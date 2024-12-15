@@ -1,382 +1,324 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>RTS MVP</title>
+<title>Minimal RTS</title>
 <style>
-body, html { margin: 0; overflow: hidden; }
-canvas { display: block; }
-.ui {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 10px;
-  font-family: monospace;
-}
+body { margin: 0; overflow: hidden; background-color: #333; }
+#game-container { width: 100vw; height: 100vh; overflow: hidden; position: relative; }
+.tile { width: 32px; height: 32px; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.1); float: left; }
+.land { background-color: #8B4513; }
+.water { background-color: #0000FF; }
+.rock { background-color: #808080; }
+.street { background-color: #D3D3D3; }
+.ore { background-color: #FFD700; }
+.unit { position: absolute; width: 24px; height: 24px; background-color: green; border-radius: 50%; }
+.enemy { background-color: red; }
+.factory { position: absolute; width: 96px; height: 64px; background-color: gray; }
+.enemy-factory { background-color: darkred; }
+.health-bar { position: absolute; width: 100%; height: 4px; background-color: red; top: -5px; }
+.health { background-color: green; height: 100%; }
+.selected { border: 2px solid yellow; }
+#ui { position: absolute; top: 10px; left: 10px; color: white; }
+#map { position: absolute; }
+.bullet{position:absolute;width:4px;height:4px;background-color:black;border-radius:50%;}
 </style>
 </head>
 <body>
-
-<div class="ui">
-  <div>Money: <span id="money">100</span></div>
-  <div>Time: <span id="time">0</span>s</div>
-  <button id="startButton">Start</button>
-  <button id="restartButton" disabled>Restart</button>
+<div id="game-container">
+    <div id="map"></div>
+    <div id="ui">
+        Money: <span id="money">1000</span><br>
+        <select id="unit-type">
+            <option value="tank">Tank (100)</option>
+            <option value="harvester">Harvester (500)</option>
+        </select>
+        <button onclick="produceUnit()">Produce Unit</button><br>
+        Production Timer: <span id="production-timer"></span><br>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="restartGame()">Restart Game</button>
+    </div>
 </div>
-
-<canvas id="gameCanvas"></canvas>
-
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-const tileSize = 32;
-const mapWidth = 50;
-const mapHeight = 50;
-const map = [];
-
-const tileTypes = {
-  LAND: { color: 'brown' },
-  WATER: { color: 'blue' },
-  ROCK: { color: 'gray' },
-  STREET: { color: 'lightgray' }
-};
-
-// Generate map with random tiles
-for (let y = 0; y < mapHeight; y++) {
-  map[y] = [];
-  for (let x = 0; x < mapWidth; x++) {
-    const tileType = Math.random() < 0.7 ? tileTypes.LAND : 
-                      (Math.random() < 0.5 ? tileTypes.WATER :
-                      (Math.random() < 0.5 ? tileTypes.ROCK : tileTypes.STREET));
-    map[y][x] = { type: tileType, x, y };
-  }
-}
-
-let cameraX = 0;
-let cameraY = 0;
+const container = document.getElementById('game-container');
+const map = document.getElementById('map');
+const uiMoney = document.getElementById('money');
+const unitTypeSelect = document.getElementById('unit-type');
+const productionTimerDisplay = document.getElementById('production-timer');
+let money = 1000;
+let mapWidth = 50;
+let mapHeight = 30;
+let tiles = [];
+let units = [];
+let enemyUnits = [];
+let selectedUnit = null;
+let isProducing = false;
+let productionTime = 0;
+let productionInterval;
+let enemyFactory;
+let playerFactory;
 let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
-
-canvas.addEventListener('mousedown', (e) => {
-  if (e.button === 2) { // Right click
-    isDragging = true;
-    dragStartX = e.clientX - cameraX;
-    dragStartY = e.clientY - cameraY;
-  }
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-
-  cameraX = e.clientX - dragStartX;
-  cameraY = e.clientY - dragStartY;
-
-  // Keep camera within map bounds
-  cameraX = Math.max(0, Math.min(cameraX, mapWidth * tileSize - canvas.width));
-  cameraY = Math.max(0, Math.min(cameraY, mapHeight * tileSize - canvas.height));
-});
-
-canvas.addEventListener('mouseup', (e) => {
-  if (e.button === 2) {
-    isDragging = false;
-  }
-});
-
-// Optional: Zoom functionality
-// canvas.addEventListener('wheel', (e) => { 
-//   // Implement zoom logic here
-// });
-
-const factory = {
-  x: 5,
-  y: 5,
-  width: 3,
-  height: 2,
-  health: 100,
-  producing: false,
-  productionTime: 5000, // 5 seconds
-  timer: null
-};
-
-const tanks = [];
-let selectedTank = null;
-
-function createTank(x, y, isPlayer) {
-  return {
-    x,
-    y,
-    width: 1,
-    height: 1,
-    health: 50,
-    speed: 0.05, // Tiles per frame
-    targetX: null,
-    targetY: null,
-    isPlayer,
-    shooting: false,
-    shootCooldown: 1000, // 1 second
-    lastShotTime: 0
-  };
-}
-
-// Create player's starting tank
-tanks.push(createTank(10, 10, true));
-
-// Create some enemy tanks
-for (let i = 0; i < 3; i++) {
-  const x = Math.floor(Math.random() * mapWidth);
-  const y = Math.floor(Math.random() * mapHeight);
-  tanks.push(createTank(x, y, false));
-}
-
-const bullets = [];
-
-function createBullet(x, y, targetX, targetY, isPlayer) {
-  const angle = Math.atan2(targetY - y, targetX - x);
-  return {
-    x,
-    y,
-    speed: 0.2,
-    angle,
-    isPlayer
-  };
-}
-
-let money = 100;
-let time = 0;
 let gameStarted = false;
-let gameOver = false;
+let occupancyMap = [];
+let showOccupancyMap = false;
+let bullets = [];
 
-const moneyElement = document.getElementById('money');
-const timeElement = document.getElementById('time');
-const startButton = document.getElementById('startButton');
-const restartButton = document.getElementById('restartButton');
+function generateMap() {
+    for (let y = 0; y < mapHeight; y++) {
+        tiles[y] = [];
+        occupancyMap[y] = [];
+        for (let x = 0; x < mapWidth; x++) {
+            let type = 'land';
+            if (Math.random() < 0.2 && (x > 3 && y > 3 && x < mapWidth - 3 && y < mapHeight - 3)) type = 'water';
+            if (Math.random() < 0.1 && (x > 3 && y > 3 && x < mapWidth - 3 && y < mapHeight - 3)) type = 'rock';
+            if (Math.random() < 0.05 && (x > 3 && y > 3 && x < mapWidth - 3 && y < mapHeight - 3)) type = 'street';
+            if (Math.random() < 0.05 && (x > 3 && y > 3 && x < mapWidth - 3 && y < mapHeight - 3)) type = 'ore';
+            let tile = document.createElement('div');
+            tile.className = 'tile ' + type;
+            tile.dataset.x = x;
+            tile.dataset.y = y;
+            map.appendChild(tile);
+            tiles[y][x] = type;
+            occupancyMap[y][x] = false;
+        }
+    }
+    map.style.width = (mapWidth * 32) + 'px';
+    map.style.height = (mapHeight * 32) + 'px';
+}
 
-startButton.addEventListener('click', startGame);
-restartButton.addEventListener('click', restartGame);
+function createUnit(x, y, isEnemy, type) {
+    let unit = document.createElement('div');
+    unit.className = 'unit' + (isEnemy ? ' enemy' : '');
+    unit.style.left = x * 32 + 'px';
+    unit.style.top = y * 32 + 'px';
+    unit.dataset.x = x;
+    unit.dataset.y = y;
+    unit.dataset.health = type === "harvester" ? 300 : 100;
+    unit.dataset.type = type;
+    let healthBar = document.createElement('div');
+    healthBar.className = 'health-bar';
+    let health = document.createElement('div');
+    health.className = 'health';
+    health.style.width = "100%";
+    healthBar.appendChild(health);
+    unit.appendChild(healthBar);
+    map.appendChild(unit);
+    if (isEnemy) {
+        enemyUnits.push(unit);
+    } else {
+        units.push(unit);
+    }
+    return unit;
+}
+
+function createFactory(x, y, isEnemy) {
+    let factory = document.createElement('div');
+    factory.className = 'factory' + (isEnemy ? ' enemy-factory' : '');
+    factory.style.left = x * 32 + 'px';
+    factory.style.top = y * 32 + 'px';
+    factory.dataset.x = x;
+    factory.dataset.y = y;
+    factory.dataset.health = 500;
+    let healthBar = document.createElement('div');
+    healthBar.className = 'health-bar';
+    let health = document.createElement('div');
+    health.className = 'health';
+    health.style.width = "100%";
+    healthBar.appendChild(health);
+    factory.appendChild(healthBar);
+    map.appendChild(factory);
+    return factory;
+}
+
+function produceUnit() {
+    if (isProducing) return;
+    const unitType = unitTypeSelect.value;
+    const cost = unitType === "harvester" ? 500 : 100;
+    if (money >= cost) {
+        money -= cost;
+        uiMoney.textContent = money;
+        isProducing = true;
+        productionTime = unitType === "harvester" ? 10 : 5; // Adjust production time as needed
+        productionTimerDisplay.textContent = productionTime;
+        productionInterval = setInterval(() => {
+            productionTime--;
+            productionTimerDisplay.textContent = productionTime;
+            if (productionTime <= 0) {
+                clearInterval(productionInterval);
+                isProducing = false;
+                createUnit(parseInt(playerFactory.dataset.x) + 1, parseInt(playerFactory.dataset.y), false, unitType);
+            }
+        }, 1000);
+    }
+}
+
+function gameLoop() {
+    if (!gameStarted) return;
+    // Enemy AI
+    enemyUnits.forEach(enemy => {
+        // Basic AI: Move towards player factory
+        let fx = parseInt(playerFactory.dataset.x);
+        let fy = parseInt(playerFactory.dataset.y);
+        let ex = parseInt(enemy.dataset.x);
+        let ey = parseInt(enemy.dataset.y);
+
+        if (Math.abs(fx - ex) > Math.abs(fy - ey)) {
+            if (fx > ex) {
+                moveUnit(enemy, ex + 1, ey);
+            } else {
+                moveUnit(enemy, ex - 1, ey);
+            }
+        } else {
+            if (fy > ey) {
+                moveUnit(enemy, ex, ey + 1);
+              } else {
+                moveUnit(enemy, ex, ey - 1);
+            }
+        }
+
+        // Attack logic (simple proximity)
+        units.forEach(playerUnit => {
+            let px = parseInt(playerUnit.dataset.x);
+            let py = parseInt(playerUnit.dataset.y);
+            if (Math.abs(px - ex) <= 1 && Math.abs(py - ey) <= 1) {
+                attack(enemy, playerUnit);
+            }
+        });
+        if (Math.abs(parseInt(playerFactory.dataset.x) - ex) <= 2 && Math.abs(parseInt(playerFactory.dataset.y) - ey) <= 1) {
+            attack(enemy, playerFactory);
+        }
+
+    });
+
+    requestAnimationFrame(gameLoop);
+}
+
+function moveUnit(unit, x, y) {
+    let oldX = parseInt(unit.dataset.x);
+    let oldY = parseInt(unit.dataset.y);
+    if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && tiles[y][x] !== "rock" && tiles[y][x] !== "water" && !occupancyMap[y][x]) {
+        occupancyMap[oldY][oldX] = false;
+        unit.style.left = x * 32 + 'px';
+        unit.style.top = y * 32 + 'px';
+        unit.dataset.x = x;
+        unit.dataset.y = y;
+        occupancyMap[y][x] = unit;
+    }
+}
+
+function attack(attacker, target) {
+    let damage = 10;
+    if(attacker.dataset.type === "harvester") damage = 5;
+    target.dataset.health -= damage;
+    target.querySelector(".health").style.width = (target.dataset.health / (target.className.includes("factory") ? 500 : target.dataset.type === "harvester" ? 300 : 100)) * 100 + "%";
+    if (target.dataset.health <= 0) {
+        if (target.className.includes("factory")) {
+            if (target.className.includes("enemy")) {
+                alert("You win!");
+                gameStarted = false;
+            } else {
+                alert("You Lose!");
+                gameStarted = false;
+            }
+        }
+        map.removeChild(target);
+        if (target.className.includes("enemy")) {
+            enemyUnits.splice(enemyUnits.indexOf(target), 1);
+        } else {
+            units.splice(units.indexOf(target), 1);
+        }
+    }
+}
 
 function startGame() {
-  gameStarted = true;
-  startButton.disabled = true;
-  restartButton.disabled = false;
-  setInterval(update, 1000 / 60); // 60 FPS
-  setInterval(() => {
-    if (gameStarted && !gameOver) {
-      time++;
-      timeElement.textContent = time;
-    }
-  }, 1000);
+    if (gameStarted) return;
+    generateMap();
+    playerFactory = createFactory(2, 2, false);
+    enemyFactory = createFactory(mapWidth-5, mapHeight-3, true);
+    createUnit(mapWidth-6, mapHeight-3, true, "tank");
+    gameStarted = true;
+    gameLoop();
 }
 
 function restartGame() {
-  // Reset game variables and objects
-  // ...
-  startGame();
+    map.innerHTML = "";
+    units = [];
+    enemyUnits = [];
+    money = 1000;
+    uiMoney.textContent = money;
+    gameStarted = false;
+    clearInterval(productionInterval);
+    isProducing = false;
+    productionTimerDisplay.textContent = "";
+    startGame();
 }
 
-function update() {
-  if (gameOver) return;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw map
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      const tile = map[y][x];
-      ctx.fillStyle = tile.type.color;
-      ctx.fillRect(tile.x * tileSize - cameraX, tile.y * tileSize - cameraY, tileSize, tileSize);
-      ctx.strokeRect(tile.x * tileSize - cameraX, tile.y * tileSize - cameraY, tileSize, tileSize);
+map.addEventListener('mousedown', (e) => {
+    if (e.button === 2) { // Right mouse button
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
     }
-  }
+});
 
-  // Draw factory
-  ctx.fillStyle = 'red';
-  ctx.fillRect(factory.x * tileSize - cameraX, factory.y * tileSize - cameraY, factory.width * tileSize, factory.height * tileSize);
-  ctx.strokeRect(factory.x * tileSize - cameraX, factory.y * tileSize - cameraY, factory.width * tileSize, factory.height * tileSize);
-
-  // Draw factory health bar
-  ctx.fillStyle = 'green';
-  ctx.fillRect(factory.x * tileSize - cameraX, (factory.y - 0.5) * tileSize - cameraY, factory.width * tileSize * (factory.health / 100), 5);
-
-  // Factory production
-  if (factory.producing) {
-    const timeLeft = Math.max(0, factory.productionTime - (Date.now() - factory.timer));
-    ctx.fillStyle = 'black';
-    ctx.font = '12px monospace';
-    ctx.fillText(`${(timeLeft / 1000).toFixed(1)}s`, (factory.x + 1) * tileSize - cameraX, (factory.y - 0.8) * tileSize - cameraY);
-  }
-
-  // Draw tanks
-  for (let i = 0; i < tanks.length; i++) {
-    const tank = tanks[i];
-    ctx.fillStyle = tank.isPlayer ? 'green' : 'red';
-    ctx.fillRect(tank.x * tileSize - cameraX, tank.y * tileSize - cameraY, tileSize, tileSize);
-    ctx.strokeRect(tank.x * tileSize - cameraX, tank.y * tileSize - cameraY, tileSize, tileSize);
-
-    // Draw tank health bar
-    ctx.fillStyle = 'green';
-    ctx.fillRect(tank.x * tileSize - cameraX, (tank.y - 0.5) * tileSize - cameraY, tileSize * (tank.health / 50), 5);
-
-    // Tank movement
-    if (tank.targetX !== null && tank.targetY !== null) {
-      const angle = Math.atan2(tank.targetY - tank.y, tank.targetX - tank.x);
-      tank.x += tank.speed * Math.cos(angle);
-      tank.y += tank.speed * Math.sin(angle);
-
-      if (Math.abs(tank.x - tank.targetX) < tank.speed && Math.abs(tank.y - tank.targetY) < tank.speed) {
-        tank.x = tank.targetX;
-        tank.y = tank.targetY;
-        tank.targetX = null;
-        tank.targetY = null;
-      }
+map.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        let dx = e.clientX - dragStartX;
+        let dy = e.clientY - dragStartY;
+        map.style.left = (parseInt(map.style.left || 0) + dx) + 'px';
+        map.style.top = (parseInt(map.style.top || 0) + dy) + 'px';
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
     }
+});
 
-    // Tank shooting
-    if (tank.shooting && Date.now() - tank.lastShotTime > tank.shootCooldown) {
-      tank.lastShotTime = Date.now();
-      bullets.push(createBullet(tank.x, tank.y, tank.targetX, tank.targetY, tank.isPlayer));
-    }
-  }
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+});
 
-  // Draw bullets
-  for (let i = bullets.length - 1; i >= 0; i--) {
-    const bullet = bullets[i];
-    bullet.x += bullet.speed * Math.cos(bullet.angle);
-    bullet.y += bullet.speed * Math.sin(bullet.angle);
-
-    ctx.fillStyle = bullet.isPlayer ? 'green' : 'red';
-    ctx.beginPath();
-    ctx.arc(bullet.x * tileSize - cameraX, bullet.y * tileSize - cameraY, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bullet collision detection
-    for (let j = tanks.length - 1; j >= 0; j--) {
-      const tank = tanks[j];
-      if (tank.isPlayer !== bullet.isPlayer && 
-          bullet.x > tank.x && bullet.x < tank.x + tank.width &&
-          bullet.y > tank.y && bullet.y < tank.y + tank.height) {
-        tank.health -= 10;
-        bullets.splice(i, 1);
-
-        if (tank.health <= 0) {
-          tanks.splice(j, 1);
-          // Play destruction sound and animation (not implemented)
+map.addEventListener('click', (e) => {
+    if (e.target.className.includes('unit') && !e.target.className.includes('enemy')) {
+        if (selectedUnit) {
+            selectedUnit.classList.remove('selected');
         }
-        break;
-      }
+        selectedUnit = e.target;
+        selectedUnit.classList.add('selected');
+    } else if (selectedUnit && gameStarted) {
+        let tile = e.target.closest('.tile');
+        if (tile) {
+            moveUnit(selectedUnit, parseInt(tile.dataset.x), parseInt(tile.dataset.y));
+        }
     }
-
-    // Bullet collision with factory
-    if (bullet.isPlayer !== factory.isPlayer &&
-        bullet.x > factory.x && bullet.x < factory.x + factory.width &&
-        bullet.y > factory.y && bullet.y < factory.y + factory.height) {
-      factory.health -= 10;
-      bullets.splice(i, 1);
-
-      if (factory.health <= 0) {
-        // Game over logic (not implemented)
-      }
-      break;
-    }
-
-    // Remove bullets that go off-screen
-    if (bullet.x < 0 || bullet.x > mapWidth || bullet.y < 0 || bullet.y > mapHeight) {
-      bullets.splice(i, 1);
-    }
-  }
-
-  // Enemy AI (very basic)
-  for (let i = 0; i < tanks.length; i++) {
-    const tank = tanks[i];
-    if (!tank.isPlayer && tank.targetX === null && tank.targetY === null) {
-      // Random movement
-      tank.targetX = Math.floor(Math.random() * mapWidth);
-      tank.targetY = Math.floor(Math.random() * mapHeight);
-
-      // Or: Implement pathfinding towards player's factory
-    }
-  }
-
-  // Update money
-  if (gameStarted && !gameOver) {
-    money += 1; // Increase money over time
-    moneyElement.textContent = money;
-  }
-}
-
-// Mouse click to select units or issue commands
-canvas.addEventListener('click', (e) => {
-  const x = Math.floor((e.clientX + cameraX) / tileSize);
-  const y = Math.floor((e.clientY + cameraY) / tileSize);
-
-  // Check if clicked on a tank
-  for (let i = 0; i < tanks.length; i++) {
-    const tank = tanks[i];
-    if (x >= tank.x && x < tank.x + tank.width && y >= tank.y && y < tank.y + tank.height) {
-      selectedTank = tank;
-      // Play selection sound (not implemented)
-      return;
-    }
-  }
-
-  // If a tank is selected, issue move or attack command
-  if (selectedTank) {
-    // Check if clicked on an enemy tank
-    for (let i = 0; i < tanks.length; i++) {
-      const tank = tanks[i];
-      if (tank !== selectedTank && !tank.isPlayer && 
-          x >= tank.x && x < tank.x + tank.width && y >= tank.y && y < tank.y + tank.height) {
-        selectedTank.targetX = tank.x;
-        selectedTank.targetY = tank.y;
-        selectedTank.shooting = true;
-        return;
-      }
-    }
-
-    // Otherwise, move to the clicked tile
-    selectedTank.targetX = x;
-    selectedTank.targetY = y;
-    selectedTank.shooting = false;
-  }
 });
 
-// Implement a basic UI for factory production
-// (This is a simplified example, you'll likely want to use a proper UI library)
-const factoryUI = document.createElement('div');
-factoryUI.style.position = 'absolute';
-factoryUI.style.top = (factory.y * tileSize - cameraY) + 'px';
-factoryUI.style.left = (factory.x * tileSize - cameraX) + 'px';
-factoryUI.innerHTML = `
-  <select id="unitSelect">
-    <option value="tank">Tank ($100)</option>
-    </select>
-  <button id="produceButton">Produce</button>
-`;
-document.body.appendChild(factoryUI);
-
-const unitSelect = document.getElementById('unitSelect');
-const produceButton = document.getElementById('produceButton');
-
-produceButton.addEventListener('click', () => {
-  const unitType = unitSelect.value;
-  if (unitType === 'tank' && money >= 100 && !factory.producing) {
-    money -= 100;
-    factory.producing = true;
-    factory.timer = Date.now();
-    setTimeout(() => {
-      factory.producing = false;
-      tanks.push(createTank(factory.x, factory.y + factory.height, true));
-    }, factory.productionTime);
-  }
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'o') {
+        showOccupancyMap = !showOccupancyMap;
+        if(showOccupancyMap){
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    if(occupancyMap[y][x]){
+                        let tile = map.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+                        tile.style.backgroundColor = "rgba(255, 255, 0, 0.5)";
+                    }
+                }
+            }
+        } else {
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                        let tile = map.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+                        if(tile){
+                            tile.style.backgroundColor = "";
+                        }
+                }
+            }
+        }
+    }
+    if(event.key === 'h'){
+        alert("Controls:\n- Right Click + Drag: Move Map\n- Click Unit: Select Unit\n- Click Tile: Move Selected Unit\n- o: Toggle Occupancy Map");
+    }
 });
-
-// Optional: Debug/developer mode
-// console.log("Game initialized");
 
 </script>
 
