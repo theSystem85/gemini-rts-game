@@ -3,15 +3,17 @@
 <head>
 <title>RTS MVP</title>
 <style>
-body, html { 
-  margin: 0; 
-  overflow: hidden; 
+body, html {
+  margin: 0;
+  overflow: hidden;
   font-family: monospace;
 }
+
 #map {
   position: absolute;
   background-color: #8B4513; /* Land color */
 }
+
 .tile {
   width: 32px;
   height: 32px;
@@ -19,10 +21,12 @@ body, html {
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.2); /* Subtle tile borders */
 }
+
 .water { background-color: blue; }
 .rock { background-color: gray; }
 .street { background-color: lightgray; }
 .ore { background-color: gold; }
+
 .unit {
   width: 24px;
   height: 24px;
@@ -30,19 +34,25 @@ body, html {
   background-color: green;
   position: relative; /* For health bar positioning */
 }
+
 .selected { outline: 2px solid yellow; }
+
 .enemy { background-color: red; }
+
 .factory {
   width: 96px;
   height: 64px;
   background-color: #A9A9A9; /* Factory color */
 }
+
 .harvester {
   background-color: violet;
 }
+
 .building {
   position: relative; /* For health bar and countdown positioning */
 }
+
 .health-bar {
   position: absolute;
   bottom: 0;
@@ -50,7 +60,9 @@ body, html {
   height: 4px;
   background-color: green;
 }
+
 .enemy .health-bar { background-color: red; }
+
 .countdown {
   position: absolute;
   top: 0;
@@ -58,6 +70,7 @@ body, html {
   transform: translateX(-50%);
   font-size: 10px;
 }
+
 .bullet {
   position: absolute;
   width: 4px;
@@ -65,18 +78,21 @@ body, html {
   background-color: black;
   border-radius: 50%;
 }
+
 #ui {
   position: absolute;
   top: 10px;
   left: 10px;
   color: white;
 }
+
 #occupancy-map {
   position: absolute;
   top: 0;
   left: 0;
   pointer-events: none; /* Allow clicks to pass through */
 }
+
 .occupancy-tile {
   width: 32px;
   height: 32px;
@@ -85,20 +101,23 @@ body, html {
   border: 1px solid rgba(255, 0, 0, 0.5); /* Occupancy tile borders */
   opacity: 0.5; /* Semi-transparent */
 }
+
 .occupied { background-color: rgba(255, 0, 0, 0.5); }
+
+.destroyed { opacity: 0.5; }
 </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div id="ui">
-    Money: <span id="money">1000</span><br>
-    Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span><br>
-    Time: <span id="time">0</span>s<br>
-    <button id="start">Start</button>
-    <button id="pause" disabled>Pause</button>
-    <button id="restart" disabled>Restart</button>
-  </div>
-  <div id="occupancy-map"></div>
+<div id="map"></div>
+<div id="ui">
+Money: <span id="money">1000</span><br>
+Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span><br>
+Time: <span id="time">0</span>s<br>
+<button id="start">Start</button>
+<button id="pause" disabled>Pause</button>
+<button id="restart" disabled>Restart</button>
+</div>
+<div id="occupancy-map"></div>
 
 <script>
 const mapWidth = 100;
@@ -114,6 +133,7 @@ const startButton = document.getElementById('start');
 const pauseButton = document.getElementById('pause');
 const restartButton = document.getElementById('restart');
 const occupancyMap = document.getElementById('occupancy-map');
+
 let occupancyGrid = [];
 let tiles = [];
 let units = [];
@@ -130,29 +150,25 @@ let startTime = 0;
 let gamePaused = false;
 let showOccupancyMap = false; // Flag to toggle occupancy map visibility
 
-// Initialize map
 function initMap() {
   map.style.width = mapWidth * tileSize + 'px';
   map.style.height = mapHeight * tileSize + 'px';
   occupancyMap.style.width = mapWidth * tileSize + 'px';
   occupancyMap.style.height = mapHeight * tileSize + 'px';
 
-  // Generate tiles with connected water, rocks, and streets
   tiles = generateTiles();
 
-  // Create occupancy grid
   occupancyGrid = Array(mapHeight).fill(null).map(() => Array(mapWidth).fill(0));
 
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
       const tile = document.createElement('div');
       tile.classList.add('tile');
-      tile.classList.add(tiles[y][x]); // Add tile type class
+      tile.classList.add(tiles[y][x]);
       tile.style.left = x * tileSize + 'px';
       tile.style.top = y * tileSize + 'px';
       map.appendChild(tile);
 
-      // Create occupancy map tile
       const occupancyTile = document.createElement('div');
       occupancyTile.classList.add('occupancy-tile');
       occupancyTile.style.left = x * tileSize + 'px';
@@ -162,26 +178,15 @@ function initMap() {
   }
 }
 
-// Generate tiles with connected features
 function generateTiles() {
   const newTiles = Array(mapHeight).fill(null).map(() => Array(mapWidth).fill('land'));
-
-  // Generate water
   generateConnectedFeature(newTiles, 'water', 0.3);
-
-  // Generate rocks
   generateConnectedFeature(newTiles, 'rock', 0.2);
-
-  // Generate streets
   generateConnectedFeature(newTiles, 'street', 0.1);
-
-  // Generate ore
   generateOre(newTiles, 0.05);
-
   return newTiles;
 }
 
-// Helper function to generate connected features (water, rocks, streets)
 function generateConnectedFeature(tiles, featureType, density) {
   let numFeatures = Math.floor(mapWidth * mapHeight * density);
   let startX = Math.floor(Math.random() * mapWidth);
@@ -192,8 +197,6 @@ function generateConnectedFeature(tiles, featureType, density) {
       tiles[startY][startX] = featureType;
       numFeatures--;
     }
-
-    // Move to a random neighbor
     const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
     const randomDir = directions[Math.floor(Math.random() * directions.length)];
     startX = Math.max(0, Math.min(mapWidth - 1, startX + randomDir[0]));
@@ -201,7 +204,6 @@ function generateConnectedFeature(tiles, featureType, density) {
   }
 }
 
-// Helper function to generate ore
 function generateOre(tiles, density) {
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
@@ -212,7 +214,6 @@ function generateOre(tiles, density) {
   }
 }
 
-// Initialize game elements
 function initGame() {
   units = [];
   enemyUnits = [];
@@ -223,7 +224,6 @@ function initGame() {
   startTime = Date.now();
   gamePaused = false;
 
-  // Clear occupancy grid
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
       occupancyGrid[y][x] = 0;
@@ -231,17 +231,12 @@ function initGame() {
     }
   }
 
-  // Create player's factory
   createStructure(10, 10, 'factory', false);
-
-  // Create enemy factory
   createStructure(80, 80, 'factory', true);
 
-  // Update UI
   updateUi();
 }
 
-// Create a structure (factory)
 function createStructure(x, y, type, isEnemy) {
   const structure = {
     x: x,
@@ -249,21 +244,25 @@ function createStructure(x, y, type, isEnemy) {
     type: type,
     isEnemy: isEnemy,
     health: 100,
-    width: type === 'factory' ? 3 : 1, // Harvester occupies 1 tile
+    width: type === 'factory' ? 3 : 1,
     height: type === 'factory' ? 2 : 1
   };
 
-  // Add structure to the correct array
   if (isEnemy) {
     enemyStructures.push(structure);
   } else {
     structures.push(structure);
+    // Initialize production properties for player's factory
+    if (type === 'factory') {
+      structure.productionQueue = null; 
+      structure.productionTime = 0; 
+    }
   }
 
   renderStructure(structure);
 }
 
-// Render a structure on the map
+
 function renderStructure(structure) {
   const structureDiv = document.createElement('div');
   structureDiv.classList.add(structure.type);
@@ -276,12 +275,10 @@ function renderStructure(structure) {
   structureDiv.style.width = structure.width * tileSize + 'px';
   structureDiv.style.height = structure.height * tileSize + 'px';
 
-  // Add health bar
   const healthBar = document.createElement('div');
   healthBar.classList.add('health-bar');
   structureDiv.appendChild(healthBar);
 
-  // Add countdown timer (if factory)
   if (structure.type === 'factory') {
     const countdown = document.createElement('div');
     countdown.classList.add('countdown');
@@ -290,16 +287,14 @@ function renderStructure(structure) {
 
   map.appendChild(structureDiv);
 
-  // Update occupancy grid
-  for (let y = structure.y; y < structure.y + structure.height; y++) {
-    for (let x = structure.x; x < structure.x + structure.width; x++) {
-      occupancyGrid[y][x] = 1;
-      occupancyMap.children[y * mapWidth + x].classList.add('occupied');
+  for (let yy = structure.y; yy < structure.y + structure.height; yy++) {
+    for (let xx = structure.x; xx < structure.x + structure.width; xx++) {
+      occupancyGrid[yy][xx] = 1;
+      occupancyMap.children[yy * mapWidth + xx].classList.add('occupied');
     }
   }
 }
 
-// Create a unit (tank or harvester)
 function createUnit(x, y, isEnemy, type = 'tank') {
   const unit = {
     x: x,
@@ -307,15 +302,14 @@ function createUnit(x, y, isEnemy, type = 'tank') {
     isEnemy: isEnemy,
     type: type,
     health: 100,
-    speed: type === 'tank' ? 1 : 0.5, // Harvester moves slower
+    speed: type === 'tank' ? 1 : 0.5,
     targetX: null,
     targetY: null,
     moving: false,
-    path: [], // Path for A* pathfinding
-    armor: type === 'tank' ? 1 : 3, // Harvester has more armor
+    path: [],
+    armor: type === 'tank' ? 1 : 3,
   };
 
-  // Add unit to the correct array
   if (isEnemy) {
     enemyUnits.push(unit);
   } else {
@@ -325,7 +319,6 @@ function createUnit(x, y, isEnemy, type = 'tank') {
   renderUnit(unit);
 }
 
-// Render a unit on the map
 function renderUnit(unit) {
   const unitDiv = document.createElement('div');
   unitDiv.classList.add('unit');
@@ -338,30 +331,28 @@ function renderUnit(unit) {
   unitDiv.style.left = unit.x * tileSize + 'px';
   unitDiv.style.top = unit.y * tileSize + 'px';
 
-  // Add health bar
   const healthBar = document.createElement('div');
   healthBar.classList.add('health-bar');
   unitDiv.appendChild(healthBar);
 
   map.appendChild(unitDiv);
 
-  // Update occupancy grid
-  occupancyGrid[unit.y][unit.x] = 1;
-  occupancyMap.children[unit.y * mapWidth + x].classList.add('occupied');
+  const ux = Math.floor(unit.x);
+  const uy = Math.floor(unit.y);
+  occupancyGrid[uy][ux] = 1;
+  occupancyMap.children[uy * mapWidth + ux].classList.add('occupied');
+
+  unit.div = unitDiv;
 }
 
-// Update game state
 function updateGame(timestamp) {
   if (gamePaused) return;
 
-  // Update time
   timeDisplay.textContent = Math.floor((timestamp - startTime) / 1000);
 
-  // Update money
-  money += 1; // Increase money over time
+  money += 1; 
   moneyDisplay.textContent = money;
 
-  // Update units
   for (let i = units.length - 1; i >= 0; i--) {
     updateUnit(units[i]);
   }
@@ -369,12 +360,10 @@ function updateGame(timestamp) {
     updateUnit(enemyUnits[i]);
   }
 
-  // Update bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
     updateBullet(bullets[i]);
   }
 
-  // Update structures
   for (let i = structures.length - 1; i >= 0; i--) {
     updateStructure(structures[i]);
   }
@@ -383,22 +372,18 @@ function updateGame(timestamp) {
   }
 }
 
-// Update a single unit
 function updateUnit(unit) {
-  // A* pathfinding (simplified)
   if (unit.targetX !== null && unit.targetY !== null && unit.path.length === 0) {
-    unit.path = findPath(unit.x, unit.y, unit.targetX, unit.targetY);
+    unit.path = findPath(Math.floor(unit.x), Math.floor(unit.y), unit.targetX, unit.targetY);
   }
 
-  // Move unit
   if (unit.path.length > 0) {
     const nextTile = unit.path.shift();
     moveUnit(unit, nextTile.x, nextTile.y);
   }
 
-  // Enemy AI (basic)
   if (unit.isEnemy) {
-    if (Math.random() < 0.01) { // 1% chance to change target
+    if (Math.random() < 0.01) {
       const targetStructure = structures[Math.floor(Math.random() * structures.length)];
       unit.targetX = targetStructure.x;
       unit.targetY = targetStructure.y;
@@ -406,98 +391,250 @@ function updateUnit(unit) {
   }
 }
 
-// Move a unit to a target tile
 function moveUnit(unit, targetX, targetY) {
-  // Calculate movement speed based on tile type
+  // Clear old occupancy
+  const oldX = Math.floor(unit.x);
+  const oldY = Math.floor(unit.y);
+  occupancyGrid[oldY][oldX] = 0;
+  occupancyMap.children[oldY * mapWidth + oldX].classList.remove('occupied');
+
   let speed = unit.speed;
   const targetTileType = tiles[targetY][targetX];
   if (targetTileType === 'street') {
-    speed *= 1.5; // 50% faster on streets
+    speed *= 1.5;
   }
 
-  // Calculate distance to target
   const dx = targetX - unit.x;
   const dy = targetY - unit.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // If close enough to target, snap to position
   if (dist < speed) {
     unit.x = targetX;
     unit.y = targetY;
     unit.moving = false;
   } else {
-    // Move towards target
     unit.x += dx / dist * speed;
     unit.y += dy / dist * speed;
     unit.moving = true;
   }
 
-  // Update unit's position on the map
-  const unitDiv = map.querySelector('.unit' + (unit.isEnemy ? '.enemy' : '') + (unit.type === 'harvester' ? '.harvester' : '') + ':not(.destroyed)');
-  if (unitDiv) {
-    unitDiv.style.left = unit.x * tileSize + 'px';
-    unitDiv.style.top = unit.y * tileSize + 'px';
+  if (unit.div) {
+    unit.div.style.left = unit.x * tileSize + 'px';
+    unit.div.style.top = unit.y * tileSize + 'px';
   }
 
-  // Update occupancy grid
-  occupancyGrid[Math.floor(unit.y)][Math.floor(unit.x)] = 1;
-  occupancyMap.children[Math.floor(unit.y) * mapWidth + Math.floor(unit.x)].classList.add('occupied');
+  const newX = Math.floor(unit.x);
+  const newY = Math.floor(unit.y);
+  occupancyGrid[newY][newX] = 1;
+  occupancyMap.children[newY * mapWidth + newX].classList.add('occupied');
 }
 
-// Find a path using A* algorithm (simplified)
 function findPath(startX, startY, endX, endY) {
-  // ... (Implementation of A* pathfinding algorithm)
-  // For simplicity, this example returns a direct path if possible
-  // In a real implementation, you would use A* to find a path around obstacles
-  const path = [];
-  if (tiles[endY][endX] !== 'water' && tiles[endY][endX] !== 'rock') {
-    path.push({ x: endX, y:endY });
+  if (startX === endX && startY === endY) return [];
+  if (!isTilePassable(endX, endY)) return [];
+
+  function heuristic(x1, y1, x2, y2) {
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
   }
-  return path;
+
+  function isTilePassable(x, y) {
+    if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return false;
+    const t = tiles[y][x];
+    if (t === 'water' || t === 'rock') return false;
+    if (occupancyGrid[y][x] === 1) return false;
+    return true;
+  }
+
+  const openSet = [];
+  const closedSet = new Set();
+  const startNode = { x: startX, y: startY, g: 0, f: heuristic(startX, startY, endX, endY), parent: null };
+  openSet.push(startNode);
+
+  while (openSet.length > 0) {
+    openSet.sort((a,b) => a.f - b.f);
+    const current = openSet.shift();
+    const key = current.x + ',' + current.y;
+
+    if (current.x === endX && current.y === endY) {
+      const path = [];
+      let cur = current;
+      while (cur.parent) {
+        path.unshift({ x: cur.x, y: cur.y });
+        cur = cur.parent;
+      }
+      return path;
+    }
+
+    closedSet.add(key);
+    const neighbors = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (const [dx,dy] of neighbors) {
+      const nx = current.x+dx;
+      const ny = current.y+dy;
+      if (!isTilePassable(nx, ny)) continue;
+      const nKey = nx+','+ny;
+      if (closedSet.has(nKey)) continue;
+      const g = current.g+1;
+      let neighbor = openSet.find(n => n.x === nx && n.y === ny);
+      if (!neighbor) {
+        neighbor = { x: nx, y: ny, g, f: g+heuristic(nx,ny,endX,endY), parent: current };
+        openSet.push(neighbor);
+      } else if (g < neighbor.g) {
+        neighbor.g = g;
+        neighbor.f = g+heuristic(nx,ny,endX,endY);
+        neighbor.parent = current;
+      }
+    }
+  }
+
+  return [];
 }
 
-// Update a single bullet
 function updateBullet(bullet) {
-  // Move bullet
   bullet.x += bullet.dx * bullet.speed;
   bullet.y += bullet.dy * bullet.speed;
 
-  // Update bullet's position on the map
   bullet.div.style.left = bullet.x * tileSize + 'px';
   bullet.div.style.top = bullet.y * tileSize + 'px';
 
-  // Check for collision with units or structures
   checkBulletCollision(bullet);
 }
 
-// Check if a bullet has collided with any units or structures
 function checkBulletCollision(bullet) {
-  // ... (Implementation of collision detection)
-  // If collision detected, damage the unit/structure and remove the bullet
+  const bx = Math.floor(bullet.x);
+  const by = Math.floor(bullet.y);
+
+  for (const unit of units) {
+    if (Math.floor(unit.x) === bx && Math.floor(unit.y) === by) {
+      damageUnit(unit, bullet.damage || 10);
+      removeBullet(bullet);
+      return;
+    }
+  }
+  for (const unit of enemyUnits) {
+    if (Math.floor(unit.x) === bx && Math.floor(unit.y) === by) {
+      damageUnit(unit, bullet.damage || 10);
+      removeBullet(bullet);
+      return;
+    }
+  }
+
+  function inStructure(s, x, y) {
+    return (x >= s.x && x < s.x + s.width && y >= s.y && y < s.y + s.height);
+  }
+
+  for (const s of structures) {
+    if (inStructure(s, bx, by)) {
+      damageStructure(s, bullet.damage || 10);
+      removeBullet(bullet);
+      return;
+    }
+  }
+  for (const s of enemyStructures) {
+    if (inStructure(s, bx, by)) {
+      damageStructure(s, bullet.damage || 10);
+      removeBullet(bullet);
+      return;
+    }
+  }
 }
 
-// Update a single structure
+function damageUnit(unit, amount) {
+  amount = amount / (unit.armor || 1);
+  unit.health -= amount;
+  if (unit.health <= 0) {
+    destroyUnit(unit);
+  } else {
+    const unitDiv = findUnitDiv(unit);
+    if (unitDiv) {
+      const healthBar = unitDiv.querySelector('.health-bar');
+      healthBar.style.width = Math.max(0, unit.health) + '%';
+    }
+  }
+}
+
+function damageStructure(structure, amount) {
+  structure.health -= amount;
+  if (structure.health <= 0) {
+    // The updateStructure will handle destruction checks
+  } else {
+    const structureDiv = findStructureDiv(structure);
+    if (structureDiv) {
+      const healthBar = structureDiv.querySelector('.health-bar');
+      healthBar.style.width = Math.max(0, structure.health) + '%';
+    }
+  }
+}
+
+function findUnitDiv(unit) {
+  return unit.div;
+}
+
+function findStructureDiv(structure) {
+  const buildings = map.querySelectorAll('.building' + (structure.isEnemy ? '.enemy' : ''));
+  for (const b of buildings) {
+    const bx = parseInt(b.style.left) / tileSize;
+    const by = parseInt(b.style.top) / tileSize;
+    if (bx === structure.x && by === structure.y) {
+      return b;
+    }
+  }
+  return null;
+}
+
+function destroyUnit(unit) {
+  const arr = unit.isEnemy ? enemyUnits : units;
+  const idx = arr.indexOf(unit);
+  if (idx !== -1) arr.splice(idx,1);
+
+  if (unit.div && !unit.div.classList.contains('destroyed')) {
+    unit.div.classList.add('destroyed');
+    if (unit.div.parentNode) {
+      map.removeChild(unit.div);
+    }
+  }
+
+  const ux = Math.floor(unit.x);
+  const uy = Math.floor(unit.y);
+  occupancyGrid[uy][ux] = 0;
+  occupancyMap.children[uy * mapWidth + ux].classList.remove('occupied');
+  // Play destruction sound if desired
+}
+
+function removeBullet(bullet) {
+  const idx = bullets.indexOf(bullet);
+  if (idx !== -1) bullets.splice(idx,1);
+  if (bullet.div && bullet.div.parentNode) {
+    map.removeChild(bullet.div);
+  }
+}
+
 function updateStructure(structure) {
-  // Update health bar
-  const structureDiv = map.querySelector('.building' + (structure.isEnemy ? '.enemy' : '') + ':not(.destroyed)');
+  const structureDiv = findStructureDiv(structure);
   if (structureDiv) {
     const healthBar = structureDiv.querySelector('.health-bar');
     healthBar.style.width = structure.health + '%';
 
-    // Check for destruction
+    // Handle production countdown for player's factory
+    if (structure.type === 'factory' && !structure.isEnemy && structure.productionTime > 0) {
+      // Decrement productionTime. This assumes updateGame runs roughly once per second.
+      // If it runs more frequently, you may need a timing mechanism.
+      structure.productionTime -= 1;
+      const countdown = structureDiv.querySelector('.countdown');
+      if (countdown) countdown.textContent = structure.productionTime + 's';
+      if (structure.productionTime <= 0 && structure.productionQueue) {
+        finishProduction(structure);
+      }
+    }
+
     if (structure.health <= 0) {
       structureDiv.classList.add('destroyed');
-      // ... (Implementation of destruction animation and sound effect)
-
-      // Update occupancy grid
-      for (let y = structure.y; y < structure.y + structure.height; y++) {
-        for (let x = structure.x; x < structure.x + structure.width; x++) {
-          occupancyGrid[y][x] = 0;
-          occupancyMap.children[y * mapWidth + x].classList.remove('occupied');
+      for (let yy = structure.y; yy < structure.y + structure.height; yy++) {
+        for (let xx = structure.x; xx < structure.x + structure.width; xx++) {
+          occupancyGrid[yy][xx] = 0;
+          occupancyMap.children[yy * mapWidth + xx].classList.remove('occupied');
         }
       }
 
-      // Check for victory/defeat condition
       if (structure.isEnemy) {
         wins++;
         winsDisplay.textContent = wins;
@@ -513,7 +650,7 @@ function updateStructure(structure) {
   }
 }
 
-// Update UI elements
+
 function updateUi() {
   moneyDisplay.textContent = money;
   winsDisplay.textContent = wins;
@@ -521,7 +658,6 @@ function updateUi() {
   timeDisplay.textContent = 0;
 }
 
-// Handle user input
 function handleInput(event) {
   if (gamePaused) return;
 
@@ -530,43 +666,45 @@ function handleInput(event) {
   const y = Math.floor((event.clientY - mapRect.top) / tileSize);
 
   if (event.type === 'mousedown') {
-    if (event.button === 2) { // Right-click: Start map scrolling
+    if (event.button === 2) {
+      // Right-click: Start map scrolling
       map.startX = event.clientX;
       map.startY = event.clientY;
-
       document.addEventListener('mousemove', handleMapDrag);
       document.addEventListener('mouseup', stopMapDrag);
-
-      // Prevent default context menu
-      event.preventDefault(); 
-
-      // Add this line to specifically disable context menu on the map element:
+      event.preventDefault();
       map.addEventListener('contextmenu', (e) => e.preventDefault());
-    } else if (event.button === 0) { // Left-click: Unit/structure selection, movement, attack
-      const clickedUnit = units.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
-      const clickedEnemyUnit = enemyUnits.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
-      const clickedStructure = structures.find(structure => 
-        x >= structure.x && x < structure.x + structure.width &&
-        y >= structure.y && y < structure.y + structure.height
+    } else if (event.button === 0) {
+      // Left-click: selection or commands
+      const clickedUnit = units.find(u => Math.floor(u.x) === x && Math.floor(u.y) === y);
+      const clickedEnemyUnit = enemyUnits.find(u => Math.floor(u.x) === x && Math.floor(u.y) === y);
+      const clickedStructure = structures.find(s =>
+        x >= s.x && x < s.x + s.width &&
+        y >= s.y && y < s.y + s.height
       );
-      const clickedEnemyStructure = enemyStructures.find(structure => 
-        x >= structure.x && x < structure.x + structure.width &&
-        y >= structure.y && y < structure.y + structure.height
+      const clickedEnemyStructure = enemyStructures.find(s =>
+        x >= s.x && x < s.x + s.width &&
+        y >= s.y && y < s.y + s.height
       );
 
-      if (clickedUnit) { // Select unit
+      if (clickedUnit) {
         selectUnit(clickedUnit);
-      } else if (clickedEnemyUnit) { // Attack enemy unit
+      } else if (clickedEnemyUnit) {
         if (selectedUnit) {
           attackTarget(selectedUnit, clickedEnemyUnit);
         }
-      } else if (clickedStructure) { // Select structure (if needed)
-        // ... (Implementation for selecting structures)
-      } else if (clickedEnemyStructure) { // Attack enemy structure
+      } else if (clickedStructure) {
+        // Player's structure clicked
+        if (selectedUnit) {
+          selectedUnit.div.classList.remove('selected');
+          selectedUnit = null;
+        }
+        selectStructure(clickedStructure);
+      } else if (clickedEnemyStructure) {
         if (selectedUnit) {
           attackTarget(selectedUnit, clickedEnemyStructure);
         }
-      } else { // Move selected unit
+      } else {
         if (selectedUnit) {
           moveSelectedUnit(x, y);
         }
@@ -575,7 +713,125 @@ function handleInput(event) {
   }
 }
 
-// Select a unit
+function selectStructure(structure) {
+  // Clear existing selection
+  removeProductionUI() // Remove any existing production UI
+
+  // Ensure this is a player's factory
+  if (structure.type === 'factory' && !structure.isEnemy) {
+    const structureDiv = findStructureDiv(structure)
+    if (!structureDiv) return
+
+    // Create the production UI
+    const productionUI = document.createElement('div')
+    productionUI.style.position = 'absolute'
+    productionUI.style.left = (structure.x * tileSize) + 'px'
+    productionUI.style.top = (structure.y * tileSize - 50) + 'px' // Position above factory
+    productionUI.style.background = 'rgba(0,0,0,0.7)'
+    productionUI.style.color = 'white'
+    productionUI.style.padding = '5px'
+    productionUI.style.fontSize = '12px'
+    productionUI.style.border = '1px solid #ccc'
+    productionUI.id = 'production-ui'
+
+    const select = document.createElement('select')
+    const optionTank = document.createElement('option')
+    optionTank.value = 'tank'
+    optionTank.textContent = 'Tank (cost 100)'
+    const optionHarv = document.createElement('option')
+    optionHarv.value = 'harvester'
+    optionHarv.textContent = 'Harvester (cost 500)'
+    select.appendChild(optionTank)
+    select.appendChild(optionHarv)
+
+    const produceBtn = document.createElement('button')
+    produceBtn.textContent = 'Produce'
+    produceBtn.style.marginLeft = '5px'
+    produceBtn.addEventListener('click', () => {
+      const unitType = select.value
+      startProduction(structure, unitType)
+    })
+
+    productionUI.appendChild(select)
+    productionUI.appendChild(produceBtn)
+    map.appendChild(productionUI)
+  }
+}
+
+
+function removeProductionUI() {
+  const ui = document.getElementById('production-ui');
+  if (ui && ui.parentNode) {
+    ui.parentNode.removeChild(ui);
+  }
+}
+
+function finishProduction(factory) {
+  // Attempt to spawn the unit adjacent to the factory
+  const directions = [
+    [factory.width,0],
+    [-1,0],
+    [0,-1],
+    [0,factory.height]
+  ];
+
+  let spawnX = factory.x + factory.width;
+  let spawnY = factory.y;
+  let placed = false;
+  for (const [dx,dy] of directions) {
+    const nx = factory.x + dx;
+    const ny = factory.y + dy;
+    if (
+      nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight &&
+      occupancyGrid[ny][nx] === 0 &&
+      tiles[ny][nx] !== 'water' && tiles[ny][nx] !== 'rock'
+    ) {
+      spawnX = nx;
+      spawnY = ny;
+      placed = true;
+      break;
+    }
+  }
+
+  // If no ideal placement found, just place next to it anyway
+  if (!placed) {
+    spawnX = factory.x + factory.width;
+    spawnY = factory.y;
+  }
+
+  createUnit(spawnX, spawnY, false, factory.productionQueue);
+  factory.productionQueue = null;
+
+  const structureDiv = findStructureDiv(factory);
+  if (structureDiv) {
+    const countdown = structureDiv.querySelector('.countdown');
+    if (countdown) countdown.textContent = '';
+  }
+}
+
+function startProduction(factory, unitType) {
+  const cost = (unitType === 'tank') ? 100 : 500;
+  if (money < cost) {
+    alert('Not enough money!');
+    return;
+  }
+
+  money -= cost;
+  moneyDisplay.textContent = money;
+
+  // Tanks take 5s, Harvesters 10s
+  const productionTime = (unitType === 'tank') ? 5 : 10;
+  factory.productionQueue = unitType;
+  factory.productionTime = productionTime;
+
+  const structureDiv = findStructureDiv(factory);
+  if (structureDiv) {
+    const countdown = structureDiv.querySelector('.countdown');
+    if (countdown) countdown.textContent = productionTime + 's';
+  }
+}
+
+
 function selectUnit(unit) {
   if (selectedUnit) {
     selectedUnit.div.classList.remove('selected');
@@ -584,13 +840,11 @@ function selectUnit(unit) {
   selectedUnit.div.classList.add('selected');
 }
 
-// Move the selected unit to a target tile
 function moveSelectedUnit(x, y) {
   selectedUnit.targetX = x;
   selectedUnit.targetY = y;
-  selectedUnit.path = findPath(selectedUnit.x, selectedUnit.y, x, y);
+  selectedUnit.path = findPath(Math.floor(selectedUnit.x), Math.floor(selectedUnit.y), x, y);
 
-  // Show target marker
   if (!targetMarker) {
     targetMarker = document.createElement('div');
     targetMarker.style.position = 'absolute';
@@ -603,12 +857,37 @@ function moveSelectedUnit(x, y) {
   targetMarker.style.top = y * tileSize + 'px';
 }
 
-// Attack a target with the selected unit
 function attackTarget(unit, target) {
-  // ... (Implementation for attacking units/structures)
+  const dist = Math.sqrt((target.x - unit.x)**2 + (target.y - unit.y)**2);
+  if (dist <= 4) {
+    const bullet = {
+      x: unit.x,
+      y: unit.y,
+      dx: (target.x - unit.x) / dist,
+      dy: (target.y - unit.y) / dist,
+      speed: 0.1,
+      damage: 20
+    };
+    const bulletDiv = document.createElement('div');
+    bulletDiv.classList.add('bullet');
+    bulletDiv.style.left = bullet.x * tileSize + 'px';
+    bulletDiv.style.top = bullet.y * tileSize + 'px';
+    map.appendChild(bulletDiv);
+    bullet.div = bulletDiv;
+    bullets.push(bullet);
+    // shooting sound if desired
+  } else {
+    if (target.type && target.type === 'factory') {
+      unit.targetX = target.x;
+      unit.targetY = target.y;
+    } else {
+      unit.targetX = Math.floor(target.x);
+      unit.targetY = Math.floor(target.y);
+    }
+    unit.path = findPath(Math.floor(unit.x), Math.floor(unit.y), unit.targetX, unit.targetY);
+  }
 }
 
-// Handle map dragging
 function handleMapDrag(event) {
   const newX = event.clientX - map.startX + (map.offsetLeft || 0);
   const newY = event.clientY - map.startY + (map.offsetTop || 0);
@@ -616,7 +895,6 @@ function handleMapDrag(event) {
   map.style.left = newX + 'px';
   map.style.top = newY + 'px';
 
-  // Keep map within boundaries
   const mapRect = map.getBoundingClientRect();
   if (mapRect.left > 0) {
     map.style.left = '0px';
@@ -630,49 +908,40 @@ function handleMapDrag(event) {
   }
 }
 
-// Stop map dragging
 function stopMapDrag() {
   document.removeEventListener('mousemove', handleMapDrag);
   document.removeEventListener('mouseup', stopMapDrag);
 }
 
-// Initialize game
 initMap();
 initGame();
 
-// Game loop
 let lastTimestamp = 0;
 function gameLoop(timestamp) {
   if (!gamePaused) {
     const deltaTime = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
-
     updateGame(timestamp);
   }
-
   requestAnimationFrame(gameLoop);
 }
 
-// Start game
 function startGame() {
   startButton.disabled = true;
   pauseButton.disabled = false;
   restartButton.disabled = false;
   startTime = Date.now();
   gamePaused = false;
-  gameLoop(); // Start the game loop
+  gameLoop();
 }
 
-// Pause game
 function pauseGame() {
   gamePaused = true;
   pauseButton.disabled = true;
   startButton.disabled = false;
 }
 
-// Reset game
 function resetGame() {
-  // Clear existing units, structures, bullets, etc.
   units = [];
   enemyUnits = [];
   bullets = [];
@@ -683,23 +952,18 @@ function resetGame() {
     map.removeChild(targetMarker);
     targetMarker = null;
   }
-
-  // Clear the map
   map.innerHTML = '';
   occupancyMap.innerHTML = '';
-
-  // Re-initialize the map and game elements
   initMap();
   initGame();
-
-  // Reset UI
+  removeProductionUI(); // Ensure any production UI is removed
   startButton.disabled = false;
   pauseButton.disabled = true;
   restartButton.disabled = true;
   updateUi();
 }
 
-// Event listeners
+
 startButton.addEventListener('click', startGame);
 pauseButton.addEventListener('click', pauseGame);
 restartButton.addEventListener('click', resetGame);
@@ -711,19 +975,15 @@ document.addEventListener('keydown', (event) => {
     showOccupancyMap = !showOccupancyMap;
     occupancyMap.style.display = showOccupancyMap ? 'block' : 'none';
   } else if (event.key === 'h') {
-    // Show help alert with controls
     alert('Controls:\n' +
-          'Right-click and drag: Scroll map\n' +
-          'Left-click on unit: Select unit\n' +
-          'Left-click on tile: Move selected unit\n' +
-          'Left-click on enemy unit/structure: Attack with selected unit\n' +
-          'O key: Toggle occupancy map overlay\n' +
-          'H key: Show this help');
+      'Right-click and drag: Scroll map\n' +
+      'Left-click on unit: Select unit\n' +
+      'Left-click on tile: Move selected unit\n' +
+      'Left-click on enemy unit/structure: Attack with selected unit\n' +
+      'O key: Toggle occupancy map overlay\n' +
+      'H key: Show this help');
   }
 });
-
-// ... (Add more event listeners for user input)
 </script>
-
 </body>
 </html>
