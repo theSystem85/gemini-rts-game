@@ -521,11 +521,6 @@ function updateUi() {
   timeDisplay.textContent = 0;
 }
 
-// Reset game state
-function resetGame() {
-  // ... (Implementation of game reset)
-}
-
 // Handle user input
 function handleInput(event) {
   if (gamePaused) return;
@@ -536,10 +531,17 @@ function handleInput(event) {
 
   if (event.type === 'mousedown') {
     if (event.button === 2) { // Right-click: Start map scrolling
-      map.startX = event.clientX - map.offsetLeft;
-      map.startY = event.clientY - map.offsetTop;
+      map.startX = event.clientX;
+      map.startY = event.clientY;
+
       document.addEventListener('mousemove', handleMapDrag);
       document.addEventListener('mouseup', stopMapDrag);
+
+      // Prevent default context menu
+      event.preventDefault(); 
+
+      // Add this line to specifically disable context menu on the map element:
+      map.addEventListener('contextmenu', (e) => e.preventDefault());
     } else if (event.button === 0) { // Left-click: Unit/structure selection, movement, attack
       const clickedUnit = units.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
       const clickedEnemyUnit = enemyUnits.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
@@ -608,8 +610,9 @@ function attackTarget(unit, target) {
 
 // Handle map dragging
 function handleMapDrag(event) {
-  const newX = event.clientX - map.startX;
-  const newY = event.clientY - map.startY;
+  const newX = event.clientX - map.startX + (map.offsetLeft || 0);
+  const newY = event.clientY - map.startY + (map.offsetTop || 0);
+
   map.style.left = newX + 'px';
   map.style.top = newY + 'px';
 
@@ -700,6 +703,8 @@ function resetGame() {
 startButton.addEventListener('click', startGame);
 pauseButton.addEventListener('click', pauseGame);
 restartButton.addEventListener('click', resetGame);
+
+map.addEventListener('contextmenu', (e) => e.preventDefault());
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'o') {
