@@ -89,17 +89,16 @@ body, html {
 </style>
 </head>
 <body>
-
-<div id="map"></div>
-<div id="ui">
-  Money: <span id="money">1000</span><br>
-  Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span><br>
-  Time: <span id="time">0</span>s<br>
-  <button id="start">Start</button>
-  <button id="pause" disabled>Pause</button>
-  <button id="restart" disabled>Restart</button>
-</div>
-<div id="occupancy-map"></div>
+  <div id="map"></div>
+  <div id="ui">
+    Money: <span id="money">1000</span><br>
+    Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span><br>
+    Time: <span id="time">0</span>s<br>
+    <button id="start">Start</button>
+    <button id="pause" disabled>Pause</button>
+    <button id="restart" disabled>Restart</button>
+  </div>
+  <div id="occupancy-map"></div>
 
 <script>
 const mapWidth = 100;
@@ -529,7 +528,109 @@ function resetGame() {
 
 // Handle user input
 function handleInput(event) {
-  // ... (Implementation of user input handling)
+  if (gamePaused) return;
+
+  const mapRect = map.getBoundingClientRect();
+  const x = Math.floor((event.clientX - mapRect.left) / tileSize);
+  const y = Math.floor((event.clientY - mapRect.top) / tileSize);
+
+  if (event.type === 'mousedown') {
+    if (event.button === 2) { // Right-click: Start map scrolling
+      map.startX = event.clientX - map.offsetLeft;
+      map.startY = event.clientY - map.offsetTop;
+      document.addEventListener('mousemove', handleMapDrag);
+      document.addEventListener('mouseup', stopMapDrag);
+    } else if (event.button === 0) { // Left-click: Unit/structure selection, movement, attack
+      const clickedUnit = units.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
+      const clickedEnemyUnit = enemyUnits.find(unit => Math.floor(unit.x) === x && Math.floor(unit.y) === y);
+      const clickedStructure = structures.find(structure => 
+        x >= structure.x && x < structure.x + structure.width &&
+        y >= structure.y && y < structure.y + structure.height
+      );
+      const clickedEnemyStructure = enemyStructures.find(structure => 
+        x >= structure.x && x < structure.x + structure.width &&
+        y >= structure.y && y < structure.y + structure.height
+      );
+
+      if (clickedUnit) { // Select unit
+        selectUnit(clickedUnit);
+      } else if (clickedEnemyUnit) { // Attack enemy unit
+        if (selectedUnit) {
+          attackTarget(selectedUnit, clickedEnemyUnit);
+        }
+      } else if (clickedStructure) { // Select structure (if needed)
+        // ... (Implementation for selecting structures)
+      } else if (clickedEnemyStructure) { // Attack enemy structure
+        if (selectedUnit) {
+          attackTarget(selectedUnit, clickedEnemyStructure);
+        }
+      } else { // Move selected unit
+        if (selectedUnit) {
+          moveSelectedUnit(x, y);
+        }
+      }
+    }
+  }
+}
+
+// Select a unit
+function selectUnit(unit) {
+  if (selectedUnit) {
+    selectedUnit.div.classList.remove('selected');
+  }
+  selectedUnit = unit;
+  selectedUnit.div.classList.add('selected');
+}
+
+// Move the selected unit to a target tile
+function moveSelectedUnit(x, y) {
+  selectedUnit.targetX = x;
+  selectedUnit.targetY = y;
+  selectedUnit.path = findPath(selectedUnit.x, selectedUnit.y, x, y);
+
+  // Show target marker
+  if (!targetMarker) {
+    targetMarker = document.createElement('div');
+    targetMarker.style.position = 'absolute';
+    targetMarker.style.width = tileSize + 'px';
+    targetMarker.style.height = tileSize + 'px';
+    targetMarker.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+    map.appendChild(targetMarker);
+  }
+  targetMarker.style.left = x * tileSize + 'px';
+  targetMarker.style.top = y * tileSize + 'px';
+}
+
+// Attack a target with the selected unit
+function attackTarget(unit, target) {
+  // ... (Implementation for attacking units/structures)
+}
+
+// Handle map dragging
+function handleMapDrag(event) {
+  const newX = event.clientX - map.startX;
+  const newY = event.clientY - map.startY;
+  map.style.left = newX + 'px';
+  map.style.top = newY + 'px';
+
+  // Keep map within boundaries
+  const mapRect = map.getBoundingClientRect();
+  if (mapRect.left > 0) {
+    map.style.left = '0px';
+  } else if (mapRect.right < window.innerWidth) {
+    map.style.left = window.innerWidth - mapRect.width + 'px';
+  }
+  if (mapRect.top > 0) {
+    map.style.top = '0px';
+  } else if (mapRect.bottom < window.innerHeight) {
+    map.style.top = window.innerHeight - mapRect.height + 'px';
+  }
+}
+
+// Stop map dragging
+function stopMapDrag() {
+  document.removeEventListener('mousemove', handleMapDrag);
+  document.removeEventListener('mouseup', stopMapDrag);
 }
 
 // Initialize game
@@ -539,27 +640,66 @@ initGame();
 // Game loop
 let lastTimestamp = 0;
 function gameLoop(timestamp) {
-  const deltaTime = timestamp - lastTimestamp;
-  lastTimestamp = timestamp;
+  if (!gamePaused) {
+    const deltaTime = timestamp - lastTimestamp;
+    lastTimestamp = timestamp;
 
-  updateGame(timestamp);
+    updateGame(timestamp);
+  }
 
   requestAnimationFrame(gameLoop);
 }
-requestAnimationFrame(gameLoop);
+
+// Start game
+function startGame() {
+  startButton.disabled = true;
+  pauseButton.disabled = false;
+  restartButton.disabled = false;
+  startTime = Date.now();
+  gamePaused = false;
+  gameLoop(); // Start the game loop
+}
+
+// Pause game
+function pauseGame() {
+  gamePaused = true;
+  pauseButton.disabled = true;
+  startButton.disabled = false;
+}
+
+// Reset game
+function resetGame() {
+  // Clear existing units, structures, bullets, etc.
+  units = [];
+  enemyUnits = [];
+  bullets = [];
+  structures = [];
+  enemyStructures = [];
+  selectedUnit = null;
+  if (targetMarker) {
+    map.removeChild(targetMarker);
+    targetMarker = null;
+  }
+
+  // Clear the map
+  map.innerHTML = '';
+  occupancyMap.innerHTML = '';
+
+  // Re-initialize the map and game elements
+  initMap();
+  initGame();
+
+  // Reset UI
+  startButton.disabled = false;
+  pauseButton.disabled = true;
+  restartButton.disabled = true;
+  updateUi();
+}
 
 // Event listeners
-startButton.addEventListener('click', () => {
-  // ... (Implementation of start button functionality)
-});
-
-pauseButton.addEventListener('click', () => {
-  // ... (Implementation of pause button functionality)
-});
-
-restartButton.addEventListener('click', () => {
-  // ... (Implementation of restart button functionality)
-});
+startButton.addEventListener('click', startGame);
+pauseButton.addEventListener('click', pauseGame);
+restartButton.addEventListener('click', resetGame);
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'o') {
