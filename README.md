@@ -31,6 +31,10 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
    1.3 Map Scrolling
        1.3.1 Enable map scrolling with right-click and drag, restricted within map boundaries.
+    1.4 Build sidebar
+        - on the left side of the screen is a sidebar that contains all stats and build options as tiles/buttons
+        - the sidebar should not cover map content
+        - on top of the sidebar there is a little frame with a mini map of the whole game map
 
 2. Structures
    2.1 Factory Building
@@ -58,7 +62,9 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
              - use A* path finding algorithm to get over blocked map areas to their targets
              - two units can not occupy the same tile at once (implement an occupancy map overlay that can be toggled on and off for debugging visibility by pressing the o key)
        3.1.2 Actions
-             - Move: Command tanks to move to specific tiles with a visible highlight for the selected unit.
+             - Move:
+               - Command tanks to move to specific tiles with a visible highlight for the selected unit.
+               - Units start to move when user has selected them and clicks on an unoccupied place on the map.
              - Shoot:
               - Attack enemy tanks or factories with visible targeting indicators.
               - range of tanks is 4 tiles for their bullets
