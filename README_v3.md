@@ -130,12 +130,16 @@ ERROR PREVENTION AND DEBUGGING INSTRUCTIONS
 7.4.1. Validate that inertia calculations never allow the scroll offset to exceed the map boundaries.
 7.5. Multi-Unit Selection
 7.5.1. Clearly define the conversion from screen coordinates to world coordinates when determining which units fall within the selection box.
+7.5.2. Ensure singe unit selection is still possible in addition to multi unit selection. If user clicks on a unit it gets selected.
+7.5.3. When dragging a bounding box prevent unit from moving directly to the point when mouse click was released. the selection (left mouse button down, move cursor, release mouse button) itself should not result in a movement!
+7.5.4. When a unit is selected the cursor changes to indicate that the unit can now move to target.
 7.6. Timers and Cooldowns
 7.6.1. Ensure that production timers, harvest timers, and shooting cooldowns are correctly updated and reset to avoid unintended behavior.
 7.7. Preventing Crashes During Combat
 7.7.1. When tanks are in range of each other, ensure that the simultaneous shooting and movement logic is carefully handled to prevent the game from crashing.
 7.7.2. Include error handling (try/catch blocks) in critical update functions to log and bypass errors without freezing the game.
 7.8 Prevent newly created units from spawning into an occupied area. Make any unit that blocks the spawing place move automatically to the next tile to unblock.
+
 
 GENERAL REQUIREMENTS
 8.1. The entire game (HTML, CSS, JavaScript) must be implemented 3 different files. complete code blocks with inline assets so that it works immediately without additional setup.
