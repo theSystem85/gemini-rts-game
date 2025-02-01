@@ -27,6 +27,11 @@ let lastDragPos = { x: 0, y: 0 }
 let dragVelocity = { x: 0, y: 0 }
 const INERTIA_DECAY = 0.95
 
+// New globals for automatic enemy production
+let enemyLastProductionTime = performance.now()
+const enemyProductionInterval = 10000 // 10 seconds
+const enemyGroupSize = 3
+
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
 const minimapCanvas = document.getElementById('minimap')
@@ -234,6 +239,7 @@ function spawnUnit (factory, unitType) {
   }
   units.push(unit)
   playSound('productionStart')
+  return unit
 }
 
 // ========= SOUND EFFECTS =========
@@ -278,7 +284,7 @@ gameCanvas.addEventListener('mousedown', e => {
   }
 })
 
-// --- Mousemove: update scrolling or track selection bounding box ---
+// --- Mousemove: update scrolling, track selection, and update hover cursor ---
 gameCanvas.addEventListener('mousemove', e => {
   const rect = gameCanvas.getBoundingClientRect()
   const worldX = e.clientX - rect.left + scrollOffset.x
@@ -299,9 +305,67 @@ gameCanvas.addEventListener('mousemove', e => {
       wasDragging = true
     }
   }
+  // --- New hover-cursor logic (Requirements 3.1.5.1–3) ---
+  if (!isRightDragging && !isSelecting && e.buttons === 0) {
+    const rect = gameCanvas.getBoundingClientRect()
+    const worldX = e.clientX - rect.left + scrollOffset.x
+    const worldY = e.clientY - rect.top + scrollOffset.y
+    if (selectedUnits.length > 0) {
+      const targetTile = { x: Math.floor(worldX / TILE_SIZE), y: Math.floor(worldY / TILE_SIZE) }
+      let targetObject = null
+      // Check enemy factory first
+      for (const factory of factories) {
+        if (factory.id === 'enemy' &&
+            targetTile.x >= factory.x && targetTile.x < factory.x + factory.width &&
+            targetTile.y >= factory.y && targetTile.y < factory.y + factory.height) {
+          targetObject = factory
+          break
+        }
+      }
+      // Then check enemy units
+      if (!targetObject) {
+        for (const unit of units) {
+          if (unit.owner !== 'player' &&
+              Math.floor(unit.x / TILE_SIZE) === targetTile.x &&
+              Math.floor(unit.y / TILE_SIZE) === targetTile.y) {
+            targetObject = unit
+            break
+          }
+        }
+      }
+      const selUnit = selectedUnits[0]
+      const path = findPath({ x: selUnit.tileX, y: selUnit.tileY }, targetTile)
+      if (path.length === 0) {
+        gameCanvas.style.cursor = 'not-allowed'
+      } else if (targetObject) {
+        let targetCenter = null
+        if ('tileX' in targetObject) { // enemy unit
+          targetCenter = { x: targetObject.x + TILE_SIZE / 2, y: targetObject.y + TILE_SIZE / 2 }
+        } else { // enemy factory
+          targetCenter = { x: (targetObject.x + (targetObject.width * TILE_SIZE) / 2), y: (targetObject.y + (targetObject.height * TILE_SIZE) / 2) }
+        }
+        const selCenter = { x: selUnit.x + TILE_SIZE / 2, y: selUnit.y + TILE_SIZE / 2 }
+        const dx = targetCenter.x - selCenter.x
+        const dy = targetCenter.y - selCenter.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const TANK_FIRE_RANGE = TILE_SIZE * 2
+        if (dist <= TANK_FIRE_RANGE) {
+          // Immediate attack possible (in range)
+          gameCanvas.style.cursor = 'pointer'
+        } else {
+          // Enemy present but out of fire range
+          gameCanvas.style.cursor = 'crosshair'
+        }
+      } else {
+        gameCanvas.style.cursor = 'move'
+      }
+    } else {
+      gameCanvas.style.cursor = 'default'
+    }
+  }
 })
 
-// --- Mouseup: finish selection or issue move/attack orders (fixing bug #1) ---
+// --- Mouseup: finish selection or issue move/attack orders (fixing tank movement bug) ---
 gameCanvas.addEventListener('mouseup', e => {
   if (e.button === 2) {
     isRightDragging = false
@@ -347,14 +411,13 @@ gameCanvas.addEventListener('mouseup', e => {
         }
       }
       if (clickedUnit) {
-        // Select the clicked unit.
         selectedUnits.forEach(u => u.selected = false)
         selectedUnits = [clickedUnit]
         clickedUnit.selected = true
         playSound('unitSelection')
         gameCanvas.style.cursor = 'move'
       } else if (selectedUnits.length > 0) {
-        // No player unit was clicked; issue move/attack orders for selected units.
+        // No player unit was clicked; issue move/attack orders.
         const targetTile = { x: Math.floor(worldX / TILE_SIZE), y: Math.floor(worldY / TILE_SIZE) }
         let target = null
         // Check enemy factory.
@@ -402,7 +465,7 @@ gameCanvas.addEventListener('mouseup', e => {
   }
 })
 
-// --- Minimap click (fixing bug #2): recenter main view based on minimap click ---
+// --- Minimap click: recenter main view based on minimap click (bug fix #2) ---
 minimapCanvas.addEventListener('click', e => {
   const rect = minimapCanvas.getBoundingClientRect()
   const clickX = e.clientX - rect.left
@@ -413,7 +476,7 @@ minimapCanvas.addEventListener('click', e => {
   scrollOffset.y = Math.max(0, Math.min(clickY * scaleY - gameCanvas.height / 2, MAP_HEIGHT - gameCanvas.height))
 })
 
-// ========= UI BUTTONS (fixing bug #3: toggle start/pause) =========
+// ========= UI BUTTONS (Toggle Start/Pause; bug fix #3) =========
 
 pauseBtn.addEventListener('click', () => {
   if (!gameStarted) {
@@ -444,6 +507,17 @@ produceBtn.addEventListener('click', () => {
 
 function updateGame (delta) {
   if (gamePaused) return
+
+  // --- New Enemy Production (Requirement 3.3.4) ---
+  let now = performance.now()
+  if (now - enemyLastProductionTime >= enemyProductionInterval) {
+    for (let i = 0; i < enemyGroupSize; i++) {
+      let enemyUnit = spawnUnit(factories[1], 'tank')
+      enemyUnit.path = findPath({ x: enemyUnit.tileX, y: enemyUnit.tileY }, { x: factories[0].x, y: factories[0].y }).slice(1)
+      enemyUnit.target = factories[0]
+    }
+    enemyLastProductionTime = now
+  }
 
   gameTime += delta / 1000
 
@@ -632,6 +706,43 @@ function renderGame () {
       gameCtx.beginPath()
       gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3 + 3, 0, 2 * Math.PI)
       gameCtx.stroke()
+    }
+    // --- New: Draw turret for tanks (Requirement 3.1.5.4) ---
+    if (unit.type === 'tank' && unit.target) {
+      const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+      const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+      let targetCenter = null
+      if ('tileX' in unit.target) {
+        targetCenter = { x: unit.target.x + TILE_SIZE / 2 - scrollOffset.x, y: unit.target.y + TILE_SIZE / 2 - scrollOffset.y }
+      } else {
+        targetCenter = { x: (unit.target.x + (unit.target.width * TILE_SIZE) / 2) - scrollOffset.x, y: (unit.target.y + (unit.target.height * TILE_SIZE) / 2) - scrollOffset.y }
+      }
+      const dx = targetCenter.x - centerX
+      const dy = targetCenter.y - centerY
+      const angle = Math.atan2(dy, dx)
+      const turretLength = 10
+      const turretEndX = centerX + Math.cos(angle) * turretLength
+      const turretEndY = centerY + Math.sin(angle) * turretLength
+      gameCtx.strokeStyle = '#000'
+      gameCtx.lineWidth = 2
+      gameCtx.beginPath()
+      gameCtx.moveTo(centerX, centerY)
+      gameCtx.lineTo(turretEndX, turretEndY)
+      gameCtx.stroke()
+    }
+    // --- New: Harvester harvesting progress bar (Requirement 3.2.8) ---
+    if (unit.type === 'harvester' && unit.harvesting) {
+      const progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1)
+      const barWidth = TILE_SIZE
+      const barHeight = 4
+      const x = unit.x - scrollOffset.x
+      const y = unit.y + TILE_SIZE - scrollOffset.y
+      gameCtx.fillStyle = '#555'
+      gameCtx.fillRect(x, y, barWidth, barHeight)
+      gameCtx.fillStyle = '#0F0'
+      gameCtx.fillRect(x, y, barWidth * progress, barHeight)
+      gameCtx.strokeStyle = '#000'
+      gameCtx.strokeRect(x, y, barWidth, barHeight)
     }
   })
   bullets.forEach(bullet => {
