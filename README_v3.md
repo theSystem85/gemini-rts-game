@@ -16,6 +16,7 @@ Build me an RTS game with these Criteria: GENERAL SETUP
 1.2.3. Water, rock, and street features should be placed in connected patterns rather than randomly.
 1.2.4. Carve an L-shaped corridor between the player and enemy factories so that water and rocks do not block the path between bases.
 1.2.5. Ore should have a growth/spread mechanism to adjacent land tiles; set the spread interval to be three times slower than the original (e.g., 90000 ms) and include a probability factor.
+1.2.6. Ensure there is always at least one street that ranges from one base to the other
 
 1.3. Map Scrolling and Inertia
 1.3.1. The map must be scrollable using right-click and drag, with movement restricted within the map boundaries.
@@ -45,8 +46,11 @@ UNITS
 3.1.3. Tanks cannot occupy the same tile simultaneously; implement an occupancy check.
 3.1.4. Tanks should be selectable (single selection and multi-selection via bounding box) and visibly highlighted when selected.
 3.1.5. Tanks must be ordered to move to a specific target tile; if the target is an enemy unit or building, they must approach within range and fire.
-3.1.5.1 When target to move is blocked change mouse cursor to indicate it.
-3.1.5.2 When target to move is an enemy unit or building change mouse cursor to indicate an attack is possible.
+3.1.5.1. When target to move is blocked change mouse cursor to indicate it on mouse hover.
+3.1.5.2. When target to move is an enemy unit or building change mouse cursor on hover to indicate an attack is possible.
+3.1.5.3. When target to attack is within fire range change mouse cursor on hover to indicate an attack is possible without need to move.
+3.1.5.4. Every tank has a turret indicated by a short line that points at the direction of the current target being attacked.
+3.1.5.5. Ensure every bullet fired goes directly at target direction when aiming at buildings and units!
 3.1.6. Increase tank movement speed by 100% (i.e., double the base speed compared to the original version).
 3.1.7. Tanks must fire bullets when enemy targets are within range; if multiple bullets are required (e.g., 3–5 hits) to destroy a tank, implement randomized damage scaling (e.g., between 0.8× and 1.2× of a base damage value).
 3.1.8. Prevent tanks from getting stuck when in range of an enemy; ensure they continue to fire and can also move if new commands are issued.
@@ -61,11 +65,13 @@ UNITS
 3.2.5. Harvesters have a capacity to hold 5 ore units; once full, they must return to the player factory to unload.
 3.2.6. Upon unloading at the factory, the player should receive $500, and the harvester’s ore capacity resets.
 3.2.7. Ensure that harvester unloading and ore harvesting are reliably implemented without UI glitches.
+3.2.8. show a progress bar below the health bar when harvester is harvesting ore
 
 3.3. Enemy Tanks
 3.3.1. Enemy tanks are controlled by a basic AI that moves them toward the player’s factory and/or player units.
 3.3.2. Enemy tanks must follow the same movement, targeting, and firing rules as player tanks (including randomized damage and multiple-hit destruction).
 3.3.3. Ensure that enemy tanks take damage correctly and do not cause crashes when in proximity to player tanks.
+3.3.4. Ensure that enemy tanks get produced automatically at the enemy base and are assigned in small groups to attack the players base!
 
 BULLETS
 4.1. Bullets must be rendered with visible trajectories that allow the player to track their movement across the screen.
