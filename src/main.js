@@ -1,13 +1,14 @@
-import { MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { gameState } from './gameState.js'
-import { setupInputHandlers } from './inputHandler.js'
+import { tileToPixel } from './utils.js'
+import { setupInputHandlers, selectedUnits } from './inputHandler.js'
 import { renderGame, renderMinimap } from './rendering.js'
 import { spawnUnit } from './units.js'
 import { initFactories } from './factories.js'
 import { playSound } from './sound.js'
 import { updateGame } from './logic.js'
 
-// Get DOM elements
+// DOM-Elemente
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
 const minimapCanvas = document.getElementById('minimap')
@@ -21,35 +22,51 @@ const produceBtn = document.getElementById('produceBtn')
 const productionProgressEl = document.getElementById('productionProgress')
 const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
+const sidebar = document.getElementById('sidebar')
 
-// Set up toggle button for start/pause (Requirement bug #3)
-pauseBtn.textContent = 'Start'
+// Entferne redundanten Start-Button – es wird nur der Toggle (Start/Resume) verwendet
+// Setze die Sidebar in den Dark Mode:
+sidebar.style.backgroundColor = '#333'
+sidebar.style.color = '#fff'
 
-// Create and initialize map grid
+// Canvas-Größen setzen
+function resizeCanvases() {
+  gameCanvas.width = window.innerWidth - 250
+  gameCanvas.height = window.innerHeight
+  minimapCanvas.width = 250   // z. B. fix
+  minimapCanvas.height = 150
+}
+window.addEventListener('resize', resizeCanvases)
+resizeCanvases()
+
+// Erstelle Map-Grid
 export const mapGrid = []
-window.mapGrid = mapGrid // make accessible for modules that need it (like inputHandler)
 for (let y = 0; y < MAP_TILES_Y; y++) {
   mapGrid[y] = []
   for (let x = 0; x < MAP_TILES_X; x++) {
     mapGrid[y][x] = { type: 'land' }
   }
 }
-// Add patterns to mapGrid (water, rock, street, random ore) – same as in the monolithic version
+// Füge Features hinzu
+// Wasser: horizontales Flussband
 for (let y = 45; y < 55; y++) {
   for (let x = 10; x < MAP_TILES_X - 10; x++) {
     mapGrid[y][x].type = 'water'
   }
 }
+// Felsen: vertikale Formation
 for (let y = 20; y < 80; y++) {
   for (let x = 5; x < 15; x++) {
     mapGrid[y][x].type = 'rock'
   }
 }
+// Straße (wird später durch den Korridor überschrieben)
 for (let y = 70; y < 75; y++) {
   for (let x = 50; x < MAP_TILES_X - 5; x++) {
     mapGrid[y][x].type = 'street'
   }
 }
+// Zufällige Ore-Patches
 for (let i = 0; i < 100; i++) {
   const x = Math.floor(Math.random() * MAP_TILES_X)
   const y = Math.floor(Math.random() * MAP_TILES_Y)
@@ -58,18 +75,18 @@ for (let i = 0; i < 100; i++) {
   }
 }
 
-// Initialize factories
+// Initialisiere Fabriken
 const factories = []
 initFactories(factories, mapGrid)
 
-// Global arrays for units and bullets
+// Globale Arrays für Einheiten und Geschosse
 const units = []
 const bullets = []
 
-// Set up input handlers (pass units and factories so that input logic can check for enemy objects)
-setupInputHandlers(units, factories)
+// Setze Input-Handler (übergebe Einheiten, Fabriken und das Map-Grid)
+setupInputHandlers(units, factories, mapGrid)
 
-// Production variables for player's factory
+// Produktions-Variablen für die Spielerfabrik
 let production = {
   inProgress: false,
   unitType: null,
@@ -104,28 +121,26 @@ restartBtn.addEventListener('click', () => {
   window.location.reload()
 })
 
-function resizeCanvases() {
-  gameCanvas.width = window.innerWidth - 250
-  gameCanvas.height = window.innerHeight
-  minimapCanvas.width = minimapCanvas.clientWidth
-  minimapCanvas.height = minimapCanvas.clientHeight
-}
-window.addEventListener('resize', resizeCanvases)
-resizeCanvases()
-
 let lastTime = performance.now()
 function gameLoop(time) {
   const delta = time - lastTime
   lastTime = time
   if (gameState.gameStarted && !gameState.gamePaused) {
-    updateGame(delta, mapGrid, factories, units, bullets)
+    updateGame(delta, mapGrid, factories, units, bullets, gameState)
   }
-  // Handle production progress
   if (production.inProgress) {
     const elapsed = performance.now() - production.startTime
     productionProgressEl.textContent = `${Math.floor((elapsed / production.duration) * 100)}%`
     if (elapsed >= production.duration) {
       const newUnit = spawnUnit(factories[0], production.unitType, units)
+      newUnit.x = newUnit.tileX * TILE_SIZE
+      newUnit.y = newUnit.tileY * TILE_SIZE
+      newUnit.path = []
+      newUnit.target = null
+      newUnit.health = production.unitType === 'tank' ? 100 : 150
+      newUnit.maxHealth = newUnit.health
+      newUnit.speed = production.unitType === 'tank' ? 2 : 1
+      newUnit.owner = 'player'
       units.push(newUnit)
       production.inProgress = false
       productionProgressEl.textContent = ''
@@ -133,7 +148,7 @@ function gameLoop(time) {
     }
   }
   renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.scrollOffset, false, null, null)
-  renderMinimap(minimapCtx, minimapCanvas, mapGrid, gameState.scrollOffset, gameCanvas)
+  renderMinimap(minimapCtx, minimapCanvas, mapGrid, gameState.scrollOffset, gameCanvas, units)
   moneyEl.textContent = gameState.money
   gameTimeEl.textContent = Math.floor(gameState.gameTime)
   winsEl.textContent = gameState.wins

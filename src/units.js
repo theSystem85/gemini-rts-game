@@ -1,7 +1,6 @@
-import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { TILE_SIZE, MAP_TILES_X } from './config.js'
 import { getUniqueId } from './utils.js'
 
-// A simple A* pathfinding implementation. Note that we now require the mapGrid as a parameter.
 export function findPath(start, end, mapGrid) {
   const openList = []
   const closedSet = new Set()
@@ -33,7 +32,7 @@ export function findPath(start, end, mapGrid) {
       { x: current.x, y: current.y - 1 }
     ]
     for (const neighbor of neighbors) {
-      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= MAP_TILES_X || neighbor.y >= MAP_TILES_Y) continue
+      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapGrid[0].length || neighbor.y >= mapGrid.length) continue
       const tileType = mapGrid[neighbor.y][neighbor.x].type
       if (tileType === 'water' || tileType === 'rock') continue
       if (closedSet.has(nodeKey(neighbor))) continue
@@ -45,21 +44,23 @@ export function findPath(start, end, mapGrid) {
       openList.push({ x: neighbor.x, y: neighbor.y, g: gScore, h: hScore, f: fScore, parent: current })
     }
   }
-  return []
+  return [] // Kein Pfad gefunden
 }
 
-// Spawn a unit at a factory, avoiding collisions with existing units.
-// The caller should add the returned unit to the global units array.
 export function spawnUnit(factory, unitType, units) {
   let spawnX = factory.x + factory.width
   let spawnY = factory.y
   while (units.some(u => u.tileX === spawnX && u.tileY === spawnY)) {
     spawnX++
-    if (spawnX >= MAP_TILES_X) { spawnX = factory.x; spawnY++ }
+    if (spawnX >= MAP_TILES_X) {
+      spawnX = factory.x
+      spawnY++
+    }
   }
   const unit = {
     id: getUniqueId(),
-    type: unitType, // "tank" or "harvester"
+    type: unitType,
+    owner: factory.id === 'player' ? 'player' : 'enemy',
     tileX: spawnX,
     tileY: spawnY,
     x: spawnX * TILE_SIZE,
@@ -72,8 +73,7 @@ export function spawnUnit(factory, unitType, units) {
     selected: false,
     oreCarried: 0,
     harvesting: false,
-    harvestTimer: 0,
-    owner: factory.id === 'player' ? 'player' : 'enemy'
+    harvestTimer: 0
   }
   return unit
 }

@@ -14,9 +14,5 @@ export const TILE_COLORS = {
 
 export const INERTIA_DECAY = 0.95
 
-// Enemy production settings
-export const enemyProductionInterval = 10000 // in ms
-export const enemyGroupSize = 3
-
-// Tank firing range (for cursor hover indication)
+// Tank-Fire-Range (für Cursor-Hover-Indikation)
 export const TANK_FIRE_RANGE = TILE_SIZE * 2
