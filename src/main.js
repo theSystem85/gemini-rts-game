@@ -24,7 +24,7 @@ const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
 const sidebar = document.getElementById('sidebar')
 
-// Entferne den redundanten Start-Button – nur der Toggle (Start/Resume) wird genutzt
+// Entferne redundanten Start-Button – nur der Toggle (Start/Resume) wird genutzt
 pauseBtn.textContent = 'Start'
 
 // Sidebar im Dark Mode
@@ -134,7 +134,7 @@ function gameLoop(time) {
     const elapsed = performance.now() - production.startTime
     productionProgressEl.textContent = `${Math.floor((elapsed / production.duration) * 100)}%`
     if (elapsed >= production.duration) {
-      const newUnit = spawnUnit(factories[0], production.unitType, units)
+      const newUnit = spawnUnit(factories[0], production.unitType, units, mapGrid)
       newUnit.x = newUnit.tileX * TILE_SIZE
       newUnit.y = newUnit.tileY * TILE_SIZE
       newUnit.path = []

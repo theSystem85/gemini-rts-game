@@ -53,6 +53,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
         0,
         Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - gameCanvas.height)
       )
+      // Aktualisiere Drag-Velocity für Inertia
+      gameState.dragVelocity = { x: dx, y: dy }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
     }
     if (isSelecting) {
@@ -71,9 +73,30 @@ export function setupInputHandlers(units, factories, mapGrid) {
       if (wasDragging) {
         handleBoundingBoxSelection(units)
       } else {
-        handleSingleSelection(units, e)
+        // Zuerst prüfen: Wurde _eine_ Einheit angeklickt?
+        const rect = gameCanvas.getBoundingClientRect()
+        const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+        const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+        let unitClicked = false
+        for (const unit of units) {
+          if (unit.owner === 'player') {
+            const centerX = unit.x + TILE_SIZE / 2
+            const centerY = unit.y + TILE_SIZE / 2
+            const dx = worldX - centerX
+            const dy = worldY - centerY
+            if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE / 2) {
+              unitClicked = true
+              break
+            }
+          }
+        }
+        if (unitClicked) {
+          handleSingleSelection(units, e)
+        }
+        // Falls kein Spieler-Panzer angeklickt wurde, bleibt die bestehende Selektion erhalten
       }
-      // Falls bereits eine Auswahl besteht und kein Drag stattgefunden hat, interpretiere den Klick als Zielbefehl:
+      // Zielbefehl: Wenn bereits eine Einheit selektiert ist und kein Drag erfolgte,
+      // interpretiere den Klick als Zielbefehl, ohne die Selektion zu verändern.
       if (selectedUnits.length > 0 && !wasDragging) {
         const rect = gameCanvas.getBoundingClientRect()
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
@@ -96,8 +119,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
           for (const unit of units) {
             if (
               unit.owner !== 'player' &&
-              Math.floor(unit.x / TILE_SIZE) === targetTile.x &&
-              Math.floor(unit.y / TILE_SIZE) === targetTile.y
+              unit.tileX === targetTile.x &&
+              unit.tileY === targetTile.y
             ) {
               target = unit
               break
@@ -106,78 +129,87 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
         for (const unit of selectedUnits) {
           const start = { x: unit.tileX, y: unit.tileY }
-          const end = target ? { x: target.x !== undefined ? target.x : target.tileX * TILE_SIZE, y: target.y !== undefined ? target.y : target.tileY * TILE_SIZE } : targetTile
-          const path = findPath(start, { x: Math.floor(end.x / TILE_SIZE), y: Math.floor(end.y / TILE_SIZE) }, mapGrid)
-          if (path.length > 0) {
-            unit.path = path.slice(1)
-            unit.target = target
-            playSound('movement')
+          let end;
+          if (target) {
+            end = target.id ? { x: target.x, y: target.y } : { x: target.tileX, y: target.tileY }
           } else {
-            gameCanvas.style.cursor = 'not-allowed'
+            end = targetTile;
+          }
+          const path = findPath(start, end, mapGrid, null);
+          // Hier: Wenn ein Pfad gefunden wurde und Start != Ziel, dann zuweisen.
+          if (path.length > 0 && (start.x !== end.x || start.y !== end.y)) {
+            unit.path = path.slice(1);
+            unit.target = target;
+            playSound('movement');
+          } else {
+            gameCanvas.style.cursor = 'not-allowed';
           }
         }
       }
-      isSelecting = false
-      selectionActive = false
+      isSelecting = false;
+      selectionActive = false;
     }
   })
 
   minimapCanvas.addEventListener('click', e => {
-    const rect = minimapCanvas.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const clickY = e.clientY - rect.top
-    const scaleX = (mapGrid[0].length * TILE_SIZE) / minimapCanvas.width
-    const scaleY = (mapGrid.length * TILE_SIZE) / minimapCanvas.height
-    gameState.scrollOffset.x = Math.max(0, Math.min(clickX * scaleX - gameCanvas.width / 2, mapGrid[0].length * TILE_SIZE - gameCanvas.width))
-    gameState.scrollOffset.y = Math.max(0, Math.min(clickY * scaleY - gameCanvas.height / 2, mapGrid.length * TILE_SIZE - gameCanvas.height))
-  })
+    const rect = minimapCanvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const scaleX = (mapGrid[0].length * TILE_SIZE) / minimapCanvas.width;
+    const scaleY = (mapGrid.length * TILE_SIZE) / minimapCanvas.height;
+    gameState.scrollOffset.x = Math.max(0, Math.min(clickX * scaleX - gameCanvas.width / 2, mapGrid[0].length * TILE_SIZE - gameCanvas.width));
+    gameState.scrollOffset.y = Math.max(0, Math.min(clickY * scaleY - gameCanvas.height / 2, mapGrid.length * TILE_SIZE - gameCanvas.height));
+  });
 }
 
 function handleBoundingBoxSelection(units) {
-  const x1 = Math.min(selectionStart.x, selectionEnd.x)
-  const y1 = Math.min(selectionStart.y, selectionEnd.y)
-  const x2 = Math.max(selectionStart.x, selectionEnd.x)
-  const y2 = Math.max(selectionStart.y, selectionEnd.y)
-  selectedUnits.length = 0
+  const x1 = Math.min(selectionStart.x, selectionEnd.x);
+  const y1 = Math.min(selectionStart.y, selectionEnd.y);
+  const x2 = Math.max(selectionStart.x, selectionEnd.x);
+  const y2 = Math.max(selectionStart.y, selectionEnd.y);
+  selectedUnits.length = 0;
   for (const unit of units) {
     if (unit.owner === 'player') {
-      const centerX = unit.x + TILE_SIZE / 2
-      const centerY = unit.y + TILE_SIZE / 2
+      const centerX = unit.x + TILE_SIZE / 2;
+      const centerY = unit.y + TILE_SIZE / 2;
       if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
-        unit.selected = true
-        selectedUnits.push(unit)
-        playSound('unitSelection')
+        unit.selected = true;
+        selectedUnits.push(unit);
+        playSound('unitSelection');
       } else {
-        unit.selected = false
+        unit.selected = false;
       }
     }
   }
 }
 
 function handleSingleSelection(units, event) {
-  const rect = gameCanvas.getBoundingClientRect()
-  const worldX = event.clientX - rect.left + gameState.scrollOffset.x
-  const worldY = event.clientY - rect.top + gameState.scrollOffset.y
-  for (const unit of units) {
-    unit.selected = false
-  }
-  selectedUnits.length = 0
-  let clickedUnit = null
+  const rect = gameCanvas.getBoundingClientRect();
+  const worldX = event.clientX - rect.left + gameState.scrollOffset.x;
+  const worldY = event.clientY - rect.top + gameState.scrollOffset.y;
+  // Hier nicht alle Einheiten deselektieren – nur wenn tatsächlich eine Einheit getroffen wurde.
+  let clickedUnit = null;
   for (const unit of units) {
     if (unit.owner === 'player') {
-      const centerX = unit.x + TILE_SIZE / 2
-      const centerY = unit.y + TILE_SIZE / 2
-      const dx = worldX - centerX
-      const dy = worldY - centerY
+      const centerX = unit.x + TILE_SIZE / 2;
+      const centerY = unit.y + TILE_SIZE / 2;
+      const dx = worldX - centerX;
+      const dy = worldY - centerY;
       if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE / 2) {
-        clickedUnit = unit
-        break
+        clickedUnit = unit;
+        break;
       }
     }
   }
   if (clickedUnit) {
-    clickedUnit.selected = true
-    selectedUnits.push(clickedUnit)
-    playSound('unitSelection')
+    // Aktualisiere Selektion nur, wenn ein Unit getroffen wurde.
+    // Ansonsten bleibt die bestehende Selektion erhalten.
+    for (const unit of units) {
+      unit.selected = false;
+    }
+    selectedUnits.length = 0;
+    clickedUnit.selected = true;
+    selectedUnits.push(clickedUnit);
+    playSound('unitSelection');
   }
 }

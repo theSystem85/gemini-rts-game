@@ -1,4 +1,4 @@
-import { INERTIA_DECAY, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './config.js'
+import { INERTIA_DECAY, TILE_SIZE } from './config.js'
 import { spawnUnit, findPath, buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 
@@ -6,23 +6,29 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   if (gameState.gamePaused) return;
 
   const now = performance.now();
-
-  // Erstelle Occupancy-Map basierend auf den aktuellen Einheitenpositionen
+  // Erstelle Occupancy-Map basierend auf aktuellen Einheitenpositionen
   const occupancyMap = buildOccupancyMap(units, mapGrid);
 
-  // Gegnerproduktion: Alle 10 Sekunden und nur wenn Budget vorhanden ist
+  // Gegnerproduktion: Alle 10 Sekunden, aber nur wenn Budget vorhanden ist
   const enemyFactory = factories.find(f => f.id === 'enemy');
   const enemyTankCost = 1000;
   if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory.budget >= enemyTankCost) {
     for (let i = 0; i < 3; i++) {
-      const enemyUnit = spawnUnit(enemyFactory, 'tank', units);
+      if (enemyFactory.budget < enemyTankCost) break;
+      const enemyUnit = spawnUnit(enemyFactory, 'tank', units, mapGrid);
       units.push(enemyUnit);
-      const path = findPath({ x: enemyUnit.tileX, y: enemyUnit.tileY }, { x: factories.find(f => f.id === 'player').x, y: factories.find(f => f.id === 'player').y }, mapGrid, occupancyMap);
+      const path = findPath(
+        { x: enemyUnit.tileX, y: enemyUnit.tileY },
+        { x: factories.find(f => f.id === 'player').x, y: factories.find(f => f.id === 'player').y },
+        mapGrid,
+        occupancyMap
+      );
       if (path.length > 1) {
         enemyUnit.path = path.slice(1);
       }
       enemyUnit.target = factories.find(f => f.id === 'player');
       enemyFactory.budget -= enemyTankCost;
+      enemyFactory.budget = Math.max(0, enemyFactory.budget);
     }
     gameState.enemyLastProductionTime = now;
   }
@@ -31,14 +37,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // Inertia beim Scrolling
   if (!gameState.isRightDragging) {
-    gameState.scrollOffset.x = Math.max(
-      0,
-      Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, mapGrid[0].length * TILE_SIZE - window.innerWidth + 250)
-    );
-    gameState.scrollOffset.y = Math.max(
-      0,
-      Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, mapGrid.length * TILE_SIZE - window.innerHeight)
-    );
+    const maxScrollX = mapGrid[0].length * TILE_SIZE - (window.innerWidth - 250);
+    const maxScrollY = mapGrid.length * TILE_SIZE - window.innerHeight;
+    gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX));
+    gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, maxScrollY));
     gameState.dragVelocity.x *= INERTIA_DECAY;
     gameState.dragVelocity.y *= INERTIA_DECAY;
   }
@@ -52,7 +54,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       const dy = targetPos.y - unit.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (distance < unit.speed) {
-        // Überprüfe, ob der Tile bereits durch eine andere Einheit belegt ist
         if (!occupancyMap[nextTile.y][nextTile.x] || (nextTile.x === unit.tileX && nextTile.y === unit.tileY)) {
           unit.x = targetPos.x;
           unit.y = targetPos.y;
@@ -66,7 +67,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     } else {
       if (unit.target && unit.type === 'tank') {
-        // Berechne den Mittelpunkt des Ziels
         let targetCenterX, targetCenterY;
         if (unit.target.tileX !== undefined) {
           targetCenterX = unit.target.x + TILE_SIZE / 2;
@@ -77,7 +77,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
         const unitCenterX = unit.x + TILE_SIZE / 2;
         const unitCenterY = unit.y + TILE_SIZE / 2;
-        // Erstelle ein Geschoss in Richtung Zielmittelpunkt
         const bullet = {
           id: Date.now() + Math.random(),
           x: unitCenterX,
@@ -93,7 +92,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
-    // Logik für Harvester (sowohl Spieler als auch Gegner)
+    // Logik für Harvester
     if (unit.type === 'harvester' && !unit.harvesting) {
       const tileX = Math.floor(unit.x / TILE_SIZE);
       const tileY = Math.floor(unit.y / TILE_SIZE);
@@ -108,7 +107,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         unit.oreCarried++;
         unit.harvesting = false;
         if (unit.oreCarried >= 5) {
-          // Bei Gegner-Harvestern: zum Gegner-Fabrik fahren
           const targetFactory = unit.owner === 'player' ? factories.find(f => f.id === 'player') : factories.find(f => f.id === 'enemy');
           const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: targetFactory.x, y: targetFactory.y }, mapGrid, occupancyMap);
           if (path.length > 1) {
@@ -163,14 +161,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         playSound('bulletHit');
         if (bullet.target.health <= 0) {
           bullet.target.health = 0;
-          // Hier ggf. Einheit entfernen (nicht vollständig implementiert)
+          // Optionale Entfernung der Einheit
         }
       }
     } else {
       bullet.x += (dx / distance) * bullet.speed;
       bullet.y += (dy / distance) * bullet.speed;
-      // Verhindere, dass Geschosse den Mapbereich verlassen
-      if (bullet.x < 0 || bullet.x > MAP_WIDTH || bullet.y < 0 || bullet.y > MAP_HEIGHT) {
+      if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE || bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
         bullet.active = false;
       }
     }
