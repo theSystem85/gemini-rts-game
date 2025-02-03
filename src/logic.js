@@ -6,7 +6,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   if (gameState.gamePaused) return;
 
   const now = performance.now();
-  // Erstelle Occupancy-Map basierend auf aktuellen Einheitenpositionen
   const occupancyMap = buildOccupancyMap(units, mapGrid);
 
   // Gegnerproduktion: Alle 10 Sekunden, aber nur wenn Budget vorhanden ist
@@ -47,13 +46,18 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // Update der Einheitenbewegung
   units.forEach(unit => {
+    // Falls Einheit auf "street": Geschwindigkeit verdoppeln
+    let effectiveSpeed = unit.speed;
+    if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
+      effectiveSpeed *= 2;
+    }
     if (unit.path && unit.path.length > 0) {
       const nextTile = unit.path[0];
       const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE };
       const dx = targetPos.x - unit.x;
       const dy = targetPos.y - unit.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance < unit.speed) {
+      const distance = Math.hypot(dx, dy);
+      if (distance < effectiveSpeed) {
         if (!occupancyMap[nextTile.y][nextTile.x] || (nextTile.x === unit.tileX && nextTile.y === unit.tileY)) {
           unit.x = targetPos.x;
           unit.y = targetPos.y;
@@ -62,11 +66,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           unit.path.shift();
         }
       } else {
-        unit.x += (dx / distance) * unit.speed;
-        unit.y += (dy / distance) * unit.speed;
+        unit.x += (dx / distance) * effectiveSpeed;
+        unit.y += (dy / distance) * effectiveSpeed;
       }
     } else {
       if (unit.target && unit.type === 'tank') {
+        const unitCenterX = unit.x + TILE_SIZE / 2;
+        const unitCenterY = unit.y + TILE_SIZE / 2;
         let targetCenterX, targetCenterY;
         if (unit.target.tileX !== undefined) {
           targetCenterX = unit.target.x + TILE_SIZE / 2;
@@ -75,20 +81,22 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           targetCenterX = unit.target.x + (unit.target.width * TILE_SIZE) / 2;
           targetCenterY = unit.target.y + (unit.target.height * TILE_SIZE) / 2;
         }
-        const unitCenterX = unit.x + TILE_SIZE / 2;
-        const unitCenterY = unit.y + TILE_SIZE / 2;
-        const bullet = {
-          id: Date.now() + Math.random(),
-          x: unitCenterX,
-          y: unitCenterY,
-          target: unit.target,
-          speed: 4,
-          baseDamage: 20,
-          active: true
-        };
-        bullets.push(bullet);
-        playSound('shoot');
-        unit.target = null;
+        const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+        // Falls in Reichweite (4 Zellen)
+        if (dist <= 4 * TILE_SIZE) {
+          // FEUER: Erzeuge Bullet – Ziel bleibt bestehen, damit kontinuierlich gefeuert werden kann
+          const bullet = {
+            id: Date.now() + Math.random(),
+            x: unitCenterX,
+            y: unitCenterY,
+            target: unit.target,
+            speed: 4,
+            baseDamage: 20,
+            active: true
+          };
+          bullets.push(bullet);
+          playSound('shoot');
+        }
       }
     }
 
@@ -151,7 +159,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
     const dx = targetPos.x - bullet.x;
     const dy = targetPos.y - bullet.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    const distance = Math.hypot(dx, dy);
     if (distance < bullet.speed || distance === 0) {
       const factor = 0.8 + Math.random() * 0.4;
       const damage = bullet.baseDamage * factor;

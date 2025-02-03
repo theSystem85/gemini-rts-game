@@ -1,7 +1,7 @@
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { getUniqueId } from './utils.js'
 
-// Baut eine Belegungs‑Map, in der für jede Kachel (Tile) vermerkt wird, ob bereits eine Einheit steht.
+// Baut eine Occupancy-Map, die markiert, welche Kacheln bereits besetzt sind.
 export function buildOccupancyMap(units, mapGrid) {
   const occupancy = [];
   for (let y = 0; y < mapGrid.length; y++) {
@@ -16,18 +16,28 @@ export function buildOccupancyMap(units, mapGrid) {
   return occupancy;
 }
 
-// A* Pfadfindung: Gibt einen Pfad (als Array von Tile-Koordinaten) vom Start- zum Zielpunkt zurück.
-// Optional kann eine occupancyMap übergeben werden, die belegte Kacheln ausschließt.
+// A* Pfadfindung mit diagonalen Bewegungen (8 Nachbarn).
 export function findPath(start, end, mapGrid, occupancyMap = null) {
   const openList = [];
   const closedSet = new Set();
-  const startNode = { x: start.x, y: start.y, g: 0, h: Math.abs(end.x - start.x) + Math.abs(end.y - start.y) };
+  const startNode = { x: start.x, y: start.y, g: 0, h: Math.hypot(end.x - start.x, end.y - start.y) };
   startNode.f = startNode.g + startNode.h;
   openList.push(startNode);
 
   function nodeKey(node) {
     return `${node.x},${node.y}`;
   }
+
+  const directions = [
+    { x: 1, y: 0 },
+    { x: -1, y: 0 },
+    { x: 0, y: 1 },
+    { x: 0, y: -1 },
+    { x: 1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: 1 },
+    { x: -1, y: -1 }
+  ];
 
   while (openList.length > 0) {
     openList.sort((a, b) => a.f - b.f);
@@ -42,27 +52,21 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
       return path;
     }
     closedSet.add(nodeKey(current));
-    const neighbors = [
-      { x: current.x + 1, y: current.y },
-      { x: current.x - 1, y: current.y },
-      { x: current.x, y: current.y + 1 },
-      { x: current.x, y: current.y - 1 }
-    ];
-    for (const neighbor of neighbors) {
-      // Prüfe, ob der Nachbarkachel innerhalb der Map liegt
+    for (const dir of directions) {
+      const neighbor = { x: current.x + dir.x, y: current.y + dir.y };
       if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapGrid[0].length || neighbor.y >= mapGrid.length)
         continue;
-      // Kacheln mit Wasser, Felsen oder Gebäuden blockieren den Weg
       const tileType = mapGrid[neighbor.y][neighbor.x].type;
       if (tileType === 'water' || tileType === 'rock' || tileType === 'building')
         continue;
-      // Falls eine occupancyMap übergeben wurde, wird belegt geprüft (außer wenn es das Ziel ist)
       if (occupancyMap && occupancyMap[neighbor.y][neighbor.x] && !(neighbor.x === end.x && neighbor.y === end.y))
         continue;
       if (closedSet.has(nodeKey(neighbor)))
         continue;
-      const gScore = current.g + 1;
-      const hScore = Math.abs(end.x - neighbor.x) + Math.abs(end.y - neighbor.y);
+      // Kosten: Diagonal = sqrt(2), orthogonal = 1
+      const cost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1;
+      const gScore = current.g + cost;
+      const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y);
       const fScore = gScore + hScore;
       const existing = openList.find(n => n.x === neighbor.x && n.y === neighbor.y);
       if (existing && existing.f <= fScore)
@@ -73,12 +77,10 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
   return []; // Kein gültiger Pfad gefunden
 }
 
-// Spawnt eine Einheit in der Nähe der Fabrik. Dabei wird verhindert, dass
-// die Einheit in einer "building"-Kachel erscheint oder bereits besetzt ist.
+// Spawnt eine Einheit nahe der Fabrik, sodass sie nicht in "building"-Kacheln erscheint
 export function spawnUnit(factory, unitType, units, mapGrid) {
   let spawnX = factory.x + factory.width;
   let spawnY = factory.y;
-  // Solange die Kachel bereits von einer Einheit belegt ist oder als "building" markiert ist, suche weiter.
   while (
     units.some(u => u.tileX === spawnX && u.tileY === spawnY) ||
     mapGrid[spawnY][spawnX].type === 'building'

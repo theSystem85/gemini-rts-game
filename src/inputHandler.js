@@ -1,5 +1,5 @@
 import { gameState } from './gameState.js'
-import { TILE_SIZE } from './config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath } from './units.js'
 import { playSound } from './sound.js'
 
@@ -26,6 +26,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (e.button === 2) {
       gameState.isRightDragging = true
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
+      gameCanvas.style.cursor = 'grabbing'
     } else if (e.button === 0) {
       isSelecting = true
       selectionActive = true
@@ -53,9 +54,28 @@ export function setupInputHandlers(units, factories, mapGrid) {
         0,
         Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - gameCanvas.height)
       )
-      // Aktualisiere Drag-Velocity für Inertia
       gameState.dragVelocity = { x: dx, y: dy }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
+      gameCanvas.style.cursor = 'grabbing'
+    } else if (!isSelecting) {
+      // Hover-Logik: Wenn mindestens eine Einheit selektiert ist, prüfe den Abstand zum Maus-Tile
+      if (selectedUnits.length > 0) {
+        const unit = selectedUnits[0]
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+        const targetTile = { x: Math.floor(worldX / TILE_SIZE), y: Math.floor(worldY / TILE_SIZE) }
+        const targetCenterX = targetTile.x * TILE_SIZE + TILE_SIZE / 2
+        const targetCenterY = targetTile.y * TILE_SIZE + TILE_SIZE / 2
+        const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+        // Falls in Reichweite (4 Zellen), setze Cursor auf pointer, sonst grab
+        if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
+          gameCanvas.style.cursor = 'pointer'
+        } else {
+          gameCanvas.style.cursor = 'grab'
+        }
+      } else {
+        gameCanvas.style.cursor = 'default'
+      }
     }
     if (isSelecting) {
       selectionEnd = { x: worldX, y: worldY }
@@ -69,11 +89,12 @@ export function setupInputHandlers(units, factories, mapGrid) {
   gameCanvas.addEventListener('mouseup', e => {
     if (e.button === 2) {
       gameState.isRightDragging = false
+      gameCanvas.style.cursor = 'grab'
     } else if (e.button === 0 && isSelecting) {
       if (wasDragging) {
         handleBoundingBoxSelection(units)
       } else {
-        // Zuerst prüfen: Wurde _eine_ Einheit angeklickt?
+        // Prüfe, ob beim Klick eine Einheit getroffen wurde
         const rect = gameCanvas.getBoundingClientRect()
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
         const worldY = e.clientY - rect.top + gameState.scrollOffset.y
@@ -84,7 +105,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
             const centerY = unit.y + TILE_SIZE / 2
             const dx = worldX - centerX
             const dy = worldY - centerY
-            if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE / 2) {
+            if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
               unitClicked = true
               break
             }
@@ -93,16 +114,15 @@ export function setupInputHandlers(units, factories, mapGrid) {
         if (unitClicked) {
           handleSingleSelection(units, e)
         }
-        // Falls kein Spieler-Panzer angeklickt wurde, bleibt die bestehende Selektion erhalten
       }
-      // Zielbefehl: Wenn bereits eine Einheit selektiert ist und kein Drag erfolgte,
-      // interpretiere den Klick als Zielbefehl, ohne die Selektion zu verändern.
+      // Zielbefehl: Wenn mindestens eine Einheit selektiert ist und kein Drag,
+      // interpretiere den Klick als Befehl zum Bewegen oder Angreifen.
       if (selectedUnits.length > 0 && !wasDragging) {
         const rect = gameCanvas.getBoundingClientRect()
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
         const worldY = e.clientY - rect.top + gameState.scrollOffset.y
         const targetTile = { x: Math.floor(worldX / TILE_SIZE), y: Math.floor(worldY / TILE_SIZE) }
-        let target = null
+        let target = null;
         for (const factory of factories) {
           if (
             factory.id === 'enemy' &&
@@ -111,8 +131,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
             targetTile.y >= factory.y &&
             targetTile.y < factory.y + factory.height
           ) {
-            target = factory
-            break
+            target = factory;
+            break;
           }
         }
         if (!target) {
@@ -122,34 +142,33 @@ export function setupInputHandlers(units, factories, mapGrid) {
               unit.tileX === targetTile.x &&
               unit.tileY === targetTile.y
             ) {
-              target = unit
-              break
+              target = unit;
+              break;
             }
           }
         }
-        for (const unit of selectedUnits) {
-          const start = { x: unit.tileX, y: unit.tileY }
-          let end;
-          if (target) {
-            end = target.id ? { x: target.x, y: target.y } : { x: target.tileX, y: target.tileY }
-          } else {
-            end = targetTile;
-          }
+        // Wenn mehrere Einheiten selektiert sind, verteile sie in Formation (kleiner Offset)
+        selectedUnits.forEach((unit, index) => {
+          const start = { x: unit.tileX, y: unit.tileY };
+          // Formation-Offset: Beispielsweise in einem 3xN Raster
+          const formationOffset = { x: index % 3, y: Math.floor(index / 3) };
+          const end = target ? (target.id ? { x: target.x, y: target.y } : { x: target.tileX, y: target.tileY })
+                             : { x: targetTile.x + formationOffset.x, y: targetTile.y + formationOffset.y };
           const path = findPath(start, end, mapGrid, null);
-          // Hier: Wenn ein Pfad gefunden wurde und Start != Ziel, dann zuweisen.
           if (path.length > 0 && (start.x !== end.x || start.y !== end.y)) {
             unit.path = path.slice(1);
             unit.target = target;
             playSound('movement');
+            gameCanvas.style.cursor = 'grab';
           } else {
-            gameCanvas.style.cursor = 'not-allowed';
+            gameCanvas.style.cursor = 'grab';
           }
-        }
+        });
       }
       isSelecting = false;
       selectionActive = false;
     }
-  })
+  });
 
   minimapCanvas.addEventListener('click', e => {
     const rect = minimapCanvas.getBoundingClientRect();
@@ -187,7 +206,6 @@ function handleSingleSelection(units, event) {
   const rect = gameCanvas.getBoundingClientRect();
   const worldX = event.clientX - rect.left + gameState.scrollOffset.x;
   const worldY = event.clientY - rect.top + gameState.scrollOffset.y;
-  // Hier nicht alle Einheiten deselektieren – nur wenn tatsächlich eine Einheit getroffen wurde.
   let clickedUnit = null;
   for (const unit of units) {
     if (unit.owner === 'player') {
@@ -195,17 +213,18 @@ function handleSingleSelection(units, event) {
       const centerY = unit.y + TILE_SIZE / 2;
       const dx = worldX - centerX;
       const dy = worldY - centerY;
-      if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE / 2) {
+      if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
         clickedUnit = unit;
         break;
       }
     }
   }
   if (clickedUnit) {
-    // Aktualisiere Selektion nur, wenn ein Unit getroffen wurde.
-    // Ansonsten bleibt die bestehende Selektion erhalten.
+    // Selektiere nur den angeklickten Panzer (ersetze bestehende Selektion)
     for (const unit of units) {
-      unit.selected = false;
+      if (unit.owner === 'player' && unit !== clickedUnit) {
+        unit.selected = false;
+      }
     }
     selectedUnits.length = 0;
     clickedUnit.selected = true;
