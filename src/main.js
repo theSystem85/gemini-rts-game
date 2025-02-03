@@ -1,7 +1,7 @@
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { gameState } from './gameState.js'
 import { tileToPixel } from './utils.js'
-import { setupInputHandlers, selectedUnits } from './inputHandler.js'
+import { setupInputHandlers, selectedUnits, selectionActive, selectionStartExport, selectionEndExport } from './inputHandler.js'
 import { renderGame, renderMinimap } from './rendering.js'
 import { spawnUnit } from './units.js'
 import { initFactories } from './factories.js'
@@ -24,8 +24,10 @@ const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
 const sidebar = document.getElementById('sidebar')
 
-// Entferne redundanten Start-Button – es wird nur der Toggle (Start/Resume) verwendet
-// Setze die Sidebar in den Dark Mode:
+// Entferne den redundanten Start-Button – nur der Toggle (Start/Resume) wird genutzt
+pauseBtn.textContent = 'Start'
+
+// Sidebar im Dark Mode
 sidebar.style.backgroundColor = '#333'
 sidebar.style.color = '#fff'
 
@@ -33,13 +35,13 @@ sidebar.style.color = '#fff'
 function resizeCanvases() {
   gameCanvas.width = window.innerWidth - 250
   gameCanvas.height = window.innerHeight
-  minimapCanvas.width = 250   // z. B. fix
+  minimapCanvas.width = 250
   minimapCanvas.height = 150
 }
 window.addEventListener('resize', resizeCanvases)
 resizeCanvases()
 
-// Erstelle Map-Grid
+// Map-Grid erstellen
 export const mapGrid = []
 for (let y = 0; y < MAP_TILES_Y; y++) {
   mapGrid[y] = []
@@ -47,7 +49,7 @@ for (let y = 0; y < MAP_TILES_Y; y++) {
     mapGrid[y][x] = { type: 'land' }
   }
 }
-// Füge Features hinzu
+// Features hinzufügen:
 // Wasser: horizontales Flussband
 for (let y = 45; y < 55; y++) {
   for (let x = 10; x < MAP_TILES_X - 10; x++) {
@@ -60,7 +62,7 @@ for (let y = 20; y < 80; y++) {
     mapGrid[y][x].type = 'rock'
   }
 }
-// Straße (wird später durch den Korridor überschrieben)
+// Straße (wird später durch den Korridor der Fabriken überschrieben)
 for (let y = 70; y < 75; y++) {
   for (let x = 50; x < MAP_TILES_X - 5; x++) {
     mapGrid[y][x].type = 'street'
@@ -75,7 +77,7 @@ for (let i = 0; i < 100; i++) {
   }
 }
 
-// Initialisiere Fabriken
+// Fabriken initialisieren
 const factories = []
 initFactories(factories, mapGrid)
 
@@ -83,10 +85,10 @@ initFactories(factories, mapGrid)
 const units = []
 const bullets = []
 
-// Setze Input-Handler (übergebe Einheiten, Fabriken und das Map-Grid)
+// Input-Handler initialisieren (Einheiten, Fabriken, Map-Grid übergeben)
 setupInputHandlers(units, factories, mapGrid)
 
-// Produktions-Variablen für die Spielerfabrik
+// Produktionsvariablen für die Spielerfabrik
 let production = {
   inProgress: false,
   unitType: null,
@@ -147,7 +149,7 @@ function gameLoop(time) {
       playSound('productionReady')
     }
   }
-  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.scrollOffset, false, null, null)
+  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.scrollOffset, selectionActive, selectionStartExport, selectionEndExport)
   renderMinimap(minimapCtx, minimapCanvas, mapGrid, gameState.scrollOffset, gameCanvas, units)
   moneyEl.textContent = gameState.money
   gameTimeEl.textContent = Math.floor(gameState.gameTime)

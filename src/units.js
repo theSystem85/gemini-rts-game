@@ -1,60 +1,75 @@
-import { TILE_SIZE, MAP_TILES_X } from './config.js'
+import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { getUniqueId } from './utils.js'
 
-export function findPath(start, end, mapGrid) {
-  const openList = []
-  const closedSet = new Set()
-  const startNode = { x: start.x, y: start.y, g: 0, h: Math.abs(end.x - start.x) + Math.abs(end.y - start.y) }
-  startNode.f = startNode.g + startNode.h
-  openList.push(startNode)
+export function buildOccupancyMap(units, mapGrid) {
+  const occupancy = [];
+  for (let y = 0; y < mapGrid.length; y++) {
+    occupancy[y] = [];
+    for (let x = 0; x < mapGrid[0].length; x++) {
+      occupancy[y][x] = false;
+    }
+  }
+  units.forEach(unit => {
+    occupancy[unit.tileY][unit.tileX] = true;
+  });
+  return occupancy;
+}
+
+export function findPath(start, end, mapGrid, occupancyMap = null) {
+  const openList = [];
+  const closedSet = new Set();
+  const startNode = { x: start.x, y: start.y, g: 0, h: Math.abs(end.x - start.x) + Math.abs(end.y - start.y) };
+  startNode.f = startNode.g + startNode.h;
+  openList.push(startNode);
 
   function nodeKey(node) {
-    return `${node.x},${node.y}`
+    return `${node.x},${node.y}`;
   }
 
   while (openList.length > 0) {
-    openList.sort((a, b) => a.f - b.f)
-    const current = openList.shift()
+    openList.sort((a, b) => a.f - b.f);
+    const current = openList.shift();
     if (current.x === end.x && current.y === end.y) {
-      const path = []
-      let node = current
+      const path = [];
+      let node = current;
       while (node) {
-        path.unshift({ x: node.x, y: node.y })
-        node = node.parent
+        path.unshift({ x: node.x, y: node.y });
+        node = node.parent;
       }
-      return path
+      return path;
     }
-    closedSet.add(nodeKey(current))
+    closedSet.add(nodeKey(current));
     const neighbors = [
       { x: current.x + 1, y: current.y },
       { x: current.x - 1, y: current.y },
       { x: current.x, y: current.y + 1 },
       { x: current.x, y: current.y - 1 }
-    ]
+    ];
     for (const neighbor of neighbors) {
-      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapGrid[0].length || neighbor.y >= mapGrid.length) continue
-      const tileType = mapGrid[neighbor.y][neighbor.x].type
-      if (tileType === 'water' || tileType === 'rock') continue
-      if (closedSet.has(nodeKey(neighbor))) continue
-      const gScore = current.g + 1
-      const hScore = Math.abs(end.x - neighbor.x) + Math.abs(end.y - neighbor.y)
-      const fScore = gScore + hScore
-      const existing = openList.find(n => n.x === neighbor.x && n.y === neighbor.y)
-      if (existing && existing.f <= fScore) continue
-      openList.push({ x: neighbor.x, y: neighbor.y, g: gScore, h: hScore, f: fScore, parent: current })
+      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapGrid[0].length || neighbor.y >= mapGrid.length) continue;
+      const tileType = mapGrid[neighbor.y][neighbor.x].type;
+      if (tileType === 'water' || tileType === 'rock' || tileType === 'building') continue;
+      if (occupancyMap && occupancyMap[neighbor.y][neighbor.x] && !(neighbor.x === end.x && neighbor.y === end.y)) continue;
+      if (closedSet.has(nodeKey(neighbor))) continue;
+      const gScore = current.g + 1;
+      const hScore = Math.abs(end.x - neighbor.x) + Math.abs(end.y - neighbor.y);
+      const fScore = gScore + hScore;
+      const existing = openList.find(n => n.x === neighbor.x && n.y === neighbor.y);
+      if (existing && existing.f <= fScore) continue;
+      openList.push({ x: neighbor.x, y: neighbor.y, g: gScore, h: hScore, f: fScore, parent: current });
     }
   }
-  return [] // Kein Pfad gefunden
+  return []; // Kein gültiger Pfad gefunden
 }
 
 export function spawnUnit(factory, unitType, units) {
-  let spawnX = factory.x + factory.width
-  let spawnY = factory.y
+  let spawnX = factory.x + factory.width;
+  let spawnY = factory.y;
   while (units.some(u => u.tileX === spawnX && u.tileY === spawnY)) {
-    spawnX++
+    spawnX++;
     if (spawnX >= MAP_TILES_X) {
-      spawnX = factory.x
-      spawnY++
+      spawnX = factory.x;
+      spawnY++;
     }
   }
   const unit = {
@@ -74,6 +89,6 @@ export function spawnUnit(factory, unitType, units) {
     oreCarried: 0,
     harvesting: false,
     harvestTimer: 0
-  }
-  return unit
+  };
+  return unit;
 }

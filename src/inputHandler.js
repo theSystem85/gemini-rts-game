@@ -7,6 +7,9 @@ const gameCanvas = document.getElementById('gameCanvas')
 const minimapCanvas = document.getElementById('minimap')
 
 export const selectedUnits = []
+export let selectionActive = false
+export let selectionStartExport = { x: 0, y: 0 }
+export let selectionEndExport = { x: 0, y: 0 }
 
 let isSelecting = false
 let selectionStart = { x: 0, y: 0 }
@@ -25,9 +28,12 @@ export function setupInputHandlers(units, factories, mapGrid) {
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
     } else if (e.button === 0) {
       isSelecting = true
+      selectionActive = true
       wasDragging = false
       selectionStart = { x: worldX, y: worldY }
       selectionEnd = { x: worldX, y: worldY }
+      selectionStartExport = { ...selectionStart }
+      selectionEndExport = { ...selectionEnd }
     }
   })
 
@@ -39,7 +45,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (gameState.isRightDragging) {
       const dx = e.clientX - gameState.lastDragPos.x
       const dy = e.clientY - gameState.lastDragPos.y
-      // Begrenze scrollOffset innerhalb der Map
       gameState.scrollOffset.x = Math.max(
         0,
         Math.min(gameState.scrollOffset.x - dx, mapGrid[0].length * TILE_SIZE - gameCanvas.width)
@@ -48,11 +53,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
         0,
         Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - gameCanvas.height)
       )
-      gameState.dragVelocity = { x: dx, y: dy }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
     }
     if (isSelecting) {
       selectionEnd = { x: worldX, y: worldY }
+      selectionEndExport = { ...selectionEnd }
       if (!wasDragging && (Math.abs(selectionEnd.x - selectionStart.x) > 5 || Math.abs(selectionEnd.y - selectionStart.y) > 5)) {
         wasDragging = true
       }
@@ -68,9 +73,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       } else {
         handleSingleSelection(units, e)
       }
-      // Bei jedem Mausklick (ohne Selektions-Box) auch eventuelle Zielbefehle abhandeln:
-      // Wenn bereits eine Einheit selektiert ist und keine neue angeklickt wurde,
-      // interpretiere den Klick als Zielbefehl.
+      // Falls bereits eine Auswahl besteht und kein Drag stattgefunden hat, interpretiere den Klick als Zielbefehl:
       if (selectedUnits.length > 0 && !wasDragging) {
         const rect = gameCanvas.getBoundingClientRect()
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
@@ -103,23 +106,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
         for (const unit of selectedUnits) {
           const start = { x: unit.tileX, y: unit.tileY }
-          const end = target ? { x: target.x || target.tileX, y: target.y || target.tileY } : targetTile
-          const path = findPath(start, end, mapGrid)
+          const end = target ? { x: target.x !== undefined ? target.x : target.tileX * TILE_SIZE, y: target.y !== undefined ? target.y : target.tileY * TILE_SIZE } : targetTile
+          const path = findPath(start, { x: Math.floor(end.x / TILE_SIZE), y: Math.floor(end.y / TILE_SIZE) }, mapGrid)
           if (path.length > 0) {
             unit.path = path.slice(1)
             unit.target = target
             playSound('movement')
           } else {
-            // Kein gültiger Pfad gefunden; Cursor auf "not-allowed" setzen
             gameCanvas.style.cursor = 'not-allowed'
           }
         }
       }
       isSelecting = false
+      selectionActive = false
     }
   })
 
-  // Minimap-Klick: Zentriere die Ansicht neu
   minimapCanvas.addEventListener('click', e => {
     const rect = minimapCanvas.getBoundingClientRect()
     const clickX = e.clientX - rect.left
@@ -136,7 +138,6 @@ function handleBoundingBoxSelection(units) {
   const y1 = Math.min(selectionStart.y, selectionEnd.y)
   const x2 = Math.max(selectionStart.x, selectionEnd.x)
   const y2 = Math.max(selectionStart.y, selectionEnd.y)
-  // Vorherige Selektion löschen
   selectedUnits.length = 0
   for (const unit of units) {
     if (unit.owner === 'player') {
@@ -157,7 +158,6 @@ function handleSingleSelection(units, event) {
   const rect = gameCanvas.getBoundingClientRect()
   const worldX = event.clientX - rect.left + gameState.scrollOffset.x
   const worldY = event.clientY - rect.top + gameState.scrollOffset.y
-  // Vorherige Selektion löschen
   for (const unit of units) {
     unit.selected = false
   }
