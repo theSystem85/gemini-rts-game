@@ -93,6 +93,8 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.stroke();
     
     // Draw a health bar above the unit.
+    // rendering.js (modified excerpt inside units.forEach loop)
+    // Draw a health bar above the unit.
     const unitHealthRatio = unit.health / unit.maxHealth;
     const healthBarWidth = TILE_SIZE * 0.8;
     const healthBarHeight = 4;
@@ -104,6 +106,19 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight);
     gameCtx.strokeStyle = '#000';
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+    // [New] Draw harvester progress bar if mining.
+    if (unit.type === 'harvester' && unit.harvesting) {
+      const progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1);
+      const progressBarWidth = TILE_SIZE * 0.8;
+      const progressBarHeight = 3;
+      const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
+      const progressBarY = unit.y - 5 - scrollOffset.y;
+      gameCtx.fillStyle = '#FFD700'; // Gold color.
+      gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
+      gameCtx.strokeStyle = '#000';
+      gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+    }
   });
   
   // Draw bullets.

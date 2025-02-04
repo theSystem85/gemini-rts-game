@@ -40,12 +40,49 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   });
 
+  // inputHandler.js (modified excerpt)
   gameCanvas.addEventListener('mousemove', e => {
     const rect = gameCanvas.getBoundingClientRect();
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x;
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y;
 
-    // Handle right-click dragging for map scrolling
+    // [Cursor: enemy hover]
+    if (selectedUnits.length > 0) {
+      let enemyHover = false;
+      // Check enemy factories.
+      for (const factory of factories) {
+        if (factory.id !== 'player') {
+          const factoryPixelX = factory.x * TILE_SIZE;
+          const factoryPixelY = factory.y * TILE_SIZE;
+          if (worldX >= factoryPixelX &&
+              worldX < factoryPixelX + factory.width * TILE_SIZE &&
+              worldY >= factoryPixelY &&
+              worldY < factoryPixelY + factory.height * TILE_SIZE) {
+            enemyHover = true;
+            break;
+          }
+        }
+      }
+      // Check enemy units if no enemy factory is hovered.
+      if (!enemyHover) {
+        for (const unit of units) {
+          if (unit.owner !== 'player') {
+            const centerX = unit.x + TILE_SIZE / 2;
+            const centerY = unit.y + TILE_SIZE / 2;
+            if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
+              enemyHover = true;
+              break;
+            }
+          }
+        }
+      }
+      if (enemyHover) {
+        gameCanvas.style.cursor = 'crosshair';
+        return; // Skip other cursor logic.
+      }
+    }
+
+    // Existing right-drag scrolling logic
     if (gameState.isRightDragging) {
       const dx = e.clientX - gameState.lastDragPos.x;
       const dy = e.clientY - gameState.lastDragPos.y;
@@ -61,26 +98,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
       gameState.lastDragPos = { x: e.clientX, y: e.clientY };
       gameCanvas.style.cursor = 'grabbing';
     } else if (!isSelecting) {
-      // Hover logic: if at least one unit is selected, show appropriate cursor.
-      if (selectedUnits.length > 0) {
-        const unit = selectedUnits[0];
-        const unitCenterX = unit.x + TILE_SIZE / 2;
-        const unitCenterY = unit.y + TILE_SIZE / 2;
-        // Determine the tile under the mouse
-        const targetTile = { x: Math.floor(worldX / TILE_SIZE), y: Math.floor(worldY / TILE_SIZE) };
-        const targetCenterX = targetTile.x * TILE_SIZE + TILE_SIZE / 2;
-        const targetCenterY = targetTile.y * TILE_SIZE + TILE_SIZE / 2;
-        const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
-        // If within fire range (4 cells), show pointer; otherwise, show grab icon.
-        if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
-          gameCanvas.style.cursor = 'pointer';
-        } else {
-          gameCanvas.style.cursor = 'grab';
-        }
-      } else {
-        gameCanvas.style.cursor = 'default';
-      }
+      // Default cursor: if no enemy is hovered, use grab/default.
+      gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default';
     }
+    
     // Update selection rectangle if we are dragging for selection.
     if (isSelecting) {
       selectionEnd = { x: worldX, y: worldY };
@@ -90,6 +111,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
     }
   });
+
 
   gameCanvas.addEventListener('mouseup', e => {
     const rect = gameCanvas.getBoundingClientRect();
