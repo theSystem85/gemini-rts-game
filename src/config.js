@@ -18,7 +18,8 @@ export const TILE_COLORS = {
 export const INERTIA_DECAY = 0.95;
 
 // Fire range for tanks is defined in tiles (4 cells)
-export const TANK_FIRE_RANGE = 4;
+export const TANK_FIRE_RANGE = 6;  // Increased from 4 to 6 tiles
+
 
 // Constants for ore spreading (every 90 seconds with a 20% chance)
 export const ORE_SPREAD_INTERVAL = 90000; // milliseconds

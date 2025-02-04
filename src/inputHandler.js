@@ -18,18 +18,20 @@ let selectionEnd = { x: 0, y: 0 };
 let wasDragging = false;
 
 export function setupInputHandlers(units, factories, mapGrid) {
-  // Disable the context menu on right-click
+  // Disable right-click context menu.
   gameCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
   gameCanvas.addEventListener('mousedown', e => {
     const rect = gameCanvas.getBoundingClientRect();
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x;
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y;
-    if (e.button === 2) { // Right mouse button for dragging (scrolling)
+    if (e.button === 2) {
+      // Right-click: start scrolling.
       gameState.isRightDragging = true;
       gameState.lastDragPos = { x: e.clientX, y: e.clientY };
       gameCanvas.style.cursor = 'grabbing';
-    } else if (e.button === 0) { // Left mouse button for selection
+    } else if (e.button === 0) {
+      // Left-click: start selection.
       isSelecting = true;
       selectionActive = true;
       wasDragging = false;
@@ -40,18 +42,18 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   });
 
-  // inputHandler.js (modified excerpt)
   gameCanvas.addEventListener('mousemove', e => {
     const rect = gameCanvas.getBoundingClientRect();
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x;
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y;
 
-    // [Cursor: enemy hover]
+    // --- Enemy Hover Cursor ---
     if (selectedUnits.length > 0) {
       let enemyHover = false;
       // Check enemy factories.
       for (const factory of factories) {
         if (factory.id !== 'player') {
+          // Convert factory tile coordinates to pixels.
           const factoryPixelX = factory.x * TILE_SIZE;
           const factoryPixelY = factory.y * TILE_SIZE;
           if (worldX >= factoryPixelX &&
@@ -63,7 +65,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
           }
         }
       }
-      // Check enemy units if no enemy factory is hovered.
+      // Check enemy units.
       if (!enemyHover) {
         for (const unit of units) {
           if (unit.owner !== 'player') {
@@ -78,11 +80,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
       if (enemyHover) {
         gameCanvas.style.cursor = 'crosshair';
-        return; // Skip other cursor logic.
+        return; // Skip further cursor logic.
       }
     }
 
-    // Existing right-drag scrolling logic
+    // --- Right-Drag Scrolling ---
     if (gameState.isRightDragging) {
       const dx = e.clientX - gameState.lastDragPos.x;
       const dy = e.clientY - gameState.lastDragPos.y;
@@ -98,11 +100,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
       gameState.lastDragPos = { x: e.clientX, y: e.clientY };
       gameCanvas.style.cursor = 'grabbing';
     } else if (!isSelecting) {
-      // Default cursor: if no enemy is hovered, use grab/default.
       gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default';
     }
-    
-    // Update selection rectangle if we are dragging for selection.
+
+    // --- Update Selection Rectangle ---
     if (isSelecting) {
       selectionEnd = { x: worldX, y: worldY };
       selectionEndExport = { ...selectionEnd };
@@ -112,21 +113,19 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   });
 
-
   gameCanvas.addEventListener('mouseup', e => {
     const rect = gameCanvas.getBoundingClientRect();
-    if (e.button === 2) { // End right-drag
+    if (e.button === 2) {
       gameState.isRightDragging = false;
       gameCanvas.style.cursor = 'grab';
     } else if (e.button === 0 && isSelecting) {
-      // Determine whether this was a click or a drag selection.
       if (wasDragging) {
         handleBoundingBoxSelection(units);
       } else {
-        // Check if a friendly unit was clicked.
+        // Single unit selection.
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x;
         const worldY = e.clientY - rect.top + gameState.scrollOffset.y;
-        let friendlyUnitClicked = false;
+        let clickedUnit = null;
         for (const unit of units) {
           if (unit.owner === 'player') {
             const centerX = unit.x + TILE_SIZE / 2;
@@ -134,73 +133,112 @@ export function setupInputHandlers(units, factories, mapGrid) {
             const dx = worldX - centerX;
             const dy = worldY - centerY;
             if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
-              friendlyUnitClicked = true;
+              clickedUnit = unit;
               break;
             }
           }
         }
-        // If a friendly unit was clicked, only perform selection.
-        if (friendlyUnitClicked) {
-          handleSingleSelection(units, e);
-        } else if (selectedUnits.length > 0) {
-          // Otherwise, interpret the click as a move/attack order.
-          const targetTile = { x: Math.floor((e.clientX - rect.left + gameState.scrollOffset.x) / TILE_SIZE),
-                               y: Math.floor((e.clientY - rect.top + gameState.scrollOffset.y) / TILE_SIZE) };
-          let target = null;
-          // First, check if the click is on an enemy factory.
-          for (const factory of factories) {
-            if (
-              factory.id === 'enemy' &&
-              targetTile.x >= factory.x &&
-              targetTile.x < factory.x + factory.width &&
-              targetTile.y >= factory.y &&
-              targetTile.y < factory.y + factory.height
-            ) {
-              target = factory;
-              break;
-            }
+        if (clickedUnit) {
+          units.forEach(u => { if (u.owner === 'player') u.selected = false; });
+          selectedUnits.length = 0;
+          clickedUnit.selected = true;
+          selectedUnits.push(clickedUnit);
+          playSound('unitSelection');
+        }
+      }
+      // --- Command Issuing ---
+      if (selectedUnits.length > 0 && !wasDragging) {
+        const worldX = e.clientX - rect.left + gameState.scrollOffset.x;
+        const worldY = e.clientY - rect.top + gameState.scrollOffset.y;
+        let target = null;
+        // Check enemy factories.
+        for (const factory of factories) {
+          if (factory.id !== 'player' &&
+              worldX >= factory.x * TILE_SIZE &&
+              worldX < (factory.x + factory.width) * TILE_SIZE &&
+              worldY >= factory.y * TILE_SIZE &&
+              worldY < (factory.y + factory.height) * TILE_SIZE) {
+            target = factory;
+            break;
           }
-          // Next, check if an enemy unit occupies that tile.
-          if (!target) {
-            for (const unit of units) {
-              if (
-                unit.owner !== 'player' &&
-                unit.tileX === targetTile.x &&
-                unit.tileY === targetTile.y
-              ) {
+        }
+        // Check enemy units.
+        if (!target) {
+          for (const unit of units) {
+            if (unit.owner !== 'player') {
+              const centerX = unit.x + TILE_SIZE / 2;
+              const centerY = unit.y + TILE_SIZE / 2;
+              if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
                 target = unit;
                 break;
               }
             }
           }
-          // For each selected unit, compute a formation offset and assign a path.
-          selectedUnits.forEach((unit, index) => {
-            // Formation offset: arrange units in a 3xN grid.
-            const formationOffset = { x: index % 3, y: Math.floor(index / 3) };
-            // Determine the destination in tile coordinates.
-            const end = target
-              ? (target.tileX !== undefined
-                   ? { x: target.tileX, y: target.tileY } // enemy unit (tile-based)
-                   : { x: target.x, y: target.y })         // enemy factory (tile-based)
-              : { x: targetTile.x + formationOffset.x, y: targetTile.y + formationOffset.y };
-            // Compute path from the unit's current tile to the destination.
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, end, mapGrid, null);
-            if (path.length > 0 && (unit.tileX !== end.x || unit.tileY !== end.y)) {
-              // Skip the first tile (current position) and assign the rest as the path.
+        }
+        // For each selected unit, assign command with formation offsets.
+        const count = selectedUnits.length;
+        const cols = Math.ceil(Math.sqrt(count));
+        selectedUnits.forEach((unit, index) => {
+          let formationOffset = { x: 0, y: 0 };
+          if (target) {
+            const unitCenterX = unit.x + TILE_SIZE / 2;
+            const unitCenterY = unit.y + TILE_SIZE / 2;
+            let targetCenterX, targetCenterY;
+            if (target.tileX !== undefined) {
+              targetCenterX = target.x + TILE_SIZE / 2;
+              targetCenterY = target.y + TILE_SIZE / 2;
+            } else {
+              // For enemy factories, convert tile coords to pixels.
+              targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2;
+              targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
+            }
+            const dx = targetCenterX - unitCenterX;
+            const dy = targetCenterY - unitCenterY;
+            const dist = Math.hypot(dx, dy);
+            if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
+              unit.path = [];
+              unit.target = target;
+              return;
+            }
+            // Compute desired point at firing range.
+            const desiredX = targetCenterX - (dx / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
+            const desiredY = targetCenterY - (dy / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            formationOffset = { x: col, y: row };
+            const destX = desiredX + formationOffset.x * TILE_SIZE;
+            const destY = desiredY + formationOffset.y * TILE_SIZE;
+            const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) };
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
+            if (path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
               unit.path = path.slice(1);
               unit.target = target;
               playSound('movement');
+            } else {
+              unit.path = [];
+              unit.target = target;
             }
-          });
-        }
+          } else {
+            // No enemy target: move to clicked location with formation.
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            formationOffset = { x: col, y: row };
+            const destTile = { x: Math.floor(worldX / TILE_SIZE) + formationOffset.x, y: Math.floor(worldY / TILE_SIZE) + formationOffset.y };
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
+            if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
+              unit.path = path.slice(1);
+              unit.target = null;
+              playSound('movement');
+            }
+          }
+        });
       }
-      // Reset selection flags.
       isSelecting = false;
       selectionActive = false;
     }
   });
 
-  // Handle clicks on the minimap to recenter the main view.
+  // --- Minimap Click Recenters View ---
   minimapCanvas.addEventListener('click', e => {
     const rect = minimapCanvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -212,7 +250,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
   });
 }
 
-// Handles multi-unit (bounding box) selection.
 function handleBoundingBoxSelection(units) {
   const x1 = Math.min(selectionStart.x, selectionEnd.x);
   const y1 = Math.min(selectionStart.y, selectionEnd.y);
@@ -231,37 +268,5 @@ function handleBoundingBoxSelection(units) {
         unit.selected = false;
       }
     }
-  }
-}
-
-// Handles single unit selection by clicking.
-function handleSingleSelection(units, event) {
-  const rect = gameCanvas.getBoundingClientRect();
-  const worldX = event.clientX - rect.left + gameState.scrollOffset.x;
-  const worldY = event.clientY - rect.top + gameState.scrollOffset.y;
-  let clickedUnit = null;
-  for (const unit of units) {
-    if (unit.owner === 'player') {
-      const centerX = unit.x + TILE_SIZE / 2;
-      const centerY = unit.y + TILE_SIZE / 2;
-      const dx = worldX - centerX;
-      const dy = worldY - centerY;
-      if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
-        clickedUnit = unit;
-        break;
-      }
-    }
-  }
-  if (clickedUnit) {
-    // Replace any existing selection with the clicked unit.
-    units.forEach(unit => {
-      if (unit.owner === 'player' && unit !== clickedUnit) {
-        unit.selected = false;
-      }
-    });
-    selectedUnits.length = 0;
-    clickedUnit.selected = true;
-    selectedUnits.push(clickedUnit);
-    playSound('unitSelection');
   }
 }

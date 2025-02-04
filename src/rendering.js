@@ -108,16 +108,28 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
 
     // [New] Draw harvester progress bar if mining.
-    if (unit.type === 'harvester' && unit.harvesting) {
-      const progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1);
-      const progressBarWidth = TILE_SIZE * 0.8;
-      const progressBarHeight = 3;
-      const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
-      const progressBarY = unit.y - 5 - scrollOffset.y;
-      gameCtx.fillStyle = '#FFD700'; // Gold color.
-      gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
-      gameCtx.strokeStyle = '#000';
-      gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+    // After drawing the health bar for a unit:
+    if (unit.type === 'harvester') {
+      let progress = 0;
+      // If currently mining, show mining progress.
+      if (unit.harvesting) {
+        progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1);
+      }
+      // If fully loaded (oreCarried >= 5), force progress to 100%.
+      if (unit.oreCarried >= 5) {
+        progress = 1;
+      }
+      // Draw the progress bar if there is any progress.
+      if (progress > 0) {
+        const progressBarWidth = TILE_SIZE * 0.8;
+        const progressBarHeight = 3;
+        const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
+        const progressBarY = unit.y - 5 - scrollOffset.y;
+        gameCtx.fillStyle = '#FFD700'; // Gold color.
+        gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
+        gameCtx.strokeStyle = '#000';
+        gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+      }
     }
   });
   
