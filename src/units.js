@@ -1,7 +1,8 @@
-import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
-import { getUniqueId } from './utils.js'
+// units.js
+import { TILE_SIZE } from './config.js';
+import { getUniqueId } from './utils.js';
 
-// Baut eine Occupancy-Map, die markiert, welche Kacheln bereits besetzt sind.
+// Build an occupancy map to mark which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
   const occupancy = [];
   for (let y = 0; y < mapGrid.length; y++) {
@@ -16,7 +17,7 @@ export function buildOccupancyMap(units, mapGrid) {
   return occupancy;
 }
 
-// A* Pfadfindung mit diagonalen Bewegungen (8 Nachbarn).
+// A* Pathfinding with diagonal movement (8 neighbors).
 export function findPath(start, end, mapGrid, occupancyMap = null) {
   const openList = [];
   const closedSet = new Set();
@@ -63,7 +64,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
         continue;
       if (closedSet.has(nodeKey(neighbor)))
         continue;
-      // Kosten: Diagonal = sqrt(2), orthogonal = 1
+      // Cost: diagonal = sqrt(2), orthogonal = 1.
       const cost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1;
       const gScore = current.g + cost;
       const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y);
@@ -74,13 +75,14 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
       openList.push({ x: neighbor.x, y: neighbor.y, g: gScore, h: hScore, f: fScore, parent: current });
     }
   }
-  return []; // Kein gültiger Pfad gefunden
+  return []; // No valid path found.
 }
 
-// Spawnt eine Einheit nahe der Fabrik, sodass sie nicht in "building"-Kacheln erscheint
+// Spawns a unit near the given factory, avoiding "building" tiles and collisions.
 export function spawnUnit(factory, unitType, units, mapGrid) {
   let spawnX = factory.x + factory.width;
   let spawnY = factory.y;
+  // Find the next free tile.
   while (
     units.some(u => u.tileX === spawnX && u.tileY === spawnY) ||
     mapGrid[spawnY][spawnX].type === 'building'

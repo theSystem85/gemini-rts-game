@@ -1,3 +1,4 @@
+// gameState.js
 export const gameState = {
   money: 10000,
   gameTime: 0,
@@ -9,5 +10,6 @@ export const gameState = {
   dragVelocity: { x: 0, y: 0 },
   isRightDragging: false,
   lastDragPos: { x: 0, y: 0 },
-  enemyLastProductionTime: performance.now()
-}
+  enemyLastProductionTime: performance.now(),
+  lastOreUpdate: performance.now() // for ore spreading logic
+};
