@@ -1,11 +1,18 @@
 // sound.js
+let audioContext = null;
+try {
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+} catch (e) {
+  console.error("Web Audio API is not supported.");
+}
+
 export function playSound(eventName) {
+  if (!audioContext) return;
   try {
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = context.createOscillator();
-    const gainNode = context.createGain();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
     oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
+    gainNode.connect(audioContext.destination);
     oscillator.frequency.value =
       eventName === 'unitSelection' ? 600 :
       eventName === 'movement' ? 400 :
@@ -18,8 +25,8 @@ export function playSound(eventName) {
       eventName === 'explosion' ? 200 : 500;
     oscillator.type = 'sine';
     oscillator.start();
-    oscillator.stop(context.currentTime + 0.1);
+    oscillator.stop(audioContext.currentTime + 0.1);
   } catch (e) {
-    // Audio API not supported.
+    console.error("AudioContext error:", e);
   }
 }

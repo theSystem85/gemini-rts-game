@@ -114,19 +114,18 @@ produceBtn.addEventListener('click', () => {
 });
 
 pauseBtn.addEventListener('click', () => {
-  if (!gameState.gameStarted) {
-    gameState.gameStarted = true;
-    gameState.gamePaused = false;
-    pauseBtn.textContent = 'Pause';
-  } else {
-    gameState.gamePaused = !gameState.gamePaused;
-    pauseBtn.textContent = gameState.gamePaused ? 'Resume' : 'Pause';
-  }
+  gameState.gamePaused = !gameState.gamePaused;
+  pauseBtn.textContent = gameState.gamePaused ? 'Resume' : 'Pause';
 });
 
 restartBtn.addEventListener('click', () => {
   window.location.reload();
 });
+
+// Auto-start the game.
+gameState.gameStarted = true;
+gameState.gamePaused = false;
+pauseBtn.textContent = 'Pause';
 
 let lastTime = performance.now();
 function gameLoop(time) {

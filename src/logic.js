@@ -9,14 +9,19 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   const now = performance.now();
   const occupancyMap = buildOccupancyMap(units, mapGrid);
 
-  // --- Enemy Production: Spawn one tank every 10 seconds ---
+  // --- Enemy Production: Spawn one enemy tank every 10 seconds ---
   const enemyFactory = factories.find(f => f.id === 'enemy');
   const enemyTankCost = 1000;
   if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory.budget >= enemyTankCost) {
     const enemyUnit = spawnUnit(enemyFactory, 'tank', units, mapGrid);
     units.push(enemyUnit);
     const playerFactory = factories.find(f => f.id === 'player');
-    const path = findPath({ x: enemyUnit.tileX, y: enemyUnit.tileY }, { x: playerFactory.x, y: playerFactory.y }, mapGrid, occupancyMap);
+    const path = findPath(
+      { x: enemyUnit.tileX, y: enemyUnit.tileY },
+      { x: playerFactory.x, y: playerFactory.y },
+      mapGrid,
+      occupancyMap
+    );
     if (path.length > 1) {
       enemyUnit.path = path.slice(1);
     }
@@ -40,18 +45,18 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // --- Unit Updates ---
   units.forEach(unit => {
-    // Clear target if destroyed.
+    // Clear target if it’s destroyed.
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null;
     }
 
-    // Effective speed.
+    // Effective speed (doubled on streets)
     let effectiveSpeed = unit.speed;
     if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
       effectiveSpeed *= 2;
     }
 
-    // --- Enemy AI for tanks ---
+    // --- Enemy AI for Tanks ---
     if (unit.owner !== 'player' && unit.type === 'tank') {
       if (!unit.target) {
         unit.target = factories.find(f => f.id === 'player');
@@ -62,8 +67,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       } else {
         for (const other of units) {
           if (other.owner === 'player') {
-            const dist = Math.hypot((other.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2),
-                                    (other.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2));
+            const dist = Math.hypot(
+              (other.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
+              (other.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+            );
             if (dist < TANK_FIRE_RANGE * TILE_SIZE) {
               unit.target = other;
               break;
@@ -88,6 +95,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
         const distToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
         if (distToTarget <= TANK_FIRE_RANGE * TILE_SIZE) {
+          // Stop moving if within firing range.
           unit.path = [];
         }
       }
@@ -115,7 +123,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
-    // --- Tank Firing Logic ---
+    // --- Tank Firing ---
     if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
       const unitCenterX = unit.x + TILE_SIZE / 2;
       const unitCenterY = unit.y + TILE_SIZE / 2;
@@ -156,10 +164,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
-    // --- Harvester Logic ---
+    // --- Harvester Behavior ---
     if (unit.type === 'harvester') {
       const tileX = Math.floor(unit.x / TILE_SIZE);
       const tileY = Math.floor(unit.y / TILE_SIZE);
+      // Start mining if on an ore tile.
       if (unit.oreCarried < 5 && !unit.harvesting && mapGrid[tileY][tileX].type === 'ore') {
         if (!unit.oreField) {
           unit.oreField = { x: tileX, y: tileY };
@@ -174,26 +183,35 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (performance.now() - unit.harvestTimer > 10000) {
           unit.oreCarried++;
           unit.harvesting = false;
+          // Remove ore from the map once mined.
           mapGrid[tileY][tileX].type = 'land';
         }
       }
       if (unit.oreCarried >= 5) {
+        // Set unloading target to the factory's center.
         const targetFactory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy');
-        const unitCenter = { x: unit.x + TILE_SIZE/2, y: unit.y + TILE_SIZE/2 };
+        const unloadTile = {
+          x: targetFactory.x + Math.floor(targetFactory.width / 2),
+          y: targetFactory.y + Math.floor(targetFactory.height / 2)
+        };
+        // Force the harvester to return to base.
+        if (!unit.path || unit.path.length === 0) {
+          const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTile, mapGrid, occupancyMap);
+          if (path.length > 1) {
+            unit.path = path.slice(1);
+          }
+        }
+        // Check distance to factory center.
+        const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
         const factoryCenter = {
           x: targetFactory.x * TILE_SIZE + (targetFactory.width * TILE_SIZE) / 2,
           y: targetFactory.y * TILE_SIZE + (targetFactory.height * TILE_SIZE) / 2
         };
         const distanceToFactory = Math.hypot(unitCenter.x - factoryCenter.x, unitCenter.y - factoryCenter.y);
-        // Unload when within 3 tiles.
-        if (distanceToFactory > 3 * TILE_SIZE) {
-          const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: targetFactory.x, y: targetFactory.y }, mapGrid, occupancyMap);
-          if (path.length > 1) {
-            unit.path = path.slice(1);
-          }
-        } else {
+        if (distanceToFactory <= 3 * TILE_SIZE) {
+          // Unload ore.
           if (unit.owner === 'player') {
             gameState.money += 1000;
           } else {
@@ -202,6 +220,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           unit.oreCarried = 0;
           unit.oreField = null;
           playSound('deposit');
+          // After unloading, go to the nearest ore field.
           const orePos = findClosestOre(unit, mapGrid);
           if (orePos) {
             const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
@@ -218,7 +237,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       let underFire = false;
       bullets.forEach(bullet => {
         if (bullet.shooter && bullet.shooter.owner === 'player') {
-          const bulletDist = Math.hypot(bullet.x - (unit.x + TILE_SIZE / 2), bullet.y - (unit.y + TILE_SIZE / 2));
+          const bulletDist = Math.hypot(
+            bullet.x - (unit.x + TILE_SIZE / 2),
+            bullet.y - (unit.y + TILE_SIZE / 2)
+          );
           if (bulletDist < 2 * TILE_SIZE) {
             underFire = true;
             if (!unit.target) {
@@ -253,6 +275,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     const bullet = bullets[i];
     if (!bullet.active) continue;
     if (bullet.homing) {
+      // Homing (rocket) bullet update.
       let targetPos = null;
       if (bullet.target) {
         if (bullet.target.tileX !== undefined) {
@@ -267,7 +290,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       const dx = targetPos.x - bullet.x;
       const dy = targetPos.y - bullet.y;
       const distance = Math.hypot(dx, dy);
-      // Increased collision threshold to 10 pixels.
       if (distance < 10) {
         const factor = 0.8 + Math.random() * 0.4;
         const damage = bullet.baseDamage * factor;
@@ -282,18 +304,19 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       } else {
         bullet.x += (dx / distance) * bullet.speed;
         bullet.y += (dy / distance) * bullet.speed;
-        if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE || bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
+        if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE ||
+            bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
           bullet.active = false;
         }
       }
     } else {
-      // Ballistic bullet update.
+      // Ballistic (normal tank) bullet update.
       bullet.x += bullet.vx;
       bullet.y += bullet.vy;
       const dx = bullet.fixedTargetPos.x - bullet.x;
       const dy = bullet.fixedTargetPos.y - bullet.y;
       const d = Math.hypot(dx, dy);
-      if (d < bullet.speed) {
+      if (d < 10) { // Use same threshold as homing bullets.
         const factor = 0.8 + Math.random() * 0.4;
         const damage = bullet.baseDamage * factor;
         if (bullet.target && bullet.target.health !== undefined) {
@@ -305,7 +328,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           }
         }
       }
-      if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE || bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
+      if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE ||
+          bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
         bullet.active = false;
       }
     }
