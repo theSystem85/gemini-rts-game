@@ -3,11 +3,9 @@
   <head>
     <meta charset="UTF-8">
     <title>RTS Game</title>
-    <!-- Link to CSS file -->
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
-    <!-- Left Sidebar: contains minimap, stats, production controls and main buttons -->
     <div id="sidebar">
       <canvas id="minimap"></canvas>
       <div id="stats">
@@ -19,20 +17,18 @@
       <div id="production">
         <select id="unitType">
           <option value="tank">Tank ($1000)</option>
+          <option value="rocketTank">Rocket Tank ($2000)</option>
           <option value="harvester">Harvester ($500)</option>
         </select>
         <button id="produceBtn">Produce</button>
         <span id="productionProgress"></span>
       </div>
       <div id="controls">
-        <!-- Only one toggle button (Pause/Resume) is needed -->
         <button id="pauseBtn">Start</button>
         <button id="restartBtn">Restart</button>
       </div>
     </div>
-    <!-- Main game canvas (for the full-screen map) -->
     <canvas id="gameCanvas"></canvas>
-    <!-- Include main game logic -->
     <script src="/src/main.js" type="module"></script>
   </body>
 </html>

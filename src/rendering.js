@@ -9,7 +9,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   const endTileX = Math.min(mapGrid[0].length, Math.ceil((scrollOffset.x + gameCanvas.width) / TILE_SIZE));
   const endTileY = Math.min(mapGrid.length, Math.ceil((scrollOffset.y + gameCanvas.height) / TILE_SIZE));
   
-  // Draw the map tiles.
+  // Draw map tiles.
   for (let y = startTileY; y < endTileY; y++) {
     for (let x = startTileX; x < endTileX; x++) {
       const tile = mapGrid[y][x];
@@ -20,20 +20,17 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     }
   }
   
-  // Draw the factories.
+  // Draw factories.
   factories.forEach(factory => {
     const pos = tileToPixel(factory.x, factory.y);
-    // Player factory is green; enemy factory is red.
     gameCtx.fillStyle = factory.id === 'player' ? '#0A0' : '#A00';
     gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - scrollOffset.y, factory.width * TILE_SIZE, factory.height * TILE_SIZE);
-    // Draw health bar above the factory.
     const barWidth = factory.width * TILE_SIZE;
     const healthRatio = factory.health / factory.maxHealth;
     gameCtx.fillStyle = '#0F0';
     gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth * healthRatio, 5);
     gameCtx.strokeStyle = '#000';
     gameCtx.strokeRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth, 5);
-    // If enemy factory, display its budget.
     if (factory.id === 'enemy' && factory.budget !== undefined) {
       gameCtx.fillStyle = '#FFF';
       gameCtx.font = '12px Arial';
@@ -41,19 +38,22 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     }
   });
   
-  // Draw the units.
+  // Draw units.
   units.forEach(unit => {
-    // Choose color based on owner and unit type.
     if (unit.owner === 'player') {
-      gameCtx.fillStyle = unit.type === 'tank' ? '#00F' : '#9400D3';
+      if (unit.type === 'rocketTank') {
+        gameCtx.fillStyle = '#00F';
+      } else if (unit.type === 'tank') {
+        gameCtx.fillStyle = '#008';
+      } else if (unit.type === 'harvester') {
+        gameCtx.fillStyle = '#9400D3';
+      }
     } else {
       gameCtx.fillStyle = unit.type === 'tank' ? '#F00' : '#FF00FF';
     }
-    // Draw the unit as a circle.
     gameCtx.beginPath();
     gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3, 0, 2 * Math.PI);
     gameCtx.fill();
-    // If the unit is selected, draw a highlight circle.
     if (unit.selected) {
       gameCtx.strokeStyle = '#FF0';
       gameCtx.lineWidth = 2;
@@ -62,8 +62,8 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.stroke();
     }
     
-    // Always draw the turret line showing the aiming direction.
-    let turretDirX = 0, turretDirY = -1; // Default points up.
+    // Draw turret line.
+    let turretDirX = 0, turretDirY = -1;
     if (unit.path && unit.path.length > 0) {
       const nextTile = unit.path[0];
       const nextCenterX = nextTile.x * TILE_SIZE + TILE_SIZE / 2;
@@ -75,8 +75,8 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         turretDirX = (unit.target.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2);
         turretDirY = (unit.target.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2);
       } else {
-        turretDirX = (unit.target.x + (unit.target.width * TILE_SIZE) / 2) - (unit.x + TILE_SIZE / 2);
-        turretDirY = (unit.target.y + (unit.target.height * TILE_SIZE) / 2) - (unit.y + TILE_SIZE / 2);
+        turretDirX = (unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2) - (unit.x + TILE_SIZE / 2);
+        turretDirY = (unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2) - (unit.y + TILE_SIZE / 2);
       }
     }
     const angle = Math.atan2(turretDirY, turretDirX);
@@ -92,9 +92,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.lineTo(turretEndX, turretEndY);
     gameCtx.stroke();
     
-    // Draw a health bar above the unit.
-    // rendering.js (modified excerpt inside units.forEach loop)
-    // Draw a health bar above the unit.
+    // Draw health bar.
     const unitHealthRatio = unit.health / unit.maxHealth;
     const healthBarWidth = TILE_SIZE * 0.8;
     const healthBarHeight = 4;
@@ -106,26 +104,22 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight);
     gameCtx.strokeStyle = '#000';
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
-
-    // [New] Draw harvester progress bar if mining.
-    // After drawing the health bar for a unit:
+    
+    // Harvester progress bar: remains at 100% if full.
     if (unit.type === 'harvester') {
       let progress = 0;
-      // If currently mining, show mining progress.
       if (unit.harvesting) {
         progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1);
       }
-      // If fully loaded (oreCarried >= 5), force progress to 100%.
       if (unit.oreCarried >= 5) {
         progress = 1;
       }
-      // Draw the progress bar if there is any progress.
       if (progress > 0) {
         const progressBarWidth = TILE_SIZE * 0.8;
         const progressBarHeight = 3;
         const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
         const progressBarY = unit.y - 5 - scrollOffset.y;
-        gameCtx.fillStyle = '#FFD700'; // Gold color.
+        gameCtx.fillStyle = '#FFD700';
         gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
         gameCtx.strokeStyle = '#000';
         gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
@@ -141,7 +135,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.fill();
   });
   
-  // Draw the selection rectangle if active.
+  // Draw selection rectangle.
   if (selectionActive && selectionStart && selectionEnd) {
     const rectX = selectionStart.x - scrollOffset.x;
     const rectY = selectionStart.y - scrollOffset.y;
@@ -157,14 +151,12 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
   const scaleX = minimapCanvas.width / (mapGrid[0].length * TILE_SIZE);
   const scaleY = minimapCanvas.height / (mapGrid.length * TILE_SIZE);
-  // Draw each tile on the minimap.
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type];
       minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY);
     }
   }
-  // Draw units on the minimap.
   units.forEach(unit => {
     minimapCtx.fillStyle = unit.owner === 'player' ? '#00F' : '#F00';
     const unitX = (unit.x + TILE_SIZE / 2) * scaleX;
@@ -173,7 +165,6 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
     minimapCtx.arc(unitX, unitY, 3, 0, 2 * Math.PI);
     minimapCtx.fill();
   });
-  // Draw a rectangle indicating the current viewport.
   minimapCtx.strokeStyle = '#FF0';
   minimapCtx.lineWidth = 2;
   minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY);

@@ -2,7 +2,7 @@
 import { TILE_SIZE } from './config.js';
 import { getUniqueId } from './utils.js';
 
-// Build an occupancy map, marking which tiles are occupied.
+// Build an occupancy map indicating which tiles are occupied.
 export function buildOccupancyMap(units, mapGrid) {
   const occupancy = [];
   for (let y = 0; y < mapGrid.length; y++) {
@@ -17,7 +17,7 @@ export function buildOccupancyMap(units, mapGrid) {
   return occupancy;
 }
 
-// A* pathfinding with diagonal movement (8 neighbors).
+// A* pathfinding that prefers faster (road) routes.
 export function findPath(start, end, mapGrid, occupancyMap = null) {
   const openList = [];
   const closedSet = new Set();
@@ -64,7 +64,11 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
         continue;
       if (closedSet.has(nodeKey(neighbor)))
         continue;
-      const cost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1;
+      // Cost: base cost is 1 (or sqrt(2) for diagonal).
+      let baseCost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1;
+      // If the tile is a road ("street"), movement is 2× faster, so cost is halved.
+      const multiplier = (tileType === 'street') ? 0.5 : 1;
+      const cost = baseCost * multiplier;
       const gScore = current.g + cost;
       const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y);
       const fScore = gScore + hScore;
@@ -77,32 +81,41 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
   return []; // No valid path found.
 }
 
-// Spawns a unit near the given factory, avoiding building tiles.
+// Spawns a unit near the given factory by searching in a small radius.
 export function spawnUnit(factory, unitType, units, mapGrid) {
-  let spawnX = factory.x + factory.width;
-  let spawnY = factory.y;
-  while (
-    units.some(u => u.tileX === spawnX && u.tileY === spawnY) ||
-    mapGrid[spawnY][spawnX].type === 'building'
-  ) {
-    spawnX++;
-    if (spawnX >= mapGrid[0].length) {
-      spawnX = factory.x;
-      spawnY++;
-      if (spawnY >= mapGrid.length) break;
+  const startX = factory.x + factory.width;
+  const startY = factory.y;
+  let spawnX = startX;
+  let spawnY = startY;
+  const maxRadius = 5;
+  let found = false;
+  for (let r = 0; r <= maxRadius && !found; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const x = startX + dx;
+        const y = startY + dy;
+        if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue;
+        if (mapGrid[y][x].type === 'building') continue;
+        if (units.some(u => u.tileX === x && u.tileY === y)) continue;
+        spawnX = x;
+        spawnY = y;
+        found = true;
+        break;
+      }
+      if (found) break;
     }
   }
   const unit = {
     id: getUniqueId(),
-    type: unitType,
+    type: unitType,  // "tank", "rocketTank", or "harvester"
     owner: factory.id === 'player' ? 'player' : 'enemy',
     tileX: spawnX,
     tileY: spawnY,
     x: spawnX * TILE_SIZE,
     y: spawnY * TILE_SIZE,
-    speed: unitType === 'tank' ? 2 : 1,
-    health: unitType === 'tank' ? 100 : 150,
-    maxHealth: unitType === 'tank' ? 100 : 150,
+    speed: (unitType === 'harvester') ? 1 : 2,
+    health: (unitType === 'harvester') ? 150 : 100,
+    maxHealth: (unitType === 'harvester') ? 150 : 100,
     path: [],
     target: null,
     selected: false,

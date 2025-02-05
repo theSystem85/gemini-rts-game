@@ -11,5 +11,5 @@ export const gameState = {
   isRightDragging: false,
   lastDragPos: { x: 0, y: 0 },
   enemyLastProductionTime: performance.now(),
-  lastOreUpdate: performance.now() // for ore spreading logic
+  lastOreUpdate: performance.now()
 };

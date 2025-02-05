@@ -6,7 +6,6 @@ export function playSound(eventName) {
     const gainNode = context.createGain();
     oscillator.connect(gainNode);
     gainNode.connect(context.destination);
-    // Choose frequency based on event type.
     oscillator.frequency.value =
       eventName === 'unitSelection' ? 600 :
       eventName === 'movement' ? 400 :
@@ -21,6 +20,6 @@ export function playSound(eventName) {
     oscillator.start();
     oscillator.stop(context.currentTime + 0.1);
   } catch (e) {
-    // If the Web Audio API is not supported, silently fail.
+    // Audio API not supported.
   }
 }

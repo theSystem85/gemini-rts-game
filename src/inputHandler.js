@@ -53,7 +53,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
       // Check enemy factories.
       for (const factory of factories) {
         if (factory.id !== 'player') {
-          // Convert factory tile coordinates to pixels.
           const factoryPixelX = factory.x * TILE_SIZE;
           const factoryPixelY = factory.y * TILE_SIZE;
           if (worldX >= factoryPixelX &&
@@ -175,7 +174,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
             }
           }
         }
-        // For each selected unit, assign command with formation offsets.
+        // Formation logic: distribute selected units in a grid formation.
         const count = selectedUnits.length;
         const cols = Math.ceil(Math.sqrt(count));
         selectedUnits.forEach((unit, index) => {
@@ -188,7 +187,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
               targetCenterX = target.x + TILE_SIZE / 2;
               targetCenterY = target.y + TILE_SIZE / 2;
             } else {
-              // For enemy factories, convert tile coords to pixels.
               targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2;
               targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
             }
@@ -238,7 +236,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   });
 
-  // --- Minimap Click Recenters View ---
+  // --- Minimap Click: Recenters View ---
   minimapCanvas.addEventListener('click', e => {
     const rect = minimapCanvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;

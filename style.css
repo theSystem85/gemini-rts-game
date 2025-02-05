@@ -1,6 +1,4 @@
 /* style.css */
-
-/* Reset margins and ensure full height */
 html, body {
   margin: 0;
   padding: 0;
@@ -8,22 +6,20 @@ html, body {
   overflow: hidden;
 }
 
-/* Sidebar on the left – now in dark mode */
 #sidebar {
   position: absolute;
   top: 0;
   left: 0;
   width: 250px;
   height: 100%;
-  background: #333; /* dark background */
-  color: #fff; /* light text */
+  background: #333;
+  color: #fff;
   padding: 10px;
   box-sizing: border-box;
   overflow-y: auto;
   font-family: sans-serif;
 }
 
-/* Main game canvas fills the rest of the screen */
 #gameCanvas {
   position: absolute;
   top: 0;
@@ -34,7 +30,6 @@ html, body {
   cursor: default;
 }
 
-/* Minimap styling */
 #minimap {
   width: 100%;
   height: 150px;
