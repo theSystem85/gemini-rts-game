@@ -20,8 +20,9 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     }
   }
   
-  // Draw factories.
+  // Draw factories (skip if destroyed).
   factories.forEach(factory => {
+    if (factory.destroyed) return;
     const pos = tileToPixel(factory.x, factory.y);
     gameCtx.fillStyle = factory.id === 'player' ? '#0A0' : '#A00';
     gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - scrollOffset.y, factory.width * TILE_SIZE, factory.height * TILE_SIZE);
@@ -42,9 +43,9 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   units.forEach(unit => {
     if (unit.owner === 'player') {
       if (unit.type === 'rocketTank') {
-        gameCtx.fillStyle = '#00F';
+        gameCtx.fillStyle = '#00F'; // Bright blue for rocket tanks.
       } else if (unit.type === 'tank') {
-        gameCtx.fillStyle = '#008';
+        gameCtx.fillStyle = '#008'; // Darker blue for normal tanks.
       } else if (unit.type === 'harvester') {
         gameCtx.fillStyle = '#9400D3';
       }
@@ -105,7 +106,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.strokeStyle = '#000';
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
     
-    // Harvester progress bar: remains at 100% if full.
+    // Draw harvester progress bar (remains at 100% if full).
     if (unit.type === 'harvester') {
       let progress = 0;
       if (unit.harvesting) {
@@ -114,7 +115,8 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       if (unit.oreCarried >= 5) {
         progress = 1;
       }
-      if (progress > 0) {
+      // Always draw the bar if ore is full.
+      if (progress >= 0) {
         const progressBarWidth = TILE_SIZE * 0.8;
         const progressBarHeight = 3;
         const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
