@@ -1,5 +1,12 @@
 // logic.js
-import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, TANK_FIRE_RANGE } from './config.js';
+import {
+  INERTIA_DECAY,
+  TILE_SIZE,
+  ORE_SPREAD_INTERVAL,
+  ORE_SPREAD_PROBABILITY,
+  TANK_FIRE_RANGE,
+  HARVESTER_CAPPACITY
+} from './config.js';
 import { spawnUnit, findPath, buildOccupancyMap } from './units.js';
 import { playSound } from './sound.js';
 
@@ -42,12 +49,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // --- Unit Updates ---
   units.forEach(unit => {
-    // Clear target if it’s destroyed.
+    // Clear target if destroyed.
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null;
     }
 
-    // Effective speed (double on streets)
+    // Effective speed (doubled on street tiles)
     let effectiveSpeed = unit.speed;
     if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
       effectiveSpeed *= 2;
@@ -55,26 +62,26 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // --- Enemy AI for Tanks ---
     if (unit.owner !== 'player' && unit.type === 'tank') {
-      if (!unit.target) {
-        unit.target = factories.find(f => f.id === 'player');
-        const path = findPath({ x: unit.tileX, y: unit.tileY },
-                              { x: unit.target.x, y: unit.target.y },
-                              mapGrid, occupancyMap);
-        if (path.length > 1) {
-          unit.path = path.slice(1);
-        }
-      } else {
-        // Switch target if any friendly unit comes close.
-        for (const other of units) {
-          if (other.owner === 'player') {
-            const dist = Math.hypot((other.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2),
-                                    (other.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2));
-            if (dist < TANK_FIRE_RANGE * TILE_SIZE) {
-              unit.target = other;
-              break;
-            }
+      // Look for any player's unit within 10 tiles.
+      let closestPlayerUnit = null;
+      let closestDist = Infinity;
+      for (const other of units) {
+        if (other.owner === 'player') {
+          const d = Math.hypot(
+            (other.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
+            (other.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+          );
+          if (d < closestDist) {
+            closestDist = d;
+            closestPlayerUnit = other;
           }
         }
+      }
+      if (closestPlayerUnit && closestDist < 10 * TILE_SIZE) {
+        unit.target = closestPlayerUnit;
+      } else {
+        // Default to attacking player's base.
+        unit.target = factories.find(f => f.id === 'player');
       }
     }
 
@@ -166,7 +173,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       const tileX = Math.floor(unit.x / TILE_SIZE);
       const tileY = Math.floor(unit.y / TILE_SIZE);
       // Begin mining if on an ore tile.
-      if (unit.oreCarried < 5 && !unit.harvesting && mapGrid[tileY][tileX].type === 'ore') {
+      if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && mapGrid[tileY][tileX].type === 'ore') {
         if (!unit.oreField) {
           unit.oreField = { x: tileX, y: tileY };
         }
@@ -184,29 +191,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           mapGrid[tileY][tileX].type = 'land';
         }
       }
-      if (unit.oreCarried >= 5) {
+      if (unit.oreCarried >= HARVESTER_CAPPACITY) {
         const targetFactory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy');
-        // Set unload target to factory center.
-        const unloadTile = {
-          x: targetFactory.x + Math.floor(targetFactory.width / 2),
-          y: targetFactory.y + Math.floor(targetFactory.height / 2)
-        };
-        if (!unit.path || unit.path.length === 0) {
-          const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTile, mapGrid, occupancyMap);
-          if (path.length > 1) {
-            unit.path = path.slice(1);
-          }
-        }
-        const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
-        const factoryCenter = {
-          x: targetFactory.x * TILE_SIZE + (targetFactory.width * TILE_SIZE) / 2,
-          y: targetFactory.y * TILE_SIZE + (targetFactory.height * TILE_SIZE) / 2
-        };
-        const distanceToFactory = Math.hypot(unitCenter.x - factoryCenter.x, unitCenter.y - factoryCenter.y);
-        if (distanceToFactory <= 3 * TILE_SIZE) {
-          // Unload ore.
+        // Instead of using center distances, unload as soon as the harvester is on any tile adjacent to the factory.
+        if (isAdjacentToFactory(unit, targetFactory)) {
           if (unit.owner === 'player') {
             gameState.money += 1000;
           } else {
@@ -215,12 +205,23 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           unit.oreCarried = 0;
           unit.oreField = null;
           playSound('deposit');
-          // After unloading, move to nearest ore field.
+          // After unloading, resume harvesting by moving toward the nearest ore field.
           const orePos = findClosestOre(unit, mapGrid);
           if (orePos) {
             const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
             if (newPath.length > 1) {
               unit.path = newPath.slice(1);
+            }
+          }
+        } else {
+          // Otherwise, set path toward the factory (any tile adjacent to it).
+          const unloadTarget = findAdjacentTile(targetFactory, mapGrid);
+          if (unloadTarget) {
+            if (!unit.path || unit.path.length === 0) {
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap);
+              if (path.length > 1) {
+                unit.path = path.slice(1);
+              }
             }
           }
         }
@@ -265,7 +266,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
   });
 
-  // --- Resolve Multiple Units on Same Tile ---
+  // --- Resolve Multiple Units on the Same Tile (Offset them) ---
   const tileOccupants = {};
   units.forEach(u => {
     const key = `${u.tileX},${u.tileY}`;
@@ -363,7 +364,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
   }
 
-  // --- Factory Destruction: Remove enemy base from map when destroyed ---
+  // --- Factory Destruction: Remove enemy base when destroyed ---
   for (let i = factories.length - 1; i >= 0; i--) {
     const factory = factories[i];
     if (factory.health <= 0 && !factory.destroyed) {
@@ -375,13 +376,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
       gameState.gamePaused = true;
       playSound('explosion');
-      // Remove the factory from the array.
       factories.splice(i, 1);
     }
   }
 }
 
-// Helper function to check collision of a bullet with any unit or factory.
+// Helper: Check if a bullet collides with any unit or factory.
 function checkBulletCollision(bullet, units, factories) {
   // Check collision with units.
   for (let u of units) {
@@ -402,6 +402,15 @@ function checkBulletCollision(bullet, units, factories) {
   return null;
 }
 
+// Helper: Determine if a unit is adjacent to a factory.
+// A unit is adjacent if its tile is within one tile of any tile occupied by the factory.
+function isAdjacentToFactory(unit, factory) {
+  return (unit.tileX >= factory.x - 1 &&
+          unit.tileX <= factory.x + factory.width &&
+          unit.tileY >= factory.y - 1 &&
+          unit.tileY <= factory.y + factory.height);
+}
+
 // Helper: Find the closest ore tile from a unit's current position.
 function findClosestOre(unit, mapGrid) {
   let closest = null;
@@ -420,4 +429,18 @@ function findClosestOre(unit, mapGrid) {
     }
   }
   return closest;
+}
+
+// Helper: Find an adjacent tile (to the factory) that is not a building.
+function findAdjacentTile(factory, mapGrid) {
+  // Look at the border around the factory.
+  for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
+    for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
+      if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue;
+      if (mapGrid[y][x].type !== 'building') {
+        return { x, y };
+      }
+    }
+  }
+  return null;
 }
