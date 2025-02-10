@@ -2,7 +2,7 @@
 import { TILE_SIZE } from './config.js';
 import { getUniqueId } from './utils.js';
 
-// Build an occupancy map indicating which tiles are occupied.
+// Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
   const occupancy = [];
   for (let y = 0; y < mapGrid.length; y++) {
@@ -17,11 +17,16 @@ export function buildOccupancyMap(units, mapGrid) {
   return occupancy;
 }
 
-// A* pathfinding that prefers faster (road) routes.
+// A* pathfinding with diagonal movement and a cost advantage for "street" tiles.
 export function findPath(start, end, mapGrid, occupancyMap = null) {
   const openList = [];
   const closedSet = new Set();
-  const startNode = { x: start.x, y: start.y, g: 0, h: Math.hypot(end.x - start.x, end.y - start.y) };
+  const startNode = {
+    x: start.x,
+    y: start.y,
+    g: 0,
+    h: Math.hypot(end.x - start.x, end.y - start.y)
+  };
   startNode.f = startNode.g + startNode.h;
   openList.push(startNode);
 
@@ -54,34 +59,50 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
     }
     closedSet.add(nodeKey(current));
     for (const dir of directions) {
-      const neighbor = { x: current.x + dir.x, y: current.y + dir.y };
-      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapGrid[0].length || neighbor.y >= mapGrid.length)
+      const nx = current.x + dir.x;
+      const ny = current.y + dir.y;
+      if (nx < 0 || ny < 0 || nx >= mapGrid[0].length || ny >= mapGrid.length) {
         continue;
-      const tileType = mapGrid[neighbor.y][neighbor.x].type;
-      if (tileType === 'water' || tileType === 'rock' || tileType === 'building')
+      }
+      const tileType = mapGrid[ny][nx].type;
+      // Skip water, rock, building tiles.
+      if (tileType === 'water' || tileType === 'rock' || tileType === 'building') {
         continue;
-      if (occupancyMap && occupancyMap[neighbor.y][neighbor.x] && !(neighbor.x === end.x && neighbor.y === end.y))
+      }
+      // If occupancy map is given, skip if occupied (unless it's the end).
+      if (occupancyMap && occupancyMap[ny][nx] && !(nx === end.x && ny === end.y)) {
         continue;
-      if (closedSet.has(nodeKey(neighbor)))
+      }
+      if (closedSet.has(`${nx},${ny}`)) {
         continue;
-      // Cost: base cost is 1 (or sqrt(2) for diagonal).
+      }
+      // Base cost for orth/diag movement.
       let baseCost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1;
-      // If the tile is a road ("street"), movement is 2× faster, so cost is halved.
+      // If it's a street, half the cost.
       const multiplier = (tileType === 'street') ? 0.5 : 1;
       const cost = baseCost * multiplier;
+
       const gScore = current.g + cost;
-      const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y);
+      const hScore = Math.hypot(end.x - nx, end.y - ny);
       const fScore = gScore + hScore;
-      const existing = openList.find(n => n.x === neighbor.x && n.y === neighbor.y);
-      if (existing && existing.f <= fScore)
+      const existing = openList.find(n => n.x === nx && n.y === ny);
+      if (existing && existing.f <= fScore) {
         continue;
-      openList.push({ x: neighbor.x, y: neighbor.y, g: gScore, h: hScore, f: fScore, parent: current });
+      }
+      openList.push({
+        x: nx,
+        y: ny,
+        g: gScore,
+        h: hScore,
+        f: fScore,
+        parent: current
+      });
     }
   }
-  return []; // No valid path found.
+  return [];
 }
 
-// Spawns a unit near the given factory by searching in a small radius.
+// Spawns a unit near a factory by searching a small radius around the factory.
 export function spawnUnit(factory, unitType, units, mapGrid) {
   const startX = factory.x + factory.width;
   const startY = factory.y;

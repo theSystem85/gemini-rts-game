@@ -17,6 +17,7 @@ export function playSound(eventName) {
       eventName === 'unitSelection' ? 600 :
       eventName === 'movement' ? 400 :
       eventName === 'shoot' ? 800 :
+      eventName === 'shoot_rocket' ? 100 :
       eventName === 'productionStart' ? 500 :
       eventName === 'productionReady' ? 700 :
       eventName === 'bulletHit' ? 900 :

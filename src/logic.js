@@ -86,24 +86,28 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
 
     // --- Tank Movement & Firing Behavior ---
+    // logic.js (inside your tank firing logic)
     if (unit.type === 'tank' || unit.type === 'rocketTank') {
+      // If it's a rocket tank, give it double range:
+      const range = (unit.type === 'rocketTank')
+        ? TANK_FIRE_RANGE * 2
+        : TANK_FIRE_RANGE;
+
       if (unit.target) {
         const unitCenterX = unit.x + TILE_SIZE / 2;
         const unitCenterY = unit.y + TILE_SIZE / 2;
         let targetCenterX, targetCenterY;
-        if (unit.target.tileX !== undefined) {
-          targetCenterX = unit.target.x + TILE_SIZE / 2;
-          targetCenterY = unit.target.y + TILE_SIZE / 2;
-        } else {
-          targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2;
-          targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2;
-        }
-        const distToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
-        if (distToTarget <= TANK_FIRE_RANGE * TILE_SIZE) {
-          unit.path = [];
+        // ...
+        const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+        if (dist <= range * TILE_SIZE) {
+          // within range => can fire
+          if (!unit.lastShotTime || performance.now() - unit.lastShotTime > 1600) {
+            // [spawn bullet code]
+          }
         }
       }
     }
+
 
     // --- Movement Along Path ---
     if (unit.path && unit.path.length > 0) {
@@ -151,19 +155,35 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             active: true,
             shooter: unit
           };
-          if (unit.type === 'rocketTank') {
-            bullet.homing = true;
-            bullet.target = unit.target;
-          } else {
-            bullet.homing = false;
-            bullet.fixedTargetPos = { x: targetCenterX, y: targetCenterY };
-            const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
-            bullet.vx = bullet.speed * Math.cos(angle);
-            bullet.vy = bullet.speed * Math.sin(angle);
-          }
+          bullet.homing = false;
+          bullet.fixedTargetPos = { x: targetCenterX, y: targetCenterY };
+          const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+          bullet.vx = bullet.speed * Math.cos(angle);
+          bullet.vy = bullet.speed * Math.sin(angle);
           bullets.push(bullet);
           unit.lastShotTime = performance.now();
           playSound('shoot');
+        }
+      }
+      // rocket tank
+      else if (dist <= TANK_FIRE_RANGE * 2 * TILE_SIZE) {
+        if (!unit.lastShotTime || performance.now() - unit.lastShotTime > 1600) {
+          let bullet = {
+            id: Date.now() + Math.random(),
+            x: unitCenterX,
+            y: unitCenterY,
+            speed: 2,
+            baseDamage: 40,
+            active: true,
+            shooter: unit
+          };
+          if (unit.type === 'rocketTank') {
+            bullet.homing = true;
+            bullet.target = unit.target;
+          }
+          bullets.push(bullet);
+          unit.lastShotTime = performance.now();
+          playSound('shoot_rocket');
         }
       }
     }
