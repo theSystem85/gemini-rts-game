@@ -5,36 +5,17 @@ import {
   ORE_SPREAD_INTERVAL,
   ORE_SPREAD_PROBABILITY,
   TANK_FIRE_RANGE,
-  HARVESTER_CAPPACITY
+  HARVESTER_CAPPACITY,
+  PATH_CALC_INTERVAL
 } from './config.js';
 import { spawnUnit, findPath, buildOccupancyMap } from './units.js';
 import { playSound } from './sound.js';
+import { updateEnemyAI } from './enemy.js';
 
 export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   if (gameState.gamePaused) return;
-
   const now = performance.now();
   const occupancyMap = buildOccupancyMap(units, mapGrid);
-
-  // --- Enemy Production: Spawn one enemy tank every 10 seconds ---
-  const enemyFactory = factories.find(f => f.id === 'enemy');
-  const enemyTankCost = 1000;
-  if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory.budget >= enemyTankCost) {
-    const enemyUnit = spawnUnit(enemyFactory, 'tank', units, mapGrid);
-    units.push(enemyUnit);
-    const playerFactory = factories.find(f => f.id === 'player');
-    const path = findPath({ x: enemyUnit.tileX, y: enemyUnit.tileY },
-                          { x: playerFactory.x, y: playerFactory.y },
-                          mapGrid, occupancyMap);
-    if (path.length > 1) {
-      enemyUnit.path = path.slice(1);
-    }
-    enemyUnit.target = playerFactory;
-    enemyFactory.budget -= enemyTankCost;
-    enemyFactory.budget = Math.max(0, enemyFactory.budget);
-    gameState.enemyLastProductionTime = now;
-  }
-
   gameState.gameTime += delta / 1000;
 
   // --- Map Scrolling Inertia ---
@@ -49,6 +30,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // --- Unit Updates ---
   units.forEach(unit => {
+    // Save previous position for movement check
+    const prevX = unit.x, prevY = unit.y;
+
     // Clear target if destroyed.
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null;
@@ -60,55 +44,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       effectiveSpeed *= 2;
     }
 
-    // --- Enemy AI for Tanks ---
-    if (unit.owner !== 'player' && unit.type === 'tank') {
-      // Look for any player's unit within 10 tiles.
-      let closestPlayerUnit = null;
-      let closestDist = Infinity;
-      for (const other of units) {
-        if (other.owner === 'player') {
-          const d = Math.hypot(
-            (other.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
-            (other.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
-          );
-          if (d < closestDist) {
-            closestDist = d;
-            closestPlayerUnit = other;
-          }
-        }
-      }
-      if (closestPlayerUnit && closestDist < 10 * TILE_SIZE) {
-        unit.target = closestPlayerUnit;
-      } else {
-        // Default to attacking player's base.
-        unit.target = factories.find(f => f.id === 'player');
-      }
-    }
-
-    // --- Tank Movement & Firing Behavior ---
-    // logic.js (inside your tank firing logic)
-    if (unit.type === 'tank' || unit.type === 'rocketTank') {
-      // If it's a rocket tank, give it double range:
-      const range = (unit.type === 'rocketTank')
-        ? TANK_FIRE_RANGE * 2
-        : TANK_FIRE_RANGE;
-
-      if (unit.target) {
-        const unitCenterX = unit.x + TILE_SIZE / 2;
-        const unitCenterY = unit.y + TILE_SIZE / 2;
-        let targetCenterX, targetCenterY;
-        // ...
-        const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
-        if (dist <= range * TILE_SIZE) {
-          // within range => can fire
-          if (!unit.lastShotTime || performance.now() - unit.lastShotTime > 1600) {
-            // [spawn bullet code]
-          }
-        }
-      }
-    }
-
-
     // --- Movement Along Path ---
     if (unit.path && unit.path.length > 0) {
       const nextTile = unit.path[0];
@@ -117,17 +52,38 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       const dy = targetPos.y - unit.y;
       const distance = Math.hypot(dx, dy);
       if (distance < effectiveSpeed) {
-        if (!occupancyMap[nextTile.y][nextTile.x] || (nextTile.x === unit.tileX && nextTile.y === unit.tileY)) {
-          unit.x = targetPos.x;
-          unit.y = targetPos.y;
-          unit.tileX = nextTile.x;
-          unit.tileY = nextTile.y;
-          unit.path.shift();
-          occupancyMap[unit.tileY][unit.tileX] = true;
-        }
+        unit.x = targetPos.x;
+        unit.y = targetPos.y;
+        unit.tileX = nextTile.x;
+        unit.tileY = nextTile.y;
+        unit.path.shift();
+        occupancyMap[unit.tileY][unit.tileX] = true;
       } else {
         unit.x += (dx / distance) * effectiveSpeed;
         unit.y += (dy / distance) * effectiveSpeed;
+      }
+    }
+    // Update lastMovedTime if unit has moved
+    if (unit.x !== prevX || unit.y !== prevY) {
+      unit.lastMovedTime = now;
+    }
+
+    // --- If spawned inside factory, compute an exit path ---
+    if (unit.spawnedInFactory) {
+      const factory = unit.owner === 'player'
+        ? factories.find(f => f.id === 'player')
+        : factories.find(f => f.id === 'enemy');
+      if (unit.tileX >= factory.x && unit.tileX < factory.x + factory.width &&
+          unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
+        const exitTile = findAdjacentTile(factory, mapGrid);
+        if (exitTile) {
+          const exitPath = findPath({ x: unit.tileX, y: unit.tileY }, exitTile, mapGrid, occupancyMap);
+          if (exitPath.length > 1) {
+            unit.path = exitPath.slice(1);
+          }
+        }
+      } else {
+        unit.spawnedInFactory = false;
       }
     }
 
@@ -145,77 +101,72 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
       const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
       if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
-        if (!unit.lastShotTime || performance.now() - unit.lastShotTime > 1600) {
-          let bullet = {
-            id: Date.now() + Math.random(),
-            x: unitCenterX,
-            y: unitCenterY,
-            speed: 3,
-            baseDamage: 20,
-            active: true,
-            shooter: unit
-          };
-          bullet.homing = false;
-          bullet.fixedTargetPos = { x: targetCenterX, y: targetCenterY };
-          const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
-          bullet.vx = bullet.speed * Math.cos(angle);
-          bullet.vy = bullet.speed * Math.sin(angle);
-          bullets.push(bullet);
-          unit.lastShotTime = performance.now();
-          playSound('shoot');
-        }
-      }
-      // rocket tank
-      else if (dist <= TANK_FIRE_RANGE * 2 * TILE_SIZE) {
-        if (!unit.lastShotTime || performance.now() - unit.lastShotTime > 1600) {
-          let bullet = {
-            id: Date.now() + Math.random(),
-            x: unitCenterX,
-            y: unitCenterY,
-            speed: 2,
-            baseDamage: 40,
-            active: true,
-            shooter: unit
-          };
-          if (unit.type === 'rocketTank') {
-            bullet.homing = true;
-            bullet.target = unit.target;
+        if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
+          if (unit.type === 'tank') {
+            let bullet = {
+              id: Date.now() + Math.random(),
+              x: unitCenterX,
+              y: unitCenterY,
+              speed: 3,
+              baseDamage: 20,
+              active: true,
+              shooter: unit,
+              homing: false,
+              fixedTargetPos: { x: targetCenterX, y: targetCenterY }
+            };
+            const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+            bullet.vx = bullet.speed * Math.cos(angle);
+            bullet.vy = bullet.speed * Math.sin(angle);
+            bullets.push(bullet);
+            unit.lastShotTime = now;
+            playSound('shoot');
+          } else if (unit.type === 'rocketTank') {
+            let bullet = {
+              id: Date.now() + Math.random(),
+              x: unitCenterX,
+              y: unitCenterY,
+              speed: 2,
+              baseDamage: 40,
+              active: true,
+              shooter: unit,
+              homing: true,
+              target: unit.target
+            };
+            bullets.push(bullet);
+            unit.lastShotTime = now;
+            playSound('shoot_rocket');
           }
-          bullets.push(bullet);
-          unit.lastShotTime = performance.now();
-          playSound('shoot_rocket');
         }
       }
     }
 
     // --- Harvester Behavior ---
     if (unit.type === 'harvester') {
-      const tileX = Math.floor(unit.x / TILE_SIZE);
-      const tileY = Math.floor(unit.y / TILE_SIZE);
-      // Begin mining if on an ore tile.
-      if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && mapGrid[tileY][tileX].type === 'ore') {
+      // Use current tile computed from current position.
+      const unitTileX = Math.floor(unit.x / TILE_SIZE);
+      const unitTileY = Math.floor(unit.y / TILE_SIZE);
+      if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && mapGrid[unitTileY][unitTileX].type === 'ore') {
         if (!unit.oreField) {
-          unit.oreField = { x: tileX, y: tileY };
+          unit.oreField = { x: unitTileX, y: unitTileY };
         }
-        if (unit.oreField.x === tileX && unit.oreField.y === tileY) {
+        if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
           unit.harvesting = true;
-          unit.harvestTimer = performance.now();
+          unit.harvestTimer = now;
           playSound('harvest');
         }
       }
       if (unit.harvesting) {
-        if (performance.now() - unit.harvestTimer > 10000) {
+        if (now - unit.harvestTimer > 10000) {
           unit.oreCarried++;
           unit.harvesting = false;
-          // Remove ore from map.
-          mapGrid[tileY][tileX].type = 'land';
+          mapGrid[unitTileY][unitTileX].type = 'land';
         }
       }
       if (unit.oreCarried >= HARVESTER_CAPPACITY) {
         const targetFactory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy');
-        // Instead of using center distances, unload as soon as the harvester is on any tile adjacent to the factory.
+        // Check adjacency using current unit tile.
         if (isAdjacentToFactory(unit, targetFactory)) {
           if (unit.owner === 'player') {
             gameState.money += 1000;
@@ -225,16 +176,14 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           unit.oreCarried = 0;
           unit.oreField = null;
           playSound('deposit');
-          // After unloading, resume harvesting by moving toward the nearest ore field.
           const orePos = findClosestOre(unit, mapGrid);
           if (orePos) {
-            const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
-            if (newPath.length > 1) {
-              unit.path = newPath.slice(1);
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+            if (path.length > 1) {
+              unit.path = path.slice(1);
             }
           }
         } else {
-          // Otherwise, set path toward the factory (any tile adjacent to it).
           const unloadTarget = findAdjacentTile(targetFactory, mapGrid);
           if (unloadTarget) {
             if (!unit.path || unit.path.length === 0) {
@@ -247,63 +196,51 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
       }
     }
-
-    // --- Enemy Response: Backfire & Dodge ---
-    if (unit.owner !== 'player' && unit.type === 'tank') {
-      let underFire = false;
-      bullets.forEach(bullet => {
-        if (bullet.shooter && bullet.shooter.owner === 'player') {
-          const bulletDist = Math.hypot(
-            bullet.x - (unit.x + TILE_SIZE / 2),
-            bullet.y - (unit.y + TILE_SIZE / 2)
-          );
-          if (bulletDist < 2 * TILE_SIZE) {
-            underFire = true;
-            if (!unit.target) {
-              unit.target = bullet.shooter;
-            }
-          }
-        }
-      });
-      if (underFire && unit.path && unit.path.length > 0) {
-        const possibleMoves = [
-          { dx: 1, dy: 0 },
-          { dx: -1, dy: 0 },
-          { dx: 0, dy: 1 },
-          { dx: 0, dy: -1 }
-        ];
-        const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-        const newTile = { x: unit.tileX + randomMove.dx, y: unit.tileY + randomMove.dy };
-        if (newTile.x >= 0 && newTile.x < mapGrid[0].length &&
-            newTile.y >= 0 && newTile.y < mapGrid.length &&
-            mapGrid[newTile.y][newTile.x].type !== 'building') {
-          const newPath = findPath({ x: unit.tileX, y: unit.tileY }, newTile, mapGrid, occupancyMap);
-          if (newPath.length > 0) {
-            unit.path = newPath.slice(1);
-          }
-        }
-      }
-    }
   });
 
-  // --- Resolve Multiple Units on the Same Tile (Offset them) ---
+  // --- Global Throttle for Path Recalculation ---
+  // Instead of each idle unit recalculating its path individually,
+  // we recalc paths for idle units (with a target and no current path)
+  // at most once every PATH_CALC_INTERVAL milliseconds.
+  if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
+    gameState.lastGlobalPathCalc = now;
+    units.forEach(unit => {
+      if (unit.target && (!unit.path || unit.path.length === 0)) {
+        const targetPos = { x: unit.target.x, y: unit.target.y };
+        const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, occupancyMap);
+        if (newPath.length > 1) {
+          unit.path = newPath.slice(1);
+        }
+      }
+    });
+  }
+
+  // --- Resolve Multiple Units on the Same Tile (Only for Idle Units) ---
   const tileOccupants = {};
   units.forEach(u => {
-    const key = `${u.tileX},${u.tileY}`;
-    if (!tileOccupants[key]) tileOccupants[key] = [];
-    tileOccupants[key].push(u);
+    if (!u.path || u.path.length === 0) {
+      const key = `${u.tileX},${u.tileY}`;
+      if (!tileOccupants[key]) tileOccupants[key] = [];
+      tileOccupants[key].push(u);
+    }
   });
   for (const key in tileOccupants) {
     const group = tileOccupants[key];
     if (group.length > 1) {
+      const [tileX, tileY] = key.split(',').map(Number);
+      const centerX = tileX * TILE_SIZE + TILE_SIZE / 2;
+      const centerY = tileY * TILE_SIZE + TILE_SIZE / 2;
+      const n = group.length;
+      const separation = 20; // increased separation distance
       group.forEach((u, index) => {
-        u.x = u.tileX * TILE_SIZE + index * 3;
-        u.y = u.tileY * TILE_SIZE + index * 3;
+        const angle = (2 * Math.PI * index) / n;
+        u.x = centerX + separation * Math.cos(angle) - TILE_SIZE / 2;
+        u.y = centerY + separation * Math.sin(angle) - TILE_SIZE / 2;
       });
     }
   }
 
-  // --- Bullet Updates: Universal Collision Check ---
+  // --- Bullet Updates ---
   for (let i = bullets.length - 1; i >= 0; i--) {
     const bullet = bullets[i];
     if (!bullet.active) continue;
@@ -329,7 +266,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       bullet.x += bullet.vx;
       bullet.y += bullet.vy;
     }
-    // Check collision with ANY target.
     const hitTarget = checkBulletCollision(bullet, units, factories);
     if (hitTarget) {
       const factor = 0.8 + Math.random() * 0.4;
@@ -384,7 +320,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
   }
 
-  // --- Factory Destruction: Remove enemy base when destroyed ---
+  // --- Factory Destruction ---
   for (let i = factories.length - 1; i >= 0; i--) {
     const factory = factories[i];
     if (factory.health <= 0 && !factory.destroyed) {
@@ -399,11 +335,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       factories.splice(i, 1);
     }
   }
+
+  // --- Finally, update enemy AI ---
+  updateEnemyAI(units, factories, bullets, mapGrid, gameState);
 }
 
 // Helper: Check if a bullet collides with any unit or factory.
 function checkBulletCollision(bullet, units, factories) {
-  // Check collision with units.
   for (let u of units) {
     if (u.id === bullet.shooter.id) continue;
     const centerX = u.x + TILE_SIZE / 2;
@@ -411,7 +349,6 @@ function checkBulletCollision(bullet, units, factories) {
     const dist = Math.hypot(bullet.x - centerX, bullet.y - centerY);
     if (dist < 10) return u;
   }
-  // Check collision with factories.
   for (let f of factories) {
     if (f.destroyed) continue;
     const centerX = f.x * TILE_SIZE + (f.width * TILE_SIZE) / 2;
@@ -423,15 +360,21 @@ function checkBulletCollision(bullet, units, factories) {
 }
 
 // Helper: Determine if a unit is adjacent to a factory.
-// A unit is adjacent if its tile is within one tile of any tile occupied by the factory.
+// Uses the current unit position (using Math.floor) and checks all surrounding tiles.
 function isAdjacentToFactory(unit, factory) {
-  return (unit.tileX >= factory.x - 1 &&
-          unit.tileX <= factory.x + factory.width &&
-          unit.tileY >= factory.y - 1 &&
-          unit.tileY <= factory.y + factory.height);
+  const unitTileX = Math.floor(unit.x / TILE_SIZE);
+  const unitTileY = Math.floor(unit.y / TILE_SIZE);
+  for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
+    for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
+      if (unitTileX === x && unitTileY === y) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
-// Helper: Find the closest ore tile from a unit's current position.
+// Helper: Find the closest ore tile from a unit's position.
 function findClosestOre(unit, mapGrid) {
   let closest = null;
   let closestDist = Infinity;
@@ -453,7 +396,6 @@ function findClosestOre(unit, mapGrid) {
 
 // Helper: Find an adjacent tile (to the factory) that is not a building.
 function findAdjacentTile(factory, mapGrid) {
-  // Look at the border around the factory.
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
       if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue;

@@ -79,7 +79,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
       if (enemyHover) {
         gameCanvas.style.cursor = 'crosshair';
-        return; // Skip further cursor logic.
+        return;
       }
     }
 
@@ -174,9 +174,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
             }
           }
         }
-        // Formation logic: distribute selected units in a grid formation.
+        // Formation logic for movement/attack.
         const count = selectedUnits.length;
         const cols = Math.ceil(Math.sqrt(count));
+        const rows = Math.ceil(count / cols);
         selectedUnits.forEach((unit, index) => {
           let formationOffset = { x: 0, y: 0 };
           if (target) {
@@ -198,14 +199,26 @@ export function setupInputHandlers(units, factories, mapGrid) {
               unit.target = target;
               return;
             }
-            // Compute desired point at firing range.
-            const desiredX = targetCenterX - (dx / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
-            const desiredY = targetCenterY - (dy / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
-            const row = Math.floor(index / cols);
+            // Compute the base destination exactly at firing range.
+            const baseX = targetCenterX - (dx / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
+            const baseY = targetCenterY - (dy / dist) * (TANK_FIRE_RANGE * TILE_SIZE);
+            // Compute formation offset (small separation in a tight grid)
             const col = index % cols;
-            formationOffset = { x: col, y: row };
-            const destX = desiredX + formationOffset.x * TILE_SIZE;
-            const destY = desiredY + formationOffset.y * TILE_SIZE;
+            const row = Math.floor(index / cols);
+            formationOffset.x = col * 10 - ((cols - 1) * 10) / 2;
+            formationOffset.y = row * 10 - ((rows - 1) * 10) / 2;
+            // Final destination is the base destination plus formation offset.
+            let destX = baseX + formationOffset.x;
+            let destY = baseY + formationOffset.y;
+            // Ensure the final destination is not further than firing range.
+            const finalDx = targetCenterX - destX;
+            const finalDy = targetCenterY - destY;
+            let finalDist = Math.hypot(finalDx, finalDy);
+            if (finalDist > TANK_FIRE_RANGE * TILE_SIZE) {
+              const scale = (TANK_FIRE_RANGE * TILE_SIZE) / finalDist;
+              destX = targetCenterX - finalDx * scale;
+              destY = targetCenterY - finalDy * scale;
+            }
             const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) };
             const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
             if (path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
@@ -217,7 +230,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
               unit.target = target;
             }
           } else {
-            // No enemy target: move to clicked location with formation.
+            // No target: move to clicked location with a basic grid formation.
             const row = Math.floor(index / cols);
             const col = index % cols;
             formationOffset = { x: col, y: row };

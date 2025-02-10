@@ -1,5 +1,5 @@
 // rendering.js
-import { TILE_SIZE, TILE_COLORS } from './config.js';
+import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js';
 import { tileToPixel } from './utils.js';
 
 export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, scrollOffset, selectionActive, selectionStart, selectionEnd) {
@@ -20,7 +20,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     }
   }
   
-  // Draw factories (skip if destroyed).
+  // Draw factories.
   factories.forEach(factory => {
     if (factory.destroyed) return;
     const pos = tileToPixel(factory.x, factory.y);
@@ -43,9 +43,9 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   units.forEach(unit => {
     if (unit.owner === 'player') {
       if (unit.type === 'rocketTank') {
-        gameCtx.fillStyle = '#00F'; // Bright blue for rocket tanks.
+        gameCtx.fillStyle = '#00F';
       } else if (unit.type === 'tank') {
-        gameCtx.fillStyle = '#008'; // Darker blue for normal tanks.
+        gameCtx.fillStyle = '#008';
       } else if (unit.type === 'harvester') {
         gameCtx.fillStyle = '#9400D3';
       }
@@ -106,26 +106,23 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.strokeStyle = '#000';
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
     
-    // Draw harvester progress bar (remains at 100% if full).
+    // Draw harvester progress bar.
     if (unit.type === 'harvester') {
       let progress = 0;
       if (unit.harvesting) {
         progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1);
       }
-      if (unit.oreCarried >= 5) {
+      if (unit.oreCarried >= HARVESTER_CAPPACITY) {
         progress = 1;
       }
-      // Always draw the bar if ore is full.
-      if (progress >= 0) {
-        const progressBarWidth = TILE_SIZE * 0.8;
-        const progressBarHeight = 3;
-        const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
-        const progressBarY = unit.y - 5 - scrollOffset.y;
-        gameCtx.fillStyle = '#FFD700';
-        gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
-        gameCtx.strokeStyle = '#000';
-        gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
-      }
+      const progressBarWidth = TILE_SIZE * 0.8;
+      const progressBarHeight = 3;
+      const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2;
+      const progressBarY = unit.y - 5 - scrollOffset.y;
+      gameCtx.fillStyle = '#FFD700';
+      gameCtx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
+      gameCtx.strokeStyle = '#000';
+      gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
     }
   });
   

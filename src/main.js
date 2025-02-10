@@ -9,7 +9,6 @@ import { initFactories } from './factories.js';
 import { playSound } from './sound.js';
 import { updateGame } from './logic.js';
 
-// DOM elements
 const gameCanvas = document.getElementById('gameCanvas');
 const gameCtx = gameCanvas.getContext('2d');
 const minimapCanvas = document.getElementById('minimap');
@@ -25,7 +24,6 @@ const pauseBtn = document.getElementById('pauseBtn');
 const restartBtn = document.getElementById('restartBtn');
 const sidebar = document.getElementById('sidebar');
 
-// Remove redundant start button if present.
 const startBtn = document.getElementById('startBtn');
 if (startBtn) {
   startBtn.style.display = 'none';
@@ -33,7 +31,6 @@ if (startBtn) {
 sidebar.style.backgroundColor = '#333';
 sidebar.style.color = '#fff';
 
-// Canvas sizing.
 function resizeCanvases() {
   gameCanvas.width = window.innerWidth - 250;
   gameCanvas.height = window.innerHeight;
@@ -122,7 +119,6 @@ restartBtn.addEventListener('click', () => {
   window.location.reload();
 });
 
-// Auto-start the game.
 gameState.gameStarted = true;
 gameState.gamePaused = false;
 pauseBtn.textContent = 'Pause';
