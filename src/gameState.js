@@ -11,5 +11,6 @@ export const gameState = {
   isRightDragging: false,
   lastDragPos: { x: 0, y: 0 },
   enemyLastProductionTime: performance.now(),
-  lastOreUpdate: performance.now()
+  lastOreUpdate: performance.now(),
+  explosions: []  // Initialized empty explosions array for visual effects.
 }

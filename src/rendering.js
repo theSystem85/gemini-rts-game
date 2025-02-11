@@ -2,7 +2,7 @@
 import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
 import { tileToPixel } from './utils.js'
 
-export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, scrollOffset, selectionActive, selectionStart, selectionEnd) {
+export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
   gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
   const startTileX = Math.floor(scrollOffset.x / TILE_SIZE)
   const startTileY = Math.floor(scrollOffset.y / TILE_SIZE)
@@ -133,6 +133,21 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.arc(bullet.x - scrollOffset.x, bullet.y - scrollOffset.y, 3, 0, 2 * Math.PI)
     gameCtx.fill()
   })
+  
+  // Draw explosion effects.
+  if (gameState?.explosions && gameState?.explosions.length > 0) {
+    const currentTime = performance.now()
+    gameState.explosions.forEach(exp => {
+      const progress = (currentTime - exp.startTime) / exp.duration
+      const currentRadius = exp.maxRadius * progress
+      const alpha = Math.max(0, 1 - progress)
+      gameCtx.strokeStyle = `rgba(255,165,0,${alpha})`
+      gameCtx.lineWidth = 2
+      gameCtx.beginPath()
+      gameCtx.arc(exp.x - scrollOffset.x, exp.y - scrollOffset.y, currentRadius, 0, 2 * Math.PI)
+      gameCtx.stroke()
+    })
+  }
   
   // Draw selection rectangle.
   if (selectionActive && selectionStart && selectionEnd) {

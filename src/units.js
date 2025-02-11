@@ -77,9 +77,8 @@ class MinHeap {
 }
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
-// Now includes an early exit if the destination is out of bounds or impassable.
+// Early exits if destination is out of bounds or impassable.
 export function findPath(start, end, mapGrid, occupancyMap = null) {
-  // If destination is not within map boundaries, return empty path.
   if (
     end.x < 0 ||
     end.y < 0 ||
@@ -89,7 +88,6 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
     console.warn('findPath: destination tile out of bounds')
     return []
   }
-  // Early exit: if destination tile is impassable.
   const destType = mapGrid[end.y][end.x].type
   if (destType === 'water' || destType === 'rock' || destType === 'building') {
     console.warn('findPath: destination tile not passable')
@@ -123,7 +121,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
   ]
 
   let iterations = 0
-  const maxIterations = 10000  // safety cutoff
+  const maxIterations = 10000
   while (openHeap.size() > 0) {
     if (++iterations > maxIterations) {
       console.warn('findPath: reached maximum iterations')
@@ -172,7 +170,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
 export function spawnUnit(factory, unitType, units, mapGrid) {
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + Math.floor(factory.height / 2)
-  const unit = {
+  return {
     id: getUniqueId(),
     type: unitType,  // "tank", "rocketTank", or "harvester"
     owner: factory.id === 'player' ? 'player' : 'enemy',
@@ -191,5 +189,76 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     spawnTime: Date.now(),
     spawnedInFactory: true
   }
-  return unit
+}
+
+// --- Collision Resolution for Idle Units ---
+// When multiple units share the same tile, shuffle the available adjacent directions using a temporary swap.
+export function resolveUnitCollisions(units, mapGrid) {
+  const assignedTiles = new Set()
+  units.forEach(u => {
+    if (!u.path || u.path.length === 0) {
+      const tileX = Math.floor(u.x / TILE_SIZE)
+      const tileY = Math.floor(u.y / TILE_SIZE)
+      u.tileX = tileX
+      u.tileY = tileY
+    }
+  })
+  const tileOccupants = {}
+  units.forEach(u => {
+    if (!u.path || u.path.length === 0) {
+      const key = `${u.tileX},${u.tileY}`
+      if (!tileOccupants[key]) tileOccupants[key] = []
+      tileOccupants[key].push(u)
+    }
+  })
+  for (const key in tileOccupants) {
+    const group = tileOccupants[key]
+    const [tileX, tileY] = key.split(',').map(Number)
+    // Place first unit at the tile center.
+    const primary = group[0]
+    primary.x = tileX * TILE_SIZE
+    primary.y = tileY * TILE_SIZE
+    assignedTiles.add(key)
+    // For every additional unit, assign a random adjacent free tile.
+    const directions = [
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: 1 },
+      { dx: 1, dy: -1 },
+      { dx: -1, dy: 1 },
+      { dx: -1, dy: -1 }
+    ]
+    group.slice(1).forEach(u => {
+      // Shuffle directions using a temporary variable swap.
+      for (let i = directions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        let temp = directions[i]
+        directions[i] = directions[j]
+        directions[j] = temp
+      }
+      let placed = false
+      for (const {dx, dy} of directions) {
+        const newTileX = tileX + dx
+        const newTileY = tileY + dy
+        if (newTileX < 0 || newTileY < 0 || newTileX >= mapGrid[0].length || newTileY >= mapGrid.length) continue
+        const tileType = mapGrid[newTileY][newTileX].type
+        if (tileType === 'water' || tileType === 'rock' || tileType === 'building') continue
+        const newKey = `${newTileX},${newTileY}`
+        if (assignedTiles.has(newKey)) continue
+        u.x = newTileX * TILE_SIZE
+        u.y = newTileY * TILE_SIZE
+        u.tileX = newTileX
+        u.tileY = newTileY
+        assignedTiles.add(newKey)
+        placed = true
+        break
+      }
+      if (!placed) {
+        u.x = tileX * TILE_SIZE
+        u.y = tileY * TILE_SIZE
+      }
+    })
+  }
 }
