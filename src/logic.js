@@ -12,7 +12,7 @@ import { spawnUnit, findPath, buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 import { updateEnemyAI } from './enemy.js'
 
-// Helper: Checks if any friendly unit (other than shooter) is obstructing the line-of-sight between shooter and target.
+// Helper: Check if any friendly unit (other than shooter) is obstructing the line-of-sight.
 function lineOfSightBlocked(shooter, target, units) {
   const shooterCenter = { x: shooter.x + TILE_SIZE / 2, y: shooter.y + TILE_SIZE / 2 }
   let targetCenter
@@ -29,7 +29,6 @@ function lineOfSightBlocked(shooter, target, units) {
     if (unit.id === shooter.id) continue
     if (unit.owner !== shooter.owner) continue
     const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
-    // Projection of unitCenter onto the line from shooterCenter to targetCenter.
     const t = ((unitCenter.x - shooterCenter.x) * dx + (unitCenter.y - shooterCenter.y) * dy) / (length * length)
     if (t < 0 || t > 1) continue
     const closestPoint = { x: shooterCenter.x + t * dx, y: shooterCenter.y + t * dy }
@@ -59,15 +58,14 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
   // --- Unit Updates ---
   units.forEach(unit => {
-    // Save previous position for movement check
     const prevX = unit.x, prevY = unit.y
 
-    // Clear target if destroyed.
+    // Clear target if it’s been destroyed.
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null
     }
 
-    // Effective speed (doubled on street tiles)
+    // Determine effective speed (doubled on street tiles)
     let effectiveSpeed = unit.speed
     if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
       effectiveSpeed *= 2
@@ -92,7 +90,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         unit.y += (dy / distance) * effectiveSpeed
       }
     }
-    // Update lastMovedTime if unit has moved
     if (unit.x !== prevX || unit.y !== prevY) {
       unit.lastMovedTime = now
     }
@@ -116,7 +113,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
-    // --- Tank Firing ---
+    // --- Tank/Rocket Tank Firing ---
     if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
@@ -131,9 +128,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
       if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
         if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
-          if (lineOfSightBlocked(unit, unit.target, units)) {
-            // Do not fire if a friendly unit is obstructing the shot.
-          } else {
+          if (!lineOfSightBlocked(unit, unit.target, units)) {
             if (unit.type === 'tank') {
               let bullet = {
                 id: Date.now() + Math.random(),
@@ -175,19 +170,34 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // --- Harvester Behavior ---
     if (unit.type === 'harvester') {
-      // Use current tile computed from current position.
       const unitTileX = Math.floor(unit.x / TILE_SIZE)
       const unitTileY = Math.floor(unit.y / TILE_SIZE)
-      if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && mapGrid[unitTileY][unitTileX].type === 'ore') {
-        if (!unit.oreField) {
-          unit.oreField = { x: unitTileX, y: unitTileY }
-        }
-        if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
-          unit.harvesting = true
-          unit.harvestTimer = now
-          playSound('harvest')
+      // If not carrying ore and not already harvesting…
+      if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting) {
+        if (mapGrid[unitTileY][unitTileX].type === 'ore') {
+          // If on an ore tile, start harvesting
+          if (!unit.oreField) {
+            unit.oreField = { x: unitTileX, y: unitTileY }
+          }
+          if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
+            unit.harvesting = true
+            unit.harvestTimer = now
+            playSound('harvest')
+          }
+        } else {
+          // Otherwise, if not already moving, seek the closest ore
+          if (!unit.path || unit.path.length === 0) {
+            const orePos = findClosestOre(unit, mapGrid)
+            if (orePos) {
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
+              if (path.length > 1) {
+                unit.path = path.slice(1)
+              }
+            }
+          }
         }
       }
+      // Process harvesting timer.
       if (unit.harvesting) {
         if (now - unit.harvestTimer > 10000) {
           unit.oreCarried++
@@ -195,11 +205,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           mapGrid[unitTileY][unitTileX].type = 'land'
         }
       }
+      // When carrying a full load, head to deposit.
       if (unit.oreCarried >= HARVESTER_CAPPACITY) {
         const targetFactory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy')
-        // Check adjacency using current unit tile.
         if (isAdjacentToFactory(unit, targetFactory)) {
           if (unit.owner === 'player') {
             gameState.money += 1000
@@ -231,7 +241,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
   })
 
-  // --- Global Throttle for Path Recalculation ---
+  // --- Global Path Recalculation ---
   if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
     gameState.lastGlobalPathCalc = now
     units.forEach(unit => {
@@ -245,7 +255,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     })
   }
 
-  // --- Resolve Multiple Units on the Same Tile (Only for Idle Units) ---
+  // --- Resolve Multiple Units on the Same Tile ---
   const tileOccupants = {}
   units.forEach(u => {
     if (!u.path || u.path.length === 0) {
@@ -370,7 +380,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   updateEnemyAI(units, factories, bullets, mapGrid, gameState)
 }
 
-// Helper: Check if a bullet collides with any unit or factory.
 function checkBulletCollision(bullet, units, factories) {
   for (let u of units) {
     if (u.id === bullet.shooter.id) continue
@@ -389,7 +398,6 @@ function checkBulletCollision(bullet, units, factories) {
   return null
 }
 
-// Helper: Determine if a unit is adjacent to a factory.
 function isAdjacentToFactory(unit, factory) {
   const unitTileX = Math.floor(unit.x / TILE_SIZE)
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
@@ -403,7 +411,6 @@ function isAdjacentToFactory(unit, factory) {
   return false
 }
 
-// Helper: Find the closest ore tile from a unit's position.
 function findClosestOre(unit, mapGrid) {
   let closest = null
   let closestDist = Infinity
@@ -423,7 +430,6 @@ function findClosestOre(unit, mapGrid) {
   return closest
 }
 
-// Helper: Find an adjacent tile (to the factory) that is not a building.
 function findAdjacentTile(factory, mapGrid) {
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
