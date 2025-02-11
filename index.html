@@ -15,13 +15,21 @@
         <p>Losses: <span id="losses">0</span></p>
       </div>
       <div id="production">
-        <select id="unitType">
-          <option value="tank">Tank ($1000)</option>
-          <option value="rocketTank">Rocket Tank ($2000)</option>
-          <option value="harvester">Harvester ($500)</option>
-        </select>
-        <button id="produceBtn">Produce</button>
-        <span id="productionProgress"></span>
+        <div id="productionButtons">
+          <button class="production-button" data-unit-type="tank">
+            <img src="public/images/tank.webp" onerror="this.style.display='none'">
+            <span>Tank ($1000)</span>
+          </button>
+          <button class="production-button" data-unit-type="rocketTank">
+            <img src="public/images/rocket_tank.webp" onerror="this.style.display='none'">
+            <span>Rocket Tank ($2000)</span>
+          </button>
+          <button class="production-button" data-unit-type="harvester">
+            <img src="public/images/harvester.webp" onerror="this.style.display='none'">
+            <span>Harvester ($500)</span>
+          </button>
+        </div>
+        <div id="productionProgress"></div>
       </div>
       <div id="controls">
         <button id="pauseBtn">Start</button>

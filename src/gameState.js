@@ -12,4 +12,4 @@ export const gameState = {
   lastDragPos: { x: 0, y: 0 },
   enemyLastProductionTime: performance.now(),
   lastOreUpdate: performance.now()
-};
+}
