@@ -6,7 +6,7 @@ import { setupInputHandlers, selectedUnits, selectionActive, selectionStartExpor
 import { renderGame, renderMinimap } from './rendering.js'
 import { spawnUnit } from './units.js'
 import { initFactories } from './factories.js'
-import { playSound } from './sound.js'
+import { playSound, initBackgroundMusic, toggleBackgroundMusic } from './sound.js'
 import { updateGame } from './logic.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
@@ -22,7 +22,6 @@ const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
 const sidebar = document.getElementById('sidebar')
 
-// Production buttons container (new UI replaces dropdown/produceBtn)
 const productionButtons = document.getElementById('productionButtons')
 
 const startBtn = document.getElementById('startBtn')
@@ -41,7 +40,6 @@ function resizeCanvases() {
 window.addEventListener('resize', resizeCanvases)
 resizeCanvases()
 
-// --- Create Map Grid ---
 export const mapGrid = []
 for (let y = 0; y < MAP_TILES_Y; y++) {
   mapGrid[y] = []
@@ -49,7 +47,6 @@ for (let y = 0; y < MAP_TILES_Y; y++) {
     mapGrid[y][x] = { type: 'land' }
   }
 }
-// Add water, rock, street, and ore.
 for (let y = 45; y < 55; y++) {
   for (let x = 10; x < MAP_TILES_X - 10; x++) {
     mapGrid[y][x].type = 'water'
@@ -73,18 +70,14 @@ for (let i = 0; i < 100; i++) {
   }
 }
 
-// --- Initialize Factories ---
 const factories = []
 initFactories(factories, mapGrid)
 
-// Global arrays.
 const units = []
 const bullets = []
 
-// Initialize input handlers.
 setupInputHandlers(units, factories, mapGrid)
 
-// --- Production Logic for Player ---
 let production = {
   inProgress: false,
   unitType: null,
@@ -92,14 +85,12 @@ let production = {
   duration: 3000
 }
 
-// Map unit types to cost.
 const unitCosts = {
   tank: 1000,
   rocketTank: 2000,
   harvester: 500
 }
 
-// Attach event listeners to each production button.
 productionButtons.querySelectorAll('.production-button').forEach(button => {
   button.addEventListener('click', () => {
     if (production.inProgress) return
@@ -126,6 +117,18 @@ restartBtn.addEventListener('click', () => {
 gameState.gameStarted = true
 gameState.gamePaused = false
 pauseBtn.textContent = 'Pause'
+
+// Instead of auto-playing background music immediately,
+// wait for the first user interaction.
+document.addEventListener('click', initBackgroundMusic, { once: true })
+
+const musicControlButton = document.getElementById('musicControl')
+if (musicControlButton) {
+  musicControlButton.addEventListener('click', () => {
+    toggleBackgroundMusic()
+    musicControlButton.textContent = musicControlButton.textContent === "Pause Music" ? "Play Music" : "Pause Music"
+  })
+}
 
 let lastTime = performance.now()
 function gameLoop(time) {

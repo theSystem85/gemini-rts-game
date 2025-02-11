@@ -77,8 +77,25 @@ class MinHeap {
 }
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
-// Now includes a safety cutoff if iterations exceed a threshold.
+// Now includes an early exit if the destination is out of bounds or impassable.
 export function findPath(start, end, mapGrid, occupancyMap = null) {
+  // If destination is not within map boundaries, return empty path.
+  if (
+    end.x < 0 ||
+    end.y < 0 ||
+    end.x >= mapGrid[0].length ||
+    end.y >= mapGrid.length
+  ) {
+    console.warn('findPath: destination tile out of bounds')
+    return []
+  }
+  // Early exit: if destination tile is impassable.
+  const destType = mapGrid[end.y][end.x].type
+  if (destType === 'water' || destType === 'rock' || destType === 'building') {
+    console.warn('findPath: destination tile not passable')
+    return []
+  }
+
   const openHeap = new MinHeap()
   const closedSet = new Set()
   const startNode = {
