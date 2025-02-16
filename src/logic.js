@@ -126,7 +126,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
-    // --- Firing ---
+    // --- Firing with Clear Line-of-Sight Check (Prevent Friendly Fire) ---
     if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
@@ -139,7 +139,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
       }
       const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
-      if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
+      // Only fire if target is within range and there is a clear line of sight
+      if (dist <= TANK_FIRE_RANGE * TILE_SIZE && hasClearShot(unit, unit.target, units)) {
         if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
           if (unit.type === 'tank') {
             let bullet = {
@@ -276,11 +277,15 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   // --- Bullet Updates ---
   for (let i = bullets.length - 1; i >= 0; i--) {
     const bullet = bullets[i]
-    if (!bullet.active) continue
+    if (!bullet.active) {
+      bullets.splice(i, 1)
+      continue
+    }
     if (bullet.homing) {
       if (now - bullet.startTime > 5000) {
         triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
         bullet.active = false
+        bullets.splice(i, 1)
         continue
       }
       if (bullet.target) {
@@ -300,6 +305,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       } else {
         bullet.active = false
         triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+        bullets.splice(i, 1)
         continue
       }
       const hitTarget = checkBulletCollision(bullet, units, factories)
@@ -307,6 +313,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
         bullet.active = false
         playSound('shoot_rocket')
+        bullets.splice(i, 1)
         continue
       }
     } else {
@@ -323,12 +330,16 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           if (hitTarget.health <= 0) {
             hitTarget.health = 0
           }
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+          bullets.splice(i, 1)
+          continue
         }
       }
     }
     if (bullet.x < 0 || bullet.x > mapGrid[0].length * TILE_SIZE ||
         bullet.y < 0 || bullet.y > mapGrid.length * TILE_SIZE) {
       bullet.active = false
+      bullets.splice(i, 1)
     }
   }
 
@@ -490,4 +501,35 @@ function findAdjacentTile(factory, mapGrid) {
     }
   }
   return null
+}
+
+// Prevent friendly fire by ensuring clear line-of-sight.
+// Returns true if no friendly unit (other than shooter and target) is in the bullet's path.
+function hasClearShot(shooter, target, units) {
+  const shooterCenter = { x: shooter.x + TILE_SIZE / 2, y: shooter.y + TILE_SIZE / 2 }
+  const targetCenter = target.tileX !== undefined 
+    ? { x: target.x + TILE_SIZE / 2, y: target.y + TILE_SIZE / 2 }
+    : { x: target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2, y: target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2 }
+  const dx = targetCenter.x - shooterCenter.x
+  const dy = targetCenter.y - shooterCenter.y
+  const segmentLengthSq = dx * dx + dy * dy
+  // Threshold distance that counts as being "in the way"
+  const threshold = TILE_SIZE / 3
+
+  for (let other of units) {
+    // Only check for friendly units that are not the shooter or the intended target.
+    if (other === shooter || other === target) continue
+    if (other.owner !== shooter.owner) continue
+    const otherCenter = { x: other.x + TILE_SIZE / 2, y: other.y + TILE_SIZE / 2 }
+    const px = otherCenter.x - shooterCenter.x
+    const py = otherCenter.y - shooterCenter.y
+    let t = (px * dx + py * dy) / segmentLengthSq
+    if (t < 0 || t > 1) continue
+    const closestPoint = { x: shooterCenter.x + t * dx, y: shooterCenter.y + t * dy }
+    const distToSegment = Math.hypot(otherCenter.x - closestPoint.x, otherCenter.y - closestPoint.y)
+    if (distToSegment < threshold) {
+      return false
+    }
+  }
+  return true
 }

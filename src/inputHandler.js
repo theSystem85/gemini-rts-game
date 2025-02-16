@@ -17,6 +17,10 @@ let selectionStart = { x: 0, y: 0 }
 let selectionEnd = { x: 0, y: 0 }
 let wasDragging = false
 
+// Add variables to track right-click dragging.
+let rightDragStart = { x: 0, y: 0 }
+let rightWasDragging = false
+
 // Helper: For a given target and unit center, return the appropriate aiming point.
 // For factories, this returns the closest point on the factory rectangle.
 function getTargetPoint(target, unitCenter) {
@@ -47,6 +51,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (e.button === 2) {
       // Right-click: start scrolling.
       gameState.isRightDragging = true
+      rightDragStart = { x: e.clientX, y: e.clientY }
+      rightWasDragging = false
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
       gameCanvas.style.cursor = 'grabbing'
     } else if (e.button === 0) {
@@ -117,6 +123,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
       gameState.dragVelocity = { x: dx, y: dy }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
       gameCanvas.style.cursor = 'grabbing'
+      // Check if right-drag exceeds threshold.
+      if (!rightWasDragging && Math.hypot(e.clientX - rightDragStart.x, e.clientY - rightDragStart.y) > 5) {
+        rightWasDragging = true
+      }
+      return
     } else if (!isSelecting) {
       gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
     }
@@ -134,8 +145,15 @@ export function setupInputHandlers(units, factories, mapGrid) {
   gameCanvas.addEventListener('mouseup', e => {
     const rect = gameCanvas.getBoundingClientRect()
     if (e.button === 2) {
+      // End right-click drag.
       gameState.isRightDragging = false
       gameCanvas.style.cursor = 'grab'
+      // If the right click was NOT a drag, deselect all units.
+      if (!rightWasDragging) {
+        units.forEach(u => { if (u.owner === 'player') u.selected = false })
+        selectedUnits.length = 0
+      }
+      rightWasDragging = false
     } else if (e.button === 0 && isSelecting) {
       if (wasDragging) {
         handleBoundingBoxSelection(units)
