@@ -93,77 +93,101 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
     console.warn('findPath: destination tile not passable')
     return []
   }
-
+  
+  // Initialize A* search.
   const openHeap = new MinHeap()
   const closedSet = new Set()
   const startNode = {
     x: start.x,
     y: start.y,
     g: 0,
-    h: Math.hypot(end.x - start.x, end.y - start.y)
+    h: Math.hypot(end.x - start.x, end.y - start.y),
+    f: 0,
+    parent: null
   }
   startNode.f = startNode.g + startNode.h
   openHeap.push(startNode)
 
-  function nodeKey(node) {
-    return `${node.x},${node.y}`
-  }
+  // Removed any maximum iteration check to ensure players' units can always move.
+  while (openHeap.size() > 0) {
+    const currentNode = openHeap.pop()
+    const currentKey = `${currentNode.x},${currentNode.y}`
 
-  const directions = [
-    { x: 1, y: 0 },
-    { x: -1, y: 0 },
-    { x: 0, y: 1 },
+    if (currentNode.x === end.x && currentNode.y === end.y) {
+      // Reconstruct path.
+      let path = []
+      let curr = currentNode
+      while (curr) {
+        path.push({ x: curr.x, y: curr.y })
+        curr = curr.parent
+      }
+      return path.reverse()
+    }
+    
+    closedSet.add(currentKey)
+    const neighbors = getNeighbors(currentNode, mapGrid)
+    for (const neighbor of neighbors) {
+      const neighborKey = `${neighbor.x},${neighbor.y}`
+      if (closedSet.has(neighborKey)) continue
+      // Skip if occupancyMap is provided and the tile is occupied.
+      if (occupancyMap && occupancyMap[neighbor.y][neighbor.x]) continue
+      
+      const gScore = currentNode.g + Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
+      let foundInHeap = false
+      for (const node of openHeap.content) {
+        if (node.x === neighbor.x && node.y === neighbor.y) {
+          foundInHeap = true
+          if (gScore < node.g) {
+            node.g = gScore
+            node.f = gScore + node.h
+            node.parent = currentNode
+            openHeap.bubbleUp(openHeap.content.indexOf(node))
+          }
+          break
+        }
+      }
+      if (!foundInHeap) {
+        const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y)
+        const neighborNode = {
+          x: neighbor.x,
+          y: neighbor.y,
+          g: gScore,
+          h: hScore,
+          f: gScore + hScore,
+          parent: currentNode
+        }
+        openHeap.push(neighborNode)
+      }
+    }
+  }
+  // If no path is found, return an empty array.
+  return []
+}
+
+function getNeighbors(node, mapGrid) {
+  const neighbors = []
+  const dirs = [
     { x: 0, y: -1 },
-    { x: 1, y: 1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
     { x: 1, y: -1 },
+    { x: 1, y: 1 },
     { x: -1, y: 1 },
     { x: -1, y: -1 }
   ]
-
-  let iterations = 0
-  const maxIterations = 10000
-  while (openHeap.size() > 0) {
-    if (++iterations > maxIterations) {
-      console.warn('findPath: reached maximum iterations')
-      return []
-    }
-    const current = openHeap.pop()
-    if (current.x === end.x && current.y === end.y) {
-      const path = []
-      let node = current
-      while (node) {
-        path.unshift({ x: node.x, y: node.y })
-        node = node.parent
+  
+  for (const dir of dirs) {
+    const x = node.x + dir.x
+    const y = node.y + dir.y
+    if (y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length) {
+      const tileType = mapGrid[y][x].type
+      if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+        neighbors.push({ x, y })
       }
-      return path
-    }
-    closedSet.add(nodeKey(current))
-    for (const dir of directions) {
-      const nx = current.x + dir.x
-      const ny = current.y + dir.y
-      if (nx < 0 || ny < 0 || nx >= mapGrid[0].length || ny >= mapGrid.length) continue
-      const tileType = mapGrid[ny][nx].type
-      if (tileType === 'water' || tileType === 'rock' || tileType === 'building') continue
-      if (occupancyMap && occupancyMap[ny][nx] && !(nx === end.x && ny === end.y)) continue
-      if (closedSet.has(`${nx},${ny}`)) continue
-      let baseCost = (dir.x !== 0 && dir.y !== 0) ? Math.SQRT2 : 1
-      const multiplier = (tileType === 'street') ? 0.5 : 1
-      const cost = baseCost * multiplier
-      const gScore = current.g + cost
-      const hScore = Math.hypot(end.x - nx, end.y - ny)
-      const fScore = gScore + hScore
-      const newNode = {
-        x: nx,
-        y: ny,
-        g: gScore,
-        h: hScore,
-        f: fScore,
-        parent: current
-      }
-      openHeap.push(newNode)
     }
   }
-  return []
+  return neighbors
 }
 
 // Spawns a unit at the center ("under") of the factory.
