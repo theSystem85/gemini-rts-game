@@ -192,15 +192,14 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
 }
 
 // --- Collision Resolution for Idle Units ---
-// When multiple units share the same tile, shuffle the available adjacent directions using a temporary swap.
+// When multiple units share the same tile, smoothly move them to their target positions
 export function resolveUnitCollisions(units, mapGrid) {
   const assignedTiles = new Set()
+  // Update each unit's tile coordinates based on their current positions.
   units.forEach(u => {
     if (!u.path || u.path.length === 0) {
-      const tileX = Math.floor(u.x / TILE_SIZE)
-      const tileY = Math.floor(u.y / TILE_SIZE)
-      u.tileX = tileX
-      u.tileY = tileY
+      u.tileX = Math.floor(u.x / TILE_SIZE)
+      u.tileY = Math.floor(u.y / TILE_SIZE)
     }
   })
   const tileOccupants = {}
@@ -214,12 +213,15 @@ export function resolveUnitCollisions(units, mapGrid) {
   for (const key in tileOccupants) {
     const group = tileOccupants[key]
     const [tileX, tileY] = key.split(',').map(Number)
-    // Place first unit at the tile center.
+    // Desired center for units on this tile:
+    const centerX = tileX * TILE_SIZE
+    const centerY = tileY * TILE_SIZE
+    // For primary unit, smoothly interpolate toward tile center.
     const primary = group[0]
-    primary.x = tileX * TILE_SIZE
-    primary.y = tileY * TILE_SIZE
+    primary.x += (centerX - primary.x) * 0.2
+    primary.y += (centerY - primary.y) * 0.2
     assignedTiles.add(key)
-    // For every additional unit, assign a random adjacent free tile.
+    // Directions for adjacent free tiles.
     const directions = [
       { dx: 1, dy: 0 },
       { dx: -1, dy: 0 },
@@ -230,25 +232,35 @@ export function resolveUnitCollisions(units, mapGrid) {
       { dx: -1, dy: 1 },
       { dx: -1, dy: -1 }
     ]
+    // For additional units, find a free neighboring tile and smoothly move them.
     group.slice(1).forEach(u => {
-      // Shuffle directions using a temporary variable swap.
+      let placed = false
+      // Shuffle directions for randomness.
       for (let i = directions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        let temp = directions[i]
+        const temp = directions[i]
         directions[i] = directions[j]
         directions[j] = temp
       }
-      let placed = false
-      for (const {dx, dy} of directions) {
+      for (const { dx, dy } of directions) {
         const newTileX = tileX + dx
         const newTileY = tileY + dy
-        if (newTileX < 0 || newTileY < 0 || newTileX >= mapGrid[0].length || newTileY >= mapGrid.length) continue
+        if (
+          newTileX < 0 ||
+          newTileY < 0 ||
+          newTileX >= mapGrid[0].length ||
+          newTileY >= mapGrid.length
+        )
+          continue
         const tileType = mapGrid[newTileY][newTileX].type
-        if (tileType === 'water' || tileType === 'rock' || tileType === 'building') continue
+        if (tileType === 'water' || tileType === 'rock' || tileType === 'building')
+          continue
         const newKey = `${newTileX},${newTileY}`
         if (assignedTiles.has(newKey)) continue
-        u.x = newTileX * TILE_SIZE
-        u.y = newTileY * TILE_SIZE
+        const targetX = newTileX * TILE_SIZE
+        const targetY = newTileY * TILE_SIZE
+        u.x += (targetX - u.x) * 0.2
+        u.y += (targetY - u.y) * 0.2
         u.tileX = newTileX
         u.tileY = newTileY
         assignedTiles.add(newKey)
@@ -256,9 +268,18 @@ export function resolveUnitCollisions(units, mapGrid) {
         break
       }
       if (!placed) {
-        u.x = tileX * TILE_SIZE
-        u.y = tileY * TILE_SIZE
+        // If no adjacent tile is free, smoothly move toward the center.
+        u.x += (centerX - u.x) * 0.2
+        u.y += (centerY - u.y) * 0.2
       }
     })
   }
+}
+
+// --- Helper: Deselect All Units ---
+// Call this function on a right-click event if it is not part of a map drag.
+export function deselectUnits(units) {
+  units.forEach(u => {
+    u.selected = false
+  })
 }

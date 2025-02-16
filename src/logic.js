@@ -20,6 +20,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   const occupancyMap = buildOccupancyMap(units, mapGrid)
   gameState.gameTime += delta / 1000
 
+  // --- Right Click Deselect (if not dragging) ---
+  if (gameState.rightClick && !gameState.isRightDragging) {
+    units.forEach(unit => { unit.selected = false })
+    gameState.rightClick = false // reset flag after processing
+  }
+
   // --- Map Scrolling Inertia ---
   if (!gameState.isRightDragging) {
     const maxScrollX = mapGrid[0].length * TILE_SIZE - (window.innerWidth - 250)
@@ -82,6 +88,41 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
       } else {
         unit.spawnedInFactory = false
+      }
+    }
+
+    // --- Smooth Attack Position Adjustment for Tanks ---
+    if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      let targetCenterX, targetCenterY
+      if (unit.target.tileX !== undefined) {
+        targetCenterX = unit.target.x + TILE_SIZE / 2
+        targetCenterY = unit.target.y + TILE_SIZE / 2
+      } else {
+        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+      }
+      // Determine ideal position: maintain attack range without colliding.
+      const dx = targetCenterX - unitCenterX
+      const dy = targetCenterY - unitCenterY
+      const currentDist = Math.hypot(dx, dy)
+      const desiredDist = TANK_FIRE_RANGE * TILE_SIZE
+      // Calculate the desired center position to maintain range.
+      const desiredCenterX = targetCenterX - (dx / currentDist) * desiredDist
+      const desiredCenterY = targetCenterY - (dy / currentDist) * desiredDist
+      // Compute target top-left positions for this unit.
+      const desiredX = desiredCenterX - TILE_SIZE / 2
+      const desiredY = desiredCenterY - TILE_SIZE / 2
+      // Smoothly interpolate toward the desired position, scaled by unit speed.
+      const diffX = desiredX - unit.x
+      const diffY = desiredY - unit.y
+      const diffDist = Math.hypot(diffX, diffY)
+      if (diffDist > 1) { // only move if significant difference exists
+        const moveX = (diffX / diffDist) * effectiveSpeed
+        const moveY = (diffY / diffDist) * effectiveSpeed
+        unit.x += moveX
+        unit.y += moveY
       }
     }
 
