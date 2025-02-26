@@ -12,7 +12,15 @@ export function buildOccupancyMap(units, mapGrid) {
     }
   }
   units.forEach(unit => {
-    occupancy[unit.tileY][unit.tileX] = true
+    // Ensure unit tile indices are within mapGrid bounds.
+    if (
+      unit.tileY >= 0 &&
+      unit.tileY < mapGrid.length &&
+      unit.tileX >= 0 &&
+      unit.tileX < mapGrid[0].length
+    ) {
+      occupancy[unit.tileY][unit.tileX] = true
+    }
   })
   return occupancy
 }

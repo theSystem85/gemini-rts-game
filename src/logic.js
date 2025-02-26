@@ -45,6 +45,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
 
     let effectiveSpeed = unit.speed
+    // Before using tile indices, clamp them so we don't access out-of-bound indices.
+    unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
+    unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
+
     if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
       effectiveSpeed *= 2
     }
@@ -52,25 +56,35 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Movement Along Path ---
     if (unit.path && unit.path.length > 0) {
       const nextTile = unit.path[0]
-      const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
-      const dx = targetPos.x - unit.x
-      const dy = targetPos.y - unit.y
-      const distance = Math.hypot(dx, dy)
-      if (distance < effectiveSpeed) {
-        unit.x = targetPos.x
-        unit.y = targetPos.y
-        unit.tileX = nextTile.x
-        unit.tileY = nextTile.y
+      // Prevent path finding errors if nextTile is out of bounds.
+      if (nextTile.x < 0 || nextTile.x >= mapGrid[0].length ||
+          nextTile.y < 0 || nextTile.y >= mapGrid.length) {
         unit.path.shift()
-        occupancyMap[unit.tileY][unit.tileX] = true
       } else {
-        unit.x += (dx / distance) * effectiveSpeed
-        unit.y += (dy / distance) * effectiveSpeed
+        const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
+        const dx = targetPos.x - unit.x
+        const dy = targetPos.y - unit.y
+        const distance = Math.hypot(dx, dy)
+        if (distance < effectiveSpeed) {
+          unit.x = targetPos.x
+          unit.y = targetPos.y
+          unit.tileX = nextTile.x
+          unit.tileY = nextTile.y
+          unit.path.shift()
+          occupancyMap[unit.tileY][unit.tileX] = true
+        } else {
+          unit.x += (dx / distance) * effectiveSpeed
+          unit.y += (dy / distance) * effectiveSpeed
+        }
       }
     }
     if (unit.x !== prevX || unit.y !== prevY) {
       unit.lastMovedTime = now
     }
+
+    // After repositioning, clamp tile indices again.
+    unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
+    unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
 
     // --- Spawn Exit ---
     if (unit.spawnedInFactory) {
