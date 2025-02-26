@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTS Game MVP</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body, html { height: 100%; overflow: hidden; }
+        #game-container {
+            display: flex;
+            height: 100vh;
+            background: #111;
+        }
+        #sidebar {
+            width: 200px;
+            background: #222;
+            color: white;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+        #game-canvas {
+            flex-grow: 1;
+        }
+        #minimap {
+            width: 180px;
+            height: 180px;
+            background: #333;
+            margin-top: 10px;
+            position: relative;
+        }
+        #viewport-rect {
+            position: absolute;
+            border: 1px solid white;
+        }
+        select, button {
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="sidebar">
+            <div>Money: $<span id="money">5000</span></div>
+            <div>Time: <span id="time">0</span>s</div>
+            <div>Wins: <span id="wins">0</span></div>
+            <div>Losses: <span id="losses">0</span></div>
+            <select id="unit-type">
+                <option value="tank">Tank ($1000)</option>
+                <option value="rocket">Rocket Tank ($2000)</option>
+                <option value="harvester">Harvester ($500)</option>
+            </select>
+            <button id="produce-btn">Produce (<span id="progress">0%</span>)</button>
+            <canvas id="minimap"></canvas>
+        </div>
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const minimap = document.getElementById('minimap');
+        const minimapCtx = minimap.getContext('2d');
+        const TILE_SIZE = 32;
+        const GRID_WIDTH = Math.floor(window.innerWidth * 0.8 / TILE_SIZE);
+        const GRID_HEIGHT = Math.floor(window.innerHeight / TILE_SIZE);
+
+        // Game state
+        let game = {
+            money: 5000,
+            time: 0,
+            wins: 0,
+            losses: 0,
+            grid: [],
+            units: [],
+            factories: [],
+            projectiles: [],
+            camera: { x: 0, y: 0 },
+            selectedUnits: [],
+            dragging: false,
+            dragStart: { x: 0, y: 0 },
+            scrollVelocity: { x: 0, y: 0 }
+        };
+
+        // Tile types
+        const TILES = {
+            LAND: { color: '#A0522D', passable: true },
+            WATER: { color: '#1E90FF', passable: false },
+            ROCK: { color: '#808080', passable: false },
+            STREET: { color: '#D3D3D3', passable: true, speed: 2 },
+            ORE: { color: '#FFD700', passable: true },
+            BUILDING: { color: '#666', passable: false }
+        };
+
+        // Unit properties
+        const UNIT_TYPES = {
+            tank: { cost: 1000, speed: 1, armor: 100, range: 5, damage: 20 },
+            rocket: { cost: 2000, speed: 1, armor: 100, range: 10, damage: 30, homing: true },
+            harvester: { cost: 500, speed: 0.5, armor: 300, capacity: 5 }
+        };
+
+        // Initialize game
+        function init() {
+            canvas.width = window.innerWidth * 0.8;
+            canvas.height = window.innerHeight;
+            minimap.width = 180;
+            minimap.height = 180;
+            generateMap();
+            placeFactories();
+            gameLoop();
+            setInterval(spreadOre, 90000);
+            setInterval(spawnEnemy, 10000);
+            setInterval(() => game.time++, 1000);
+        }
+
+        // Generate map
+        function generateMap() {
+            game.grid = Array(GRID_HEIGHT).fill().map(() => 
+                Array(GRID_WIDTH).fill().map(() => ({ type: 'LAND', occupied: false }))
+            );
+
+            // Add water, rock, and initial ore
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    if (Math.random() < 0.1) game.grid[y][x].type = 'WATER';
+                    else if (Math.random() < 0.1) game.grid[y][x].type = 'ROCK';
+                    else if (Math.random() < 0.05) game.grid[y][x].type = 'ORE';
+                }
+            }
+
+            // Add L-shaped street corridor
+            const startX = game.factories[0]?.x || 10;
+            const endX = game.factories[1]?.x || GRID_WIDTH - 10;
+            const midY = Math.floor(GRID_HEIGHT / 2);
+            for (let x = startX; x <= endX; x++) game.grid[midY][x].type = 'STREET';
+            for (let y = midY; y >= 5; y--) game.grid[y][startX].type = 'STREET';
+            for (let y = midY; y < GRID_HEIGHT - 5; y++) game.grid[y][endX].type = 'STREET';
+        }
+
+        // Place factories
+        function placeFactories() {
+            game.factories = [
+                { x: 5, y: 5, w: 3, h: 2, health: 1000, owner: 'player', producing: null, progress: 0 },
+                { x: GRID_WIDTH - 8, y: GRID_HEIGHT - 7, w: 3, h: 2, health: 1000, owner: 'enemy', producing: null, progress: 0, money: 5000 }
+            ];
+            game.factories.forEach(f => markBuildingTiles(f));
+        }
+
+        function markBuildingTiles(factory) {
+            for (let y = factory.y; y < factory.y + factory.h; y++) {
+                for (let x = factory.x; x < factory.x + factory.w; x++) {
+                    game.grid[y][x].type = 'BUILDING';
+                    game.grid[y][x].occupied = true;
+                }
+            }
+        }
+
+        // A* Pathfinding
+        function findPath(start, goal) {
+            const openSet = [start];
+            const cameFrom = new Map();
+            const gScore = new Map([[`${start.x},${start.y}`, 0]]);
+            const fScore = new Map([[`${start.x},${start.y}`, heuristic(start, goal)]]);
+
+            while (openSet.length > 0) {
+                const current = openSet.reduce((a, b) => fScore.get(`${a.x},${a.y}`) < fScore.get(`${b.x},${b.y}`) ? a : b);
+                if (current.x === goal.x && current.y === goal.y) return reconstructPath(cameFrom, current);
+
+                openSet.splice(openSet.indexOf(current), 1);
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const neighbor = { x: current.x + dx, y: current.y + dy };
+                        if (!isValidTile(neighbor)) continue;
+
+                        const tentativeG = gScore.get(`${current.x},${current.y}`) + (game.grid[neighbor.y][neighbor.x].type === 'STREET' ? 0.5 : 1);
+                        const key = `${neighbor.x},${neighbor.y}`;
+                        if (tentativeG < (gScore.get(key) || Infinity)) {
+                            cameFrom.set(key, current);
+                            gScore.set(key, tentativeG);
+                            fScore.set(key, tentativeG + heuristic(neighbor, goal));
+                            if (!openSet.some(n => n.x === neighbor.x && n.y === neighbor.y)) openSet.push(neighbor);
+                        }
+                    }
+                }
+            }
+            return [];
+        }
+
+        function heuristic(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function reconstructPath(cameFrom, current) {
+            const path = [current];
+            while (cameFrom.has(`${current.x},${current.y}`)) {
+                current = cameFrom.get(`${current.x},${current.y}`);
+                path.unshift(current);
+            }
+            return path;
+        }
+
+        function isValidTile(pos) {
+            return pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT && 
+                   TILES[game.grid[pos.y][pos.x].type].passable && !game.grid[pos.y][pos.x].occupied;
+        }
+
+        // Unit production
+        document.getElementById('produce-btn').addEventListener('click', () => {
+            const type = document.getElementById('unit-type').value;
+            const cost = UNIT_TYPES[type].cost;
+            if (game.money >= cost && !game.factories[0].producing) {
+                game.money -= cost;
+                game.factories[0].producing = type;
+                game.factories[0].progress = 0;
+            }
+        });
+
+        function spawnUnit(factory, type) {
+            const unit = {
+                x: factory.x + 1.5,
+                y: factory.y + factory.h,
+                type,
+                owner: factory.owner,
+                health: UNIT_TYPES[type].armor,
+                speed: UNIT_TYPES[type].speed,
+                path: [],
+                target: null,
+                ore: type === 'harvester' ? 0 : undefined,
+                mining: false,
+                firingCooldown: 0
+            };
+            game.units.push(unit);
+            game.grid[Math.floor(unit.y)][Math.floor(unit.x)].occupied = true;
+        }
+
+        function spawnEnemy() {
+            const enemyFactory = game.factories[1];
+            if (enemyFactory.money >= 1000 && !enemyFactory.producing) {
+                enemyFactory.producing = 'tank';
+                enemyFactory.progress = 0;
+                enemyFactory.money -= 1000;
+            }
+        }
+
+        // Ore spreading
+        function spreadOre() {
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    if (game.grid[y][x].type === 'ORE' && Math.random() < 0.06) {
+                        const dirs = [[0,1], [1,0], [0,-1], [-1,0]];
+                        const [dy, dx] = dirs[Math.floor(Math.random() * 4)];
+                        const ny = y + dy, nx = x + dx;
+                        if (ny >= 0 && ny < GRID_HEIGHT && nx >= 0 && nx < GRID_WIDTH && game.grid[ny][nx].type === 'LAND') {
+                            game.grid[ny][nx].type = 'ORE';
+                        }
+                    }
+                }
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Update factories
+            game.factories.forEach(f => {
+                if (f.producing) {
+                    f.progress += 100 / (3 * 60); // 3 seconds at 60 FPS
+                    if (f.progress >= 100) {
+                        spawnUnit(f, f.producing);
+                        f.producing = null;
+                        f.progress = 0;
+                    }
+                }
+            });
+
+            // Update units
+            game.units.forEach((unit, i) => {
+                if (unit.health <= 0) {
+                    game.grid[Math.floor(unit.y)][Math.floor(unit.x)].occupied = false;
+                    game.units.splice(i, 1);
+                    return;
+                }
+
+                // Movement
+                if (unit.path.length > 0) {
+                    const next = unit.path[0];
+                    const dx = next.x - unit.x, dy = next.y - unit.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const speed = TILES[game.grid[Math.floor(unit.y)][Math.floor(unit.x)].type].speed || 1;
+                    if (dist < unit.speed * speed / 60) {
+                        game.grid[Math.floor(unit.y)][Math.floor(unit.x)].occupied = false;
+                        unit.x = next.x;
+                        unit.y = next.y;
+                        game.grid[Math.floor(unit.y)][Math.floor(unit.x)].occupied = true;
+                        unit.path.shift();
+                    } else {
+                        unit.x += (dx / dist) * unit.speed * speed / 60;
+                        unit.y += (dy / dist) * unit.speed * speed / 60;
+                    }
+                }
+
+                // Harvester logic
+                if (unit.type === 'harvester') {
+                    if (unit.ore >= UNIT_TYPES.harvester.capacity) {
+                        if (!unit.path.length) unit.path = findPath(
+                            { x: Math.floor(unit.x), y: Math.floor(unit.y) },
+                            { x: game.factories[0].x + 1, y: game.factories[0].y + 2 }
+                        );
+                        if (distToFactory(unit) < 1.5 && unit.ore > 0) {
+                            game.money += 1000;
+                            unit.ore = 0;
+                            unit.path = findPath(
+                                { x: Math.floor(unit.x), y: Math.floor(unit.y) },
+                                findNearestOre(unit)
+                            );
+                        }
+                    } else if (game.grid[Math.floor(unit.y)][Math.floor(unit.x)].type === 'ORE' && !unit.mining) {
+                        unit.mining = true;
+                        setTimeout(() => {
+                            if (unit.mining && unit.ore < UNIT_TYPES.harvester.capacity) {
+                                unit.ore++;
+                                game.grid[Math.floor(unit.y)][Math.floor(unit.x)].type = 'LAND';
+                            }
+                            unit.mining = false;
+                        }, 10000);
+                    }
+                }
+
+                // Combat
+                if (unit.type !== 'harvester' && unit.firingCooldown <= 0) {
+                    const target = findTarget(unit);
+                    if (target && distTo(unit, target) <= UNIT_TYPES[unit.type].range) {
+                        fireProjectile(unit, target);
+                        unit.firingCooldown = 60;
+                    }
+                }
+                unit.firingCooldown = Math.max(0, unit.firingCooldown - 1);
+            });
+
+            // Update projectiles
+            game.projectiles.forEach((p, i) => {
+                if (p.homing && p.target.health > 0) {
+                    const dx = p.target.x - p.x, dy = p.target.y - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    p.vx = (dx / dist) * 3;
+                    p.vy = (dy / dist) * 3;
+                }
+                p.x += p.vx / 60;
+                p.y += p.vy / 60;
+
+                if (p.x < 0 || p.x >= GRID_WIDTH || p.y < 0 || p.y >= GRID_HEIGHT) {
+                    game.projectiles.splice(i, 1);
+                    return;
+                }
+
+                game.units.concat(game.factories).forEach(t => {
+                    if (t.owner !== p.owner && distTo(p, t) < 10 / TILE_SIZE) {
+                        t.health -= UNIT_TYPES[p.type].damage * (0.8 + Math.random() * 0.4);
+                        game.projectiles.splice(i, 1);
+                    }
+                });
+            });
+
+            // Update camera
+            game.camera.x += game.scrollVelocity.x;
+            game.camera.y += game.scrollVelocity.y;
+            game.scrollVelocity.x *= 0.95;
+            game.scrollVelocity.y *= 0.95;
+            game.camera.x = Math.max(0, Math.min(game.camera.x, GRID_WIDTH * TILE_SIZE - canvas.width));
+            game.camera.y = Math.max(0, Math.min(game.camera.y, GRID_HEIGHT * TILE_SIZE - canvas.height));
+
+            // Check game over
+            if (game.factories[0].health <= 0) game.losses++;
+            if (game.factories[1].health <= 0) game.wins++;
+            if (game.factories.some(f => f.health <= 0)) {
+                game.factories = game.factories.filter(f => f.health > 0);
+                init();
+            }
+
+            // Update UI
+            document.getElementById('money').textContent = game.money;
+            document.getElementById('time').textContent = game.time;
+            document.getElementById('wins').textContent = game.wins;
+            document.getElementById('losses').textContent = game.losses;
+            document.getElementById('progress').textContent = 
+                game.factories[0].producing ? `${Math.floor(game.factories[0].progress)}%` : '0%';
+        }
+
+        function findTarget(unit) {
+            return game.units.concat(game.factories)
+                .filter(t => t.owner !== unit.owner)
+                .reduce((closest, t) => 
+                    distTo(unit, t) < distTo(unit, closest) ? t : closest, 
+                    { x: Infinity, y: Infinity });
+        }
+
+        function fireProjectile(unit, target) {
+            const p = {
+                x: unit.x,
+                y: unit.y,
+                type: unit.type,
+                owner: unit.owner,
+                target: unit.type === 'rocket' ? target : null,
+                homing: unit.type === 'rocket'
+            };
+            const dx = target.x - unit.x, dy = target.y - unit.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            p.vx = (dx / dist) * 3;
+            p.vy = (dy / dist) * 3;
+            game.projectiles.push(p);
+        }
+
+        function distTo(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function distToFactory(unit) {
+            const f = game.factories[unit.owner === 'player' ? 0 : 1];
+            return distTo(unit, { x: f.x + 1.5, y: f.y + 1 });
+        }
+
+        function findNearestOre(unit) {
+            let nearest = { x: unit.x, y: unit.y, dist: Infinity };
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    if (game.grid[y][x].type === 'ORE') {
+                        const d = distTo(unit, { x, y });
+                        if (d < nearest.dist) nearest = { x, y, dist: d };
+                    }
+                }
+            }
+            return nearest;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Render grid
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const tileX = x * TILE_SIZE - game.camera.x;
+                    const tileY = y * TILE_SIZE - game.camera.y;
+                    if (tileX + TILE_SIZE < 0 || tileX > canvas.width || tileY + TILE_SIZE < 0 || tileY > canvas.height) continue;
+                    
+                    ctx.fillStyle = TILES[game.grid[y][x].type].color;
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            // Render factories
+            game.factories.forEach(f => {
+                const x = f.x * TILE_SIZE - game.camera.x;
+                const y = f.y * TILE_SIZE - game.camera.y;
+                ctx.fillStyle = f.owner === 'player' ? '#00FF00' : '#FF0000';
+                ctx.fillRect(x, y, f.w * TILE_SIZE, f.h * TILE_SIZE);
+                
+                // Health bar
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x, y - 10, f.w * TILE_SIZE, 5);
+                ctx.fillStyle = 'green';
+                ctx.fillRect(x, y - 10, f.w * TILE_SIZE * (f.health / 1000), 5);
+                
+                if (f.owner === 'enemy') {
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(`$${f.money}`, x, y - 15);
+                }
+            });
+
+            // Render units
+            game.units.forEach(u => {
+                const x = u.x * TILE_SIZE - game.camera.x;
+                const y = u.y * TILE_SIZE - game.camera.y;
+                ctx.fillStyle = u.owner === 'player' ? '#00FFFF' : '#FF00FF';
+                ctx.fillRect(x - 8, y - 8, 16, 16);
+                
+                // Health bar
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x - 8, y - 20, 16, 3);
+                ctx.fillStyle = 'green';
+                ctx.fillRect(x - 8, y - 20, 16 * (u.health / UNIT_TYPES[u.type].armor), 3);
+                
+                if (u.type === 'harvester' && u.mining) {
+                    ctx.fillStyle = 'yellow';
+                    ctx.fillRect(x - 8, y + 10, 16 * (u.ore / UNIT_TYPES.harvester.capacity), 3);
+                }
+            });
+
+            // Render projectiles
+            game.projectiles.forEach(p => {
+                const x = p.x * TILE_SIZE - game.camera.x;
+                const y = p.y * TILE_SIZE - game.camera.y;
+                ctx.fillStyle = p.owner === 'player' ? '#FFFF00' : '#FF8000';
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Render selection
+            if (game.dragging) {
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect(
+                    game.dragStart.x - game.camera.x,
+                    game.dragStart.y - game.camera.y,
+                    mouse.x - game.dragStart.x,
+                    mouse.y - game.dragStart.y
+                );
+            }
+
+            // Render minimap
+            minimapCtx.clearRect(0, 0, minimap.width, minimap.height);
+            const scaleX = minimap.width / (GRID_WIDTH * TILE_SIZE);
+            const scaleY = minimap.height / (GRID_HEIGHT * TILE_SIZE);
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    minimapCtx.fillStyle = TILES[game.grid[y][x].type].color;
+                    minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY);
+                }
+            }
+            const viewRect = document.getElementById('viewport-rect');
+            viewRect.style.left = (game.camera.x * scaleX) + 'px';
+            viewRect.style.top = (game.camera.y * scaleY) + 'px';
+            viewRect.style.width = (canvas.width * scaleX) + 'px';
+            viewRect.style.height = (canvas.height * scaleY) + 'px';
+        }
+
+        // Input handling
+        const mouse = { x: 0, y: 0 };
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0) {
+                const x = e.offsetX + game.camera.x;
+                const y = e.offsetY + game.camera.y;
+                const unit = game.units.find(u => 
+                    u.owner === 'player' && 
+                    Math.abs(u.x * TILE_SIZE - x) < 16 && 
+                    Math.abs(u.y * TILE_SIZE - y) < 16
+                );
+                if (unit) {
+                    game.selectedUnits = e.shiftKey ? [...game.selectedUnits, unit] : [unit];
+                } else {
+                    game.dragging = true;
+                    game.dragStart = { x: e.offsetX + game.camera.x, y: e.offsetY + game.camera.y };
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            mouse.x = e.offsetX + game.camera.x;
+            mouse.y = e.offsetY + game.camera.y;
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0 && game.dragging) {
+                game.dragging = false;
+                const rect = {
+                    x: Math.min(game.dragStart.x, mouse.x),
+                    y: Math.min(game.dragStart.y, mouse.y),
+                    w: Math.abs(mouse.x - game.dragStart.x),
+                    h: Math.abs(mouse.y - game.dragStart.y)
+                };
+                game.selectedUnits = game.units.filter(u => 
+                    u.owner === 'player' &&
+                    u.x * TILE_SIZE >= rect.x && u.x * TILE_SIZE <= rect.x + rect.w &&
+                    u.y * TILE_SIZE >= rect.y && u.y * TILE_SIZE <= rect.y + rect.h
+                );
+            }
+        });
+
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            if (game.selectedUnits.length) {
+                const target = { x: Math.floor((e.offsetX + game.camera.x) / TILE_SIZE), y: Math.floor((e.offsetY + game.camera.y) / TILE_SIZE) };
+                game.selectedUnits.forEach(u => {
+                    u.path = findPath({ x: Math.floor(u.x), y: Math.floor(u.y) }, target);
+                });
+            } else {
+                game.scrollVelocity.x = (game.dragStart.x - e.offsetX) / 10;
+                game.scrollVelocity.y = (game.dragStart.y - e.offsetY) / 10;
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 2) {
+                game.dragStart = { x: e.offsetX, y: e.offsetY };
+            }
+        });
+
+        minimap.addEventListener('click', e => {
+            const scaleX = GRID_WIDTH * TILE_SIZE / minimap.width;
+            const scaleY = GRID_HEIGHT * TILE_SIZE / minimap.height;
+            game.camera.x = (e.offsetX * scaleX) - canvas.width / 2;
+            game.camera.y = (e.offsetY * scaleY) - canvas.height / 2;
+        });
+
+        // Start game
+        init();
+    </script>
+</body>
+</html>
