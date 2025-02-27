@@ -323,22 +323,52 @@ export function setupInputHandlers(units, factories, mapGrid) {
 }
 
 function handleBoundingBoxSelection(units) {
-  const x1 = Math.min(selectionStart.x, selectionEnd.x)
-  const y1 = Math.min(selectionStart.y, selectionEnd.y)
-  const x2 = Math.max(selectionStart.x, selectionEnd.x)
-  const y2 = Math.max(selectionStart.y, selectionEnd.y)
-  selectedUnits.length = 0
-  for (const unit of units) {
-    if (unit.owner === 'player') {
-      const centerX = unit.x + TILE_SIZE / 2
-      const centerY = unit.y + TILE_SIZE / 2
-      if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
-        unit.selected = true
-        selectedUnits.push(unit)
-        playSound('unitSelection')
-      } else {
-        unit.selected = false
+  try {
+    const x1 = Math.min(selectionStart.x, selectionEnd.x)
+    const y1 = Math.min(selectionStart.y, selectionEnd.y)
+    const x2 = Math.max(selectionStart.x, selectionEnd.x)
+    const y2 = Math.max(selectionStart.y, selectionEnd.y)
+    
+    // Clear current selection first
+    selectedUnits.length = 0
+    
+    // Find units within selection rectangle
+    for (const unit of units) {
+      if (unit.owner === 'player' && unit.health > 0) {  // Ensure unit is alive
+        const centerX = unit.x + TILE_SIZE / 2
+        const centerY = unit.y + TILE_SIZE / 2
+        
+        if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
+          unit.selected = true
+          selectedUnits.push(unit)
+          playSound('unitSelection')
+        } else {
+          unit.selected = false
+        }
       }
     }
+  } catch (error) {
+    console.error("Error in handleBoundingBoxSelection:", error)
+    // Reset selection state in case of error
+    selectedUnits.length = 0
+  }
+}
+
+// Safety function: Call this at the beginning of each frame update
+// to remove any destroyed units from selection
+export function cleanupDestroyedSelectedUnits() {
+  try {
+    // Filter out any invalid or destroyed units
+    const validSelectedUnits = selectedUnits.filter(unit => 
+      unit && typeof unit === 'object' && unit.health > 0);
+      
+    // If we found units to remove, update the array
+    if (validSelectedUnits.length !== selectedUnits.length) {
+      selectedUnits.length = 0;
+      selectedUnits.push(...validSelectedUnits);
+    }
+  } catch (error) {
+    console.error("Error in cleanupDestroyedSelectedUnits:", error);
+    selectedUnits.length = 0; // Safety reset
   }
 }
