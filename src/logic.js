@@ -62,6 +62,16 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       // Store previous position for collision detection
       const prevX = unit.x, prevY = unit.y
 
+      // If the unit has finished dodging and reached its dodge destination
+      if (unit.isDodging && unit.path.length === 0 && unit.originalPath) {
+        unit.path = unit.originalPath;
+        unit.target = unit.originalTarget;
+        unit.originalPath = null;
+        unit.originalTarget = null;
+        unit.isDodging = false;
+        unit.dodgeEndTime = null;
+      }
+
       // Clear targets that are destroyed
       if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
         unit.target = null

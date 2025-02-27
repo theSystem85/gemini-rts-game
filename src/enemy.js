@@ -7,7 +7,8 @@ import { getUniqueId } from './utils.js'
 /* 
   updateEnemyAI:
   - Handles enemy production and target selection.
-  - When under fire, units now compute a dodge offset of 10 pixels instead of jumping to an adjacent tile.
+  - When under fire, units now compute a dodge using proper pathfinding
+  - Dodge behavior preserves unit's original target and checks boundaries
 */
 export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const occupancyMap = buildOccupancyMap(units, mapGrid)
@@ -84,7 +85,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         unit.target = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
       }
 
-      // --- Dodge Logic: gradual movement ---
+      // --- Dodge Logic: using pathfinding ---
       let underFire = false
       bullets.forEach(bullet => {
         if (bullet.shooter && bullet.shooter.owner === 'player') {
@@ -94,9 +95,11 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           }
         }
       })
+      
       if (underFire) {
-        if (!unit.lastDodgeTime || now - unit.lastDodgeTime > 500) {
+        if (!unit.lastDodgeTime || now - unit.lastDodgeTime > 1000) { // Reduce frequency to avoid constant dodging
           unit.lastDodgeTime = now
+          
           let dodgeDir = { x: 0, y: 0 }
           bullets.forEach(bullet => {
             if (bullet.shooter && bullet.shooter.owner === 'player') {
@@ -109,25 +112,59 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
               }
             }
           })
+          
           const mag = Math.hypot(dodgeDir.x, dodgeDir.y)
           if (mag > 0) {
             dodgeDir.x /= mag
             dodgeDir.y /= mag
-            const offsetPixels = 10  // gradual offset (10 pixels)
-            const desiredX = unit.x + dodgeDir.x * offsetPixels
-            const desiredY = unit.y + dodgeDir.y * offsetPixels
-            const destTile = { x: Math.floor(desiredX / TILE_SIZE), y: Math.floor(desiredY / TILE_SIZE) }
-            if (destTile.x !== unit.tileX || destTile.y !== unit.tileY) {
-              const newPath = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, occupancyMap)
-              if (newPath.length > 0) {
-                unit.path = newPath.slice(1)
+            
+            // Calculate potential dodge destination (1-2 tiles away in dodge direction)
+            const dodgeDistance = 1 + Math.floor(Math.random() * 2); // 1 or 2 tiles
+            const destTileX = Math.floor(unit.tileX + Math.round(dodgeDir.x * dodgeDistance));
+            const destTileY = Math.floor(unit.tileY + Math.round(dodgeDir.y * dodgeDistance));
+            
+            // Check map boundaries and tile validity
+            if (destTileX >= 0 && destTileX < mapGrid[0].length && 
+                destTileY >= 0 && destTileY < mapGrid.length) {
+                
+              const tileType = mapGrid[destTileY][destTileX].type;
+              if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+                
+                // Store original path and target if this is a new dodge
+                if (!unit.originalPath) {
+                  unit.originalPath = unit.path ? [...unit.path] : [];
+                  unit.originalTarget = unit.target;
+                  unit.dodgeEndTime = now + 3000; // Resume original path after 3 seconds max
+                }
+                
+                // Create a new path to the dodge destination
+                const newPath = findPath(
+                  { x: unit.tileX, y: unit.tileY }, 
+                  { x: destTileX, y: destTileY }, 
+                  mapGrid, 
+                  occupancyMap
+                );
+                
+                if (newPath.length > 1) {
+                  unit.isDodging = true;
+                  unit.path = newPath.slice(1);
+                }
               }
-            } else {
-              // If still in the same tile, nudge position slightly.
-              unit.x += dodgeDir.x * offsetPixels
-              unit.y += dodgeDir.y * offsetPixels
             }
           }
+        } 
+      }
+      
+      // Check if dodge should end (either reached destination or timed out)
+      if (unit.isDodging && unit.originalPath) {
+        if (unit.path.length === 0 || now > unit.dodgeEndTime) {
+          // Return to original path and target
+          unit.path = unit.originalPath;
+          unit.target = unit.originalTarget;
+          unit.originalPath = null;
+          unit.originalTarget = null;
+          unit.isDodging = false;
+          unit.dodgeEndTime = null;
         }
       }
     }
