@@ -86,7 +86,7 @@ class MinHeap {
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
-export function findPath(start, end, mapGrid, occupancyMap = null) {
+export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = 1000) {
   if (
     end.x < 0 ||
     end.y < 0 ||
@@ -117,6 +117,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
   openHeap.push(startNode)
 
   // Removed any maximum iteration check to ensure players' units can always move.
+  let nodesExplored = 0;
   while (openHeap.size() > 0) {
     const currentNode = openHeap.pop()
     const currentKey = `${currentNode.x},${currentNode.y}`
@@ -166,6 +167,21 @@ export function findPath(start, end, mapGrid, occupancyMap = null) {
         }
         openHeap.push(neighborNode)
       }
+    }
+    nodesExplored++;
+    if (nodesExplored > pathFindingLimit) {
+      const bestNode = openHeap.content.reduce((best, node) => {
+        const fScore = node.g + node.h;
+        const bestFScore = best.g + best.h;
+        return fScore < bestFScore ? node : best;
+      }, openHeap.content[0]);
+      let path = [];
+      let curr = bestNode;
+      while (curr) {
+        path.push({ x: curr.x, y: curr.y });
+        curr = curr.parent;
+      }
+      return path.reverse();
     }
   }
   // If no path is found, return an empty array.
