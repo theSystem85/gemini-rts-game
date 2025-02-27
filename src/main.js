@@ -132,47 +132,72 @@ if (musicControlButton) {
 
 let lastTime = performance.now()
 function gameLoop(time) {
-  const delta = time - lastTime
-  lastTime = time
-  if (gameState.gameStarted && !gameState.gamePaused) {
-    updateGame(delta, mapGrid, factories, units, bullets, gameState)
-  }
-  if (production.inProgress) {
-    const elapsed = performance.now() - production.startTime
-    productionProgressEl.textContent = `${Math.floor((elapsed / production.duration) * 100)}%`
-    if (elapsed >= production.duration) {
-      const newUnit = spawnUnit(factories[0], production.unitType, units, mapGrid)
-      newUnit.x = newUnit.tileX * TILE_SIZE
-      newUnit.y = newUnit.tileY * TILE_SIZE
-      newUnit.path = []
-      newUnit.target = null
-      if (production.unitType === 'tank') {
-        newUnit.health = 100
-        newUnit.maxHealth = 100
-        newUnit.speed = 2
-      } else if (production.unitType === 'rocketTank') {
-        newUnit.health = 100
-        newUnit.maxHealth = 100
-        newUnit.speed = 2
-      } else if (production.unitType === 'harvester') {
-        newUnit.health = 150
-        newUnit.maxHealth = 150
-        newUnit.speed = 1
-      }
-      newUnit.owner = 'player'
-      units.push(newUnit)
-      production.inProgress = false
-      productionProgressEl.textContent = ''
-      playSound('productionReady')
+  try {
+    const delta = time - lastTime
+    lastTime = time
+    
+    if (gameState.gameStarted && !gameState.gamePaused) {
+      updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
+    
+    if (production.inProgress) {
+      const elapsed = performance.now() - production.startTime
+      productionProgressEl.textContent = `${Math.floor((elapsed / production.duration) * 100)}%`
+      
+      if (elapsed >= production.duration) {
+        try {
+          const newUnit = spawnUnit(factories[0], production.unitType, units, mapGrid)
+          
+          if (newUnit) {
+            newUnit.x = newUnit.tileX * TILE_SIZE
+            newUnit.y = newUnit.tileY * TILE_SIZE
+            newUnit.path = []
+            newUnit.target = null
+            
+            if (production.unitType === 'tank') {
+              newUnit.health = 100
+              newUnit.maxHealth = 100
+              newUnit.speed = 2
+            } else if (production.unitType === 'rocketTank') {
+              newUnit.health = 100
+              newUnit.maxHealth = 100
+              newUnit.speed = 2
+            } else if (production.unitType === 'harvester') {
+              newUnit.health = 150
+              newUnit.maxHealth = 150
+              newUnit.speed = 1
+            }
+            
+            newUnit.owner = 'player'
+            units.push(newUnit)
+          }
+        } catch (error) {
+          console.error("Error spawning unit:", error)
+        }
+        
+        production.inProgress = false
+        productionProgressEl.textContent = ''
+        playSound('productionReady')
+      }
+    }
+    
+    renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
+              gameState.scrollOffset, selectionActive, 
+              selectionStartExport, selectionEndExport, gameState)
+    renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
+                 gameState.scrollOffset, gameCanvas, units)
+    
+    moneyEl.textContent = gameState.money
+    gameTimeEl.textContent = Math.floor(gameState.gameTime)
+    winsEl.textContent = gameState.wins
+    lossesEl.textContent = gameState.losses
+    
+    requestAnimationFrame(gameLoop)
+  } catch (error) {
+    console.error("Critical error in game loop:", error)
+    // Try to recover by requesting next frame
+    requestAnimationFrame(gameLoop)
   }
-  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.scrollOffset, selectionActive, selectionStartExport, selectionEndExport)
-  renderMinimap(minimapCtx, minimapCanvas, mapGrid, gameState.scrollOffset, gameCanvas, units)
-  moneyEl.textContent = gameState.money
-  gameTimeEl.textContent = Math.floor(gameState.gameTime)
-  winsEl.textContent = gameState.wins
-  lossesEl.textContent = gameState.losses
-  requestAnimationFrame(gameLoop)
 }
 
 gameLoop(performance.now())
