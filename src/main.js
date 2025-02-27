@@ -406,11 +406,16 @@ function animate(timestamp) {
     return
   }
   
-  // Calculate delta time
+  // Calculate delta time with a maximum to avoid spiral of doom on slow frames
   const now = timestamp || performance.now()
   if (!lastFrameTime) lastFrameTime = now
-  const delta = now - lastFrameTime
+  const delta = Math.min(now - lastFrameTime, 33) // Cap at ~30 FPS equivalent
   lastFrameTime = now
+  
+  // Check if game is over
+  if (gameState.gameOver) {
+    gameState.gamePaused = true
+  }
   
   // Update production progress
   productionQueue.updateProgress(timestamp)
@@ -436,7 +441,13 @@ function animate(timestamp) {
   const seconds = gameTimeSeconds % 60
   gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
   
-  requestAnimationFrame(animate)
+  // Use setTimeout to ensure we don't overload the browser
+  if (units.length > 20) {
+    // For large number of units, use setTimeout to give browser breathing room
+    setTimeout(() => requestAnimationFrame(animate), 5)
+  } else {
+    requestAnimationFrame(animate)
+  }
 }
 
 // Helper function to check valid position
