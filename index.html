@@ -19,14 +19,20 @@
           <button class="production-button" data-unit-type="tank">
             <img src="images/tank.webp" onerror="this.style.display='none'">
             <span>Tank ($1000)</span>
+            <div class="production-progress"></div>
+            <div class="batch-counter" style="display:none">0</div>
           </button>
           <button class="production-button" data-unit-type="rocketTank">
             <img src="images/rocket_tank.webp" onerror="this.style.display='none'">
             <span>Rocket Tank ($2000)</span>
+            <div class="production-progress"></div>
+            <div class="batch-counter" style="display:none">0</div>
           </button>
           <button class="production-button" data-unit-type="harvester">
             <img src="images/harvester.webp" onerror="this.style.display='none'">
             <span>Harvester ($500)</span>
+            <div class="production-progress"></div>
+            <div class="batch-counter" style="display:none">0</div>
           </button>
         </div>
         <div id="productionProgress"></div>
@@ -34,12 +40,20 @@
       <div id="controls">
         <button id="pauseBtn">Start</button>
         <button id="restartBtn">Restart</button>
-      </div>
-      <div id="musicControlContainer">
         <button id="musicControl">Pause Music</button>
       </div>
     </div>
     <canvas id="gameCanvas"></canvas>
     <script src="/src/main.js" type="module"></script>
+    <script>
+      // Add this to ensure we have sound functions even if not defined elsewhere
+      function playSound(soundName) {
+        if (typeof sounds !== 'undefined' && sounds[soundName]) {
+          const sound = sounds[soundName]
+          sound.currentTime = 0
+          sound.play().catch(e => console.log('Error playing sound:', e))
+        }
+      }
+    </script>
   </body>
 </html>

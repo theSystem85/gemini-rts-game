@@ -78,30 +78,238 @@ const bullets = []
 
 setupInputHandlers(units, factories, mapGrid)
 
-let production = {
-  inProgress: false,
-  unitType: null,
-  startTime: 0,
-  duration: 3000
-}
-
 const unitCosts = {
   tank: 1000,
   rocketTank: 2000,
   harvester: 500
 }
 
+// Enhanced production queue system
+const productionQueue = {
+  items: [],
+  current: null,
+  paused: false,
+  
+  // Utility function to update batch counter display
+  updateBatchCounter: function(button, count) {
+    const batchCounter = button.querySelector('.batch-counter');
+    if (count <= 0) {
+      batchCounter.style.display = 'none';
+      button.classList.remove('active');
+      button.classList.remove('paused');
+    } else {
+      batchCounter.textContent = count;
+      batchCounter.style.display = 'flex';
+    }
+  },
+  
+  addItem: function(unitType, button) {
+    // Check how many of this type are currently queued
+    let currentCount = 0;
+    for (const item of this.items) {
+      if (item.button === button) currentCount++;
+    }
+    
+    // If current production is of this type, add 1 more
+    if (this.current && this.current.button === button) currentCount++;
+    
+    // Add to queue and update counter
+    this.items.push({ unitType, button });
+    this.updateBatchCounter(button, currentCount + 1);
+    
+    // Start production if not already in progress
+    if (!this.current && !this.paused) {
+      this.startNextProduction();
+    }
+  },
+  startNextProduction: function() {
+    if (this.items.length === 0 || this.paused) return
+    
+    const item = this.items[0]
+    const cost = unitCosts[item.unitType] || 0
+    
+    if (gameState.money < cost) {
+      // Not enough money, check again later
+      setTimeout(() => this.startNextProduction(), 1000)
+      return
+    }
+    
+    // Deduct the cost
+    gameState.money -= cost
+    
+    // Start the production
+    this.current = {
+      unitType: item.unitType,
+      button: item.button,
+      progress: 0,
+      startTime: performance.now(),
+      duration: 3000 // 3 seconds
+    }
+    
+    // Mark button as active
+    item.button.classList.add('active')
+    
+    playSound('productionStart')
+  },
+  updateProgress: function(timestamp) {
+    if (!this.current || this.paused) return
+    
+    const elapsed = timestamp - this.current.startTime
+    const progress = Math.min(elapsed / this.current.duration, 1)
+    this.current.progress = progress
+    
+    // Update the progress bar
+    const progressBar = this.current.button.querySelector('.production-progress')
+    if (progressBar) {
+      progressBar.style.width = `${progress * 100}%`
+    }
+    
+    if (progress >= 1) {
+      // Production complete
+      this.completeCurrentProduction()
+    }
+  },
+  completeCurrentProduction: function() {
+    if (!this.current) return
+    
+    const unitType = this.current.unitType
+    const button = this.current.button
+    
+    // Remove item from queue and get count of remaining items of this type
+    this.items.shift();
+    let remainingCount = this.items.filter(item => item.button === button).length;
+    
+    // Update batch counter
+    this.updateBatchCounter(button, remainingCount);
+    
+    // Reset the progress bar
+    const progressBar = button.querySelector('.production-progress')
+    if (progressBar) {
+      progressBar.style.width = '0%'
+    }
+    
+    // Spawn the unit with all required parameters
+    const playerFactory = factories.find(f => f.id === 'player') // Changed from owner to id
+    if (playerFactory) {
+      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid)
+      // Add the new unit to the units array if it was created successfully
+      if (newUnit) {
+        units.push(newUnit)
+        playSound('unitSpawned') // Add sound feedback for unit creation
+      } else {
+        // If unit creation failed, refund the cost
+        console.warn("Failed to spawn unit - refunding cost")
+        gameState.money += unitCosts[unitType] || 0
+      }
+    }
+    
+    // Clear current production
+    this.current = null
+    
+    // Start next item in queue if available
+    if (this.items.length > 0) {
+      setTimeout(() => this.startNextProduction(), 100)
+    }
+    
+    playSound('productionComplete')
+  },
+  togglePause: function() {
+    this.paused = !this.paused
+    
+    if (this.current) {
+      this.current.button.classList.toggle('paused', this.paused)
+      
+      if (!this.paused) {
+        // Reset the start time to account for the pause
+        this.current.startTime = performance.now() - (this.current.progress * this.current.duration)
+        this.startNextProduction()
+      }
+    }
+  },
+  cancelProduction: function() {
+    if (!this.current) return
+    
+    const button = this.current.button
+    const unitType = this.current.unitType
+    
+    // Return money for the current production
+    gameState.money += unitCosts[unitType] || 0
+    
+    // Remove item from queue
+    this.items.shift()
+    
+    // Count remaining items of this type
+    let remainingCount = this.items.filter(item => item.button === button).length;
+    
+    // Update batch counter
+    this.updateBatchCounter(button, remainingCount);
+    
+    // Reset the progress bar
+    const progressBar = button.querySelector('.production-progress')
+    if (progressBar) {
+      progressBar.style.width = '0%'
+    }
+    
+    // Clear current production
+    this.current = null
+    this.paused = false
+    
+    // Start next item in queue if available
+    if (this.items.length > 0) {
+      this.startNextProduction()
+    }
+  }
+}
+
 productionButtons.querySelectorAll('.production-button').forEach(button => {
   button.addEventListener('click', () => {
-    if (production.inProgress) return
     const unitType = button.getAttribute('data-unit-type')
     const cost = unitCosts[unitType] || 0
-    if (gameState.money < cost) return
-    gameState.money -= cost
-    production.inProgress = true
-    production.unitType = unitType
-    production.startTime = performance.now()
-    playSound('productionStart')
+    
+    if (gameState.money < cost) {
+      // Show visual feedback for not enough money
+      button.classList.add('error')
+      setTimeout(() => button.classList.remove('error'), 300)
+      return
+    }
+    
+    // Add to production queue
+    productionQueue.addItem(unitType, button)
+  })
+  
+  button.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    
+    // Check if this button has the current production
+    if (productionQueue.current && productionQueue.current.button === button) {
+      if (!productionQueue.paused) {
+        // First right-click pauses
+        productionQueue.togglePause()
+      } else {
+        // Second right-click cancels
+        productionQueue.cancelProduction()
+      }
+    } else {
+      // Find the last queued item of this type
+      for (let i = productionQueue.items.length - 1; i >= 0; i--) {
+        if (productionQueue.items[i].button === button) {
+          // Return money for the cancelled production
+          gameState.money += unitCosts[productionQueue.items[i].unitType] || 0;
+          
+          // Remove from queue
+          productionQueue.items.splice(i, 1);
+          
+          // Update batch counter
+          const remainingCount = productionQueue.items.filter(
+            item => item.button === button
+          ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
+          
+          productionQueue.updateBatchCounter(button, remainingCount);
+          
+          break; // Only remove one at a time
+        }
+      }
+    }
   })
 })
 
@@ -130,6 +338,38 @@ if (musicControlButton) {
   })
 }
 
+// Add the minimap event listeners
+const minimapElement = document.getElementById('minimap')
+if (minimapElement) {
+  // Handle left click on minimap
+  minimapElement.addEventListener('click', handleMinimapClick)
+  
+  // Handle right click on minimap - prevent default and just move viewport without deselection
+  minimapElement.addEventListener('contextmenu', (e) => {
+    e.preventDefault() // Prevent the default context menu
+    handleMinimapClick(e) // Use the same handler as left-click to move viewport
+    return false // Prevent bubbling
+  })
+}
+
+function handleMinimapClick(e) {
+  // Get minimap dimensions
+  const minimap = e.target
+  const minimapRect = minimap.getBoundingClientRect()
+  
+  // Calculate click position relative to minimap
+  const clickX = (e.clientX - minimapRect.left) / minimapRect.width
+  const clickY = (e.clientY - minimapRect.top) / minimapRect.height
+  
+  // Calculate new scroll position
+  const newX = clickX * (MAP_TILES_X * TILE_SIZE - gameCanvas.width)
+  const newY = clickY * (MAP_TILES_Y * TILE_SIZE - gameCanvas.height)
+  
+  // Update gameState.scrollOffset instead of cameraPosition
+  gameState.scrollOffset.x = Math.max(0, Math.min(newX, MAP_TILES_X * TILE_SIZE - gameCanvas.width))
+  gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - gameCanvas.height))
+}
+
 let lastTime = performance.now()
 function gameLoop(time) {
   try {
@@ -138,47 +378,6 @@ function gameLoop(time) {
     
     if (gameState.gameStarted && !gameState.gamePaused) {
       updateGame(delta, mapGrid, factories, units, bullets, gameState)
-    }
-    
-    if (production.inProgress) {
-      const elapsed = performance.now() - production.startTime
-      productionProgressEl.textContent = `${Math.floor((elapsed / production.duration) * 100)}%`
-      
-      if (elapsed >= production.duration) {
-        try {
-          const newUnit = spawnUnit(factories[0], production.unitType, units, mapGrid)
-          
-          if (newUnit) {
-            newUnit.x = newUnit.tileX * TILE_SIZE
-            newUnit.y = newUnit.tileY * TILE_SIZE
-            newUnit.path = []
-            newUnit.target = null
-            
-            if (production.unitType === 'tank') {
-              newUnit.health = 100
-              newUnit.maxHealth = 100
-              newUnit.speed = 2
-            } else if (production.unitType === 'rocketTank') {
-              newUnit.health = 100
-              newUnit.maxHealth = 100
-              newUnit.speed = 2
-            } else if (production.unitType === 'harvester') {
-              newUnit.health = 150
-              newUnit.maxHealth = 150
-              newUnit.speed = 1
-            }
-            
-            newUnit.owner = 'player'
-            units.push(newUnit)
-          }
-        } catch (error) {
-          console.error("Error spawning unit:", error)
-        }
-        
-        production.inProgress = false
-        productionProgressEl.textContent = ''
-        playSound('productionReady')
-      }
     }
     
     renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
@@ -199,5 +398,57 @@ function gameLoop(time) {
     requestAnimationFrame(gameLoop)
   }
 }
+
+// Modify the animation loop to update production progress
+function animate(timestamp) {
+  if (!gameState.gameStarted || gameState.gamePaused) {
+    requestAnimationFrame(animate)
+    return
+  }
+  
+  // Calculate delta time
+  const now = timestamp || performance.now()
+  if (!lastFrameTime) lastFrameTime = now
+  const delta = now - lastFrameTime
+  lastFrameTime = now
+  
+  // Update production progress
+  productionQueue.updateProgress(timestamp)
+  
+  // Update game elements
+  updateGame(delta / 1000, mapGrid, factories, units, bullets, gameState)
+  
+  // Render game
+  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
+    gameState.scrollOffset, gameState.selectionActive, 
+    gameState.selectionStart, gameState.selectionEnd, gameState)
+  
+  // Render minimap
+  renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
+    gameState.scrollOffset, gameCanvas, units)
+  
+  // Update money display
+  moneyEl.textContent = `$${Math.floor(gameState.money)}`
+  
+  // Update game time display
+  const gameTimeSeconds = Math.floor(gameState.gameTime)
+  const minutes = Math.floor(gameTimeSeconds / 60)
+  const seconds = gameTimeSeconds % 60
+  gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+  
+  requestAnimationFrame(animate)
+}
+
+// Helper function to check valid position
+function isValidPosition(x, y, mapGrid) {
+  return y >= 0 && y < mapGrid.length && 
+         x >= 0 && x < mapGrid[0].length && 
+         mapGrid[y][x].type !== 'water' && 
+         mapGrid[y][x].type !== 'rock'
+}
+
+// Initialize animation loop
+let lastFrameTime = null
+requestAnimationFrame(animate)
 
 gameLoop(performance.now())

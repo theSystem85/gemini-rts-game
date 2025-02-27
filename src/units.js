@@ -200,16 +200,51 @@ function getNeighbors(node, mapGrid) {
 
 // Spawns a unit at the center ("under") of the factory.
 export function spawnUnit(factory, unitType, units, mapGrid) {
-  const spawnX = factory.x + Math.floor(factory.width / 2)
-  const spawnY = factory.y + Math.floor(factory.height / 2)
+  const spawnX = factory.x + Math.floor(factory.width / 2);
+  const spawnY = factory.y + Math.floor(factory.height / 2);
+  
+  // First try direct spawn at factory exit point (just below the factory)
+  const exitX = spawnX;
+  const exitY = spawnY + 1; // Position below factory
+  
+  // Check if exit is blocked by another unit and try to move it
+  const exitBlocked = units.some(unit => 
+    Math.floor(unit.x / TILE_SIZE) === exitX && 
+    Math.floor(unit.y / TILE_SIZE) === exitY
+  );
+  
+  // If exit is blocked, try to move blocking units as per requirement 3.1.7
+  if (exitBlocked) {
+    const success = moveBlockingUnits(exitX, exitY, units, mapGrid);
+    if (success) {
+      // Successfully moved blocking unit, spawn at exit
+      return createUnit(factory, unitType, exitX, exitY);
+    }
+  } else if (isPositionValid(exitX, exitY, mapGrid, units)) {
+    // Exit is free, spawn there
+    return createUnit(factory, unitType, exitX, exitY);
+  }
+  
+  // If direct exit spawn failed, find another position
+  const spawnPosition = findAvailableSpawnPosition(factory, mapGrid, units);
+  if (!spawnPosition) {
+    console.warn('No available spawn position for new unit');
+    return null; // Return null if no position is available
+  }
+  
+  return createUnit(factory, unitType, spawnPosition.x, spawnPosition.y);
+}
+
+// Helper to create the actual unit object
+function createUnit(factory, unitType, x, y) {
   return {
     id: getUniqueId(),
     type: unitType,  // "tank", "rocketTank", or "harvester"
     owner: factory.id === 'player' ? 'player' : 'enemy',
-    tileX: spawnX,
-    tileY: spawnY,
-    x: spawnX * TILE_SIZE,
-    y: spawnY * TILE_SIZE,
+    tileX: x,
+    tileY: y,
+    x: x * TILE_SIZE,
+    y: y * TILE_SIZE,
     speed: (unitType === 'harvester') ? 1 : 2,
     health: (unitType === 'harvester') ? 150 : 100,
     maxHealth: (unitType === 'harvester') ? 150 : 100,
@@ -219,8 +254,119 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     oreCarried: 0,
     harvesting: false,
     spawnTime: Date.now(),
-    spawnedInFactory: true
+    spawnedInFactory: false
+  };
+}
+
+// Find an available position near the factory for unit spawn
+function findAvailableSpawnPosition(factory, mapGrid, units) {
+  // First, try positions around the factory in a spiral pattern
+  const directions = [
+    { x: 0, y: 1 },  // south
+    { x: 1, y: 0 },  // east
+    { x: 0, y: -1 }, // north
+    { x: -1, y: 0 }  // west
+    // Add diagonals for more options
+    ,{ x: 1, y: 1 },  // southeast
+    { x: 1, y: -1 },  // northeast
+    { x: -1, y: -1 }, // northwest
+    { x: -1, y: 1 }   // southwest
+  ];
+  
+  // Factory center and dimensions
+  const factoryX = factory.x + Math.floor(factory.width / 2);
+  const factoryY = factory.y + Math.floor(factory.height / 2);
+  
+  // Check immediate surrounding tiles first (1 tile away)
+  for (let distance = 1; distance <= 5; distance++) {
+    for (const dir of directions) {
+      const x = factoryX + dir.x * distance;
+      const y = factoryY + dir.y * distance;
+      
+      // Check if position is valid
+      if (isPositionValid(x, y, mapGrid, units)) {
+        return { x, y };
+      }
+    }
   }
+  
+  // If we couldn't find a position in the immediate vicinity,
+  // expand the search with a more thorough approach
+  for (let distance = 1; distance <= 10; distance++) {
+    // Check in a square pattern around the factory
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        // Skip positions we've already checked (inner square)
+        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue;
+        
+        const x = factoryX + dx;
+        const y = factoryY + dy;
+        
+        if (isPositionValid(x, y, mapGrid, units)) {
+          return { x, y };
+        }
+      }
+    }
+  }
+  
+  // No valid position found
+  return null;
+}
+
+// Helper function to check if a position is valid for unit spawn
+function isPositionValid(x, y, mapGrid, units) {
+  // Check if position is within bounds
+  if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) {
+    return false;
+  }
+  
+  // Check if tile is passable (not a building, rock, etc.)
+  if (mapGrid[y][x].type !== 'land' && mapGrid[y][x].type !== 'street' && mapGrid[y][x].type !== 'ore') {
+    return false;
+  }
+  
+  // Check if tile is occupied by another unit
+  const isOccupied = units.some(unit => 
+    Math.floor(unit.x / TILE_SIZE) === x && 
+    Math.floor(unit.y / TILE_SIZE) === y
+  );
+  
+  return !isOccupied;
+}
+
+// Implementation of algorithm A1: move blocking units to make room
+export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
+  // Find any unit blocking the target position
+  const blockingUnit = units.find(unit => 
+    Math.floor(unit.x / TILE_SIZE) === targetX && 
+    Math.floor(unit.y / TILE_SIZE) === targetY
+  );
+  
+  if (!blockingUnit) return true; // No blocking unit
+  
+  // Find the closest free tile to move the blocking unit
+  const directions = [
+    {x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0},  // Cardinals
+    {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}, {x: -1, y: -1}  // Diagonals
+  ];
+  
+  for (let distance = 1; distance <= 3; distance++) {
+    for (const dir of directions) {
+      const newX = targetX + dir.x * distance;
+      const newY = targetY + dir.y * distance;
+      
+      if (isPositionValid(newX, newY, mapGrid, units)) {
+        // Move the blocking unit
+        blockingUnit.tileX = newX;
+        blockingUnit.tileY = newY;
+        blockingUnit.x = newX * TILE_SIZE;
+        blockingUnit.y = newY * TILE_SIZE;
+        return true;
+      }
+    }
+  }
+  
+  return false; // Couldn't move blocking unit
 }
 
 // --- Collision Resolution for Idle Units ---
