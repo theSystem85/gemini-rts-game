@@ -73,6 +73,23 @@ for (let i = 0; i < 100; i++) {
 const factories = []
 initFactories(factories, mapGrid)
 
+// Center viewport on player factory
+const playerFactory = factories.find(f => f.id === 'player')
+if (playerFactory) {
+  const factoryPixelX = playerFactory.x * TILE_SIZE
+  const factoryPixelY = playerFactory.y * TILE_SIZE
+  
+  // Center the factory in the viewport
+  gameState.scrollOffset.x = Math.max(0, Math.min(
+    factoryPixelX - gameCanvas.width / 2,
+    MAP_TILES_X * TILE_SIZE - gameCanvas.width
+  ))
+  gameState.scrollOffset.y = Math.max(0, Math.min(
+    factoryPixelY - gameCanvas.height / 2,
+    MAP_TILES_Y * TILE_SIZE - gameCanvas.height
+  ))
+}
+
 const units = []
 const bullets = []
 
