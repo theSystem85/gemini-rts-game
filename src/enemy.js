@@ -1,5 +1,5 @@
 // enemy.js
-import { TILE_SIZE } from './config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 import { getUniqueId } from './utils.js'
@@ -170,6 +170,62 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     }
     // (For harvesters, behavior remains the same.)
   })
+
+  // For tanks with targets, ensure they maintain safe attack distance
+  units.forEach(unit => {
+    if (unit.owner !== 'enemy') return
+    
+    if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
+      // Check if unit is too close to its target
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      let targetCenterX, targetCenterY
+      
+      if (unit.target.tileX !== undefined) {
+        targetCenterX = unit.target.x + TILE_SIZE / 2
+        targetCenterY = unit.target.y + TILE_SIZE / 2
+      } else {
+        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+      }
+      
+      const dx = targetCenterX - unitCenterX
+      const dy = targetCenterY - unitCenterY
+      const currentDist = Math.hypot(dx, dy)
+      
+      // Calculate safe distance with explosion buffer
+      const explosionSafetyBuffer = TILE_SIZE * 0.5
+      const safeAttackDistance = Math.max(
+        TANK_FIRE_RANGE * TILE_SIZE,
+        TILE_SIZE * 2 + explosionSafetyBuffer
+      )
+      
+      // If unit is too close and not already dodging, back up
+      if (currentDist < safeAttackDistance && !unit.isDodging) {
+        // Calculate retreat position (away from target)
+        const destTileX = Math.floor(unit.tileX - Math.round((dx / currentDist) * 2));
+        const destTileY = Math.floor(unit.tileY - Math.round((dy / currentDist) * 2));
+        
+        // Check map boundaries and tile validity
+        if (destTileX >= 0 && destTileX < mapGrid[0].length && 
+            destTileY >= 0 && destTileY < mapGrid.length) {
+          
+          const tileType = mapGrid[destTileY][destTileX].type;
+          if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+            const newPath = findPath(
+              { x: unit.tileX, y: unit.tileY }, 
+              { x: destTileX, y: destTileY }, 
+              mapGrid, 
+              null
+            );
+            if (newPath.length > 1) {
+              unit.path = newPath.slice(1);
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // Spawns an enemy unit at the center ("under") of the enemy factory.

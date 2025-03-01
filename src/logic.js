@@ -154,10 +154,19 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         const dx = targetCenterX - unitCenterX
         const dy = targetCenterY - unitCenterY
         const currentDist = Math.hypot(dx, dy)
-        const desiredDist = TANK_FIRE_RANGE * TILE_SIZE
-        // Calculate the desired center position to maintain range.
+        
+        // Increase minimum distance to account for explosion radius
+        // Use TANK_FIRE_RANGE but add a small safety buffer (0.5 tile)
+        const explosionSafetyBuffer = TILE_SIZE * 0.5
+        const desiredDist = Math.max(
+          TANK_FIRE_RANGE * TILE_SIZE,
+          TILE_SIZE * 2 + explosionSafetyBuffer // explosion radius + buffer
+        )
+        
+        // Calculate the desired center position to maintain safe range
         const desiredCenterX = targetCenterX - (dx / currentDist) * desiredDist
         const desiredCenterY = targetCenterY - (dy / currentDist) * desiredDist
+        
         // Compute target top-left positions for this unit.
         const desiredX = desiredCenterX - TILE_SIZE / 2
         const desiredY = desiredCenterY - TILE_SIZE / 2
@@ -170,6 +179,16 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           const moveY = (diffY / diffDist) * effectiveSpeed
           unit.x += moveX
           unit.y += moveY
+        }
+
+        // Define a threshold (90% of firing range) for moving closer to target
+        const attackRangeThreshold = TANK_FIRE_RANGE * TILE_SIZE * 0.9;
+        if (currentDist > attackRangeThreshold) {
+          const targetTile = { x: Math.floor(targetCenterX / TILE_SIZE), y: Math.floor(targetCenterY / TILE_SIZE) };
+          const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, null);
+          if (newPath && newPath.length > 1) {
+            unit.path = newPath.slice(1);
+          }
         }
       }
 
@@ -330,7 +349,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
       if (bullet.homing) {
         if (now - bullet.startTime > 5000) {
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullet.active = false
           bullets.splice(i, 1)
           continue
@@ -351,13 +370,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           bullet.y += (dy / distance) * bullet.speed
         } else {
           bullet.active = false
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullets.splice(i, 1)
           continue
         }
         const hitTarget = checkBulletCollision(bullet, units, factories)
         if (hitTarget) {
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullet.active = false
           playSound('shoot_rocket')
           bullets.splice(i, 1)
@@ -377,7 +396,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             if (hitTarget.health <= 0) {
               hitTarget.health = 0
             }
-            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, now, mapGrid)
+            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
             bullets.splice(i, 1)
             continue
           }
@@ -519,7 +538,7 @@ function checkBulletCollision(bullet, units, factories) {
 }
 
 // Trigger explosion effect and apply area damage
-function triggerExplosion(x, y, baseDamage, units, factories, now, mapGrid) {
+function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, mapGrid) {
   const explosionRadius = TILE_SIZE * 2
   
   // Add explosion visual effect
@@ -537,7 +556,9 @@ function triggerExplosion(x, y, baseDamage, units, factories, now, mapGrid) {
     const dy = (unit.y + TILE_SIZE / 2) - y
     const distance = Math.hypot(dx, dy)
     
+    // Skip the shooter if this was their own bullet
     if (distance < explosionRadius) {
+      if (shooter && unit.id === shooter.id) return
       const falloff = 1 - (distance / explosionRadius)
       const damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
       unit.health -= damage
