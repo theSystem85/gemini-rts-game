@@ -63,6 +63,15 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.stroke()
     }
     
+    // If unit is alert, draw an outer red circle.
+    if (unit.alertMode) {
+      gameCtx.strokeStyle = 'red'
+      gameCtx.lineWidth = 3
+      gameCtx.beginPath()
+      gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 2, 0, 2 * Math.PI)
+      gameCtx.stroke()
+    }
+    
     // Draw turret line.
     let turretDirX = 0, turretDirY = -1
     if (unit.path && unit.path.length > 0) {

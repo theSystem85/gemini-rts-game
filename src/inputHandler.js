@@ -320,6 +320,18 @@ export function setupInputHandlers(units, factories, mapGrid) {
       })
     }
   })
+
+  // Add keydown event listener to toggle alert mode.
+  document.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() === 'a') {
+      // Toggle alert mode on all selected player units.
+      selectedUnits.forEach(unit => {
+        unit.alertMode = !unit.alertMode;
+        // Optionally play an alert sound:
+        // playSound('alert');
+      });
+    }
+  });
 }
 
 function handleBoundingBoxSelection(units) {

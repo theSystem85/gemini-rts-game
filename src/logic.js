@@ -246,6 +246,73 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
       }
 
+      // --- Alert Mode Firing for Player Units ---
+      if (unit.owner === 'player' && unit.alertMode) {
+        // Gather enemy units.
+        const enemyUnits = units.filter(u => u.owner !== 'player' && u.health > 0);
+        // Calculate center of current unit.
+        const unitCenterX = unit.x + TILE_SIZE / 2;
+        const unitCenterY = unit.y + TILE_SIZE / 2;
+        // Filter enemies within firing range.
+        const alertRange = TANK_FIRE_RANGE * TILE_SIZE; // Using same constant for range.
+        const targets = enemyUnits.filter(enemy => {
+          const enemyCenterX = enemy.x + TILE_SIZE / 2;
+          const enemyCenterY = enemy.y + TILE_SIZE / 2;
+          return Math.hypot(enemyCenterX - unitCenterX, enemyCenterY - unitCenterY) <= alertRange;
+        });
+        if (targets.length > 0) {
+          // Use different cooldowns for tank and rocketTank
+          const cooldown = unit.type === 'rocketTank' ? 2000 : 1600;
+          if (!unit.lastShotTime || now - unit.lastShotTime > cooldown) {
+            targets.forEach(target => {
+              // Calculate target center for accurate aiming
+              const targetCenterX = 
+                target.tileX !== undefined 
+                  ? target.x + TILE_SIZE / 2 
+                  : target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2;
+              const targetCenterY = 
+                target.tileX !== undefined 
+                  ? target.y + TILE_SIZE / 2 
+                  : target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
+              const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+              if (unit.type === 'tank') {
+                let bullet = {
+                  id: Date.now() + Math.random(),
+                  x: unitCenterX,
+                  y: unitCenterY,
+                  speed: 3,
+                  baseDamage: 20,
+                  active: true,
+                  shooter: unit,
+                  homing: false
+                };
+                bullet.vx = bullet.speed * Math.cos(angle);
+                bullet.vy = bullet.speed * Math.sin(angle);
+                bullets.push(bullet);
+                playSound('shoot');
+              } else if (unit.type === 'rocketTank') {
+                let bullet = {
+                  id: Date.now() + Math.random(),
+                  x: unitCenterX,
+                  y: unitCenterY,
+                  speed: 2,
+                  baseDamage: 40,
+                  active: true,
+                  shooter: unit,
+                  homing: true,
+                  target: target
+                };
+                bullet.vx = bullet.speed * Math.cos(angle);
+                bullet.vy = bullet.speed * Math.sin(angle);
+                bullets.push(bullet);
+                playSound('shoot_rocket');
+              }
+              unit.lastShotTime = now;
+            });
+          }
+        }
+      }
+      
       // --- Harvester ---
       if (unit.type === 'harvester') {
         const unitTileX = Math.floor(unit.x / TILE_SIZE)

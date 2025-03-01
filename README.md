@@ -173,11 +173,12 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-1) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it.
-2) Introduce a new unit called tank-v2 that takes the velocity and direction of a moving target into account when shooting at it. The round shall explode at he calculated ainticipated spot regardless of the target itself being hit or not. These round make 20% more damage than normal tanks rounds.
+1) Introduce a new unit called tank-v2 that takes the velocity and direction of a moving target into account when shooting at it. The round shall explode at he calculated ainticipated spot regardless of the target itself being hit or not. These round make 20% more damage than normal tanks rounds.
+(-) When user drags with right click on the minimap then the viewport should update in realtime.
 
 Newly Closed Features:
 (x) The camera should initially start at the a position so that the factory of the player is visible.
+(x) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it.
 
 Open Bugs:
 (-) when enemy base is destroyed the game still continues but it should end with a message on the screen showing the curren win/loss ration of the player.
