@@ -176,9 +176,12 @@ Open Features:
 1) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it.
 2) Introduce a new unit called tank-v2 that takes the velocity and direction of a moving target into account when shooting at it. The round shall explode at he calculated ainticipated spot regardless of the target itself being hit or not. These round make 20% more damage than normal tanks rounds.
 
+Newly Closed Features:
+(x) The camera should initially start at the a position so that the factory of the player is visible.
+
 Open Bugs:
 (-) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it
-(-) The camera should initially start at the a position so that the factory of the player is visible
+(-) 
 (-) Prevent playing the same sound multiple times at the exact same time. Put in some cooldown period for each sound. Otherwise it just get louder and sound off.
 (-) Make sure the music does not play on startup automatically.
 (-) The selection border when drag selection is performed by user is not visible anymore (regression). Please get it back!
