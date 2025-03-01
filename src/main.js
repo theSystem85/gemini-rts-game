@@ -104,18 +104,14 @@ const productionQueue = {
   },
   
   addItem: function(unitType, button) {
-    // Check how many of this type are currently queued
-    let currentCount = 0;
-    for (const item of this.items) {
-      if (item.button === button) currentCount++;
-    }
-    
-    // If current production is of this type, add 1 more
-    if (this.current && this.current.button === button) currentCount++;
-    
-    // Add to queue and update counter
+    // Add to queue
     this.items.push({ unitType, button });
-    this.updateBatchCounter(button, currentCount + 1);
+    
+    // Count only queued items
+    let currentCount = this.items.filter(item => item.button === button).length;
+    
+    // Update batch counter with the correct total
+    this.updateBatchCounter(button, currentCount);
     
     // Start production if not already in progress
     if (!this.current && !this.paused) {
