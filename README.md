@@ -180,11 +180,13 @@ Newly Closed Features:
 (x) The camera should initially start at the a position so that the factory of the player is visible.
 
 Open Bugs:
-(-) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it
-(-) 
+(-) when enemy base is destroyed the game still continues but it should end with a message on the screen showing the curren win/loss ration of the player.
+(-) Units when dodging should not move differently than normal. They shoul just move to a random adjacent tile when an enemy projectile is approacing. Doding should not be faster than normal movement.
+(-) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it.
 (-) Prevent playing the same sound multiple times at the exact same time. Put in some cooldown period for each sound. Otherwise it just get louder and sound off.
 (-) Make sure the music does not play on startup automatically.
 (-) The selection border when drag selection is performed by user is not visible anymore (regression). Please get it back!
 
 Fixed Bugs:
-(x) when I click on some build button twice there is a 3 shown in the batch count
+(x) when I click on some build button twice there is a 3 shown in the batch count.
+(x) Units when attacking should keep being close enough to target in order to be in range of attack but not too close so they get also hit by thier own bullets impact.

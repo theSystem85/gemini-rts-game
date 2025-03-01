@@ -224,26 +224,26 @@ export function setupInputHandlers(units, factories, mapGrid) {
             const dx = targetCenter.x - unitCenter.x
             const dy = targetCenter.y - unitCenter.y
             const dist = Math.hypot(dx, dy)
-            if (dist <= TANK_FIRE_RANGE * TILE_SIZE) {
-              unit.path = []
-              unit.target = target
-              return
-            }
-            // Compute the base destination exactly at firing range.
-            const baseX = targetCenter.x - (dx / dist) * (TANK_FIRE_RANGE * TILE_SIZE)
-            const baseY = targetCenter.y - (dy / dist) * (TANK_FIRE_RANGE * TILE_SIZE)
+            const explosionSafetyBuffer = TILE_SIZE * 0.5
+            const safeAttackDistance = Math.max(
+              TANK_FIRE_RANGE * TILE_SIZE,
+              TILE_SIZE * 2 + explosionSafetyBuffer
+            ) - TILE_SIZE
+            
+            const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
+            const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
             const col = index % cols
             const row = Math.floor(index / cols)
             formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
             formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
             let destX = baseX + formationOffset.x
             let destY = baseY + formationOffset.y
-            // Ensure the final destination is not further than firing range.
+            // Ensure the final destination maintains safe distance
             const finalDx = targetCenter.x - destX
             const finalDy = targetCenter.y - destY
             let finalDist = Math.hypot(finalDx, finalDy)
-            if (finalDist > TANK_FIRE_RANGE * TILE_SIZE) {
-              const scale = (TANK_FIRE_RANGE * TILE_SIZE) / finalDist
+            if (finalDist < safeAttackDistance) {
+              const scale = safeAttackDistance / finalDist
               destX = targetCenter.x - finalDx * scale
               destY = targetCenter.y - finalDy * scale
             }
