@@ -179,14 +179,17 @@ Newly Closed Features:
 (x) The camera should initially start at the a position so that the factory of the player is visible.
 (x) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it. This feature is exclusive to Tank V2 units.
 (x) Tank-V2 is an upgraded tank that costs $2000, deals 20% more damage than a regular tank, and is the only unit capable of alert mode. In alert mode, the Tank-V2 fires at any enemy in range but won't chase them, respecting normal cooldown timers.
+(x) when a unit was produced play one of the unitReady01 or unitReady02 or unitReady03 sounds randomly
+(x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) when enemy base is destroyed the game still continues but it should end with a message on the screen showing the curren win/loss ration of the player.
+(-) when enemy base is destroyed the game still continues but it should end with a message on the screen showing the curren win/loss ratio of the player.
 (-) Units when dodging should not move differently than normal. They shoul just move to a random adjacent tile when an enemy projectile is approacing. Doding should not be faster than normal movement.
 (-) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it.
 (-) Prevent playing the same sound multiple times at the exact same time. Put in some cooldown period for each sound. Otherwise it just get louder and sound off.
 
 Fixed Bugs:
+(x) The coloring of enemy unit types shall be the same as for players units. Only mark enemy units by giving them a red health bar
 (x) The selection border when drag selection is performed by user is not visible anymore (regression). Please get it back!
 (x) Make sure the music does not play on startup automatically.
 (x) the enemy rocket tank should not have the same color as the harvester.
