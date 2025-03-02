@@ -326,9 +326,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (e.key.toLowerCase() === 'a') {
       // Toggle alert mode on all selected player units.
       selectedUnits.forEach(unit => {
-        unit.alertMode = !unit.alertMode;
-        // Optionally play an alert sound:
-        // playSound('alert');
+        // Only tank-v2 units can use alert mode
+        if (unit.type === 'tank-v2') {
+          unit.alertMode = !unit.alertMode;
+        }
       });
     }
   });

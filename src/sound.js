@@ -82,9 +82,10 @@ export function initBackgroundMusic() {
   const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
   bgMusicAudio = new Audio('sound/music/' + file)
   bgMusicAudio.loop = true
-  bgMusicAudio.play().catch(e => {
-    console.error("Error playing background music:", e)
-  })
+  // Comment out or remove the auto-play so music does not start on startup.
+  // bgMusicAudio.play().catch(e => {
+  //   console.error("Error playing background music:", e)
+  // })
 }
 
 export function toggleBackgroundMusic() {

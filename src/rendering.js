@@ -48,9 +48,18 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         gameCtx.fillStyle = '#008'
       } else if (unit.type === 'harvester') {
         gameCtx.fillStyle = '#9400D3'
+      } else if (unit.type === 'tank-v2') {
+        gameCtx.fillStyle = '#FFF'  // Force white for tank-v2
       }
     } else {
-      gameCtx.fillStyle = unit.type === 'tank' ? '#F00' : '#FF00FF'
+      // For enemy units, assign distinct colors.
+      if (unit.type === 'rocketTank') {
+        gameCtx.fillStyle = '#A52A2A'  // e.g. a brownish color distinct from harvester
+      } else if (unit.type === 'tank-v2') {
+        gameCtx.fillStyle = '#FFF'  // Always white
+      } else {
+        gameCtx.fillStyle = (unit.type === 'tank') ? '#F00' : '#FF00FF'
+      }
     }
     gameCtx.beginPath()
     gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3, 0, 2 * Math.PI)
@@ -64,7 +73,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     }
     
     // If unit is alert, draw an outer red circle.
-    if (unit.alertMode) {
+    if (unit.alertMode && unit.type === 'tank-v2') {
       gameCtx.strokeStyle = 'red'
       gameCtx.lineWidth = 3
       gameCtx.beginPath()
