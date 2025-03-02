@@ -193,7 +193,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
 
       // --- Firing with Clear Line-of-Sight Check (Prevent Friendly Fire) ---
-      if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
+      if ((unit.type === 'tank' || unit.type === 'rocketTank' || unit.type === 'tank-v2') && unit.target) {
         const unitCenterX = unit.x + TILE_SIZE / 2
         const unitCenterY = unit.y + TILE_SIZE / 2
         let targetCenterX, targetCenterY
@@ -209,40 +209,75 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (dist <= TANK_FIRE_RANGE * TILE_SIZE && hasClearShot(unit, unit.target, units)) {
           if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
             if (unit.type === 'tank') {
-              let bullet = {
-                id: Date.now() + Math.random(),
-                x: unitCenterX,
-                y: unitCenterY,
-                speed: 3,
-                baseDamage: 20,
-                active: true,
-                shooter: unit,
-                homing: false
+              const cooldown = 1600; // Normal tank reload in ms
+              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+                let bullet = {
+                  id: Date.now() + Math.random(),
+                  x: unitCenterX,
+                  y: unitCenterY,
+                  speed: 3,
+                  baseDamage: 20,
+                  active: true,
+                  shooter: unit,
+                  homing: false
+                };
+                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+                // Use correct angle formula for normal tank to fire at current target position
+                bullet.vx = bullet.speed * Math.cos(angle);
+                bullet.vy = bullet.speed * Math.sin(angle);
+                
+                bullets.push(bullet);
+                unit.lastShotTime = now;
               }
-              const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
-              bullet.vx = bullet.speed * Math.cos(angle)
-              bullet.vy = bullet.speed * Math.sin(angle)
-              bullets.push(bullet)
-              unit.lastShotTime = now
-              playSound('shoot')
+            } else if (unit.type === 'tank-v2') {
+              const cooldown = 1600; // Same cooldown as regular tank
+              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+                // Standard bullet like normal tank
+                let bullet = {
+                  id: Date.now() + Math.random(),
+                  x: unitCenterX,
+                  y: unitCenterY,
+                  speed: 3,
+                  baseDamage: 24, // 20% more damage than regular tank
+                  active: true,
+                  shooter: unit,
+                  homing: false
+                };
+                
+                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+                bullet.vx = bullet.speed * Math.cos(angle);
+                bullet.vy = bullet.speed * Math.sin(angle);
+                
+                bullets.push(bullet);
+                unit.lastShotTime = now;
+              }
             } else if (unit.type === 'rocketTank') {
-              let bullet = {
-                id: Date.now() + Math.random(),
-                x: unitCenterX,
-                y: unitCenterY,
-                speed: 2,
-                baseDamage: 40,
-                active: true,
-                shooter: unit,
-                homing: true,
-                target: unit.target,
-                startTime: now
+              const cooldown = 2000; // Rocket tank reload in ms
+              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+                let bullet = {
+                  id: Date.now() + Math.random(),
+                  x: unitCenterX,
+                  y: unitCenterY,
+                  speed: 2,
+                  baseDamage: 40,
+                  active: true,
+                  shooter: unit,
+                  homing: true,
+                  target: unit.target
+                };
+                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+                bullet.vx = bullet.speed * Math.cos(angle);
+                bullet.vy = bullet.speed * Math.sin(angle);
+                
+                bullets.push(bullet);
+                unit.lastShotTime = now;
               }
-              bullets.push(bullet)
-              unit.lastShotTime = now
-              playSound('shoot_rocket')
             }
           }
+        } else if (!hasClearShot(unit, unit.target, units) && !unit.findingClearShot) {
+          // If no clear shot, find a nearby position with clear shot
+          unit.findingClearShot = true;
+          findPositionWithClearShot(unit, unit.target, units, mapGrid);
         }
       }
 
@@ -706,7 +741,7 @@ function hasClearShot(shooter, target, units) {
   const dy = targetCenter.y - shooterCenter.y
   const segmentLengthSq = dx * dx + dy * dy
   // Threshold distance that counts as being "in the way"
-  const threshold = TILE_SIZE / 3
+  const threshold = TILE_SIZE / 2.5
 
   for (let other of units) {
     // Only check for friendly units that are not the shooter or the intended target.
@@ -724,4 +759,73 @@ function hasClearShot(shooter, target, units) {
     }
   }
   return true
+}
+
+// Add this new function to find a position with a clear line of sight
+function findPositionWithClearShot(unit, target, units, mapGrid) {
+  const unitTileX = Math.floor(unit.x / TILE_SIZE);
+  const unitTileY = Math.floor(unit.y / TILE_SIZE);
+  
+  // Check adjacent tiles in a spiral pattern, including diagonal moves for better positioning
+  const directions = [
+    {x: 0, y: -1},  // up
+    {x: 1, y: 0},   // right
+    {x: 0, y: 1},   // down
+    {x: -1, y: 0},  // left
+    {x: 1, y: -1},  // up-right
+    {x: 1, y: 1},   // down-right
+    {x: -1, y: 1},  // down-left
+    {x: -1, y: -1}  // up-left
+  ];
+  
+  // Create the occupancy map once instead of checking each unit repeatedly
+  const occupancyMap = buildOccupancyMap(units, mapGrid);
+  
+  // Create a temporary unit copy for testing line of sight
+  const testUnit = {...unit, path: [...(unit.path || [])]};
+  
+  let bestPosition = null;
+  let bestDistance = Infinity;
+  
+  for (const dir of directions) {
+    const testX = unitTileX + dir.x;
+    const testY = unitTileY + dir.y;
+    
+    // Check if tile is valid and passable
+    if (testX >= 0 && testX < mapGrid[0].length && 
+        testY >= 0 && testY < mapGrid.length && 
+        mapGrid[testY][testX].type !== 'building' && 
+        mapGrid[testY][testX].type !== 'water') {
+      
+      // Check if tile is not occupied using the occupancy map
+      if (!occupancyMap[testY][testX]) {
+        // Position test unit at this tile to check line of sight
+        testUnit.x = testX * TILE_SIZE;
+        testUnit.y = testY * TILE_SIZE;
+        testUnit.tileX = testX;
+        testUnit.tileY = testY;
+        
+        // Check if there's a clear shot from this position
+        if (hasClearShot(testUnit, target, units)) {
+          // Calculate distance to current position to find the nearest valid spot
+          const distance = Math.hypot(testX - unitTileX, testY - unitTileY);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestPosition = {x: testX, y: testY};
+          }
+        }
+      }
+    }
+  }
+  
+  // If we found a position with clear shot, move to it
+  if (bestPosition) {
+    unit.path = [bestPosition];
+    unit.findingClearShot = false;
+    return true;
+  }
+  
+  // If no clear shot position found nearby, reset the flag
+  unit.findingClearShot = false;
+  return false;
 }

@@ -96,10 +96,37 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     console.warn('findPath: destination tile out of bounds')
     return []
   }
-  const destType = mapGrid[end.y][end.x].type
+  // Begin destination adjustment if not passable
+  let adjustedEnd = { ...end }
+  let destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
   if (destType === 'water' || destType === 'rock' || destType === 'building') {
-    console.warn('findPath: destination tile not passable')
-    return []
+    const dirs = [
+      { x: 0, y: -1 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: -1 },
+      { x: 1, y: 1 },
+      { x: -1, y: 1 },
+      { x: -1, y: -1 }
+    ]
+    let found = false
+    for (const dir of dirs) {
+      const newX = adjustedEnd.x + dir.x
+      const newY = adjustedEnd.y + dir.y
+      if (newX >= 0 && newY >= 0 && newX < mapGrid[0].length && newY < mapGrid.length) {
+        const newType = mapGrid[newY][newX].type
+        if (newType !== 'water' && newType !== 'rock' && newType !== 'building') {
+          adjustedEnd = { x: newX, y: newY }
+          found = true
+          break
+        }
+      }
+    }
+    if (!found) {
+      console.warn('findPath: destination tile not passable and no adjacent free tile found')
+      return []
+    }
   }
   
   // Initialize A* search.
@@ -109,7 +136,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     x: start.x,
     y: start.y,
     g: 0,
-    h: Math.hypot(end.x - start.x, end.y - start.y),
+    h: Math.hypot(adjustedEnd.x - start.x, adjustedEnd.y - start.y),
     f: 0,
     parent: null
   }
@@ -122,7 +149,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     const currentNode = openHeap.pop()
     const currentKey = `${currentNode.x},${currentNode.y}`
 
-    if (currentNode.x === end.x && currentNode.y === end.y) {
+    if (currentNode.x === adjustedEnd.x && currentNode.y === adjustedEnd.y) {
       // Reconstruct path.
       let path = []
       let curr = currentNode
@@ -156,7 +183,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
         }
       }
       if (!foundInHeap) {
-        const hScore = Math.hypot(end.x - neighbor.x, end.y - neighbor.y)
+        const hScore = Math.hypot(adjustedEnd.x - neighbor.x, adjustedEnd.y - neighbor.y)
         const neighborNode = {
           x: neighbor.x,
           y: neighbor.y,
@@ -216,6 +243,14 @@ function getNeighbors(node, mapGrid) {
 
 // Spawns a unit at the center ("under") of the factory.
 export function spawnUnit(factory, unitType, units, mapGrid) {
+  // Check if player has enough money
+  const unitCost = {
+    'tank': 1000,
+    'rocketTank': 2000,
+    'harvester': 500,
+    'tank-v2': 2000 // Update cost to $2000
+  };
+
   const spawnX = factory.x + Math.floor(factory.width / 2);
   const spawnY = factory.y + Math.floor(factory.height / 2);
   
@@ -253,6 +288,24 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
 
 // Helper to create the actual unit object
 function createUnit(factory, unitType, x, y) {
+  if (unitType === 'tank-v2') {
+    return {
+      id: getUniqueId(),
+      type: unitType,
+      owner: factory.id === 'player' ? 'player' : 'enemy',
+      tileX: x,
+      tileY: y,
+      x: x * TILE_SIZE,
+      y: y * TILE_SIZE,
+      speed: 2, // similar to tank
+      health: 100,
+      maxHealth: 100,
+      path: [],
+      target: null,
+      selected: false,
+      lastShotTime: 0
+    };
+  }
   return {
     id: getUniqueId(),
     type: unitType,  // "tank", "rocketTank", or "harvester"
