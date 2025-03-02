@@ -208,7 +208,7 @@ const productionQueue = {
       // Add the new unit to the units array if it was created successfully
       if (newUnit) {
         units.push(newUnit)
-        playSound('unitSpawned') // Add sound feedback for unit creation
+        playSound('productionReady') // Add sound feedback for unit creation
       } else {
         // If unit creation failed, refund the cost
         console.warn("Failed to spawn unit - refunding cost")

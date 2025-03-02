@@ -476,7 +476,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           bullets.splice(i, 1)
           continue
         }
-        const hitTarget = checkBulletCollision(bullet, units, factories)
+        const hitTarget = checkBulletCollision(bullet, units, factories, gameState)
         if (hitTarget) {
           triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullet.active = false
@@ -487,7 +487,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       } else {
         bullet.x += bullet.vx
         bullet.y += bullet.vy
-        const hitTarget = checkBulletCollision(bullet, units, factories)
+        const hitTarget = checkBulletCollision(bullet, units, factories, gameState)
         if (hitTarget) {
           const factor = 0.8 + Math.random() * 0.4
           const damage = bullet.baseDamage * factor
@@ -509,6 +509,18 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         bullet.active = false
         bullets.splice(i, 1)
       }
+    }
+
+    // If game over, display win/loss ratio message on screen
+    if (gameState.gameOver) {
+      const gameOverEl = document.getElementById('gameOverMessage');
+      if (gameOverEl) {
+        gameOverEl.innerText = `Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`;
+      } else {
+        console.log(`Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`);
+      }
+      // Optionally, halt further game processing
+      return;
     }
 
     // --- Update Explosion Effects ---
@@ -561,12 +573,15 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         factory.destroyed = true
         if (factory.id === 'enemy') {
           gameState.wins++
+          gameState.gameOver = true
+          gameState.gameOverMessage = `Victory! Win/Loss Ratio: ${gameState.wins}:${gameState.losses}`
         } else if (factory.id === 'player') {
           gameState.losses++
+          gameState.gameOver = true
+          gameState.gameOverMessage = `Defeat! Win/Loss Ratio: ${gameState.wins}:${gameState.losses}`
         }
         gameState.gamePaused = true
         playSound('explosion')
-        factories.splice(i, 1)
       }
     }
 
@@ -579,7 +594,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 }
 
 // --- Helper Functions ---
-function checkBulletCollision(bullet, units, factories) {
+function checkBulletCollision(bullet, units, factories, gameState) {
   try {
     // Check collisions with units
     for (const unit of units) {

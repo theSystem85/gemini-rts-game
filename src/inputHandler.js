@@ -180,6 +180,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
           clickedUnit.selected = true
           selectedUnits.push(clickedUnit)
           playSound('unitSelection')
+          playSound('yesSir01') // play sound on unit selection
         }
       }
       // --- Command Issuing ---

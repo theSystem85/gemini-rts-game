@@ -6,6 +6,8 @@ export const gameState = {
   losses: 0,
   gameStarted: false,
   gamePaused: false,
+  gameOver: false,
+  gameOverMessage: null,
   scrollOffset: { x: 0, y: 0 },
   dragVelocity: { x: 0, y: 0 },
   isRightDragging: false,

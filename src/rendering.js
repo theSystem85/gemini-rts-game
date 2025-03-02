@@ -3,6 +3,21 @@ import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
 import { tileToPixel } from './utils.js'
 
 export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+  // If game over, render win/lose overlay and stop drawing further
+  if (gameState.gameOver && gameState.gameOverMessage) {
+    const messageX = gameCanvas.width / 2; // added declaration
+    const messageY = gameCanvas.height / 2;
+    gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+    gameCtx.font = 'bold 32px Arial';
+    gameCtx.textAlign = 'center';
+    gameCtx.fillStyle = '#FFFFFF';
+    gameCtx.fillText(gameState.gameOverMessage, messageX, messageY);
+    gameCtx.font = '20px Arial';
+    gameCtx.fillText('Press R to start a new game', messageX, messageY + 50);
+    return;
+  }
+
   gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
   const startTileX = Math.floor(scrollOffset.x / TILE_SIZE)
   const startTileY = Math.floor(scrollOffset.y / TILE_SIZE)
@@ -41,25 +56,15 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   
   // Draw units.
   units.forEach(unit => {
-    if (unit.owner === 'player') {
-      if (unit.type === 'rocketTank') {
-        gameCtx.fillStyle = '#00F'
-      } else if (unit.type === 'tank') {
-        gameCtx.fillStyle = '#008'
-      } else if (unit.type === 'harvester') {
-        gameCtx.fillStyle = '#9400D3'
-      } else if (unit.type === 'tank-v2') {
-        gameCtx.fillStyle = '#FFF'  // Force white for tank-v2
-      }
-    } else {
-      // For enemy units, assign distinct colors.
-      if (unit.type === 'rocketTank') {
-        gameCtx.fillStyle = '#A52A2A'  // e.g. a brownish color distinct from harvester
-      } else if (unit.type === 'tank-v2') {
-        gameCtx.fillStyle = '#FFF'  // Always white
-      } else {
-        gameCtx.fillStyle = (unit.type === 'tank') ? '#F00' : '#FF00FF'
-      }
+    // Use same fill colors regardless of owner.
+    if (unit.type === 'tank') {
+      gameCtx.fillStyle = '#008';
+    } else if (unit.type === 'harvester') {
+      gameCtx.fillStyle = '#9400D3';
+    } else if (unit.type === 'rocketTank') {
+      gameCtx.fillStyle = '#008'; // same as tank (adjust if needed)
+    } else if (unit.type === 'tank-v2') {
+      gameCtx.fillStyle = '#FFF';
     }
     gameCtx.beginPath()
     gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3, 0, 2 * Math.PI)
@@ -111,18 +116,17 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.lineTo(turretEndX, turretEndY)
     gameCtx.stroke()
     
-    // Draw health bar.
+    // Draw health bar. For enemy units, force red fill.
     const unitHealthRatio = unit.health / unit.maxHealth
     const healthBarWidth = TILE_SIZE * 0.8
     const healthBarHeight = 4
     const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
     const healthBarY = unit.y - 10 - scrollOffset.y
-    gameCtx.fillStyle = '#F00'
-    gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
-    gameCtx.fillStyle = '#0F0'
-    gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight)
     gameCtx.strokeStyle = '#000'
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+    // Use green for player units, red for enemy units.
+    gameCtx.fillStyle = (unit.owner === 'enemy') ? '#F00' : '#0F0'
+    gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight)
     
     // Draw harvester progress bar.
     if (unit.type === 'harvester') {
@@ -167,7 +171,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     })
   }
   
-  // Draw selection rectangle.
+  // Draw selection rectangle if active.
   if (selectionActive && selectionStart && selectionEnd) {
     const rectX = selectionStart.x - scrollOffset.x
     const rectY = selectionStart.y - scrollOffset.y
