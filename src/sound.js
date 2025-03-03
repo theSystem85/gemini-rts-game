@@ -29,17 +29,38 @@ const soundFiles = {
   unitSelection: ['yesSir01.mp3']
 }
 
+const activeAudioElements = new Map();
+
 function playAssetSound(category) {
   const files = soundFiles[category]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
-    const audio = new Audio('sound/' + file)
+    const soundPath = 'sound/' + file;
+
+    // Check if this sound is already playing
+    if (activeAudioElements.has(soundPath)) {
+      const existingAudio = activeAudioElements.get(soundPath);
+      existingAudio.currentTime = 0;
+      existingAudio.play().catch(e => {
+        console.error("Error replaying sound asset:", e);
+      });
+      return true;
+    }
+
+    const audio = new Audio(soundPath);
+    audio.addEventListener('ended', () => {
+      activeAudioElements.delete(soundPath);
+    });
+    
     audio.play().catch(e => {
-      console.error("Error playing sound asset:", e)
-    })
-    return true
+      console.error("Error playing sound asset:", e);
+      activeAudioElements.delete(soundPath);
+    });
+    
+    activeAudioElements.set(soundPath, audio);
+    return true;
   }
-  return false
+  return false;
 }
 
 export function playSound(eventName) {
