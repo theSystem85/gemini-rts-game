@@ -354,15 +354,32 @@ if (musicControlButton) {
 // Add the minimap event listeners
 const minimapElement = document.getElementById('minimap')
 if (minimapElement) {
-  // Handle left click on minimap
-  minimapElement.addEventListener('click', handleMinimapClick)
-  
-  // Handle right click on minimap - prevent default and just move viewport without deselection
+  // Handle minimap dragging state
+  let isMinimapDragging = false;
+
+  minimapElement.addEventListener('mousedown', (e) => {
+    if (e.button === 0 || e.button === 2) {
+      e.preventDefault();
+      isMinimapDragging = true;
+      handleMinimapClick(e);
+    }
+  });
+
+  minimapElement.addEventListener('mousemove', (e) => {
+    if (isMinimapDragging) {
+      handleMinimapClick(e);
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    isMinimapDragging = false;
+  });
+
+  // Prevent context menu on minimap
   minimapElement.addEventListener('contextmenu', (e) => {
-    e.preventDefault() // Prevent the default context menu
-    handleMinimapClick(e) // Use the same handler as left-click to move viewport
-    return false // Prevent bubbling
-  })
+    e.preventDefault();
+    return false;
+  });
 }
 
 function handleMinimapClick(e) {

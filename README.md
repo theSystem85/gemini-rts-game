@@ -173,9 +173,10 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) When user drags with right click on the minimap then the viewport should update in realtime.
+(-) 
 
 Newly Closed Features:
+(x) When user drags with right click on the minimap then the viewport should update in realtime.
 (x) The camera should initially start at the a position so that the factory of the player is visible.
 (x) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it. This feature is exclusive to Tank V2 units.
 (x) Tank-V2 is an upgraded tank that costs $1500, deals 20% more damage than a regular tank, and is the only unit capable of alert mode. In alert mode, the Tank-V2 fires at any enemy in range but won't chase them, respecting normal cooldown timers.
