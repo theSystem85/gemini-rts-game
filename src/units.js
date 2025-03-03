@@ -303,7 +303,13 @@ function createUnit(factory, unitType, x, y) {
       path: [],
       target: null,
       selected: false,
-      lastShotTime: 0
+      lastShotTime: 0,
+      // Add rotation properties
+      direction: 0, // Angle in radians (0 = east, PI/2 = south)
+      targetDirection: 0,
+      turretDirection: 0,
+      rotationSpeed: 0.1, // Radians per frame
+      isRotating: false
     };
   }
   return {
@@ -323,7 +329,13 @@ function createUnit(factory, unitType, x, y) {
     oreCarried: 0,
     harvesting: false,
     spawnTime: Date.now(),
-    spawnedInFactory: false
+    spawnedInFactory: false,
+    // Add rotation properties for all unit types
+    direction: 0, // Angle in radians (0 = east, PI/2 = south)
+    targetDirection: 0,
+    turretDirection: 0,
+    rotationSpeed: 0.1, // Radians per frame
+    isRotating: false
   };
 }
 
