@@ -31,6 +31,39 @@ if (startBtn) {
 sidebar.style.backgroundColor = '#333'
 sidebar.style.color = '#fff'
 
+// Create speed control element
+const speedControl = document.createElement('div')
+speedControl.innerHTML = `
+  <label style="display: flex; align-items: center; margin: 10px 0;">
+    Game Speed: 
+    <input type="number" 
+           min="0.25" 
+           max="4" 
+           step="0.25" 
+           value="1" 
+           style="width: 70px; margin-left: 10px;"
+           id="speedMultiplier">
+  </label>
+`
+
+// Insert speed control at the beginning of sidebar
+if (sidebar.firstChild) {
+  sidebar.insertBefore(speedControl, sidebar.firstChild)
+} else {
+  sidebar.appendChild(speedControl)
+}
+
+// Add speed control handler
+const speedMultiplier = document.getElementById('speedMultiplier')
+speedMultiplier.addEventListener('change', (e) => {
+  const value = parseFloat(e.target.value)
+  if (value >= 0.25 && value <= 4) {
+    gameState.speedMultiplier = value
+  } else {
+    e.target.value = gameState.speedMultiplier
+  }
+})
+
 function resizeCanvases() {
   gameCanvas.width = window.innerWidth - 250
   gameCanvas.height = window.innerHeight
@@ -403,7 +436,7 @@ function handleMinimapClick(e) {
 let lastTime = performance.now()
 function gameLoop(time) {
   try {
-    const delta = time - lastTime
+    const delta = (time - lastTime) * gameState.speedMultiplier
     lastTime = time
     
     if (gameState.gameStarted && !gameState.gamePaused) {
