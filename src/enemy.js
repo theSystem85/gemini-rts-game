@@ -64,6 +64,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         newEnemy.target = playerFactory
         // Set up pathfinding interval to prevent recalculating every frame
         newEnemy.lastPathCalcTime = now
+        newEnemy.lastTargetChangeTime = now // Initialize target change timer
       }
       enemyFactory.budget -= cost
       gameState.enemyLastProductionTime = now
@@ -76,55 +77,80 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 
     // For tanks/rocket tanks, choose a target as before...
     if (unit.type === 'tank' || unit.type === 'rocketTank') {
-      const nearbyEnemies = units.filter(u => u.owner === 'enemy' && Math.hypot(u.x - unit.x, u.y - unit.y) < 100)
-      let newTarget = null
+      // Only consider changing targets every 2 seconds
+      const canChangeTarget = !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 2000);
       
-      if (nearbyEnemies.length >= 3) {
-        newTarget = playerFactory
-      } else {
-        let closestPlayer = null
-        let closestDist = Infinity
-        units.forEach(u => {
-          if (u.owner === 'player') {
-            const d = Math.hypot((u.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2), (u.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2))
-            if (d < closestDist) {
-              closestDist = d
-              closestPlayer = u
+      if (canChangeTarget) {
+        let newTarget = null;
+        const nearbyEnemies = units.filter(u => u.owner === 'enemy' && Math.hypot(u.x - unit.x, u.y - unit.y) < 100)
+        
+        if (nearbyEnemies.length >= 3) {
+          newTarget = playerFactory
+        } else {
+          let closestPlayer = null
+          let closestDist = Infinity
+          units.forEach(u => {
+            if (u.owner === 'player') {
+              const d = Math.hypot((u.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2), (u.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2))
+              if (d < closestDist) {
+                closestDist = d
+                closestPlayer = u
+              }
+            }
+          })
+          newTarget = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
+        }
+        
+        // Only update the target if it actually changed
+        if (unit.target !== newTarget) {
+          unit.target = newTarget;
+          unit.lastTargetChangeTime = now; // Update the last target change time
+          
+          // Store target position for path calculation
+          let targetPos = null;
+          if (unit.target.tileX !== undefined) {
+            targetPos = { x: unit.target.tileX, y: unit.target.tileY };
+          } else {
+            targetPos = { x: unit.target.x, y: unit.target.y };
+          }
+          unit.moveTarget = targetPos;
+          
+          // Calculate path to new target using same pathfinding as player units
+          if (!unit.isDodging) {
+            const path = findPath(
+              { x: unit.tileX, y: unit.tileY }, 
+              targetPos, 
+              mapGrid, 
+              null // Don't use occupancy map for long distance paths
+            );
+            if (path.length > 1) {
+              unit.path = path.slice(1);
+              unit.lastPathCalcTime = now;
             }
           }
-        })
-        newTarget = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
+        }
       }
       
-      // Only update the path if the target changed or we haven't calculated a path recently
-      const targetChanged = unit.target !== newTarget;
-      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 2000); // 2 seconds interval
-      
-      if (targetChanged || (pathRecalcNeeded && (!unit.path || unit.path.length < 3))) {
-        unit.target = newTarget;
-        
-        // Store target position for path calculation
+      // Recalculate path periodically even if target hasn't changed
+      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 2000);
+      if (pathRecalcNeeded && !unit.isDodging && unit.target && (!unit.path || unit.path.length < 3)) {
         let targetPos = null;
         if (unit.target.tileX !== undefined) {
           targetPos = { x: unit.target.tileX, y: unit.target.tileY };
         } else {
           targetPos = { x: unit.target.x, y: unit.target.y };
         }
-        unit.moveTarget = targetPos;
         
-        // Only recalculate path if we need to and we're not currently dodging
-        if (!unit.isDodging && (!unit.path || unit.path.length < 3 || targetChanged)) {
-          // Use the same findPath function as player units
-          const path = findPath(
-            { x: unit.tileX, y: unit.tileY }, 
-            targetPos, 
-            mapGrid, 
-            null // Don't use occupancy map for long distance paths
-          )
-          if (path.length > 1) {
-            unit.path = path.slice(1)
-            unit.lastPathCalcTime = now
-          }
+        // Use the same findPath function as player units
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY }, 
+          targetPos, 
+          mapGrid, 
+          null // Don't use occupancy map for long distance paths
+        );
+        if (path.length > 1) {
+          unit.path = path.slice(1);
+          unit.lastPathCalcTime = now;
         }
       }
 
@@ -334,7 +360,7 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     tileY: spawnY,
     x: spawnX * TILE_SIZE,
     y: spawnY * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 1 : 2,
+    speed: (unitType === 'harvester') ? 1 : 2, // Same speed as player units
     health: (unitType === 'harvester') ? 150 : 100,
     maxHealth: (unitType === 'harvester') ? 150 : 100,
     path: [],
@@ -346,6 +372,7 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     spawnedInFactory: true,
     lastPathCalcTime: 0,        // Track when we last calculated a path
     lastPositionCheckTime: 0,   // Track when we last checked position
+    lastTargetChangeTime: 0,    // Track when we last changed targets
     // Add rotation properties
     direction: 0,
     targetDirection: 0,

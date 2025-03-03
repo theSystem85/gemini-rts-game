@@ -85,11 +85,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
       unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
 
+      // Apply same speed rules for all units (player and enemy)
       if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
         effectiveSpeed *= 2
       }
 
       // --- Movement Along Path ---
+      // Apply consistent movement logic for all units with paths
       if (unit.path && unit.path.length > 0) {
         const nextTile = unit.path[0]
         // Prevent path finding errors if nextTile is out of bounds.
@@ -142,6 +144,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
 
       // --- Smooth Attack Position Adjustment for Tanks ---
+      // Apply this to both player and enemy units
       if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
         const unitCenterX = unit.x + TILE_SIZE / 2
         const unitCenterY = unit.y + TILE_SIZE / 2
@@ -174,12 +177,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         const desiredX = desiredCenterX - TILE_SIZE / 2
         const desiredY = desiredCenterY - TILE_SIZE / 2
         // Smoothly interpolate toward the desired position, scaled by unit speed.
+        // Apply the same movement speed limit for both player and enemy units
         const diffX = desiredX - unit.x
         const diffY = desiredY - unit.y
         const diffDist = Math.hypot(diffX, diffY)
         if (diffDist > 1) { // only move if significant difference exists
-          const moveX = (diffX / diffDist) * effectiveSpeed
-          const moveY = (diffY / diffDist) * effectiveSpeed
+          const moveX = (diffX / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
+          const moveY = (diffY / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
           unit.x += moveX
           unit.y += moveY
         }
@@ -188,9 +192,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         const attackRangeThreshold = TANK_FIRE_RANGE * TILE_SIZE * 0.9;
         if (currentDist > attackRangeThreshold) {
           const targetTile = { x: Math.floor(targetCenterX / TILE_SIZE), y: Math.floor(targetCenterY / TILE_SIZE) };
-          const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, null);
-          if (newPath && newPath.length > 1) {
-            unit.path = newPath.slice(1);
+          // Limit path recalculation frequency - for both player and enemy units 
+          if (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > 2000) { // 2 seconds
+            const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, null);
+            if (newPath && newPath.length > 1) {
+              unit.path = newPath.slice(1);
+              unit.lastPathCalcTime = now;
+            }
           }
         }
       }
@@ -515,6 +523,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       units.forEach(unit => {
         // Only recalculate if unit has no path or is near the end of its current path
         if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
+          // For enemy units, respect target change timer
+          if (unit.owner === 'enemy' && unit.lastTargetChangeTime && 
+              now - unit.lastTargetChangeTime < 2000) {
+            return; // Skip recalculation if target was changed recently
+          }
+          
           // Preserve movement command even when path is empty
           let targetPos = null;
           
