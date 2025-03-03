@@ -23,7 +23,14 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     if (gameState.gamePaused) return
     const now = performance.now()
     const occupancyMap = buildOccupancyMap(units, mapGrid)
-    gameState.gameTime += delta / 1000
+    // Scale delta time by speed multiplier
+    const scaledDelta = delta * gameState.speedMultiplier
+    gameState.gameTime += scaledDelta / 1000
+
+    // Update movement speeds for all units based on speed multiplier
+    units.forEach(unit => {
+      unit.effectiveSpeed = unit.speed * gameState.speedMultiplier
+    })
     
     // Clean up unit selection - prevent null references
     cleanupDestroyedSelectedUnits();
@@ -80,7 +87,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         unit.target = null
       }
       
-      let effectiveSpeed = unit.speed
+      let effectiveSpeed = unit.effectiveSpeed
       // Before using tile indices, clamp them so we don't access out-of-bound indices.
       unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
       unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
@@ -492,7 +499,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           // Only move if not significantly rotating
           if (!unit.isRotating) {
             const distance = Math.hypot(dx, dy)
-            let effectiveSpeed = unit.speed
+            let effectiveSpeed = unit.effectiveSpeed
             
             // Apply street speed bonus
             if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
@@ -568,6 +575,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     }
 
     // --- Bullet Updates ---
+    bullets.forEach(bullet => {
+      bullet.effectiveSpeed = bullet.speed * gameState.speedMultiplier
+    })
     for (let i = bullets.length - 1; i >= 0; i--) {
       const bullet = bullets[i]
       if (!bullet.active) {
@@ -593,8 +603,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           const dx = targetCenterX - bullet.x
           const dy = targetCenterY - bullet.y
           const distance = Math.hypot(dx, dy)
-          bullet.x += (dx / distance) * bullet.speed
-          bullet.y += (dy / distance) * bullet.speed
+          bullet.x += (dx / distance) * bullet.effectiveSpeed
+          bullet.y += (dy / distance) * bullet.effectiveSpeed
         } else {
           bullet.active = false
           triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)

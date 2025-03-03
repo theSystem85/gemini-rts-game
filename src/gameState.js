@@ -14,5 +14,6 @@ export const gameState = {
   lastDragPos: { x: 0, y: 0 },
   enemyLastProductionTime: performance.now(),
   lastOreUpdate: performance.now(),
-  explosions: []  // Initialized empty explosions array for visual effects.
+  explosions: [],  // Initialized empty explosions array for visual effects.
+  speedMultiplier: 1.0
 }
