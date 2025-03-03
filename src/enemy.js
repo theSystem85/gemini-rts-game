@@ -50,11 +50,20 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           }
         }
       } else {
-        const path = findPath({ x: newEnemy.tileX, y: newEnemy.tileY }, { x: playerFactory.x, y: playerFactory.y }, mapGrid, occupancyMap)
+        // Use the same findPath function as player units with proper parameters
+        const path = findPath(
+          { x: newEnemy.tileX, y: newEnemy.tileY }, 
+          { x: playerFactory.x, y: playerFactory.y }, 
+          mapGrid, 
+          null // Don't use occupancy map for long distance paths for better performance
+        )
         if (path.length > 1) {
           newEnemy.path = path.slice(1)
+          newEnemy.moveTarget = { x: playerFactory.x, y: playerFactory.y } // Store target for recalculation
         }
         newEnemy.target = playerFactory
+        // Set up pathfinding interval to prevent recalculating every frame
+        newEnemy.lastPathCalcTime = now
       }
       enemyFactory.budget -= cost
       gameState.enemyLastProductionTime = now
@@ -68,8 +77,10 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     // For tanks/rocket tanks, choose a target as before...
     if (unit.type === 'tank' || unit.type === 'rocketTank') {
       const nearbyEnemies = units.filter(u => u.owner === 'enemy' && Math.hypot(u.x - unit.x, u.y - unit.y) < 100)
+      let newTarget = null
+      
       if (nearbyEnemies.length >= 3) {
-        unit.target = playerFactory
+        newTarget = playerFactory
       } else {
         let closestPlayer = null
         let closestDist = Infinity
@@ -82,7 +93,39 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             }
           }
         })
-        unit.target = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
+        newTarget = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
+      }
+      
+      // Only update the path if the target changed or we haven't calculated a path recently
+      const targetChanged = unit.target !== newTarget;
+      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 2000); // 2 seconds interval
+      
+      if (targetChanged || (pathRecalcNeeded && (!unit.path || unit.path.length < 3))) {
+        unit.target = newTarget;
+        
+        // Store target position for path calculation
+        let targetPos = null;
+        if (unit.target.tileX !== undefined) {
+          targetPos = { x: unit.target.tileX, y: unit.target.tileY };
+        } else {
+          targetPos = { x: unit.target.x, y: unit.target.y };
+        }
+        unit.moveTarget = targetPos;
+        
+        // Only recalculate path if we need to and we're not currently dodging
+        if (!unit.isDodging && (!unit.path || unit.path.length < 3 || targetChanged)) {
+          // Use the same findPath function as player units
+          const path = findPath(
+            { x: unit.tileX, y: unit.tileY }, 
+            targetPos, 
+            mapGrid, 
+            null // Don't use occupancy map for long distance paths
+          )
+          if (path.length > 1) {
+            unit.path = path.slice(1)
+            unit.lastPathCalcTime = now
+          }
+        }
       }
 
       // --- Dodge Logic: using pathfinding ---
@@ -137,7 +180,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
                   unit.dodgeEndTime = now + 3000; // Resume original path after 3 seconds max
                 }
                 
-                // Create a new path to the dodge destination
+                // Create a new path to the dodge destination using the same findPath function
                 const newPath = findPath(
                   { x: unit.tileX, y: unit.tileY }, 
                   { x: destTileX, y: destTileY }, 
@@ -148,6 +191,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
                 if (newPath.length > 1) {
                   unit.isDodging = true;
                   unit.path = newPath.slice(1);
+                  unit.lastPathCalcTime = now; // Reset path calculation timer after dodge
                 }
               }
             }
@@ -165,10 +209,53 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           unit.originalTarget = null;
           unit.isDodging = false;
           unit.dodgeEndTime = null;
+          unit.lastPathCalcTime = now; // Reset path calculation timer
         }
       }
     }
-    // (For harvesters, behavior remains the same.)
+    // (For harvesters, behavior remains the same but we'll add path recalculation throttling)
+    else if (unit.type === 'harvester') {
+      // Only recalculate harvester paths periodically to improve performance
+      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 3000); // 3 seconds interval
+      
+      if (pathRecalcNeeded && (!unit.path || unit.path.length === 0)) {
+        // Find ore or return to factory as needed
+        if (unit.oreCarried >= 5) { // Assuming 5 is full capacity
+          const targetFactory = factories.find(f => f.id === 'enemy');
+          const unloadTarget = findAdjacentTile(targetFactory, mapGrid);
+          
+          if (unloadTarget) {
+            const path = findPath(
+              { x: unit.tileX, y: unit.tileY },
+              unloadTarget,
+              mapGrid,
+              occupancyMap
+            );
+            
+            if (path.length > 1) {
+              unit.path = path.slice(1);
+              unit.lastPathCalcTime = now;
+            }
+          }
+        } else if (!unit.harvesting) {
+          const orePos = findClosestOre(unit, mapGrid);
+          
+          if (orePos) {
+            const path = findPath(
+              { x: unit.tileX, y: unit.tileY },
+              orePos,
+              mapGrid,
+              occupancyMap
+            );
+            
+            if (path.length > 1) {
+              unit.path = path.slice(1);
+              unit.lastPathCalcTime = now;
+            }
+          }
+        }
+      }
+    }
   })
 
   // For tanks with targets, ensure they maintain safe attack distance
@@ -176,50 +263,57 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     if (unit.owner !== 'enemy') return
     
     if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
-      // Check if unit is too close to its target
-      const unitCenterX = unit.x + TILE_SIZE / 2
-      const unitCenterY = unit.y + TILE_SIZE / 2
-      let targetCenterX, targetCenterY
+      // Check if unit is too close to its target - only do this check occasionally for performance
+      const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > 1000); // 1 second interval
       
-      if (unit.target.tileX !== undefined) {
-        targetCenterX = unit.target.x + TILE_SIZE / 2
-        targetCenterY = unit.target.y + TILE_SIZE / 2
-      } else {
-        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
-        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
-      }
-      
-      const dx = targetCenterX - unitCenterX
-      const dy = targetCenterY - unitCenterY
-      const currentDist = Math.hypot(dx, dy)
-      
-      // Calculate safe distance with explosion buffer
-      const explosionSafetyBuffer = TILE_SIZE * 0.5
-      const safeAttackDistance = Math.max(
-        TANK_FIRE_RANGE * TILE_SIZE,
-        TILE_SIZE * 2 + explosionSafetyBuffer
-      )
-      
-      // If unit is too close and not already dodging, back up
-      if (currentDist < safeAttackDistance && !unit.isDodging) {
-        // Calculate retreat position (away from target)
-        const destTileX = Math.floor(unit.tileX - Math.round((dx / currentDist) * 2));
-        const destTileY = Math.floor(unit.tileY - Math.round((dy / currentDist) * 2));
+      if (positionCheckNeeded) {
+        unit.lastPositionCheckTime = now;
         
-        // Check map boundaries and tile validity
-        if (destTileX >= 0 && destTileX < mapGrid[0].length && 
-            destTileY >= 0 && destTileY < mapGrid.length) {
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+        let targetCenterX, targetCenterY
+        
+        if (unit.target.tileX !== undefined) {
+          targetCenterX = unit.target.x + TILE_SIZE / 2
+          targetCenterY = unit.target.y + TILE_SIZE / 2
+        } else {
+          targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+          targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+        }
+        
+        const dx = targetCenterX - unitCenterX
+        const dy = targetCenterY - unitCenterY
+        const currentDist = Math.hypot(dx, dy)
+        
+        // Calculate safe distance with explosion buffer
+        const explosionSafetyBuffer = TILE_SIZE * 0.5
+        const safeAttackDistance = Math.max(
+          TANK_FIRE_RANGE * TILE_SIZE,
+          TILE_SIZE * 2 + explosionSafetyBuffer
+        )
+        
+        // If unit is too close and not already dodging, back up
+        if (currentDist < safeAttackDistance && !unit.isDodging) {
+          // Calculate retreat position (away from target)
+          const destTileX = Math.floor(unit.tileX - Math.round((dx / currentDist) * 2));
+          const destTileY = Math.floor(unit.tileY - Math.round((dy / currentDist) * 2));
           
-          const tileType = mapGrid[destTileY][destTileX].type;
-          if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
-            const newPath = findPath(
-              { x: unit.tileX, y: unit.tileY }, 
-              { x: destTileX, y: destTileY }, 
-              mapGrid, 
-              null
-            );
-            if (newPath.length > 1) {
-              unit.path = newPath.slice(1);
+          // Check map boundaries and tile validity
+          if (destTileX >= 0 && destTileX < mapGrid[0].length && 
+              destTileY >= 0 && destTileY < mapGrid.length) {
+            
+            const tileType = mapGrid[destTileY][destTileX].type;
+            if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+              const newPath = findPath(
+                { x: unit.tileX, y: unit.tileY }, 
+                { x: destTileX, y: destTileY }, 
+                mapGrid, 
+                null
+              );
+              if (newPath.length > 1) {
+                unit.path = newPath.slice(1);
+                unit.lastPathCalcTime = now;
+              }
             }
           }
         }
@@ -250,6 +344,8 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     harvesting: false,
     spawnTime: Date.now(),
     spawnedInFactory: true,
+    lastPathCalcTime: 0,        // Track when we last calculated a path
+    lastPositionCheckTime: 0,   // Track when we last checked position
     // Add rotation properties
     direction: 0,
     targetDirection: 0,
