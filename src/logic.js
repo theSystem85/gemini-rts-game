@@ -542,6 +542,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
             if (newPath.length > 1) {
               unit.path = newPath.slice(1);
+              // Update last path calculation time for all units
+              unit.lastPathCalcTime = now;
             } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < 1) {
               // Clear moveTarget if we've reached destination
               unit.moveTarget = null;
