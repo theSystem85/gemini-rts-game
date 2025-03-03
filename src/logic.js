@@ -14,6 +14,8 @@ import { playSound } from './sound.js'
 import { updateEnemyAI } from './enemy.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from './inputHandler.js'
 
+const harvestedTiles = new Set(); // Track tiles currently being harvested
+
 let explosions = [] // Global explosion effects for rocket impacts
 
 export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
@@ -368,33 +370,35 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         const unitTileY = Math.floor(unit.y / TILE_SIZE)
         if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting) {
           if (mapGrid[unitTileY][unitTileX].type === 'ore') {
-            if (!unit.oreField) {
-              unit.oreField = { x: unitTileX, y: unitTileY }
-            }
-            if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
-              unit.harvesting = true
-              unit.harvestTimer = now
-              playSound('harvest')
-            }
-          } else {
-            if (!unit.path || unit.path.length === 0) {
-              const orePos = findClosestOre(unit, mapGrid)
-              if (orePos) {
-                const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
-                if (path.length > 1) {
-                  unit.path = path.slice(1)
-                }
+            const tileKey = `${unitTileX},${unitTileY}`;
+            if (!harvestedTiles.has(tileKey)) {
+              if (!unit.oreField) {
+                unit.oreField = { x: unitTileX, y: unitTileY }
               }
+              if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
+                unit.harvesting = true
+                unit.harvestTimer = now
+                harvestedTiles.add(tileKey); // Mark tile as being harvested
+                playSound('harvest')
+              }
+            } else {
+              // Tile is being harvested by another unit, find a new ore tile
+              unit.oreField = null;
             }
           }
         }
+        
         if (unit.harvesting) {
           if (now - unit.harvestTimer > 10000) {
             unit.oreCarried++
             unit.harvesting = false
-            mapGrid[unitTileY][unitTileX].type = 'land'
+            const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
+            harvestedTiles.delete(tileKey); // Free up the tile
+            mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
+            unit.oreField = null;
           }
         }
+
         if (unit.oreCarried >= HARVESTER_CAPPACITY) {
           const targetFactory = unit.owner === 'player'
             ? factories.find(f => f.id === 'player')
