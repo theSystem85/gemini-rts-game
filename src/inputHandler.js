@@ -332,6 +332,54 @@ export function setupInputHandlers(units, factories, mapGrid) {
           unit.alertMode = !unit.alertMode;
         }
       });
+    } else if (e.key.toLowerCase() === 'd') {
+      // Fix: Make all selected units dodge to a random nearby free tile regardless of their state.
+      selectedUnits.forEach(unit => {
+        // Compute current tile coordinates from unit position.
+        const tileX = Math.floor(unit.x / TILE_SIZE);
+        const tileY = Math.floor(unit.y / TILE_SIZE);
+        const candidates = [];
+        const directions = [
+          { dx: -1, dy:  0 },
+          { dx:  1, dy:  0 },
+          { dx:  0, dy: -1 },
+          { dx:  0, dy:  1 },
+          { dx: -1, dy: -1 },
+          { dx: -1, dy:  1 },
+          { dx:  1, dy: -1 },
+          { dx:  1, dy:   1 }
+        ];
+        directions.forEach(dir => {
+          const newX = tileX + dir.dx;
+          const newY = tileY + dir.dy;
+          // Check boundaries.
+          if (newX >= 0 && newX < mapGrid[0].length && newY >= 0 && newY < mapGrid.length) {
+            const tileType = mapGrid[newY][newX].type;
+            if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+              // Check that no unit occupies the candidate tile.
+              const occupied = units.some(u => Math.floor(u.x / TILE_SIZE) === newX && Math.floor(u.y / TILE_SIZE) === newY);
+              if (!occupied) {
+                candidates.push({ x: newX, y: newY });
+              }
+            }
+          }
+        });
+        
+        if (candidates.length > 0) {
+          const candidate = candidates[Math.floor(Math.random() * candidates.length)];
+          // Store current path and target regardless of state so dodge can always be triggered.
+          unit.originalPath = unit.path ? [...unit.path] : [];
+          unit.originalTarget = unit.target;
+          unit.isDodging = true;
+          unit.dodgeEndTime = performance.now() + 3000; // Dodge lasts up to 3 seconds.
+          
+          // Compute a new path to the dodge destination using existing pathfinding.
+          const newPath = findPath({ x: tileX, y: tileY }, candidate, mapGrid, null);
+          if (newPath.length > 1) {
+            unit.path = newPath.slice(1);
+          }
+        }
+      });
     }
   });
 }

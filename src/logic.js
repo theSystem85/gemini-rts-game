@@ -347,6 +347,19 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           }
         }
       }
+
+      // Fix: Auto–acquire target for tank-v2 in alert mode if none assigned.
+      if (unit.owner === 'player' && unit.alertMode && unit.type === 'tank-v2' && !unit.target) {
+        const enemyUnits = units.filter(u => u.owner !== 'player' && u.health > 0);
+        if (enemyUnits.length) {
+          enemyUnits.sort((a, b) => {
+            const aDist = Math.hypot(a.x - (unit.x + TILE_SIZE/2), a.y - (unit.y + TILE_SIZE/2));
+            const bDist = Math.hypot(b.x - (unit.x + TILE_SIZE/2), b.y - (unit.y + TILE_SIZE/2));
+            return aDist - bDist;
+          });
+          unit.target = enemyUnits[0];
+        }
+      }
       
       // --- Harvester ---
       if (unit.type === 'harvester') {
