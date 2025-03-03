@@ -58,13 +58,13 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   units.forEach(unit => {
     // Use same fill colors regardless of owner.
     if (unit.type === 'tank') {
-      gameCtx.fillStyle = '#008';
+      gameCtx.fillStyle = '#008';  // Dark blue for regular tanks
     } else if (unit.type === 'harvester') {
-      gameCtx.fillStyle = '#9400D3';
+      gameCtx.fillStyle = '#9400D3';  // Purple for harvesters
     } else if (unit.type === 'rocketTank') {
-      gameCtx.fillStyle = '#008'; // same as tank (adjust if needed)
+      gameCtx.fillStyle = '#800000';  // Dark red for rocket tanks
     } else if (unit.type === 'tank-v2') {
-      gameCtx.fillStyle = '#FFF';
+      gameCtx.fillStyle = '#FFF';  // White for tank-v2
     }
     gameCtx.beginPath()
     gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3, 0, 2 * Math.PI)
