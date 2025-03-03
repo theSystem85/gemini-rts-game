@@ -6,7 +6,8 @@ import {
   ORE_SPREAD_PROBABILITY,
   TANK_FIRE_RANGE,
   HARVESTER_CAPPACITY,
-  PATH_CALC_INTERVAL
+  PATH_CALC_INTERVAL,
+  PATHFINDING_THRESHOLD
 } from './config.js'
 import { spawnUnit, findPath, buildOccupancyMap, resolveUnitCollisions } from './units.js'
 import { playSound } from './sound.js'
@@ -432,27 +433,43 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Global Path Recalculation ---
     if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
       gameState.lastGlobalPathCalc = now
-      const THRESHOLD = 20
       units.forEach(unit => {
-        if (unit.target && (!unit.path || unit.path.length === 0)) {
-          let targetPos
-          if (unit.target.tileX !== undefined) {
-            // If target is a unit, use its tile coordinates.
-            targetPos = { x: unit.target.tileX, y: unit.target.tileY }
-          } else {
-            // Otherwise, assume target is a building.
-            targetPos = { x: unit.target.x, y: unit.target.y }
+        // Only recalculate if unit has no path or is near the end of its current path
+        if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
+          // Preserve movement command even when path is empty
+          let targetPos = null;
+          
+          if (unit.moveTarget) {
+            // Use stored move target if it exists
+            targetPos = unit.moveTarget;
+          } else if (unit.target) {
+            // Handle combat targets
+            targetPos = unit.target.tileX !== undefined 
+              ? { x: unit.target.tileX, y: unit.target.tileY }
+              : { x: unit.target.x, y: unit.target.y };
           }
-          // Compute distance in tiles.
-          const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
-          const newPath = distance > THRESHOLD 
-            ? findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, null)
-            : findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, occupancyMap)
-          if (newPath.length > 1) {
-            unit.path = newPath.slice(1)
+
+          if (targetPos) {
+            // Store move target for future recalculations
+            unit.moveTarget = targetPos;
+            
+            // Compute distance to decide pathfinding strategy
+            const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY);
+            
+            // Use occupancy map for close range, ignore for long distance
+            const newPath = distance > PATHFINDING_THRESHOLD
+              ? findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, null)
+              : findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, occupancyMap);
+
+            if (newPath.length > 1) {
+              unit.path = newPath.slice(1);
+            } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < 1) {
+              // Clear moveTarget if we've reached destination
+              unit.moveTarget = null;
+            }
           }
         }
-      })
+      });
     }
 
     // --- Bullet Updates ---
