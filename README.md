@@ -184,10 +184,10 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it.
-(-) Prevent playing the same sound multiple times at the exact same time. Put in some cooldown period for each sound. Otherwise it just get louder and sound off.
+(-) Prevent playing the same sound multiple times at the exact same time. When some sound x is already running do not add it on top but just start that sound from the beginning.
 
 Fixed Bugs:
+(x) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it.
 (x) Units when dodging should not move differently than normal. They shoul just move to a random adjacent tile when an enemy projectile is approacing. Doding should not be faster than normal movement.
 (x) when enemy base is destroyed the game still continues but it should end with a message on the screen showing the curren win/loss ratio of the player.
 (x) The coloring of enemy unit types shall be the same as for players units. Only mark enemy units by giving them a red health bar
