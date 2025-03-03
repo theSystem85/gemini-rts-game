@@ -275,6 +275,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
             if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
               unit.path = path.slice(1)
               unit.target = null
+              unit.moveTarget = destTile // Store the final destination
               playSound('movement')
             }
           }
@@ -316,6 +317,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
         if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
           unit.path = path.slice(1)
           unit.target = null
+          unit.moveTarget = destTile // Store the final destination
           playSound('movement')
         }
       })

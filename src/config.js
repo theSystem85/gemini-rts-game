@@ -26,3 +26,6 @@ export const ORE_SPREAD_PROBABILITY = 0.06
 
 // New: Path recalculation interval (in milliseconds)
 export const PATH_CALC_INTERVAL = 2000
+
+// Distance threshold for using occupancy map in pathfinding (in tiles)
+export const PATHFINDING_THRESHOLD = 10
