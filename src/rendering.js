@@ -56,24 +56,54 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   
   // Draw units.
   units.forEach(unit => {
-    // Use same fill colors regardless of owner.
+    if (unit.health <= 0) return
+
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    
+    // Set fill color based on unit type
     if (unit.type === 'tank') {
-      gameCtx.fillStyle = '#008';  // Dark blue for regular tanks
-    } else if (unit.type === 'harvester') {
-      gameCtx.fillStyle = '#9400D3';  // Purple for harvesters
-    } else if (unit.type === 'rocketTank') {
-      gameCtx.fillStyle = '#800000';  // Dark red for rocket tanks
+      gameCtx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'
     } else if (unit.type === 'tank-v2') {
-      gameCtx.fillStyle = '#FFF';  // White for tank-v2
+      gameCtx.fillStyle = '#FFF'  // White for tank-v2
+    } else if (unit.type === 'harvester') {
+      gameCtx.fillStyle = '#9400D3'  // Purple for harvesters
+    } else if (unit.type === 'rocketTank') {
+      gameCtx.fillStyle = '#800000'  // Dark red for rocket tanks
     }
+    
+    // Draw rectangular body instead of circle
+    const bodyWidth = TILE_SIZE * 0.7
+    const bodyHeight = TILE_SIZE * 0.5
+    
+    // Save the current context state
+    gameCtx.save()
+    
+    // Translate to center of unit and rotate
+    gameCtx.translate(centerX, centerY)
+    gameCtx.rotate(unit.direction)
+    
+    // Draw the rectangular body centered on the unit position
+    gameCtx.fillRect(-bodyWidth / 2, -bodyHeight / 2, bodyWidth, bodyHeight)
+    
+    // Draw front direction indicator (triangle)
+    gameCtx.fillStyle = unit.owner === 'player' ? '#00FF00' : '#FFFF00'
     gameCtx.beginPath()
-    gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3, 0, 2 * Math.PI)
+    gameCtx.moveTo(bodyWidth / 2, 0)
+    gameCtx.lineTo(bodyWidth / 2 - 8, -8)
+    gameCtx.lineTo(bodyWidth / 2 - 8, 8)
+    gameCtx.closePath()
     gameCtx.fill()
+    
+    // Restore the context to its original state
+    gameCtx.restore()
+
+    // Draw selection circle if unit is selected
     if (unit.selected) {
       gameCtx.strokeStyle = '#FF0'
       gameCtx.lineWidth = 2
       gameCtx.beginPath()
-      gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 3 + 3, 0, 2 * Math.PI)
+      gameCtx.arc(centerX, centerY, TILE_SIZE / 3 + 3, 0, 2 * Math.PI)
       gameCtx.stroke()
     }
     
@@ -82,39 +112,23 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.strokeStyle = 'red'
       gameCtx.lineWidth = 3
       gameCtx.beginPath()
-      gameCtx.arc(unit.x + TILE_SIZE / 2 - scrollOffset.x, unit.y + TILE_SIZE / 2 - scrollOffset.y, TILE_SIZE / 2, 0, 2 * Math.PI)
+      gameCtx.arc(centerX, centerY, TILE_SIZE / 2, 0, 2 * Math.PI)
       gameCtx.stroke()
     }
     
-    // Draw turret line.
-    let turretDirX = 0, turretDirY = -1
-    if (unit.path && unit.path.length > 0) {
-      const nextTile = unit.path[0]
-      const nextCenterX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
-      const nextCenterY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
-      turretDirX = nextCenterX - (unit.x + TILE_SIZE / 2)
-      turretDirY = nextCenterY - (unit.y + TILE_SIZE / 2)
-    } else if (unit.target) {
-      if (unit.target.tileX !== undefined) {
-        turretDirX = (unit.target.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2)
-        turretDirY = (unit.target.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
-      } else {
-        turretDirX = (unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2) - (unit.x + TILE_SIZE / 2)
-        turretDirY = (unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2) - (unit.y + TILE_SIZE / 2)
-      }
-    }
-    const angle = Math.atan2(turretDirY, turretDirX)
-    const turretLength = 10
-    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
-    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
-    const turretEndX = centerX + Math.cos(angle) * turretLength
-    const turretEndY = centerY + Math.sin(angle) * turretLength
+    // Draw turret - use the turretDirection for rotation
+    gameCtx.save()
+    gameCtx.translate(centerX, centerY)
+    gameCtx.rotate(unit.turretDirection)
+    
     gameCtx.strokeStyle = '#000'
-    gameCtx.lineWidth = 2
+    gameCtx.lineWidth = 3
     gameCtx.beginPath()
-    gameCtx.moveTo(centerX, centerY)
-    gameCtx.lineTo(turretEndX, turretEndY)
+    gameCtx.moveTo(0, 0)
+    gameCtx.lineTo(TILE_SIZE / 2, 0)
     gameCtx.stroke()
+    
+    gameCtx.restore()
     
     // Draw health bar. For enemy units, force red fill.
     const unitHealthRatio = unit.health / unit.maxHealth
@@ -124,11 +138,12 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     const healthBarY = unit.y - 10 - scrollOffset.y
     gameCtx.strokeStyle = '#000'
     gameCtx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+    
     // Use green for player units, red for enemy units.
     gameCtx.fillStyle = (unit.owner === 'enemy') ? '#F00' : '#0F0'
     gameCtx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight)
     
-    // Draw harvester progress bar.
+    // Draw ore carried indicator for harvesters
     if (unit.type === 'harvester') {
       let progress = 0
       if (unit.harvesting) {

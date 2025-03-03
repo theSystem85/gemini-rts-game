@@ -432,6 +432,81 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           }
         }
       }
+
+      // --- Rotation Updates ---
+      // Update turret direction
+      if (unit.target) {
+        let targetCenterX, targetCenterY
+        if (unit.target.tileX !== undefined) {
+          targetCenterX = unit.target.x + TILE_SIZE / 2
+          targetCenterY = unit.target.y + TILE_SIZE / 2
+        } else {
+          targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+          targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+        }
+        
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+        
+        // Calculate target turret angle
+        const turretAngle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+        
+        // Smoothly rotate the turret
+        unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.rotationSpeed)
+      }
+      
+      // Update body direction for movement
+      if (unit.path && unit.path.length > 0) {
+        const nextTile = unit.path[0]
+        // Prevent path finding errors if nextTile is out of bounds.
+        if (nextTile && !(nextTile.x < 0 || nextTile.x >= mapGrid[0].length ||
+            nextTile.y < 0 || nextTile.y >= mapGrid.length)) {
+          
+          const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
+          const dx = targetPos.x - unit.x
+          const dy = targetPos.y - unit.y
+          
+          // Calculate target direction angle for the tank body
+          const targetDirection = Math.atan2(dy, dx)
+          unit.targetDirection = targetDirection
+          
+          // Check if we need to rotate
+          const angleDifference = angleDiff(unit.direction, targetDirection)
+          
+          if (angleDifference > 0.05) { // Allow small threshold to avoid jitter
+            unit.isRotating = true
+            // Smoothly rotate towards the target direction
+            unit.direction = smoothRotateTowardsAngle(unit.direction, targetDirection, unit.rotationSpeed)
+          } else {
+            unit.isRotating = false
+          }
+          
+          // Only move if not significantly rotating
+          if (!unit.isRotating) {
+            const distance = Math.hypot(dx, dy)
+            let effectiveSpeed = unit.speed
+            
+            // Apply street speed bonus
+            if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
+              effectiveSpeed *= 2
+            }
+            
+            if (distance < effectiveSpeed) {
+              unit.x = targetPos.x
+              unit.y = targetPos.y
+              unit.tileX = nextTile.x
+              unit.tileY = nextTile.y
+              unit.path.shift()
+              occupancyMap[unit.tileY][unit.tileX] = true
+            } else {
+              unit.x += (dx / distance) * effectiveSpeed
+              unit.y += (dy / distance) * effectiveSpeed
+            }
+          }
+        } else if (nextTile) {
+          unit.path.shift()
+        }
+      }
     }
 
     // --- Global Path Recalculation ---
@@ -877,4 +952,38 @@ function findPositionWithClearShot(unit, target, units, mapGrid) {
   // If no clear shot position found nearby, reset the flag
   unit.findingClearShot = false;
   return false;
+}
+
+// Helper function to calculate the smallest difference between two angles
+function angleDiff(angle1, angle2) {
+  const diff = Math.abs((angle1 - angle2 + Math.PI) % (2 * Math.PI) - Math.PI)
+  return diff
+}
+
+// Helper function to smoothly rotate from current angle to target angle
+function smoothRotateTowardsAngle(currentAngle, targetAngle, rotationSpeed) {
+  // Normalize angles to be between -PI and PI
+  currentAngle = normalizeAngle(currentAngle)
+  targetAngle = normalizeAngle(targetAngle)
+  
+  // Find the shortest rotation direction
+  let angleDiff = targetAngle - currentAngle
+  
+  // Ensure we rotate in the shortest direction
+  if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI
+  if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI
+  
+  // Apply rotation speed
+  if (Math.abs(angleDiff) < rotationSpeed) {
+    return targetAngle // If very close, snap to target angle
+  } else if (angleDiff > 0) {
+    return currentAngle + rotationSpeed
+  } else {
+    return currentAngle - rotationSpeed
+  }
+}
+
+// Helper function to normalize angle between -PI and PI
+function normalizeAngle(angle) {
+  return ((angle + Math.PI) % (2 * Math.PI)) - Math.PI
 }

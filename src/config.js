@@ -21,6 +21,10 @@ export const INERTIA_DECAY = 0.95
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9
 
+// Tank rotation constants
+export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
+export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
+
 export const ORE_SPREAD_INTERVAL = 90000
 export const ORE_SPREAD_PROBABILITY = 0.06
 

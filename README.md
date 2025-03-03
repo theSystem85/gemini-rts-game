@@ -173,7 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) 
+(-) Add a rectangular body to the units so it is not just a circle so you can see where the tank is headed to when moving. Like with a real tank there should be a direction of the wagon pointing to where it moves to and the turret independently pointing to where it is aiming to. Make sure to introduce a rate of turn "ROT" so that is takes some time before a tank can move onto a tile at a different direction. So when the tank is attacking a target at another direction the turret turns and the wagon below also starts to turn. The wagon does not move before the rotation is finished pointing to the target.
 
 Newly Closed Features:
 (x) When user drags with right click on the minimap then the viewport should update in realtime.

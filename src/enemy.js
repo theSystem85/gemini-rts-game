@@ -249,7 +249,13 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     oreCarried: 0,
     harvesting: false,
     spawnTime: Date.now(),
-    spawnedInFactory: true
+    spawnedInFactory: true,
+    // Add rotation properties
+    direction: 0,
+    targetDirection: 0,
+    turretDirection: 0,
+    rotationSpeed: 0.1,
+    isRotating: false
   }
 }
 
