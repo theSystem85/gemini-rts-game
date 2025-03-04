@@ -177,6 +177,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) make a shuffle map button in sidebar where a new map is randomly generated with organic lakes, rocks and streets. Make sure there is at least one street connecting both factories. When map is shuffled the game is also resetted. next to the shuffle button there should be a random seed input which is initially set to 1. The shuffle map button uses the seed.
 (x) When units are selected the player can press ctrl+NUMBER key to assign a command group to the selected units. whenever the user presses that NUMBER again the group of units gets selected again.
 (x) if player presses the I key an alert window shows the current controls with explanation and the game pauses
 (x) if player presses H key the view is focussing the factory
