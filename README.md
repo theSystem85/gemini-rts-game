@@ -173,9 +173,18 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) Add a rectangular body to the units so it is not just a circle so you can see where the tank is headed to when moving. Like with a real tank there should be a direction of the wagon pointing to where it moves to and the turret independently pointing to where it is aiming to. Make sure to introduce a rate of turn "ROT" so that is takes some time before a tank can move onto a tile at a different direction. So when the tank is attacking a target at another direction the turret turns and the wagon below also starts to turn. The wagon does not move before the rotation is finished pointing to the target.
+(-) When units are selected the player can press shift+NUMBER key to assign a command group to the selected units. whenever the user presses that NUMBER again the group of units gets selected again.
+(-) the game starts in pause mode on startup or reload
+(-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) if player presses the I key an alert window shows the current controls with explanation and the game pauses
+(x) if player presses H key the view is focussing the factory
+(x) the base factory should be selectable by the player and when he clicks on a map location all new units will move to that spot.
+(x) when the factory is selected there should also be a yellow outline to indicate the selection
+(x) when the factory is selected and the user clicks on the map to set the production deploy target there should be a litte flag on a pole symbol on the map tile to indicate it
+(x) make sure the factory can only be selected by clicking at it directly and not by dragging a selection box
+(x) Add a rectangular body to the units so it is not just a circle so you can see where the tank is headed to when moving. Like with a real tank there should be a direction of the wagon pointing to where it moves to and the turret independently pointing to where it is aiming to. Make sure to introduce a rate of turn "ROT" so that is takes some time before a tank can move onto a tile at a different direction. So when the tank is attacking a target at another direction the turret turns and the wagon below also starts to turn. The wagon does not move before the rotation is finished pointing to the target.
 (x) When user drags with right click on the minimap then the viewport should update in realtime.
 (x) The camera should initially start at the a position so that the factory of the player is visible.
 (x) Players units can be set to alert mode when they are selected and "A" key is pressed on keyboard. Then a red circle appears around the unit to indicate that state. If a unit is in alert mode it attacks every enemy unit automatically when in range but is not chasing it. This feature is exclusive to Tank V2 units.
@@ -184,7 +193,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) 
+(-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
 Fixed Bugs:
 (x) Prevent playing the same sound multiple times at the exact same time. When some sound x is already running do not add it on top but just start that sound from the beginning.

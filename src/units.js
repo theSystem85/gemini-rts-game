@@ -269,11 +269,41 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     const success = moveBlockingUnits(exitX, exitY, units, mapGrid);
     if (success) {
       // Successfully moved blocking unit, spawn at exit
-      return createUnit(factory, unitType, exitX, exitY);
+      const newUnit = createUnit(factory, unitType, exitX, exitY);
+      
+      // If factory has a rally point, set unit's path to it
+      if (factory.rallyPoint) {
+        const path = findPath(
+          { x: exitX, y: exitY },
+          { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
+          mapGrid,
+          null
+        );
+        if (path.length > 1) {
+          newUnit.path = path.slice(1);
+        }
+      }
+      
+      return newUnit;
     }
   } else if (isPositionValid(exitX, exitY, mapGrid, units)) {
     // Exit is free, spawn there
-    return createUnit(factory, unitType, exitX, exitY);
+    const newUnit = createUnit(factory, unitType, exitX, exitY);
+    
+    // If factory has a rally point, set unit's path to it
+    if (factory.rallyPoint) {
+      const path = findPath(
+        { x: exitX, y: exitY },
+        { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
+        mapGrid,
+        null
+      );
+      if (path.length > 1) {
+        newUnit.path = path.slice(1);
+      }
+    }
+    
+    return newUnit;
   }
   
   // If direct exit spawn failed, find another position
@@ -283,7 +313,22 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     return null; // Return null if no position is available
   }
   
-  return createUnit(factory, unitType, spawnPosition.x, spawnPosition.y);
+  const newUnit = createUnit(factory, unitType, spawnPosition.x, spawnPosition.y);
+  
+  // If factory has a rally point, set unit's path to it
+  if (factory.rallyPoint) {
+    const path = findPath(
+      { x: spawnPosition.x, y: spawnPosition.y },
+      { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
+      mapGrid,
+      null
+    );
+    if (path.length > 1) {
+      newUnit.path = path.slice(1);
+    }
+  }
+  
+  return newUnit;
 }
 
 // Helper to create the actual unit object

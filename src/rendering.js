@@ -47,6 +47,19 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth * healthRatio, 5)
     gameCtx.strokeStyle = '#000'
     gameCtx.strokeRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth, 5)
+    
+    // Draw yellow selection outline for selected factories
+    if (factory.selected) {
+      gameCtx.strokeStyle = '#FF0'
+      gameCtx.lineWidth = 3
+      gameCtx.strokeRect(
+        pos.x - scrollOffset.x - 2, 
+        pos.y - scrollOffset.y - 2, 
+        factory.width * TILE_SIZE + 4, 
+        factory.height * TILE_SIZE + 4
+      )
+    }
+    
     if (factory.id === 'enemy' && factory.budget !== undefined) {
       gameCtx.fillStyle = '#FFF'
       gameCtx.font = '12px Arial'
@@ -196,6 +209,36 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.lineWidth = 2
     gameCtx.strokeRect(rectX, rectY, rectWidth, rectHeight)
   }
+  
+  // Draw rally point flag if any factory has one
+  factories.forEach(factory => {
+    if (factory.rallyPoint && factory.id === 'player') {
+      const flagX = factory.rallyPoint.x * TILE_SIZE - scrollOffset.x;
+      const flagY = factory.rallyPoint.y * TILE_SIZE - scrollOffset.y;
+      
+      // Draw flag pole
+      gameCtx.strokeStyle = '#8B4513'; // Brown color for pole
+      gameCtx.lineWidth = 2;
+      gameCtx.beginPath();
+      gameCtx.moveTo(flagX + TILE_SIZE/2, flagY + TILE_SIZE);
+      gameCtx.lineTo(flagX + TILE_SIZE/2, flagY);
+      gameCtx.stroke();
+      
+      // Draw triangular flag
+      gameCtx.fillStyle = '#FFFF00'; // Yellow flag
+      gameCtx.beginPath();
+      gameCtx.moveTo(flagX + TILE_SIZE/2, flagY);
+      gameCtx.lineTo(flagX + TILE_SIZE, flagY + TILE_SIZE/3);
+      gameCtx.lineTo(flagX + TILE_SIZE/2, flagY + TILE_SIZE/2);
+      gameCtx.closePath();
+      gameCtx.fill();
+      
+      // Draw outline around the rally point tile
+      gameCtx.strokeStyle = '#FFFF00';
+      gameCtx.lineWidth = 1;
+      gameCtx.strokeRect(flagX, flagY, TILE_SIZE, TILE_SIZE);
+    }
+  });
 }
 
 export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units) {
