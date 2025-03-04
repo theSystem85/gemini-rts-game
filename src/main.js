@@ -53,6 +53,17 @@ if (sidebar.firstChild) {
   sidebar.appendChild(speedControl)
 }
 
+// New: Add shuffle map control with a seed input
+const shuffleControl = document.createElement('div')
+shuffleControl.innerHTML = `
+  <label style="display: flex; align-items: center; margin: 10px 0;">
+    Seed:
+    <input type="number" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
+  </label>
+  <button id="shuffleMapBtn" style="margin: 10px 0;">Shuffle Map</button>
+`
+sidebar.appendChild(shuffleControl)
+
 // Add speed control handler
 const speedMultiplier = document.getElementById('speedMultiplier')
 speedMultiplier.value = gameState.speedMultiplier // Set initial value to match gameState
@@ -75,34 +86,194 @@ window.addEventListener('resize', resizeCanvases)
 resizeCanvases()
 
 export const mapGrid = []
-for (let y = 0; y < MAP_TILES_Y; y++) {
-  mapGrid[y] = []
-  for (let x = 0; x < MAP_TILES_X; x++) {
-    mapGrid[y][x] = { type: 'land' }
+
+// Seeded random generator
+function seededRandom(seed) {
+  const m = 0x80000000, a = 1103515245, c = 12345
+  let state = seed
+  return function() {
+    state = (a * state + c) % m
+    return state / (m - 1)
   }
 }
-for (let y = 45; y < 55; y++) {
-  for (let x = 10; x < MAP_TILES_X - 10; x++) {
-    mapGrid[y][x].type = 'water'
+
+// Generate a new map using the given seed and organic features
+function generateMap(seed) {
+  const rand = seededRandom(parseInt(seed))
+  // Clear any old content
+  mapGrid.length = 0
+  for (let y = 0; y < MAP_TILES_Y; y++) {
+    mapGrid[y] = []
+    for (let x = 0; x < MAP_TILES_X; x++) {
+      // Initially all land
+      mapGrid[y][x] = { type: 'land' }
+      // ...existing code for initial random assignment if needed...
+    }
   }
-}
-for (let y = 20; y < 80; y++) {
-  for (let x = 5; x < 15; x++) {
-    mapGrid[y][x].type = 'rock'
+  // -------- Step 0: Generate Ore Fields --------
+  const oreClusterCount = 6;
+  const oreClusters = [];
+  for (let i = 0; i < oreClusterCount; i++) {
+    const clusterCenterX = Math.floor(rand() * MAP_TILES_X);
+    const clusterCenterY = Math.floor(rand() * MAP_TILES_Y);
+    oreClusters.push({ x: clusterCenterX, y: clusterCenterY });
+    const clusterRadius = Math.floor(rand() * 3) + 5; // radius between 5 and 7
+    for (let y = Math.max(0, clusterCenterY - clusterRadius); y < Math.min(MAP_TILES_Y, clusterCenterY + clusterRadius); y++) {
+      for (let x = Math.max(0, clusterCenterX - clusterRadius); x < Math.min(MAP_TILES_X, clusterCenterX + clusterRadius); x++) {
+        const dx = x - clusterCenterX, dy = y - clusterCenterY;
+        if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.9) {
+          mapGrid[y][x].type = 'ore';
+        }
+      }
+    }
   }
-}
-for (let y = 70; y < 75; y++) {
-  for (let x = 50; x < MAP_TILES_X - 5; x++) {
-    mapGrid[y][x].type = 'street'
+
+  // -------- Step 1: Generate Mountain Chains (Rock Clusters) --------
+  const rockClusterCount = 9;
+  const rockClusters = [];
+  for (let i = 0; i < rockClusterCount; i++) {
+    const clusterCenterX = Math.floor(rand() * MAP_TILES_X);
+    const clusterCenterY = Math.floor(rand() * MAP_TILES_Y);
+    rockClusters.push({ x: clusterCenterX, y: clusterCenterY });
+    const clusterRadius = Math.floor(rand() * 3) + 2; // radius between 2 and 4
+    for (let y = Math.max(0, clusterCenterY - clusterRadius); y < Math.min(MAP_TILES_Y, clusterCenterY + clusterRadius); y++) {
+      for (let x = Math.max(0, clusterCenterX - clusterRadius); x < Math.min(MAP_TILES_X, clusterCenterX + clusterRadius); x++) {
+        const dx = x - clusterCenterX, dy = y - clusterCenterY;
+        if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.8) {
+          mapGrid[y][x].type = 'rock';
+        }
+      }
+    }
   }
-}
-for (let i = 0; i < 100; i++) {
-  const x = Math.floor(Math.random() * MAP_TILES_X)
-  const y = Math.floor(Math.random() * MAP_TILES_Y)
-  if (mapGrid[y][x].type === 'land') {
-    mapGrid[y][x].type = 'ore'
+  // Helper: Draw a thick line (Bresenham-like)
+  function drawThickLine(grid, start, end, type, thickness) {
+    // ...existing code...
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    for (let j = 0; j <= steps; j++) {
+      const x = Math.floor(start.x + (dx * j) / steps);
+      const y = Math.floor(start.y + (dy * j) / steps);
+      for (let ty = -Math.floor(thickness/2); ty <= Math.floor(thickness/2); ty++) {
+        for (let tx = -Math.floor(thickness/2); tx <= Math.floor(thickness/2); tx++) {
+          const nx = x + tx, ny = y + ty;
+          if (nx >= 0 && ny >= 0 && nx < MAP_TILES_X && ny < MAP_TILES_Y) {
+            grid[ny][nx].type = type;
+          }
+        }
+      }
+    }
   }
+  // Connect rock clusters in sequence (mountain chains)
+  for (let i = 0; i < rockClusters.length - 1; i++) {
+    drawThickLine(mapGrid, rockClusters[i], rockClusters[i+1], 'rock', 2);
+  }
+
+  // -------- Step 2: Generate Lakes and Rivers --------
+  const lakeCount = 2;
+  const lakeCenters = [];
+  for (let i = 0; i < lakeCount; i++) {
+    const centerX = Math.floor(rand() * MAP_TILES_X);
+    const centerY = Math.floor(rand() * MAP_TILES_Y);
+    const radius = Math.floor(rand() * 4) + 4; // radius between 4 and 7
+    lakeCenters.push({ x: centerX, y: centerY, radius });
+    for (let y = Math.max(0, centerY - radius); y < Math.min(MAP_TILES_Y, centerY + radius); y++) {
+      for (let x = Math.max(0, centerX - radius); x < Math.min(MAP_TILES_X, centerX + radius); x++) {
+        const dx = x - centerX, dy = y - centerY;
+        if (Math.hypot(dx, dy) < radius) {
+          mapGrid[y][x].type = 'water';
+        }
+      }
+    }
+  }
+  // Connect lakes with a river
+  if (lakeCenters.length === 2) {
+    const startLake = lakeCenters[0];
+    const endLake = lakeCenters[1];
+    const steps = Math.max(Math.abs(endLake.x - startLake.x), Math.abs(endLake.y - startLake.y));
+    for (let j = 0; j <= steps; j++) {
+      const x = Math.floor(startLake.x + ((endLake.x - startLake.x) * j) / steps);
+      const y = Math.floor(startLake.y + ((endLake.y - startLake.y) * j) / steps);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && ny >= 0 && nx < MAP_TILES_X && ny < MAP_TILES_Y) {
+            if (rand() < 0.8) {
+              mapGrid[ny][nx].type = 'water';
+            }
+          }
+        }
+      }
+    }
+    // Ensure at least one street crosses the river (midpoint)
+    const riverMidX = Math.floor((startLake.x + endLake.x) / 2);
+    const riverMidY = Math.floor((startLake.y + endLake.y) / 2);
+    mapGrid[riverMidY][riverMidX].type = 'street';
+  }
+
+  // -------- Step 3: Generate Streets --------
+  const playerFactoryPos = { x: Math.floor(MAP_TILES_X * 0.1), y: Math.floor(MAP_TILES_Y * 0.9) };
+  const enemyFactoryPos = { x: Math.floor(MAP_TILES_X * 0.9), y: Math.floor(MAP_TILES_Y * 0.1) };
+
+  // Connect ore fields to player factory
+  oreClusters.forEach(cluster => {
+    drawThickLine(mapGrid, playerFactoryPos, cluster, 'street', 2);
+  });
+  // Connect the two bases
+  drawThickLine(mapGrid, playerFactoryPos, enemyFactoryPos, 'street', 2);
+
+  // Existing base connectivity for redundancy
+  const dxx = enemyFactoryPos.x - playerFactoryPos.x;
+  const dyy = enemyFactoryPos.y - playerFactoryPos.y;
+  const connectSteps = Math.max(Math.abs(dxx), Math.abs(dyy));
+  for (let j = 0; j <= connectSteps; j++) {
+    const x = Math.floor(playerFactoryPos.x + (dxx * j) / connectSteps);
+    const y = Math.floor(playerFactoryPos.y + (dyy * j) / connectSteps);
+    if (x >= 0 && y >= 0 && x < MAP_TILES_X && y < MAP_TILES_Y) {
+      mapGrid[y][x].type = 'street';
+      if (x + 1 < MAP_TILES_X) { mapGrid[y][x+1].type = 'street'; }
+      if (y + 1 < MAP_TILES_Y) { mapGrid[y+1][x].type = 'street'; }
+    }
+  }
+  // ...existing code...
 }
+
+// Reset game state with the new map (clearing factories, units, bullets, and resetting the viewport)
+function resetGameWithNewMap(seed) {
+  generateMap(seed)
+  factories.length = 0
+  initFactories(factories, mapGrid)
+  units.length = 0
+  bullets.length = 0
+  const playerFactory = factories.find(f => f.id === 'player')
+  if (playerFactory) {
+    const factoryPixelX = playerFactory.x * TILE_SIZE
+    const factoryPixelY = playerFactory.y * TILE_SIZE
+    gameState.scrollOffset.x = Math.max(0, Math.min(
+      factoryPixelX - gameCanvas.width / 2,
+      MAP_TILES_X * TILE_SIZE - gameCanvas.width
+    ))
+    gameState.scrollOffset.y = Math.max(0, Math.min(
+      factoryPixelY - gameCanvas.height / 2,
+      MAP_TILES_Y * TILE_SIZE - gameCanvas.height
+    ))
+  }
+  gameState.gameTime = 0
+  gameState.gameOver = false
+  gameState.gameStarted = true
+  gameState.gamePaused = false
+  pauseBtn.textContent = 'Pause'
+  // ...existing code to restart/update the game loop if necessary...
+}
+
+// Add event listener for the shuffle map button using the entered seed
+document.getElementById('shuffleMapBtn').addEventListener('click', () => {
+  const seedInput = document.getElementById('mapSeed')
+  const seed = seedInput.value || '1'
+  resetGameWithNewMap(seed)
+})
+
+// Replace the original static map generation with the seeded generation on initial load
+generateMap(document.getElementById('mapSeed').value)
 
 const factories = []
 initFactories(factories, mapGrid)
