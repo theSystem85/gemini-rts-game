@@ -11,7 +11,7 @@ export function fireProjectile(unit, target, gameState) {
     id: generateId(),
     position: {...unit.position},
     target: {...target.position},
-    speed: 3, // Increased by 3x (assuming original speed was 1)
+    speed: 8, // Increased from 3 to 8
     damage: unit.damage,
     ownerId: unit.id,
     ownerFaction: unit.faction

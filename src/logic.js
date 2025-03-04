@@ -87,13 +87,26 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         unit.target = null
       }
       
-      let effectiveSpeed = unit.effectiveSpeed
+      let effectiveSpeed = unit.effectiveSpeed * 0.5 // Reduce base speed by half
+      
+      // Apply street speed bonus (reduced from 2x to 1.5x)
+      if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
+        effectiveSpeed *= 1.5
+      }
+      
+      // Further reduce speed in combat situations
+      if (unit.target || unit.isDodging) {
+        effectiveSpeed *= 0.6 // 60% speed when in combat or dodging
+      }
+      
+      // Cap maximum speed
+      effectiveSpeed = Math.min(effectiveSpeed, 2)
       // Before using tile indices, clamp them so we don't access out-of-bound indices.
-      unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
-      unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
+      unit.tileX = Math.max(0, Math.min(unit.tileX || 0, mapGrid[0].length - 1))
+      unit.tileY = Math.max(0, Math.min(unit.tileY || 0, mapGrid.length - 1))
 
       // Apply same speed rules for all units (player and enemy)
-      if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
+      if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
         effectiveSpeed *= 2
       }
 
@@ -102,10 +115,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (unit.path && unit.path.length > 0) {
         const nextTile = unit.path[0]
         // Prevent path finding errors if nextTile is out of bounds.
-        if (nextTile.x < 0 || nextTile.x >= mapGrid[0].length ||
-            nextTile.y < 0 || nextTile.y >= mapGrid.length) {
+        if (nextTile && (nextTile.x < 0 || nextTile.x >= mapGrid[0].length ||
+            nextTile.y < 0 || nextTile.y >= mapGrid.length)) {
           unit.path.shift()
-        } else {
+        } else if (nextTile) {
           const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
           const dx = targetPos.x - unit.x
           const dy = targetPos.y - unit.y
@@ -116,7 +129,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             unit.tileX = nextTile.x
             unit.tileY = nextTile.y
             unit.path.shift()
-            occupancyMap[unit.tileY][unit.tileX] = true
+            if (unit.tileY >= 0 && unit.tileY < occupancyMap.length && 
+                unit.tileX >= 0 && unit.tileX < occupancyMap[0].length) {
+              occupancyMap[unit.tileY][unit.tileX] = true
+            }
           } else {
             unit.x += (dx / distance) * effectiveSpeed
             unit.y += (dy / distance) * effectiveSpeed
@@ -128,20 +144,20 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
 
       // After repositioning, clamp tile indices again.
-      unit.tileX = Math.max(0, Math.min(unit.tileX, mapGrid[0].length - 1))
-      unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
+      unit.tileX = Math.max(0, Math.min(unit.tileX || 0, mapGrid[0].length - 1))
+      unit.tileY = Math.max(0, Math.min(unit.tileY || 0, mapGrid.length - 1))
 
       // --- Spawn Exit ---
       if (unit.spawnedInFactory) {
         const factory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy')
-        if (unit.tileX >= factory.x && unit.tileX < factory.x + factory.width &&
+        if (factory && unit.tileX >= factory.x && unit.tileX < factory.x + factory.width &&
             unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
           const exitTile = findAdjacentTile(factory, mapGrid)
           if (exitTile) {
             const exitPath = findPath({ x: unit.tileX, y: unit.tileY }, exitTile, mapGrid, occupancyMap)
-            if (exitPath.length > 1) {
+            if (exitPath && exitPath.length > 1) {
               unit.path = exitPath.slice(1)
             }
           }
@@ -724,6 +740,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateEnemyAI(units, factories, bullets, mapGrid, gameState)
   } catch (error) {
     console.error("Critical error in updateGame:", error)
+    console.trace() // Add stack trace to see exactly where the error occurs
     // Don't allow the game to completely crash
   }
 }
