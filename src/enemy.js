@@ -352,7 +352,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + Math.floor(factory.height / 2)
-  return {
+  const unit = {
     id: getUniqueId(),
     type: unitType,  // "tank", "rocketTank", or "harvester"
     owner: 'enemy',
@@ -378,8 +378,19 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     targetDirection: 0,
     turretDirection: 0,
     rotationSpeed: 0.1,
-    isRotating: false
+    isRotating: false,
+    effectiveSpeed: 0.5, // Reduced base speed
   }
+  
+  // Set speed based on unit type
+  if (unitType === 'harvester') {
+    unit.effectiveSpeed = 0.4
+  } else if (unitType === 'rocketTank') {
+    unit.effectiveSpeed = 0.3
+  } else { // regular tank
+    unit.effectiveSpeed = 0.35
+  }
+  return unit
 }
 
 // Helper: Find the closest ore tile from a unit's current position.
