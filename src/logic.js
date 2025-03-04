@@ -292,12 +292,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
-                  speed: 2,
+                  speed: 5, // Increased from 2 to 5 for 2.5x faster rockets
                   baseDamage: 40,
                   active: true,
                   shooter: unit,
                   homing: true,
-                  target: unit.target
+                  target: unit.target  // Fixed: changed from 'target' to 'unit.target'
                 };
                 const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
                 bullet.vx = bullet.speed * Math.cos(angle);

@@ -55,6 +55,7 @@ if (sidebar.firstChild) {
 
 // Add speed control handler
 const speedMultiplier = document.getElementById('speedMultiplier')
+speedMultiplier.value = gameState.speedMultiplier // Set initial value to match gameState
 speedMultiplier.addEventListener('change', (e) => {
   const value = parseFloat(e.target.value)
   if (value >= 0.25 && value <= 4) {
