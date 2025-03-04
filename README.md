@@ -173,11 +173,11 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) When units are selected the player can press shift+NUMBER key to assign a command group to the selected units. whenever the user presses that NUMBER again the group of units gets selected again.
 (-) the game starts in pause mode on startup or reload
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) When units are selected the player can press ctrl+NUMBER key to assign a command group to the selected units. whenever the user presses that NUMBER again the group of units gets selected again.
 (x) if player presses the I key an alert window shows the current controls with explanation and the game pauses
 (x) if player presses H key the view is focussing the factory
 (x) the base factory should be selectable by the player and when he clicks on a map location all new units will move to that spot.

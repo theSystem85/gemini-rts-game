@@ -60,7 +60,7 @@ function showControlsHelp() {
         <li><strong>D Key:</strong> Make selected units dodge</li>
         <li><strong>H Key:</strong> Focus view on your factory</li>
         <li><strong>I Key:</strong> Show this help (press again to close)</li>
-        <li><strong>CMD + 1-9:</strong> Assign selected units to control group</li>
+        <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
         <li><strong>1-9 Keys:</strong> Select units in that control group</li>
       </ul>
       <p>Press I again to close and resume the game</p>
@@ -532,29 +532,67 @@ export function setupInputHandlers(units, factories, mapGrid) {
         playSound('unitSelection');
       }
     }
-    // Control group assignment (cmd+number)
-    else if (e.metaKey && e.key >= '1' && e.key <= '9') {
+    // Control group assignment (ctrl+number)
+    else if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
       const groupNum = e.key;
+      console.log(`Attempting to assign control group ${groupNum} with ctrl key`);
+      
       if (selectedUnits.length > 0) {
         // Only store units, not factories
-        const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory');
+        const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory' && unit.owner === 'player');
+        
         if (onlyUnits.length > 0) {
+          // Store references to the units
           controlGroups[groupNum] = [...onlyUnits];
+          console.log(`Successfully assigned control group ${groupNum} with ${onlyUnits.length} units`);
           playSound('unitSelection');
+          
+          // Visual feedback
+          const message = document.createElement('div');
+          message.textContent = `Group ${groupNum} assigned`;
+          message.style.position = 'absolute';
+          message.style.left = '50%';
+          message.style.bottom = '10%';
+          message.style.transform = 'translateX(-50%)';
+          message.style.backgroundColor = 'rgba(0,0,0,0.7)';
+          message.style.color = 'white';
+          message.style.padding = '8px 16px';
+          message.style.borderRadius = '4px';
+          message.style.zIndex = '1000';
+          document.body.appendChild(message);
+          
+          // Remove the message after 2 seconds
+          setTimeout(() => {
+            document.body.removeChild(message);
+          }, 2000);
         }
       }
     }
-    // Control group selection (just number)
-    else if (!e.metaKey && e.key >= '1' && e.key <= '9') {
+    // Control group selection (just number keys 1-9)
+    else if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9') {
       const groupNum = e.key;
-      if (controlGroups[groupNum] && controlGroups[groupNum].length > 0) {
+      console.log(`Trying to select control group ${groupNum}`);
+      console.log(`Available control groups: ${Object.keys(controlGroups).join(', ')}`);
+      
+      // Check if we have units in this control group
+      if (controlGroups[groupNum] && Array.isArray(controlGroups[groupNum]) && controlGroups[groupNum].length > 0) {
+        console.log(`Found control group ${groupNum} with ${controlGroups[groupNum].length} units`);
+        
         // Clear current selection
         units.forEach(u => { if (u.owner === 'player') u.selected = false });
+        factories.forEach(f => f.selected = false);
         selectedUnits.length = 0;
         
         // Select all units in the control group that are still alive
         const aliveUnits = controlGroups[groupNum].filter(unit => 
-          units.includes(unit) && unit.health > 0);
+          unit && // unit exists
+          typeof unit === 'object' && // is an object
+          units.includes(unit) && // is in the game units array
+          unit.health > 0 && // is alive
+          unit.owner === 'player' // belongs to player (safety check)
+        );
+        
+        console.log(`Found ${aliveUnits.length} alive units in group ${groupNum}`);
         
         // Update the control group to only include alive units
         controlGroups[groupNum] = aliveUnits;
@@ -647,6 +685,10 @@ export function getRallyPoint() {
 // Set game to paused state on startup
 export function initGamePaused() {
   gameState.paused = true;
+  // Initialize the controlGroups object with empty arrays for all possible groups
+  for (let i = 1; i <= 9; i++) {
+    controlGroups[i] = [];
+  }
   showControlsHelp(); // Show controls when game starts
 }
 
