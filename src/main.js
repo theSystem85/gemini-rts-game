@@ -106,6 +106,12 @@ for (let i = 0; i < 100; i++) {
 const factories = []
 initFactories(factories, mapGrid)
 
+// Initialize rally points as null
+factories.forEach(factory => {
+  factory.rallyPoint = null;
+  factory.selected = false;
+});
+
 // Center viewport on player factory
 const playerFactory = factories.find(f => f.id === 'player')
 if (playerFactory) {

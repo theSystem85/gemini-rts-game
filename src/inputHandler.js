@@ -21,6 +21,60 @@ let wasDragging = false
 let rightDragStart = { x: 0, y: 0 }
 let rightWasDragging = false
 
+// Add control groups functionality
+const controlGroups = {}
+
+// Track factory for rally points
+let playerFactory = null
+let rallyPoint = null
+
+// Function to create help overlay
+function showControlsHelp() {
+  // Create or show the help overlay
+  let helpOverlay = document.getElementById('helpOverlay');
+  
+  if (!helpOverlay) {
+    helpOverlay = document.createElement('div');
+    helpOverlay.id = 'helpOverlay';
+    helpOverlay.style.position = 'absolute';
+    helpOverlay.style.top = '50%';
+    helpOverlay.style.left = '50%';
+    helpOverlay.style.transform = 'translate(-50%, -50%)';
+    helpOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    helpOverlay.style.color = 'white';
+    helpOverlay.style.padding = '20px';
+    helpOverlay.style.borderRadius = '10px';
+    helpOverlay.style.zIndex = '1000';
+    helpOverlay.style.maxWidth = '80%';
+    helpOverlay.style.maxHeight = '80%';
+    helpOverlay.style.overflow = 'auto';
+    
+    // Controls info
+    helpOverlay.innerHTML = `
+      <h2>Game Controls</h2>
+      <ul>
+        <li><strong>Left Click:</strong> Select unit or factory</li>
+        <li><strong>Left Click + Drag:</strong> Select multiple units</li>
+        <li><strong>Right Click:</strong> Move units / Attack enemy</li>
+        <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
+        <li><strong>D Key:</strong> Make selected units dodge</li>
+        <li><strong>H Key:</strong> Focus view on your factory</li>
+        <li><strong>I Key:</strong> Show this help (press again to close)</li>
+        <li><strong>CMD + 1-9:</strong> Assign selected units to control group</li>
+        <li><strong>1-9 Keys:</strong> Select units in that control group</li>
+      </ul>
+      <p>Press I again to close and resume the game</p>
+    `;
+    
+    document.body.appendChild(helpOverlay);
+  } else {
+    helpOverlay.style.display = helpOverlay.style.display === 'none' ? 'block' : 'none';
+  }
+  
+  // Toggle game pause state
+  gameState.paused = !gameState.paused;
+}
+
 // Helper: For a given target and unit center, return the appropriate aiming point.
 // For factories, this returns the closest point on the factory rectangle.
 function getTargetPoint(target, unitCenter) {
@@ -41,10 +95,16 @@ function getTargetPoint(target, unitCenter) {
 }
 
 export function setupInputHandlers(units, factories, mapGrid) {
+  // Store player factory reference for later use
+  playerFactory = factories.find(factory => factory.id === 'player');
+
   // Disable right-click context menu.
   gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
   gameCanvas.addEventListener('mousedown', e => {
+    // Don't process input if game is paused
+    if (gameState.paused) return;
+    
     const rect = gameCanvas.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
@@ -68,6 +128,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
   })
 
   gameCanvas.addEventListener('mousemove', e => {
+    // Don't process input if game is paused
+    if (gameState.paused) return;
+    
     const rect = gameCanvas.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
@@ -143,6 +206,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
   })
 
   gameCanvas.addEventListener('mouseup', e => {
+    // Don't process input if game is paused
+    if (gameState.paused) return;
+    
     const rect = gameCanvas.getBoundingClientRect()
     if (e.button === 2) {
       // End right-click drag.
@@ -154,132 +220,185 @@ export function setupInputHandlers(units, factories, mapGrid) {
         selectedUnits.length = 0
       }
       rightWasDragging = false
-    } else if (e.button === 0 && isSelecting) {
-      if (wasDragging) {
-        handleBoundingBoxSelection(units)
-      } else {
-        // Single unit selection.
+      
+      // Check if the player factory is selected
+      const playerFactory = factories.find(f => f.id === 'player' && f.selected);
+      if (playerFactory) {
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
         const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-        let clickedUnit = null
-        for (const unit of units) {
-          if (unit.owner === 'player') {
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
-            const dx = worldX - centerX
-            const dy = worldY - centerY
-            if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
-              clickedUnit = unit
-              break
+        
+        // Set rally point at clicked tile
+        playerFactory.rallyPoint = { 
+          x: Math.floor(worldX / TILE_SIZE), 
+          y: Math.floor(worldY / TILE_SIZE) 
+        };
+        
+        // Visual feedback for rally point setting
+        playSound('movement');
+      }
+    } else if (e.button === 0 && isSelecting) {
+      if (wasDragging) {
+        handleBoundingBoxSelection(units, factories) // The function will be modified to ignore factories
+      } else {
+        // Single unit or factory selection.
+        const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+        const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+        
+        // Check for factory selection first - direct click only
+        let selectedFactory = null;
+        for (const factory of factories) {
+          if (factory.id === 'player') {
+            const factoryPixelX = factory.x * TILE_SIZE
+            const factoryPixelY = factory.y * TILE_SIZE
+            
+            if (worldX >= factoryPixelX &&
+                worldX < factoryPixelX + factory.width * TILE_SIZE &&
+                worldY >= factoryPixelY &&
+                worldY < factoryPixelY + factory.height * TILE_SIZE) {
+              selectedFactory = factory;
+              break;
             }
           }
         }
-        if (clickedUnit) {
-          units.forEach(u => { if (u.owner === 'player') u.selected = false })
-          selectedUnits.length = 0
-          clickedUnit.selected = true
-          selectedUnits.push(clickedUnit)
-          playSound('unitSelection')
-          playSound('yesSir01') // play sound on unit selection
-        }
-      }
-      // --- Command Issuing ---
-      if (selectedUnits.length > 0 && !wasDragging) {
-        const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-        const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-        let target = null
-        // Check enemy factories.
-        for (const factory of factories) {
-          if (factory.id !== 'player' &&
-              worldX >= factory.x * TILE_SIZE &&
-              worldX < (factory.x + factory.width) * TILE_SIZE &&
-              worldY >= factory.y * TILE_SIZE &&
-              worldY < (factory.y + factory.height) * TILE_SIZE) {
-            target = factory
-            break
-          }
-        }
-        // Check enemy units.
-        if (!target) {
+        
+        if (selectedFactory) {
+          // Clear existing selection
+          units.forEach(u => { if (u.owner === 'player') u.selected = false });
+          selectedUnits.length = 0;
+          
+          // Clear factory selections
+          factories.forEach(f => f.selected = false);
+          
+          // Select factory
+          selectedFactory.selected = true;
+          selectedUnits.push(selectedFactory);
+          playSound('unitSelection');
+        } else {
+          // Normal unit selection
+          let clickedUnit = null
           for (const unit of units) {
-            if (unit.owner !== 'player') {
+            if (unit.owner === 'player') {
               const centerX = unit.x + TILE_SIZE / 2
               const centerY = unit.y + TILE_SIZE / 2
-              if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
-                target = unit
+              const dx = worldX - centerX
+              const dy = worldY - centerY
+              if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
+                clickedUnit = unit
                 break
               }
             }
           }
+          if (clickedUnit) {
+            units.forEach(u => { if (u.owner === 'player') u.selected = false })
+            factories.forEach(f => f.selected = false); // Clear factory selections too
+            selectedUnits.length = 0
+            clickedUnit.selected = true
+            selectedUnits.push(clickedUnit)
+            playSound('unitSelection')
+            playSound('yesSir01') // play sound on unit selection
+          }
         }
-        // Formation logic for movement/attack.
-        const count = selectedUnits.length
-        const cols = Math.ceil(Math.sqrt(count))
-        const rows = Math.ceil(count / cols)
-        selectedUnits.forEach((unit, index) => {
-          let formationOffset = { x: 0, y: 0 }
-          if (target) {
-            const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
-            // Use helper to get target point (for factories, this is the closest point on its boundary)
-            let targetCenter = getTargetPoint(target, unitCenter)
-            const dx = targetCenter.x - unitCenter.x
-            const dy = targetCenter.y - unitCenter.y
-            const dist = Math.hypot(dx, dy)
-            const explosionSafetyBuffer = TILE_SIZE * 0.5
-            const safeAttackDistance = Math.max(
-              TANK_FIRE_RANGE * TILE_SIZE,
-              TILE_SIZE * 2 + explosionSafetyBuffer
-            ) - TILE_SIZE
-            
-            const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
-            const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
-            const col = index % cols
-            const row = Math.floor(index / cols)
-            formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
-            formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
-            let destX = baseX + formationOffset.x
-            let destY = baseY + formationOffset.y
-            // Ensure the final destination maintains safe distance
-            const finalDx = targetCenter.x - destX
-            const finalDy = targetCenter.y - destY
-            let finalDist = Math.hypot(finalDx, finalDy)
-            if (finalDist < safeAttackDistance) {
-              const scale = safeAttackDistance / finalDist
-              destX = targetCenter.x - finalDx * scale
-              destY = targetCenter.y - finalDy * scale
-            }
-            const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
-            if (path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
-              unit.path = path.slice(1)
-              unit.target = target
-              playSound('movement')
-            } else {
-              unit.path = []
-              unit.target = target
-            }
-          } else {
-            // No target: move to clicked location with a basic grid formation.
-            const colsCount = Math.ceil(Math.sqrt(count))
-            const rowsCount = Math.ceil(count / colsCount)
-            const col = index % colsCount
-            const row = Math.floor(index / colsCount)
-            formationOffset = {
-              x: col * 10 - ((colsCount - 1) * 10) / 2,
-              y: row * 10 - ((rowsCount - 1) * 10) / 2
-            }
-            const destX = Math.floor(worldX) + formationOffset.x
-            const destY = Math.floor(worldY) + formationOffset.y
-            const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
-            if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
-              unit.path = path.slice(1)
-              unit.target = null
-              unit.moveTarget = destTile // Store the final destination
-              playSound('movement')
+      }
+      // --- Command Issuing ---
+      if (selectedUnits.length > 0 && !wasDragging) {
+        // Skip command issuing for factory selection
+        if (selectedUnits[0].type !== 'factory') {
+          const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+          const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+          let target = null
+          // Check enemy factories.
+          for (const factory of factories) {
+            if (factory.id !== 'player' &&
+                worldX >= factory.x * TILE_SIZE &&
+                worldX < (factory.x + factory.width) * TILE_SIZE &&
+                worldY >= factory.y * TILE_SIZE &&
+                worldY < (factory.y + factory.height) * TILE_SIZE) {
+              target = factory
+              break
             }
           }
-        })
+          // Check enemy units.
+          if (!target) {
+            for (const unit of units) {
+              if (unit.owner !== 'player') {
+                const centerX = unit.x + TILE_SIZE / 2
+                const centerY = unit.y + TILE_SIZE / 2
+                if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
+                  target = unit
+                  break
+                }
+              }
+            }
+          }
+          // Formation logic for movement/attack.
+          const count = selectedUnits.length
+          const cols = Math.ceil(Math.sqrt(count))
+          const rows = Math.ceil(count / cols)
+          selectedUnits.forEach((unit, index) => {
+            let formationOffset = { x: 0, y: 0 }
+            if (target) {
+              const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
+              // Use helper to get target point (for factories, this is the closest point on its boundary)
+              let targetCenter = getTargetPoint(target, unitCenter)
+              const dx = targetCenter.x - unitCenter.x
+              const dy = targetCenter.y - unitCenter.y
+              const dist = Math.hypot(dx, dy)
+              const explosionSafetyBuffer = TILE_SIZE * 0.5
+              const safeAttackDistance = Math.max(
+                TANK_FIRE_RANGE * TILE_SIZE,
+                TILE_SIZE * 2 + explosionSafetyBuffer
+              ) - TILE_SIZE
+              
+              const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
+              const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
+              const col = index % cols
+              const row = Math.floor(index / cols)
+              formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
+              formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
+              let destX = baseX + formationOffset.x
+              let destY = baseY + formationOffset.y
+              // Ensure the final destination maintains safe distance
+              const finalDx = targetCenter.x - destX
+              const finalDy = targetCenter.y - destY
+              let finalDist = Math.hypot(finalDx, finalDy)
+              if (finalDist < safeAttackDistance) {
+                const scale = safeAttackDistance / finalDist
+                destX = targetCenter.x - finalDx * scale
+                destY = targetCenter.y - finalDy * scale
+              }
+              const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
+              if (path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
+                unit.path = path.slice(1)
+                unit.target = target
+                playSound('movement')
+              } else {
+                unit.path = []
+                unit.target = target
+              }
+            } else {
+              // No target: move to clicked location with a basic grid formation.
+              const colsCount = Math.ceil(Math.sqrt(count))
+              const rowsCount = Math.ceil(count / colsCount)
+              const col = index % colsCount
+              const row = Math.floor(index / colsCount)
+              formationOffset = {
+                x: col * 10 - ((colsCount - 1) * 10) / 2,
+                y: row * 10 - ((rowsCount - 1) * 10) / 2
+              }
+              const destX = Math.floor(worldX) + formationOffset.x
+              const destY = Math.floor(worldY) + formationOffset.y
+              const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
+              if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
+                unit.path = path.slice(1)
+                unit.target = null
+                unit.moveTarget = destTile // Store the final destination
+                playSound('movement')
+              }
+            }
+          })
+        }
       }
       isSelecting = false
       selectionActive = false
@@ -288,6 +407,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
 
   // --- Minimap Click: Recenters View and Commands Selected Units ---
   minimapCanvas.addEventListener('click', e => {
+    // Don't process input if game is paused
+    if (gameState.paused) return;
+
     const rect = minimapCanvas.getBoundingClientRect()
     const clickX = e.clientX - rect.left
     const clickY = e.clientY - rect.top
@@ -324,8 +446,18 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   })
 
-  // Add keydown event listener to toggle alert mode.
+  // Enhanced keydown event listener
   document.addEventListener('keydown', e => {
+    // Some keys should work even when paused
+    if (e.key.toLowerCase() === 'i') {
+      showControlsHelp();
+      return;
+    }
+    
+    // Don't process other inputs if game is paused
+    if (gameState.paused && e.key.toLowerCase() !== 'i') return;
+    
+    // A key for alert mode
     if (e.key.toLowerCase() === 'a') {
       // Toggle alert mode on all selected player units.
       selectedUnits.forEach(unit => {
@@ -334,7 +466,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
           unit.alertMode = !unit.alertMode;
         }
       });
-    } else if (e.key.toLowerCase() === 'd') {
+    } 
+    // D key for dodge
+    else if (e.key.toLowerCase() === 'd') {
       // Fix: Make all selected units dodge to a random nearby free tile regardless of their state.
       selectedUnits.forEach(unit => {
         // Compute current tile coordinates from unit position.
@@ -383,10 +517,70 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
       });
     }
+    // H key to focus on factory
+    else if (e.key.toLowerCase() === 'h') {
+      if (playerFactory) {
+        // Calculate factory center
+        const factoryX = (playerFactory.x + playerFactory.width/2) * TILE_SIZE;
+        const factoryY = (playerFactory.y + playerFactory.height/2) * TILE_SIZE;
+        
+        // Center the view on the factory
+        gameState.scrollOffset.x = Math.max(0, Math.min(factoryX - gameCanvas.width / 2, 
+                                 mapGrid[0].length * TILE_SIZE - gameCanvas.width));
+        gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - gameCanvas.height / 2, 
+                                 mapGrid.length * TILE_SIZE - gameCanvas.height));
+        playSound('unitSelection');
+      }
+    }
+    // Control group assignment (cmd+number)
+    else if (e.metaKey && e.key >= '1' && e.key <= '9') {
+      const groupNum = e.key;
+      if (selectedUnits.length > 0) {
+        // Only store units, not factories
+        const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory');
+        if (onlyUnits.length > 0) {
+          controlGroups[groupNum] = [...onlyUnits];
+          playSound('unitSelection');
+        }
+      }
+    }
+    // Control group selection (just number)
+    else if (!e.metaKey && e.key >= '1' && e.key <= '9') {
+      const groupNum = e.key;
+      if (controlGroups[groupNum] && controlGroups[groupNum].length > 0) {
+        // Clear current selection
+        units.forEach(u => { if (u.owner === 'player') u.selected = false });
+        selectedUnits.length = 0;
+        
+        // Select all units in the control group that are still alive
+        const aliveUnits = controlGroups[groupNum].filter(unit => 
+          units.includes(unit) && unit.health > 0);
+        
+        // Update the control group to only include alive units
+        controlGroups[groupNum] = aliveUnits;
+        
+        if (aliveUnits.length > 0) {
+          aliveUnits.forEach(unit => {
+            unit.selected = true;
+            selectedUnits.push(unit);
+          });
+          
+          // Center view on the middle unit of the group
+          const middleUnit = aliveUnits[Math.floor(aliveUnits.length / 2)];
+          gameState.scrollOffset.x = Math.max(0, Math.min(middleUnit.x - gameCanvas.width / 2, 
+                                   mapGrid[0].length * TILE_SIZE - gameCanvas.width));
+          gameState.scrollOffset.y = Math.max(0, Math.min(middleUnit.y - gameCanvas.height / 2, 
+                                   mapGrid.length * TILE_SIZE - gameCanvas.height));
+          
+          playSound('unitSelection');
+          playSound('yesSir01');
+        }
+      }
+    }
   });
 }
 
-function handleBoundingBoxSelection(units) {
+function handleBoundingBoxSelection(units, factories) {
   try {
     const x1 = Math.min(selectionStart.x, selectionEnd.x)
     const y1 = Math.min(selectionStart.y, selectionEnd.y)
@@ -395,6 +589,14 @@ function handleBoundingBoxSelection(units) {
     
     // Clear current selection first
     selectedUnits.length = 0
+    
+    // Don't include factories in drag selection (requirement #3)
+    // Clear any factory selections
+    if (factories) {
+      factories.forEach(factory => {
+        factory.selected = false;
+      });
+    }
     
     // Find units within selection rectangle
     for (const unit of units) {
@@ -435,4 +637,34 @@ export function cleanupDestroyedSelectedUnits() {
     console.error("Error in cleanupDestroyedSelectedUnits:", error);
     selectedUnits.length = 0; // Safety reset
   }
+}
+
+// Get rally point for newly produced units
+export function getRallyPoint() {
+  return rallyPoint;
+}
+
+// Set game to paused state on startup
+export function initGamePaused() {
+  gameState.paused = true;
+  showControlsHelp(); // Show controls when game starts
+}
+
+// Reset input state for game restart without page reload
+export function resetInputState() {
+  // Clear selections
+  selectedUnits.length = 0;
+  selectionActive = false;
+  isSelecting = false;
+  wasDragging = false;
+  rightWasDragging = false;
+  gameState.isRightDragging = false;
+  
+  // Don't clear control groups to maintain them across restarts
+  
+  // Reset rally point
+  rallyPoint = null;
+  
+  // Reset player factory reference (will be updated when setupInputHandlers is called again)
+  playerFactory = null;
 }
