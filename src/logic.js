@@ -344,7 +344,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   ? target.y + TILE_SIZE / 2 
                   : target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
               const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
-              if (unit.type === 'tank') {
+              if (unit.type === 'tank' || unit.type === 'tank-v2') {
                 let bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
@@ -818,6 +818,7 @@ function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, mapG
     duration: 500,
     maxRadius: explosionRadius
   })
+  playSound('explosion'); // play explosion sound when a destruction occurs
   
   // Apply damage to nearby units
   units.forEach(unit => {
