@@ -676,37 +676,3 @@ export function cleanupDestroyedSelectedUnits() {
     selectedUnits.length = 0; // Safety reset
   }
 }
-
-// Get rally point for newly produced units
-export function getRallyPoint() {
-  return rallyPoint;
-}
-
-// Set game to paused state on startup
-export function initGamePaused() {
-  gameState.paused = true;
-  // Initialize the controlGroups object with empty arrays for all possible groups
-  for (let i = 1; i <= 9; i++) {
-    controlGroups[i] = [];
-  }
-  showControlsHelp(); // Show controls when game starts
-}
-
-// Reset input state for game restart without page reload
-export function resetInputState() {
-  // Clear selections
-  selectedUnits.length = 0;
-  selectionActive = false;
-  isSelecting = false;
-  wasDragging = false;
-  rightWasDragging = false;
-  gameState.isRightDragging = false;
-  
-  // Don't clear control groups to maintain them across restarts
-  
-  // Reset rally point
-  rallyPoint = null;
-  
-  // Reset player factory reference (will be updated when setupInputHandlers is called again)
-  playerFactory = null;
-}
