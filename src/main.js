@@ -1,13 +1,12 @@
 // main.js
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { gameState } from './gameState.js'
-import { tileToPixel } from './utils.js'
-import { setupInputHandlers, selectedUnits, selectionActive, selectionStartExport, selectionEndExport } from './inputHandler.js'
+import { setupInputHandlers, selectionActive, selectionStartExport, selectionEndExport } from './inputHandler.js'
 import { renderGame, renderMinimap } from './rendering.js'
 import { spawnUnit } from './units.js'
 import { initFactories } from './factories.js'
 import { playSound, initBackgroundMusic, toggleBackgroundMusic } from './sound.js'
-import { updateGame } from './logic.js'
+import { updateGame } from './updateGame.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
@@ -17,7 +16,6 @@ const moneyEl = document.getElementById('money')
 const gameTimeEl = document.getElementById('gameTime')
 const winsEl = document.getElementById('wins')
 const lossesEl = document.getElementById('losses')
-const productionProgressEl = document.getElementById('productionProgress')
 const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
 const sidebar = document.getElementById('sidebar')
