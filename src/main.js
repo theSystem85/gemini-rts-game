@@ -430,6 +430,21 @@ const productionQueue = {
               newUnit.path = newPath.slice(1);
             }
           }
+        } 
+        // For combat units, check if rally point is set and path to it
+        else if (playerFactory.rallyPoint) {
+          const rallyPointTile = playerFactory.rallyPoint;
+          const rallyPath = findPath(
+            { x: newUnit.tileX, y: newUnit.tileY },
+            rallyPointTile,
+            mapGrid,
+            null
+          );
+          
+          if (rallyPath.length > 1) {
+            newUnit.path = rallyPath.slice(1);
+            newUnit.moveTarget = rallyPointTile; // Store the final destination
+          }
         }
       } else {
         console.warn("Failed to spawn unit - refunding cost");

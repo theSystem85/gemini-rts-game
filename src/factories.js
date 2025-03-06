@@ -10,7 +10,8 @@ export function initFactories(factories, mapGrid) {
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
-    budget: 0
+    budget: 0,
+    rallyPoint: null
   }
   // Position enemy factory at least 5 tiles from top and right.
   const enemyFactory = {
@@ -22,9 +23,16 @@ export function initFactories(factories, mapGrid) {
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
-    budget: 5000
+    budget: 5000,
+    rallyPoint: null
   }
   factories.push(playerFactory, enemyFactory)
+  
+  // Set default enemy rally point toward player's factory
+  enemyFactory.rallyPoint = {
+    x: Math.floor((playerFactory.x + enemyFactory.x) / 2),
+    y: Math.floor((playerFactory.y + enemyFactory.y) / 2)
+  };
 
   // Mark factory tiles as "building" to block unit movement.
   factories.forEach(factory => {

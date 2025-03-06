@@ -10,63 +10,85 @@ import { getUniqueId } from './utils.js'
   - Dodge behavior preserves unit's original target and checks boundaries
 */
 export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
-  const occupancyMap = buildOccupancyMap(units, mapGrid)
-  const now = performance.now()
+  const now = Date.now()
   const playerFactory = factories.find(f => f.id === 'player')
   const enemyFactory = factories.find(f => f.id === 'enemy')
-
-  // --- Enemy Production ---
-  if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
-    // Ensure enemy always has at least one harvester.
-    const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
-    let unitType = 'tank'
-    let cost = 1000
-    if (enemyHarvesters.length === 0) {
-      unitType = 'harvester'
-      cost = 500
-    } else {
-      const rand = Math.random()
-      if (rand < 0.1) {
-        unitType = 'rocketTank'
-        cost = 2000
-      } else if (rand < 0.3) {
+  const occupancyMap = buildOccupancyMap(mapGrid, units)
+  
+  // Process enemy unit production
+  if (enemyFactory && !enemyFactory.destroyed && enemyFactory.budget > 0) {
+    const lastProductionTime = enemyFactory.lastProductionTime || 0
+    if (now - lastProductionTime > 5000) { // Production every 5 seconds
+      enemyFactory.lastProductionTime = now
+      
+      // Count existing enemy units
+      const enemyUnits = units.filter(u => u.owner === 'enemy')
+      const harvesters = enemyUnits.filter(u => u.type === 'harvester')
+      
+      // Only spawn harvester if we have less than 3, otherwise focus on combat units
+      let unitType = 'tank'
+      let cost = 1000
+      
+      if (harvesters.length < 3) {
         unitType = 'harvester'
         cost = 500
       } else {
-        unitType = 'tank'
-        cost = 1000
+        // Randomize unit production
+        const rand = Math.random()
+        
+        if (rand < 0.1) {
+          unitType = 'rocketTank'
+          cost = 2000
+        } else if (rand < 0.3) {
+          unitType = 'harvester'
+          cost = 500
+        } else {
+          unitType = 'tank'
+          cost = 1000
+        }
       }
-    }
-    if (enemyFactory.budget >= cost) {
-      const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid)
-      units.push(newEnemy)
-      if (unitType === 'harvester') {
-        const orePos = findClosestOre(newEnemy, mapGrid)
-        if (orePos) {
-          const path = findPath({ x: newEnemy.tileX, y: newEnemy.tileY }, orePos, mapGrid, occupancyMap)
+      if (enemyFactory.budget >= cost) {
+        const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid)
+        units.push(newEnemy)
+        if (unitType === 'harvester') {
+          const orePos = findClosestOre(newEnemy, mapGrid)
+          if (orePos) {
+            const path = findPath(
+              { x: newEnemy.tileX, y: newEnemy.tileY }, 
+              orePos, 
+              mapGrid, 
+              occupancyMap
+            )
+            if (path.length > 1) {
+              newEnemy.path = path.slice(1)
+            }
+          }
+        } else if (enemyFactory.rallyPoint) {
+          // If enemy factory has a rally point, path combat units to it
+          const rallyPath = findPath(
+            { x: newEnemy.tileX, y: newEnemy.tileY }, 
+            enemyFactory.rallyPoint, 
+            mapGrid, 
+            occupancyMap
+          )
+          if (rallyPath.length > 1) {
+            newEnemy.path = rallyPath.slice(1)
+            newEnemy.moveTarget = enemyFactory.rallyPoint
+          }
+        } else {
+          // Use the same findPath function as player units with proper parameters
+          const path = findPath(
+            { x: newEnemy.tileX, y: newEnemy.tileY }, 
+            { x: playerFactory.x, y: playerFactory.y }, 
+            mapGrid, 
+            null // Don't use occupancy map for long distance paths for better performance
+          )
           if (path.length > 1) {
             newEnemy.path = path.slice(1)
           }
         }
-      } else {
-        // Use the same findPath function as player units with proper parameters
-        const path = findPath(
-          { x: newEnemy.tileX, y: newEnemy.tileY }, 
-          { x: playerFactory.x, y: playerFactory.y }, 
-          mapGrid, 
-          null // Don't use occupancy map for long distance paths for better performance
-        )
-        if (path.length > 1) {
-          newEnemy.path = path.slice(1)
-          newEnemy.moveTarget = { x: playerFactory.x, y: playerFactory.y } // Store target for recalculation
-        }
-        newEnemy.target = playerFactory
-        // Set up pathfinding interval to prevent recalculating every frame
-        newEnemy.lastPathCalcTime = now
-        newEnemy.lastTargetChangeTime = now // Initialize target change timer
+        enemyFactory.budget -= cost
       }
-      enemyFactory.budget -= cost
-      gameState.enemyLastProductionTime = now
     }
   }
 
