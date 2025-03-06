@@ -356,6 +356,13 @@ const productionQueue = {
     // For example: harvester (cost 500) takes 3000ms, so duration = 3000 * (cost/500)
     const baseDuration = 3000;
     const duration = baseDuration * (cost / 500);
+    
+    // Explicitly reset progress bar at the start of production
+    const progressBar = item.button.querySelector('.production-progress');
+    if (progressBar) {
+      progressBar.style.width = '0%';
+    }
+    
     this.current = {
       unitType: item.unitType,
       button: item.button,
@@ -385,9 +392,27 @@ const productionQueue = {
   completeCurrentProduction: function() {
     if (!this.current) return;
     const unitType = this.current.unitType;
+    const button = this.current.button;
+    
     // Remove item from queue
     this.items.shift();
-    this.updateBatchCounter(this.current.button, this.items.filter(item => item.button === this.current.button).length);
+    this.updateBatchCounter(button, this.items.filter(item => item.button === button).length);
+    
+    // Reset the progress bar immediately before doing anything else
+    const progressBar = button.querySelector('.production-progress');
+    if (progressBar) {
+      // Add reset class to disable transition
+      progressBar.classList.add('reset');
+      progressBar.style.width = '0%';
+      
+      // Force browser reflow to ensure the style is applied immediately
+      void progressBar.offsetWidth;
+      
+      // Remove the reset class after a short delay
+      setTimeout(() => {
+        progressBar.classList.remove('reset');
+      }, 50);
+    }
     
     // Spawn the unit
     const playerFactory = factories.find(f => f.id === 'player');
@@ -396,9 +421,8 @@ const productionQueue = {
       if (newUnit) {
         units.push(newUnit);
         playSound('productionReady');
-        // If the produced unit is a harvester, automatically send it to harvest.
+        // If the produced unit is a harvester, automatically send it to harvest
         if (newUnit.type === 'harvester') {
-          // Assume findClosestOre and findPath have been imported.
           const orePos = findClosestOre(newUnit, mapGrid);
           if (orePos) {
             const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
@@ -412,21 +436,25 @@ const productionQueue = {
         gameState.money += unitCosts[unitType] || 0;
       }
     }
+    
+    // Clear current production
     this.current = null;
+    this.paused = false;
+    
+    // Start next item in queue if available
     if (this.items.length > 0) {
       this.startNextProduction();
     }
+    
     playSound('productionComplete');
     // Remove active/paused classes from button
-    this.current && this.current.button.classList.remove('active', 'paused');
+    button.classList.remove('active', 'paused');
   },
-  
+
   togglePause: function() {
     this.paused = !this.paused
-    
     if (this.current) {
       this.current.button.classList.toggle('paused', this.paused)
-      
       if (!this.paused) {
         // Reset the start time to account for the pause
         this.current.startTime = performance.now() - (this.current.progress * this.current.duration)
@@ -434,9 +462,9 @@ const productionQueue = {
       }
     }
   },
+
   cancelProduction: function() {
     if (!this.current) return
-    
     const button = this.current.button
     const unitType = this.current.unitType
     
@@ -446,11 +474,8 @@ const productionQueue = {
     // Remove item from queue
     this.items.shift()
     
-    // Count remaining items of this type
-    let remainingCount = this.items.filter(item => item.button === button).length;
-    
     // Update batch counter
-    this.updateBatchCounter(button, remainingCount);
+    this.updateBatchCounter(button, this.items.filter(item => item.button === button).length)
     
     // Reset the progress bar
     const progressBar = button.querySelector('.production-progress')
@@ -473,21 +498,17 @@ productionButtons.querySelectorAll('.production-button').forEach(button => {
   button.addEventListener('click', () => {
     const unitType = button.getAttribute('data-unit-type')
     const cost = unitCosts[unitType] || 0
-    
     if (gameState.money < cost) {
       // Show visual feedback for not enough money
       button.classList.add('error')
       setTimeout(() => button.classList.remove('error'), 300)
       return
     }
-    
-    // Add to production queue
     productionQueue.addItem(unitType, button)
   })
-  
+
   button.addEventListener('contextmenu', (e) => {
     e.preventDefault()
-    
     // Check if this button has the current production
     if (productionQueue.current && productionQueue.current.button === button) {
       if (!productionQueue.paused) {
@@ -511,9 +532,7 @@ productionButtons.querySelectorAll('.production-button').forEach(button => {
           const remainingCount = productionQueue.items.filter(
             item => item.button === button
           ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
-          
           productionQueue.updateBatchCounter(button, remainingCount);
-          
           break; // Only remove one at a time
         }
       }
@@ -677,9 +696,9 @@ function animate(timestamp) {
 
 // Helper function to check valid position
 function isValidPosition(x, y, mapGrid) {
-  return y >= 0 && y < mapGrid.length && 
-         x >= 0 && x < mapGrid[0].length && 
-         mapGrid[y][x].type !== 'water' && 
+  return y >= 0 && y < mapGrid.length &&
+         x >= 0 && x < mapGrid[0].length &&
+         mapGrid[y][x].type !== 'water' &&
          mapGrid[y][x].type !== 'rock'
 }
 

@@ -100,7 +100,14 @@ html, body {
   background-color: #4CAF50;
   width: 0%;
   z-index: 3;
-  transition: width 0.1s linear;
+  /* Modify the transition for smoother resets */
+  transition: width 0.1s ease-out;
+}
+
+/* Add a specific class for completed progress that will reset without transition */
+.production-progress.reset {
+  transition: none;
+  width: 0% !important;
 }
 
 /* Batch counter for production buttons */
