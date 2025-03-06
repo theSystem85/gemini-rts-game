@@ -431,6 +431,8 @@ const productionQueue = {
         // Reset the start time to account for the pause
         this.current.startTime = performance.now() - (this.current.progress * this.current.duration)
         this.startNextProduction()
+      } else {
+        playSound('productionPaused') // Play pause sound
       }
     }
   },
@@ -439,6 +441,9 @@ const productionQueue = {
     
     const button = this.current.button
     const unitType = this.current.unitType
+    
+    // Play cancel sound before cancelling
+    playSound('productionCancelled')
     
     // Return money for the current production
     gameState.money += unitCosts[unitType] || 0
