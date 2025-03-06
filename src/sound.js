@@ -11,7 +11,9 @@ const soundMapping = {
   movement: 'tankMove',
   shoot: 'tankShot',
   shoot_rocket: 'patriotMissile', // updated: rocket tank now uses patriotMissile sounds
-  productionStart: null,
+  productionStart: 'constructionStarted',
+  productionPaused: 'constructionPaused',
+  productionCancelled: 'constructionCancelled',
   productionReady: 'productionReady',
   bulletHit: 'bulletHit',
   harvest: null,
@@ -27,7 +29,11 @@ const soundFiles = {
   bulletHit: ['bulletHit01.mp3'],
   deposit: ['deposit.mp3'],
   unitSelection: ['yesSir01.mp3'],
-  patriotMissile: ['patriotMissile01.mp3', 'patriotMissile02.mp3']
+  patriotMissile: ['patriotMissile01.mp3', 'patriotMissile02.mp3'],
+  constructionStarted: ['construction_started.mp3', 'building.mp3'],
+  constructionPaused: ['construction_paused.mp3'],
+  constructionCancelled: ['construction_cancelled.mp3'],
+  building: ['building.mp3']
 }
 
 const activeAudioElements = new Map();
