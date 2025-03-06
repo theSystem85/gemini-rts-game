@@ -45,9 +45,11 @@ export function moveUnitAlongPath(unit, nextTileX, nextTileY, delta, speed) {
     unit.tileY = nextTileY;
     return true; // Reached next tile
   } else {
-    // Otherwise move towards it
-    unit.x += (dx / distance) * effectiveSpeed;
-    unit.y += (dy / distance) * effectiveSpeed;
+    // Otherwise move towards it - ensure equal speed in all directions
+    const normalizedDx = dx / distance;
+    const normalizedDy = dy / distance;
+    unit.x += normalizedDx * effectiveSpeed;
+    unit.y += normalizedDy * effectiveSpeed;
     return false; // Still moving
   }
 }

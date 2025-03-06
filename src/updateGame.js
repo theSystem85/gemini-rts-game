@@ -92,26 +92,14 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
       let effectiveSpeed = unit.effectiveSpeed * 0.5 // Reduce base speed by half
 
-      // Apply street speed bonus (reduced from 2x to 1.5x)
+      // Apply street speed bonus
       if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
-        effectiveSpeed *= 1.5
+        effectiveSpeed *= 1.5  // Changed from 1.1 to consistent 50% boost
       }
 
-      // Further reduce speed in combat situations
-      if (unit.target || unit.isDodging) {
-        effectiveSpeed *= 0.6 // 60% speed when in combat or dodging
-      }
-
-      // Cap maximum speed
-      effectiveSpeed = Math.min(effectiveSpeed, 2)
       // Before using tile indices, clamp them so we don't access out-of-bound indices.
       unit.tileX = Math.max(0, Math.min(unit.tileX || 0, mapGrid[0].length - 1))
       unit.tileY = Math.max(0, Math.min(unit.tileY || 0, mapGrid.length - 1))
-
-      // Apply same speed rules for all units (player and enemy)
-      if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
-        effectiveSpeed *= 2
-      }
 
       // --- Movement Along Path ---
       // Apply consistent movement logic for all units with paths
@@ -522,7 +510,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
             // Apply street speed bonus
             if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
-              effectiveSpeed *= 2
+              effectiveSpeed *= 1.5  // Changed from 2 to consistent 50% boost
             }
 
             if (distance < effectiveSpeed) {

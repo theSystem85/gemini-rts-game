@@ -214,7 +214,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       
       // Give bonus movement for streets
       const isStreet = mapGrid[neighbor.y][neighbor.x].type === 'street';
-      const terrainFactor = isStreet ? 0.8 : 1.0; // 20% faster on streets
+      const terrainFactor = isStreet ? 0.67 : 1.0; // 33% less cost (50% faster) on streets
       
       // Calculate g score (cost from start to this neighbor via current path)
       const gScore = currentNode.g + (movementCost * terrainFactor);
