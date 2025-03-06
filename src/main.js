@@ -3,10 +3,11 @@ import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { gameState } from './gameState.js'
 import { setupInputHandlers, selectionActive, selectionStartExport, selectionEndExport } from './inputHandler.js'
 import { renderGame, renderMinimap } from './rendering.js'
-import { spawnUnit } from './units.js'
+import { spawnUnit, findPath } from './units.js'
 import { initFactories } from './factories.js'
 import { playSound, initBackgroundMusic, toggleBackgroundMusic } from './sound.js'
 import { updateGame } from './updateGame.js'
+import { findClosestOre } from './logic.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
@@ -307,7 +308,8 @@ setupInputHandlers(units, factories, mapGrid)
 const unitCosts = {
   tank: 1000,
   rocketTank: 2000,
-  harvester: 500
+  harvester: 500,
+  'tank-v2': 2000
 }
 
 // Enhanced production queue system
@@ -330,111 +332,95 @@ const productionQueue = {
   },
   
   addItem: function(unitType, button) {
+    const cost = unitCosts[unitType] || 0;
+    // Immediately deduct cost when button is clicked
+    if (gameState.money < cost) {
+      // Optionally show an error feedback here
+      return;
+    }
+    gameState.money -= cost;
     // Add to queue
     this.items.push({ unitType, button });
-    
-    // Count only queued items
     let currentCount = this.items.filter(item => item.button === button).length;
-    
-    // Update batch counter with the correct total
     this.updateBatchCounter(button, currentCount);
-    
-    // Start production if not already in progress
     if (!this.current && !this.paused) {
       this.startNextProduction();
     }
   },
+  
   startNextProduction: function() {
-    if (this.items.length === 0 || this.paused) return
-    
-    const item = this.items[0]
-    const cost = unitCosts[item.unitType] || 0
-    
-    if (gameState.money < cost) {
-      // Not enough money, check again later
-      setTimeout(() => this.startNextProduction(), 1000)
-      return
-    }
-    
-    // Deduct the cost
-    gameState.money -= cost
-    
-    // Start the production
+    if (this.items.length === 0 || this.paused) return;
+    const item = this.items[0];
+    const cost = unitCosts[item.unitType] || 0;
+    // Set production duration proportional to cost.
+    // For example: harvester (cost 500) takes 3000ms, so duration = 3000 * (cost/500)
+    const baseDuration = 3000;
+    const duration = baseDuration * (cost / 500);
     this.current = {
       unitType: item.unitType,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
-      duration: 3000 // 3 seconds
+      duration: duration
     }
-    
     // Mark button as active
-    item.button.classList.add('active')
-    
-    playSound('productionStart')
+    item.button.classList.add('active');
+    playSound('productionStart');
   },
+  
   updateProgress: function(timestamp) {
-    if (!this.current || this.paused) return
-    
-    const elapsed = timestamp - this.current.startTime
-    const progress = Math.min(elapsed / this.current.duration, 1)
-    this.current.progress = progress
-    
-    // Update the progress bar
-    const progressBar = this.current.button.querySelector('.production-progress')
+    if (!this.current || this.paused) return;
+    const elapsed = timestamp - this.current.startTime;
+    const progress = Math.min(elapsed / this.current.duration, 1);
+    this.current.progress = progress;
+    const progressBar = this.current.button.querySelector('.production-progress');
     if (progressBar) {
-      progressBar.style.width = `${progress * 100}%`
+      progressBar.style.width = `${progress * 100}%`;
     }
-    
     if (progress >= 1) {
-      // Production complete
-      this.completeCurrentProduction()
+      this.completeCurrentProduction();
     }
   },
+  
   completeCurrentProduction: function() {
-    if (!this.current) return
-    
-    const unitType = this.current.unitType
-    const button = this.current.button
-    
-    // Remove item from queue and get count of remaining items of this type
+    if (!this.current) return;
+    const unitType = this.current.unitType;
+    // Remove item from queue
     this.items.shift();
-    let remainingCount = this.items.filter(item => item.button === button).length;
+    this.updateBatchCounter(this.current.button, this.items.filter(item => item.button === this.current.button).length);
     
-    // Update batch counter
-    this.updateBatchCounter(button, remainingCount);
-    
-    // Reset the progress bar
-    const progressBar = button.querySelector('.production-progress')
-    if (progressBar) {
-      progressBar.style.width = '0%'
-    }
-    
-    // Spawn the unit with all required parameters
-    const playerFactory = factories.find(f => f.id === 'player') // Changed from owner to id
+    // Spawn the unit
+    const playerFactory = factories.find(f => f.id === 'player');
     if (playerFactory) {
-      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid)
-      // Add the new unit to the units array if it was created successfully
+      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
       if (newUnit) {
-        units.push(newUnit)
-        playSound('productionReady') // Add sound feedback for unit creation
+        units.push(newUnit);
+        playSound('productionReady');
+        // If the produced unit is a harvester, automatically send it to harvest.
+        if (newUnit.type === 'harvester') {
+          // Assume findClosestOre and findPath have been imported.
+          const orePos = findClosestOre(newUnit, mapGrid);
+          if (orePos) {
+            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
+            if (newPath.length > 1) {
+              newUnit.path = newPath.slice(1);
+            }
+          }
+        }
       } else {
-        // If unit creation failed, refund the cost
-        console.warn("Failed to spawn unit - refunding cost")
-        gameState.money += unitCosts[unitType] || 0
+        console.warn("Failed to spawn unit - refunding cost");
+        gameState.money += unitCosts[unitType] || 0;
       }
     }
-    
-    // Clear current production
-    this.current = null
-    
-    // Start next item in queue if available
+    this.current = null;
     if (this.items.length > 0) {
-      setTimeout(() => this.startNextProduction(), 100)
+      this.startNextProduction();
     }
-    
-    playSound('productionComplete')
+    playSound('productionComplete');
+    // Remove active/paused classes from button
+    this.current && this.current.button.classList.remove('active', 'paused');
   },
+  
   togglePause: function() {
     this.paused = !this.paused
     
