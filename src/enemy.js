@@ -1,7 +1,6 @@
 // enemy.js
 import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
-import { playSound } from './sound.js'
 import { getUniqueId } from './utils.js'
 
 /* 
