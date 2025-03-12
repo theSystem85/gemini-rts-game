@@ -7,7 +7,8 @@ import {
   TANK_FIRE_RANGE,
   HARVESTER_CAPPACITY,
   PATH_CALC_INTERVAL,
-  PATHFINDING_THRESHOLD
+  PATHFINDING_THRESHOLD,
+  SAFE_RANGE_ENABLED
 } from './config.js'
 import { findPath, buildOccupancyMap, resolveUnitCollisions } from './units.js'
 import { playSound } from './sound.js'
@@ -195,23 +196,25 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           TILE_SIZE * 2 + explosionSafetyBuffer // explosion radius + buffer
         )
 
-        // Calculate the desired center position to maintain safe range
-        const desiredCenterX = targetCenterX - (dx / currentDist) * desiredDist
-        const desiredCenterY = targetCenterY - (dy / currentDist) * desiredDist
+        if (SAFE_RANGE_ENABLED) {
+          // Calculate the desired center position to maintain safe range
+          const desiredCenterX = targetCenterX - (dx / currentDist) * desiredDist
+          const desiredCenterY = targetCenterY - (dy / currentDist) * desiredDist
 
-        // Compute target top-left positions for this unit.
-        const desiredX = desiredCenterX - TILE_SIZE / 2
-        const desiredY = desiredCenterY - TILE_SIZE / 2
-        // Smoothly interpolate toward the desired position, scaled by unit speed.
-        // Apply the same movement speed limit for both player and enemy units
-        const diffX = desiredX - unit.x
-        const diffY = desiredY - unit.y
-        const diffDist = Math.hypot(diffX, diffY)
-        if (diffDist > 1) { // only move if significant difference exists
-          const moveX = (diffX / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
-          const moveY = (diffY / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
-          unit.x += moveX
-          unit.y += moveY
+          // Compute target top-left positions for this unit.
+          const desiredX = desiredCenterX - TILE_SIZE / 2
+          const desiredY = desiredCenterY - TILE_SIZE / 2
+          // Smoothly interpolate toward the desired position, scaled by unit speed.
+          // Apply the same movement speed limit for both player and enemy units
+          const diffX = desiredX - unit.x
+          const diffY = desiredY - unit.y
+          const diffDist = Math.hypot(diffX, diffY)
+          if (diffDist > 1) { // only move if significant difference exists
+            const moveX = (diffX / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
+            const moveY = (diffY / diffDist) * Math.min(effectiveSpeed, 2) // Cap at speed 2
+            unit.x += moveX
+            unit.y += moveY
+          }
         }
 
         // Define a threshold (90% of firing range) for moving closer to target
@@ -519,11 +522,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           if (!unit.isRotating) {
             const distance = Math.hypot(dx, dy)
             let effectiveSpeed = unit.effectiveSpeed
-
-            // Apply street speed bonus
-            if (mapGrid[unit.tileY][unit.tileX].type === 'street') {
-              effectiveSpeed *= 2
-            }
 
             if (distance < effectiveSpeed) {
               unit.x = targetPos.x

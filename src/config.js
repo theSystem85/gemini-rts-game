@@ -4,6 +4,7 @@ export const MAP_TILES_X = 100
 export const MAP_TILES_Y = 100
 export const MAP_WIDTH = MAP_TILES_X * TILE_SIZE
 export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
+export const SAFE_RANGE_ENABLED = false
 
 // HARVESTER_CAPPACITY is now 1 (so a harvester unloads as soon as it harvests one unit)
 export const HARVESTER_CAPPACITY = 1
