@@ -388,13 +388,48 @@ export function setupInputHandlers(units, factories, mapGrid) {
               }
               const destX = Math.floor(worldX) + formationOffset.x
               const destY = Math.floor(worldY) + formationOffset.y
-              const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
+              const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
+              
+              // Check if this tile is already targeted by previously processed units
+              const alreadyTargeted = selectedUnits.slice(0, index).some(u => 
+                u.moveTarget && u.moveTarget.x === originalDestTile.x && u.moveTarget.y === originalDestTile.y
+              );
+              
+              // If already targeted, find an adjacent free tile instead
+              let destTile = originalDestTile;
+              if (alreadyTargeted) {
+                const directions = [
+                  {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0},
+                  {dx: 1, dy: -1}, {dx: 1, dy: 1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}
+                ];
+                
+                for (const dir of directions) {
+                  const newTile = { 
+                    x: originalDestTile.x + dir.dx, 
+                    y: originalDestTile.y + dir.dy 
+                  };
+                  
+                  // Check if this new tile is valid and not targeted
+                  if (newTile.x >= 0 && newTile.y >= 0 && 
+                      newTile.x < mapGrid[0].length && newTile.y < mapGrid.length &&
+                      mapGrid[newTile.y][newTile.x].type !== 'water' &&
+                      mapGrid[newTile.y][newTile.x].type !== 'rock' &&
+                      mapGrid[newTile.y][newTile.x].type !== 'building' &&
+                      !selectedUnits.slice(0, index).some(u => 
+                        u.moveTarget && u.moveTarget.x === newTile.x && u.moveTarget.y === newTile.y
+                      )) {
+                    destTile = newTile;
+                    break;
+                  }
+                }
+              }
+              
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
               if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
-                unit.path = path.slice(1)
-                unit.target = null
-                unit.moveTarget = destTile // Store the final destination
-                playSound('movement')
+                unit.path = path.slice(1);
+                unit.target = null;
+                unit.moveTarget = destTile; // Store the final destination
+                playSound('movement');
               }
             }
           })
