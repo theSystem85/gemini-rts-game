@@ -173,6 +173,21 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) add tabs for building menu to contain units and buildings. When the buildings tab is clicked to become active the units build options get swapped by the buildings build options and vice versa.
+(-) when a building is build 100% it can be selected in the sidebar and then the cursor when hovered over the game map shows a transparent layout of the building where it might be placed. When user then left clicks on a free place on the map (none of the tiles of the buildings foundation should be blocked by rocks, other buildings, water, units) then the building can be placed there. If there is a blocking tile the overlay turns from 50% transparend green to 50% transparent red on that tile. A finished construction can be aborted by right click on the buildings build button in the sidebar. The the player gets the money back.
+(-) add power plant to the building options costing 2000$ and its size is 2x3 tiles. It provies 100 power to the base.
+(-) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
+(-) add a radar station building to the buildings options. Its size is 2x3 tiles. Its armor is 2 times that of a tank. When build the radar station enables the overview map. Before that map is just gray. It consumes 50 energy.
+(-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
+(-) any building can be repaired by clicking the repair button in the side menu and then on a building. As soon as player click right click the repair mode is deselected again. Repairing x% of a building cost x * 0.3 of what it would have cost to build it again. Repairing a building restores the healthbar of that building. 
+(-) add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+(-) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
+(-) add cannon tower defense building costing 2000$ and consuming 20 energy. Its armor is 3 times that of a tank. Its range is same as a tank. Its projectiles are same as a tank. It automatically attacks any eney unit in range.
+(-) add concrete wall to building options. The wall prevents any tank projectiles from crossing. It costs 100$ and has 2 times the armor of a tank. Its size is 1x1. Its tile color is darker thank rock grey. It does not cost energy.
+(-) add rocket tower defense building costing 4000$ and consuming 50 energy. Its armor is 2 times that of a tank. Its range is the same a rocket tank. Its projectiles are same as a rocket tank. It automatically attacks any eney unit in range.
+(-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
+(-) make tank_v2 get 30% more health as tank_v1.
+(-) rename tank to tank_v1 in code and to Tank V1 in the UI.
 (-) the game starts in pause mode on startup or reload
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
