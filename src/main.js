@@ -400,20 +400,28 @@ const productionQueue = {
         playSound('productionReady');
         // If the produced unit is a harvester, automatically send it to harvest.
         if (newUnit.type === 'harvester') {
-          // Assume findClosestOre and findPath have been imported.
-          const orePos = findClosestOre(newUnit, mapGrid);
+          // Access the targetedOreTiles from the imported module
+          // We'll pass this to findClosestOre to avoid targeting the same ore as other harvesters
+          const targetedOreTiles = window.gameState?.targetedOreTiles || {};
+          
+          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
           if (orePos) {
+            // Register this ore tile as targeted by this unit
+            const tileKey = `${orePos.x},${orePos.y}`;
+            if (window.gameState?.targetedOreTiles) {
+              window.gameState.targetedOreTiles[tileKey] = newUnit.id;
+            }
+            
             const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
             if (newPath.length > 1) {
               newUnit.path = newPath.slice(1);
+              newUnit.oreField = orePos; // Set initial ore field target
             }
           }
         }
-      } else {
-        console.warn("Failed to spawn unit - refunding cost");
-        gameState.money += unitCosts[unitType] || 0;
       }
     }
+    
     this.current = null;
     if (this.items.length > 0) {
       this.startNextProduction();

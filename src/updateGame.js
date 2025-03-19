@@ -21,6 +21,7 @@ import {
 } from './logic.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
+const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
 
 export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
@@ -411,6 +412,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             if (!harvestedTiles.has(tileKey)) {
               if (!unit.oreField) {
                 unit.oreField = { x: unitTileX, y: unitTileY }
+                // Register this tile as targeted by this unit
+                targetedOreTiles[tileKey] = unit.id;
               }
               if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
                 unit.harvesting = true
@@ -420,6 +423,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
               }
             } else {
               // Tile is being harvested by another unit, find a new ore tile
+              if (unit.oreField) {
+                // Remove the previous targeting
+                const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`;
+                if (targetedOreTiles[prevTileKey] === unit.id) {
+                  delete targetedOreTiles[prevTileKey];
+                }
+              }
               unit.oreField = null;
             }
           }
@@ -431,12 +441,26 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             unit.harvesting = false
             const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
             harvestedTiles.delete(tileKey); // Free up the tile
+            
+            // Keep targeting this tile until it's depleted
             mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
+            
+            // Remove targeting once the tile is depleted
+            delete targetedOreTiles[tileKey];
             unit.oreField = null;
           }
         }
 
         if (unit.oreCarried >= HARVESTER_CAPPACITY) {
+          // Clear targeting when full of ore and returning to base
+          if (unit.oreField) {
+            const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
+            if (targetedOreTiles[tileKey] === unit.id) {
+              delete targetedOreTiles[tileKey];
+            }
+            unit.oreField = null;
+          }
+          
           const targetFactory = unit.owner === 'player'
             ? factories.find(f => f.id === 'player')
             : factories.find(f => f.id === 'enemy')
@@ -465,6 +489,21 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   unit.path = path.slice(1)
                 }
               }
+            }
+          }
+        }
+        
+        // After unloading, find a new ore tile that's not targeted
+        if (unit.oreCarried === 0 && !unit.harvesting && (!unit.path || unit.path.length === 0)) {
+          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles)
+          if (orePos) {
+            // Mark this ore tile as targeted by this unit
+            const tileKey = `${orePos.x},${orePos.y}`;
+            targetedOreTiles[tileKey] = unit.id;
+            
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
+            if (path.length > 1) {
+              unit.path = path.slice(1)
             }
           }
         }
