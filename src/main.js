@@ -21,7 +21,9 @@ const pauseBtn = document.getElementById('pauseBtn')
 const restartBtn = document.getElementById('restartBtn')
 const sidebar = document.getElementById('sidebar')
 
-const productionButtons = document.getElementById('productionButtons')
+// Replace the now-obsolete productionButtons reference
+// const productionButtons = document.getElementById('productionButtons')
+// Instead, we'll look for production buttons in both tabs later
 
 const startBtn = document.getElementById('startBtn')
 if (startBtn) {
@@ -474,57 +476,72 @@ const productionQueue = {
   }
 }
 
-productionButtons.querySelectorAll('.production-button').forEach(button => {
-  button.addEventListener('click', () => {
-    const unitType = button.getAttribute('data-unit-type')
-    const cost = unitCosts[unitType] || 0
-    
-    if (gameState.money < cost) {
-      // Show visual feedback for not enough money
-      button.classList.add('error')
-      setTimeout(() => button.classList.remove('error'), 300)
-      return
-    }
-    
-    // Add to production queue
-    productionQueue.addItem(unitType, button)
-  })
+// Replace the existing event listener setup for production buttons with this updated version
+// that targets both tabs of production buttons
+function setupProductionButtonListeners() {
+  // Select all unit production buttons from the units tab
+  const allProductionButtons = document.querySelectorAll('.production-button[data-unit-type]');
   
-  button.addEventListener('contextmenu', (e) => {
-    e.preventDefault()
-    
-    // Check if this button has the current production
-    if (productionQueue.current && productionQueue.current.button === button) {
-      if (!productionQueue.paused) {
-        // First right-click pauses
-        productionQueue.togglePause()
-      } else {
-        // Second right-click cancels
-        productionQueue.cancelProduction()
+  allProductionButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const unitType = button.getAttribute('data-unit-type');
+      const cost = unitCosts[unitType] || 0;
+      
+      if (gameState.money < cost) {
+        // Show visual feedback for not enough money
+        button.classList.add('error');
+        setTimeout(() => button.classList.remove('error'), 300);
+        return;
       }
-    } else {
-      // Find the last queued item of this type
-      for (let i = productionQueue.items.length - 1; i >= 0; i--) {
-        if (productionQueue.items[i].button === button) {
-          // Return money for the cancelled production
-          gameState.money += unitCosts[productionQueue.items[i].unitType] || 0;
-          
-          // Remove from queue
-          productionQueue.items.splice(i, 1);
-          
-          // Update batch counter
-          const remainingCount = productionQueue.items.filter(
-            item => item.button === button
-          ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
-          
-          productionQueue.updateBatchCounter(button, remainingCount);
-          
-          break; // Only remove one at a time
+      
+      // Add to production queue
+      productionQueue.addItem(unitType, button);
+    });
+    
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      
+      // Check if this button has the current production
+      if (productionQueue.current && productionQueue.current.button === button) {
+        if (!productionQueue.paused) {
+          // First right-click pauses
+          productionQueue.togglePause();
+        } else {
+          // Second right-click cancels
+          productionQueue.cancelProduction();
+        }
+      } else {
+        // Find the last queued item of this type
+        for (let i = productionQueue.items.length - 1; i >= 0; i--) {
+          if (productionQueue.items[i].button === button) {
+            // Return money for the cancelled production
+            gameState.money += unitCosts[productionQueue.items[i].unitType] || 0;
+            
+            // Remove from queue
+            productionQueue.items.splice(i, 1);
+            
+            // Update batch counter
+            const remainingCount = productionQueue.items.filter(
+              item => item.button === button
+            ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
+            
+            productionQueue.updateBatchCounter(button, remainingCount);
+            
+            break; // Only remove one at a time
+          }
         }
       }
-    }
-  })
-})
+    });
+  });
+}
+
+// Add a DOMContentLoaded event listener to ensure the buttons exist before attaching listeners
+document.addEventListener('DOMContentLoaded', () => {
+  setupProductionButtonListeners();
+});
+
+// Remove or comment out the old code that's causing the error
+// productionButtons.querySelectorAll('.production-button').forEach(button => { ... });
 
 pauseBtn.addEventListener('click', () => {
   gameState.gamePaused = !gameState.gamePaused
@@ -693,3 +710,66 @@ let lastFrameTime = null
 requestAnimationFrame(animate)
 
 gameLoop(performance.now())
+
+// Initialize production tabs
+function initProductionTabs() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      // Remove active class from all buttons and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked button
+      button.classList.add('active');
+      
+      // Show corresponding content
+      const tabName = button.getAttribute('data-tab');
+      document.getElementById(`${tabName}TabContent`).classList.add('active');
+    });
+  });
+  
+  // Setup building buttons
+  setupBuildingButtons();
+}
+
+function setupBuildingButtons() {
+  const buildingButtons = document.querySelectorAll('[data-building-type]');
+  
+  buildingButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const buildingType = button.getAttribute('data-building-type');
+      // We'll implement actual building production logic later
+      console.log(`Attempting to build: ${buildingType}`);
+      
+      // For now, we'll just show a message that this feature is coming soon
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = `Building ${buildingType} - Feature coming soon!`;
+      notification.style.position = 'absolute';
+      notification.style.top = '10px';
+      notification.style.left = '50%';
+      notification.style.transform = 'translateX(-50%)';
+      notification.style.backgroundColor = 'rgba(0,0,0,0.7)';
+      notification.style.color = 'white';
+      notification.style.padding = '10px 15px';
+      notification.style.borderRadius = '5px';
+      notification.style.zIndex = '1000';
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => notification.remove(), 500);
+      }, 2000);
+    });
+  });
+}
+
+// Make sure to initialize the tabs
+document.addEventListener('DOMContentLoaded', () => {
+  initProductionTabs();
+});

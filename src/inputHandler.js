@@ -651,6 +651,15 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
     }
   });
+
+  // Set up production buttons - make sure we now handle buttons in both tabs
+  const allProductionButtons = document.querySelectorAll('.production-button[data-unit-type]');
+  allProductionButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const unitType = button.getAttribute('data-unit-type');
+      productionQueue.addItem(unitType, button);
+    });
+  });
 }
 
 function handleBoundingBoxSelection(units, factories) {
