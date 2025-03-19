@@ -129,12 +129,18 @@ export function isAdjacentToFactory(unit, factory) {
   return false
 }
 
-export function findClosestOre(unit, mapGrid) {
+export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
   let closest = null
   let closestDist = Infinity
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       if (mapGrid[y][x].type === 'ore') {
+        // Skip this ore tile if it's already targeted by another unit
+        const tileKey = `${x},${y}`;
+        if (targetedOreTiles[tileKey] && targetedOreTiles[tileKey] !== unit.id) {
+          continue;
+        }
+        
         const dx = x - unit.tileX
         const dy = y - unit.tileY
         const dist = Math.hypot(dx, dy)

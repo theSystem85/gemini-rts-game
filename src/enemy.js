@@ -20,6 +20,9 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const playerFactory = factories.find(f => f.id === 'player')
   const enemyFactory = factories.find(f => f.id === 'enemy')
 
+  // Get targeted ore tiles from gameState
+  const targetedOreTiles = gameState.targetedOreTiles || {};
+
   // --- Enemy Production ---
   if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
     // Ensure enemy always has at least one harvester
@@ -228,6 +231,15 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 3000)
       if (pathRecalcNeeded && (!unit.path || unit.path.length === 0)) {
         if (unit.oreCarried >= 5) {
+          // Clear targeting when full of ore and returning to base
+          if (unit.oreField) {
+            const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
+            if (targetedOreTiles[tileKey] === unit.id) {
+              delete targetedOreTiles[tileKey];
+            }
+            unit.oreField = null;
+          }
+
           const targetFactory = factories.find(f => f.id === 'enemy')
           const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
           if (unloadTarget) {
@@ -243,8 +255,12 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             }
           }
         } else if (!unit.harvesting) {
-          const orePos = findClosestOre(unit, mapGrid)
+          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles)
           if (orePos) {
+            // Mark this ore tile as targeted by this unit
+            const tileKey = `${orePos.x},${orePos.y}`;
+            targetedOreTiles[tileKey] = unit.id;
+
             const path = findPath(
               { x: unit.tileX, y: unit.tileY },
               orePos,
@@ -254,6 +270,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             if (path.length > 1) {
               unit.path = path.slice(1)
               unit.lastPathCalcTime = now
+              unit.oreField = orePos; // Set target ore field
             }
           }
         }
@@ -356,24 +373,9 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
   return unit
 }
 
-// Find the closest ore tile from a unit's position
-function findClosestOre(unit, mapGrid) {
-  let closest = null
-  let closestDist = Infinity
-  for (let y = 0; y < mapGrid.length; y++) {
-    for (let x = 0; x < mapGrid[0].length; x++) {
-      if (mapGrid[y][x].type === 'ore') {
-        const dx = x - unit.tileX
-        const dy = y - unit.tileY
-        const dist = Math.hypot(dx, dy)
-        if (dist < closestDist) {
-          closestDist = dist
-          closest = { x, y }
-        }
-      }
-    }
-  }
-  return closest
+// Find the closest ore tile from a unit's position that isn't already targeted
+function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
+  return globalFindClosestOre(unit, mapGrid, targetedOreTiles);
 }
 
 // Find an adjacent tile to the factory that is not a building
