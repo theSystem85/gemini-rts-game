@@ -15,5 +15,13 @@ export const gameState = {
   enemyLastProductionTime: performance.now(),
   lastOreUpdate: performance.now(),
   explosions: [],  // Initialized empty explosions array for visual effects.
-  speedMultiplier: 0.25  // Changed from 1.0 to 0.5
+  speedMultiplier: 0.25,  // Changed from 1.0 to 0.5
+
+  // Building related properties
+  buildings: [],
+  powerSupply: 0,
+  buildingPlacementMode: false,
+  currentBuildingType: null,
+  cursorX: 0,
+  cursorY: 0
 }

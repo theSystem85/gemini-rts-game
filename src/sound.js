@@ -36,6 +36,15 @@ const soundFiles = {
   building: ['building.mp3']
 }
 
+// Sound file paths
+const soundPaths = {
+  // ... existing sounds ...
+  
+  // Building-related sounds
+  buildingPlaced: 'sounds/building_placed.mp3',
+  error: 'sounds/error.mp3',
+}
+
 const activeAudioElements = new Map();
 
 function playAssetSound(category) {
