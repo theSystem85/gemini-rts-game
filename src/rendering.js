@@ -1,10 +1,15 @@
 // rendering.js
 import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
 import { tileToPixel } from './utils.js'
+import { buildingData, isTileValid } from './buildings.js';
 
-export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+
+  if (!gameState) {
+    return;
+  }
   // If game over, render win/lose overlay and stop drawing further
-  if (gameState.gameOver && gameState.gameOverMessage) {
+  if (gameState?.gameOver && gameState?.gameOverMessage) {
     const messageX = gameCanvas.width / 2; // added declaration
     const messageY = gameCanvas.height / 2;
     gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -33,6 +38,47 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.strokeStyle = 'rgba(0,0,0,0.1)'
       gameCtx.strokeRect(x * TILE_SIZE - scrollOffset.x, y * TILE_SIZE - scrollOffset.y, TILE_SIZE, TILE_SIZE)
     }
+  }
+  
+  // Draw buildings if they exist
+  if (buildings && buildings.length > 0) {
+    buildings.forEach(building => {
+      const screenX = building.x * TILE_SIZE - scrollOffset.x;
+      const screenY = building.y * TILE_SIZE - scrollOffset.y;
+      const width = building.width * TILE_SIZE;
+      const height = building.height * TILE_SIZE;
+      
+      // Draw building base
+      gameCtx.fillStyle = '#777';
+      gameCtx.fillRect(screenX, screenY, width, height);
+      
+      // Draw building outline
+      gameCtx.strokeStyle = '#000';
+      gameCtx.lineWidth = 2;
+      gameCtx.strokeRect(screenX, screenY, width, height);
+      
+      // Draw building type identifier
+      gameCtx.fillStyle = '#fff';
+      gameCtx.font = '10px Arial';
+      gameCtx.textAlign = 'center';
+      gameCtx.fillText(building.type, screenX + width / 2, screenY + height / 2);
+      
+      // Draw health bar if damaged
+      if (building.health < building.maxHealth) {
+        const healthBarWidth = width;
+        const healthBarHeight = 5;
+        const healthPercentage = building.health / building.maxHealth;
+        
+        // Background
+        gameCtx.fillStyle = '#333';
+        gameCtx.fillRect(screenX, screenY - 10, healthBarWidth, healthBarHeight);
+        
+        // Health
+        gameCtx.fillStyle = healthPercentage > 0.6 ? '#0f0' : 
+                             healthPercentage > 0.3 ? '#ff0' : '#f00';
+        gameCtx.fillRect(screenX, screenY - 10, healthBarWidth * healthPercentage, healthBarHeight);
+      }
+    });
   }
   
   // Draw factories.
@@ -239,9 +285,57 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.strokeRect(flagX, flagY, TILE_SIZE, TILE_SIZE);
     }
   });
+
+  // Draw building placement overlay if in placement mode
+  if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
+    const buildingInfo = buildingData[gameState.currentBuildingType];
+    
+    if (buildingInfo) {
+      const mouseX = gameState.cursorX;
+      const mouseY = gameState.cursorY;
+      
+      // Get tile position based on mouse coordinates
+      const tileX = Math.floor(mouseX / TILE_SIZE);
+      const tileY = Math.floor(mouseY / TILE_SIZE);
+      
+      // Draw placement grid
+      for (let y = 0; y < buildingInfo.height; y++) {
+        for (let x = 0; x < buildingInfo.width; x++) {
+          const currentTileX = tileX + x;
+          const currentTileY = tileY + y;
+          
+          // Calculate screen coordinates
+          const screenX = currentTileX * TILE_SIZE - scrollOffset.x;
+          const screenY = currentTileY * TILE_SIZE - scrollOffset.y;
+          
+          // Check if valid placement for this tile
+          const isValid = isTileValid(currentTileX, currentTileY, mapGrid, units);
+          
+          // Draw tile with appropriate color
+          gameCtx.fillStyle = isValid ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+          gameCtx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+          
+          // Draw tile outline
+          gameCtx.strokeStyle = '#fff';
+          gameCtx.lineWidth = 1;
+          gameCtx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
+      }
+      
+      // Draw building name above cursor
+      gameCtx.fillStyle = '#fff';
+      gameCtx.font = '14px Arial';
+      gameCtx.textAlign = 'center';
+      gameCtx.fillText(
+        buildingInfo.displayName, 
+        tileX * TILE_SIZE + (buildingInfo.width * TILE_SIZE / 2) - scrollOffset.x, 
+        tileY * TILE_SIZE - 10 - scrollOffset.y
+      );
+    }
+  }
 }
 
-export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units) {
+export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings) {
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height)
   const scaleX = minimapCanvas.width / (mapGrid[0].length * TILE_SIZE)
   const scaleY = minimapCanvas.height / (mapGrid.length * TILE_SIZE)
@@ -262,4 +356,17 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
   minimapCtx.strokeStyle = '#FF0'
   minimapCtx.lineWidth = 2
   minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY)
+
+  // Draw buildings if they exist
+  if (buildings && buildings.length > 0) {
+    minimapCtx.fillStyle = '#555';
+    buildings.forEach(building => {
+      minimapCtx.fillRect(
+        building.x * scaleX,
+        building.y * scaleY,
+        building.width * scaleX,
+        building.height * scaleY
+      );
+    });
+  }
 }

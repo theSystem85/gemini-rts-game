@@ -8,6 +8,7 @@ import { initFactories } from './factories.js'
 import { playSound, initBackgroundMusic, toggleBackgroundMusic } from './sound.js'
 import { updateGame } from './updateGame.js'
 import { findClosestOre } from './logic.js'
+import { buildingData, createBuilding, canPlaceBuilding, isTileValid, placeBuilding, updatePowerSupply } from './buildings.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
@@ -314,6 +315,12 @@ const unitCosts = {
   'tank-v2': 2000
 }
 
+// Add buildingCosts based on our building data
+const buildingCosts = {};
+for (const [type, data] of Object.entries(buildingData)) {
+  buildingCosts[type] = data.cost;
+}
+
 // Enhanced production queue system
 const productionQueue = {
   items: [],
@@ -333,18 +340,24 @@ const productionQueue = {
     }
   },
   
-  addItem: function(unitType, button) {
-    const cost = unitCosts[unitType] || 0;
+  addItem: function(type, button, isBuilding = false) {
+    const cost = isBuilding ? buildingCosts[type] : unitCosts[type] || 0;
+    
     // Immediately deduct cost when button is clicked
     if (gameState.money < cost) {
-      // Optionally show an error feedback here
+      // Show error feedback
+      button.classList.add('error');
+      setTimeout(() => button.classList.remove('error'), 300);
       return;
     }
+    
     gameState.money -= cost;
+    
     // Add to queue
-    this.items.push({ unitType, button });
+    this.items.push({ type, button, isBuilding });
     let currentCount = this.items.filter(item => item.button === button).length;
     this.updateBatchCounter(button, currentCount);
+    
     if (!this.current && !this.paused) {
       this.startNextProduction();
     }
@@ -353,18 +366,21 @@ const productionQueue = {
   startNextProduction: function() {
     if (this.items.length === 0 || this.paused) return;
     const item = this.items[0];
-    const cost = unitCosts[item.unitType] || 0;
+    const cost = item.isBuilding ? buildingCosts[item.type] : unitCosts[item.type] || 0;
+    
     // Set production duration proportional to cost.
-    // For example: harvester (cost 500) takes 3000ms, so duration = 3000 * (cost/500)
     const baseDuration = 3000;
     const duration = baseDuration * (cost / 500);
+    
     this.current = {
-      unitType: item.unitType,
+      type: item.type,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
-      duration: duration
+      duration: duration,
+      isBuilding: item.isBuilding
     }
+    
     // Mark button as active
     item.button.classList.add('active');
     playSound('productionStart');
@@ -386,36 +402,65 @@ const productionQueue = {
   
   completeCurrentProduction: function() {
     if (!this.current) return;
-    const unitType = this.current.unitType;
+    
     // Remove item from queue
     this.items.shift();
     this.updateBatchCounter(this.current.button, this.items.filter(item => item.button === this.current.button).length);
     
-    // Spawn the unit
-    const playerFactory = factories.find(f => f.id === 'player');
-    if (playerFactory) {
-      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
-      if (newUnit) {
-        units.push(newUnit);
-        playSound('productionReady');
-        // If the produced unit is a harvester, automatically send it to harvest.
-        if (newUnit.type === 'harvester') {
-          // Access the targetedOreTiles from the imported module
-          // We'll pass this to findClosestOre to avoid targeting the same ore as other harvesters
-          const targetedOreTiles = window.gameState?.targetedOreTiles || {};
+    // Handle completion based on type
+    if (this.current.isBuilding) {
+      // Building completion - enter placement mode
+      gameState.buildingPlacementMode = true;
+      gameState.currentBuildingType = this.current.type;
+      
+      // Show notification to place building
+      showNotification(`Click on the map to place your ${buildingData[this.current.type].displayName}`);
+      
+      // Remove active state but keep button marked for placement
+      this.current.button.classList.remove('active');
+      this.current.button.classList.add('ready-for-placement');
+      
+      playSound('productionReady');
+      
+      // Temporarily store the current item for cancellation
+      this.completedBuilding = {
+        type: this.current.type,
+        button: this.current.button
+      };
+      
+      this.current = null;
+      
+      // Don't start next production until this building is placed
+      return;
+    } else {
+      // Unit production - spawn the unit
+      const unitType = this.current.type;
+      const playerFactory = factories.find(f => f.id === 'player');
+      
+      if (playerFactory) {
+        const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
+        if (newUnit) {
+          units.push(newUnit);
+          playSound('productionReady');
           
-          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
-          if (orePos) {
-            // Register this ore tile as targeted by this unit
-            const tileKey = `${orePos.x},${orePos.y}`;
-            if (window.gameState?.targetedOreTiles) {
-              window.gameState.targetedOreTiles[tileKey] = newUnit.id;
-            }
+          // If the produced unit is a harvester, automatically send it to harvest
+          if (newUnit.type === 'harvester') {
+            // Access the targetedOreTiles from the imported module
+            const targetedOreTiles = window.gameState?.targetedOreTiles || {};
             
-            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
-            if (newPath.length > 1) {
-              newUnit.path = newPath.slice(1);
-              newUnit.oreField = orePos; // Set initial ore field target
+            const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
+            if (orePos) {
+              // Register this ore tile as targeted by this unit
+              const tileKey = `${orePos.x},${orePos.y}`;
+              if (window.gameState?.targetedOreTiles) {
+                window.gameState.targetedOreTiles[tileKey] = newUnit.id;
+              }
+              
+              const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
+              if (newPath.length > 1) {
+                newUnit.path = newPath.slice(1);
+                newUnit.oreField = orePos; // Set initial ore field target
+              }
             }
           }
         }
@@ -431,35 +476,23 @@ const productionQueue = {
     this.current && this.current.button.classList.remove('active', 'paused');
   },
   
-  togglePause: function() {
-    this.paused = !this.paused
-    
-    if (this.current) {
-      this.current.button.classList.toggle('paused', this.paused)
-      
-      if (!this.paused) {
-        // Reset the start time to account for the pause
-        this.current.startTime = performance.now() - (this.current.progress * this.current.duration)
-        this.startNextProduction()
-      } else {
-        playSound('productionPaused') // Play pause sound
-      }
-    }
-  },
+  // ... existing togglePause method ...
+  
   cancelProduction: function() {
-    if (!this.current) return
+    if (!this.current) return;
     
-    const button = this.current.button
-    const unitType = this.current.unitType
+    const button = this.current.button;
+    const type = this.current.type;
+    const isBuilding = this.current.isBuilding;
     
     // Play cancel sound before cancelling
-    playSound('productionCancelled')
+    playSound('productionCancelled');
     
     // Return money for the current production
-    gameState.money += unitCosts[unitType] || 0
+    gameState.money += isBuilding ? buildingCosts[type] || 0 : unitCosts[type] || 0;
     
     // Remove item from queue
-    this.items.shift()
+    this.items.shift();
     
     // Count remaining items of this type
     let remainingCount = this.items.filter(item => item.button === button).length;
@@ -468,18 +501,50 @@ const productionQueue = {
     this.updateBatchCounter(button, remainingCount);
     
     // Reset the progress bar
-    const progressBar = button.querySelector('.production-progress')
+    const progressBar = button.querySelector('.production-progress');
     if (progressBar) {
-      progressBar.style.width = '0%'
+      progressBar.style.width = '0%';
     }
     
     // Clear current production
-    this.current = null
-    this.paused = false
+    this.current = null;
+    this.paused = false;
     
     // Start next item in queue if available
     if (this.items.length > 0) {
-      this.startNextProduction()
+      this.startNextProduction();
+    }
+  },
+  
+  // New method to cancel a building placement
+  cancelBuildingPlacement: function() {
+    if (!this.completedBuilding) return;
+    
+    const button = this.completedBuilding.button;
+    const type = this.completedBuilding.type;
+    
+    // Play cancel sound
+    playSound('productionCancelled');
+    
+    // Return money for the building
+    gameState.money += buildingCosts[type] || 0;
+    
+    // Clear building placement mode
+    gameState.buildingPlacementMode = false;
+    gameState.currentBuildingType = null;
+    
+    // Remove ready-for-placement class
+    button.classList.remove('ready-for-placement');
+    
+    // Clear the completed building reference
+    this.completedBuilding = null;
+    
+    // Show notification
+    showNotification(`${buildingData[type].displayName} construction canceled`);
+    
+    // Start next item in queue if available
+    if (this.items.length > 0) {
+      this.startNextProduction();
     }
   }
 }
@@ -523,7 +588,7 @@ function setupProductionButtonListeners() {
         for (let i = productionQueue.items.length - 1; i >= 0; i--) {
           if (productionQueue.items[i].button === button) {
             // Return money for the cancelled production
-            gameState.money += unitCosts[productionQueue.items[i].unitType] || 0;
+            gameState.money += unitCosts[productionQueue.items[i].type] || 0;
             
             // Remove from queue
             productionQueue.items.splice(i, 1);
@@ -679,16 +744,21 @@ function animate(timestamp) {
   updateGame(delta / 1000, mapGrid, factories, units, bullets, gameState)
   
   // Render game
-  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
+  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.buildings,
     gameState.scrollOffset, gameState.selectionActive, 
     gameState.selectionStart, gameState.selectionEnd, gameState)
   
   // Render minimap
   renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
-    gameState.scrollOffset, gameCanvas, units)
+    gameState.scrollOffset, gameCanvas, units, gameState.buildings)
   
   // Update money display
   moneyEl.textContent = `$${Math.floor(gameState.money)}`
+  
+  // Update power display if it exists
+  if (document.getElementById('powerIndicator')) {
+    document.getElementById('powerIndicator').textContent = `Power: ${gameState.powerSupply}`;
+  }
   
   // Update game time display
   const gameTimeSeconds = Math.floor(gameState.gameTime)
@@ -749,30 +819,65 @@ function setupBuildingButtons() {
   buildingButtons.forEach(button => {
     button.addEventListener('click', () => {
       const buildingType = button.getAttribute('data-building-type');
-      // We'll implement actual building production logic later
-      console.log(`Attempting to build: ${buildingType}`);
       
-      // For now, we'll just show a message that this feature is coming soon
-      const notification = document.createElement('div');
-      notification.className = 'notification';
-      notification.textContent = `Building ${buildingType} - Feature coming soon!`;
-      notification.style.position = 'absolute';
-      notification.style.top = '10px';
-      notification.style.left = '50%';
-      notification.style.transform = 'translateX(-50%)';
-      notification.style.backgroundColor = 'rgba(0,0,0,0.7)';
-      notification.style.color = 'white';
-      notification.style.padding = '10px 15px';
-      notification.style.borderRadius = '5px';
-      notification.style.zIndex = '1000';
+      // If button has "ready-for-placement" class, do nothing
+      // The placement is handled by the canvas click event
+      if (button.classList.contains('ready-for-placement')) {
+        return;
+      }
       
-      document.body.appendChild(notification);
+      const cost = buildingCosts[buildingType] || 0;
       
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => notification.remove(), 500);
-      }, 2000);
+      if (gameState.money < cost) {
+        // Show visual feedback for not enough money
+        button.classList.add('error');
+        setTimeout(() => button.classList.remove('error'), 300);
+        return;
+      }
+      
+      // Add to production queue as a building
+      productionQueue.addItem(buildingType, button, true);
+    });
+    
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      
+      // If this is a ready-for-placement building, cancel its placement
+      if (button.classList.contains('ready-for-placement')) {
+        productionQueue.cancelBuildingPlacement();
+        return;
+      }
+      
+      // Check if this button has the current production
+      if (productionQueue.current && productionQueue.current.button === button) {
+        if (!productionQueue.paused) {
+          // First right-click pauses
+          productionQueue.togglePause();
+        } else {
+          // Second right-click cancels
+          productionQueue.cancelProduction();
+        }
+      } else {
+        // Find the last queued item of this type
+        for (let i = productionQueue.items.length - 1; i >= 0; i--) {
+          if (productionQueue.items[i].button === button) {
+            // Return money for the cancelled production
+            gameState.money += buildingCosts[productionQueue.items[i].type] || 0;
+            
+            // Remove from queue
+            productionQueue.items.splice(i, 1);
+            
+            // Update batch counter
+            const remainingCount = productionQueue.items.filter(
+              item => item.button === button
+            ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
+            
+            productionQueue.updateBatchCounter(button, remainingCount);
+            
+            break; // Only remove one at a time
+          }
+        }
+      }
     });
   });
 }
@@ -781,3 +886,131 @@ function setupBuildingButtons() {
 document.addEventListener('DOMContentLoaded', () => {
   initProductionTabs();
 });
+
+// Add power indicator to sidebar
+function addPowerIndicator() {
+  const controlsDiv = document.getElementById('controls');
+  
+  const powerIndicator = document.createElement('div');
+  powerIndicator.id = 'powerIndicator';
+  powerIndicator.style.marginBottom = '10px';
+  powerIndicator.style.padding = '5px';
+  powerIndicator.style.backgroundColor = '#222';
+  powerIndicator.style.border = '1px solid #444';
+  powerIndicator.style.borderRadius = '3px';
+  powerIndicator.textContent = `Power: ${gameState.powerSupply}`;
+  
+  // Insert before the controls div
+  controlsDiv.parentNode.insertBefore(powerIndicator, controlsDiv);
+}
+
+// Add this to document ready event
+document.addEventListener('DOMContentLoaded', () => {
+  initProductionTabs();
+  addPowerIndicator();
+});
+
+// Add building placement handling to the canvas click event
+gameCanvas.addEventListener('click', (e) => {
+  if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
+    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
+    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
+    
+    // Convert to tile coordinates
+    const tileX = Math.floor(mouseX / TILE_SIZE);
+    const tileY = Math.floor(mouseY / TILE_SIZE);
+    
+    // Get building data
+    const buildingType = gameState.currentBuildingType;
+    
+    // Check if placement is valid
+    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units)) {
+      // Create and place the building
+      const newBuilding = createBuilding(buildingType, tileX, tileY);
+      gameState.buildings.push(newBuilding);
+      
+      // Mark building tiles in the map grid
+      placeBuilding(newBuilding, mapGrid);
+      
+      // Update power supply
+      updatePowerSupply(gameState.buildings, gameState);
+      
+      // Exit placement mode
+      gameState.buildingPlacementMode = false;
+      gameState.currentBuildingType = null;
+      
+      // Remove ready-for-placement class from the button
+      document.querySelectorAll('.ready-for-placement').forEach(button => {
+        button.classList.remove('ready-for-placement');
+      });
+      
+      // Clear the completed building reference
+      productionQueue.completedBuilding = null;
+      
+      // Play placement sound
+      playSound('buildingPlaced');
+      
+      // Show notification
+      showNotification(`${buildingData[buildingType].displayName} constructed`);
+      
+      // Start next production if any
+      if (productionQueue.items.length > 0) {
+        productionQueue.startNextProduction();
+      }
+    } else {
+      // Play error sound for invalid placement
+      playSound('error');
+    }
+  }
+});
+
+// Add mousemove event to show building placement overlay
+gameCanvas.addEventListener('mousemove', (e) => {
+  if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
+    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
+    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
+    
+    // Update cursor position for the overlay renderer
+    gameState.cursorX = mouseX;
+    gameState.cursorY = mouseY;
+    
+    // Force a redraw
+    requestAnimationFrame(() => {
+      renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.buildings,
+        gameState.scrollOffset, gameState.selectionActive, 
+        gameState.selectionStart, gameState.selectionEnd, gameState);
+    });
+  }
+});
+
+// Handle escape key to cancel building placement
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && gameState.buildingPlacementMode) {
+    productionQueue.cancelBuildingPlacement();
+  }
+});
+
+// Helper function to show notifications
+function showNotification(message, duration = 3000) {
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.textContent = message;
+  notification.style.position = 'absolute';
+  notification.style.top = '10px';
+  notification.style.left = '50%';
+  notification.style.transform = 'translateX(-50%)';
+  notification.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  notification.style.color = 'white';
+  notification.style.padding = '10px 15px';
+  notification.style.borderRadius = '5px';
+  notification.style.zIndex = '1000';
+  
+  document.body.appendChild(notification);
+  
+  // Fade out and remove
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.5s ease';
+    setTimeout(() => notification.remove(), 500);
+  }, duration);
+}
