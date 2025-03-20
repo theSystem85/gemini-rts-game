@@ -249,6 +249,7 @@ export function placeBuilding(building, mapGrid) {
   for (let y = building.y; y < building.y + building.height; y++) {
     for (let x = building.x; x < building.x + building.width; x++) {
       mapGrid[y][x].building = building;
+      mapGrid[y][x].type = 'building'; // Mark the tile as a building type for pathfinding
     }
   }
 }
