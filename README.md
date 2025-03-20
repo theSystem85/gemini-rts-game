@@ -173,9 +173,6 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) ensure that construction of one unit and one building can run in parallel
-(-) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
-(-) ensure that when the energy is below 10% then unit an building production is slowed down by 66% and the overview map turns gray. When enegery lever rises again above 10% then effects get resotred.
 (-) add a radar station building to the buildings options. Its size is 2x3 tiles. Its armor is 2 times that of a tank. When build the radar station enables the overview map. Before that map is just gray. It consumes 50 energy.
 (-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 (-) any building can be repaired by clicking the repair button in the side menu and then on a building. As soon as player click right click the repair mode is deselected again. Repairing x% of a building cost x * 0.3 of what it would have cost to build it again. Repairing a building restores the healthbar of that building. 
@@ -190,6 +187,9 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) ensure that when the energy is below 10% then unit an building production is slowed down by 66% and the overview map turns gray. When enegery lever rises again above 10% then effects get resotred.
+(x) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
+(x) ensure that construction of one unit and one building can run in parallel
 (x) ensure that buildings can only be build within a distance of 3 tiles close to the next existing building of yours. When it is too far away the footprint building overlay on the map turns red. That means that if one tile of the newly to build footprint is in range the entire building can be constructed.
 (x) ensure that newly build buildings are not passable for player or enemy ai
 (x) make sure that the initial factory is also taken into account for building range when new buildings are placed.

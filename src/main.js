@@ -323,9 +323,13 @@ for (const [type, data] of Object.entries(buildingData)) {
 
 // Enhanced production queue system
 const productionQueue = {
-  items: [],
-  current: null,
-  paused: false,
+  unitItems: [],
+  buildingItems: [],
+  currentUnit: null,
+  currentBuilding: null,
+  pausedUnit: false,
+  pausedBuilding: false,
+  completedBuilding: null,
   
   // Utility function to update batch counter display
   updateBatchCounter: function(button, count) {
@@ -353,31 +357,72 @@ const productionQueue = {
     
     gameState.money -= cost;
     
-    // Add to queue
-    this.items.push({ type, button, isBuilding });
-    let currentCount = this.items.filter(item => item.button === button).length;
-    this.updateBatchCounter(button, currentCount);
-    
-    if (!this.current && !this.paused) {
-      this.startNextProduction();
+    // Add to the appropriate queue
+    if (isBuilding) {
+      this.buildingItems.push({ type, button, isBuilding });
+      let currentCount = this.buildingItems.filter(item => item.button === button).length;
+      this.updateBatchCounter(button, currentCount);
+      
+      if (!this.currentBuilding && !this.pausedBuilding) {
+        this.startNextBuildingProduction();
+      }
+    } else {
+      this.unitItems.push({ type, button, isBuilding });
+      let currentCount = this.unitItems.filter(item => item.button === button).length;
+      this.updateBatchCounter(button, currentCount);
+      
+      if (!this.currentUnit && !this.pausedUnit) {
+        this.startNextUnitProduction();
+      }
     }
   },
   
-  startNextProduction: function() {
-    if (this.items.length === 0 || this.paused) return;
-    const item = this.items[0];
-    const cost = item.isBuilding ? buildingCosts[item.type] : unitCosts[item.type] || 0;
+  startNextUnitProduction: function() {
+    if (this.unitItems.length === 0 || this.pausedUnit) return;
+    const item = this.unitItems[0];
+    const cost = unitCosts[item.type] || 0;
     
     // Set production duration proportional to cost.
     const baseDuration = 3000;
     const duration = baseDuration * (cost / 500);
     
-    this.current = {
+    // Apply energy slowdown if needed
+    const slowdownFactor = (gameState.powerSupply < 0 && 
+                           Math.abs(gameState.powerSupply) > 0.9 * gameState.totalPowerProduction) ? 3 : 1;
+    
+    this.currentUnit = {
       type: item.type,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
-      duration: duration,
+      duration: duration * slowdownFactor,
+      isBuilding: item.isBuilding
+    }
+    
+    // Mark button as active
+    item.button.classList.add('active');
+    playSound('productionStart');
+  },
+  
+  startNextBuildingProduction: function() {
+    if (this.buildingItems.length === 0 || this.pausedBuilding) return;
+    const item = this.buildingItems[0];
+    const cost = buildingCosts[item.type] || 0;
+    
+    // Set production duration proportional to cost.
+    const baseDuration = 3000;
+    const duration = baseDuration * (cost / 500);
+    
+    // Apply energy slowdown if needed
+    const slowdownFactor = (gameState.powerSupply < 0 && 
+                           Math.abs(gameState.powerSupply) > 0.9 * gameState.totalPowerProduction) ? 3 : 1;
+    
+    this.currentBuilding = {
+      type: item.type,
+      button: item.button,
+      progress: 0,
+      startTime: performance.now(),
+      duration: duration * slowdownFactor,
       isBuilding: item.isBuilding
     }
     
@@ -387,115 +432,158 @@ const productionQueue = {
   },
   
   updateProgress: function(timestamp) {
-    if (!this.current || this.paused) return;
-    const elapsed = timestamp - this.current.startTime;
-    const progress = Math.min(elapsed / this.current.duration, 1);
-    this.current.progress = progress;
-    const progressBar = this.current.button.querySelector('.production-progress');
-    if (progressBar) {
-      progressBar.style.width = `${progress * 100}%`;
+    // Update unit production
+    if (this.currentUnit && !this.pausedUnit) {
+      const elapsed = timestamp - this.currentUnit.startTime;
+      const progress = Math.min(elapsed / this.currentUnit.duration, 1);
+      this.currentUnit.progress = progress;
+      const progressBar = this.currentUnit.button.querySelector('.production-progress');
+      if (progressBar) {
+        progressBar.style.width = `${progress * 100}%`;
+      }
+      if (progress >= 1) {
+        this.completeCurrentUnitProduction();
+      }
     }
-    if (progress >= 1) {
-      this.completeCurrentProduction();
+    
+    // Update building production
+    if (this.currentBuilding && !this.pausedBuilding) {
+      const elapsed = timestamp - this.currentBuilding.startTime;
+      const progress = Math.min(elapsed / this.currentBuilding.duration, 1);
+      this.currentBuilding.progress = progress;
+      const progressBar = this.currentBuilding.button.querySelector('.production-progress');
+      if (progressBar) {
+        progressBar.style.width = `${progress * 100}%`;
+      }
+      if (progress >= 1) {
+        this.completeCurrentBuildingProduction();
+      }
     }
   },
   
-  completeCurrentProduction: function() {
-    if (!this.current) return;
+  completeCurrentUnitProduction: function() {
+    if (!this.currentUnit) return;
     
     // Remove item from queue
-    this.items.shift();
-    this.updateBatchCounter(this.current.button, this.items.filter(item => item.button === this.current.button).length);
+    this.unitItems.shift();
+    this.updateBatchCounter(this.currentUnit.button, this.unitItems.filter(item => item.button === this.currentUnit.button).length);
     
-    // Handle completion based on type
-    if (this.current.isBuilding) {
-      // Building completion - enter placement mode
-      gameState.buildingPlacementMode = true;
-      gameState.currentBuildingType = this.current.type;
-      
-      // Show notification to place building
-      showNotification(`Click on the map to place your ${buildingData[this.current.type].displayName}`);
-      
-      // Remove active state but keep button marked for placement
-      this.current.button.classList.remove('active');
-      this.current.button.classList.add('ready-for-placement');
-      
-      playSound('productionReady');
-      
-      // Temporarily store the current item for cancellation
-      this.completedBuilding = {
-        type: this.current.type,
-        button: this.current.button
-      };
-      
-      this.current = null;
-      
-      // Don't start next production until this building is placed
-      return;
-    } else {
-      // Unit production - spawn the unit
-      const unitType = this.current.type;
-      const playerFactory = factories.find(f => f.id === 'player');
-      
-      if (playerFactory) {
-        const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
-        if (newUnit) {
-          units.push(newUnit);
-          playSound('productionReady');
+    // Unit production - spawn the unit
+    const unitType = this.currentUnit.type;
+    const playerFactory = factories.find(f => f.id === 'player');
+    
+    if (playerFactory) {
+      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
+      if (newUnit) {
+        units.push(newUnit);
+        playSound('productionReady');
+        
+        // If the produced unit is a harvester, automatically send it to harvest
+        if (newUnit.type === 'harvester') {
+          // Access the targetedOreTiles from the imported module
+          const targetedOreTiles = window.gameState?.targetedOreTiles || {};
           
-          // If the produced unit is a harvester, automatically send it to harvest
-          if (newUnit.type === 'harvester') {
-            // Access the targetedOreTiles from the imported module
-            const targetedOreTiles = window.gameState?.targetedOreTiles || {};
+          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
+          if (orePos) {
+            // Register this ore tile as targeted by this unit
+            const tileKey = `${orePos.x},${orePos.y}`;
+            if (window.gameState?.targetedOreTiles) {
+              window.gameState.targetedOreTiles[tileKey] = newUnit.id;
+            }
             
-            const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
-            if (orePos) {
-              // Register this ore tile as targeted by this unit
-              const tileKey = `${orePos.x},${orePos.y}`;
-              if (window.gameState?.targetedOreTiles) {
-                window.gameState.targetedOreTiles[tileKey] = newUnit.id;
-              }
-              
-              const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
-              if (newPath.length > 1) {
-                newUnit.path = newPath.slice(1);
-                newUnit.oreField = orePos; // Set initial ore field target
-              }
+            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null);
+            if (newPath.length > 1) {
+              newUnit.path = newPath.slice(1);
+              newUnit.oreField = orePos; // Set initial ore field target
             }
           }
         }
       }
     }
     
-    this.current = null;
-    if (this.items.length > 0) {
-      this.startNextProduction();
+    // Reset and start next production
+    this.currentUnit.button.classList.remove('active', 'paused');
+    this.currentUnit = null;
+    if (this.unitItems.length > 0) {
+      this.startNextUnitProduction();
     }
     playSound('productionComplete');
-    // Remove active/paused classes from button
-    this.current && this.current.button.classList.remove('active', 'paused');
   },
   
-  // ... existing togglePause method ...
-  
-  cancelProduction: function() {
-    if (!this.current) return;
+  completeCurrentBuildingProduction: function() {
+    if (!this.currentBuilding) return;
     
-    const button = this.current.button;
-    const type = this.current.type;
-    const isBuilding = this.current.isBuilding;
+    // Remove item from queue
+    this.buildingItems.shift();
+    this.updateBatchCounter(this.currentBuilding.button, this.buildingItems.filter(item => item.button === this.currentBuilding.button).length);
+    
+    // Building completion - enter placement mode
+    gameState.buildingPlacementMode = true;
+    gameState.currentBuildingType = this.currentBuilding.type;
+    
+    // Show notification to place building
+    showNotification(`Click on the map to place your ${buildingData[this.currentBuilding.type].displayName}`);
+    
+    // Remove active state but keep button marked for placement
+    this.currentBuilding.button.classList.remove('active');
+    this.currentBuilding.button.classList.add('ready-for-placement');
+    
+    playSound('productionReady');
+    
+    // Temporarily store the current item for cancellation
+    this.completedBuilding = {
+      type: this.currentBuilding.type,
+      button: this.currentBuilding.button
+    };
+    
+    this.currentBuilding = null;
+    
+    // Don't automatically start next building production until this one is placed
+  },
+  
+  togglePauseUnit: function() {
+    if (!this.currentUnit) return;
+    
+    this.pausedUnit = !this.pausedUnit;
+    if (this.pausedUnit) {
+      this.currentUnit.button.classList.add('paused');
+      playSound('productionPaused');
+    } else {
+      this.currentUnit.button.classList.remove('paused');
+      playSound('productionStart');
+    }
+  },
+  
+  togglePauseBuilding: function() {
+    if (!this.currentBuilding) return;
+    
+    this.pausedBuilding = !this.pausedBuilding;
+    if (this.pausedBuilding) {
+      this.currentBuilding.button.classList.add('paused');
+      playSound('productionPaused');
+    } else {
+      this.currentBuilding.button.classList.remove('paused');
+      playSound('productionStart');
+    }
+  },
+  
+  cancelUnitProduction: function() {
+    if (!this.currentUnit) return;
+    
+    const button = this.currentUnit.button;
+    const type = this.currentUnit.type;
     
     // Play cancel sound before cancelling
     playSound('productionCancelled');
     
     // Return money for the current production
-    gameState.money += isBuilding ? buildingCosts[type] || 0 : unitCosts[type] || 0;
+    gameState.money += unitCosts[type] || 0;
     
     // Remove item from queue
-    this.items.shift();
+    this.unitItems.shift();
     
     // Count remaining items of this type
-    let remainingCount = this.items.filter(item => item.button === button).length;
+    let remainingCount = this.unitItems.filter(item => item.button === button).length;
     
     // Update batch counter
     this.updateBatchCounter(button, remainingCount);
@@ -507,16 +595,53 @@ const productionQueue = {
     }
     
     // Clear current production
-    this.current = null;
-    this.paused = false;
+    this.currentUnit = null;
+    this.pausedUnit = false;
     
     // Start next item in queue if available
-    if (this.items.length > 0) {
-      this.startNextProduction();
+    if (this.unitItems.length > 0) {
+      this.startNextUnitProduction();
     }
   },
   
-  // New method to cancel a building placement
+  cancelBuildingProduction: function() {
+    if (!this.currentBuilding) return;
+    
+    const button = this.currentBuilding.button;
+    const type = this.currentBuilding.type;
+    
+    // Play cancel sound before cancelling
+    playSound('productionCancelled');
+    
+    // Return money for the current production
+    gameState.money += buildingCosts[type] || 0;
+    
+    // Remove item from queue
+    this.buildingItems.shift();
+    
+    // Count remaining items of this type
+    let remainingCount = this.buildingItems.filter(item => item.button === button).length;
+    
+    // Update batch counter
+    this.updateBatchCounter(button, remainingCount);
+    
+    // Reset the progress bar
+    const progressBar = button.querySelector('.production-progress');
+    if (progressBar) {
+      progressBar.style.width = '0%';
+    }
+    
+    // Clear current production
+    this.currentBuilding = null;
+    this.pausedBuilding = false;
+    
+    // Start next item in queue if available
+    if (this.buildingItems.length > 0) {
+      this.startNextBuildingProduction();
+    }
+  },
+  
+  // Method to cancel a building placement
   cancelBuildingPlacement: function() {
     if (!this.completedBuilding) return;
     
@@ -542,9 +667,9 @@ const productionQueue = {
     // Show notification
     showNotification(`${buildingData[type].displayName} construction canceled`);
     
-    // Start next item in queue if available
-    if (this.items.length > 0) {
-      this.startNextProduction();
+    // Start next building in queue if available
+    if (this.buildingItems.length > 0) {
+      this.startNextBuildingProduction();
     }
   }
 }
@@ -575,28 +700,28 @@ function setupProductionButtonListeners() {
       e.preventDefault();
       
       // Check if this button has the current production
-      if (productionQueue.current && productionQueue.current.button === button) {
-        if (!productionQueue.paused) {
+      if (productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
+        if (!productionQueue.pausedUnit) {
           // First right-click pauses
-          productionQueue.togglePause();
+          productionQueue.togglePauseUnit();
         } else {
           // Second right-click cancels
-          productionQueue.cancelProduction();
+          productionQueue.cancelUnitProduction();
         }
       } else {
         // Find the last queued item of this type
-        for (let i = productionQueue.items.length - 1; i >= 0; i--) {
-          if (productionQueue.items[i].button === button) {
+        for (let i = productionQueue.unitItems.length - 1; i >= 0; i--) {
+          if (productionQueue.unitItems[i].button === button) {
             // Return money for the cancelled production
-            gameState.money += unitCosts[productionQueue.items[i].type] || 0;
+            gameState.money += unitCosts[productionQueue.unitItems[i].type] || 0;
             
             // Remove from queue
-            productionQueue.items.splice(i, 1);
+            productionQueue.unitItems.splice(i, 1);
             
             // Update batch counter
-            const remainingCount = productionQueue.items.filter(
+            const remainingCount = productionQueue.unitItems.filter(
               item => item.button === button
-            ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
+            ).length + (productionQueue.currentUnit && productionQueue.currentUnit.button === button ? 1 : 0);
             
             productionQueue.updateBatchCounter(button, remainingCount);
             
@@ -719,59 +844,57 @@ function gameLoop(time) {
   }
 }
 
-// Modify the animation loop to update production progress
+// Modify the animation loop to update production progress and handle energy effects
 function animate(timestamp) {
   if (!gameState.gameStarted || gameState.gamePaused) {
-    requestAnimationFrame(animate)
-    return
+    requestAnimationFrame(animate);
+    return;
   }
   
   // Calculate delta time with a maximum to avoid spiral of doom on slow frames
-  const now = timestamp || performance.now()
-  if (!lastFrameTime) lastFrameTime = now
-  const delta = Math.min(now - lastFrameTime, 33) // Cap at ~30 FPS equivalent
-  lastFrameTime = now
+  const now = timestamp || performance.now();
+  if (!lastFrameTime) lastFrameTime = now;
+  const delta = Math.min(now - lastFrameTime, 33); // Cap at ~30 FPS equivalent
+  lastFrameTime = now;
   
   // Check if game is over
   if (gameState.gameOver) {
-    gameState.gamePaused = true
+    gameState.gamePaused = true;
   }
   
   // Update production progress
-  productionQueue.updateProgress(timestamp)
+  productionQueue.updateProgress(timestamp);
+  
+  // Update energy bar display
+  updateEnergyBar();
   
   // Update game elements
-  updateGame(delta / 1000, mapGrid, factories, units, bullets, gameState)
+  updateGame(delta / 1000, mapGrid, factories, units, bullets, gameState);
   
-  // Render game
+  // Render game with low energy effects if applicable
   renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.buildings,
     gameState.scrollOffset, gameState.selectionActive, 
-    gameState.selectionStart, gameState.selectionEnd, gameState)
+    gameState.selectionStart, gameState.selectionEnd, gameState);
   
-  // Render minimap
+  // Render minimap with low energy effects if applicable
   renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
-    gameState.scrollOffset, gameCanvas, units, gameState.buildings)
+    gameState.scrollOffset, gameCanvas, units, gameState.buildings, gameState);
   
   // Update money display
-  moneyEl.textContent = `$${Math.floor(gameState.money)}`
-  
-  // Update power display if it exists
-  if (document.getElementById('powerIndicator')) {
-    document.getElementById('powerIndicator').textContent = `Power: ${gameState.powerSupply}`;
-  }
+  moneyEl.textContent = `$${Math.floor(gameState.money)}`;
   
   // Update game time display
-  const gameTimeSeconds = Math.floor(gameState.gameTime)
-  const minutes = Math.floor(gameTimeSeconds / 60)
-  const seconds = gameTimeSeconds % 60
-  gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+  const gameTimeSeconds = Math.floor(gameState.gameTime);
+  const minutes = Math.floor(gameTimeSeconds / 60);
+  const seconds = gameTimeSeconds % 60;
+  gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   
   // Use setTimeout to ensure we don't overload the browser
   if (units.length > 20) {
     // For large number of units, use setTimeout to give browser breathing room
-    setTimeout(() => requestAnimationFrame(animate), 5)
+    setTimeout(() => requestAnimationFrame(animate), 5);
   } else {
-    requestAnimationFrame(animate)
+    requestAnimationFrame(animate);
   }
 }
 
@@ -854,28 +977,28 @@ function setupBuildingButtons() {
       }
       
       // Check if this button has the current production
-      if (productionQueue.current && productionQueue.current.button === button) {
-        if (!productionQueue.paused) {
+      if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+        if (!productionQueue.pausedBuilding) {
           // First right-click pauses
-          productionQueue.togglePause();
+          productionQueue.togglePauseBuilding();
         } else {
           // Second right-click cancels
-          productionQueue.cancelProduction();
+          productionQueue.cancelBuildingProduction();
         }
       } else {
         // Find the last queued item of this type
-        for (let i = productionQueue.items.length - 1; i >= 0; i--) {
-          if (productionQueue.items[i].button === button) {
+        for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
+          if (productionQueue.buildingItems[i].button === button) {
             // Return money for the cancelled production
-            gameState.money += buildingCosts[productionQueue.items[i].type] || 0;
+            gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0;
             
             // Remove from queue
-            productionQueue.items.splice(i, 1);
+            productionQueue.buildingItems.splice(i, 1);
             
             // Update batch counter
-            const remainingCount = productionQueue.items.filter(
+            const remainingCount = productionQueue.buildingItems.filter(
               item => item.button === button
-            ).length + (productionQueue.current && productionQueue.current.button === button ? 1 : 0);
+            ).length + (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button ? 1 : 0);
             
             productionQueue.updateBatchCounter(button, remainingCount);
             
@@ -892,21 +1015,133 @@ document.addEventListener('DOMContentLoaded', () => {
   initProductionTabs();
 });
 
-// Add power indicator to sidebar
+// Add power indicator to sidebar with energy bar
 function addPowerIndicator() {
-  const controlsDiv = document.getElementById('controls');
+  const minimapElement = document.getElementById('minimap');
   
+  // Create container for energy display
   const powerIndicator = document.createElement('div');
   powerIndicator.id = 'powerIndicator';
+  powerIndicator.style.marginTop = '10px';
   powerIndicator.style.marginBottom = '10px';
   powerIndicator.style.padding = '5px';
   powerIndicator.style.backgroundColor = '#222';
   powerIndicator.style.border = '1px solid #444';
   powerIndicator.style.borderRadius = '3px';
-  powerIndicator.textContent = `Power: ${gameState.powerSupply}`;
   
-  // Insert before the controls div
-  controlsDiv.parentNode.insertBefore(powerIndicator, controlsDiv);
+  // Create heading for energy display
+  const powerHeading = document.createElement('div');
+  powerHeading.textContent = 'Energy:';
+  powerHeading.style.marginBottom = '5px';
+  powerIndicator.appendChild(powerHeading);
+  
+  // Create energy bar container
+  const energyBarContainer = document.createElement('div');
+  energyBarContainer.id = 'energyBarContainer';
+  energyBarContainer.style.width = '100%';
+  energyBarContainer.style.height = '20px';
+  energyBarContainer.style.backgroundColor = '#333';
+  energyBarContainer.style.border = '1px solid #555';
+  energyBarContainer.style.position = 'relative';
+  energyBarContainer.style.borderRadius = '2px';
+  energyBarContainer.style.overflow = 'hidden';
+  
+  // Create energy bar
+  const energyBar = document.createElement('div');
+  energyBar.id = 'energyBar';
+  energyBar.style.width = '100%';
+  energyBar.style.height = '100%';
+  energyBar.style.backgroundColor = '#4CAF50'; // Green
+  energyBar.style.position = 'absolute';
+  energyBar.style.transition = 'width 0.3s, background-color 0.5s';
+  
+  // Create energy text
+  const energyText = document.createElement('div');
+  energyText.id = 'energyText';
+  energyText.style.position = 'absolute';
+  energyText.style.width = '100%';
+  energyText.style.height = '100%';
+  energyText.style.display = 'flex';
+  energyText.style.justifyContent = 'center';
+  energyText.style.alignItems = 'center';
+  energyText.style.color = 'white';
+  energyText.style.fontWeight = 'bold';
+  energyText.style.zIndex = '1';
+  energyText.style.textShadow = '1px 1px 2px #000';
+  energyText.textContent = 'Energy: 0';
+  
+  // Add elements to their parents
+  energyBarContainer.appendChild(energyBar);
+  energyBarContainer.appendChild(energyText);
+  powerIndicator.appendChild(energyBarContainer);
+  
+  // Insert after minimap
+  minimapElement.parentNode.insertBefore(powerIndicator, minimapElement.nextSibling);
+  
+  // Initialize energy stats in gameState
+  gameState.totalPowerProduction = 0;
+  gameState.powerConsumption = 0;
+}
+
+// Update the energy bar display
+function updateEnergyBar() {
+  const energyBar = document.getElementById('energyBar');
+  const energyText = document.getElementById('energyText');
+  
+  if (!energyBar || !energyText) return;
+  
+  // Calculate total power production and consumption from buildings
+  let totalProduction = 0;
+  let totalConsumption = 0;
+  
+  gameState.buildings.forEach(building => {
+    if (building.power > 0) {
+      totalProduction += building.power;
+    } else {
+      totalConsumption += Math.abs(building.power);
+    }
+  });
+  
+  // Store values in gameState for other functions to access
+  gameState.totalPowerProduction = totalProduction;
+  gameState.powerConsumption = totalConsumption;
+  
+  // Display energy production value
+  energyText.textContent = `Energy: ${totalProduction - totalConsumption}`;
+  
+  // Calculate percentage of energy remaining
+  let energyPercentage = 100;
+  if (totalProduction > 0) {
+    energyPercentage = Math.max(0, 100 - (totalConsumption / totalProduction) * 100);
+  } else if (totalConsumption > 0) {
+    // If no production but consumption exists
+    energyPercentage = 0;
+  }
+  
+  // Update bar width
+  energyBar.style.width = `${energyPercentage}%`;
+  
+  // Update bar color based on percentage thresholds
+  if (energyPercentage <= 10) {
+    // Below 10% - Red
+    energyBar.style.backgroundColor = '#F44336';
+  } else if (energyPercentage <= 25) {
+    // Below 25% - Orange
+    energyBar.style.backgroundColor = '#FF9800';
+  } else if (energyPercentage <= 50) {
+    // Below 50% - Yellow
+    energyBar.style.backgroundColor = '#FFEB3B';
+  } else {
+    // Above 50% - Green
+    energyBar.style.backgroundColor = '#4CAF50';
+  }
+  
+  // Check if energy is below 10% for production slowdown and map effects
+  if (energyPercentage <= 10) {
+    gameState.lowEnergyMode = true;
+  } else {
+    gameState.lowEnergyMode = false;
+  }
 }
 
 // Add this to document ready event
@@ -964,8 +1199,8 @@ gameCanvas.addEventListener('click', (e) => {
       showNotification(`${buildingData[buildingType].displayName} constructed`);
       
       // Start next production if any
-      if (productionQueue.items.length > 0) {
-        productionQueue.startNextProduction();
+      if (productionQueue.buildingItems.length > 0) {
+        productionQueue.startNextBuildingProduction();
       }
     } else {
       // Play error sound for invalid placement

@@ -351,16 +351,28 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   }
 }
 
-export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings) {
+export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState) {
   minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height)
   const scaleX = minimapCanvas.width / (mapGrid[0].length * TILE_SIZE)
   const scaleY = minimapCanvas.height / (mapGrid.length * TILE_SIZE)
+  
+  // Save original canvas context state
+  minimapCtx.save();
+  
+  // Apply grayscale filter if in low energy mode
+  if (gameState && gameState.lowEnergyMode) {
+    minimapCtx.filter = 'grayscale(100%)';
+  }
+  
+  // Draw map tiles
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type]
       minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY)
     }
   }
+  
+  // Draw units
   units.forEach(unit => {
     minimapCtx.fillStyle = unit.owner === 'player' ? '#00F' : '#F00'
     const unitX = (unit.x + TILE_SIZE / 2) * scaleX
@@ -369,20 +381,25 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
     minimapCtx.arc(unitX, unitY, 3, 0, 2 * Math.PI)
     minimapCtx.fill()
   })
-  minimapCtx.strokeStyle = '#FF0'
-  minimapCtx.lineWidth = 2
-  minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY)
-
+  
   // Draw buildings if they exist
   if (buildings && buildings.length > 0) {
     minimapCtx.fillStyle = '#555';
     buildings.forEach(building => {
       minimapCtx.fillRect(
-        building.x * scaleX,
-        building.y * scaleY,
-        building.width * scaleX,
-        building.height * scaleY
+        building.x * TILE_SIZE * scaleX,
+        building.y * TILE_SIZE * scaleY,
+        building.width * TILE_SIZE * scaleX,
+        building.height * TILE_SIZE * scaleY
       );
     });
   }
+  
+  // Reset filter
+  minimapCtx.restore();
+  
+  // Draw viewport border (always in color, never grayscale)
+  minimapCtx.strokeStyle = '#FF0'
+  minimapCtx.lineWidth = 2
+  minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY)
 }

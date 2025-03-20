@@ -264,11 +264,36 @@ export function placeBuilding(building, mapGrid) {
 // Update the game's power supply
 export function updatePowerSupply(buildings, gameState) {
   let totalPower = 0;
+  let totalProduction = 0;
+  let totalConsumption = 0;
   
   buildings.forEach(building => {
     totalPower += building.power;
+    
+    // Track production and consumption separately
+    if (building.power > 0) {
+      totalProduction += building.power;
+    } else if (building.power < 0) {
+      totalConsumption += Math.abs(building.power);
+    }
   });
   
+  // Store values in gameState
   gameState.powerSupply = totalPower;
+  gameState.totalPowerProduction = totalProduction;
+  gameState.powerConsumption = totalConsumption;
+  
+  // Calculate energy percentage for visual effects and production slowdown
+  let energyPercentage = 100;
+  if (totalProduction > 0) {
+    energyPercentage = Math.max(0, 100 - (totalConsumption / totalProduction) * 100);
+  } else if (totalConsumption > 0) {
+    // If no production but consumption exists
+    energyPercentage = 0;
+  }
+  
+  // Set low energy mode when below 10% energy
+  gameState.lowEnergyMode = energyPercentage <= 10;
+  
   return totalPower;
 }
