@@ -262,8 +262,8 @@ function resetGameWithNewMap(seed) {
   gameState.gameTime = 0
   gameState.gameOver = false
   gameState.gameStarted = true
-  gameState.gamePaused = false
-  pauseBtn.textContent = 'Pause'
+  gameState.gamePaused = true // Ensure game is paused after reset
+  pauseBtn.textContent = 'Start' // Update button text
   // ...existing code to restart/update the game loop if necessary...
 }
 
@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 pauseBtn.addEventListener('click', () => {
   gameState.gamePaused = !gameState.gamePaused
-  pauseBtn.textContent = gameState.gamePaused ? 'Resume' : 'Pause'
+  pauseBtn.textContent = gameState.gamePaused ? 'Start' : 'Pause'
 })
 
 restartBtn.addEventListener('click', () => {
@@ -626,8 +626,8 @@ restartBtn.addEventListener('click', () => {
 })
 
 gameState.gameStarted = true
-gameState.gamePaused = false
-pauseBtn.textContent = 'Pause'
+// gameState.gamePaused is already set to true in gameState.js
+pauseBtn.textContent = 'Start' // Update button text to match initial state
 
 // Instead of auto-playing background music immediately,
 // wait for the first user interaction.
