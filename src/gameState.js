@@ -5,7 +5,7 @@ export const gameState = {
   wins: 0,
   losses: 0,
   gameStarted: false,
-  gamePaused: false,
+  gamePaused: true, // Changed from false to true to start paused
   gameOver: false,
   gameOverMessage: null,
   scrollOffset: { x: 0, y: 0 },

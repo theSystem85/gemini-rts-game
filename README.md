@@ -186,10 +186,10 @@ Open Features:
 (-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
 (-) make tank_v2 get 30% more health as tank_v1.
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
-(-) the game starts in pause mode on startup or reload
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) the game starts in pause mode on startup or reload
 (x) add health values to all buildings described in buildingData inside buildings.js. take the values from the readme.md file. Also make sure that in the building buttons in the sidebar the cost is only visible on hover over the button but not part of the label!
 (x) ensure that when a build button in the building tab is clicked its production gets started. When the production is 100% the build button can be clicked again in the sidebar to go into buildings placement mode on the game map. Then the cursor when hovered over the game map shows a transparent layout of the building where it might be placed. When user then left clicks on a free place on the map (none of the tiles of the buildings foundation should be blocked by rocks, other buildings, water, units) then the building can be placed there. If there is a blocking tile the overlay turns from 50% transparend green to 50% transparent red on that tile. A finished construction can be aborted by right click on the buildings build button in the sidebar. The the player gets the money back.
 (x) add power plant to the building options costing 2000$ and its size is 2x3 tiles. It provies 100 power to the base.
