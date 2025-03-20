@@ -826,6 +826,11 @@ function setupBuildingButtons() {
         return;
       }
       
+      // If a building placement is already in progress, don't queue another one
+      if (gameState.buildingPlacementMode) {
+        return;
+      }
+      
       const cost = buildingCosts[buildingType] || 0;
       
       if (gameState.money < cost) {
@@ -923,10 +928,15 @@ gameCanvas.addEventListener('click', (e) => {
     // Get building data
     const buildingType = gameState.currentBuildingType;
     
-    // Check if placement is valid - pass buildings array to check for proximity
-    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings)) {
+    // Check if placement is valid - pass buildings and factories arrays
+    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories)) {
       // Create and place the building
       const newBuilding = createBuilding(buildingType, tileX, tileY);
+      
+      // Add owner property to the building
+      newBuilding.owner = 'player';
+      
+      // Add the building to gameState.buildings
       gameState.buildings.push(newBuilding);
       
       // Mark building tiles in the map grid

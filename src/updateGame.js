@@ -580,6 +580,46 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
     }
 
+    // --- Building Updates (make buildings attackable) ---
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      for (let i = gameState.buildings.length - 1; i >= 0; i--) {
+        const building = gameState.buildings[i];
+        
+        // Skip destroyed buildings and remove them
+        if (building.health <= 0) {
+          // Remove building from selected units if it was selected
+          if (building.selected) {
+            const idx = selectedUnits.findIndex(u => u === building);
+            if (idx !== -1) {
+              selectedUnits.splice(idx, 1);
+            }
+          }
+          
+          // Remove from map grid
+          for (let y = building.y; y < building.y + building.height; y++) {
+            for (let x = building.x; x < building.x + building.width; x++) {
+              if (mapGrid[y] && mapGrid[y][x]) {
+                mapGrid[y][x].building = null;
+              }
+            }
+          }
+          
+          // Remove the building from the buildings array
+          gameState.buildings.splice(i, 1);
+          
+          // Play explosion sound
+          playSound('explosion');
+          
+          // Add explosion effect
+          const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2);
+          const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2);
+          triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now, mapGrid);
+          
+          continue;
+        }
+      }
+    }
+
     // --- Global Path Recalculation ---
     if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
       gameState.lastGlobalPathCalc = now
@@ -692,6 +732,47 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
             bullets.splice(i, 1)
             continue
+          }
+        }
+      }
+      // Check for collisions with buildings
+      if (bullet.active && gameState.buildings && gameState.buildings.length > 0) {
+        for (const building of gameState.buildings) {
+          // Skip checking owner's own buildings (no friendly fire)
+          if (bullet.shooter && bullet.shooter.owner === building.owner) {
+            continue;
+          }
+          
+          // Calculate building boundaries
+          const buildingLeft = building.x * TILE_SIZE;
+          const buildingRight = buildingLeft + building.width * TILE_SIZE;
+          const buildingTop = building.y * TILE_SIZE;
+          const buildingBottom = buildingTop + building.height * TILE_SIZE;
+          
+          // Check if bullet is inside building
+          if (bullet.x >= buildingLeft && bullet.x <= buildingRight &&
+              bullet.y >= buildingTop && bullet.y <= buildingBottom) {
+            
+            // Calculate damage
+            const factor = 0.8 + Math.random() * 0.4;
+            const damage = bullet.baseDamage * factor;
+            
+            // Apply damage to building
+            building.health -= damage;
+            if (building.health <= 0) {
+              building.health = 0;
+            }
+            
+            // Create explosion effect
+            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid);
+            
+            // Play sound
+            playSound('bulletHit');
+            
+            // Deactivate bullet
+            bullet.active = false;
+            bullets.splice(i, 1);
+            break;
           }
         }
       }
