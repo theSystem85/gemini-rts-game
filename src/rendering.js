@@ -309,7 +309,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
           const screenY = currentTileY * TILE_SIZE - scrollOffset.y;
           
           // Check if valid placement for this tile
-          const isValid = isTileValid(currentTileX, currentTileY, mapGrid, units);
+          const isValid = isTileValid(currentTileX, currentTileY, mapGrid, units, buildings);
           
           // Draw tile with appropriate color
           gameCtx.fillStyle = isValid ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
