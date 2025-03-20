@@ -1,7 +1,7 @@
 // rendering.js
 import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
 import { tileToPixel } from './utils.js'
-import { buildingData, isTileValid } from './buildings.js';
+import { buildingData, isTileValid, isNearExistingBuilding } from './buildings.js';
 
 export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
 
@@ -298,6 +298,21 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       const tileX = Math.floor(mouseX / TILE_SIZE);
       const tileY = Math.floor(mouseY / TILE_SIZE);
       
+      // Check if any tile is in range of existing building
+      let isAnyTileInRange = false;
+      for (let y = 0; y < buildingInfo.height; y++) {
+        for (let x = 0; x < buildingInfo.width; x++) {
+          const currentTileX = tileX + x;
+          const currentTileY = tileY + y;
+          
+          if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories)) {
+            isAnyTileInRange = true;
+            break;
+          }
+        }
+        if (isAnyTileInRange) break;
+      }
+      
       // Draw placement grid
       for (let y = 0; y < buildingInfo.height; y++) {
         for (let x = 0; x < buildingInfo.width; x++) {
@@ -308,11 +323,12 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
           const screenX = currentTileX * TILE_SIZE - scrollOffset.x;
           const screenY = currentTileY * TILE_SIZE - scrollOffset.y;
           
-          // Check if valid placement for this tile - now pass factories too
+          // Check if valid placement for this tile (terrain/units check only)
           const isValid = isTileValid(currentTileX, currentTileY, mapGrid, units, buildings, factories);
           
-          // Draw tile with appropriate color
-          gameCtx.fillStyle = isValid ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+          // Determine final color: Red if not valid or not in range, Green if both valid and in range
+          const validColor = isAnyTileInRange ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+          gameCtx.fillStyle = isValid ? validColor : 'rgba(255, 0, 0, 0.5)';
           gameCtx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
           
           // Draw tile outline

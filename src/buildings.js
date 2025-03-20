@@ -184,8 +184,20 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
     return false;
   }
   
-  // Check if the building is within 3 tiles of an existing player building or factory
-  if (!isNearExistingBuilding(tileX, tileY, buildings, factories)) {
+  // Check if ANY tile of the building is within range of an existing building
+  let isAnyTileInRange = false;
+  for (let y = tileY; y < tileY + height; y++) {
+    for (let x = tileX; x < tileX + width; x++) {
+      if (isNearExistingBuilding(x, y, buildings, factories)) {
+        isAnyTileInRange = true;
+        break;
+      }
+    }
+    if (isAnyTileInRange) break;
+  }
+  
+  // If no tile is in range, return false
+  if (!isAnyTileInRange) {
     return false;
   }
   
@@ -220,11 +232,6 @@ export function isTileValid(tileX, tileY, mapGrid, units, buildings, factories) 
   if (tileX < 0 || tileY < 0 || 
       tileX >= mapGrid[0].length || 
       tileY >= mapGrid.length) {
-    return false;
-  }
-  
-  // Check if the tile is within 3 tiles of an existing player building or factory
-  if (!isNearExistingBuilding(tileX, tileY, buildings, factories)) {
     return false;
   }
   
