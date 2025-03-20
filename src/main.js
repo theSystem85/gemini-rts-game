@@ -923,8 +923,8 @@ gameCanvas.addEventListener('click', (e) => {
     // Get building data
     const buildingType = gameState.currentBuildingType;
     
-    // Check if placement is valid
-    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units)) {
+    // Check if placement is valid - pass buildings array to check for proximity
+    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings)) {
       // Create and place the building
       const newBuilding = createBuilding(buildingType, tileX, tileY);
       gameState.buildings.push(newBuilding);

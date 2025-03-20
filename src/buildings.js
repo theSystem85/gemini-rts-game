@@ -121,8 +121,37 @@ export function createBuilding(type, x, y) {
   };
 }
 
+// Helper function to check if a position is within 3 tiles of any existing player building
+export function isNearExistingBuilding(tileX, tileY, buildings, maxDistance = 3) {
+  // For the first building placement, allow anywhere on the map
+  if (buildings.length === 0) {
+    return true;
+  }
+  
+  for (const building of buildings) {
+    // Skip enemy buildings (we only want to build near our own buildings)
+    if (building.owner === 'enemy') {
+      continue;
+    }
+    
+    // Calculate the shortest distance from the new position to any tile of the existing building
+    for (let bY = building.y; bY < building.y + building.height; bY++) {
+      for (let bX = building.x; bX < building.x + building.width; bX++) {
+        // Calculate Manhattan distance to be more efficient
+        const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY);
+        
+        if (distance <= maxDistance) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
 // Check if a building can be placed at given coordinates
-export function canPlaceBuilding(type, tileX, tileY, mapGrid, units) {
+export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings) {
   if (!buildingData[type]) return false;
   
   const width = buildingData[type].width;
@@ -132,6 +161,11 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units) {
   if (tileX < 0 || tileY < 0 || 
       tileX + width > mapGrid[0].length || 
       tileY + height > mapGrid.length) {
+    return false;
+  }
+  
+  // Check if the building is within 3 tiles of an existing player building
+  if (!isNearExistingBuilding(tileX, tileY, buildings)) {
     return false;
   }
   
@@ -161,11 +195,16 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units) {
 }
 
 // Check individual tile validity for coloring the placement overlay
-export function isTileValid(tileX, tileY, mapGrid, units) {
+export function isTileValid(tileX, tileY, mapGrid, units, buildings) {
   // Out of bounds
   if (tileX < 0 || tileY < 0 || 
       tileX >= mapGrid[0].length || 
       tileY >= mapGrid.length) {
+    return false;
+  }
+  
+  // Check if the tile is within 3 tiles of an existing player building
+  if (!isNearExistingBuilding(tileX, tileY, buildings)) {
     return false;
   }
   
