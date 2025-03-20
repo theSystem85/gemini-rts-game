@@ -122,26 +122,46 @@ export function createBuilding(type, x, y) {
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building
-export function isNearExistingBuilding(tileX, tileY, buildings, maxDistance = 3) {
-  // For the first building placement, allow anywhere on the map
-  if (buildings.length === 0) {
-    return true;
+export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = 3) {
+  // For the first building placement, we still need to check if it's close to the player's factory
+  
+  // First check factories (specifically player's factory)
+  if (factories && factories.length > 0) {
+    for (const factory of factories) {
+      // Only consider player's factory
+      if (factory.id === 'player') {
+        // Calculate the shortest distance from the new position to any tile of the factory
+        for (let bY = factory.y; bY < factory.y + factory.height; bY++) {
+          for (let bX = factory.x; bX < factory.x + factory.width; bX++) {
+            // Calculate Manhattan distance
+            const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY);
+            
+            if (distance <= maxDistance) {
+              return true;
+            }
+          }
+        }
+      }
+    }
   }
   
-  for (const building of buildings) {
-    // Skip enemy buildings (we only want to build near our own buildings)
-    if (building.owner === 'enemy') {
-      continue;
-    }
-    
-    // Calculate the shortest distance from the new position to any tile of the existing building
-    for (let bY = building.y; bY < building.y + building.height; bY++) {
-      for (let bX = building.x; bX < building.x + building.width; bX++) {
-        // Calculate Manhattan distance to be more efficient
-        const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY);
-        
-        if (distance <= maxDistance) {
-          return true;
+  // Then check buildings
+  if (buildings && buildings.length > 0) {
+    for (const building of buildings) {
+      // Skip enemy buildings (we only want to build near our own buildings)
+      if (building.owner === 'enemy') {
+        continue;
+      }
+      
+      // Calculate the shortest distance from the new position to any tile of the existing building
+      for (let bY = building.y; bY < building.y + building.height; bY++) {
+        for (let bX = building.x; bX < building.x + building.width; bX++) {
+          // Calculate Manhattan distance
+          const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY);
+          
+          if (distance <= maxDistance) {
+            return true;
+          }
         }
       }
     }
@@ -151,7 +171,7 @@ export function isNearExistingBuilding(tileX, tileY, buildings, maxDistance = 3)
 }
 
 // Check if a building can be placed at given coordinates
-export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings) {
+export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factories) {
   if (!buildingData[type]) return false;
   
   const width = buildingData[type].width;
@@ -164,8 +184,8 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings) 
     return false;
   }
   
-  // Check if the building is within 3 tiles of an existing player building
-  if (!isNearExistingBuilding(tileX, tileY, buildings)) {
+  // Check if the building is within 3 tiles of an existing player building or factory
+  if (!isNearExistingBuilding(tileX, tileY, buildings, factories)) {
     return false;
   }
   
@@ -195,7 +215,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings) 
 }
 
 // Check individual tile validity for coloring the placement overlay
-export function isTileValid(tileX, tileY, mapGrid, units, buildings) {
+export function isTileValid(tileX, tileY, mapGrid, units, buildings, factories) {
   // Out of bounds
   if (tileX < 0 || tileY < 0 || 
       tileX >= mapGrid[0].length || 
@@ -203,8 +223,8 @@ export function isTileValid(tileX, tileY, mapGrid, units, buildings) {
     return false;
   }
   
-  // Check if the tile is within 3 tiles of an existing player building
-  if (!isNearExistingBuilding(tileX, tileY, buildings)) {
+  // Check if the tile is within 3 tiles of an existing player building or factory
+  if (!isNearExistingBuilding(tileX, tileY, buildings, factories)) {
     return false;
   }
   

@@ -173,6 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) ensure that newly build buildings are not passable for player or enemy ai
 (-) ensure that buildings can only be build within a distance of 3 tiles close to the next existing building of yours. When it is too far away the footprint building overlay on the map turns red. That means that if one tile of the newly to build footprint is in range the entire building can be constructed.
 (-) ensure that construction of one unit and one building can run in parallel
 (-) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
@@ -191,6 +192,8 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) make sure that the initial factory is also taken into account for building range when new buildings are placed.
+(x) Make sure that all buildings also have a health bar like the factory and can be attacked and destroyed and selected.
 (x) the game starts in pause mode on startup or reload
 (x) add health values to all buildings described in buildingData inside buildings.js. take the values from the readme.md file. Also make sure that in the building buttons in the sidebar the cost is only visible on hover over the button but not part of the label!
 (x) ensure that when a build button in the building tab is clicked its production gets started. When the production is 100% the build button can be clicked again in the sidebar to go into buildings placement mode on the game map. Then the cursor when hovered over the game map shows a transparent layout of the building where it might be placed. When user then left clicks on a free place on the map (none of the tiles of the buildings foundation should be blocked by rocks, other buildings, water, units) then the building can be placed there. If there is a blocking tile the overlay turns from 50% transparend green to 50% transparent red on that tile. A finished construction can be aborted by right click on the buildings build button in the sidebar. The the player gets the money back.

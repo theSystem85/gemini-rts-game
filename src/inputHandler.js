@@ -672,7 +672,6 @@ function handleBoundingBoxSelection(units, factories) {
     // Clear current selection first
     selectedUnits.length = 0
     
-    // Don't include factories in drag selection (requirement #3)
     // Clear any factory selections
     if (factories) {
       factories.forEach(factory => {
@@ -692,6 +691,28 @@ function handleBoundingBoxSelection(units, factories) {
           playSound('unitSelection')
         } else {
           unit.selected = false
+        }
+      }
+    }
+    
+    // Now check for player buildings in the selection rectangle
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      for (const building of gameState.buildings) {
+        if (building.owner === 'player') {
+          const buildingX = building.x * TILE_SIZE
+          const buildingY = building.y * TILE_SIZE
+          const buildingWidth = building.width * TILE_SIZE
+          const buildingHeight = building.height * TILE_SIZE
+          
+          // Check if any part of the building is within the selection rectangle
+          if (buildingX + buildingWidth > x1 && buildingX < x2 && 
+              buildingY + buildingHeight > y1 && buildingY < y2) {
+            building.selected = true
+            selectedUnits.push(building)
+            playSound('unitSelection')
+          } else {
+            building.selected = false
+          }
         }
       }
     }
