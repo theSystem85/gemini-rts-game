@@ -173,7 +173,6 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) ensure that newly build buildings are not passable for player or enemy ai
 (-) ensure that buildings can only be build within a distance of 3 tiles close to the next existing building of yours. When it is too far away the footprint building overlay on the map turns red. That means that if one tile of the newly to build footprint is in range the entire building can be constructed.
 (-) ensure that construction of one unit and one building can run in parallel
 (-) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
@@ -192,6 +191,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) ensure that newly build buildings are not passable for player or enemy ai
 (x) make sure that the initial factory is also taken into account for building range when new buildings are placed.
 (x) Make sure that all buildings also have a health bar like the factory and can be attacked and destroyed and selected.
 (x) the game starts in pause mode on startup or reload
