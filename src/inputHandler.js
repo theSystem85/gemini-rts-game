@@ -652,14 +652,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   });
 
-  // Set up production buttons - make sure we now handle buttons in both tabs
-  const allProductionButtons = document.querySelectorAll('.production-button[data-unit-type]');
-  allProductionButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const unitType = button.getAttribute('data-unit-type');
-      productionQueue.addItem(unitType, button);
-    });
-  });
+  // IMPORTANT: REMOVE THIS CODE TO PREVENT DUPLICATE BUILDING QUEUE EVENTS
+  // We don't need to set up production buttons here since they are now handled in main.js
+  // This prevents duplicate event listeners
 }
 
 function handleBoundingBoxSelection(units, factories) {

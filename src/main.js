@@ -674,13 +674,22 @@ const productionQueue = {
   }
 }
 
-// Replace the existing event listener setup for production buttons with this updated version
-// that targets both tabs of production buttons
-function setupProductionButtonListeners() {
-  // Select all unit production buttons from the units tab
-  const allProductionButtons = document.querySelectorAll('.production-button[data-unit-type]');
+// MODIFIED: Combined production button setup function that handles both unit and building buttons
+function setupAllProductionButtons() {
+  console.log("Setting up all production buttons - ONE TIME ONLY");
   
-  allProductionButtons.forEach(button => {
+  // Clear any existing event listeners by cloning and replacing elements
+  document.querySelectorAll('.production-button').forEach(button => {
+    const clone = button.cloneNode(true);
+    if (button.parentNode) {
+      button.parentNode.replaceChild(clone, button);
+    }
+  });
+  
+  // Now set up unit buttons
+  const unitButtons = document.querySelectorAll('.production-button[data-unit-type]');
+  
+  unitButtons.forEach(button => {
     button.addEventListener('click', () => {
       const unitType = button.getAttribute('data-unit-type');
       const cost = unitCosts[unitType] || 0;
@@ -731,15 +740,103 @@ function setupProductionButtonListeners() {
       }
     });
   });
+  
+  // Set up building buttons
+  const buildingButtons = document.querySelectorAll('.production-button[data-building-type]');
+  
+  buildingButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const buildingType = button.getAttribute('data-building-type');
+      
+      // If button has "ready-for-placement" class, do nothing
+      // The placement is handled by the canvas click event
+      if (button.classList.contains('ready-for-placement')) {
+        return;
+      }
+      
+      // If a building placement is already in progress, don't queue another one
+      if (gameState.buildingPlacementMode) {
+        return;
+      }
+      
+      const cost = buildingCosts[buildingType] || 0;
+      
+      if (gameState.money < cost) {
+        // Show visual feedback for not enough money
+        button.classList.add('error');
+        setTimeout(() => button.classList.remove('error'), 300);
+        return;
+      }
+      
+      // Add to production queue as a building
+      productionQueue.addItem(buildingType, button, true);
+    });
+    
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      
+      // If this is a ready-for-placement building, cancel its placement
+      if (button.classList.contains('ready-for-placement')) {
+        productionQueue.cancelBuildingPlacement();
+        return;
+      }
+      
+      // Check if this button has the current production
+      if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+        if (!productionQueue.pausedBuilding) {
+          // First right-click pauses
+          productionQueue.togglePauseBuilding();
+        } else {
+          // Second right-click cancels
+          productionQueue.cancelBuildingProduction();
+        }
+      } else {
+        // Find the last queued item of this type
+        for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
+          if (productionQueue.buildingItems[i].button === button) {
+            // Return money for the cancelled production
+            gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0;
+            
+            // Remove from queue
+            productionQueue.buildingItems.splice(i, 1);
+            
+            // Update batch counter
+            const remainingCount = productionQueue.buildingItems.filter(
+              item => item.button === button
+            ).length + (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button ? 1 : 0);
+            
+            productionQueue.updateBatchCounter(button, remainingCount);
+            
+            break; // Only remove one at a time
+          }
+        }
+      }
+    });
+  });
 }
 
-// Add a DOMContentLoaded event listener to ensure the buttons exist before attaching listeners
-document.addEventListener('DOMContentLoaded', () => {
-  setupProductionButtonListeners();
-});
-
-// Remove or comment out the old code that's causing the error
-// productionButtons.querySelectorAll('.production-button').forEach(button => { ... });
+// Initialize production tabs without setting up buttons again
+function initProductionTabs() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      // Remove active class from all buttons and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked button
+      button.classList.add('active');
+      
+      // Show corresponding content
+      const tabName = button.getAttribute('data-tab');
+      document.getElementById(`${tabName}TabContent`).classList.add('active');
+    });
+  });
+  
+  // REMOVED: Don't call setupBuildingButtons() here to avoid duplication
+}
 
 pauseBtn.addEventListener('click', () => {
   gameState.gamePaused = !gameState.gamePaused
@@ -912,109 +1009,6 @@ requestAnimationFrame(animate)
 
 gameLoop(performance.now())
 
-// Initialize production tabs
-function initProductionTabs() {
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabContents = document.querySelectorAll('.tab-content');
-  
-  tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      // Remove active class from all buttons and contents
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
-      
-      // Add active class to clicked button
-      button.classList.add('active');
-      
-      // Show corresponding content
-      const tabName = button.getAttribute('data-tab');
-      document.getElementById(`${tabName}TabContent`).classList.add('active');
-    });
-  });
-  
-  // Setup building buttons
-  setupBuildingButtons();
-}
-
-function setupBuildingButtons() {
-  const buildingButtons = document.querySelectorAll('[data-building-type]');
-  
-  buildingButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const buildingType = button.getAttribute('data-building-type');
-      
-      // If button has "ready-for-placement" class, do nothing
-      // The placement is handled by the canvas click event
-      if (button.classList.contains('ready-for-placement')) {
-        return;
-      }
-      
-      // If a building placement is already in progress, don't queue another one
-      if (gameState.buildingPlacementMode) {
-        return;
-      }
-      
-      const cost = buildingCosts[buildingType] || 0;
-      
-      if (gameState.money < cost) {
-        // Show visual feedback for not enough money
-        button.classList.add('error');
-        setTimeout(() => button.classList.remove('error'), 300);
-        return;
-      }
-      
-      // Add to production queue as a building
-      productionQueue.addItem(buildingType, button, true);
-    });
-    
-    button.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      
-      // If this is a ready-for-placement building, cancel its placement
-      if (button.classList.contains('ready-for-placement')) {
-        productionQueue.cancelBuildingPlacement();
-        return;
-      }
-      
-      // Check if this button has the current production
-      if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
-        if (!productionQueue.pausedBuilding) {
-          // First right-click pauses
-          productionQueue.togglePauseBuilding();
-        } else {
-          // Second right-click cancels
-          productionQueue.cancelBuildingProduction();
-        }
-      } else {
-        // Find the last queued item of this type
-        for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-          if (productionQueue.buildingItems[i].button === button) {
-            // Return money for the cancelled production
-            gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0;
-            
-            // Remove from queue
-            productionQueue.buildingItems.splice(i, 1);
-            
-            // Update batch counter
-            const remainingCount = productionQueue.buildingItems.filter(
-              item => item.button === button
-            ).length + (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button ? 1 : 0);
-            
-            productionQueue.updateBatchCounter(button, remainingCount);
-            
-            break; // Only remove one at a time
-          }
-        }
-      }
-    });
-  });
-}
-
-// Make sure to initialize the tabs
-document.addEventListener('DOMContentLoaded', () => {
-  initProductionTabs();
-});
-
 // Add power indicator to sidebar with energy bar
 function addPowerIndicator() {
   const minimapElement = document.getElementById('minimap');
@@ -1148,6 +1142,7 @@ function updateEnergyBar() {
 document.addEventListener('DOMContentLoaded', () => {
   initProductionTabs();
   addPowerIndicator();
+  setupAllProductionButtons(); // Set up all buttons once
 });
 
 // Add building placement handling to the canvas click event
