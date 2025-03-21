@@ -64,7 +64,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.fillText(building.type, screenX + width / 2, screenY + height / 2);
       
       // Draw turret for defensive buildings
-      if (building.type === 'rocketTurret') {
+      if (building.type === 'rocketTurret' || building.type.startsWith('turretGun')) {
         const centerX = screenX + width / 2;
         const centerY = screenY + height / 2;
         
@@ -73,17 +73,60 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         gameCtx.translate(centerX, centerY);
         gameCtx.rotate(building.turretDirection || 0);
         
-        // Draw the turret barrel - thicker and more visible
-        gameCtx.strokeStyle = '#F00';
-        gameCtx.lineWidth = 4;
-        gameCtx.beginPath();
-        gameCtx.moveTo(0, 0);
-        gameCtx.lineTo(TILE_SIZE, 0);
-        gameCtx.stroke();
-        
-        // Draw rocket launcher
-        gameCtx.fillStyle = '#444';
-        gameCtx.fillRect(TILE_SIZE * 0.5, -5, TILE_SIZE * 0.5, 10);
+        // Draw the turret barrel with different styles based on turret type
+        if (building.type === 'rocketTurret') {
+          // Rocket turret - thick red barrel
+          gameCtx.strokeStyle = '#F00';
+          gameCtx.lineWidth = 4;
+          gameCtx.beginPath();
+          gameCtx.moveTo(0, 0);
+          gameCtx.lineTo(TILE_SIZE, 0);
+          gameCtx.stroke();
+          
+          // Draw rocket launcher
+          gameCtx.fillStyle = '#444';
+          gameCtx.fillRect(TILE_SIZE * 0.5, -5, TILE_SIZE * 0.5, 10);
+        } else if (building.type === 'turretGunV1') {
+          // V1 - Basic turret
+          gameCtx.strokeStyle = '#00F';
+          gameCtx.lineWidth = 3;
+          gameCtx.beginPath();
+          gameCtx.moveTo(0, 0);
+          gameCtx.lineTo(TILE_SIZE * 0.7, 0);
+          gameCtx.stroke();
+        } else if (building.type === 'turretGunV2') {
+          // V2 - Advanced targeting turret
+          gameCtx.strokeStyle = '#0FF';
+          gameCtx.lineWidth = 3;
+          gameCtx.beginPath();
+          gameCtx.moveTo(0, 0);
+          gameCtx.lineTo(TILE_SIZE * 0.8, 0);
+          gameCtx.stroke();
+          
+          // Add targeting reticle
+          gameCtx.strokeStyle = '#0FF';
+          gameCtx.beginPath();
+          gameCtx.arc(TILE_SIZE * 0.4, 0, 4, 0, Math.PI * 2);
+          gameCtx.stroke();
+        } else if (building.type === 'turretGunV3') {
+          // V3 - Heavy burst fire turret
+          gameCtx.strokeStyle = '#FF0';
+          gameCtx.lineWidth = 4;
+          gameCtx.beginPath();
+          gameCtx.moveTo(0, 0);
+          gameCtx.lineTo(TILE_SIZE * 0.9, 0);
+          gameCtx.stroke();
+          
+          // Draw double barrel
+          gameCtx.strokeStyle = '#FF0';
+          gameCtx.lineWidth = 2;
+          gameCtx.beginPath();
+          gameCtx.moveTo(TILE_SIZE * 0.3, -3);
+          gameCtx.lineTo(TILE_SIZE * 0.9, -3);
+          gameCtx.moveTo(TILE_SIZE * 0.3, 3);
+          gameCtx.lineTo(TILE_SIZE * 0.9, 3);
+          gameCtx.stroke();
+        }
         
         // Draw turret base
         gameCtx.fillStyle = '#222';
@@ -105,7 +148,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         if (building.selected) {
           gameCtx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
           gameCtx.beginPath();
-          gameCtx.arc(centerX, centerY, building.fireRange * TILE_SIZE - scrollOffset.x, 0, Math.PI * 2);
+          gameCtx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2);
           gameCtx.stroke();
         }
       }

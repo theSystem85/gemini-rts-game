@@ -876,11 +876,25 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
   const now = performance.now();
   
   buildings.forEach(building => {
-    // Only process player rocket turrets that aren't destroyed
-    if (building.type === 'rocketTurret' && building.owner === 'player' && building.health > 0) {
+    // Process player defensive buildings that aren't destroyed
+    if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun')) && 
+        building.owner === 'player' && building.health > 0) {
+      
       // Calculate center position of the building for range calculations
       const centerX = (building.x + building.width / 2) * TILE_SIZE;
       const centerY = (building.y + building.height / 2) * TILE_SIZE;
+      
+      // For turret guns with burst fire, handle burst timing
+      if (building.burstFire && building.currentBurst > 0) {
+        if (now - building.lastBurstTime >= building.burstDelay) {
+          // Fire the next shot in the burst sequence
+          fireTurretProjectile(building, building.currentTarget, centerX, centerY, now, bullets);
+          building.lastBurstTime = now;
+          building.currentBurst--;
+          return; // Skip regular firing logic during burst sequence
+        }
+        return; // Wait for next burst shot
+      }
       
       // Only fire if cooldown has elapsed
       if (!building.lastShotTime || now - building.lastShotTime >= building.fireCooldown) {
@@ -905,50 +919,118 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
         
         // If enemy in range, rotate turret and fire
         if (closestEnemy) {
+          building.currentTarget = closestEnemy; // Store current target for burst fire
+          
           const unitCenterX = closestEnemy.x + TILE_SIZE / 2;
           const unitCenterY = closestEnemy.y + TILE_SIZE / 2;
-          const dx = unitCenterX - centerX;
-          const dy = unitCenterY - centerY;
+          
+          // Standard target prediction
+          let targetX = unitCenterX;
+          let targetY = unitCenterY;
+          
+          // For V2 turret, implement aim-ahead feature
+          if (building.aimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
+            // Calculate target velocity
+            let vx = 0, vy = 0;
+            
+            if (closestEnemy.lastKnownX !== undefined && closestEnemy.lastKnownY !== undefined) {
+              // Calculate velocity based on position change
+              vx = (unitCenterX - closestEnemy.lastKnownX) / delta;
+              vy = (unitCenterY - closestEnemy.lastKnownY) / delta;
+            } else if (closestEnemy.path && closestEnemy.path.length > 0) {
+              // Estimate velocity based on path direction
+              const nextTile = closestEnemy.path[0];
+              const nextX = nextTile.x * TILE_SIZE + TILE_SIZE / 2;
+              const nextY = nextTile.y * TILE_SIZE + TILE_SIZE / 2;
+              const dx = nextX - unitCenterX;
+              const dy = nextY - unitCenterY;
+              const dist = Math.hypot(dx, dy);
+              if (dist > 0) {
+                vx = dx / dist * closestEnemy.speed;
+                vy = dy / dist * closestEnemy.speed;
+              }
+            }
+            
+            // Calculate time to reach target based on bullet speed
+            const distToTarget = Math.hypot(unitCenterX - centerX, unitCenterY - centerY);
+            const timeToTarget = distToTarget / (building.projectileSpeed * TILE_SIZE);
+            
+            // Predict future position
+            targetX = unitCenterX + vx * timeToTarget;
+            targetY = unitCenterY + vy * timeToTarget;
+          }
+          
+          // Store current target position for velocity calculation in next update
+          closestEnemy.lastKnownX = unitCenterX;
+          closestEnemy.lastKnownY = unitCenterY;
           
           // Calculate target direction for the turret
-          building.targetDirection = Math.atan2(dy, dx);
+          building.targetDirection = Math.atan2(targetY - centerY, targetX - centerX);
           
-          // Smoothly rotate turret
+          // Smoothly rotate turret - use 1.0 for 10x faster rotation (previously 0.1)
           building.turretDirection = smoothRotateTowardsAngle(
             building.turretDirection || 0, 
             building.targetDirection, 
-            0.1
+            0.5  // Increased from 0.1 to 1.0 (10x faster)
           );
           
-          // Create a bullet object with all required properties for rocket projectiles
-          const angle = Math.atan2(dy, dx);
-          
-          // Fire a rocket with proper properties
-          const rocket = {
-            id: Date.now() + Math.random(),
-            x: centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 1.5), // Offset from building center
-            y: centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 1.5), // Offset from building center
-            speed: building.projectileSpeed,
-            vx: Math.cos(building.turretDirection) * building.projectileSpeed,
-            vy: Math.sin(building.turretDirection) * building.projectileSpeed,
-            type: 'rocket',
-            shooter: building,
-            baseDamage: building.damage,
-            active: true,
-            homing: true,
-            target: closestEnemy,
-            startTime: now
-          };
-          
-          bullets.push(rocket);
-          
-          // Play sound
-          playSound('shoot_rocket');
-          
-          // Update last shot time
-          building.lastShotTime = now;
+          // Only fire if the turret is facing close enough to the target
+          const angleToTarget = Math.abs(angleDiff(building.turretDirection, building.targetDirection));
+          if (angleToTarget < 0.2) { // Only fire if pointing within ~11 degrees
+            // Fire the projectile
+            fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets);
+            
+            // For burst fire, set up burst sequence
+            if (building.burstFire) {
+              building.currentBurst = building.burstCount - 1; // Already fired first shot
+              building.lastBurstTime = now;
+            }
+          }
         }
       }
     }
   });
+}
+
+// Helper function to fire a projectile from a turret
+function fireTurretProjectile(building, target, centerX, centerY, now, bullets) {
+  // Create a bullet object with all required properties
+  let projectile = {
+    id: Date.now() + Math.random(),
+    x: centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
+    y: centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
+    speed: building.projectileSpeed,
+    baseDamage: building.damage,
+    active: true,
+    shooter: building
+  };
+  
+  if (building.type === 'rocketTurret') {
+    // Rocket projectile - homing
+    projectile.homing = true;
+    projectile.target = target;
+    projectile.startTime = now;
+    
+    // Play rocket sound
+    playSound('shoot_rocket');
+  } else {
+    // Standard bullet - calculate trajectory
+    projectile.homing = false;
+    projectile.vx = Math.cos(building.turretDirection) * building.projectileSpeed;
+    projectile.vy = Math.sin(building.turretDirection) * building.projectileSpeed;
+    
+    // Play appropriate sound based on turret type
+    if (building.type === 'turretGunV3') {
+      playSound('shoot_heavy');
+    } else {
+      playSound('shoot');
+    }
+  }
+  
+  bullets.push(projectile);
+  
+  // Update last shot time unless we're in a burst sequence
+  if (!building.burstFire || building.currentBurst === 0) {
+    building.lastShotTime = now;
+  }
 }
