@@ -2,6 +2,7 @@
 import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
 import { getUniqueId } from './utils.js'
+import { findClosestOre } from './logic.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -371,11 +372,6 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     unit.effectiveSpeed = 0.35
   }
   return unit
-}
-
-// Find the closest ore tile from a unit's position that isn't already targeted
-function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
-  return globalFindClosestOre(unit, mapGrid, targetedOreTiles);
 }
 
 // Find an adjacent tile to the factory that is not a building
