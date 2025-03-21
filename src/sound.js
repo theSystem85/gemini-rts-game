@@ -109,6 +109,15 @@ export function playSound(eventName) {
   } catch (e) {
     console.error("AudioContext error:", e)
   }
+
+  // Add new sound mapping for heavy turret
+  if (eventName === 'shoot_heavy' && !soundMapping['shoot_heavy']) {
+    soundMapping['shoot_heavy'] = {
+      audio: new Audio('./sounds/shoot.mp3'), // Reuse existing sound if needed
+      volume: 0.5,
+      playbackRate: 0.7 // Lower pitch for heavier sound
+    };
+  }
 }
 
 // --- Background Music Functionality ---

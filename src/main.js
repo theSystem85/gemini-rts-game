@@ -1158,47 +1158,59 @@ gameCanvas.addEventListener('click', (e) => {
     // Get building data
     const buildingType = gameState.currentBuildingType;
     
-    // Check if placement is valid - pass buildings and factories arrays
-    if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories)) {
-      // Create and place the building
-      const newBuilding = createBuilding(buildingType, tileX, tileY);
-      
-      // Add owner property to the building
-      newBuilding.owner = 'player';
-      
-      // Add the building to gameState.buildings
-      gameState.buildings.push(newBuilding);
-      
-      // Mark building tiles in the map grid
-      placeBuilding(newBuilding, mapGrid);
-      
-      // Update power supply
-      updatePowerSupply(gameState.buildings, gameState);
-      
-      // Exit placement mode
-      gameState.buildingPlacementMode = false;
-      gameState.currentBuildingType = null;
-      
-      // Remove ready-for-placement class from the button
-      document.querySelectorAll('.ready-for-placement').forEach(button => {
-        button.classList.remove('ready-for-placement');
-      });
-      
-      // Clear the completed building reference
-      productionQueue.completedBuilding = null;
-      
-      // Play placement sound
-      playSound('buildingPlaced');
-      
-      // Show notification
-      showNotification(`${buildingData[buildingType].displayName} constructed`);
-      
-      // Start next production if any
-      if (productionQueue.buildingItems.length > 0) {
-        productionQueue.startNextBuildingProduction();
+    console.log(`Attempting to place ${buildingType} at (${tileX},${tileY})`);
+    
+    try {
+      // Check if placement is valid - pass buildings and factories arrays
+      if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories)) {
+        // Create and place the building
+        const newBuilding = createBuilding(buildingType, tileX, tileY);
+        
+        // Add owner property to the building
+        newBuilding.owner = 'player';
+        
+        // Add the building to gameState.buildings
+        if (!gameState.buildings) {
+          gameState.buildings = [];
+        }
+        gameState.buildings.push(newBuilding);
+        
+        // Mark building tiles in the map grid
+        placeBuilding(newBuilding, mapGrid);
+        
+        // Update power supply
+        updatePowerSupply(gameState.buildings, gameState);
+        
+        // Exit placement mode
+        gameState.buildingPlacementMode = false;
+        gameState.currentBuildingType = null;
+        
+        // Remove ready-for-placement class from the button
+        document.querySelectorAll('.ready-for-placement').forEach(button => {
+          button.classList.remove('ready-for-placement');
+        });
+        
+        // Clear the completed building reference
+        productionQueue.completedBuilding = null;
+        
+        // Play placement sound
+        playSound('buildingPlaced');
+        
+        // Show notification
+        showNotification(`${buildingData[buildingType].displayName} constructed`);
+        
+        // Start next production if any
+        if (productionQueue.buildingItems.length > 0) {
+          productionQueue.startNextBuildingProduction();
+        }
+      } else {
+        console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`);
+        // Play error sound for invalid placement
+        playSound('error');
       }
-    } else {
-      // Play error sound for invalid placement
+    } catch (error) {
+      console.error("Error during building placement:", error);
+      showNotification("Error placing building: " + error.message, 5000);
       playSound('error');
     }
   }

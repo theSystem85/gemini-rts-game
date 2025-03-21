@@ -45,7 +45,14 @@ export const buildingData = {
     power: -10,
     image: 'turret_gun_v1.jpg',
     displayName: 'Turret Gun V1',
-    health: 300
+    health: 300,
+    // Add combat properties
+    fireRange: 10, // 50% more than tank range (TANK_FIRE_RANGE + 50%)
+    fireCooldown: 1600, // Same as regular tank
+    damage: 20, // Same as regular tank
+    armor: 1,
+    projectileType: 'bullet',
+    projectileSpeed: 6 // Increased from 3 to 6
   },
   turretGunV2: {
     width: 1,
@@ -54,7 +61,15 @@ export const buildingData = {
     power: -15,
     image: 'turret_gun_v2.jpg',
     displayName: 'Turret Gun V2',
-    health: 300
+    health: 300,
+    // Add combat properties
+    fireRange: 10, // 50% more than tank range
+    fireCooldown: 1600,
+    damage: 24, // Same as tank-v2 (20% more than V1)
+    armor: 1,
+    projectileType: 'bullet',
+    projectileSpeed: 7, // Increased from 3 to 7
+    aimAhead: true // Special targeting feature
   },
   turretGunV3: {
     width: 1,
@@ -63,7 +78,17 @@ export const buildingData = {
     power: -25,
     image: 'turret_gun_v3.jpg',
     displayName: 'Turret Gun V3',
-    health: 300
+    health: 300,
+    // Add combat properties
+    fireRange: 12, // Even more range
+    fireCooldown: 1400, // Faster firing
+    damage: 30, // Higher damage
+    armor: 1.5,
+    projectileType: 'bullet',
+    projectileSpeed: 8, // Increased from 4 to 8
+    burstFire: true, // Special feature: fires 3 shots in quick succession
+    burstCount: 3, 
+    burstDelay: 150 // ms between burst shots
   },
   rocketTurret: {
     width: 2,
@@ -79,7 +104,7 @@ export const buildingData = {
     damage: 40,
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
-    projectileSpeed: 4
+    projectileSpeed: 6 // Increased from 4 to 6
   },
   teslaCoil: {
     width: 2,
@@ -128,16 +153,30 @@ export function createBuilding(type, x, y) {
   };
   
   // Add combat properties for defensive buildings
-  if (type === 'rocketTurret') {
+  if (type === 'rocketTurret' || type.startsWith('turretGun')) {
     building.fireRange = data.fireRange;
     building.fireCooldown = data.fireCooldown;
     building.damage = data.damage;
-    building.armor = data.armor;
+    building.armor = data.armor || 1;
     building.projectileType = data.projectileType;
     building.projectileSpeed = data.projectileSpeed;
     building.lastShotTime = 0;
     building.turretDirection = 0; // Direction the turret is facing
     building.targetDirection = 0; // Direction the turret should face
+    
+    // Add special targeting features
+    if (data.aimAhead) {
+      building.aimAhead = true;
+    }
+    
+    // Add burst fire capabilities
+    if (data.burstFire) {
+      building.burstFire = true;
+      building.burstCount = data.burstCount || 3;
+      building.burstDelay = data.burstDelay || 150;
+      building.currentBurst = 0;
+      building.lastBurstTime = 0;
+    }
   }
   
   return building;
@@ -203,6 +242,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   if (tileX < 0 || tileY < 0 || 
       tileX + width > mapGrid[0].length || 
       tileY + height > mapGrid.length) {
+    console.log('Building placement failed: Out of map boundaries');
     return false;
   }
   
@@ -220,16 +260,18 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   
   // If no tile is in range, return false
   if (!isAnyTileInRange) {
+    console.log('Building placement failed: Not near an existing building');
     return false;
   }
   
   // Check if any tile is blocked
   for (let y = tileY; y < tileY + height; y++) {
-    for (let x = tileX; x < tileX + width; x++) {
+    for (let x = tileX; x < tileX + width; x++) { // FIXED: use x instead of tileX in condition
       // Check map terrain
       if (mapGrid[y][x].type === 'water' || 
           mapGrid[y][x].type === 'rock' || 
           mapGrid[y][x].building) {
+        console.log(`Building placement failed: Invalid terrain at (${x},${y}): ${mapGrid[y][x].type}`);
         return false;
       }
       
@@ -240,11 +282,13 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       );
       
       if (unitsAtTile.length > 0) {
+        console.log(`Building placement failed: Unit present at (${x},${y})`);
         return false;
       }
     }
   }
   
+  console.log(`Building placement successful for ${type} at (${tileX},${tileY})`);
   return true;
 }
 
