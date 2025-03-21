@@ -180,13 +180,13 @@ Open Features:
 (-) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
 (-) add cannon tower defense building costing 2000$ and consuming 20 energy. Its armor is 3 times that of a tank. Its range is same as a tank. Its projectiles are same as a tank. It automatically attacks any eney unit in range.
 (-) add concrete wall to building options. The wall prevents any tank projectiles from crossing. It costs 100$ and has 2 times the armor of a tank. Its size is 1x1. Its tile color is darker thank rock grey. It does not cost energy.
-(-) add rocket tower defense building costing 4000$ and consuming 50 energy. Its armor is 2 times that of a tank. Its range is the same a rocket tank. Its projectiles are same as a rocket tank. It automatically attacks any eney unit in range.
 (-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
 (-) make tank_v2 get 30% more health as tank_v1.
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) implement rocket tower defense building costing 4000$ and consuming 50 energy. Its armor is 2 times that of a tank. Its range is 50% higher than that of the a rocket tank. Its projectiles are same as a rocket tank. It automatically attacks any eney unit in range.
 (x) ensure that when the energy is below 10% then unit an building production is slowed down by 66% and the overview map turns gray. When enegery lever rises again above 10% then effects get resotred.
 (x) Show the energy production as a green bar in the sidebar below the overview map going from left to right. The bar starts with 100% green and 100% width of the sidebar. When The available energy is consumed by buildings by 50% it turns full yellow and when only 25% energy is left it turns full orange and when only 10% energy is left it turns 100% red. The bar has a label showing "energy produced" in numbers (centered). The color changes gradually depending on the given color keyframes.
 (x) ensure that construction of one unit and one building can run in parallel

@@ -72,7 +72,14 @@ export const buildingData = {
     power: -40,
     image: 'rocket_turret.jpg',
     displayName: 'Rocket Turret',
-    health: 200
+    health: 200,
+    // Add combat properties
+    fireRange: 12, // Increased by 50% from 8 to 12
+    fireCooldown: 3000, // 3 seconds between shots
+    damage: 40,
+    armor: 2, // 2x the armor of a tank
+    projectileType: 'rocket',
+    projectileSpeed: 4
   },
   teslaCoil: {
     width: 2,
@@ -108,7 +115,7 @@ export function createBuilding(type, x, y) {
   
   const data = buildingData[type];
   
-  return {
+  const building = {
     type,
     x,
     y,
@@ -119,6 +126,21 @@ export function createBuilding(type, x, y) {
     power: data.power,
     isBuilding: true
   };
+  
+  // Add combat properties for defensive buildings
+  if (type === 'rocketTurret') {
+    building.fireRange = data.fireRange;
+    building.fireCooldown = data.fireCooldown;
+    building.damage = data.damage;
+    building.armor = data.armor;
+    building.projectileType = data.projectileType;
+    building.projectileSpeed = data.projectileSpeed;
+    building.lastShotTime = 0;
+    building.turretDirection = 0; // Direction the turret is facing
+    building.targetDirection = 0; // Direction the turret should face
+  }
+  
+  return building;
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building

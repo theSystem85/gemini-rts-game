@@ -63,6 +63,53 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.textAlign = 'center';
       gameCtx.fillText(building.type, screenX + width / 2, screenY + height / 2);
       
+      // Draw turret for defensive buildings
+      if (building.type === 'rocketTurret') {
+        const centerX = screenX + width / 2;
+        const centerY = screenY + height / 2;
+        
+        // Draw turret
+        gameCtx.save();
+        gameCtx.translate(centerX, centerY);
+        gameCtx.rotate(building.turretDirection || 0);
+        
+        // Draw the turret barrel - thicker and more visible
+        gameCtx.strokeStyle = '#F00';
+        gameCtx.lineWidth = 4;
+        gameCtx.beginPath();
+        gameCtx.moveTo(0, 0);
+        gameCtx.lineTo(TILE_SIZE, 0);
+        gameCtx.stroke();
+        
+        // Draw rocket launcher
+        gameCtx.fillStyle = '#444';
+        gameCtx.fillRect(TILE_SIZE * 0.5, -5, TILE_SIZE * 0.5, 10);
+        
+        // Draw turret base
+        gameCtx.fillStyle = '#222';
+        gameCtx.beginPath();
+        gameCtx.arc(0, 0, 8, 0, Math.PI * 2);
+        gameCtx.fill();
+        
+        // Draw ready indicator if the turret can fire
+        if (!building.lastShotTime || performance.now() - building.lastShotTime >= building.fireCooldown) {
+          gameCtx.fillStyle = '#0F0';
+          gameCtx.beginPath();
+          gameCtx.arc(0, 0, 4, 0, Math.PI * 2);
+          gameCtx.fill();
+        }
+        
+        gameCtx.restore();
+        
+        // Draw range indicator if selected
+        if (building.selected) {
+          gameCtx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+          gameCtx.beginPath();
+          gameCtx.arc(centerX, centerY, building.fireRange * TILE_SIZE - scrollOffset.x, 0, Math.PI * 2);
+          gameCtx.stroke();
+        }
+      }
+      
       // Draw health bar if damaged
       if (building.health < building.maxHealth) {
         const healthBarWidth = width;

@@ -859,9 +859,96 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // --- Update Enemy AI ---
     updateEnemyAI(units, factories, bullets, mapGrid, gameState)
+    
+    // Update defensive buildings
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      updateDefensiveBuildings(gameState.buildings, units, bullets, delta);
+    }
   } catch (error) {
     console.error("Critical error in updateGame:", error)
     console.trace() // Add stack trace to see exactly where the error occurs
     // Don't allow the game to completely crash
   }
+}
+
+// Function to update defensive buildings like rocket turrets
+function updateDefensiveBuildings(buildings, units, bullets, delta) {
+  const now = performance.now();
+  
+  buildings.forEach(building => {
+    // Only process player rocket turrets that aren't destroyed
+    if (building.type === 'rocketTurret' && building.owner === 'player' && building.health > 0) {
+      // Calculate center position of the building for range calculations
+      const centerX = (building.x + building.width / 2) * TILE_SIZE;
+      const centerY = (building.y + building.height / 2) * TILE_SIZE;
+      
+      // Only fire if cooldown has elapsed
+      if (!building.lastShotTime || now - building.lastShotTime >= building.fireCooldown) {
+        let closestEnemy = null;
+        let closestDistance = Infinity;
+        
+        // Find closest enemy in range
+        for (const unit of units) {
+          if (unit.owner === 'enemy' && unit.health > 0) {
+            const unitCenterX = unit.x + TILE_SIZE / 2;
+            const unitCenterY = unit.y + TILE_SIZE / 2;
+            const dx = unitCenterX - centerX;
+            const dy = unitCenterY - centerY;
+            const distance = Math.hypot(dx, dy);
+            
+            if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
+              closestEnemy = unit;
+              closestDistance = distance;
+            }
+          }
+        }
+        
+        // If enemy in range, rotate turret and fire
+        if (closestEnemy) {
+          const unitCenterX = closestEnemy.x + TILE_SIZE / 2;
+          const unitCenterY = closestEnemy.y + TILE_SIZE / 2;
+          const dx = unitCenterX - centerX;
+          const dy = unitCenterY - centerY;
+          
+          // Calculate target direction for the turret
+          building.targetDirection = Math.atan2(dy, dx);
+          
+          // Smoothly rotate turret
+          building.turretDirection = smoothRotateTowardsAngle(
+            building.turretDirection || 0, 
+            building.targetDirection, 
+            0.1
+          );
+          
+          // Create a bullet object with all required properties for rocket projectiles
+          const angle = Math.atan2(dy, dx);
+          
+          // Fire a rocket with proper properties
+          const rocket = {
+            id: Date.now() + Math.random(),
+            x: centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 1.5), // Offset from building center
+            y: centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 1.5), // Offset from building center
+            speed: building.projectileSpeed,
+            vx: Math.cos(building.turretDirection) * building.projectileSpeed,
+            vy: Math.sin(building.turretDirection) * building.projectileSpeed,
+            type: 'rocket',
+            shooter: building,
+            baseDamage: building.damage,
+            active: true,
+            homing: true,
+            target: closestEnemy,
+            startTime: now
+          };
+          
+          bullets.push(rocket);
+          
+          // Play sound
+          playSound('shoot_rocket');
+          
+          // Update last shot time
+          building.lastShotTime = now;
+        }
+      }
+    }
+  });
 }

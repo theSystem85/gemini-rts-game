@@ -10,6 +10,16 @@ export let explosions = [] // Global explosion effects for rocket impacts
 // --- Helper Functions ---
 export function checkBulletCollision(bullet, units, factories, gameState) {
   try {
+    // Skip collision with self (building that shot the bullet)
+    if (bullet.shooter && bullet.shooter.isBuilding && 
+        bullet.x >= bullet.shooter.x * TILE_SIZE && 
+        bullet.x <= (bullet.shooter.x + bullet.shooter.width) * TILE_SIZE &&
+        bullet.y >= bullet.shooter.y * TILE_SIZE && 
+        bullet.y <= (bullet.shooter.y + bullet.shooter.height) * TILE_SIZE) {
+      // Bullet is still inside the building that shot it, skip collision
+      return null;
+    }
+    
     // Check collisions with units
     for (const unit of units) {
       // Skip friendly units to prevent friendly fire
@@ -23,7 +33,19 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
         // Apply randomized damage (0.8x to 1.2x base damage)
         const damageMultiplier = 0.8 + Math.random() * 0.4
         const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
-        unit.health -= actualDamage
+        
+        // Apply damage reduction from armor if the unit has armor
+        if (unit.armor) {
+          unit.health -= Math.max(1, Math.round(actualDamage / unit.armor));
+        } else {
+          unit.health -= actualDamage;
+        }
+        
+        // If this is a rocket projectile, trigger an explosion
+        if (bullet.type === 'rocket') {
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, performance.now(), null);
+        }
+        
         return unit
       }
     }
