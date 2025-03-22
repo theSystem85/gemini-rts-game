@@ -173,6 +173,8 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
+(-) when the h key is toggled an overview pops up or closes showing all the key bindings (mouse and keyboard) with explanations.
 (-) add a radar station building to the buildings options. Its size is 2x3 tiles. Its armor is 2 times that of a tank. When build the radar station enables the overview map. Before that map is just gray. It consumes 50 energy.
 (-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 (-) any building can be repaired by clicking the repair button in the side menu and then on a building. As soon as player click right click the repair mode is deselected again. Repairing x% of a building cost x * 0.3 of what it would have cost to build it again. Repairing a building restores the healthbar of that building. 
