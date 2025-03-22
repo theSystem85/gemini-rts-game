@@ -173,6 +173,12 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) add the aim ahead feature (aka AAF) for tanks that means that tanks aim at the position the target unit (aka TU) will be at when the TU does not change its speed or direction. Make sure to define a function that calculates the correct angle to aim at so that this function can be reused for all usages of AAF. Make sure only tank_v2 can use AAF but not tank_v1.
+(-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
+(-) add meaning to the level system so
+    Level 1: means that units will use the aim ahead feature
+    Level 2: means that units will use the dodge feature
+    Level 3: means that units will repair themselves when not moving by 1% every 3 seconds.
 (-) add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
 (-) when the h key is toggled an overview pops up or closes showing all the key bindings (mouse and keyboard) with explanations.
 (-) add a radar station building to the buildings options. Its size is 2x3 tiles. Its armor is 2 times that of a tank. When build the radar station enables the overview map. Before that map is just gray. It consumes 50 energy.
