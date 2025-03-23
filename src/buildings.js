@@ -69,7 +69,7 @@ export const buildingData = {
     armor: 1,
     projectileType: 'bullet',
     projectileSpeed: 7, // Increased from 3 to 7
-    aimAhead: true // Special targeting feature
+    useAimAhead: true // Enable aim-ahead feature for this turret
   },
   turretGunV3: {
     width: 1,
