@@ -34,3 +34,8 @@ export const PATH_CALC_INTERVAL = 2000
 
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export const PATHFINDING_THRESHOLD = 10
+
+// Aim-Ahead Function (AAF) calibration factor
+// Adjust this value in the browser console using:
+// window.gameState.aimAheadCalibrationFactor = newValue;
+export const AIM_AHEAD_CALIBRATION_FACTOR = 1.0

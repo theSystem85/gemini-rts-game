@@ -354,7 +354,8 @@ function createUnit(factory, unitType, x, y) {
       targetDirection: 0,
       turretDirection: 0,
       rotationSpeed: 0.1, // Radians per frame
-      isRotating: false
+      isRotating: false,
+      useAimAhead: true // Enable aim-ahead feature for tank-v2
     };
   }
   return {
@@ -380,7 +381,8 @@ function createUnit(factory, unitType, x, y) {
     targetDirection: 0,
     turretDirection: 0,
     rotationSpeed: 0.1, // Radians per frame
-    isRotating: false
+    isRotating: false,
+    useAimAhead: false // Default: Don't use aim-ahead for other units
   };
 }
 

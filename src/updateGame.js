@@ -17,7 +17,7 @@ import { selectedUnits, cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import {
   checkBulletCollision, triggerExplosion, isAdjacentToFactory, angleDiff, explosions,
   findClosestOre, findAdjacentTile, findPositionWithClearShot, smoothRotateTowardsAngle,
-  hasClearShot
+  hasClearShot, calculateAimAheadPosition
 } from './logic.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
@@ -284,11 +284,27 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   shooter: unit,
                   homing: false
                 };
-
-                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+                
+                // Use aim-ahead function if enabled for this unit
+                let targetingX = targetCenterX;
+                let targetingY = targetCenterY;
+                
+                if (unit.useAimAhead && unit.target.path && unit.target.path.length > 0) {
+                  // Calculate predicted position using aim-ahead
+                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState);
+                  targetingX = predictedPos.x;
+                  targetingY = predictedPos.y;
+                } else {
+                  // Standard targeting without prediction
+                  targetingX = targetCenterX;
+                  targetingY = targetCenterY;
+                }
+                
+                // Calculate bullet direction based on predicted position
+                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX);
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
-
+                
                 bullets.push(bullet);
                 unit.lastShotTime = now;
               }
@@ -929,7 +945,12 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
           let targetY = unitCenterY;
           
           // For V2 turret, implement aim-ahead feature
-          if (building.aimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
+          if (building.useAimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
+            // Use the centralized aim-ahead function instead of manual velocity calculation
+            const predictedPos = calculateAimAheadPosition(building, closestEnemy, building.projectileSpeed, gameState);
+            targetX = predictedPos.x;
+            targetY = predictedPos.y;
+          } else if (building.aimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
             // Calculate target velocity
             let vx = 0, vy = 0;
             

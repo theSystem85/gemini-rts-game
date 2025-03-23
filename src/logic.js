@@ -321,3 +321,82 @@ export function smoothRotateTowardsAngle(currentAngle, targetAngle, rotationSpee
 export function normalizeAngle(angle) {
   return ((angle + Math.PI) % (2 * Math.PI)) - Math.PI
 }
+
+// Calculate aim ahead position for moving targets
+export function calculateAimAheadPosition(shooter, target, projectileSpeed, gameState) {
+  // If target has no velocity or path, just return its current position
+  if (!target.path || target.path.length === 0) {
+    return {
+      x: target.x + TILE_SIZE / 2,
+      y: target.y + TILE_SIZE / 2
+    };
+  }
+  
+  // Use calibration factor from gameState if available, otherwise use default 1.0
+  const calibrationFactor = gameState && gameState.aimAheadCalibrationFactor !== undefined 
+    ? gameState.aimAheadCalibrationFactor 
+    : 1.0;
+  
+  // Get shooter and target center positions
+  const shooterCenterX = shooter.x + TILE_SIZE / 2;
+  const shooterCenterY = shooter.y + TILE_SIZE / 2;
+  
+  const targetCenterX = target.x + TILE_SIZE / 2;
+  const targetCenterY = target.y + TILE_SIZE / 2;
+  
+  // Calculate target's velocity based on its direction and speed
+  let targetVelocityX = 0;
+  let targetVelocityY = 0;
+  
+  // If target is moving along a path
+  if (target.path && target.path.length > 0) {
+    const nextTile = target.path[0];
+    const nextTileX = nextTile.x * TILE_SIZE + TILE_SIZE / 2;
+    const nextTileY = nextTile.y * TILE_SIZE + TILE_SIZE / 2;
+    
+    const moveDirX = nextTileX - targetCenterX;
+    const moveDirY = nextTileY - targetCenterY;
+    
+    // Normalize movement direction
+    const moveDist = Math.hypot(moveDirX, moveDirY);
+    if (moveDist > 0) {
+      const normalizedDirX = moveDirX / moveDist;
+      const normalizedDirY = moveDirY / moveDist;
+      
+      // Use target's speed or default to a reasonable value
+      const targetSpeed = target.effectiveSpeed || 0.35; // Default speed if not specified
+      
+      targetVelocityX = normalizedDirX * targetSpeed * TILE_SIZE;
+      targetVelocityY = normalizedDirY * targetSpeed * TILE_SIZE;
+    }
+  }
+  
+  // Current distance between shooter and target
+  const dx = targetCenterX - shooterCenterX;
+  const dy = targetCenterY - shooterCenterY;
+  const currentDistance = Math.hypot(dx, dy);
+  
+  // Initial time estimate (how long it would take to hit the target at its current position)
+  let interceptTime = currentDistance / (projectileSpeed * TILE_SIZE);
+  
+  // Iterative solution for better precision (3 iterations usually sufficient)
+  for (let i = 0; i < 3; i++) {
+    // Predict where target will be after interceptTime
+    const futureX = targetCenterX + targetVelocityX * interceptTime * calibrationFactor;
+    const futureY = targetCenterY + targetVelocityY * interceptTime * calibrationFactor;
+    
+    // Recalculate distance to future position
+    const futureRelativeX = futureX - shooterCenterX;
+    const futureRelativeY = futureY - shooterCenterY;
+    const futureDistance = Math.hypot(futureRelativeX, futureRelativeY);
+    
+    // Update interceptTime
+    interceptTime = futureDistance / (projectileSpeed * TILE_SIZE);
+  }
+  
+  // Final prediction
+  const predictedX = targetCenterX + targetVelocityX * interceptTime * calibrationFactor;
+  const predictedY = targetCenterY + targetVelocityY * interceptTime * calibrationFactor;
+  
+  return { x: predictedX, y: predictedY };
+}

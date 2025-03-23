@@ -23,5 +23,8 @@ export const gameState = {
   buildingPlacementMode: false,
   currentBuildingType: null,
   cursorX: 0,
-  cursorY: 0
+  cursorY: 0,
+  
+  // Aim-ahead function (AAF) calibration factor
+  aimAheadCalibrationFactor: 1.0
 }
