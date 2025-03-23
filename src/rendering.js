@@ -196,6 +196,96 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       )
     }
     
+    // Show what the enemy is currently building (if anything)
+    if (factory.id === 'enemy' && factory.currentlyBuilding) {
+      // Calculate center of factory for image placement
+      const centerX = pos.x + (factory.width * TILE_SIZE / 2) - scrollOffset.x;
+      const centerY = pos.y + (factory.height * TILE_SIZE / 2) - scrollOffset.y;
+      
+      // Draw image or icon of what's being built
+      const iconSize = TILE_SIZE;
+      
+      // Create a backdrop/background for the icon
+      gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      gameCtx.fillRect(
+        centerX - iconSize/2, 
+        centerY - iconSize/2, 
+        iconSize, 
+        iconSize
+      );
+      
+      // Try to use the same images as the production buttons
+      const imageName = factory.currentlyBuilding.includes('turretGun') ? 
+        `turret_gun_${factory.currentlyBuilding.slice(-2).toLowerCase()}.jpg` : 
+        factory.currentlyBuilding === 'tank-v2' ? 
+          'tank_v2.jpg' : 
+          buildingData[factory.currentlyBuilding]?.image || `${factory.currentlyBuilding}.webp`;
+          
+      // Create and draw the image
+      const img = new Image();
+      img.src = `images/${imageName}`;
+      
+      // Try to draw the image, fall back to text if it fails
+      try {
+        gameCtx.drawImage(img, 
+          centerX - iconSize/2, 
+          centerY - iconSize/2, 
+          iconSize, 
+          iconSize
+        );
+      } catch (e) {
+        // If image fails to load, just show text
+        gameCtx.fillStyle = '#FFF';
+        gameCtx.font = '10px Arial';
+        gameCtx.textAlign = 'center';
+        gameCtx.fillText(
+          factory.currentlyBuilding, 
+          centerX, 
+          centerY
+        );
+      }
+      
+      // Add a "building" progress border
+      const now = performance.now();
+      const progress = Math.min((now - factory.buildStartTime) / factory.buildDuration, 1);
+      
+      gameCtx.strokeStyle = '#FF0';
+      gameCtx.lineWidth = 2;
+      
+      // Draw progress border segments
+      if (progress < 0.25) {
+        // First segment (top)
+        gameCtx.beginPath();
+        gameCtx.moveTo(centerX - iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX - iconSize/2 + iconSize * (progress * 4), centerY - iconSize/2);
+        gameCtx.stroke();
+      } else if (progress < 0.5) {
+        // Top complete, drawing right side
+        gameCtx.beginPath();
+        gameCtx.moveTo(centerX - iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY - iconSize/2 + iconSize * ((progress - 0.25) * 4));
+        gameCtx.stroke();
+      } else if (progress < 0.75) {
+        // Right complete, drawing bottom
+        gameCtx.beginPath();
+        gameCtx.moveTo(centerX - iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY + iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2 - iconSize * ((progress - 0.5) * 4), centerY + iconSize/2);
+        gameCtx.stroke();
+      } else {
+        // Bottom complete, drawing left
+        gameCtx.beginPath();
+        gameCtx.moveTo(centerX - iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY - iconSize/2);
+        gameCtx.lineTo(centerX + iconSize/2, centerY + iconSize/2);
+        gameCtx.lineTo(centerX - iconSize/2, centerY + iconSize/2);
+        gameCtx.lineTo(centerX - iconSize/2, centerY + iconSize/2 - iconSize * ((progress - 0.75) * 4));
+        gameCtx.stroke();
+      }
+    }
+    
     if (factory.id === 'enemy' && factory.budget !== undefined) {
       gameCtx.fillStyle = '#FFF'
       gameCtx.font = '12px Arial'

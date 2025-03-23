@@ -3,6 +3,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
 import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
+import { buildingData, createBuilding, canPlaceBuilding, placeBuilding } from './buildings.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -14,6 +15,7 @@ const useSafeAttackDistance = false
   - Handles enemy production and target selection
   - Dodging behavior is now toggled by ENABLE_DODGING constant
   - Units recalculate paths no more often than every 2 seconds
+  - Now includes building construction logic for turrets and power plants
 */
 export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const occupancyMap = buildOccupancyMap(units, mapGrid)
@@ -24,31 +26,123 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   // Get targeted ore tiles from gameState
   const targetedOreTiles = gameState.targetedOreTiles || {};
 
-  // --- Enemy Production ---
+  // --- Enemy Building Construction ---
+  // Only attempt to build every 15 seconds
+  if (now - (gameState.enemyLastBuildingTime || 0) >= 15000 && enemyFactory && enemyFactory.budget > 3000 && gameState.buildings) {
+    const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy');
+    const powerPlants = enemyBuildings.filter(b => b.type === 'powerPlant');
+    const turrets = enemyBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret');
+    
+    // Calculate total power production and consumption
+    let totalPower = 0;
+    enemyBuildings.forEach(building => {
+      totalPower += building.power || 0;
+    });
+    
+    let buildingType = null;
+    let cost = 0;
+    
+    // Decision logic for what to build
+    if (totalPower < 0 || powerPlants.length === 0) {
+      // Need power - build a power plant
+      buildingType = 'powerPlant';
+      cost = 2000;
+    } else if (turrets.length < 3) {
+      // Build defense turrets
+      const rand = Math.random();
+      if (rand < 0.4 && enemyFactory.budget >= 3000) {
+        buildingType = 'turretGunV3';
+        cost = 3000;
+      } else if (rand < 0.7 && enemyFactory.budget >= 2000) {
+        buildingType = 'turretGunV2';
+        cost = 2000;
+      } else {
+        buildingType = 'turretGunV1';
+        cost = 1000;
+      }
+    }
+    
+    // Attempt to place the building
+    if (buildingType && enemyFactory.budget >= cost) {
+      // Find a suitable location near the enemy factory
+      const maxDistance = 3;
+      let placed = false;
+      
+      // Try positions around the factory
+      for (let y = Math.max(0, enemyFactory.y - maxDistance); y <= Math.min(mapGrid.length - 1, enemyFactory.y + enemyFactory.height + maxDistance); y++) {
+        for (let x = Math.max(0, enemyFactory.x - maxDistance); x <= Math.min(mapGrid[0].length - 1, enemyFactory.x + enemyFactory.width + maxDistance); x++) {
+          // Skip if we can't place a building here
+          if (!canPlaceBuilding(buildingType, x, y, mapGrid, units, gameState.buildings, factories)) {
+            continue;
+          }
+          
+          // Create and place the building
+          const newBuilding = createBuilding(buildingType, x, y);
+          newBuilding.owner = 'enemy';
+          gameState.buildings.push(newBuilding);
+          placeBuilding(newBuilding, mapGrid);
+          
+          // Reduce enemy budget
+          enemyFactory.budget -= cost;
+          
+          // Show what's being built
+          enemyFactory.currentlyBuilding = buildingType;
+          enemyFactory.buildStartTime = now;
+          enemyFactory.buildDuration = 5000; // 5 seconds to show the icon
+          
+          // Update timestamp
+          gameState.enemyLastBuildingTime = now;
+          
+          placed = true;
+          break;
+        }
+        if (placed) break;
+      }
+    }
+  }
+  
+  // Clear building indicator after build duration
+  if (enemyFactory && enemyFactory.currentlyBuilding && now - enemyFactory.buildStartTime > enemyFactory.buildDuration) {
+    enemyFactory.currentlyBuilding = null;
+  }
+
+  // --- Enemy Unit Production ---
   if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
     // Ensure enemy always has at least one harvester
     const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
     let unitType = 'tank'
     let cost = 1000
+    
     if (enemyHarvesters.length === 0) {
       unitType = 'harvester'
       cost = 500
     } else {
       const rand = Math.random()
+      // Enhanced unit selection with tank-v2
       if (rand < 0.1) {
         unitType = 'rocketTank'
         cost = 2000
       } else if (rand < 0.3) {
         unitType = 'harvester'
         cost = 500
+      } else if (rand < 0.5) {
+        unitType = 'tank-v2'
+        cost = 2000
       } else {
         unitType = 'tank'
         cost = 1000
       }
     }
+    
     if (enemyFactory.budget >= cost) {
       const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid)
       units.push(newEnemy)
+      
+      // Show what's being built
+      enemyFactory.currentlyBuilding = unitType;
+      enemyFactory.buildStartTime = now;
+      enemyFactory.buildDuration = 5000; // 5 seconds to show the icon
+      
       if (unitType === 'harvester') {
         const orePos = findClosestOre(newEnemy, mapGrid)
         if (orePos) {
@@ -83,7 +177,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     if (unit.owner !== 'enemy') return
 
     // Combat unit behavior
-    if (unit.type === 'tank' || unit.type === 'rocketTank') {
+    if (unit.type === 'tank' || unit.type === 'rocketTank' || unit.type === 'tank-v2') {
       // Target selection throttled to every 2 seconds
       const canChangeTarget = !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 2000)
       if (canChangeTarget) {
