@@ -47,7 +47,7 @@ const soundPaths = {
 
 const activeAudioElements = new Map();
 
-function playAssetSound(category) {
+function playAssetSound(category, volume = 1.0) {
   const files = soundFiles[category]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
@@ -57,6 +57,7 @@ function playAssetSound(category) {
     if (activeAudioElements.has(soundPath)) {
       const existingAudio = activeAudioElements.get(soundPath);
       existingAudio.currentTime = 0;
+      existingAudio.volume = volume; // Set volume
       existingAudio.play().catch(e => {
         console.error("Error replaying sound asset:", e);
       });
@@ -64,6 +65,7 @@ function playAssetSound(category) {
     }
 
     const audio = new Audio(soundPath);
+    audio.volume = volume; // Set volume
     audio.addEventListener('ended', () => {
       activeAudioElements.delete(soundPath);
     });
@@ -79,11 +81,11 @@ function playAssetSound(category) {
   return false;
 }
 
-export function playSound(eventName) {
+export function playSound(eventName, volume = 1.0) {
   if (!audioContext) return
   const category = soundMapping[eventName]
   if (category) {
-    const played = playAssetSound(category)
+    const played = playAssetSound(category, volume)
     if (played) return
   }
   // Fallback beep sound.
@@ -104,6 +106,7 @@ export function playSound(eventName) {
       eventName === 'deposit' ? 450 :
       eventName === 'explosion' ? 200 : 500
     oscillator.type = 'sine'
+    gainNode.gain.value = volume
     oscillator.start()
     oscillator.stop(audioContext.currentTime + 0.1)
   } catch (e) {

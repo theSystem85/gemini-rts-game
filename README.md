@@ -173,6 +173,10 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) make sure the enemy also builds turretGuns (v1 to v3) and tank-v2 units and power plants if energy is needed.
+(-) add unit lost sound
+(-) ensure unit ready sound is used
+(-) For every playSound call add a 2nd argument that specifies the loudness. By default it is 1.0. Set the loudness to 0.5 for the explosion sound(s).
 (-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
 (-) add meaning to the level system so
     Level 1: means that units will use the aim ahead feature
@@ -192,6 +196,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) show a small centered tile sized image (use the same as for the build buttons) of what the enemy is building in the base over the factory building of the enemy.
 (x) make sure tanks can fire in the direction of enemy units by tanking the targets speed and direction into account so that they can also hit moving targets. This feature is called aimAheadFunction (AAF). Implement a feature flag for every tank and defense turret so if the flag is tured on they will use that feature. For now only set the flag to true for tank-v2 and turretGunV2. Make sure to put in a global calibration factor variable that I can use to tweek the AAF angle when it is not precise and tell me how to change it in browser console.
 (x) add concrete wall to building options. The wall prevents any tank projectiles from crossing. It costs 100$ and has 2 times the armor of a tank. Its size is 1x1. Its tile color is darker thank rock grey. It does not cost energy.
 (x) implement rocket tower defense building costing 4000$ and consuming 50 energy. Its armor is 2 times that of a tank. Its range is 50% higher than that of the a rocket tank. Its projectiles are same as a rocket tank. It automatically attacks any eney unit in range.

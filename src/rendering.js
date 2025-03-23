@@ -3,6 +3,41 @@ import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
 import { tileToPixel } from './utils.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from './buildings.js';
 
+// Create an image cache to avoid repeated loading
+const imageCache = {};
+
+// Helper function to load images once
+function getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback) {
+  // Check if image is already in cache
+  if (imageCache[baseName]) {
+    callback(imageCache[baseName]);
+    return;
+  }
+  
+  // Try loading with different extensions
+  const tryLoadImage = (baseName, extensions, index = 0) => {
+    if (index >= extensions.length) {
+      callback(null); // No image found
+      return;
+    }
+    
+    const img = new Image();
+    img.onload = () => {
+      imageCache[baseName] = img; // Cache the loaded image
+      callback(img);
+    };
+    
+    img.onerror = () => {
+      // Try next extension
+      tryLoadImage(baseName, extensions, index + 1);
+    };
+    
+    img.src = `images/${baseName}.${extensions[index]}`;
+  };
+  
+  tryLoadImage(baseName, extensions, 0);
+}
+
 export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
 
   if (!gameState) {
@@ -203,7 +238,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       const centerY = pos.y + (factory.height * TILE_SIZE / 2) - scrollOffset.y;
       
       // Draw image or icon of what's being built
-      const iconSize = TILE_SIZE;
+      const iconSize = TILE_SIZE * 2; // Keep the 2x size
       
       // Create a backdrop/background for the icon
       gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -214,45 +249,58 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         iconSize
       );
       
-      // Try to use the same images as the production buttons
-      const imageName = factory.currentlyBuilding.includes('turretGun') ? 
-        `turret_gun_${factory.currentlyBuilding.slice(-2).toLowerCase()}.jpg` : 
-        factory.currentlyBuilding === 'tank-v2' ? 
-          'tank_v2.jpg' : 
-          buildingData[factory.currentlyBuilding]?.image || `${factory.currentlyBuilding}.webp`;
-          
-      // Create and draw the image
-      const img = new Image();
-      img.src = `images/${imageName}`;
+      // Simplified and more direct image name determination
+      let imageName;
       
-      // Try to draw the image, fall back to text if it fails
-      try {
-        gameCtx.drawImage(img, 
-          centerX - iconSize/2, 
-          centerY - iconSize/2, 
-          iconSize, 
-          iconSize
-        );
-      } catch (e) {
-        // If image fails to load, just show text
-        gameCtx.fillStyle = '#FFF';
-        gameCtx.font = '10px Arial';
-        gameCtx.textAlign = 'center';
-        gameCtx.fillText(
-          factory.currentlyBuilding, 
-          centerX, 
-          centerY
-        );
+      // Handle unit types
+      if (factory.currentlyBuilding === 'tank') {
+        imageName = 'tank';
+      } else if (factory.currentlyBuilding === 'tank-v2') {
+        imageName = 'tank_v2';
+      } else if (factory.currentlyBuilding === 'rocketTank') {
+        imageName = 'rocket_tank';
+      } else if (factory.currentlyBuilding === 'harvester') {
+        imageName = 'harvester';
+      } 
+      // Handle building types
+      else if (factory.currentlyBuilding.startsWith('turretGun')) {
+        const version = factory.currentlyBuilding.slice(-2).toLowerCase();
+        imageName = `turret_gun_${version}`;
+      } else {
+        // For other buildings, use the type directly
+        imageName = factory.currentlyBuilding;
       }
+      
+      // Use the image cache function instead of creating a new Image every time
+      getOrLoadImage(imageName, ['jpg', 'webp', 'png'], (img) => {
+        if (img) {
+          gameCtx.drawImage(img, 
+            centerX - iconSize/2, 
+            centerY - iconSize/2, 
+            iconSize, 
+            iconSize
+          );
+        } else {
+          // Fallback if no image could be loaded
+          gameCtx.fillStyle = '#FFF';
+          gameCtx.font = '16px Arial';
+          gameCtx.textAlign = 'center';
+          gameCtx.fillText(
+            factory.currentlyBuilding, 
+            centerX, 
+            centerY
+          );
+        }
+      });
       
       // Add a "building" progress border
       const now = performance.now();
       const progress = Math.min((now - factory.buildStartTime) / factory.buildDuration, 1);
       
       gameCtx.strokeStyle = '#FF0';
-      gameCtx.lineWidth = 2;
+      gameCtx.lineWidth = 3;
       
-      // Draw progress border segments
+      // Draw progress border segments - scaled with iconSize
       if (progress < 0.25) {
         // First segment (top)
         gameCtx.beginPath();
