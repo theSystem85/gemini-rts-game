@@ -266,8 +266,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                 // Use correct angle formula for normal tank to fire at current target position
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
-
                 bullets.push(bullet);
+                
+                // Add sound effect for tank firing
+                playSound('tankShot', 1.0);
+                
                 unit.lastShotTime = now;
               }
             } else if (unit.type === 'tank-v2') {
@@ -623,8 +626,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           // Remove the building from the buildings array
           gameState.buildings.splice(i, 1);
           
-          // Play explosion sound
-          playSound('explosion');
+          // Play explosion sound with reduced volume (0.5)
+          playSound('explosion', 0.5);
           
           // Add explosion effect
           const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2);
