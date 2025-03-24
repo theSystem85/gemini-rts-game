@@ -159,7 +159,7 @@ export const productionQueue = {
       const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
       if (newUnit) {
         units.push(newUnit);
-        playSound('productionReady');
+        playSound('productionReady', 1.0); // Play unit ready sound
         
         // If the produced unit is a harvester, automatically send it to harvest
         if (newUnit.type === 'harvester') {
