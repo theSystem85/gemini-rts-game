@@ -41,8 +41,8 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
           unit.health -= actualDamage;
         }
 
-        // Play unit lost sound if unit dies
-        if (unit.health <= 0) {
+        // Play unit lost sound if player unit dies
+        if (unit.health <= 0 && unit.owner === 'player') {
           playSound('unitLost', 1.0);
         }
         
@@ -82,7 +82,7 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
           }
           
           // Play hit sound
-          playSound('bulletHit');
+          playSound('bulletHit', 0.5);
           
           // If this is a rocket projectile, trigger an explosion
           if (bullet.type === 'rocket') {
