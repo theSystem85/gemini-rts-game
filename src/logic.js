@@ -50,6 +50,45 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
       }
     }
     
+    // Check collisions with buildings
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      for (const building of gameState.buildings) {
+        // Skip friendly buildings to prevent friendly fire
+        if (building.owner === bullet.shooter?.owner) continue;
+        
+        // Check if bullet is within building bounds (with small buffer)
+        const buildingX = building.x * TILE_SIZE;
+        const buildingY = building.y * TILE_SIZE;
+        const buildingWidth = building.width * TILE_SIZE;
+        const buildingHeight = building.height * TILE_SIZE;
+        
+        if (bullet.x >= buildingX - 5 && bullet.x <= buildingX + buildingWidth + 5 &&
+            bullet.y >= buildingY - 5 && bullet.y <= buildingY + buildingHeight + 5) {
+          
+          // Apply damage to building (with randomized multiplier)
+          const damageMultiplier = 0.8 + Math.random() * 0.4;
+          const actualDamage = Math.round(bullet.baseDamage * damageMultiplier);
+          
+          // Apply damage reduction from armor if the building has armor
+          if (building.armor) {
+            building.health -= Math.max(1, Math.round(actualDamage / building.armor));
+          } else {
+            building.health -= actualDamage;
+          }
+          
+          // Play hit sound
+          playSound('bulletHit');
+          
+          // If this is a rocket projectile, trigger an explosion
+          if (bullet.type === 'rocket') {
+            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, performance.now(), null);
+          }
+          
+          return building;
+        }
+      }
+    }
+    
     // Check collisions with factories
     for (const factory of factories) {
       // Skip friendly factories
