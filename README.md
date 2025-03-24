@@ -173,8 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) make sure enemy defense turrets are actually attacking player units when in range
-(-) make sure the enemy also can build turretGuns (v1 to v3)  and power plants if energy is needed.
+(-) refine the coloring of the power bar and its logic on impacting the production.
 (-) Also make sure the enemy builds the defense buildings towards the direction of the closest ore field to protect harvesters and the base.
 (-) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
 
@@ -201,6 +200,8 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) make sure the enemy also can build turretGuns (v1 to v3)  and power plants if energy is needed.
+(x) make sure enemy defense turrets are actually attacking player units when in range
 (x) show a small centered tile sized image (use the same as for the build buttons) of what the enemy is building in the base over the factory building of the enemy.
 (x) make sure tanks can fire in the direction of enemy units by tanking the targets speed and direction into account so that they can also hit moving targets. This feature is called aimAheadFunction (AAF). Implement a feature flag for every tank and defense turret so if the flag is tured on they will use that feature. For now only set the flag to true for tank-v2 and turretGunV2. Make sure to put in a global calibration factor variable that I can use to tweek the AAF angle when it is not precise and tell me how to change it in browser console.
 (x) add concrete wall to building options. The wall prevents any tank projectiles from crossing. It costs 100$ and has 2 times the armor of a tank. Its size is 1x1. Its tile color is darker thank rock grey. It does not cost energy.

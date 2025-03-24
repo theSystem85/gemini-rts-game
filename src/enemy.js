@@ -27,8 +27,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const targetedOreTiles = gameState.targetedOreTiles || {};
 
   // --- Enemy Building Construction ---
-  // Only attempt to build every 15 seconds
-  if (now - (gameState.enemyLastBuildingTime || 0) >= 15000 && enemyFactory && enemyFactory.budget > 2000 && gameState.buildings) {
+  // Reduce build interval from 15 seconds to 10 seconds for faster defensive building construction
+  if (now - (gameState.enemyLastBuildingTime || 0) >= 10000 && enemyFactory && enemyFactory.budget > 1000 && gameState.buildings) {
     const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy');
     const powerPlants = enemyBuildings.filter(b => b.type === 'powerPlant');
     const turrets = enemyBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret');
@@ -65,31 +65,55 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     
     // If no building was selected from player patterns or we couldn't afford it, use standard logic
     if (!buildingType || enemyFactory.budget < cost) {
-      // Decision logic for what to build
-      if (energyEfficiency < 10 || powerPlants.length === 0) {
-        // Need power - build a power plant
+      // New build priority: First power plant, then at least 2 turrets before anything else
+      if (powerPlants.length === 0) {
+        // Always build first power plant
         buildingType = 'powerPlant';
         cost = 2000;
-      } else if (turrets.length < 4) {
-        // Build defense turrets
-        const rand = Math.random();
-        if (rand < 0.3 && enemyFactory.budget >= 3000) {
-          buildingType = 'turretGunV3';
-          cost = 3000;
-        } else if (rand < 0.6 && enemyFactory.budget >= 2000) {
-          buildingType = 'turretGunV2';
-          cost = 2000;
-        } else if (rand < 0.9) {
-          buildingType = 'turretGunV1';
-          cost = 1000;
-        } else if (enemyFactory.budget >= 4000) {
+      } else if (turrets.length < 2) {
+        // Prioritize defensive turrets (at least 2) right after power plant
+        // Choose the best turret the enemy can afford
+        if (enemyFactory.budget >= 4000) {
           buildingType = 'rocketTurret';
           cost = 4000;
+        } else if (enemyFactory.budget >= 3000) {
+          buildingType = 'turretGunV3';
+          cost = 3000;
+        } else if (enemyFactory.budget >= 2000) {
+          buildingType = 'turretGunV2';
+          cost = 2000;
         } else {
           buildingType = 'turretGunV1';
           cost = 1000;
         }
-      } else if (enemyHarvesters.length >= 3 && powerPlants.length >= 2 && enemyFactory.budget >= 2500 && Math.random() < 0.4) {
+      } else if (enemyHarvesters.length === 0 || (enemyHarvesters.length < 2 && Math.random() < 0.7)) {
+        // Now encourage harvester production (first one is handled in unit production)
+        // Start with harvester support (if budget allows)
+        if (enemyFactory.budget >= 2500) {
+          buildingType = 'oreRefinery';
+          cost = 2500;
+        }
+      } else if (energyEfficiency < 20 || (powerPlants.length < 2 && enemyFactory.budget >= 3000)) {
+        // Build second power plant if energy efficiency is low or if we can afford it
+        buildingType = 'powerPlant';
+        cost = 2000;
+      } else if (turrets.length < 4) {
+        // After establishing economy, build more defensive structures
+        const rand = Math.random();
+        if (rand < 0.4 && enemyFactory.budget >= 4000) {
+          buildingType = 'rocketTurret';
+          cost = 4000;
+        } else if (rand < 0.7 && enemyFactory.budget >= 3000) {
+          buildingType = 'turretGunV3';
+          cost = 3000;
+        } else if (rand < 0.9 && enemyFactory.budget >= 2000) {
+          buildingType = 'turretGunV2';
+          cost = 2000;
+        } else {
+          buildingType = 'turretGunV1';
+          cost = 1000;
+        }
+      } else if (enemyHarvesters.length >= 2 && powerPlants.length >= 2 && enemyFactory.budget >= 2500 && Math.random() < 0.5) {
         // Build refinery to speed up harvesting operations
         buildingType = 'oreRefinery';
         cost = 2500;

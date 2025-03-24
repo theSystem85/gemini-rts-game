@@ -134,7 +134,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
     const rect = gameCanvas.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-
     // --- Enemy Hover Cursor ---
     if (selectedUnits.length > 0) {
       let enemyHover = false
@@ -149,6 +148,25 @@ export function setupInputHandlers(units, factories, mapGrid) {
               worldY < factoryPixelY + factory.height * TILE_SIZE) {
             enemyHover = true
             break
+          }
+        }
+      }
+      // Check enemy buildings
+      if (!enemyHover && gameState.buildings && gameState.buildings.length > 0) {
+        for (const building of gameState.buildings) {
+          if (building.owner !== 'player') {
+            const buildingX = building.x * TILE_SIZE
+            const buildingY = building.y * TILE_SIZE
+            const buildingWidth = building.width * TILE_SIZE
+            const buildingHeight = building.height * TILE_SIZE
+            
+            if (worldX >= buildingX && 
+                worldX < buildingX + buildingWidth && 
+                worldY >= buildingY && 
+                worldY < buildingY + buildingHeight) {
+              enemyHover = true
+              break
+            }
           }
         }
       }
@@ -306,18 +324,42 @@ export function setupInputHandlers(units, factories, mapGrid) {
           const worldX = e.clientX - rect.left + gameState.scrollOffset.x
           const worldY = e.clientY - rect.top + gameState.scrollOffset.y
           let target = null
-          // Check enemy factories.
-          for (const factory of factories) {
-            if (factory.id !== 'player' &&
-                worldX >= factory.x * TILE_SIZE &&
-                worldX < (factory.x + factory.width) * TILE_SIZE &&
-                worldY >= factory.y * TILE_SIZE &&
-                worldY < (factory.y + factory.height) * TILE_SIZE) {
-              target = factory
-              break
+          
+          // Check enemy buildings first (they have priority)
+          if (gameState.buildings && gameState.buildings.length > 0) {
+            for (const building of gameState.buildings) {
+              if (building.owner !== 'player') {
+                const buildingX = building.x * TILE_SIZE
+                const buildingY = building.y * TILE_SIZE
+                const buildingWidth = building.width * TILE_SIZE
+                const buildingHeight = building.height * TILE_SIZE
+                
+                if (worldX >= buildingX && 
+                    worldX < buildingX + buildingWidth && 
+                    worldY >= buildingY && 
+                    worldY < buildingY + buildingHeight) {
+                  target = building
+                  break
+                }
+              }
             }
           }
-          // Check enemy units.
+          
+          // Check enemy factories if no building was targeted
+          if (!target) {
+            for (const factory of factories) {
+              if (factory.id !== 'player' &&
+                  worldX >= factory.x * TILE_SIZE &&
+                  worldX < (factory.x + factory.width) * TILE_SIZE &&
+                  worldY >= factory.y * TILE_SIZE &&
+                  worldY < (factory.y + factory.height) * TILE_SIZE) {
+                target = factory
+                break
+              }
+            }
+          }
+          
+          // Check enemy units if no building or factory was targeted
           if (!target) {
             for (const unit of units) {
               if (unit.owner !== 'player') {
