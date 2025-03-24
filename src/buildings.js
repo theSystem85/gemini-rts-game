@@ -183,14 +183,12 @@ export function createBuilding(type, x, y) {
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building
-export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = 3) {
-  // For the first building placement, we still need to check if it's close to the player's factory
-  
-  // First check factories (specifically player's factory)
+export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = 3, owner = 'player') {
+  // First check factories
   if (factories && factories.length > 0) {
     for (const factory of factories) {
-      // Only consider player's factory
-      if (factory.id === 'player') {
+      // Only consider factories belonging to the same owner
+      if (factory.id === owner || factory.owner === owner) {
         // Calculate the shortest distance from the new position to any tile of the factory
         for (let bY = factory.y; bY < factory.y + factory.height; bY++) {
           for (let bX = factory.x; bX < factory.x + factory.width; bX++) {
@@ -209,8 +207,8 @@ export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDi
   // Then check buildings
   if (buildings && buildings.length > 0) {
     for (const building of buildings) {
-      // Skip enemy buildings (we only want to build near our own buildings)
-      if (building.owner === 'enemy') {
+      // Skip buildings not belonging to the same owner
+      if (building.owner !== owner) {
         continue;
       }
       
@@ -232,7 +230,7 @@ export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDi
 }
 
 // Check if a building can be placed at given coordinates
-export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factories) {
+export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factories, owner = 'player') {
   if (!buildingData[type]) return false;
   
   const width = buildingData[type].width;
@@ -250,7 +248,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   let isAnyTileInRange = false;
   for (let y = tileY; y < tileY + height; y++) {
     for (let x = tileX; x < tileX + width; x++) {
-      if (isNearExistingBuilding(x, y, buildings, factories)) {
+      if (isNearExistingBuilding(x, y, buildings, factories, 3, owner)) {
         isAnyTileInRange = true;
         break;
       }
@@ -266,7 +264,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   
   // Check if any tile is blocked
   for (let y = tileY; y < tileY + height; y++) {
-    for (let x = tileX; x < tileX + width; x++) { // FIXED: use x instead of tileX in condition
+    for (let x = tileX; x < tileX + width; x++) { // FIXED: use x in condition instead of y
       // Check map terrain
       if (mapGrid[y][x].type === 'water' || 
           mapGrid[y][x].type === 'rock' || 

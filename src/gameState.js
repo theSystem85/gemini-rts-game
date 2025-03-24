@@ -25,6 +25,11 @@ export const gameState = {
   cursorX: 0,
   cursorY: 0,
   
+  // Enemy AI learning
+  playerBuildHistory: null,  // Will be initialized from localStorage if available
+  currentSessionId: null,    // Will be set when first building is placed
+  enemyLastBuildingTime: 0,  // Track when enemy last built something
+  
   // Aim-ahead function (AAF) calibration factor
   aimAheadCalibrationFactor: 1.0
 }
