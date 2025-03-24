@@ -173,7 +173,12 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) make sure the enemy also builds turretGuns (v1 to v3) and tank-v2 units and power plants if energy is needed.
+(-) make sure enemy defense turrets are actually attacking player units when in range
+(-) make sure the enemy also can build turretGuns (v1 to v3)  and power plants if energy is needed.
+(-) Also make sure the enemy builds the defense buildings towards the direction of the closest ore field to protect harvesters and the base.
+(-) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
+
+(-) make sure the enemy also can build turretGuns (v1 to v3) and tank-v2 units and power plants if energy is needed.
 (-) add unit lost sound
 (-) ensure unit ready sound is used
 (-) For every playSound call add a 2nd argument that specifies the loudness. By default it is 1.0. Set the loudness to 0.5 for the explosion sound(s).
@@ -229,6 +234,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
+(-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
 Fixed Bugs:

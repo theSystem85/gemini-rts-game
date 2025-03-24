@@ -154,6 +154,18 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
       // --- Spawn Exit ---
       if (unit.spawnedInFactory) {
+        // Check if the unit should still be held in the factory (for enemy units)
+        if (unit.holdInFactory && unit.owner === 'enemy') {
+          const now = performance.now();
+          if (now < unit.factoryBuildEndTime) {
+            // Don't allow the unit to leave the factory yet
+            continue;
+          } else {
+            // Unit can now leave the factory
+            unit.holdInFactory = false;
+          }
+        }
+        
         const factory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy')
@@ -895,9 +907,9 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
   const now = performance.now();
   
   buildings.forEach(building => {
-    // Process player defensive buildings that aren't destroyed
+    // Process defensive buildings that aren't destroyed (both player and enemy)
     if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun')) && 
-        building.owner === 'player' && building.health > 0) {
+        building.health > 0) {
       
       // Calculate center position of the building for range calculations
       const centerX = (building.x + building.width / 2) * TILE_SIZE;
@@ -920,9 +932,9 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
         let closestEnemy = null;
         let closestDistance = Infinity;
         
-        // Find closest enemy in range
+        // Find closest enemy in range (enemy turrets target player units, player turrets target enemy units)
         for (const unit of units) {
-          if (unit.owner === 'enemy' && unit.health > 0) {
+          if (unit.owner !== building.owner && unit.health > 0) {
             const unitCenterX = unit.x + TILE_SIZE / 2;
             const unitCenterY = unit.y + TILE_SIZE / 2;
             const dx = unitCenterX - centerX;
@@ -991,11 +1003,11 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
           // Calculate target direction for the turret
           building.targetDirection = Math.atan2(targetY - centerY, targetX - centerX);
           
-          // Smoothly rotate turret - use 1.0 for 10x faster rotation (previously 0.1)
+          // Smoothly rotate turret - use 0.5 for 5x faster rotation (previously 0.1)
           building.turretDirection = smoothRotateTowardsAngle(
             building.turretDirection || 0, 
             building.targetDirection, 
-            0.5  // Increased from 0.1 to 1.0 (10x faster)
+            0.5
           );
           
           // Only fire if the turret is facing close enough to the target
