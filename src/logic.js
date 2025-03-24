@@ -40,6 +40,11 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
         } else {
           unit.health -= actualDamage;
         }
+
+        // Play unit lost sound if unit dies
+        if (unit.health <= 0) {
+          playSound('unitLost', 1.0);
+        }
         
         // If this is a rocket projectile, trigger an explosion
         if (bullet.type === 'rocket') {
@@ -141,7 +146,7 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
     duration: 500,
     maxRadius: explosionRadius
   })
-  playSound('explosion'); // play explosion sound when a destruction occurs
+  playSound('explosion', 0.5); // Set explosion sound volume to 0.5
   
   // Apply damage to nearby units
   units.forEach(unit => {

@@ -865,7 +865,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Cleanup: Remove Destroyed Units ---
     for (let i = units.length - 1; i >= 0; i--) {
       if (units[i].health <= 0) {
-        units.splice(i, 1)
+        playSound('unitLost', 1.0); // Play unit lost sound when unit is destroyed
+        units.splice(i, 1);
+        continue;
       }
     }
 

@@ -173,12 +173,13 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) only focus groups on double tapping mapping key (300ms double tap) but not immediately like it is now
+(-) Make sure new units start in alert mode but make sure units in alert mode only attack enemy units within range automatically!
 (-) refine the coloring of the power bar and its logic on impacting the production.
 (-) Also make sure the enemy builds the defense buildings towards the direction of the closest ore field to protect harvesters and the base.
 (-) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
 
 (-) make sure the enemy also can build turretGuns (v1 to v3) and tank-v2 units and power plants if energy is needed.
-(-) add unit lost sound
 (-) ensure unit ready sound is used
 (-) For every playSound call add a 2nd argument that specifies the loudness. By default it is 1.0. Set the loudness to 0.5 for the explosion sound(s).
 (-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
@@ -200,6 +201,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) add unit lost sound
 (x) make sure the enemy also can build turretGuns (v1 to v3)  and power plants if energy is needed.
 (x) make sure enemy defense turrets are actually attacking player units when in range
 (x) show a small centered tile sized image (use the same as for the build buttons) of what the enemy is building in the base over the factory building of the enemy.

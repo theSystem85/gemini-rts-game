@@ -18,7 +18,8 @@ const soundMapping = {
   bulletHit: 'bulletHit',
   harvest: null,
   deposit: 'deposit',
-  explosion: 'explosion'
+  explosion: 'explosion',
+  unitLost: 'unitLost' // Adding unit lost sound mapping
 }
 
 const soundFiles = {
@@ -33,16 +34,8 @@ const soundFiles = {
   constructionStarted: ['construction_started.mp3', 'building.mp3'],
   constructionPaused: ['construction_paused.mp3'],
   constructionCancelled: ['construction_cancelled.mp3'],
-  building: ['building.mp3']
-}
-
-// Sound file paths
-const soundPaths = {
-  // ... existing sounds ...
-  
-  // Building-related sounds
-  buildingPlaced: 'sounds/building_placed.mp3',
-  error: 'sounds/error.mp3',
+  building: ['building.mp3'],
+  unitLost: ['unit_lost.mp3'] // Empty array for now, will be populated when sound asset is added
 }
 
 const activeAudioElements = new Map();
