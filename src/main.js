@@ -839,7 +839,7 @@ gameCanvas.addEventListener('click', (e) => {
         
         // Play placement sound
         playSound('buildingPlaced');
-        
+
         // Show notification
         showNotification(`${buildingData[buildingType].displayName} constructed`);
         

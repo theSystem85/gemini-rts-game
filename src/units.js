@@ -1,6 +1,7 @@
 // units.js
 import { TILE_SIZE } from './config.js'
 import { getUniqueId } from './utils.js'
+import { playSound } from './sound.js'
 
 // Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
@@ -302,6 +303,7 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
         newUnit.path = path.slice(1);
       }
     }
+    playSound('unitReady')
     
     return newUnit;
   }

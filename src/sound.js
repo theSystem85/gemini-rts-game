@@ -14,9 +14,11 @@ const soundMapping = {
   productionStart: 'constructionStarted',
   productionPaused: 'constructionPaused',
   productionCancelled: 'constructionCancelled',
-  productionReady: 'productionReady',
+  constructionComplete: 'constructionComplete',
+  buildingPlaced: 'buildingPlaced',
+  unitReady: 'unitReady',
   bulletHit: 'bulletHit',
-  harvest: null,
+  harvest: 'harvest',
   deposit: 'deposit',
   explosion: 'explosion',
   unitLost: 'unitLost' // Adding unit lost sound mapping
@@ -26,7 +28,8 @@ const soundFiles = {
   explosion: ['explosion01.mp3', 'explosion02.mp3', 'explosion03.mp3', 'explosion04.mp3'],
   tankShot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'],
   tankMove: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'],
-  productionReady: ['unitReady01.mp3', 'unitReady02.mp3', 'unitReady03.mp3'],
+  constructionComplete: ['constructionComplete.mp3'],
+  unitReady: ['unitReady01.mp3', 'unitReady02.mp3', 'unitReady03.mp3'],
   bulletHit: ['bulletHit01.mp3'],
   deposit: ['deposit.mp3'],
   unitSelection: ['yesSir01.mp3'],
@@ -35,12 +38,15 @@ const soundFiles = {
   constructionPaused: ['construction_paused.mp3'],
   constructionCancelled: ['construction_cancelled.mp3'],
   building: ['building.mp3'],
+  buildingPlaced: ['buildingPlaced.mp3'],
+  harvest: ['harvest.mp3'],
   unitLost: ['unit_lost.mp3'] // Empty array for now, will be populated when sound asset is added
 }
 
 const activeAudioElements = new Map();
 
 function playAssetSound(category, volume = 1.0) {
+  console.log('playAssetSound', category, volume)
   const files = soundFiles[category]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
@@ -75,6 +81,7 @@ function playAssetSound(category, volume = 1.0) {
 }
 
 export function playSound(eventName, volume = 1.0) {
+  console.log('playSound', eventName, volume)
   if (!audioContext) return
   const category = soundMapping[eventName]
   if (category) {

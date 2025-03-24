@@ -279,9 +279,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
                 bullets.push(bullet);
-                
-                // Add sound effect for tank firing
-                playSound('tankShot', 1.0);
+
+                playSound('shoot', 0.5);
                 
                 unit.lastShotTime = now;
               }
@@ -756,7 +755,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           if (hitTarget.health !== undefined) {
             hitTarget.health -= damage
             bullet.active = false
-            playSound('bulletHit')
+            playSound('bulletHit', 0.5)
             if (hitTarget.health <= 0) {
               hitTarget.health = 0
             }
@@ -798,7 +797,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid);
             
             // Play sound
-            playSound('bulletHit');
+            playSound('bulletHit', 0.5);
             
             // Deactivate bullet
             bullet.active = false;
@@ -865,7 +864,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Cleanup: Remove Destroyed Units ---
     for (let i = units.length - 1; i >= 0; i--) {
       if (units[i].health <= 0) {
-        playSound('unitLost', 1.0); // Play unit lost sound when unit is destroyed
+        if (units[i].owner === 'player') {
+          playSound('unitLost', 1.0); // Play unit lost sound only for player units
+        }
         units.splice(i, 1);
         continue;
       }
@@ -886,7 +887,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           gameState.gameOverMessage = `Defeat! Win/Loss Ratio: ${gameState.wins}:${gameState.losses}`
         }
         gameState.gamePaused = true
-        playSound('explosion')
+        playSound('explosion', 0.5)
       }
     }
 
