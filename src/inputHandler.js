@@ -28,6 +28,9 @@ const controlGroups = {}
 let playerFactory = null
 let rallyPoint = null
 
+// Add global variable for formation toggle
+let groupFormationMode = false
+
 // Function to create help overlay
 function showControlsHelp() {
   // Create or show the help overlay
@@ -62,6 +65,7 @@ function showControlsHelp() {
         <li><strong>I Key:</strong> Show this help (press again to close)</li>
         <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
         <li><strong>1-9 Keys:</strong> Select units in that control group</li>
+        <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
       </ul>
       <p>Press I again to close and resume the game</p>
     `;
@@ -435,10 +439,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
               const rowsCount = Math.ceil(count / colsCount)
               const col = index % colsCount
               const row = Math.floor(index / colsCount)
-              formationOffset = {
-                x: col * 10 - ((colsCount - 1) * 10) / 2,
-                y: row * 10 - ((rowsCount - 1) * 10) / 2
+
+              // Apply formation offsets based on whether formation mode is active
+              if (unit.formationActive && unit.formationOffset) {
+                // Use stored formation offsets for this unit
+                formationOffset = {
+                  x: unit.formationOffset.x,
+                  y: unit.formationOffset.y
+                };
+              } else {
+                // Default grid formation if formation mode is not active
+                formationOffset = {
+                  x: col * 10 - ((colsCount - 1) * 10) / 2,
+                  y: row * 10 - ((rowsCount - 1) * 10) / 2
+                };
               }
+
               const destX = Math.floor(worldX) + formationOffset.x
               const destY = Math.floor(worldY) + formationOffset.y
               const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
@@ -515,12 +531,25 @@ export function setupInputHandlers(units, factories, mapGrid) {
       const colsCount = Math.ceil(Math.sqrt(count))
       const rowsCount = Math.ceil(count / colsCount)
       selectedUnits.forEach((unit, index) => {
-        const col = index % colsCount
-        const row = Math.floor(index / colsCount)
-        const formationOffset = {
-          x: col * 10 - ((colsCount - 1) * 10) / 2,
-          y: row * 10 - ((rowsCount - 1) * 10) / 2
+        let formationOffset;
+        
+        // Apply formation offsets based on whether formation mode is active
+        if (unit.formationActive && unit.formationOffset) {
+          // Use stored formation offsets for this unit
+          formationOffset = {
+            x: unit.formationOffset.x,
+            y: unit.formationOffset.y
+          };
+        } else {
+          // Default grid formation if formation mode is not active
+          const col = index % colsCount
+          const row = Math.floor(index / colsCount)
+          formationOffset = {
+            x: col * 10 - ((colsCount - 1) * 10) / 2,
+            y: row * 10 - ((rowsCount - 1) * 10) / 2
+          };
         }
+        
         const destX = Math.floor(worldX) + formationOffset.x
         const destY = Math.floor(worldY) + formationOffset.y
         const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
@@ -705,6 +734,33 @@ export function setupInputHandlers(units, factories, mapGrid) {
           playSound('unitSelection');
           playSound('yesSir01');
         }
+      }
+    }
+    // F key to toggle formation mode
+    else if(e.key.toLowerCase() === 'f'){
+      groupFormationMode = !groupFormationMode;
+      
+      // Toggle formationActive for selected units with a group number
+      const groupedUnits = selectedUnits.filter(unit => unit.groupNumber);
+      if (groupedUnits.length > 0) {
+        // Find the center of the formation
+        const centerX = groupedUnits.reduce((sum, unit) => sum + unit.x, 0) / groupedUnits.length;
+        const centerY = groupedUnits.reduce((sum, unit) => sum + unit.y, 0) / groupedUnits.length;
+        
+        // Store relative positions for each unit
+        groupedUnits.forEach(unit => {
+          unit.formationActive = groupFormationMode;
+          if (groupFormationMode) {
+            // Store the relative position from center when formation is activated
+            unit.formationOffset = {
+              x: unit.x - centerX,
+              y: unit.y - centerY
+            };
+          } else {
+            // Clear formation data when deactivated
+            unit.formationOffset = null;
+          }
+        });
       }
     }
   });

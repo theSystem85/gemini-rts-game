@@ -173,7 +173,6 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) Make sure units in alert mode also attack enemy defense buildings automatically when in range!
 (-) disable default CSS mouse cursor on the game map and switch to an SVG with transparency and animations that is displayed on the game map whenever the mouse moves. Make sure to hide it when the cursor is on the sidebar. Here are the different cursor states:
     (1) Movement Cursor: When a unit (or group) is selected the cursor turns green (make sure to generate an animated svg that indicates a movement target for a game on a map)
     (2) Movement Blocked: When a unit (or group) is selected the cursor turns red (make sure to generate an animated svg that indicates a blocked movement target for a game on a map)
@@ -205,6 +204,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) Make sure units in alert mode also attack enemy defense buildings automatically when in range!
 (x) when a group is selected and F key is pressed make sure that group keeps its relative position (formation) in between each unit of the group. F key can be toggled to switch formation on and off. If it is on it is indicated by a green group number.
 (x) when a unit is in a group show a little number (group number) 1-9 in the bottom left corner of the unit representing the group it belongs to.
 (x) Make sure new units that have alert mode support start in alert mode but make sure units in alert mode only attack enemy units within range automatically!
