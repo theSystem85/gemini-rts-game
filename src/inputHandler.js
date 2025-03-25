@@ -31,30 +31,30 @@ let rallyPoint = null
 // Add global variable for formation toggle
 let groupFormationMode = false
 
-// Function to create help overlay
+// Updated: Help overlay with modern futuristic styling
 function showControlsHelp() {
-  // Create or show the help overlay
   let helpOverlay = document.getElementById('helpOverlay');
-  
   if (!helpOverlay) {
     helpOverlay = document.createElement('div');
     helpOverlay.id = 'helpOverlay';
+    // Updated futuristic styling
     helpOverlay.style.position = 'absolute';
     helpOverlay.style.top = '50%';
     helpOverlay.style.left = '50%';
     helpOverlay.style.transform = 'translate(-50%, -50%)';
-    helpOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    helpOverlay.style.color = 'white';
+    helpOverlay.style.background = 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
+    helpOverlay.style.color = '#fff';
     helpOverlay.style.padding = '20px';
     helpOverlay.style.borderRadius = '10px';
+    helpOverlay.style.boxShadow = '0 4px 15px rgba(0, 255, 255, 0.2)';
+    helpOverlay.style.fontFamily = 'Roboto, sans-serif';
     helpOverlay.style.zIndex = '1000';
     helpOverlay.style.maxWidth = '80%';
     helpOverlay.style.maxHeight = '80%';
     helpOverlay.style.overflow = 'auto';
     
-    // Controls info
     helpOverlay.innerHTML = `
-      <h2>Game Controls</h2>
+      <h2 style="margin-top:0;">Game Controls</h2>
       <ul>
         <li><strong>Left Click:</strong> Select unit or factory</li>
         <li><strong>Left Click + Drag:</strong> Select multiple units</li>
@@ -69,7 +69,6 @@ function showControlsHelp() {
       </ul>
       <p>Press I again to close and resume the game</p>
     `;
-    
     document.body.appendChild(helpOverlay);
   } else {
     helpOverlay.style.display = helpOverlay.style.display === 'none' ? 'block' : 'none';
@@ -77,6 +76,53 @@ function showControlsHelp() {
   
   // Toggle game pause state
   gameState.paused = !gameState.paused;
+}
+
+// Updated: Toggle keybindings overview overlay with modern, futuristic styling
+function toggleKeyBindingsOverview() {
+  let overview = document.getElementById('keyBindingsOverview');
+  if (!overview) {
+    overview = document.createElement('div');
+    overview.id = 'keyBindingsOverview';
+    // Updated futuristic styling
+    overview.style.position = 'absolute';
+    overview.style.top = '50%';
+    overview.style.left = '50%';
+    overview.style.transform = 'translate(-50%, -50%)';
+    overview.style.background = 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
+    overview.style.color = '#fff';
+    overview.style.padding = '20px';
+    overview.style.borderRadius = '8px';
+    overview.style.boxShadow = '0 4px 15px rgba(0, 255, 255, 0.2)';
+    overview.style.fontFamily = 'Roboto, sans-serif';
+    overview.style.zIndex = '1000';
+    overview.style.maxWidth = '80%';
+    overview.style.maxHeight = '80%';
+    overview.style.overflowY = 'auto';
+    overview.innerHTML = `
+      <h2 style="margin-top:0;">Key Bindings</h2>
+      <ul>
+        <li><strong>Left Click</strong>: Select unit or factory</li>
+        <li><strong>Left Click + Drag</strong>: Multi-unit selection</li>
+        <li><strong>Right Click</strong>: Issue move or attack command</li>
+        <li><strong>A</strong>: Toggle alert mode (for supported units)</li>
+        <li><strong>D</strong>: Dodge command</li>
+        <li><strong>H</strong>: Toggle this keybindings overview</li>
+        <li><strong>I</strong>: Show additional help (pause game)</li>
+        <li><strong>CTRL + 1-9</strong>: Assign control groups</li>
+        <li><strong>1-9</strong>: Recall control groups</li>
+        <li><strong>F</strong>: Toggle formation mode</li>
+      </ul>
+    `;
+    document.body.appendChild(overview);
+  } else {
+    // Toggle the display
+    if (overview.style.display === 'none' || overview.style.display === '') {
+      overview.style.display = 'block';
+    } else {
+      overview.style.display = 'none';
+    }
+  }
 }
 
 // Helper: For a given target and unit center, return the appropriate aiming point.
@@ -546,9 +592,13 @@ export function setupInputHandlers(units, factories, mapGrid) {
       showControlsHelp();
       return;
     }
+    // New: Toggle keybindings overview when H is pressed
+    else if (e.key.toLowerCase() === 'h') {
+      toggleKeyBindingsOverview();
+      return;
+    }
     
-    // Don't process other inputs if game is paused
-    if (gameState.paused && e.key.toLowerCase() !== 'i') return;
+    // Don't process other inputs if gameState.paused && e.key.toLowerCase() !== 'i') return;
     
     // A key for alert mode
     if (e.key.toLowerCase() === 'a') {
@@ -714,12 +764,29 @@ export function setupInputHandlers(units, factories, mapGrid) {
     // F key to toggle formation mode
     else if(e.key.toLowerCase() === 'f'){
       groupFormationMode = !groupFormationMode;
+      
       // Toggle formationActive for selected units with a group number
-      selectedUnits.forEach(unit => {
-        if(unit.groupNumber) {
+      const groupedUnits = selectedUnits.filter(unit => unit.groupNumber);
+      if (groupedUnits.length > 0) {
+        // Find the center of the formation
+        const centerX = groupedUnits.reduce((sum, unit) => sum + unit.x, 0) / groupedUnits.length;
+        const centerY = groupedUnits.reduce((sum, unit) => sum + unit.y, 0) / groupedUnits.length;
+        
+        // Store relative positions for each unit
+        groupedUnits.forEach(unit => {
           unit.formationActive = groupFormationMode;
-        }
-      });
+          if (groupFormationMode) {
+            // Store the relative position from center when formation is activated
+            unit.formationOffset = {
+              x: unit.x - centerX,
+              y: unit.y - centerY
+            };
+          } else {
+            // Clear formation data when deactivated
+            unit.formationOffset = null;
+          }
+        });
+      }
     }
   });
 
