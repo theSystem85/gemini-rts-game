@@ -361,3 +361,40 @@ export function updatePowerSupply(buildings, gameState) {
   
   return totalPower;
 }
+
+// Calculate the repair cost for a building
+export function calculateRepairCost(building) {
+  // Get the original cost of the building
+  const type = building.type;
+  const originalCost = buildingData[type].cost;
+  
+  // Calculate the percentage of damage
+  const damagePercent = 1 - (building.health / building.maxHealth);
+  
+  // Formula: repair cost = damage percentage * original cost * 0.3
+  const repairCost = Math.ceil(damagePercent * originalCost * 0.3);
+  
+  return repairCost;
+}
+
+// Repair a building to full health
+export function repairBuilding(building, gameState) {
+  // Only repair if building is damaged
+  if (building.health >= building.maxHealth) {
+    return { success: false, message: "Building already at full health" };
+  }
+  
+  // Calculate repair cost
+  const repairCost = calculateRepairCost(building);
+  
+  // Check if player has enough money
+  if (gameState.money < repairCost) {
+    return { success: false, message: "Not enough money for repairs" };
+  }
+  
+  // Deduct cost and repair
+  gameState.money -= repairCost;
+  building.health = building.maxHealth;
+  
+  return { success: true, message: "Building repaired", cost: repairCost };
+}

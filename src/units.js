@@ -3,6 +3,13 @@ import { TILE_SIZE } from './config.js'
 import { getUniqueId } from './utils.js'
 import { playSound } from './sound.js'
 
+export const unitCosts = {
+  tank: 1000,
+  rocketTank: 2000,
+  harvester: 500,
+  'tank-v2': 2000
+}
+
 // Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
   const occupancy = []
