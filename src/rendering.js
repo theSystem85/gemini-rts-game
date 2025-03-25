@@ -475,10 +475,10 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   
   // Draw selection rectangle if active.
   if (selectionActive && selectionStart && selectionEnd) {
-    const rectX = selectionStart.x - scrollOffset.x
-    const rectY = selectionStart.y - scrollOffset.y
-    const rectWidth = selectionEnd.x - selectionStart.x
-    const rectHeight = selectionEnd.y - selectionStart.y
+    const rectX = Math.min(selectionStart.x, selectionEnd.x) - scrollOffset.x
+    const rectY = Math.min(selectionStart.y, selectionEnd.y) - scrollOffset.y
+    const rectWidth = Math.abs(selectionEnd.x - selectionStart.x)
+    const rectHeight = Math.abs(selectionEnd.y - selectionStart.y)
     gameCtx.strokeStyle = '#FF0'
     gameCtx.lineWidth = 2
     gameCtx.strokeRect(rectX, rectY, rectWidth, rectHeight)

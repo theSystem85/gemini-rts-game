@@ -98,6 +98,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
   // Store player factory reference for later use
   playerFactory = factories.find(factory => factory.id === 'player');
 
+  // Store a reference to gameState for direct updates
+  gameState.selectionActive = false;
+  gameState.selectionStart = { x: 0, y: 0 };
+  gameState.selectionEnd = { x: 0, y: 0 };
+
   // Disable right-click context menu.
   gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
@@ -119,11 +124,14 @@ export function setupInputHandlers(units, factories, mapGrid) {
       // Left-click: start selection.
       isSelecting = true
       selectionActive = true
+      gameState.selectionActive = true
       wasDragging = false
       selectionStart = { x: worldX, y: worldY }
       selectionEnd = { x: worldX, y: worldY }
       selectionStartExport = { ...selectionStart }
       selectionEndExport = { ...selectionEnd }
+      gameState.selectionStart = { ...selectionStart }
+      gameState.selectionEnd = { ...selectionEnd }
     }
   })
 
@@ -134,6 +142,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     const rect = gameCanvas.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    
     // --- Enemy Hover Cursor ---
     if (selectedUnits.length > 0) {
       let enemyHover = false
@@ -212,11 +221,13 @@ export function setupInputHandlers(units, factories, mapGrid) {
     } else if (!isSelecting) {
       gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
     }
-
+    
     // --- Update Selection Rectangle ---
     if (isSelecting) {
       selectionEnd = { x: worldX, y: worldY }
       selectionEndExport = { ...selectionEnd }
+      gameState.selectionEnd = { ...selectionEnd }
+      
       if (!wasDragging && (Math.abs(selectionEnd.x - selectionStart.x) > 5 || Math.abs(selectionEnd.y - selectionStart.y) > 5)) {
         wasDragging = true
       }
@@ -256,7 +267,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
     } else if (e.button === 0 && isSelecting) {
       if (wasDragging) {
-        handleBoundingBoxSelection(units, factories) // The function will be modified to ignore factories
+        handleBoundingBoxSelection(units, factories)
       } else {
         // Single unit or factory selection.
         const worldX = e.clientX - rect.left + gameState.scrollOffset.x
@@ -479,6 +490,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
       isSelecting = false
       selectionActive = false
+      gameState.selectionActive = false
     }
   })
 
