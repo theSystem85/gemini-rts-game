@@ -569,10 +569,10 @@ function gameLoop(time) {
     }
     
     renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
-              gameState.scrollOffset, selectionActive, 
-              selectionStartExport, selectionEndExport, gameState)
+              gameState.buildings, gameState.scrollOffset, gameState.selectionActive, 
+              gameState.selectionStart, gameState.selectionEnd, gameState)
     renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
-                 gameState.scrollOffset, gameCanvas, units)
+                 gameState.scrollOffset, gameCanvas, units, gameState.buildings, gameState)
     
     moneyEl.textContent = gameState.money
     gameTimeEl.textContent = Math.floor(gameState.gameTime)

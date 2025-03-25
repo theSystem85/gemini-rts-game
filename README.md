@@ -243,11 +243,11 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) the yellow selection frame is not visible anymore when dragging a frame around a group of units to select it. Also make sure that buildings cannot be selected by the frame only on direct click on the building.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
 Fixed Bugs:
+(x) the yellow selection frame is not visible anymore when dragging a frame around a group of units to select it.
 (x) Prevent playing the same sound multiple times at the exact same time. When some sound x is already running do not add it on top but just start that sound from the beginning.
 (x) Harvesters are able to harvest the same tile simultaneously. That should not happen. The ore tile shall be blocked as soon as one harvester is at it.
 (x) Units when dodging should not move differently than normal. They shoul just move to a random adjacent tile when an enemy projectile is approacing. Doding should not be faster than normal movement.
