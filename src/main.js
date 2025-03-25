@@ -1,13 +1,23 @@
 // main.js
-import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
-import { gameState } from './gameState.js'
-import { setupInputHandlers, selectionActive, selectionStartExport, selectionEndExport } from './inputHandler.js'
+import { setupInputHandlers } from './inputHandler.js'
+import { unitCosts } from './units.js'
 import { renderGame, renderMinimap } from './rendering.js'
-import { initFactories } from './factories.js'
-import { playSound, initBackgroundMusic, toggleBackgroundMusic } from './sound.js'
+import { gameState } from './gameState.js'
 import { updateGame } from './updateGame.js'
-import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, updatePowerSupply } from './buildings.js'
+import { 
+  buildingData, 
+  createBuilding, 
+  canPlaceBuilding, 
+  placeBuilding, 
+  updatePowerSupply,
+  repairBuilding,
+  calculateRepairCost
+} from './buildings.js'
 import { productionQueue } from './productionQueue.js'
+import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { playSound, toggleBackgroundMusic } from './sound.js'
+import { initFactories } from './factories.js'
+import { initBackgroundMusic } from './sound.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 const gameCtx = gameCanvas.getContext('2d')
@@ -306,13 +316,6 @@ export const units = []
 export const bullets = []
 
 setupInputHandlers(units, factories, mapGrid)
-
-export const unitCosts = {
-  tank: 1000,
-  rocketTank: 2000,
-  harvester: 500,
-  'tank-v2': 2000
-}
 
 // Add buildingCosts based on our building data
 export const buildingCosts = {};
@@ -793,6 +796,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Add building placement handling to the canvas click event
 gameCanvas.addEventListener('click', (e) => {
+  // If repair mode is active, check for buildings to repair
+  if (gameState.repairMode) {
+    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
+    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
+    
+    // Convert to tile coordinates
+    const tileX = Math.floor(mouseX / TILE_SIZE);
+    const tileY = Math.floor(mouseY / TILE_SIZE);
+    
+    // Check if we clicked on a player building
+    for (const building of gameState.buildings) {
+      if (building.owner === 'player' &&
+          tileX >= building.x && tileX < (building.x + building.width) &&
+          tileY >= building.y && tileY < (building.y + building.height)) {
+        
+        // Skip if building is at full health
+        if (building.health >= building.maxHealth) {
+          showNotification('Building is already at full health.');
+          return;
+        }
+        
+        // Calculate repair cost
+        const repairCost = calculateRepairCost(building);
+        
+        // Check if player has enough money
+        if (gameState.money < repairCost) {
+          showNotification(`Not enough money for repairs. Cost: $${repairCost}`);
+          return;
+        }
+        
+        // Perform the repair
+        const result = repairBuilding(building, gameState);
+        
+        if (result.success) {
+          showNotification(`Building repaired for $${result.cost}`);
+          playSound('construction_started');
+          moneyEl.textContent = gameState.money;
+        } else {
+          showNotification(result.message);
+        }
+        
+        return;
+      }
+    }
+    
+    showNotification('No player building found to repair.');
+    return;
+  }
+  
   if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
     const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
     const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
@@ -886,6 +938,148 @@ gameCanvas.addEventListener('mousemove', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && gameState.buildingPlacementMode) {
     productionQueue.cancelBuildingPlacement();
+  }
+});
+
+// Add repair button functionality
+document.getElementById('repairBtn').addEventListener('click', () => {
+  // Toggle repair mode
+  gameState.repairMode = !gameState.repairMode;
+  
+  // Update button appearance
+  const repairBtn = document.getElementById('repairBtn');
+  if (gameState.repairMode) {
+    repairBtn.classList.add('active');
+    showNotification('Repair mode activated. Click on a building to repair it.');
+  } else {
+    repairBtn.classList.remove('active');
+    showNotification('Repair mode deactivated.');
+  }
+  
+  // Cancel building placement mode if active
+  if (gameState.buildingPlacementMode) {
+    productionQueue.cancelBuildingPlacement();
+  }
+});
+
+// Add building repair handling to the canvas click event
+gameCanvas.addEventListener('click', (e) => {
+  // If repair mode is active, check for buildings to repair
+  if (gameState.repairMode) {
+    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
+    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
+    
+    // Convert to tile coordinates
+    const tileX = Math.floor(mouseX / TILE_SIZE);
+    const tileY = Math.floor(mouseY / TILE_SIZE);
+    
+    // Check if we clicked on a player building
+    for (const building of gameState.buildings) {
+      if (building.owner === 'player' &&
+          tileX >= building.x && tileX < (building.x + building.width) &&
+          tileY >= building.y && tileY < (building.y + building.height)) {
+        
+        // Skip if building is at full health
+        if (building.health >= building.maxHealth) {
+          showNotification('Building is already at full health.');
+          return;
+        }
+        
+        // Calculate repair cost
+        const repairCost = calculateRepairCost(building);
+        
+        // Check if player has enough money
+        if (gameState.money < repairCost) {
+          showNotification(`Not enough money for repairs. Cost: $${repairCost}`);
+          return;
+        }
+        
+        // Perform the repair
+        const result = repairBuilding(building, gameState);
+        
+        if (result.success) {
+          showNotification(`Building repaired for $${result.cost}`);
+          playSound('construction_started');
+          moneyEl.textContent = gameState.money;
+        } else {
+          showNotification(result.message);
+        }
+        
+        return;
+      }
+    }
+    
+    showNotification('No player building found to repair.');
+    return;
+  }
+  
+  if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
+    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
+    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
+    
+    // Convert to tile coordinates
+    const tileX = Math.floor(mouseX / TILE_SIZE);
+    const tileY = Math.floor(mouseY / TILE_SIZE);
+    
+    // Get building data
+    const buildingType = gameState.currentBuildingType;
+    
+    try {
+      // Check if placement is valid - pass buildings and factories arrays
+      if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories)) {
+        // Create and place the building
+        const newBuilding = createBuilding(buildingType, tileX, tileY);
+        
+        // Add owner property to the building
+        newBuilding.owner = 'player';
+        
+        // Add the building to gameState.buildings
+        if (!gameState.buildings) {
+          gameState.buildings = [];
+        }
+        gameState.buildings.push(newBuilding);
+        
+        // Mark building tiles in the map grid
+        placeBuilding(newBuilding, mapGrid);
+        
+        // Update power supply
+        updatePowerSupply(gameState.buildings, gameState);
+        
+        // Exit placement mode
+        gameState.buildingPlacementMode = false;
+        gameState.currentBuildingType = null;
+        
+        // Remove ready-for-placement class from the button
+        document.querySelectorAll('.ready-for-placement').forEach(button => {
+          button.classList.remove('ready-for-placement');
+        });
+        
+        // Clear the completed building reference
+        productionQueue.completedBuilding = null;
+        
+        // Play placement sound
+        playSound('buildingPlaced');
+
+        // Show notification
+        showNotification(`${buildingData[buildingType].displayName} constructed`);
+        
+        // Start next production if any
+        if (productionQueue.buildingItems.length > 0) {
+          productionQueue.startNextBuildingProduction();
+        }
+
+        // Save player building patterns
+        savePlayerBuildPatterns(buildingType);
+      } else {
+        console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`);
+        // Play error sound for invalid placement
+        playSound('error');
+      }
+    } catch (error) {
+      console.error("Error during building placement:", error);
+      showNotification("Error placing building: " + error.message, 5000);
+      playSound('error');
+    }
   }
 });
 
