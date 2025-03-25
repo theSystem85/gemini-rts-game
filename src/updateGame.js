@@ -354,81 +354,45 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
       // --- Alert Mode Firing for Player Units ---
       if (unit.owner === 'player' && unit.alertMode) {
-        // Gather enemy units.
-        const enemyUnits = units.filter(u => u.owner !== 'player' && u.health > 0);
         // Calculate center of current unit.
         const unitCenterX = unit.x + TILE_SIZE / 2;
         const unitCenterY = unit.y + TILE_SIZE / 2;
-        // Filter enemies within firing range.
-        const alertRange = TANK_FIRE_RANGE * TILE_SIZE; // Using same constant for range.
-        const targets = enemyUnits.filter(enemy => {
-          const enemyCenterX = enemy.x + TILE_SIZE / 2;
-          const enemyCenterY = enemy.y + TILE_SIZE / 2;
-          return Math.hypot(enemyCenterX - unitCenterX, enemyCenterY - unitCenterY) <= alertRange;
-        });
-        if (targets.length > 0) {
-          // Use different cooldowns for tank and rocketTank
-          const cooldown = unit.type === 'rocketTank' ? 2000 : 1600;
-          if (!unit.lastShotTime || now - unit.lastShotTime > cooldown) {
-            targets.forEach(target => {
-              // Calculate target center for accurate aiming
-              const targetCenterX =
-                target.tileX !== undefined
-                  ? target.x + TILE_SIZE / 2
-                  : target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2;
-              const targetCenterY =
-                target.tileX !== undefined
-                  ? target.y + TILE_SIZE / 2
-                  : target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
-              const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
-              if (unit.type === 'tank' || unit.type === 'tank-v2') {
-                let bullet = {
-                  id: Date.now() + Math.random(),
-                  x: unitCenterX,
-                  y: unitCenterY,
-                  speed: 3,
-                  baseDamage: 20,
-                  active: true,
-                  shooter: unit,
-                  homing: false
-                };
-                bullet.vx = bullet.speed * Math.cos(angle);
-                bullet.vy = bullet.speed * Math.sin(angle);
-                bullets.push(bullet);
-                playSound('shoot');
-              } else if (unit.type === 'rocketTank') {
-                let bullet = {
-                  id: Date.now() + Math.random(),
-                  x: unitCenterX,
-                  y: unitCenterY,
-                  speed: 2,
-                  baseDamage: 40,
-                  active: true,
-                  shooter: unit,
-                  homing: true,
-                  target: target
-                };
-                bullet.vx = bullet.speed * Math.cos(angle);
-                bullet.vy = bullet.speed * Math.sin(angle);
-                bullets.push(bullet);
-                playSound('shoot_rocket');
-              }
-              unit.lastShotTime = now;
+        
+        // Define alert range (same as firing range)
+        const alertRange = TANK_FIRE_RANGE * TILE_SIZE;
+        
+        // Only proceed if unit doesn't already have a target
+        if (!unit.target) {
+          // Gather enemy units within range
+          const enemyUnits = units.filter(u => 
+            u.owner !== 'player' && 
+            u.health > 0 && 
+            Math.hypot(
+              (u.x + TILE_SIZE / 2) - unitCenterX, 
+              (u.y + TILE_SIZE / 2) - unitCenterY
+            ) <= alertRange
+          );
+          
+          // If enemies found in range, pick the closest one as target
+          if (enemyUnits.length > 0) {
+            enemyUnits.sort((a, b) => {
+              const aDist = Math.hypot((a.x + TILE_SIZE / 2) - unitCenterX, (a.y + TILE_SIZE / 2) - unitCenterY);
+              const bDist = Math.hypot((b.x + TILE_SIZE / 2) - unitCenterX, (b.y + TILE_SIZE / 2) - unitCenterY);
+              return aDist - bDist;
             });
+            unit.target = enemyUnits[0];
           }
         }
-      }
-
-      // Fix: Auto–acquire target for tank-v2 in alert mode if none assigned.
-      if (unit.owner === 'player' && unit.alertMode && unit.type === 'tank-v2' && !unit.target) {
-        const enemyUnits = units.filter(u => u.owner !== 'player' && u.health > 0);
-        if (enemyUnits.length) {
-          enemyUnits.sort((a, b) => {
-            const aDist = Math.hypot(a.x - (unit.x + TILE_SIZE / 2), a.y - (unit.y + TILE_SIZE / 2));
-            const bDist = Math.hypot(b.x - (unit.x + TILE_SIZE / 2), b.y - (unit.y + TILE_SIZE / 2));
-            return aDist - bDist;
-          });
-          unit.target = enemyUnits[0];
+        
+        // If the target went out of range, clear it
+        if (unit.target) {
+          const targetCenterX = unit.target.x + TILE_SIZE / 2;
+          const targetCenterY = unit.target.y + TILE_SIZE / 2;
+          const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+          
+          if (distance > alertRange) {
+            unit.target = null;
+          }
         }
       }
 
