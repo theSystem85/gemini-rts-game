@@ -173,6 +173,12 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) disable default CSS mouse cursor on the game map and switch to an SVG with transparency and animations that is displayed on the game map whenever the mouse moves. Make sure to hide it when the cursor is on the sidebar. Here are the different cursor states:
+    (1) Movement Cursor: When a unit (or group) is selected the cursor turns green (make sure to generate an animated svg that indicates a movement target for a game on a map)
+    (2) Movement Blocked: When a unit (or group) is selected the cursor turns red (make sure to generate an animated svg that indicates a blocked movement target for a game on a map)
+    (3) Attack: When a unit (or group) is selected the cursor turns red with a crosshair (make sure to generate an animated svg that indicates it)
+(-) when a unit is in a group show a little number (group number) 1-9 in the bottom left corner of the unit representing the group it belongs to.
+(-) when a group is selected and F key is pressed make sure that group keeps its relative position (formation) in between each unit of the group. F key can be toggled to switch formation on and off. If it is on it is indicated by a green group number.
 (-) only focus groups on double tapping mapping key (300ms double tap) but not immediately like it is now
 (-) Make sure new units start in alert mode but make sure units in alert mode only attack enemy units within range automatically!
 (-) refine the coloring of the power bar and its logic on impacting the production.
@@ -237,6 +243,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
+(-) the yellow selection frame is not visible anymore when dragging a frame around a group of units to select it. Also make sure that buildings cannot be selected by the frame only on direct click on the building.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
