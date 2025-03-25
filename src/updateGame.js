@@ -686,6 +686,33 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Global Path Recalculation ---
     if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
       gameState.lastGlobalPathCalc = now
+      
+      // Group units by formation to calculate centers before path recalculations
+      const formationGroups = {};
+      
+      // First pass: identify all formation groups and calculate centers
+      units.forEach(unit => {
+        if (unit.formationActive && unit.groupNumber) {
+          if (!formationGroups[unit.groupNumber]) {
+            formationGroups[unit.groupNumber] = {
+              units: [],
+              centerX: 0,
+              centerY: 0
+            };
+          }
+          formationGroups[unit.groupNumber].units.push(unit);
+        }
+      });
+      
+      // Calculate the center position of each formation group
+      Object.values(formationGroups).forEach(group => {
+        if (group.units.length > 0) {
+          group.centerX = group.units.reduce((sum, unit) => sum + unit.x, 0) / group.units.length;
+          group.centerY = group.units.reduce((sum, unit) => sum + unit.y, 0) / group.units.length;
+        }
+      });
+      
+      // Second pass: recalculate paths for all units
       units.forEach(unit => {
         // Only recalculate if unit has no path or is near the end of its current path
         if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
@@ -694,10 +721,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             now - unit.lastTargetChangeTime < 2000) {
             return; // Skip recalculation if target was changed recently
           }
-
+          
           // Preserve movement command even when path is empty
           let targetPos = null;
-
           if (unit.moveTarget) {
             // Use stored move target if it exists
             targetPos = unit.moveTarget;
@@ -707,19 +733,41 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
               ? { x: unit.target.tileX, y: unit.target.tileY }
               : { x: unit.target.x, y: unit.target.y };
           }
-
+          
           if (targetPos) {
             // Store move target for future recalculations
             unit.moveTarget = targetPos;
-
+            
+            // Apply formation offset if unit is in formation mode
+            let adjustedTarget = {...targetPos};
+            
+            // If unit is in formation mode and has formation offset, adjust the target
+            if (unit.formationActive && unit.formationOffset && unit.groupNumber) {
+              const formationGroup = formationGroups[unit.groupNumber];
+              
+              // If this unit is part of a known formation group
+              if (formationGroup && formationGroup.units.some(u => u.moveTarget)) {
+                // Use the first unit with a moveTarget as the formation reference point
+                const referenceUnit = formationGroup.units.find(u => u.moveTarget);
+                
+                if (referenceUnit && referenceUnit !== unit) {
+                  // Apply formation offset to target position
+                  adjustedTarget = {
+                    x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
+                    y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
+                  };
+                }
+              }
+            }
+            
             // Compute distance to decide pathfinding strategy
-            const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY);
-
+            const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY);
+            
             // Use occupancy map for close range, ignore for long distance
             const newPath = distance > PATHFINDING_THRESHOLD
-              ? findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, null)
-              : findPath({ x: unit.tileX, y: unit.tileY }, targetPos, mapGrid, occupancyMap);
-
+              ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+              : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap);
+            
             if (newPath.length > 1) {
               unit.path = newPath.slice(1);
               // Update last path calculation time for all units

@@ -451,7 +451,8 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
 
     // NEW: Draw group number if assigned.
     if (unit.groupNumber) {
-      gameCtx.fillStyle = '#FFF';
+      // Use green color if formation mode is active, else default white.
+      gameCtx.fillStyle = unit.formationActive ? 'green' : '#FFF';
       gameCtx.font = '10px Arial';
       gameCtx.textAlign = 'left';
       // Position at bottom left of unit rectangle.
