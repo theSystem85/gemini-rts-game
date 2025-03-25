@@ -448,6 +448,19 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.strokeStyle = '#000'
       gameCtx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
     }
+
+    // NEW: Draw group number if assigned.
+    if (unit.groupNumber) {
+      gameCtx.fillStyle = '#FFF';
+      gameCtx.font = '10px Arial';
+      gameCtx.textAlign = 'left';
+      // Position at bottom left of unit rectangle.
+      gameCtx.fillText(
+        unit.groupNumber, 
+        unit.x + 2 - scrollOffset.x, 
+        unit.y + TILE_SIZE - 2 - scrollOffset.y
+      );
+    }
   })
   
   // Draw bullets.

@@ -631,8 +631,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
         const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory' && unit.owner === 'player');
         
         if (onlyUnits.length > 0) {
-          // Store references to the units
+          // Store references to the units and assign group number to each
           controlGroups[groupNum] = [...onlyUnits];
+          onlyUnits.forEach(unit => {
+            unit.groupNumber = groupNum;
+          });
           console.log(`Successfully assigned control group ${groupNum} with ${onlyUnits.length} units`);
           playSound('unitSelection');
           
