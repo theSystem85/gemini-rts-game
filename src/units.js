@@ -243,7 +243,7 @@ function getNeighbors(node, mapGrid) {
 }
 
 // Spawns a unit at the center ("under") of the factory.
-export function spawnUnit(factory, unitType, units, mapGrid) {
+export function spawnUnit(factory, type, units, mapGrid) {
   // Check if player has enough money
   const unitCost = {
     'tank': 1000,
@@ -270,7 +270,7 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     const success = moveBlockingUnits(exitX, exitY, units, mapGrid);
     if (success) {
       // Successfully moved blocking unit, spawn at exit
-      const newUnit = createUnit(factory, unitType, exitX, exitY);
+      const newUnit = createUnit(factory, type, exitX, exitY);
       
       // If factory has a rally point, set unit's path to it
       if (factory.rallyPoint) {
@@ -289,7 +289,7 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     }
   } else if (isPositionValid(exitX, exitY, mapGrid, units)) {
     // Exit is free, spawn there
-    const newUnit = createUnit(factory, unitType, exitX, exitY);
+    const newUnit = createUnit(factory, type, exitX, exitY);
     
     // If factory has a rally point, set unit's path to it
     if (factory.rallyPoint) {
@@ -315,7 +315,7 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
     return null; // Return null if no position is available
   }
   
-  const newUnit = createUnit(factory, unitType, spawnPosition.x, spawnPosition.y);
+  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y);
   
   // If factory has a rally point, set unit's path to it
   if (factory.rallyPoint) {
@@ -335,32 +335,7 @@ export function spawnUnit(factory, unitType, units, mapGrid) {
 
 // Helper to create the actual unit object
 function createUnit(factory, unitType, x, y) {
-  if (unitType === 'tank-v2') {
-    return {
-      id: getUniqueId(),
-      type: unitType,
-      owner: factory.id === 'player' ? 'player' : 'enemy',
-      tileX: x,
-      tileY: y,
-      x: x * TILE_SIZE,
-      y: y * TILE_SIZE,
-      speed: 2, // similar to tank
-      health: 100,
-      maxHealth: 100,
-      path: [],
-      target: null,
-      selected: false,
-      lastShotTime: 0,
-      // Add rotation properties
-      direction: 0, // Angle in radians (0 = east, PI/2 = south)
-      targetDirection: 0,
-      turretDirection: 0,
-      rotationSpeed: 0.1, // Radians per frame
-      isRotating: false,
-      useAimAhead: true // Enable aim-ahead feature for tank-v2
-    };
-  }
-  return {
+  const unit = {
     id: getUniqueId(),
     type: unitType,  // "tank", "rocketTank", or "harvester"
     owner: factory.id === 'player' ? 'player' : 'enemy',
@@ -386,6 +361,27 @@ function createUnit(factory, unitType, x, y) {
     isRotating: false,
     useAimAhead: false // Default: Don't use aim-ahead for other units
   };
+
+  // Apply unit-specific properties
+  if (unitType === 'tank-v2') {
+    unit.speed = 1.5
+    unit.rotationSpeed = 0.15
+    unit.alertMode = true  // Start tank-v2 in alert mode by default
+    unit.useAimAhead = true
+  } else if (unitType === 'tank') {
+    unit.speed = 1.5
+    unit.rotationSpeed = 0.15
+  } else if (unitType === 'rocketTank') {
+    unit.speed = 1.3
+    unit.rotationSpeed = 0.12
+  } else if (unitType === 'harvester') {
+    unit.speed = 1.8
+    unit.rotationSpeed = 0.2
+    unit.oreCarried = 0
+    unit.harvesting = false
+  }
+
+  return unit;
 }
 
 // Find an available position near the factory for unit spawn
