@@ -363,7 +363,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         
         // Only proceed if unit doesn't already have a target
         if (!unit.target) {
-          // Gather enemy units within range
+          // First, check for enemy units within range
           const enemyUnits = units.filter(u => 
             u.owner !== 'player' && 
             u.health > 0 && 
@@ -373,21 +373,90 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             ) <= alertRange
           );
           
-          // If enemies found in range, pick the closest one as target
+          // Also check for enemy buildings (particularly defensive ones) within range
+          const enemyBuildings = [];
+          if (gameState.buildings && gameState.buildings.length > 0) {
+            for (const building of gameState.buildings) {
+              if (building.owner !== 'player' && building.health > 0) {
+                // Calculate building center
+                const buildingCenterX = (building.x + building.width/2) * TILE_SIZE;
+                const buildingCenterY = (building.y + building.height/2) * TILE_SIZE;
+                const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY);
+                
+                // Prioritize defensive buildings like turrets
+                const isDefensive = building.type === 'rocketTurret' || 
+                                   building.type.startsWith('turretGun');
+                                   
+                if (distance <= alertRange) {
+                  enemyBuildings.push({
+                    building: building,
+                    distance: distance,
+                    isDefensive: isDefensive
+                  });
+                }
+              }
+            }
+          }
+          
+          // Determine target - prioritize closest enemy
+          let closestTarget = null;
+          let closestDistance = Infinity;
+          
+          // Check enemy units first
           if (enemyUnits.length > 0) {
-            enemyUnits.sort((a, b) => {
-              const aDist = Math.hypot((a.x + TILE_SIZE / 2) - unitCenterX, (a.y + TILE_SIZE / 2) - unitCenterY);
-              const bDist = Math.hypot((b.x + TILE_SIZE / 2) - unitCenterX, (b.y + TILE_SIZE / 2) - unitCenterY);
-              return aDist - bDist;
+            enemyUnits.forEach(u => {
+              const distance = Math.hypot(
+                (u.x + TILE_SIZE / 2) - unitCenterX, 
+                (u.y + TILE_SIZE / 2) - unitCenterY
+              );
+              
+              if (distance < closestDistance) {
+                closestDistance = distance;
+                closestTarget = u;
+              }
             });
-            unit.target = enemyUnits[0];
+          }
+          
+          // Then check enemy buildings, prioritizing defensive structures
+          if (enemyBuildings.length > 0) {
+            // First check defensive buildings
+            const defensiveBuildings = enemyBuildings.filter(b => b.isDefensive);
+            
+            if (defensiveBuildings.length > 0) {
+              defensiveBuildings.sort((a, b) => a.distance - b.distance);
+              
+              if (!closestTarget || defensiveBuildings[0].distance < closestDistance) {
+                closestDistance = defensiveBuildings[0].distance;
+                closestTarget = defensiveBuildings[0].building;
+              }
+            } 
+            // If no defensive buildings or none closer than units, check other buildings
+            else if (!closestTarget) {
+              enemyBuildings.sort((a, b) => a.distance - b.distance);
+              closestTarget = enemyBuildings[0].building;
+            }
+          }
+          
+          // Set the closest enemy as target
+          if (closestTarget) {
+            unit.target = closestTarget;
           }
         }
         
         // If the target went out of range, clear it
         if (unit.target) {
-          const targetCenterX = unit.target.x + TILE_SIZE / 2;
-          const targetCenterY = unit.target.y + TILE_SIZE / 2;
+          let targetCenterX, targetCenterY;
+          
+          if (unit.target.isBuilding) {
+            // Target is a building
+            targetCenterX = (unit.target.x + unit.target.width/2) * TILE_SIZE;
+            targetCenterY = (unit.target.y + unit.target.height/2) * TILE_SIZE;
+          } else {
+            // Target is a unit
+            targetCenterX = unit.target.x + TILE_SIZE / 2;
+            targetCenterY = unit.target.y + TILE_SIZE / 2;
+          }
+          
           const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
           
           if (distance > alertRange) {
