@@ -28,6 +28,9 @@ const controlGroups = {}
 let playerFactory = null
 let rallyPoint = null
 
+// Add global variable for formation toggle
+let groupFormationMode = false
+
 // Function to create help overlay
 function showControlsHelp() {
   // Create or show the help overlay
@@ -62,6 +65,7 @@ function showControlsHelp() {
         <li><strong>I Key:</strong> Show this help (press again to close)</li>
         <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
         <li><strong>1-9 Keys:</strong> Select units in that control group</li>
+        <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
       </ul>
       <p>Press I again to close and resume the game</p>
     `;
@@ -706,6 +710,16 @@ export function setupInputHandlers(units, factories, mapGrid) {
           playSound('yesSir01');
         }
       }
+    }
+    // F key to toggle formation mode
+    else if(e.key.toLowerCase() === 'f'){
+      groupFormationMode = !groupFormationMode;
+      // Toggle formationActive for selected units with a group number
+      selectedUnits.forEach(unit => {
+        if(unit.groupNumber) {
+          unit.formationActive = groupFormationMode;
+        }
+      });
     }
   });
 
