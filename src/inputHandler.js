@@ -31,7 +31,7 @@ let rallyPoint = null
 // Add global variable for formation toggle
 let groupFormationMode = false
 
-// Updated: Help overlay with modern futuristic styling
+// Function to create help overlay
 function showControlsHelp() {
   let helpOverlay = document.getElementById('helpOverlay');
   if (!helpOverlay) {
@@ -485,10 +485,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
               const rowsCount = Math.ceil(count / colsCount)
               const col = index % colsCount
               const row = Math.floor(index / colsCount)
-              formationOffset = {
-                x: col * 10 - ((colsCount - 1) * 10) / 2,
-                y: row * 10 - ((rowsCount - 1) * 10) / 2
+
+              // Apply formation offsets based on whether formation mode is active
+              if (unit.formationActive && unit.formationOffset) {
+                // Use stored formation offsets for this unit
+                formationOffset = {
+                  x: unit.formationOffset.x,
+                  y: unit.formationOffset.y
+                };
+              } else {
+                // Default grid formation if formation mode is not active
+                formationOffset = {
+                  x: col * 10 - ((colsCount - 1) * 10) / 2,
+                  y: row * 10 - ((rowsCount - 1) * 10) / 2
+                };
               }
+
               const destX = Math.floor(worldX) + formationOffset.x
               const destY = Math.floor(worldY) + formationOffset.y
               const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
@@ -565,12 +577,25 @@ export function setupInputHandlers(units, factories, mapGrid) {
       const colsCount = Math.ceil(Math.sqrt(count))
       const rowsCount = Math.ceil(count / colsCount)
       selectedUnits.forEach((unit, index) => {
-        const col = index % colsCount
-        const row = Math.floor(index / colsCount)
-        const formationOffset = {
-          x: col * 10 - ((colsCount - 1) * 10) / 2,
-          y: row * 10 - ((rowsCount - 1) * 10) / 2
+        let formationOffset;
+        
+        // Apply formation offsets based on whether formation mode is active
+        if (unit.formationActive && unit.formationOffset) {
+          // Use stored formation offsets for this unit
+          formationOffset = {
+            x: unit.formationOffset.x,
+            y: unit.formationOffset.y
+          };
+        } else {
+          // Default grid formation if formation mode is not active
+          const col = index % colsCount
+          const row = Math.floor(index / colsCount)
+          formationOffset = {
+            x: col * 10 - ((colsCount - 1) * 10) / 2,
+            y: row * 10 - ((rowsCount - 1) * 10) / 2
+          };
         }
+        
         const destX = Math.floor(worldX) + formationOffset.x
         const destY = Math.floor(worldY) + formationOffset.y
         const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
