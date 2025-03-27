@@ -162,7 +162,7 @@ Error Prevention and Debugging
 8.3.2 Handle simultaneous shooting and movement events carefully to avoid crashes.
 
 General Requirements
-9.1 The game must be implemented in three separate files (HTML, CSS, JavaScript) with inline assets for immediate execution.
+9.1 The game must be implemented in three separate files (HTML, CSS, JavaScript) with inline assets for imme diate execution.
 9.2 Clearly separate UI logic from game logic through comments and structure.
 9.3 Provide detailed inline comments explaining each part of the logic, especially where previous errors occurred.
 9.4 Prioritize simplicity and functionality over advanced optimizations.
@@ -179,18 +179,14 @@ Open Features:
     (3) Attack: When a unit (or group) is selected the cursor turns red with a crosshair (make sure to generate an animated svg that indicates it)
 (-) only focus groups on double tapping mapping key (300ms double tap) but not immediately like it is now
 (-) refine the coloring of the power bar and its logic on impacting the production.
-(-) Also make sure the enemy builds the defense buildings towards the direction of the closest ore field to protect harvesters and the base.
-(-) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
 (-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
 (-) add meaning to the level system so
     Level 1: means that units will use the aim ahead feature
     Level 2: means that units will use the dodge feature
     Level 3: means that units will repair themselves when not moving by 1% every 3 seconds.
 (-) add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
-(-) when the h key is toggled an overview pops up or closes showing all the key bindings (mouse and keyboard) with explanations.
 (-) add a radar station building to the buildings options. Its size is 2x3 tiles. Its armor is 2 times that of a tank. When build the radar station enables the overview map. Before that map is just gray. It consumes 50 energy.
 (-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
-(-) any building can be repaired by clicking the repair button in the side menu and then on a building. As soon as player click right click the repair mode is deselected again. Repairing x% of a building cost x * 0.3 of what it would have cost to build it again. Repairing a building restores the healthbar of that building. 
 (-) add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
 (-) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
 (-) implement turretGunV1, turretGunV2 and turretGunV3 defense buildings by extending the existing dummy building with active defense features. Its projectiles are same as a each respective tank_v1, tank_v2 and tank_v3. It automatically attacks any enemy units in range but has 50% more range. turretGunV2 additionally has an aim ahead function so it is increasing the likelyhood of hitting moving targets.
@@ -200,6 +196,11 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) replace the colored tiles for water and land with land01.jpg and water01.jpg from /images/map folder make sure to first shrink the images to the 32x32 pixel format needed for the tiles and then use the cached version of it on the game map. Also prepare the code to get rock and street and ore replaced as soon as the assets are provided like rock01.jpg and street01.jpg and ore01.jpg but use the colors always as fallback when the assets are not found. The numbers behind the image file names can be any number. Whe filling the map with these tiles make sure to pick any random available number for the image file to fill in the map to get some variation.
+(?) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
+(x) when the h key is toggled an overview pops up or closes showing all the key bindings (mouse and keyboard) with explanations.
+(x) any building can be repaired by clicking the repair button in the side menu and then on a building. As soon as player click right click the repair mode is deselected again. Repairing x% of a building cost x * 0.3 of what it would have cost to build it again. Repairing a building restores the healthbar of that building. 
+(x) Also make sure the enemy builds the defense buildings towards the direction of the closest ore field to protect harvesters and the base.
 (x) Make sure units in alert mode also attack enemy defense buildings automatically when in range!
 (x) when a group is selected and F key is pressed make sure that group keeps its relative position (formation) in between each unit of the group. F key can be toggled to switch formation on and off. If it is on it is indicated by a green group number.
 (x) when a unit is in a group show a little number (group number) 1-9 in the bottom left corner of the unit representing the group it belongs to.

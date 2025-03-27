@@ -1,10 +1,23 @@
 // rendering.js
-import { TILE_SIZE, TILE_COLORS, HARVESTER_CAPPACITY } from './config.js'
+import { TILE_SIZE, TILE_COLORS, TILE_IMAGES, HARVESTER_CAPPACITY, USE_TEXTURES, TEXTURE_VARIATIONS } from './config.js'
 import { tileToPixel } from './utils.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from './buildings.js';
 
 // Create an image cache to avoid repeated loading
 const imageCache = {};
+
+// Create a tile texture cache with variations for randomization
+const tileTextureCache = {};
+
+// Track loading state to avoid redundant requests
+const loadingImages = {};
+
+// Variation cache for each tile position
+const tileVariationMap = {};
+
+// Flag to track if all textures are loaded
+let allTexturesLoaded = false;
+let loadingStarted = false;
 
 // Helper function to load images once
 function getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback) {
@@ -14,38 +27,214 @@ function getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback)
     return;
   }
   
+  // Check if this image is already being loaded
+  if (loadingImages[baseName]) {
+    // Add this callback to the queue
+    loadingImages[baseName].push(callback);
+    return;
+  }
+  
+  // Start loading this image and create callback queue
+  loadingImages[baseName] = [callback];
+  
   // Try loading with different extensions
   const tryLoadImage = (baseName, extensions, index = 0) => {
     if (index >= extensions.length) {
-      callback(null); // No image found
+      // Nothing worked - notify all callbacks with failure
+      while (loadingImages[baseName].length > 0) {
+        const cb = loadingImages[baseName].shift();
+        cb(null);
+      }
+      delete loadingImages[baseName];
+      console.warn(`Failed to load image: ${baseName}`);
       return;
     }
     
     const img = new Image();
     img.onload = () => {
-      imageCache[baseName] = img; // Cache the loaded image
-      callback(img);
+      // Cache the loaded image
+      imageCache[baseName] = img;
+      
+      // Notify all waiting callbacks
+      while (loadingImages[baseName].length > 0) {
+        const cb = loadingImages[baseName].shift();
+        cb(img);
+      }
+      delete loadingImages[baseName];
     };
     
     img.onerror = () => {
       // Try next extension
+      console.log(`Failed to load ${baseName}.${extensions[index]}, trying next format...`);
       tryLoadImage(baseName, extensions, index + 1);
     };
     
-    img.src = `images/${baseName}.${extensions[index]}`;
+    // The public directory is served at the root
+    img.src = `${baseName}.${extensions[index]}`;
   };
   
   tryLoadImage(baseName, extensions, 0);
 }
 
-export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+// Create rotated/transformed variations of a texture
+// Added shouldRotate parameter that defaults to true for backward compatibility
+function createTextureVariations(baseTexture, count, shouldRotate = true) {
+  const variations = [baseTexture]; // First variation is the original
+  
+  // If rotation is disabled, just return the original texture
+  if (!shouldRotate || count <= 1) {
+    return variations;
+  }
+  
+  // Create a temporary canvas for manipulations
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE;
+  canvas.height = TILE_SIZE;
+  const ctx = canvas.getContext('2d');
+  
+  // Create additional variations
+  for (let i = 1; i < count; i++) {
+    // Reset transform and clear
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, TILE_SIZE, TILE_SIZE);
+    
+    // Apply random transformation
+    ctx.translate(TILE_SIZE/2, TILE_SIZE/2);
+    
+    // For variation 1 & 3: rotate
+    if (i % 2 === 1) {
+      const angle = (i === 1) ? Math.PI/2 : Math.PI * 3/2;
+      ctx.rotate(angle);
+    }
+    
+    // For variation 2 & 3: flip horizontally
+    if (i >= 2) {
+      ctx.scale(-1, 1);
+    }
+    
+    ctx.translate(-TILE_SIZE/2, -TILE_SIZE/2);
+    
+    // Draw the base texture with the transformation applied
+    ctx.drawImage(baseTexture, 0, 0);
+    
+    // Create a new canvas to store this variation
+    const variationCanvas = document.createElement('canvas');
+    variationCanvas.width = TILE_SIZE;
+    variationCanvas.height = TILE_SIZE;
+    const varCtx = variationCanvas.getContext('2d');
+    varCtx.drawImage(canvas, 0, 0);
+    
+    variations.push(variationCanvas);
+  }
+  
+  return variations;
+}
 
+// Preload all tile textures at startup
+function preloadAllTextures(callback) {
+  if (loadingStarted) return;
+  loadingStarted = true;
+  console.log("Starting texture preloading...");
+  
+  // Count total textures to load
+  let totalTextures = 0;
+  let loadedTextures = 0;
+  
+  for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
+    const paths = tileInfo.paths || [];
+    if (paths.length === 0) continue;
+    totalTextures += paths.length;
+  }
+  
+  if (totalTextures === 0) {
+    console.log("No textures to preload.");
+    allTexturesLoaded = true;
+    if (callback) callback();
+    return;
+  }
+  
+  // For each tile type
+  for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
+    // Get the image paths and rotation setting
+    const paths = tileInfo.paths || [];
+    const shouldRotate = tileInfo.rotate !== undefined ? tileInfo.rotate : true;
+    
+    // Skip if no images defined
+    if (paths.length === 0) continue;
+    
+    tileTextureCache[tileType] = [];
+    
+    // For each image path for this tile type
+    for (const imagePath of paths) {
+      getOrLoadImage(imagePath, ['jpg', 'webp', 'png'], (img) => {
+        if (img) {
+          console.log(`Loaded texture: ${imagePath} (rotation: ${shouldRotate ? 'enabled' : 'disabled'})`);
+          
+          // Create a canvas for the texture at the correct size
+          const baseCanvas = document.createElement('canvas');
+          baseCanvas.width = TILE_SIZE;
+          baseCanvas.height = TILE_SIZE;
+          const baseCtx = baseCanvas.getContext('2d');
+          
+          // Draw the image resized to TILE_SIZE
+          baseCtx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
+          
+          // Generate variations and add them to the cache - respect the rotation setting
+          const variations = createTextureVariations(baseCanvas, TEXTURE_VARIATIONS, shouldRotate);
+          tileTextureCache[tileType] = tileTextureCache[tileType].concat(variations);
+        }
+        
+        loadedTextures++;
+        console.log(`Texture loading progress: ${loadedTextures}/${totalTextures}`);
+        
+        if (loadedTextures === totalTextures) {
+          console.log("All textures loaded successfully!");
+          allTexturesLoaded = true;
+          if (callback) callback();
+        }
+      });
+    }
+  }
+}
+
+// Get a consistent tile variation based on position
+function getTileVariation(tileType, x, y) {
+  // Create unique key for this tile position
+  const key = `${tileType}_${x}_${y}`;
+  
+  // If we already determined a variation for this tile, use it
+  if (tileVariationMap[key] !== undefined) {
+    return tileVariationMap[key];
+  }
+  
+  // If no variations available, return -1 to use color fallback
+  if (!tileTextureCache[tileType] || tileTextureCache[tileType].length === 0) {
+    return -1;
+  }
+  
+  // Generate a deterministic but seemingly random variation based on position
+  // This ensures the same tile always gets the same variation
+  const hash = Math.abs((x * 73) ^ (y * 151)) % tileTextureCache[tileType].length;
+  
+  // Store the variation for this position
+  tileVariationMap[key] = hash;
+  
+  return hash;
+}
+
+export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
   if (!gameState) {
     return;
   }
+  
+  // If texture loading hasn't started yet, start it (this should only happen once)
+  if (!loadingStarted) {
+    preloadAllTextures();
+  }
+  
   // If game over, render win/lose overlay and stop drawing further
   if (gameState?.gameOver && gameState?.gameOverMessage) {
-    const messageX = gameCanvas.width / 2; // added declaration
+    const messageX = gameCanvas.width / 2;
     const messageY = gameCanvas.height / 2;
     gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
@@ -57,22 +246,63 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     gameCtx.fillText('Press R to start a new game', messageX, messageY + 50);
     return;
   }
-
-  gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
-  const startTileX = Math.floor(scrollOffset.x / TILE_SIZE)
-  const startTileY = Math.floor(scrollOffset.y / TILE_SIZE)
-  const endTileX = Math.min(mapGrid[0].length, Math.ceil((scrollOffset.x + gameCanvas.width) / TILE_SIZE))
-  const endTileY = Math.min(mapGrid.length, Math.ceil((scrollOffset.y + gameCanvas.height) / TILE_SIZE))
   
-  // Draw map tiles.
+  gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+  
+  // Calculate visible tile range - improved for better performance
+  const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE));
+  const startTileY = Math.max(0, Math.floor(scrollOffset.y / TILE_SIZE));
+  const tilesX = Math.ceil(gameCanvas.width / TILE_SIZE) + 1;
+  const tilesY = Math.ceil(gameCanvas.height / TILE_SIZE) + 1;
+  const endTileX = Math.min(mapGrid[0].length, startTileX + tilesX);
+  const endTileY = Math.min(mapGrid.length, startTileY + tilesY);
+  
+  // Draw map tiles - optimized rendering
   for (let y = startTileY; y < endTileY; y++) {
     for (let x = startTileX; x < endTileX; x++) {
-      const tile = mapGrid[y][x]
-      gameCtx.fillStyle = TILE_COLORS[tile.type]
-      gameCtx.fillRect(x * TILE_SIZE - scrollOffset.x, y * TILE_SIZE - scrollOffset.y, TILE_SIZE, TILE_SIZE)
-      gameCtx.strokeStyle = 'rgba(0,0,0,0.1)'
-      gameCtx.strokeRect(x * TILE_SIZE - scrollOffset.x, y * TILE_SIZE - scrollOffset.y, TILE_SIZE, TILE_SIZE)
+      const tile = mapGrid[y][x];
+      const tileType = tile.type;
+      const tileX = x * TILE_SIZE - scrollOffset.x;
+      const tileY = y * TILE_SIZE - scrollOffset.y;
+      
+      // Try to use texture if available and enabled - IMPORTANT: Don't try to load here!
+      if (USE_TEXTURES && allTexturesLoaded && tileTextureCache[tileType]) {
+        // Get consistent variation for this tile position
+        const variationIndex = getTileVariation(tileType, x, y);
+        
+        // If valid variation found, draw it
+        if (variationIndex >= 0 && variationIndex < tileTextureCache[tileType].length) {
+          gameCtx.drawImage(tileTextureCache[tileType][variationIndex], tileX, tileY);
+          continue; // Skip to next tile, no need for fallback
+        }
+      }
+      
+      // Fall back to color if texture not available or disabled
+      gameCtx.fillStyle = TILE_COLORS[tileType];
+      gameCtx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
     }
+  }
+  
+  // Draw grid lines only if zoomed in closely enough for better performance
+  if (TILE_SIZE > 8) { // Only draw grid when tiles are big enough to see
+    gameCtx.strokeStyle = 'rgba(0,0,0,0.1)';
+    gameCtx.beginPath();
+    
+    // Draw vertical grid lines
+    for (let x = startTileX; x <= endTileX; x++) {
+      const lineX = x * TILE_SIZE - scrollOffset.x;
+      gameCtx.moveTo(lineX, startTileY * TILE_SIZE - scrollOffset.y);
+      gameCtx.lineTo(lineX, endTileY * TILE_SIZE - scrollOffset.y);
+    }
+    
+    // Draw horizontal grid lines
+    for (let y = startTileY; y <= endTileY; y++) {
+      const lineY = y * TILE_SIZE - scrollOffset.y;
+      gameCtx.moveTo(startTileX * TILE_SIZE - scrollOffset.x, lineY);
+      gameCtx.lineTo(endTileX * TILE_SIZE - scrollOffset.x, lineY);
+    }
+    
+    gameCtx.stroke();
   }
   
   // Draw buildings if they exist
@@ -272,7 +502,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       }
       
       // Use the image cache function instead of creating a new Image every time
-      getOrLoadImage(imageName, ['jpg', 'webp', 'png'], (img) => {
+      getOrLoadImage(`images/${imageName}`, ['jpg', 'webp', 'png'], (img) => {
         if (img) {
           gameCtx.drawImage(img, 
             centerX - iconSize/2, 
@@ -609,8 +839,9 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
   // Draw map tiles
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
-      minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type]
-      minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY)
+      // For minimap, always use color for simplicity and performance
+      minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type];
+      minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY);
     }
   }
   
@@ -644,4 +875,9 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
   minimapCtx.strokeStyle = '#FF0'
   minimapCtx.lineWidth = 2
   minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY)
+}
+
+// Export the preload function so it can be called from main.js
+export function preloadTileTextures(callback) {
+  preloadAllTextures(callback);
 }

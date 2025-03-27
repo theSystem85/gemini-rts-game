@@ -398,3 +398,31 @@ export function repairBuilding(building, gameState) {
   
   return { success: true, message: "Building repaired", cost: repairCost };
 }
+
+// Update buildings that are currently under repair
+export function updateBuildingsUnderRepair(gameState, currentTime) {
+  if (!gameState.buildingsUnderRepair || gameState.buildingsUnderRepair.length === 0) {
+    return;
+  }
+
+  // Create a new array to hold buildings still being repaired
+  const stillRepairing = [];
+
+  gameState.buildingsUnderRepair.forEach(repair => {
+    const elapsed = currentTime - repair.startTime;
+    const progress = Math.min(1, elapsed / repair.duration);
+    
+    if (progress < 1) {
+      // Building is still being repaired
+      const newHealth = repair.startHealth + (repair.healthToRepair * progress);
+      repair.building.health = Math.min(repair.targetHealth, newHealth);
+      stillRepairing.push(repair);
+    } else {
+      // Repair is complete
+      repair.building.health = repair.targetHealth;
+    }
+  });
+
+  // Replace the array with only the buildings still being repaired
+  gameState.buildingsUnderRepair = stillRepairing;
+}

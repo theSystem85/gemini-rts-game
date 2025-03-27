@@ -9,6 +9,7 @@ export const SAFE_RANGE_ENABLED = false
 // HARVESTER_CAPPACITY is now 1 (so a harvester unloads as soon as it harvests one unit)
 export const HARVESTER_CAPPACITY = 1
 
+// Fallback colors for tiles when images aren't available
 export const TILE_COLORS = {
   land: '#A0522D',
   water: '#1E90FF',
@@ -16,6 +17,36 @@ export const TILE_COLORS = {
   street: '#D3D3D3',
   ore: '#FFD700'
 }
+
+// Image paths for tile types, with variations to select from randomly and rotation setting
+export const TILE_IMAGES = {
+  land: {
+    paths: ['images/map/land01'],
+    rotate: true // Land can be rotated for variety
+  },
+  water: {
+    paths: ['images/map/water01'],
+    rotate: true // Water can be rotated for variety
+  },
+  rock: {
+    paths: ['images/map/rock_on_grass01', 'images/map/rock01', 'images/map/rock02', 'images/map/rock03', 'images/map/rock04', 'images/map/rock05'],
+    rotate: false // Rocks should not be rotated to maintain their natural shape
+  },
+  street: {
+    paths: ['images/map/street01'],
+    rotate: false // Streets shouldn't be rotated as they have directional features
+  },
+  ore: {
+    paths: ['images/map/ore01', 'images/map/ore02', 'images/map/ore03', 'images/map/ore04'],
+    rotate: false // Ore should not be rotated
+  }
+}
+
+// Enable/disable texture usage (for performance testing/fallback)
+export const USE_TEXTURES = true
+
+// Number of texture variations to generate for each tile type
+export const TEXTURE_VARIATIONS = 4
 
 export const INERTIA_DECAY = 0.95
 
