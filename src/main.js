@@ -19,9 +19,11 @@ import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { playSound, toggleBackgroundMusic } from './sound.js'
 import { initFactories } from './factories.js'
 import { initBackgroundMusic } from './sound.js'
+import { preloadBuildingImages } from './buildingImageMap.js'
 
 // Initialize loading states
 let texturesLoaded = false;
+let buildingImagesLoaded = false;
 let gameInitialized = false;
 
 // Preload textures before starting the game loop
@@ -30,7 +32,18 @@ preloadTileTextures(() => {
   console.log("All textures preloaded successfully!");
   texturesLoaded = true;
   // If other initialization is done, start the game
-  if (gameInitialized) {
+  if (buildingImagesLoaded && gameInitialized) {
+    console.log("Game ready to start!");
+  }
+});
+
+// Preload building images
+console.log("Starting building images preloading...");
+preloadBuildingImages(() => {
+  console.log("All building images preloaded successfully!");
+  buildingImagesLoaded = true;
+  // If other initialization is done, start the game
+  if (texturesLoaded && gameInitialized) {
     console.log("Game ready to start!");
   }
 });

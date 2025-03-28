@@ -2,6 +2,7 @@
 import { TILE_SIZE, TILE_COLORS, TILE_IMAGES, HARVESTER_CAPPACITY, USE_TEXTURES, TEXTURE_VARIATIONS } from './config.js'
 import { tileToPixel } from './utils.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from './buildings.js';
+import { getBuildingImage } from './buildingImageMap.js';
 
 // Create an image cache to avoid repeated loading
 const imageCache = {};
@@ -313,20 +314,28 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       const width = building.width * TILE_SIZE;
       const height = building.height * TILE_SIZE;
       
-      // Draw building base
-      gameCtx.fillStyle = '#777';
-      gameCtx.fillRect(screenX, screenY, width, height);
-      
-      // Draw building outline
-      gameCtx.strokeStyle = '#000';
-      gameCtx.lineWidth = 2;
-      gameCtx.strokeRect(screenX, screenY, width, height);
-      
-      // Draw building type identifier
-      gameCtx.fillStyle = '#fff';
-      gameCtx.font = '10px Arial';
-      gameCtx.textAlign = 'center';
-      gameCtx.fillText(building.type, screenX + width / 2, screenY + height / 2);
+      // Use the building image if available
+      getBuildingImage(building.type, width, height, (img) => {
+        if (img) {
+          // Draw the building image
+          gameCtx.drawImage(img, screenX, screenY, width, height);
+        } else {
+          // Fallback to the old rectangle rendering if no image is available
+          gameCtx.fillStyle = '#777';
+          gameCtx.fillRect(screenX, screenY, width, height);
+          
+          // Draw building outline
+          gameCtx.strokeStyle = '#000';
+          gameCtx.lineWidth = 2;
+          gameCtx.strokeRect(screenX, screenY, width, height);
+          
+          // Draw building type identifier as text
+          gameCtx.fillStyle = '#fff';
+          gameCtx.font = '10px Arial';
+          gameCtx.textAlign = 'center';
+          gameCtx.fillText(building.type, screenX + width / 2, screenY + height / 2);
+        }
+      });
       
       // Draw turret for defensive buildings
       if (building.type === 'rocketTurret' || building.type.startsWith('turretGun')) {
@@ -418,6 +427,18 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         }
       }
       
+      // Draw selection outline if building is selected
+      if (building.selected) {
+        gameCtx.strokeStyle = '#FF0';
+        gameCtx.lineWidth = 3;
+        gameCtx.strokeRect(
+          screenX - 2, 
+          screenY - 2, 
+          width + 4, 
+          height + 4
+        );
+      }
+      
       // Draw health bar if damaged
       if (building.health < building.maxHealth) {
         const healthBarWidth = width;
@@ -433,6 +454,16 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
                              healthPercentage > 0.3 ? '#ff0' : '#f00';
         gameCtx.fillRect(screenX, screenY - 10, healthBarWidth * healthPercentage, healthBarHeight);
       }
+      
+      // Draw owner indicator
+      const ownerColor = building.owner === 'player' ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+      gameCtx.fillStyle = ownerColor;
+      gameCtx.fillRect(
+        screenX + 2,
+        screenY + 2,
+        8,
+        8
+      );
     });
   }
   
@@ -440,32 +471,68 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   factories.forEach(factory => {
     if (factory.destroyed) return
     const pos = tileToPixel(factory.x, factory.y)
-    gameCtx.fillStyle = factory.id === 'player' ? '#0A0' : '#A00'
-    gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - scrollOffset.y, factory.width * TILE_SIZE, factory.height * TILE_SIZE)
+    const screenX = pos.x - scrollOffset.x
+    const screenY = pos.y - scrollOffset.y
+    const width = factory.width * TILE_SIZE
+    const height = factory.height * TILE_SIZE
+    
+    // Use the construction yard image for factories
+    getBuildingImage('constructionYard', width, height, (img) => {
+      if (img) {
+        // Draw the construction yard image without color overlay
+        gameCtx.drawImage(img, screenX, screenY, width, height);
+        
+        // Draw a small colored indicator in the corner instead of an overlay
+        const indicatorColor = factory.id === 'player' ? '#0A0' : '#A00';
+        gameCtx.fillStyle = indicatorColor;
+        gameCtx.fillRect(
+          screenX + 4,
+          screenY + 4,
+          12,
+          12
+        );
+        
+        // Add border around the indicator
+        gameCtx.strokeStyle = '#000';
+        gameCtx.lineWidth = 1;
+        gameCtx.strokeRect(
+          screenX + 4,
+          screenY + 4,
+          12,
+          12
+        );
+      } else {
+        // Fallback to the original colored rectangle if image fails to load
+        gameCtx.fillStyle = factory.id === 'player' ? '#0A0' : '#A00';
+        gameCtx.fillRect(screenX, screenY, width, height);
+      }
+    });
+    
+    // Draw health bar
     const barWidth = factory.width * TILE_SIZE
     const healthRatio = factory.health / factory.maxHealth
     gameCtx.fillStyle = '#0F0'
-    gameCtx.fillRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth * healthRatio, 5)
+    gameCtx.fillRect(screenX, screenY - 10, barWidth * healthRatio, 5)
     gameCtx.strokeStyle = '#000'
-    gameCtx.strokeRect(pos.x - scrollOffset.x, pos.y - 10 - scrollOffset.y, barWidth, 5)
+    gameCtx.strokeRect(screenX, screenY - 10, barWidth, 5)
     
     // Draw yellow selection outline for selected factories
     if (factory.selected) {
       gameCtx.strokeStyle = '#FF0'
       gameCtx.lineWidth = 3
       gameCtx.strokeRect(
-        pos.x - scrollOffset.x - 2, 
-        pos.y - scrollOffset.y - 2, 
-        factory.width * TILE_SIZE + 4, 
-        factory.height * TILE_SIZE + 4
+        screenX - 2, 
+        screenY - 2, 
+        width + 4, 
+        height + 4
       )
     }
     
     // Show what the enemy is currently building (if anything)
     if (factory.id === 'enemy' && factory.currentlyBuilding) {
       // Calculate center of factory for image placement
-      const centerX = pos.x + (factory.width * TILE_SIZE / 2) - scrollOffset.x;
-      const centerY = pos.y + (factory.height * TILE_SIZE / 2) - scrollOffset.y;
+      const centerX = screenX + (width / 2);
+      const centerY = screenY + (height / 2);
       
       // Draw image or icon of what's being built
       const iconSize = TILE_SIZE * 2; // Keep the 2x size
@@ -567,7 +634,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     if (factory.id === 'enemy' && factory.budget !== undefined) {
       gameCtx.fillStyle = '#FFF'
       gameCtx.font = '12px Arial'
-      gameCtx.fillText(`Budget: ${factory.budget}`, pos.x - scrollOffset.x, pos.y - 20 - scrollOffset.y)
+      gameCtx.fillText(`Budget: ${factory.budget}`, screenX, screenY - 20)
     }
   })
   
