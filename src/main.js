@@ -117,10 +117,33 @@ speedMultiplier.addEventListener('change', (e) => {
 })
 
 function resizeCanvases() {
-  gameCanvas.width = window.innerWidth - 250
-  gameCanvas.height = window.innerHeight
-  minimapCanvas.width = 250
-  minimapCanvas.height = 150
+  const pixelRatio = window.devicePixelRatio || 1;
+  
+  // Set canvas display size (CSS)
+  gameCanvas.style.width = `${window.innerWidth - 250}px`;
+  gameCanvas.style.height = `${window.innerHeight}px`;
+  
+  // Set actual pixel size scaled by device pixel ratio
+  gameCanvas.width = (window.innerWidth - 250) * pixelRatio;
+  gameCanvas.height = window.innerHeight * pixelRatio;
+  
+  // Scale the drawing context to counter the device pixel ratio
+  gameCtx.scale(pixelRatio, pixelRatio);
+  
+  // Maintain high-quality rendering
+  gameCtx.imageSmoothingEnabled = true;
+  gameCtx.imageSmoothingQuality = 'high';
+  
+  // Set minimap size - make it fit entirely in the sidebar
+  minimapCanvas.style.width = '230px'; // Slightly smaller than sidebar width (250px)
+  minimapCanvas.style.height = '138px'; // Keep aspect ratio
+  minimapCanvas.width = 230 * pixelRatio;
+  minimapCanvas.height = 138 * pixelRatio;
+  
+  // Scale minimap context
+  minimapCtx.scale(pixelRatio, pixelRatio);
+  minimapCtx.imageSmoothingEnabled = true;
+  minimapCtx.imageSmoothingQuality = 'high';
 }
 window.addEventListener('resize', resizeCanvases)
 resizeCanvases()
@@ -508,11 +531,18 @@ function initProductionTabs() {
       tabContents.forEach(content => content.classList.remove('active'));
       
       // Add active class to clicked button
-      button.classList.add('active');
-      
-      // Show corresponding content
-      const tabName = button.getAttribute('data-tab');
-      document.getElementById(`${tabName}TabContent`).classList.add('active');
+      button.addEventListener('click', () => {
+        // Remove active class from all buttons and contents
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked button
+        button.classList.add('active');
+        
+        // Show corresponding content
+        const tabName = button.getAttribute('data-tab');
+        document.getElementById(`${tabName}TabContent`).classList.add('active');
+      });
     });
   });
   
@@ -564,8 +594,16 @@ if (minimapElement) {
     }
   });
 
-  window.addEventListener('mouseup', () => {
-    isMinimapDragging = false;
+  // Use mouseup on the document to ensure we catch the event even if released outside the minimap
+  document.addEventListener('mouseup', (e) => {
+    if (isMinimapDragging) {
+      // This is important - process one last time with the final cursor position
+      // when it's still in drag mode before ending the drag
+      if (e.target === minimapElement) {
+        handleMinimapClick(e);
+      }
+      isMinimapDragging = false;
+    }
   });
 
   // Prevent context menu on minimap
@@ -579,18 +617,25 @@ function handleMinimapClick(e) {
   // Get minimap dimensions
   const minimap = e.target
   const minimapRect = minimap.getBoundingClientRect()
+  const pixelRatio = window.devicePixelRatio || 1
   
   // Calculate click position relative to minimap
+  // Use CSS dimensions (display size) for calculating click position
   const clickX = (e.clientX - minimapRect.left) / minimapRect.width
   const clickY = (e.clientY - minimapRect.top) / minimapRect.height
   
-  // Calculate new scroll position
-  const newX = clickX * (MAP_TILES_X * TILE_SIZE - gameCanvas.width)
-  const newY = clickY * (MAP_TILES_Y * TILE_SIZE - gameCanvas.height)
+  // Use logical (CSS) dimensions for scroll calculation, not the scaled canvas dimensions
+  // The actual game coordinate space should use CSS dimensions
+  const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+  const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
   
-  // Update gameState.scrollOffset instead of cameraPosition
-  gameState.scrollOffset.x = Math.max(0, Math.min(newX, MAP_TILES_X * TILE_SIZE - gameCanvas.width))
-  gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - gameCanvas.height))
+  // Calculate new scroll position
+  const newX = clickX * (MAP_TILES_X * TILE_SIZE - logicalCanvasWidth)
+  const newY = clickY * (MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight)
+  
+  // Update gameState.scrollOffset
+  gameState.scrollOffset.x = Math.max(0, Math.min(newX, MAP_TILES_X * TILE_SIZE - logicalCanvasWidth))
+  gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight))
 }
 
 let lastTime = performance.now()

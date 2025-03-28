@@ -3,7 +3,7 @@
 // Building dimensions and costs
 export const buildingData = {
   powerPlant: {
-    width: 2,
+    width: 3,
     height: 3,
     cost: 2000,
     power: 100,
@@ -13,7 +13,7 @@ export const buildingData = {
   },
   oreRefinery: {
     width: 3,
-    height: 2,
+    height: 3,
     cost: 2500,
     power: -30,
     image: 'ore_refinery.jpg',
@@ -31,7 +31,7 @@ export const buildingData = {
   },
   constructionYard: {
     width: 3,
-    height: 2,
+    height: 3,
     cost: 5000,
     power: 50,
     image: 'construction_yard.jpg',
