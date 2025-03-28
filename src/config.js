@@ -21,7 +21,7 @@ export const TILE_COLORS = {
 // Image paths for tile types, with variations to select from randomly and rotation setting
 export const TILE_IMAGES = {
   land: {
-    paths: ['images/map/land01'],
+    paths: ['images/map/grass01'],
     rotate: true // Land can be rotated for variety
   },
   water: {

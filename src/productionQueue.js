@@ -88,14 +88,35 @@ export const productionQueue = {
     playSound('productionStart');
   },
   
+  // Count player's construction yards for build speed bonus
+  getConstructionYardMultiplier: function() {
+    // Default multiplier is 1x speed
+    if (!gameState.buildings || gameState.buildings.length === 0) {
+      return 1;
+    }
+    
+    // Count construction yards owned by player
+    const constructionYards = gameState.buildings.filter(
+      building => building.type === 'constructionYard' && building.owner === 'player'
+    );
+    
+    // Each construction yard speeds up building by 1x (returns # of yards + 1)
+    // First yard = 2x speed, second = 3x speed, etc.
+    return constructionYards.length + 1;
+  },
+  
   startNextBuildingProduction: function() {
     if (this.buildingItems.length === 0 || this.pausedBuilding) return;
     const item = this.buildingItems[0];
     const cost = buildingCosts[item.type] || 0;
     
-    // Set production duration proportional to cost.
+    // Set production duration proportional to cost
     const baseDuration = 3000;
-    const duration = baseDuration * (cost / 500);
+    let duration = baseDuration * (cost / 500);
+    
+    // Apply construction yard speedup
+    const constructionMultiplier = this.getConstructionYardMultiplier();
+    duration = duration / constructionMultiplier;
     
     // Apply energy slowdown if needed
     const slowdownFactor = (gameState.powerSupply < 0 && 
@@ -113,6 +134,11 @@ export const productionQueue = {
     // Mark button as active
     item.button.classList.add('active');
     playSound('productionStart');
+    
+    // Show notification about construction speed if we have construction yards
+    if (constructionMultiplier > 1) {
+      showNotification(`Construction speed: ${constructionMultiplier}x`);
+    }
   },
   
   updateProgress: function(timestamp) {

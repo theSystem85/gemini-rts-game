@@ -29,6 +29,15 @@ export const buildingData = {
     displayName: 'Vehicle Factory',
     health: 300
   },
+  constructionYard: {
+    width: 3,
+    height: 2,
+    cost: 5000,
+    power: 50,
+    image: 'construction_yard.jpg',
+    displayName: 'Construction Yard',
+    health: 350
+  },
   radarStation: {
     width: 2,
     height: 2,
