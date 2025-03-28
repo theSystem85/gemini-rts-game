@@ -252,17 +252,24 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (gameState.isRightDragging) {
       const dx = e.clientX - gameState.lastDragPos.x
       const dy = e.clientY - gameState.lastDragPos.y
+      
+      // Get logical dimensions accounting for pixel ratio
+      const logicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+      const logicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      
       gameState.scrollOffset.x = Math.max(
         0,
-        Math.min(gameState.scrollOffset.x - dx, mapGrid[0].length * TILE_SIZE - gameCanvas.width)
+        Math.min(gameState.scrollOffset.x - dx, mapGrid[0].length * TILE_SIZE - logicalWidth)
       )
       gameState.scrollOffset.y = Math.max(
         0,
-        Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - gameCanvas.height)
+        Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - logicalHeight)
       )
+      
       gameState.dragVelocity = { x: dx, y: dy }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
       gameCanvas.style.cursor = 'grabbing'
+      
       // Check if right-drag exceeds threshold.
       if (!rightWasDragging && Math.hypot(e.clientX - rightDragStart.x, e.clientY - rightDragStart.y) > 5) {
         rightWasDragging = true
@@ -539,7 +546,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                 }
               }
               
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
+              const path = findPath({ x: unit.tileX, y: destTile }, destTile, mapGrid, null);
               if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
                 unit.path = path.slice(1);
                 unit.target = null;

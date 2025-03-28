@@ -23,6 +23,11 @@ export const buildingImageMap = {
 let buildingImagesPreloaded = false;
 let buildingImagesLoading = false;
 
+// Get device pixel ratio for high-DPI rendering
+const getDevicePixelRatio = () => {
+  return window.devicePixelRatio || 1;
+};
+
 // Get cached building image or load and cache it
 export function getBuildingImage(buildingType, width, height, callback) {
   const cacheKey = `${buildingType}_${width}_${height}`;
@@ -45,14 +50,57 @@ export function getBuildingImage(buildingType, width, height, callback) {
   // Load the source image
   const img = new Image();
   img.onload = () => {
-    // Create a canvas to resize/process the image
+    // Get the device pixel ratio
+    const pixelRatio = getDevicePixelRatio();
+    
+    // Create a high-resolution canvas to resize/process the image
     const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    
+    // Set display size (CSS) to desired dimensions
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    
     const ctx = canvas.getContext('2d');
     
-    // Draw the image stretched to the building's size
-    ctx.drawImage(img, 0, 0, width, height);
+    // Enable high-quality image scaling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // Scale all drawing operations by the pixel ratio
+    ctx.scale(pixelRatio, pixelRatio);
+    
+    // Use a two-step scaling process for better quality
+    // First draw to an intermediate canvas at 2x size for better downscaling
+    const tempCanvas = document.createElement('canvas');
+    const tempSize = Math.max(width, height) * 2;
+    tempCanvas.width = tempSize;
+    tempCanvas.height = tempSize;
+    
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    
+    // Draw original image to the intermediate canvas
+    const aspectRatio = img.width / img.height;
+    let drawWidth, drawHeight;
+    
+    if (aspectRatio > 1) {
+      // Image is wider than tall
+      drawWidth = tempSize;
+      drawHeight = tempSize / aspectRatio;
+    } else {
+      // Image is taller than wide
+      drawWidth = tempSize * aspectRatio;
+      drawHeight = tempSize;
+    }
+    
+    // Center the image in the canvas
+    tempCtx.drawImage(img, (tempSize - drawWidth) / 2, (tempSize - drawHeight) / 2, drawWidth, drawHeight);
+    
+    // Draw from the intermediate canvas to the final canvas
+    ctx.drawImage(tempCanvas, 0, 0, width, height);
     
     // Store the processed image in the cache
     buildingImageCache[cacheKey] = canvas;

@@ -20,6 +20,11 @@ const tileVariationMap = {};
 let allTexturesLoaded = false;
 let loadingStarted = false;
 
+// Get device pixel ratio for high-DPI rendering
+const getDevicePixelRatio = () => {
+  return window.devicePixelRatio || 1;
+};
+
 // Helper function to load images once
 function getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback) {
   // Check if image is already in cache
@@ -87,17 +92,22 @@ function createTextureVariations(baseTexture, count, shouldRotate = true) {
     return variations;
   }
   
+  const pixelRatio = getDevicePixelRatio();
+  
   // Create a temporary canvas for manipulations
   const canvas = document.createElement('canvas');
-  canvas.width = TILE_SIZE;
-  canvas.height = TILE_SIZE;
+  canvas.width = TILE_SIZE * pixelRatio;
+  canvas.height = TILE_SIZE * pixelRatio;
   const ctx = canvas.getContext('2d');
   
   // Create additional variations
   for (let i = 1; i < count; i++) {
     // Reset transform and clear
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, TILE_SIZE, TILE_SIZE);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Apply pixel ratio scaling first
+    ctx.scale(pixelRatio, pixelRatio);
     
     // Apply random transformation
     ctx.translate(TILE_SIZE/2, TILE_SIZE/2);
@@ -115,13 +125,22 @@ function createTextureVariations(baseTexture, count, shouldRotate = true) {
     
     ctx.translate(-TILE_SIZE/2, -TILE_SIZE/2);
     
+    // Enable high-quality image scaling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
     // Draw the base texture with the transformation applied
-    ctx.drawImage(baseTexture, 0, 0);
+    ctx.drawImage(baseTexture, 0, 0, TILE_SIZE, TILE_SIZE);
     
     // Create a new canvas to store this variation
     const variationCanvas = document.createElement('canvas');
-    variationCanvas.width = TILE_SIZE;
-    variationCanvas.height = TILE_SIZE;
+    variationCanvas.width = TILE_SIZE * pixelRatio;
+    variationCanvas.height = TILE_SIZE * pixelRatio;
+    
+    // Set display size (CSS) to maintain aspect
+    variationCanvas.style.width = `${TILE_SIZE}px`;
+    variationCanvas.style.height = `${TILE_SIZE}px`;
+    
     const varCtx = variationCanvas.getContext('2d');
     varCtx.drawImage(canvas, 0, 0);
     
@@ -171,14 +190,56 @@ function preloadAllTextures(callback) {
         if (img) {
           console.log(`Loaded texture: ${imagePath} (rotation: ${shouldRotate ? 'enabled' : 'disabled'})`);
           
-          // Create a canvas for the texture at the correct size
+          const pixelRatio = getDevicePixelRatio();
+          
+          // Create a canvas for the texture at the correct size, accounting for pixel ratio
           const baseCanvas = document.createElement('canvas');
-          baseCanvas.width = TILE_SIZE;
-          baseCanvas.height = TILE_SIZE;
+          baseCanvas.width = TILE_SIZE * pixelRatio;
+          baseCanvas.height = TILE_SIZE * pixelRatio;
+          
+          // Set display size (CSS) to maintain aspect
+          baseCanvas.style.width = `${TILE_SIZE}px`;
+          baseCanvas.style.height = `${TILE_SIZE}px`;
+          
           const baseCtx = baseCanvas.getContext('2d');
           
-          // Draw the image resized to TILE_SIZE
-          baseCtx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
+          // Apply high-quality image rendering
+          baseCtx.imageSmoothingEnabled = true;
+          baseCtx.imageSmoothingQuality = 'high';
+          
+          // Apply pixel ratio scaling
+          baseCtx.scale(pixelRatio, pixelRatio);
+          
+          // Use a two-step scaling process for better quality
+          // First draw to an intermediate canvas at 2x size for better downscaling
+          const tempCanvas = document.createElement('canvas');
+          const tempSize = TILE_SIZE * 2;
+          tempCanvas.width = tempSize;
+          tempCanvas.height = tempSize;
+          
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCtx.imageSmoothingEnabled = true;
+          tempCtx.imageSmoothingQuality = 'high';
+          
+          // Draw original image to the intermediate canvas, maintaining aspect ratio
+          const aspectRatio = img.width / img.height;
+          let drawWidth, drawHeight;
+          
+          if (aspectRatio > 1) {
+            // Image is wider than tall
+            drawWidth = tempSize;
+            drawHeight = tempSize / aspectRatio;
+          } else {
+            // Image is taller than wide
+            drawWidth = tempSize * aspectRatio;
+            drawHeight = tempSize;
+          }
+          
+          // Center the image in the canvas
+          tempCtx.drawImage(img, (tempSize - drawWidth) / 2, (tempSize - drawHeight) / 2, drawWidth, drawHeight);
+          
+          // Draw from the intermediate canvas to the final canvas
+          baseCtx.drawImage(tempCanvas, 0, 0, TILE_SIZE, TILE_SIZE);
           
           // Generate variations and add them to the cache - respect the rotation setting
           const variations = createTextureVariations(baseCanvas, TEXTURE_VARIATIONS, shouldRotate);
@@ -273,7 +334,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         
         // If valid variation found, draw it
         if (variationIndex >= 0 && variationIndex < tileTextureCache[tileType].length) {
-          gameCtx.drawImage(tileTextureCache[tileType][variationIndex], tileX, tileY);
+          gameCtx.drawImage(tileTextureCache[tileType][variationIndex], tileX, tileY, TILE_SIZE, TILE_SIZE);
           continue; // Skip to next tile, no need for fallback
         }
       }
@@ -891,12 +952,23 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
 }
 
 export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState) {
-  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height)
-  const scaleX = minimapCanvas.width / (mapGrid[0].length * TILE_SIZE)
-  const scaleY = minimapCanvas.height / (mapGrid.length * TILE_SIZE)
+  // Get the pixel ratio and CSS dimensions
+  const pixelRatio = window.devicePixelRatio || 1;
   
-  // Save original canvas context state
-  minimapCtx.save();
+  // Clear the entire canvas with proper scaling
+  minimapCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+  minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+  
+  // Use logical/CSS dimensions for calculations
+  const minimapLogicalWidth = parseInt(minimapCanvas.style.width, 10) || 250;
+  const minimapLogicalHeight = parseInt(minimapCanvas.style.height, 10) || 150;
+  
+  // Calculate scale based on logical dimensions
+  const scaleX = minimapLogicalWidth / (mapGrid[0].length * TILE_SIZE);
+  const scaleY = minimapLogicalHeight / (mapGrid.length * TILE_SIZE);
+  
+  // Apply pixel ratio scaling
+  minimapCtx.scale(pixelRatio, pixelRatio);
   
   // Apply grayscale filter if in low energy mode
   if (gameState && gameState.lowEnergyMode) {
@@ -908,19 +980,24 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
     for (let x = 0; x < mapGrid[0].length; x++) {
       // For minimap, always use color for simplicity and performance
       minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type];
-      minimapCtx.fillRect(x * TILE_SIZE * scaleX, y * TILE_SIZE * scaleY, TILE_SIZE * scaleX, TILE_SIZE * scaleY);
+      minimapCtx.fillRect(
+        x * TILE_SIZE * scaleX, 
+        y * TILE_SIZE * scaleY, 
+        TILE_SIZE * scaleX, 
+        TILE_SIZE * scaleY
+      );
     }
   }
   
   // Draw units
   units.forEach(unit => {
-    minimapCtx.fillStyle = unit.owner === 'player' ? '#00F' : '#F00'
-    const unitX = (unit.x + TILE_SIZE / 2) * scaleX
-    const unitY = (unit.y + TILE_SIZE / 2) * scaleY
-    minimapCtx.beginPath()
-    minimapCtx.arc(unitX, unitY, 3, 0, 2 * Math.PI)
-    minimapCtx.fill()
-  })
+    minimapCtx.fillStyle = unit.owner === 'player' ? '#00F' : '#F00';
+    const unitX = (unit.x + TILE_SIZE / 2) * scaleX;
+    const unitY = (unit.y + TILE_SIZE / 2) * scaleY;
+    minimapCtx.beginPath();
+    minimapCtx.arc(unitX, unitY, 3, 0, 2 * Math.PI);
+    minimapCtx.fill();
+  });
   
   // Draw buildings if they exist
   if (buildings && buildings.length > 0) {
@@ -935,13 +1012,28 @@ export function renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, 
     });
   }
   
-  // Reset filter
-  minimapCtx.restore();
+  // Save filter state
+  const currentFilter = minimapCtx.filter;
+  
+  // Remove grayscale filter for viewport rectangle
+  minimapCtx.filter = 'none';
+  
+  // Get logical canvas dimensions for viewport calculation
+  const gameLogicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250);
+  const gameLogicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight;
   
   // Draw viewport border (always in color, never grayscale)
-  minimapCtx.strokeStyle = '#FF0'
-  minimapCtx.lineWidth = 2
-  minimapCtx.strokeRect(scrollOffset.x * scaleX, scrollOffset.y * scaleY, gameCanvas.width * scaleX, gameCanvas.height * scaleY)
+  minimapCtx.strokeStyle = '#FF0';
+  minimapCtx.lineWidth = 2;
+  minimapCtx.strokeRect(
+    scrollOffset.x * scaleX, 
+    scrollOffset.y * scaleY, 
+    gameLogicalWidth * scaleX, 
+    gameLogicalHeight * scaleY
+  );
+  
+  // Restore previous filter state
+  minimapCtx.filter = currentFilter;
 }
 
 // Export the preload function so it can be called from main.js

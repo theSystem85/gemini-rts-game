@@ -1,12 +1,18 @@
 // factories.js
+import { buildingData } from './buildings.js';
+
 export function initFactories(factories, mapGrid) {
+  // Get the factory dimensions from buildingData
+  const factoryWidth = buildingData.constructionYard.width;
+  const factoryHeight = buildingData.constructionYard.height;
+  
   // Position player factory at least 5 tiles from left and bottom.
   const playerFactory = {
     id: 'player',
     x: 5,
-    y: mapGrid.length - 3 - 5, // 5 tiles from bottom
-    width: 3,
-    height: 2,
+    y: mapGrid.length - factoryHeight - 5, // 5 tiles from bottom
+    width: factoryWidth,
+    height: factoryHeight,
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
@@ -15,10 +21,10 @@ export function initFactories(factories, mapGrid) {
   // Position enemy factory at least 5 tiles from top and right.
   const enemyFactory = {
     id: 'enemy',
-    x: mapGrid[0].length - 4 - 5, // 5 tiles from right
+    x: mapGrid[0].length - factoryWidth - 5, // 5 tiles from right
     y: 5,
-    width: 3,
-    height: 2,
+    width: factoryWidth,
+    height: factoryHeight,
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
