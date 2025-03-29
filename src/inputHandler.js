@@ -6,6 +6,8 @@ import { playSound } from './sound.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 const minimapCanvas = document.getElementById('minimap')
+const moveCursor = document.getElementById('move-cursor')
+const attackCursor = document.getElementById('attack-cursor')
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -30,6 +32,90 @@ let rallyPoint = null
 
 // Add global variable for formation toggle
 let groupFormationMode = false
+
+// Variable to track if the cursor is over the game canvas and enemy
+let isOverGameCanvas = false
+let isOverEnemy = false
+
+// Function to update custom cursor position and visibility
+function updateCustomCursor(e) {
+  const rect = gameCanvas.getBoundingClientRect();
+  const x = e.clientX;
+  const y = e.clientY;
+  
+  // Check if cursor is over the game canvas
+  isOverGameCanvas = (
+    x >= rect.left && 
+    x <= rect.right && 
+    y >= rect.top &&
+    y <= rect.bottom
+  );
+  
+  // Move both cursors to follow mouse position (center it on the mouse cursor)
+  moveCursor.style.left = `${x - 16}px`; // Center horizontally (half of 32px width)
+  moveCursor.style.top = `${y - 16}px`;  // Center vertically (half of 32px height)
+  attackCursor.style.left = `${x - 16}px`;
+  attackCursor.style.top = `${y - 16}px`;
+  
+  // Ensure both cursors have proper z-index
+  moveCursor.style.zIndex = "10000";
+  attackCursor.style.zIndex = "10000";
+  
+  // Show appropriate custom cursor only when units are selected and mouse is over the game canvas
+  if (selectedUnits.length > 0 && isOverGameCanvas) {
+    if (isOverEnemy) {
+      // Show attack cursor when over enemy
+      attackCursor.style.display = 'block';
+      moveCursor.style.display = 'none';
+      gameCanvas.style.cursor = 'none';
+    } else if (!gameState.isRightDragging) {
+      // Show move cursor when not over enemy and not dragging
+      moveCursor.style.display = 'block';
+      attackCursor.style.display = 'none';
+      gameCanvas.style.cursor = 'none';
+    } else {
+      // Hide both custom cursors during right-drag
+      moveCursor.style.display = 'none';
+      attackCursor.style.display = 'none';
+    }
+  } else {
+    // Hide both custom cursors when no units selected or not over canvas
+    moveCursor.style.display = 'none';
+    attackCursor.style.display = 'none';
+  }
+}
+
+// Apply the initial state for the custom cursor
+document.addEventListener('DOMContentLoaded', () => {
+  // Initially hide the custom cursor
+  moveCursor.style.display = 'none';
+  attackCursor.style.display = 'none';
+  
+  // Set up the document-level mousemove event
+  document.addEventListener('mousemove', (e) => {
+    // Update custom cursor position
+    updateCustomCursor(e);
+    
+    // Detect if over sidebar to ensure cursor is hidden there
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      const sidebarRect = sidebar.getBoundingClientRect();
+      const isOverSidebar = (
+        e.clientX >= sidebarRect.left &&
+        e.clientX <= sidebarRect.right &&
+        e.clientY >= sidebarRect.top &&
+        e.clientY <= sidebarRect.bottom
+      );
+      
+      // Always hide custom cursor over sidebar
+      if (isOverSidebar) {
+        moveCursor.style.display = 'none';
+        attackCursor.style.display = 'none';
+        document.body.style.cursor = 'default';
+      }
+    }
+  });
+});
 
 // Function to create help overlay
 function showControlsHelp() {
@@ -195,7 +281,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     
     // --- Enemy Hover Cursor ---
     if (selectedUnits.length > 0) {
-      let enemyHover = false
+      isOverEnemy = false
       // Check enemy factories.
       for (const factory of factories) {
         if (factory.id !== 'player') {
@@ -205,13 +291,13 @@ export function setupInputHandlers(units, factories, mapGrid) {
               worldX < factoryPixelX + factory.width * TILE_SIZE &&
               worldY >= factoryPixelY &&
               worldY < factoryPixelY + factory.height * TILE_SIZE) {
-            enemyHover = true
+            isOverEnemy = true
             break
           }
         }
       }
       // Check enemy buildings
-      if (!enemyHover && gameState.buildings && gameState.buildings.length > 0) {
+      if (!isOverEnemy && gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
           if (building.owner !== 'player') {
             const buildingX = building.x * TILE_SIZE
@@ -223,28 +309,27 @@ export function setupInputHandlers(units, factories, mapGrid) {
                 worldX < buildingX + buildingWidth && 
                 worldY >= buildingY && 
                 worldY < buildingY + buildingHeight) {
-              enemyHover = true
+              isOverEnemy = true
               break
             }
           }
         }
       }
       // Check enemy units.
-      if (!enemyHover) {
+      if (!isOverEnemy) {
         for (const unit of units) {
           if (unit.owner !== 'player') {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
-              enemyHover = true
+              isOverEnemy = true
               break
             }
           }
         }
       }
-      if (enemyHover) {
+      if (isOverEnemy) {
         gameCanvas.style.cursor = 'crosshair'
-        return
       }
     }
 
@@ -289,6 +374,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
         wasDragging = true
       }
     }
+
+    // Update custom cursor position and visibility
+    updateCustomCursor(e);
   })
 
   gameCanvas.addEventListener('mouseup', e => {
@@ -304,8 +392,15 @@ export function setupInputHandlers(units, factories, mapGrid) {
       if (!rightWasDragging) {
         units.forEach(u => { if (u.owner === 'player') u.selected = false })
         selectedUnits.length = 0
+        
+        // Hide custom cursor when units are deselected
+        moveCursor.style.display = 'none';
+        attackCursor.style.display = 'none';
       }
       rightWasDragging = false
+      
+      // Update custom cursor visibility after unit selection changes
+      updateCustomCursor(e);
       
       // Check if the player factory is selected
       const playerFactory = factories.find(f => f.id === 'player' && f.selected);
@@ -546,12 +641,18 @@ export function setupInputHandlers(units, factories, mapGrid) {
                 }
               }
               
-              const path = findPath({ x: unit.tileX, y: destTile }, destTile, mapGrid, null);
-              if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
-                unit.path = path.slice(1);
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
+              if (path && path.length > 0) {
+                unit.path = path.length > 1 ? path.slice(1) : path;
                 unit.target = null;
                 unit.moveTarget = destTile; // Store the final destination
+                // Clear any previous target when moving
+                unit.originalTarget = null;
+                unit.originalPath = null;
                 playSound('movement');
+                
+                // Debug to verify path is set
+                console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`);
               }
             }
           })
