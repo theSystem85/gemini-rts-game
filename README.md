@@ -173,10 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) disable default CSS mouse cursor on the game map and switch to an SVG with transparency and animations that is displayed on the game map whenever the mouse moves. Make sure to hide it when the cursor is on the sidebar. Here are the different cursor states:
-    (1) Movement Cursor: When a unit (or group) is selected the cursor turns green (make sure to generate an animated svg that indicates a movement target for a game on a map)
-    (2) Movement Blocked: When a unit (or group) is selected the cursor turns red (make sure to generate an animated svg that indicates a blocked movement target for a game on a map)
-    (3) Attack: When a unit (or group) is selected the cursor turns red with a crosshair (make sure to generate an animated svg that indicates it)
+(-) make a dedicated sound for attacking confirmation
 (-) only focus groups on double tapping mapping key (300ms double tap) but not immediately like it is now
 (-) refine the coloring of the power bar and its logic on impacting the production.
 (-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
@@ -189,13 +186,16 @@ Open Features:
 (-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 (-) add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
 (-) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
-(-) implement turretGunV1, turretGunV2 and turretGunV3 defense buildings by extending the existing dummy building with active defense features. Its projectiles are same as a each respective tank_v1, tank_v2 and tank_v3. It automatically attacks any enemy units in range but has 50% more range. turretGunV2 additionally has an aim ahead function so it is increasing the likelyhood of hitting moving targets.
 (-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
 (-) make tank_v2 get 30% more health as tank_v1.
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) disable default CSS mouse cursor on the game map and switch to an SVG with transparency and animations that is displayed on the game map whenever the mouse moves. Make sure to hide it when the cursor is on the sidebar. Here are the different cursor states:
+    (1) Movement Cursor: When a unit (or group) is selected the cursor turns green (make sure to generate an animated svg that indicates a movement target for a game on a map)
+    (2) Movement Blocked: When a unit (or group) is selected the cursor turns red (make sure to generate an animated svg that indicates a blocked movement target for a game on a map)
+    (3) Attack: When a unit (or group) is selected the cursor turns red with a crosshair (make sure to generate an animated svg that indicates it)
 (x) replace the colored tiles for water and land with land01.jpg and water01.jpg from /images/map folder make sure to first shrink the images to the 32x32 pixel format needed for the tiles and then use the cached version of it on the game map. Also prepare the code to get rock and street and ore replaced as soon as the assets are provided like rock01.jpg and street01.jpg and ore01.jpg but use the colors always as fallback when the assets are not found. The numbers behind the image file names can be any number. Whe filling the map with these tiles make sure to pick any random available number for the image file to fill in the map to get some variation.
 (?) make sure whenever player builds something the order of what the player build is stored to local storage for each game session so the AI can learn on what to build by the players last 20 sessions and replicate randomly any of these sessions. The placement though is randomly around the base independent of the players placement of the buildings but always towards the next ore field or the direction of the players base.
 (x) when the h key is toggled an overview pops up or closes showing all the key bindings (mouse and keyboard) with explanations.

@@ -7,6 +7,83 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
   </head>
   <body>
+    <div id="move-cursor" style="position: absolute; left: -1000px; top: -1000px; pointer-events: none; z-index: 10000; display: none;">
+      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            #move-cursor .ring {
+              stroke: #00ff88;
+              fill: none;
+              stroke-width: 1.5;
+              opacity: 0.4;
+            }
+      
+            #move-cursor .glow {
+              filter: drop-shadow(0 0 2px #00ff88) drop-shadow(0 0 3px #00ff88);
+            }
+          </style>
+        </defs>
+      
+        <circle class="ring glow" cx="16" cy="16" r="12">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0s" repeatCount="indefinite" />
+        </circle>
+      
+        <circle class="ring glow" cx="16" cy="16" r="8">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+        </circle>
+      
+        <circle class="ring glow" cx="16" cy="16" r="4">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0.6s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0.6s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+    </div>
+    <div id="attack-cursor" style="position: absolute; left: -1000px; top: -1000px; pointer-events: none; z-index: 10000; display: none;">
+      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            #attack-cursor .ring {
+              stroke: #ff4d4d;
+              fill: none;
+              stroke-width: 1.5;
+              opacity: 0.4;
+            }
+      
+            #attack-cursor .glow {
+              filter: drop-shadow(0 0 2px #ff4d4d) drop-shadow(0 0 3px #ff4d4d);
+            }
+      
+            #attack-cursor .cross {
+              stroke: #ff4d4d;
+              stroke-width: 1.5;
+              opacity: 0.9;
+            }
+          </style>
+        </defs>
+      
+        <!-- Outer to inner pulsing rings -->
+        <circle class="ring glow" cx="16" cy="16" r="12">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0s" repeatCount="indefinite" />
+        </circle>
+      
+        <circle class="ring glow" cx="16" cy="16" r="8">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+        </circle>
+      
+        <circle class="ring glow" cx="16" cy="16" r="4">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0.6s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0.6s" repeatCount="indefinite" />
+        </circle>
+      
+        <!-- Fixed crosshair inside center circle -->
+        <line class="cross" x1="16" y1="14" x2="16" y2="18" />
+        <line class="cross" x1="14" y1="16" x2="18" y2="16" />
+      </svg>
+    </div>
     <div id="sidebar">
       <canvas id="minimap"></canvas>
       <div id="stats">
