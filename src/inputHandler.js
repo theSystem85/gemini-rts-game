@@ -563,60 +563,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   })
 
-  // --- Minimap Click: Recenters View and Commands Selected Units ---
-  minimapCanvas.addEventListener('click', e => {
-    // Don't process input if game is paused
-    if (gameState.paused) return;
-
-    const rect = minimapCanvas.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const clickY = e.clientY - rect.top
-    const scaleX = (mapGrid[0].length * TILE_SIZE) / minimapCanvas.width
-    const scaleY = (mapGrid.length * TILE_SIZE) / minimapCanvas.height
-    gameState.scrollOffset.x = Math.max(0, Math.min(clickX * scaleX - gameCanvas.width / 2, mapGrid[0].length * TILE_SIZE - gameCanvas.width))
-    gameState.scrollOffset.y = Math.max(0, Math.min(clickY * scaleY - gameCanvas.height / 2, mapGrid.length * TILE_SIZE - gameCanvas.height))
-    
-    // If selected units exist, issue move command to the clicked minimap position.
-    if (selectedUnits.length > 0) {
-      const worldX = clickX * scaleX
-      const worldY = clickY * scaleY
-      const count = selectedUnits.length
-      const colsCount = Math.ceil(Math.sqrt(count))
-      const rowsCount = Math.ceil(count / colsCount)
-      selectedUnits.forEach((unit, index) => {
-        let formationOffset;
-        
-        // Apply formation offsets based on whether formation mode is active
-        if (unit.formationActive && unit.formationOffset) {
-          // Use stored formation offsets for this unit
-          formationOffset = {
-            x: unit.formationOffset.x,
-            y: unit.formationOffset.y
-          };
-        } else {
-          // Default grid formation if formation mode is not active
-          const col = index % colsCount
-          const row = Math.floor(index / colsCount)
-          formationOffset = {
-            x: col * 10 - ((colsCount - 1) * 10) / 2,
-            y: row * 10 - ((rowsCount - 1) * 10) / 2
-          };
-        }
-        
-        const destX = Math.floor(worldX) + formationOffset.x
-        const destY = Math.floor(worldY) + formationOffset.y
-        const destTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
-        if (path.length > 0 && (unit.tileX !== destTile.x || unit.tileY !== destTile.y)) {
-          unit.path = path.slice(1)
-          unit.target = null
-          unit.moveTarget = destTile // Store the final destination
-          playSound('movement')
-        }
-      })
-    }
-  })
-
   // Enhanced keydown event listener
   document.addEventListener('keydown', e => {
     // Some keys should work even when paused
