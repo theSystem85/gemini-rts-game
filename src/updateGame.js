@@ -1014,15 +1014,14 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
       // Calculate effective cooldown based on power situation
       let effectiveCooldown = building.fireCooldown;
       
-      // Apply power slowdown for defensive buildings based on owner
-      if (building.owner === 'player' && gameState.lowEnergyMode) {
-        // Power is low, increase cooldown by 3x (slower firing rate)
-        effectiveCooldown *= 3;
-      } else if (building.owner === 'enemy' && 
-                 gameState.enemyTotalPowerProduction && 
-                 gameState.enemyPowerConsumption > 0.9 * gameState.enemyTotalPowerProduction) {
-        // Enemy is low on power, increase their cooldown too
-        effectiveCooldown *= 3;
+      // Apply power slowdown for defensive buildings using the new build speed modifier
+      if (building.owner === 'player' && gameState.playerPowerSupply < 0) {
+        // Apply player build speed modifier to turret cooldown
+        // This inverts the modifier since we want cooldown to increase as speed decreases
+        effectiveCooldown = building.fireCooldown / gameState.playerBuildSpeedModifier;
+      } else if (building.owner === 'enemy' && gameState.enemyPowerSupply < 0) {
+        // Apply enemy build speed modifier to turret cooldown
+        effectiveCooldown = building.fireCooldown / gameState.enemyBuildSpeedModifier;
       }
       
       // Only fire if cooldown has elapsed

@@ -346,6 +346,9 @@ export function updatePowerSupply(buildings, gameState) {
   let enemyTotalProduction = 0;
   let enemyTotalConsumption = 0;
   
+  // Track if player has a radar station
+  let playerHasRadarStation = false;
+  
   buildings.forEach(building => {
     // Skip buildings with no owner
     if (!building.owner) return;
@@ -358,6 +361,11 @@ export function updatePowerSupply(buildings, gameState) {
         playerTotalProduction += building.power;
       } else if (building.power < 0) {
         playerTotalConsumption += Math.abs(building.power);
+      }
+      
+      // Check if player has a radar station
+      if (building.type === 'radarStation' && building.health > 0) {
+        playerHasRadarStation = true;
       }
     } else if (building.owner === 'enemy') {
       enemyTotalPower += building.power;
@@ -380,7 +388,7 @@ export function updatePowerSupply(buildings, gameState) {
   gameState.enemyTotalPowerProduction = enemyTotalProduction;
   gameState.enemyPowerConsumption = enemyTotalConsumption;
   
-  // Calculate energy percentage for visual effects and production slowdown (player only)
+  // Calculate energy percentage for UI display
   let playerEnergyPercentage = 100;
   if (playerTotalProduction > 0) {
     playerEnergyPercentage = Math.max(0, 100 - (playerTotalConsumption / playerTotalProduction) * 100);
@@ -389,8 +397,37 @@ export function updatePowerSupply(buildings, gameState) {
     playerEnergyPercentage = 0;
   }
   
-  // Set low energy mode when below 10% energy
-  gameState.lowEnergyMode = playerEnergyPercentage <= 10;
+  // Calculate production speed penalty when power is negative
+  if (playerTotalPower < 0) {
+    // Calculate build speed modifier using the formula:
+    // When power is -100, speed is 1/2
+    // When power is -200, speed is 1/3
+    // And so on
+    const negativePower = Math.abs(playerTotalPower);
+    // Speed penalty formula: 1 / (1 + (negativePower / 100))
+    gameState.playerBuildSpeedModifier = 1 / (1 + (negativePower / 100));
+    
+    // Enable low energy mode
+    gameState.lowEnergyMode = true;
+    
+    // Disable radar when power is negative, even if radar station exists
+    gameState.radarActive = false;
+  } else {
+    // Normal speed when power is positive
+    gameState.playerBuildSpeedModifier = 1.0;
+    gameState.lowEnergyMode = false;
+    
+    // Radar is active only if player has a radar station and power is positive
+    gameState.radarActive = playerHasRadarStation;
+  }
+  
+  // Calculate enemy speed penalty when power is negative
+  if (enemyTotalPower < 0) {
+    const negativePower = Math.abs(enemyTotalPower);
+    gameState.enemyBuildSpeedModifier = 1 / (1 + (negativePower / 100));
+  } else {
+    gameState.enemyBuildSpeedModifier = 1.0;
+  }
   
   // For backward compatibility
   gameState.powerSupply = playerTotalPower;
