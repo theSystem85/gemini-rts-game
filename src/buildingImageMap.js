@@ -13,7 +13,7 @@ export const buildingImageMap = {
   turretGunV1: 'images/map/buildings/turret01.jpg',
   turretGunV2: 'images/map/buildings/turret02.jpg',
   turretGunV3: 'images/map/buildings/turret02.jpg', // Using turret02 as fallback
-  rocketTurret: 'images/map/buildings/turret01.jpg', // Using turret01 as fallback
+  rocketTurret: 'images/map/buildings/rocket_gun.png',
   teslaCoil: 'images/map/buildings/teslacoil.jpg',
   constructionYard: 'images/map/buildings/construction_yard.png',
   concreteWall: 'images/map/buildings/turret01.jpg' // Using turret01 as a fallback
