@@ -8,6 +8,7 @@ const gameCanvas = document.getElementById('gameCanvas')
 const minimapCanvas = document.getElementById('minimap')
 const moveCursor = document.getElementById('move-cursor')
 const attackCursor = document.getElementById('attack-cursor')
+const blockedCursor = document.getElementById('blocked-cursor')
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -33,12 +34,35 @@ let rallyPoint = null
 // Add global variable for formation toggle
 let groupFormationMode = false
 
-// Variable to track if the cursor is over the game canvas and enemy
+// Variable to track if the cursor is over the game canvas, enemy, or blocked terrain
 let isOverGameCanvas = false
 let isOverEnemy = false
+let isOverBlockedTerrain = false
+
+// Function to check if a location is a blocked tile (water, rock, building)
+function isBlockedTerrain(tileX, tileY, mapGrid) {
+  // First check if mapGrid is defined and properly structured
+  if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0) {
+    return false; // Can't determine if blocked, assume not blocked
+  }
+  
+  // Check if tile coordinates are valid
+  if (tileX < 0 || tileY < 0 || tileX >= mapGrid[0].length || tileY >= mapGrid.length) {
+    return true;
+  }
+  
+  // Ensure we have a valid row before accessing the tile
+  if (!mapGrid[tileY] || !mapGrid[tileY][tileX]) {
+    return false; // Can't determine if blocked, assume not blocked
+  }
+  
+  // Check if the tile type is impassable
+  const tileType = mapGrid[tileY][tileX].type;
+  return tileType === 'water' || tileType === 'rock' || tileType === 'building';
+}
 
 // Function to update custom cursor position and visibility
-function updateCustomCursor(e) {
+function updateCustomCursor(e, mapGrid) {
   const rect = gameCanvas.getBoundingClientRect();
   const x = e.clientX;
   const y = e.clientY;
@@ -51,15 +75,31 @@ function updateCustomCursor(e) {
     y <= rect.bottom
   );
   
-  // Move both cursors to follow mouse position (center it on the mouse cursor)
+  // Calculate mouse position in world coordinates
+  const worldX = x - rect.left + gameState.scrollOffset.x;
+  const worldY = y - rect.top + gameState.scrollOffset.y;
+  
+  // Convert to tile coordinates
+  const tileX = Math.floor(worldX / TILE_SIZE);
+  const tileY = Math.floor(worldY / TILE_SIZE);
+  
+  // Check if mouse is over blocked terrain when in game canvas, with added safety check
+  isOverBlockedTerrain = isOverGameCanvas && 
+    mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 && 
+    isBlockedTerrain(tileX, tileY, mapGrid);
+  
+  // Move all cursors to follow mouse position (center them on the mouse cursor)
   moveCursor.style.left = `${x - 16}px`; // Center horizontally (half of 32px width)
   moveCursor.style.top = `${y - 16}px`;  // Center vertically (half of 32px height)
   attackCursor.style.left = `${x - 16}px`;
   attackCursor.style.top = `${y - 16}px`;
+  blockedCursor.style.left = `${x - 16}px`;
+  blockedCursor.style.top = `${y - 16}px`;
   
-  // Ensure both cursors have proper z-index
+  // Ensure all cursors have proper z-index
   moveCursor.style.zIndex = "10000";
   attackCursor.style.zIndex = "10000";
+  blockedCursor.style.zIndex = "10000";
   
   // Show appropriate custom cursor only when units are selected and mouse is over the game canvas
   if (selectedUnits.length > 0 && isOverGameCanvas) {
@@ -67,21 +107,31 @@ function updateCustomCursor(e) {
       // Show attack cursor when over enemy
       attackCursor.style.display = 'block';
       moveCursor.style.display = 'none';
+      blockedCursor.style.display = 'none';
       gameCanvas.style.cursor = 'none';
-    } else if (!gameState.isRightDragging) {
-      // Show move cursor when not over enemy and not dragging
-      moveCursor.style.display = 'block';
-      attackCursor.style.display = 'none';
-      gameCanvas.style.cursor = 'none';
-    } else {
-      // Hide both custom cursors during right-drag
+    } else if (isOverBlockedTerrain) {
+      // Show blocked cursor when over impassable terrain
+      blockedCursor.style.display = 'block';
       moveCursor.style.display = 'none';
       attackCursor.style.display = 'none';
+      gameCanvas.style.cursor = 'none';
+    } else if (!gameState.isRightDragging) {
+      // Show move cursor when not over enemy or blocked terrain and not dragging
+      moveCursor.style.display = 'block';
+      attackCursor.style.display = 'none';
+      blockedCursor.style.display = 'none';
+      gameCanvas.style.cursor = 'none';
+    } else {
+      // Hide all custom cursors during right-drag
+      moveCursor.style.display = 'none';
+      attackCursor.style.display = 'none';
+      blockedCursor.style.display = 'none';
     }
   } else {
-    // Hide both custom cursors when no units selected or not over canvas
+    // Hide all custom cursors when no units selected or not over canvas
     moveCursor.style.display = 'none';
     attackCursor.style.display = 'none';
+    blockedCursor.style.display = 'none';
   }
 }
 
@@ -90,11 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initially hide the custom cursor
   moveCursor.style.display = 'none';
   attackCursor.style.display = 'none';
+  blockedCursor.style.display = 'none';
   
   // Set up the document-level mousemove event
   document.addEventListener('mousemove', (e) => {
     // Update custom cursor position
-    updateCustomCursor(e);
+    updateCustomCursor(e, gameState.mapGrid);
     
     // Detect if over sidebar to ensure cursor is hidden there
     const sidebar = document.getElementById('sidebar');
@@ -111,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOverSidebar) {
         moveCursor.style.display = 'none';
         attackCursor.style.display = 'none';
+        blockedCursor.style.display = 'none';
         document.body.style.cursor = 'default';
       }
     }
@@ -376,7 +428,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
 
     // Update custom cursor position and visibility
-    updateCustomCursor(e);
+    updateCustomCursor(e, mapGrid);
   })
 
   gameCanvas.addEventListener('mouseup', e => {
@@ -389,18 +441,17 @@ export function setupInputHandlers(units, factories, mapGrid) {
       gameState.isRightDragging = false
       gameCanvas.style.cursor = 'grab'
       // If the right click was NOT a drag, deselect all units.
-      if (!rightWasDragging) {
-        units.forEach(u => { if (u.owner === 'player') u.selected = false })
-        selectedUnits.length = 0
-        
-        // Hide custom cursor when units are deselected
-        moveCursor.style.display = 'none';
-        attackCursor.style.display = 'none';
-      }
+      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      selectedUnits.length = 0
+      
+      // Hide custom cursor when units are deselected
+      moveCursor.style.display = 'none';
+      attackCursor.style.display = 'none';
+      blockedCursor.style.display = 'none';
       rightWasDragging = false
       
       // Update custom cursor visibility after unit selection changes
-      updateCustomCursor(e);
+      updateCustomCursor(e, mapGrid);
       
       // Check if the player factory is selected
       const playerFactory = factories.find(f => f.id === 'player' && f.selected);
