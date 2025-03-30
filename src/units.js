@@ -3,6 +3,9 @@ import { TILE_SIZE } from './config.js'
 import { getUniqueId } from './utils.js'
 import { playSound } from './sound.js'
 
+// Add a global variable to track if we've already shown the pathfinding warning
+let pathfindingWarningShown = false;
+
 export const unitCosts = {
   tank: 1000,
   rocketTank: 2000,
@@ -101,7 +104,10 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     end.x >= mapGrid[0].length ||
     end.y >= mapGrid.length
   ) {
-    console.warn('findPath: destination tile out of bounds')
+    if (!pathfindingWarningShown) {
+      console.warn('findPath: destination tile out of bounds', {start, end});
+      pathfindingWarningShown = true;
+    }
     return []
   }
   // Begin destination adjustment if not passable
@@ -132,7 +138,30 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       }
     }
     if (!found) {
-      console.warn('findPath: destination tile not passable and no adjacent free tile found')
+      // Only show the warning once and include detailed information to help diagnose
+      if (!pathfindingWarningShown) {
+        console.warn('findPath: destination tile not passable and no adjacent free tile found', {
+          start, 
+          end,
+          destinationType: destType,
+          surroundingTiles: dirs.map(dir => {
+            const x = adjustedEnd.x + dir.x;
+            const y = adjustedEnd.y + dir.y;
+            if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
+              return { 
+                x, y, 
+                type: mapGrid[y][x].type,
+                building: mapGrid[y][x].building ? {
+                  type: mapGrid[y][x].building.type,
+                  owner: mapGrid[y][x].building.owner,
+                } : null
+              };
+            }
+            return { x, y, outOfBounds: true };
+          })
+        });
+        pathfindingWarningShown = true;
+      }
       return []
     }
   }

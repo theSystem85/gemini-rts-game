@@ -606,8 +606,11 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
     directionVector = playerDirection;
   }
   
-  // Preferred placement distances - 2 tiles away from factory for better spacing
-  const preferredDistances = [2, 3, 4, 1];
+  // Special case for walls - they can be placed closer together
+  let minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2;
+  
+  // Preferred placement distances - increased to ensure more space between buildings
+  const preferredDistances = [3, 4, 5, 2];
   
   // Search for positions prioritizing direction and preferred distance
   for (let angle = 0; angle < 360; angle += 30) {
@@ -665,16 +668,22 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
       if (!isValid) continue;
       
       // Check if ANY tile of the building is within range of an existing enemy building
+      // This means we're connected to the base, but not too close
       let isNearBase = false;
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
         for (let checkX = x; checkX < x + buildingWidth && !isNearBase; checkX++) {
-          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 3, 'enemy')) {
+          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 5, 'enemy')) {
             isNearBase = true;
           }
         }
       }
       
       if (!isNearBase) continue;
+      
+      // NEW: Check if this building would create a bottleneck by being too close to other buildings
+      let hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings);
+      
+      if (!hasClearPaths) continue;
       
       // If we got here, the position is valid
       console.log(`Found valid position for ${buildingType} at (${x}, ${y}) with distance ${distance}`);
@@ -687,6 +696,245 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
   return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories);
 }
 
+// New helper function to ensure there are clear paths around a potential building placement
+function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace) {
+  // First, check all sides of the building to ensure there's adequate space
+  let accessibleSides = 0;
+  
+  // Check north side
+  let northClear = true;
+  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
+    const checkY = y - minSpace;
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue;
+    
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].type === 'building' || 
+        mapGrid[checkY][checkX].type === 'water' || 
+        mapGrid[checkY][checkX].type === 'rock') {
+      northClear = false;
+      break;
+    }
+    
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      northClear = false;
+      break;
+    }
+  }
+  if (northClear) accessibleSides++;
+  
+  // Check south side
+  let southClear = true;
+  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
+    const checkY = y + height + (minSpace - 1);
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue;
+    
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].type === 'building' || 
+        mapGrid[checkY][checkX].type === 'water' || 
+        mapGrid[checkY][checkX].type === 'rock') {
+      southClear = false;
+      break;
+    }
+    
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      southClear = false;
+      break;
+    }
+  }
+  if (southClear) accessibleSides++;
+  
+  // Check west side
+  let westClear = true;
+  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
+    const checkX = x - minSpace;
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue;
+    
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].type === 'building' || 
+        mapGrid[checkY][checkX].type === 'water' || 
+        mapGrid[checkY][checkX].type === 'rock') {
+      westClear = false;
+      break;
+    }
+    
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      westClear = false;
+      break;
+    }
+  }
+  if (westClear) accessibleSides++;
+  
+  // Check east side
+  let eastClear = true;
+  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
+    const checkX = x + width + (minSpace - 1);
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue;
+    
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].type === 'building' || 
+        mapGrid[checkY][checkX].type === 'water' || 
+        mapGrid[checkY][checkX].type === 'rock') {
+      eastClear = false;
+      break;
+    }
+    
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      eastClear = false;
+      break;
+    }
+  }
+  if (eastClear) accessibleSides++;
+  
+  // Need at least 2 accessible sides (preferably opposite sides)
+  if (accessibleSides < 2) {
+    return false;
+  }
+  
+  // Now, check if this placement would create a pathfinding bottleneck by:
+  // 1. Creating a temporary map grid with this building placed
+  // 2. Trying to find paths between key points around the base
+  
+  // Create a deep copy of the relevant portion of the map grid
+  const tempMapGrid = JSON.parse(JSON.stringify(mapGrid));
+  
+  // Simulate placing the building in the temp grid
+  for (let cy = y; cy < y + height; cy++) {
+    for (let cx = x; cx < x + width; cx++) {
+      if (cx >= 0 && cy >= 0 && cx < tempMapGrid[0].length && cy < tempMapGrid.length) {
+        tempMapGrid[cy][cx].type = 'building';
+      }
+    }
+  }
+  
+  // Get the enemy factory for path testing
+  const enemyFactory = factories.find(f => f.owner === 'enemy' || f.id === 'enemy');
+  if (!enemyFactory) return true; // If no enemy factory, placement should be allowed
+  
+  // Find existing buildings to test paths between
+  const enemyBuildings = buildings ? buildings.filter(b => b.owner === 'enemy') : [];
+  
+  if (enemyBuildings.length < 1) {
+    return true; // No existing buildings to test paths between
+  }
+  
+  // Create test points around the enemy base
+  const testPoints = [];
+  
+  // Add factory exit points
+  testPoints.push({ 
+    x: enemyFactory.x + Math.floor(enemyFactory.width / 2), 
+    y: enemyFactory.y + enemyFactory.height + 1  // Below the factory
+  });
+  
+  // Add points near existing buildings
+  enemyBuildings.forEach(building => {
+    // Add points around the building
+    testPoints.push({ x: building.x - 1, y: building.y }); // Left
+    testPoints.push({ x: building.x + building.width, y: building.y }); // Right
+    testPoints.push({ x: building.x, y: building.y - 1 }); // Top
+    testPoints.push({ x: building.x, y: building.y + building.height }); // Bottom
+  });
+  
+  // Filter out invalid test points
+  const validTestPoints = testPoints.filter(point => {
+    return point.x >= 0 && point.y >= 0 && 
+           point.x < tempMapGrid[0].length && point.y < tempMapGrid.length &&
+           tempMapGrid[point.y][point.x].type !== 'building' &&
+           tempMapGrid[point.y][point.x].type !== 'water' &&
+           tempMapGrid[point.y][point.x].type !== 'rock';
+  });
+  
+  // Need at least 2 valid test points to check paths
+  if (validTestPoints.length < 2) {
+    return true;
+  }
+  
+  // Select a few random pairs of points to test paths between (no need to test all combinations)
+  const pathTestPairs = [];
+  for (let i = 0; i < Math.min(3, validTestPoints.length - 1); i++) {
+    // Randomly select two points
+    const point1 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)];
+    let point2;
+    do {
+      point2 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)];
+    } while (point1 === point2);
+    
+    pathTestPairs.push({ start: point1, end: point2 });
+  }
+  
+  // Test if paths exist between these points with the new building placed
+  for (const { start, end } of pathTestPairs) {
+    // Use our own simple path finder instead of importing findPath to avoid circular dependencies
+    const hasPath = checkSimplePath(start, end, tempMapGrid, 150); // Limit path length to avoid infinite loops
+    
+    if (!hasPath) {
+      // If any path test fails, this building placement would create a bottleneck
+      return false;
+    }
+  }
+  
+  // All tests passed, this building placement maintains paths between key points
+  return true;
+}
+
+// Simple pathfinding function for testing connectivity (BFS approach)
+function checkSimplePath(start, end, mapGrid, maxSteps) {
+  const queue = [{ x: start.x, y: start.y, steps: 0 }];
+  const visited = new Set();
+  
+  while (queue.length > 0) {
+    const current = queue.shift();
+    
+    // Check if we reached the destination
+    if (current.x === end.x && current.y === end.y) {
+      return true;
+    }
+    
+    // Check if we've reached the step limit
+    if (current.steps >= maxSteps) {
+      return false;
+    }
+    
+    // Mark as visited
+    const key = `${current.x},${current.y}`;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    
+    // Check all 8 directions
+    const directions = [
+      { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, // Cardinals
+      { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 } // Diagonals
+    ];
+    
+    for (const dir of directions) {
+      const nextX = current.x + dir.x;
+      const nextY = current.y + dir.y;
+      
+      // Check bounds
+      if (nextX < 0 || nextY < 0 || nextX >= mapGrid[0].length || nextY >= mapGrid.length) {
+        continue;
+      }
+      
+      // Check if passable
+      if (mapGrid[nextY][nextX].type === 'building' || 
+          mapGrid[nextY][nextX].type === 'water' || 
+          mapGrid[nextY][nextX].type === 'rock') {
+        continue;
+      }
+      
+      // Add to queue
+      queue.push({ x: nextX, y: nextY, steps: current.steps + 1 });
+    }
+  }
+  
+  // No path found
+  return false;
+}
+
 // Fallback position search with the original spiral pattern
 function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories) {
   const factory = factories.find(f => f.owner === 'enemy' || f.id === 'enemy');
@@ -695,12 +943,15 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   const buildingWidth = buildingData[buildingType].width;
   const buildingHeight = buildingData[buildingType].height;
   
+  // Special case for walls - they can be placed closer together
+  let minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2;
+  
   // Get player factory for directional placement of defensive buildings
   const playerFactory = factories.find(f => f.id === 'player');
   const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret';
   
   // Preferred distances for building placement
-  const preferredDistances = [2, 3, 4, 5, 1];
+  const preferredDistances = [3, 4, 5, 2];
   
   // Calculate player direction for defensive buildings
   let playerDirection = null;
@@ -775,7 +1026,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         let isNearBase = false;
         for (let cy = y; cy < y + buildingHeight && !isNearBase; cy++) {
           for (let cx = x; cx < x + buildingWidth && !isNearBase; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 3, 'enemy')) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, 'enemy')) {
               isNearBase = true;
             }
           }
@@ -793,10 +1044,15 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
           }
         }
         
-        if (isValid) {
-          console.log(`Fallback found valid position for ${buildingType} at (${x}, ${y}) with distance ${distance}`);
-          return { x, y };
-        }
+        if (!isValid) continue;
+        
+        // Use the same path checking as in the main function
+        let hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings);
+        
+        if (!hasClearPaths) continue;
+        
+        console.log(`Fallback found valid position for ${buildingType} at (${x}, ${y}) with distance ${distance}`);
+        return { x, y };
       }
     }
   }
@@ -839,7 +1095,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         
         for (let cy = y; cy < y + buildingHeight; cy++) {
           for (let cx = x; cx < x + buildingWidth; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 3, 'enemy')) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, 'enemy')) {
               isNearBase = true;
             }
             if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {
@@ -848,10 +1104,15 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
           }
         }
         
-        if (isNearBase && allTilesValid) {
-          console.log(`Last resort found valid position for ${buildingType} at (${x}, ${y})`);
-          return { x, y };
-        }
+        if (!isNearBase || !allTilesValid) continue;
+        
+        // Final check for pathfinding
+        let hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings);
+        
+        if (!hasClearPaths) continue;
+        
+        console.log(`Last resort found valid position for ${buildingType} at (${x}, ${y})`);
+        return { x, y };
       }
     }
   }
