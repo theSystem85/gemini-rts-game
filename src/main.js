@@ -525,33 +525,41 @@ function initProductionTabs() {
   const tabContents = document.querySelectorAll('.tab-content');
   
   tabButtons.forEach(button => {
+    // Fix: Remove the nested click handler that was causing issues
     button.addEventListener('click', () => {
       // Remove active class from all buttons and contents
       tabButtons.forEach(btn => btn.classList.remove('active'));
       tabContents.forEach(content => content.classList.remove('active'));
       
       // Add active class to clicked button
-      button.addEventListener('click', () => {
-        // Remove active class from all buttons and contents
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
-        
-        // Add active class to clicked button
-        button.classList.add('active');
-        
-        // Show corresponding content
-        const tabName = button.getAttribute('data-tab');
-        document.getElementById(`${tabName}TabContent`).classList.add('active');
+      button.classList.add('active');
+      
+      // Show corresponding content
+      const tabName = button.getAttribute('data-tab');
+      const tabContent = document.getElementById(`${tabName}TabContent`);
+      tabContent.classList.add('active');
+      
+      // Force image loading in the newly activated tab
+      tabContent.querySelectorAll('img').forEach(img => {
+        // Trick to force browser to load/reload image if it failed before
+        if (!img.complete || img.naturalHeight === 0) {
+          const originalSrc = img.src;
+          img.src = '';
+          setTimeout(() => { img.src = originalSrc; }, 10);
+        }
       });
     });
   });
-  
-  // REMOVED: Don't call setupBuildingButtons() here to avoid duplication
 }
 
 pauseBtn.addEventListener('click', () => {
   gameState.gamePaused = !gameState.gamePaused
   pauseBtn.textContent = gameState.gamePaused ? 'Start' : 'Pause'
+  
+  // If the game was just unpaused, resume any pending productions
+  if (!gameState.gamePaused) {
+    productionQueue.resumeProductionAfterUnpause();
+  }
 })
 
 restartBtn.addEventListener('click', () => {
