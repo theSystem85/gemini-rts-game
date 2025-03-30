@@ -61,7 +61,8 @@ export const buildingData = {
     damage: 20, // Same as regular tank
     armor: 1,
     projectileType: 'bullet',
-    projectileSpeed: 6 // Increased from 3 to 6
+    projectileSpeed: 6, // Increased from 3 to 6
+    useAimAhead: true // Enable aim-ahead feature for this turret
   },
   turretGunV2: {
     width: 1,
@@ -97,7 +98,8 @@ export const buildingData = {
     projectileSpeed: 8, // Increased from 4 to 8
     burstFire: true, // Special feature: fires 3 shots in quick succession
     burstCount: 3, 
-    burstDelay: 150 // ms between burst shots
+    burstDelay: 150, // ms between burst shots
+    useAimAhead: true // Enable aim-ahead feature for this turret
   },
   rocketTurret: {
     width: 2,
@@ -114,7 +116,7 @@ export const buildingData = {
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
     projectileSpeed: 6 // Increased from 4 to 6
-  },
+      },
   teslaCoil: {
     width: 2,
     height: 2,

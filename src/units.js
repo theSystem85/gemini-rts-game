@@ -395,7 +395,7 @@ function createUnit(factory, unitType, x, y) {
     turretDirection: 0,
     rotationSpeed: 0.1, // Radians per frame
     isRotating: false,
-    useAimAhead: false // Default: Don't use aim-ahead for other units
+    useAimAhead: unitType !== 'harvester' // Enable AAF for all tanks but not harvesters
   };
 
   // Apply unit-specific properties
@@ -403,7 +403,6 @@ function createUnit(factory, unitType, x, y) {
     unit.speed = 1.5
     unit.rotationSpeed = 0.15
     unit.alertMode = true  // Start tank-v2 in alert mode by default
-    unit.useAimAhead = true
   } else if (unitType === 'tank') {
     unit.speed = 1.5
     unit.rotationSpeed = 0.15
