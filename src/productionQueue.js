@@ -84,20 +84,21 @@ export const productionQueue = {
     
     // Set production duration proportional to cost.
     const baseDuration = 3000;
-    const duration = baseDuration * (cost / 500);
+    let duration = baseDuration * (cost / 500);
     
-    // Apply energy slowdown if needed - use player-specific power values
-    const playerPowerProduction = gameState.playerTotalPowerProduction || 0;
-    const playerPowerConsumption = gameState.playerPowerConsumption || 0;
-    const slowdownFactor = (playerPowerProduction > 0 && 
-                           playerPowerConsumption > 0.9 * playerPowerProduction) ? 3 : 1;
+    // Apply energy slowdown using the new power penalty formula
+    if (gameState.playerPowerSupply < 0) {
+      // Use the playerBuildSpeedModifier calculated in updatePowerSupply
+      // This is already set to follow the formula: 1 / (1 + (negativePower / 100))
+      duration = duration / gameState.playerBuildSpeedModifier;
+    }
     
     this.currentUnit = {
       type: item.type,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
-      duration: duration * slowdownFactor,
+      duration: duration,
       isBuilding: item.isBuilding
     }
     
@@ -142,18 +143,19 @@ export const productionQueue = {
     const constructionMultiplier = this.getConstructionYardMultiplier();
     duration = duration / constructionMultiplier;
     
-    // Apply energy slowdown if needed - use player-specific power values
-    const playerPowerProduction = gameState.playerTotalPowerProduction || 0;
-    const playerPowerConsumption = gameState.playerPowerConsumption || 0;
-    const slowdownFactor = (playerPowerProduction > 0 && 
-                           playerPowerConsumption > 0.9 * playerPowerProduction) ? 3 : 1;
+    // Apply energy slowdown using the new power penalty formula
+    if (gameState.playerPowerSupply < 0) {
+      // Use the playerBuildSpeedModifier calculated in updatePowerSupply
+      // This is already set to follow the formula: 1 / (1 + (negativePower / 100))
+      duration = duration / gameState.playerBuildSpeedModifier;
+    }
     
     this.currentBuilding = {
       type: item.type,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
-      duration: duration * slowdownFactor,
+      duration: duration,
       isBuilding: item.isBuilding
     }
     
