@@ -243,6 +243,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
+(-) after scrolling on the map the units get deselected
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 

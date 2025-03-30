@@ -84,6 +84,45 @@
         <line class="cross" x1="14" y1="16" x2="18" y2="16" />
       </svg>
     </div>
+    <div id="blocked-cursor" style="position: absolute; left: -1000px; top: -1000px; pointer-events: none; z-index: 10000; display: none;">
+      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            .blocked-ring {
+              stroke: #ff6a00;
+              fill: none;
+              stroke-width: 1.5;
+              opacity: 0.4;
+            }
+      
+            .blocked-glow {
+              filter: drop-shadow(0 0 2px #ff6a00) drop-shadow(0 0 3px #ff6a00);
+            }
+            
+            .blocked-line {
+              stroke: #ff6a00;
+              stroke-width: 2;
+              opacity: 0.9;
+            }
+          </style>
+        </defs>
+      
+        <!-- Outer to inner pulsing rings -->
+        <circle class="blocked-ring blocked-glow" cx="16" cy="16" r="12">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0s" repeatCount="indefinite" />
+        </circle>
+      
+        <circle class="blocked-ring blocked-glow" cx="16" cy="16" r="8">
+          <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+        </circle>
+      
+        <!-- X mark to indicate blocked movement -->
+        <line class="blocked-line blocked-glow" x1="10" y1="10" x2="22" y2="22" />
+        <line class="blocked-line blocked-glow" x1="22" y1="10" x2="10" y2="22" />
+      </svg>
+    </div>
     <div id="sidebar">
       <canvas id="minimap"></canvas>
       <div id="stats">
