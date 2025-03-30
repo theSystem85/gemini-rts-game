@@ -753,12 +753,6 @@ function addPowerIndicator() {
   powerIndicator.style.border = '1px solid #444';
   powerIndicator.style.borderRadius = '3px';
   
-  // Create heading for energy display
-  const powerHeading = document.createElement('div');
-  powerHeading.textContent = 'Energy:';
-  powerHeading.style.marginBottom = '5px';
-  powerIndicator.appendChild(powerHeading);
-  
   // Create energy bar container
   const energyBarContainer = document.createElement('div');
   energyBarContainer.id = 'energyBarContainer';
