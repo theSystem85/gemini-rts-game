@@ -173,6 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) use AAF for all units and turrets not just tank-v2
 (-) make a dedicated sound for attacking confirmation
 (-) only focus groups on double tapping mapping key (300ms double tap) but not immediately like it is now
 (-) refine the coloring of the power bar and its logic on impacting the production.
@@ -243,6 +244,12 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
+(-) image for rocket defence building on map is incorrect.
+(-) image for the concrete wall on map is incorrect.
+(-) build menu is clickable even before game was started. Disable the build button until the game gets started. Even the build progress startds before the game got started.
+(-) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
+(-) images in build button do not show up immediately after clicking the tab (onyl after 2nd click)
+(-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
 (-) after scrolling on the map the units get deselected
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
