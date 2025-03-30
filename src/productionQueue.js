@@ -4,6 +4,7 @@ import { buildingCosts, factories, units, mapGrid, showNotification } from './ma
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { unitCosts } from './units.js'
+import { playSound } from './sound.js'
 
 // Enhanced production queue system
 export const productionQueue = {
@@ -29,6 +30,15 @@ export const productionQueue = {
   },
   
   addItem: function(type, button, isBuilding = false) {
+    // Check if game is paused and don't allow adding items when paused
+    if (gameState.gamePaused) {
+      // Show error feedback
+      button.classList.add('error');
+      setTimeout(() => button.classList.remove('error'), 300);
+      showNotification("Cannot build while game is paused. Press Start to begin.");
+      return;
+    }
+
     const cost = isBuilding ? buildingCosts[type] : unitCosts[type] || 0;
     
     // Immediately deduct cost when button is clicked
@@ -63,6 +73,12 @@ export const productionQueue = {
   
   startNextUnitProduction: function() {
     if (this.unitItems.length === 0 || this.pausedUnit) return;
+    
+    // Don't start production if game is paused
+    if (gameState.gamePaused) {
+      return;
+    }
+    
     const item = this.unitItems[0];
     const cost = unitCosts[item.type] || 0;
     
@@ -107,6 +123,12 @@ export const productionQueue = {
   
   startNextBuildingProduction: function() {
     if (this.buildingItems.length === 0 || this.pausedBuilding) return;
+    
+    // Don't start production if game is paused
+    if (gameState.gamePaused) {
+      return;
+    }
+    
     const item = this.buildingItems[0];
     const cost = buildingCosts[item.type] || 0;
     
@@ -142,6 +164,11 @@ export const productionQueue = {
   },
   
   updateProgress: function(timestamp) {
+    // Skip progress updates if game is paused
+    if (gameState.gamePaused) {
+      return;
+    }
+    
     // Update unit production
     if (this.currentUnit && !this.pausedUnit) {
       const elapsed = timestamp - this.currentUnit.startTime;
@@ -382,6 +409,19 @@ export const productionQueue = {
     
     // Start next building in queue if available
     if (this.buildingItems.length > 0) {
+      this.startNextBuildingProduction();
+    }
+  },
+  
+  // Resume production after the game is unpaused
+  resumeProductionAfterUnpause: function() {
+    // If there are items in the unit queue but no current production, start it
+    if (this.unitItems.length > 0 && !this.currentUnit && !this.pausedUnit) {
+      this.startNextUnitProduction();
+    }
+    
+    // If there are items in the building queue but no current production, start it
+    if (this.buildingItems.length > 0 && !this.currentBuilding && !this.pausedBuilding) {
       this.startNextBuildingProduction();
     }
   }

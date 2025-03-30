@@ -246,14 +246,14 @@ Newly Closed Features:
 Open Bugs:
 (-) image for rocket defence building on map is incorrect.
 (-) image for the concrete wall on map is incorrect.
-(-) build menu is clickable even before game was started. Disable the build button until the game gets started. Even the build progress startds before the game got started.
 (-) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
-(-) images in build button do not show up immediately after clicking the tab (onyl after 2nd click)
 (-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
 Fixed Bugs:
+(x) images in build button do not show up immediately after clicking the tab (onyl after 2nd click)
+(x) build menu is clickable even before game was started. Disable the build button until the game gets started. Even the build progress startds before the game got started.
 (x) after scrolling on the map the units get deselected
 (x) the yellow selection frame is not visible anymore when dragging a frame around a group of units to select it.
 (x) Prevent playing the same sound multiple times at the exact same time. When some sound x is already running do not add it on top but just start that sound from the beginning.
