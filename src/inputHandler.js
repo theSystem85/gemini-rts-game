@@ -27,6 +27,11 @@ let rightWasDragging = false
 // Add control groups functionality
 const controlGroups = {}
 
+// Add variables for double-press detection on control groups
+let lastGroupKeyPressed = null
+let lastGroupKeyPressTime = 0
+const doublePressThreshold = 500 // 500ms threshold for double press
+
 // Track factory for rally points
 let playerFactory = null
 let rallyPoint = null
@@ -882,13 +887,43 @@ export function setupInputHandlers(units, factories, mapGrid) {
             selectedUnits.push(unit);
           });
           
-          // Center view on the middle unit of the group
-          const middleUnit = aliveUnits[Math.floor(aliveUnits.length / 2)];
-          gameState.scrollOffset.x = Math.max(0, Math.min(middleUnit.x - gameCanvas.width / 2, 
-                                   mapGrid[0].length * TILE_SIZE - gameCanvas.width));
-          gameState.scrollOffset.y = Math.max(0, Math.min(middleUnit.y - gameCanvas.height / 2, 
-                                   mapGrid.length * TILE_SIZE - gameCanvas.height));
+          // Check if this is a double press of the same key within the threshold time
+          const currentTime = performance.now();
+          const isDoublePress = lastGroupKeyPressed === groupNum && 
+                               (currentTime - lastGroupKeyPressTime) < doublePressThreshold;
           
+          // Only center view on double press, not on single press
+          if (isDoublePress) {
+            // Center view on the middle unit of the group with fix for Retina displays
+            const middleUnit = aliveUnits[Math.floor(aliveUnits.length / 2)];
+            
+            // Get device pixel ratio to account for Retina displays
+            const pixelRatio = window.devicePixelRatio || 1;
+            
+            // Calculate logical canvas dimensions (not physical pixels)
+            const logicalCanvasWidth = gameCanvas.width / pixelRatio;
+            const logicalCanvasHeight = gameCanvas.height / pixelRatio;
+            
+            // Center properly accounting for the device pixel ratio
+            gameState.scrollOffset.x = Math.max(0, Math.min(
+              middleUnit.x - (logicalCanvasWidth / 2),
+              mapGrid[0].length * TILE_SIZE - logicalCanvasWidth
+            ));
+            
+            gameState.scrollOffset.y = Math.max(0, Math.min(
+              middleUnit.y - (logicalCanvasHeight / 2),
+              mapGrid.length * TILE_SIZE - logicalCanvasHeight
+            ));
+            
+            // Play a sound for feedback on focus action
+            playSound('confirmed', 0.7);
+          }
+          
+          // Update the last key press time and key
+          lastGroupKeyPressed = groupNum;
+          lastGroupKeyPressTime = currentTime;
+          
+          // Play selection sounds
           playSound('unitSelection');
           playSound('yesSir01');
         }
