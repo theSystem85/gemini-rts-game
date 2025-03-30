@@ -245,6 +245,8 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
+(-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar.
+(-) the energy consuption of the player and the enemy AI is somehow shared. Make sure they have independen energy generation and consumption.
 (-) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (-) image for the concrete wall on map is incorrect.
 (-) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.

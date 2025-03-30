@@ -5,7 +5,6 @@ import { findPath } from './units.js'
 import { playSound } from './sound.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
-const minimapCanvas = document.getElementById('minimap')
 const moveCursor = document.getElementById('move-cursor')
 const attackCursor = document.getElementById('attack-cursor')
 const blockedCursor = document.getElementById('blocked-cursor')
@@ -34,7 +33,6 @@ const doublePressThreshold = 500 // 500ms threshold for double press
 
 // Track factory for rally points
 let playerFactory = null
-let rallyPoint = null
 
 // Add global variable for formation toggle
 let groupFormationMode = false
