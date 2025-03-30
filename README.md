@@ -245,7 +245,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar.
+(-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (see index.html) when repair mode is on and mouse hovers over a building that can be repaired.
 (-) the energy consuption of the player and the enemy AI is somehow shared. Make sure they have independen energy generation and consumption.
 (-) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (-) image for the concrete wall on map is incorrect.

@@ -336,39 +336,68 @@ export function placeBuilding(building, mapGrid) {
 
 // Update the game's power supply
 export function updatePowerSupply(buildings, gameState) {
-  let totalPower = 0;
-  let totalProduction = 0;
-  let totalConsumption = 0;
+  // Player power calculation
+  let playerTotalPower = 0;
+  let playerTotalProduction = 0;
+  let playerTotalConsumption = 0;
+  
+  // Enemy power calculation
+  let enemyTotalPower = 0;
+  let enemyTotalProduction = 0;
+  let enemyTotalConsumption = 0;
   
   buildings.forEach(building => {
-    totalPower += building.power;
+    // Skip buildings with no owner
+    if (!building.owner) return;
     
-    // Track production and consumption separately
-    if (building.power > 0) {
-      totalProduction += building.power;
-    } else if (building.power < 0) {
-      totalConsumption += Math.abs(building.power);
+    if (building.owner === 'player') {
+      playerTotalPower += building.power;
+      
+      // Track production and consumption separately
+      if (building.power > 0) {
+        playerTotalProduction += building.power;
+      } else if (building.power < 0) {
+        playerTotalConsumption += Math.abs(building.power);
+      }
+    } else if (building.owner === 'enemy') {
+      enemyTotalPower += building.power;
+      
+      // Track production and consumption separately
+      if (building.power > 0) {
+        enemyTotalProduction += building.power;
+      } else if (building.power < 0) {
+        enemyTotalConsumption += Math.abs(building.power);
+      }
     }
   });
   
   // Store values in gameState
-  gameState.powerSupply = totalPower;
-  gameState.totalPowerProduction = totalProduction;
-  gameState.powerConsumption = totalConsumption;
+  gameState.playerPowerSupply = playerTotalPower;
+  gameState.playerTotalPowerProduction = playerTotalProduction;
+  gameState.playerPowerConsumption = playerTotalConsumption;
   
-  // Calculate energy percentage for visual effects and production slowdown
-  let energyPercentage = 100;
-  if (totalProduction > 0) {
-    energyPercentage = Math.max(0, 100 - (totalConsumption / totalProduction) * 100);
-  } else if (totalConsumption > 0) {
+  gameState.enemyPowerSupply = enemyTotalPower;
+  gameState.enemyTotalPowerProduction = enemyTotalProduction;
+  gameState.enemyPowerConsumption = enemyTotalConsumption;
+  
+  // Calculate energy percentage for visual effects and production slowdown (player only)
+  let playerEnergyPercentage = 100;
+  if (playerTotalProduction > 0) {
+    playerEnergyPercentage = Math.max(0, 100 - (playerTotalConsumption / playerTotalProduction) * 100);
+  } else if (playerTotalConsumption > 0) {
     // If no production but consumption exists
-    energyPercentage = 0;
+    playerEnergyPercentage = 0;
   }
   
   // Set low energy mode when below 10% energy
-  gameState.lowEnergyMode = energyPercentage <= 10;
+  gameState.lowEnergyMode = playerEnergyPercentage <= 10;
   
-  return totalPower;
+  // For backward compatibility
+  gameState.powerSupply = playerTotalPower;
+  gameState.totalPowerProduction = playerTotalProduction;
+  gameState.powerConsumption = playerTotalConsumption;
+  
+  return playerTotalPower;
 }
 
 // Calculate the repair cost for a building

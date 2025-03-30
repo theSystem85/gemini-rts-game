@@ -814,21 +814,9 @@ function updateEnergyBar() {
   
   if (!energyBar || !energyText) return;
   
-  // Calculate total power production and consumption from buildings
-  let totalProduction = 0;
-  let totalConsumption = 0;
-  
-  gameState.buildings.forEach(building => {
-    if (building.power > 0) {
-      totalProduction += building.power;
-    } else {
-      totalConsumption += Math.abs(building.power);
-    }
-  });
-  
-  // Store values in gameState for other functions to access
-  gameState.totalPowerProduction = totalProduction;
-  gameState.powerConsumption = totalConsumption;
+  // Use player-specific power values
+  const totalProduction = gameState.playerTotalPowerProduction || 0;
+  const totalConsumption = gameState.playerPowerConsumption || 0;
   
   // Display energy production value
   energyText.textContent = `Energy: ${totalProduction - totalConsumption}`;
@@ -860,7 +848,7 @@ function updateEnergyBar() {
     energyBar.style.backgroundColor = '#4CAF50';
   }
   
-  // Check if energy is below 10% for production slowdown and map effects
+  // Check if energy is below 10% for production slowdown only (not game speed)
   if (energyPercentage <= 10) {
     gameState.lowEnergyMode = true;
   } else {

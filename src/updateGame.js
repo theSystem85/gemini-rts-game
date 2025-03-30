@@ -336,7 +336,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   homing: true,
                   target: unit.target  // Fixed: changed from 'target' to 'unit.target'
                 };
-                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
+                const angle = Math.atan2(targetCenterY - unitCenterX, targetCenterX - unitCenterX);
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
 
@@ -977,7 +977,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     
     // Update defensive buildings
     if (gameState.buildings && gameState.buildings.length > 0) {
-      updateDefensiveBuildings(gameState.buildings, units, bullets, delta);
+      updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState);
     }
   } catch (error) {
     console.error("Critical error in updateGame:", error)
@@ -987,7 +987,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 }
 
 // Function to update defensive buildings like rocket turrets
-function updateDefensiveBuildings(buildings, units, bullets, delta) {
+function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now();
   
   buildings.forEach(building => {
@@ -1011,8 +1011,22 @@ function updateDefensiveBuildings(buildings, units, bullets, delta) {
         return; // Wait for next burst shot
       }
       
+      // Calculate effective cooldown based on power situation
+      let effectiveCooldown = building.fireCooldown;
+      
+      // Apply power slowdown for defensive buildings based on owner
+      if (building.owner === 'player' && gameState.lowEnergyMode) {
+        // Power is low, increase cooldown by 3x (slower firing rate)
+        effectiveCooldown *= 3;
+      } else if (building.owner === 'enemy' && 
+                 gameState.enemyTotalPowerProduction && 
+                 gameState.enemyPowerConsumption > 0.9 * gameState.enemyTotalPowerProduction) {
+        // Enemy is low on power, increase their cooldown too
+        effectiveCooldown *= 3;
+      }
+      
       // Only fire if cooldown has elapsed
-      if (!building.lastShotTime || now - building.lastShotTime >= building.fireCooldown) {
+      if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
         let closestEnemy = null;
         let closestDistance = Infinity;
         

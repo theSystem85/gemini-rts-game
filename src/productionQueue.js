@@ -86,9 +86,11 @@ export const productionQueue = {
     const baseDuration = 3000;
     const duration = baseDuration * (cost / 500);
     
-    // Apply energy slowdown if needed
-    const slowdownFactor = (gameState.powerSupply < 0 && 
-                           Math.abs(gameState.powerSupply) > 0.9 * gameState.totalPowerProduction) ? 3 : 1;
+    // Apply energy slowdown if needed - use player-specific power values
+    const playerPowerProduction = gameState.playerTotalPowerProduction || 0;
+    const playerPowerConsumption = gameState.playerPowerConsumption || 0;
+    const slowdownFactor = (playerPowerProduction > 0 && 
+                           playerPowerConsumption > 0.9 * playerPowerProduction) ? 3 : 1;
     
     this.currentUnit = {
       type: item.type,
@@ -140,9 +142,11 @@ export const productionQueue = {
     const constructionMultiplier = this.getConstructionYardMultiplier();
     duration = duration / constructionMultiplier;
     
-    // Apply energy slowdown if needed
-    const slowdownFactor = (gameState.powerSupply < 0 && 
-                           Math.abs(gameState.powerSupply) > 0.9 * gameState.totalPowerProduction) ? 3 : 1;
+    // Apply energy slowdown if needed - use player-specific power values
+    const playerPowerProduction = gameState.playerTotalPowerProduction || 0;
+    const playerPowerConsumption = gameState.playerPowerConsumption || 0;
+    const slowdownFactor = (playerPowerProduction > 0 && 
+                           playerPowerConsumption > 0.9 * playerPowerProduction) ? 3 : 1;
     
     this.currentBuilding = {
       type: item.type,
