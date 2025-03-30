@@ -193,6 +193,7 @@ Open Features:
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 
 Newly Closed Features:
+(x) add the correct image for rocket defence building on map and remove its turret animation.
 (x) disable default CSS mouse cursor on the game map and switch to an SVG with transparency and animations that is displayed on the game map whenever the mouse moves. Make sure to hide it when the cursor is on the sidebar. Here are the different cursor states:
     (1) Movement Cursor: When a unit (or group) is selected the cursor turns green (make sure to generate an animated svg that indicates a movement target for a game on a map)
     (2) Movement Blocked: When a unit (or group) is selected the cursor turns red (make sure to generate an animated svg that indicates a blocked movement target for a game on a map)
@@ -244,7 +245,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) image for rocket defence building on map is incorrect.
+(-) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (-) image for the concrete wall on map is incorrect.
 (-) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
 (-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
