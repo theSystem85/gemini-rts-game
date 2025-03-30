@@ -440,14 +440,17 @@ export function setupInputHandlers(units, factories, mapGrid) {
       // End right-click drag.
       gameState.isRightDragging = false
       gameCanvas.style.cursor = 'grab'
-      // If the right click was NOT a drag, deselect all units.
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
-      selectedUnits.length = 0
       
-      // Hide custom cursor when units are deselected
-      moveCursor.style.display = 'none';
-      attackCursor.style.display = 'none';
-      blockedCursor.style.display = 'none';
+      // Only deselect units if this was NOT a drag operation
+      if (!rightWasDragging) {
+        units.forEach(u => { if (u.owner === 'player') u.selected = false })
+        selectedUnits.length = 0
+        
+        // Hide custom cursor when units are deselected
+        moveCursor.style.display = 'none';
+        attackCursor.style.display = 'none';
+        blockedCursor.style.display = 'none';
+      }
       rightWasDragging = false
       
       // Update custom cursor visibility after unit selection changes
