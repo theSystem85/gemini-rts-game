@@ -1094,7 +1094,7 @@ export function showNotification(message, duration = 3000) {
 }
 
 // Add function to save player building patterns to localStorage
-function savePlayerBuildPatterns(buildingType) {
+export function savePlayerBuildPatterns(buildingType) {
   try {
     // Initialize player build history if it doesn't exist
     if (!gameState.playerBuildHistory) {
