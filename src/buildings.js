@@ -42,7 +42,7 @@ export const buildingData = {
     width: 2,
     height: 2,
     cost: 1500,
-    power: -30,
+    power: -50,
     image: 'radar_station.jpg',
     displayName: 'Radar Station',
     health: 200
