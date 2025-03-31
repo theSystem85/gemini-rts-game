@@ -19,6 +19,7 @@ import {
   findClosestOre, findAdjacentTile, findPositionWithClearShot, smoothRotateTowardsAngle,
   hasClearShot, calculateAimAheadPosition
 } from './logic.js'
+import { updatePowerSupply } from './buildings.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
 const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
@@ -667,8 +668,15 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             }
           }
           
+          // Store the power value and owner before removing the building
+          const destroyedBuildingPower = building.power || 0;
+          const destroyedBuildingOwner = building.owner;
+          
           // Remove the building from the buildings array
           gameState.buildings.splice(i, 1);
+          
+          // Update power supply after building is destroyed
+          updatePowerSupply(gameState.buildings, gameState);
           
           // Play explosion sound with reduced volume (0.5)
           playSound('explosion', 0.5);
