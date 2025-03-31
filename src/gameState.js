@@ -33,5 +33,8 @@ export const gameState = {
   enemyLastBuildingTime: 0,  // Track when enemy last built something
   
   // Aim-ahead function (AAF) calibration factor
-  aimAheadCalibrationFactor: 1.0
+  aimAheadCalibrationFactor: 1.0,
+  
+  // Radar station status - initialize to false (no radar at game start)
+  radarActive: false
 }
