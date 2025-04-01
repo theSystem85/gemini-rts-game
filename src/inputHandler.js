@@ -8,6 +8,8 @@ const gameCanvas = document.getElementById('gameCanvas')
 const moveCursor = document.getElementById('move-cursor')
 const attackCursor = document.getElementById('attack-cursor')
 const blockedCursor = document.getElementById('blocked-cursor')
+const repairCursor = document.getElementById('repair-cursor')
+const repairBlockedCursor = document.getElementById('repair-blocked-cursor')
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -41,6 +43,7 @@ let groupFormationMode = false
 let isOverGameCanvas = false
 let isOverEnemy = false
 let isOverBlockedTerrain = false
+let isOverRepairableBuilding = false
 
 // Function to check if a location is a blocked tile (water, rock, building)
 function isBlockedTerrain(tileX, tileY, mapGrid) {
@@ -65,7 +68,7 @@ function isBlockedTerrain(tileX, tileY, mapGrid) {
 }
 
 // Function to update custom cursor position and visibility
-function updateCustomCursor(e, mapGrid) {
+function updateCustomCursor(e, mapGrid, factories) {
   const rect = gameCanvas.getBoundingClientRect();
   const x = e.clientX;
   const y = e.clientY;
@@ -91,50 +94,94 @@ function updateCustomCursor(e, mapGrid) {
     mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 && 
     isBlockedTerrain(tileX, tileY, mapGrid);
   
-  // Move all cursors to follow mouse position (center them on the mouse cursor)
+  // Check if mouse is over a repairable building (when in repair mode)
+  isOverRepairableBuilding = false;
+  if (gameState.repairMode && isOverGameCanvas) {
+    // Check player factory first
+    const playerFactory = factories.find(factory => factory.id === 'player');
+    if (playerFactory && 
+        tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
+        tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
+      // Factory is repairable if it's not at full health
+      isOverRepairableBuilding = playerFactory.health < playerFactory.maxHealth;
+    }
+    
+    // Check player buildings
+    if (!isOverRepairableBuilding && gameState.buildings && gameState.buildings.length > 0) {
+      for (const building of gameState.buildings) {
+        if (building.owner === 'player' &&
+            tileX >= building.x && tileX < (building.x + building.width) &&
+            tileY >= building.y && tileY < (building.y + building.height)) {
+          // Building is repairable if it's not at full health
+          isOverRepairableBuilding = building.health < building.maxHealth;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Position all cursors to follow mouse pointer (center them on the mouse cursor)
   moveCursor.style.left = `${x - 16}px`; // Center horizontally (half of 32px width)
   moveCursor.style.top = `${y - 16}px`;  // Center vertically (half of 32px height)
   attackCursor.style.left = `${x - 16}px`;
   attackCursor.style.top = `${y - 16}px`;
   blockedCursor.style.left = `${x - 16}px`;
   blockedCursor.style.top = `${y - 16}px`;
+  repairCursor.style.left = `${x - 16}px`;
+  repairCursor.style.top = `${y - 16}px`;
+  repairBlockedCursor.style.left = `${x - 16}px`;
+  repairBlockedCursor.style.top = `${y - 16}px`;
   
-  // Ensure all cursors have proper z-index
-  moveCursor.style.zIndex = "10000";
-  attackCursor.style.zIndex = "10000";
-  blockedCursor.style.zIndex = "10000";
+  // Hide all cursors first
+  moveCursor.style.display = 'none';
+  attackCursor.style.display = 'none';
+  blockedCursor.style.display = 'none';
+  repairCursor.style.display = 'none';
+  repairBlockedCursor.style.display = 'none';
   
+  // If not over the game canvas, just use default cursor
+  if (!isOverGameCanvas) {
+    gameCanvas.style.cursor = 'default';
+    return;
+  }
+  
+  // REPAIR MODE TAKES PRIORITY - if active, show repair cursors and ignore others
+  if (gameState.repairMode) {
+    // Always hide the system cursor when in repair mode over the canvas
+    gameCanvas.style.cursor = 'none';
+    
+    if (isOverRepairableBuilding) {
+      // Show repair cursor when over repairable building
+      repairCursor.style.display = 'block';
+    } else {
+      // Show blocked repair cursor when not over a repairable building
+      repairBlockedCursor.style.display = 'block';
+    }
+    return; // Exit early to prevent other cursors from showing
+  }
+  
+  // If we reach here, we're not in repair mode - handle regular movement/attack cursors
   // Show appropriate custom cursor only when units are selected and mouse is over the game canvas
-  if (selectedUnits.length > 0 && isOverGameCanvas) {
+  if (selectedUnits.length > 0) {
     if (isOverEnemy) {
       // Show attack cursor when over enemy
       attackCursor.style.display = 'block';
-      moveCursor.style.display = 'none';
-      blockedCursor.style.display = 'none';
       gameCanvas.style.cursor = 'none';
     } else if (isOverBlockedTerrain) {
       // Show blocked cursor when over impassable terrain
       blockedCursor.style.display = 'block';
-      moveCursor.style.display = 'none';
-      attackCursor.style.display = 'none';
       gameCanvas.style.cursor = 'none';
     } else if (!gameState.isRightDragging) {
       // Show move cursor when not over enemy or blocked terrain and not dragging
       moveCursor.style.display = 'block';
-      attackCursor.style.display = 'none';
-      blockedCursor.style.display = 'none';
       gameCanvas.style.cursor = 'none';
     } else {
-      // Hide all custom cursors during right-drag
-      moveCursor.style.display = 'none';
-      attackCursor.style.display = 'none';
-      blockedCursor.style.display = 'none';
+      // During right-drag, use system cursor
+      gameCanvas.style.cursor = 'grabbing';
     }
   } else {
-    // Hide all custom cursors when no units selected or not over canvas
-    moveCursor.style.display = 'none';
-    attackCursor.style.display = 'none';
-    blockedCursor.style.display = 'none';
+    // No units selected - use default cursor
+    gameCanvas.style.cursor = 'default';
   }
 }
 
@@ -144,11 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
   moveCursor.style.display = 'none';
   attackCursor.style.display = 'none';
   blockedCursor.style.display = 'none';
+  repairCursor.style.display = 'none';
+  repairBlockedCursor.style.display = 'none';
   
   // Set up the document-level mousemove event
   document.addEventListener('mousemove', (e) => {
     // Update custom cursor position
-    updateCustomCursor(e, gameState.mapGrid);
+    updateCustomCursor(e, gameState.mapGrid, gameState.factories);
     
     // Detect if over sidebar to ensure cursor is hidden there
     const sidebar = document.getElementById('sidebar');
@@ -166,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
         moveCursor.style.display = 'none';
         attackCursor.style.display = 'none';
         blockedCursor.style.display = 'none';
+        repairCursor.style.display = 'none';
+        repairBlockedCursor.style.display = 'none';
         document.body.style.cursor = 'default';
       }
     }
@@ -362,7 +413,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
             
             if (worldX >= buildingX && 
                 worldX < buildingX + buildingWidth && 
-                worldY >= buildingY && 
+                worldY >= buildingY &&
                 worldY < buildingY + buildingHeight) {
               isOverEnemy = true
               break
@@ -431,7 +482,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
 
     // Update custom cursor position and visibility
-    updateCustomCursor(e, mapGrid);
+    updateCustomCursor(e, mapGrid, factories);
   })
 
   gameCanvas.addEventListener('mouseup', e => {
@@ -457,7 +508,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       rightWasDragging = false
       
       // Update custom cursor visibility after unit selection changes
-      updateCustomCursor(e, mapGrid);
+      updateCustomCursor(e, mapGrid, factories);
       
       // Check if the player factory is selected
       const playerFactory = factories.find(f => f.id === 'player' && f.selected);

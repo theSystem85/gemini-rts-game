@@ -39,6 +39,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         
         // Start gradual repair of the factory
         gameState.money -= repairCost;
+        moneyEl.textContent = gameState.money;
         
         // Create repair info for factory
         if (!gameState.buildingsUnderRepair) {
@@ -46,22 +47,27 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         }
         
         const healthToRepair = playerFactory.maxHealth - playerFactory.health;
-        const baseDuration = 3000;
+        
+        // Base repair duration on factory cost (same calculation as regular buildings)
+        const baseDuration = 1000; // 1 second base duration
         const factoryCost = 5000;
-        const duration = baseDuration * (factoryCost / 500);
+        const buildDuration = baseDuration * (factoryCost / 500);
+        const repairDuration = buildDuration * 2.0; // 2x build time (changed from 0.2 to 2.0)
         
         gameState.buildingsUnderRepair.push({
           building: playerFactory,
           startTime: performance.now(),
-          duration: duration,
+          duration: repairDuration,
           startHealth: playerFactory.health,
           targetHealth: playerFactory.maxHealth,
           healthToRepair: healthToRepair
         });
         
+        // Log for debugging
+        console.log(`Starting repair of factory with duration ${repairDuration}ms`);
+        
         showNotification(`Factory repair started for $${repairCost}`);
         playSound('construction_started');
-        moneyEl.textContent = gameState.money;
         
         return;
       }
@@ -91,7 +97,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           const result = repairBuilding(building, gameState);
           
           if (result.success) {
-            showNotification(`Building repaired for $${result.cost}`);
+            showNotification(`Building repair started for $${result.cost}`);
             playSound('construction_started');
             moneyEl.textContent = gameState.money;
           } else {

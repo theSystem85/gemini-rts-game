@@ -19,7 +19,7 @@ import {
   findClosestOre, findAdjacentTile, findPositionWithClearShot, smoothRotateTowardsAngle,
   hasClearShot, calculateAimAheadPosition
 } from './logic.js'
-import { updatePowerSupply } from './buildings.js'
+import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
 const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
@@ -986,6 +986,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // Update defensive buildings
     if (gameState.buildings && gameState.buildings.length > 0) {
       updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState);
+    }
+    
+    // Update buildings under repair
+    if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
+      updateBuildingsUnderRepair(gameState, now);
     }
   } catch (error) {
     console.error("Critical error in updateGame:", error)

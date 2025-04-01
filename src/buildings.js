@@ -1,4 +1,5 @@
 // Building configuration and management
+import { playSound } from './sound.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -469,11 +470,36 @@ export function repairBuilding(building, gameState) {
     return { success: false, message: "Not enough money for repairs" };
   }
   
-  // Deduct cost and repair
+  // Deduct cost
   gameState.money -= repairCost;
-  building.health = building.maxHealth;
   
-  return { success: true, message: "Building repaired", cost: repairCost };
+  // Setup gradual repair
+  if (!gameState.buildingsUnderRepair) {
+    gameState.buildingsUnderRepair = [];
+  }
+  
+  const healthToRepair = building.maxHealth - building.health;
+  
+  // Repair time is 2x of build time
+  // Estimate build time based on building cost (500 cost = 1 second base duration)
+  const baseDuration = 1000; // 1 second base
+  const buildingCost = buildingData[building.type].cost;
+  const buildDuration = baseDuration * (buildingCost / 500);
+  const repairDuration = buildDuration * 2.0; // 2x build time
+  
+  gameState.buildingsUnderRepair.push({
+    building: building,
+    startTime: performance.now(),
+    duration: repairDuration,
+    startHealth: building.health,
+    targetHealth: building.maxHealth,
+    healthToRepair: healthToRepair
+  });
+  
+  // Log for debugging
+  console.log(`Starting repair of ${building.type} with duration ${repairDuration}ms`);
+  
+  return { success: true, message: "Building repair started", cost: repairCost };
 }
 
 // Update buildings that are currently under repair
@@ -482,24 +508,20 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
     return;
   }
 
-  // Create a new array to hold buildings still being repaired
-  const stillRepairing = [];
-
-  gameState.buildingsUnderRepair.forEach(repair => {
-    const elapsed = currentTime - repair.startTime;
-    const progress = Math.min(1, elapsed / repair.duration);
+  for (let i = gameState.buildingsUnderRepair.length - 1; i >= 0; i--) {
+    const repairInfo = gameState.buildingsUnderRepair[i];
+    const progress = (currentTime - repairInfo.startTime) / repairInfo.duration;
     
-    if (progress < 1) {
-      // Building is still being repaired
-      const newHealth = repair.startHealth + (repair.healthToRepair * progress);
-      repair.building.health = Math.min(repair.targetHealth, newHealth);
-      stillRepairing.push(repair);
-    } else {
+    if (progress >= 1.0) {
       // Repair is complete
-      repair.building.health = repair.targetHealth;
+      repairInfo.building.health = repairInfo.targetHealth;
+      gameState.buildingsUnderRepair.splice(i, 1);
+      // Play sound effect for completed repair
+      playSound('constructionComplete');
+    } else {
+      // Repair in progress - update health proportionally
+      const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress);
+      repairInfo.building.health = newHealth;
     }
-  });
-
-  // Replace the array with only the buildings still being repaired
-  gameState.buildingsUnderRepair = stillRepairing;
+  }
 }
