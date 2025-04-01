@@ -173,6 +173,8 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
+(-) Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 (-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 (-) When player builds the radar station it enables the overview mini map. Before that map is just gray. It consumes 50 energy. When it get destroyed and no other radar station is in the players building list the mini map gets disabled again.
 (-) make a dedicated sound for attacking confirmation
@@ -245,7 +247,7 @@ Newly Closed Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Open Bugs:
-(-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (see index.html) when repair mode is on and mouse hovers over a building that can be repaired.
+(-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 (-) the energy consuption of the player and the enemy AI is somehow shared. Make sure they have independen energy generation and consumption.
 (-) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (-) image for the concrete wall on map is incorrect.
