@@ -97,13 +97,15 @@ function updateCustomCursor(e, mapGrid, factories) {
   // Check if mouse is over a repairable building (when in repair mode)
   isOverRepairableBuilding = false;
   if (gameState.repairMode && isOverGameCanvas) {
-    // Check player factory first
-    const playerFactory = factories.find(factory => factory.id === 'player');
-    if (playerFactory && 
-        tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
-        tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
-      // Factory is repairable if it's not at full health
-      isOverRepairableBuilding = playerFactory.health < playerFactory.maxHealth;
+    // Check player factory first - Added null check for factories
+    if (factories && Array.isArray(factories)) {
+      const playerFactory = factories.find(factory => factory && factory.id === 'player');
+      if (playerFactory && 
+          tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
+          tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
+        // Factory is repairable if it's not at full health
+        isOverRepairableBuilding = playerFactory.health < playerFactory.maxHealth;
+      }
     }
     
     // Check player buildings
