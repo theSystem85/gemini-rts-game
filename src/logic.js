@@ -22,8 +22,8 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
     
     // Check collisions with units
     for (const unit of units) {
-      // Skip friendly units to prevent friendly fire
-      if (unit.owner === bullet.shooter?.owner) continue;
+      // Skip friendly units unless this is a forced attack
+      if (unit.owner === bullet.shooter?.owner && !(bullet.shooter?.forcedAttack && bullet.shooter?.target === unit)) continue;
       
       const dx = (unit.x + TILE_SIZE / 2) - bullet.x
       const dy = (unit.y + TILE_SIZE / 2) - bullet.y
@@ -58,8 +58,8 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
     // Check collisions with buildings
     if (gameState.buildings && gameState.buildings.length > 0) {
       for (const building of gameState.buildings) {
-        // Skip friendly buildings to prevent friendly fire
-        if (building.owner === bullet.shooter?.owner) continue;
+        // Skip friendly buildings unless this is a forced attack
+        if (building.owner === bullet.shooter?.owner && !(bullet.shooter?.forcedAttack && bullet.shooter?.target === building)) continue;
         
         // Check if bullet is within building bounds (with small buffer)
         const buildingX = building.x * TILE_SIZE;
@@ -96,8 +96,8 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
     
     // Check collisions with factories
     for (const factory of factories) {
-      // Skip friendly factories
-      if (factory.id === bullet.shooter?.owner) continue;
+      // Skip friendly factories unless this is a forced attack
+      if (factory.id === bullet.shooter?.owner && !(bullet.shooter?.forcedAttack && bullet.shooter?.target === factory)) continue;
       if (factory.destroyed) continue;
       
       // Check if bullet is within factory bounds (with small buffer)

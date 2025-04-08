@@ -857,8 +857,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       // Check for collisions with buildings
       if (bullet.active && gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          // Skip checking owner's own buildings (no friendly fire)
-          if (bullet.shooter && bullet.shooter.owner === building.owner) {
+          // Skip checking owner's own buildings UNLESS this is a forced attack
+          if (bullet.shooter && bullet.shooter.owner === building.owner && 
+              !(bullet.shooter.forcedAttack && bullet.shooter.target === building)) {
             continue;
           }
           

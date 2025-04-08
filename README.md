@@ -174,7 +174,7 @@ Important Notes:
 
 Open Features:
 (-) Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
-(-) Add Force Attack mode so the player can attack his own units or buildings when holding control key and left clicking on a building or unit.
+(-) Add Force Attack mode so the player can attack his own units or buildings when holding control key and left clicking on a building or unit. When unit(s) are selected and the control key is pressed the movment cursor turns into an attack cursor and then the player can click to attack his own units or buildings.
 (-) Make the map grid visibility to be able to be toggled on and off by pressing "g" key (add this to help menu overlay as well).
 (-) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
 (-) Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
