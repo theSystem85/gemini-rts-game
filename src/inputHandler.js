@@ -44,6 +44,7 @@ let isOverGameCanvas = false
 let isOverEnemy = false
 let isOverBlockedTerrain = false
 let isOverRepairableBuilding = false
+let isForceAttackMode = false // New variable to track Force Attack mode
 
 // Function to check if a location is a blocked tile (water, rock, building)
 function isBlockedTerrain(tileX, tileY, mapGrid) {
@@ -165,7 +166,12 @@ function updateCustomCursor(e, mapGrid, factories) {
   // If we reach here, we're not in repair mode - handle regular movement/attack cursors
   // Show appropriate custom cursor only when units are selected and mouse is over the game canvas
   if (selectedUnits.length > 0) {
-    if (isOverEnemy) {
+    // Force Attack mode (Ctrl key pressed) takes precedence over normal cursor display
+    if (isForceAttackMode) {
+      // Show attack cursor when in Force Attack mode
+      attackCursor.style.display = 'block';
+      gameCanvas.style.cursor = 'none';
+    } else if (isOverEnemy) {
       // Show attack cursor when over enemy
       attackCursor.style.display = 'block';
       gameCanvas.style.cursor = 'none';
@@ -198,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Set up the document-level mousemove event
   document.addEventListener('mousemove', (e) => {
+    // Update Force Attack mode status based on Ctrl key
+    isForceAttackMode = e.ctrlKey;
+    
     // Update custom cursor position
     updateCustomCursor(e, gameState.mapGrid, gameState.factories);
     
@@ -253,6 +262,7 @@ function showControlsHelp() {
         <li><strong>Left Click:</strong> Select unit or factory</li>
         <li><strong>Left Click + Drag:</strong> Select multiple units</li>
         <li><strong>Right Click:</strong> Move units / Attack enemy</li>
+        <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
         <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
         <li><strong>D Key:</strong> Make selected units dodge</li>
         <li><strong>H Key:</strong> Focus view on your factory</li>
@@ -299,6 +309,7 @@ function toggleKeyBindingsOverview() {
         <li><strong>Left Click</strong>: Select unit or factory</li>
         <li><strong>Left Click + Drag</strong>: Multi-unit selection</li>
         <li><strong>Right Click</strong>: Issue move or attack command</li>
+        <li><strong>CTRL + Left Click</strong>: Force Attack friendly units/buildings</li>
         <li><strong>A</strong>: Toggle alert mode (for supported units)</li>
         <li><strong>D</strong>: Dodge command</li>
         <li><strong>H</strong>: Toggle this keybindings overview</li>
@@ -528,80 +539,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
         playSound('movement');
       }
     } else if (e.button === 0 && isSelecting) {
-      if (wasDragging) {
-        handleBoundingBoxSelection(units, factories)
-      } else {
-        // Single unit or factory selection.
-        const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-        const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-        
-        // Check for factory selection first - direct click only
-        let selectedFactory = null;
-        for (const factory of factories) {
-          if (factory.id === 'player') {
-            const factoryPixelX = factory.x * TILE_SIZE
-            const factoryPixelY = factory.y * TILE_SIZE
-            
-            if (worldX >= factoryPixelX &&
-                worldX < factoryPixelX + factory.width * TILE_SIZE &&
-                worldY >= factoryPixelY &&
-                worldY < factoryPixelY + factory.height * TILE_SIZE) {
-              selectedFactory = factory;
-              break;
-            }
-          }
-        }
-        
-        if (selectedFactory) {
-          // Clear existing selection
-          units.forEach(u => { if (u.owner === 'player') u.selected = false });
-          selectedUnits.length = 0;
-          
-          // Clear factory selections
-          factories.forEach(f => f.selected = false);
-          
-          // Select factory
-          selectedFactory.selected = true;
-          selectedUnits.push(selectedFactory);
-          playSound('unitSelection');
-        } else {
-          // Normal unit selection
-          let clickedUnit = null
-          for (const unit of units) {
-            if (unit.owner === 'player') {
-              const centerX = unit.x + TILE_SIZE / 2
-              const centerY = unit.y + TILE_SIZE / 2
-              const dx = worldX - centerX
-              const dy = worldY - centerY
-              if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
-                clickedUnit = unit
-                break
-              }
-            }
-          }
-          if (clickedUnit) {
-            units.forEach(u => { if (u.owner === 'player') u.selected = false })
-            factories.forEach(f => f.selected = false); // Clear factory selections too
-            selectedUnits.length = 0
-            clickedUnit.selected = true
-            selectedUnits.push(clickedUnit)
-            playSound('unitSelection')
-            playSound('yesSir01') // play sound on unit selection
-          }
-        }
-      }
-      // --- Command Issuing ---
-      if (selectedUnits.length > 0 && !wasDragging) {
-        // Skip command issuing for factory selection
+      const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+      const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+      
+      // Variable to store if we've handled the Force Attack command
+      let forceAttackHandled = false;
+      
+      // --- First, handle Command Issuing in Force Attack Mode ---
+      if (selectedUnits.length > 0 && !wasDragging && e.ctrlKey) {
+        // Only process Force Attack if units are selected, not factories
         if (selectedUnits[0].type !== 'factory') {
-          const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-          const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-          let target = null
+          let forceAttackTarget = null;
           
-          // Check enemy buildings first (they have priority)
+          // Check friendly buildings first
           if (gameState.buildings && gameState.buildings.length > 0) {
             for (const building of gameState.buildings) {
-              if (building.owner !== 'player') {
+              if (building.owner === 'player') {
                 const buildingX = building.x * TILE_SIZE
                 const buildingY = building.y * TILE_SIZE
                 const buildingWidth = building.width * TILE_SIZE
@@ -611,166 +564,362 @@ export function setupInputHandlers(units, factories, mapGrid) {
                     worldX < buildingX + buildingWidth && 
                     worldY >= buildingY && 
                     worldY < buildingY + buildingHeight) {
-                  target = building
-                  break
+                  forceAttackTarget = building;
+                  break;
                 }
               }
             }
           }
           
-          // Check enemy factories if no building was targeted
-          if (!target) {
-            for (const factory of factories) {
-              if (factory.id !== 'player' &&
-                  worldX >= factory.x * TILE_SIZE &&
-                  worldX < (factory.x + factory.width) * TILE_SIZE &&
-                  worldY >= factory.y * TILE_SIZE &&
-                  worldY < (factory.y + factory.height) * TILE_SIZE) {
-                target = factory
-                break
-              }
-            }
-          }
-          
-          // Check enemy units if no building or factory was targeted
-          if (!target) {
+          // Check friendly units if no building was targeted
+          if (!forceAttackTarget) {
             for (const unit of units) {
-              if (unit.owner !== 'player') {
+              if (unit.owner === 'player' && !unit.selected) {
                 const centerX = unit.x + TILE_SIZE / 2
                 const centerY = unit.y + TILE_SIZE / 2
                 if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
-                  target = unit
-                  break
+                  forceAttackTarget = unit;
+                  break;
                 }
               }
             }
           }
-          // Formation logic for movement/attack.
-          const count = selectedUnits.length
-          const cols = Math.ceil(Math.sqrt(count))
-          const rows = Math.ceil(count / cols)
-          selectedUnits.forEach((unit, index) => {
-            let formationOffset = { x: 0, y: 0 }
-            if (target) {
-              const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
-              // Use helper to get target point (for factories, this is the closest point on its boundary)
-              let targetCenter = getTargetPoint(target, unitCenter)
-              const dx = targetCenter.x - unitCenter.x
-              const dy = targetCenter.y - unitCenter.y
-              const dist = Math.hypot(dx, dy)
-              const explosionSafetyBuffer = TILE_SIZE * 0.5
+          
+          // If we found a friendly target, issue the Force Attack command
+          if (forceAttackTarget) {
+            forceAttackHandled = true; // Mark that we've handled this click
+            
+            // Formation logic for attack
+            const count = selectedUnits.length;
+            const cols = Math.ceil(Math.sqrt(count));
+            const rows = Math.ceil(count / cols);
+            
+            selectedUnits.forEach((unit, index) => {
+              let formationOffset = { x: 0, y: 0 };
+              const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
+              
+              // Use helper to get target point
+              let targetCenter = getTargetPoint(forceAttackTarget, unitCenter);
+              const dx = targetCenter.x - unitCenter.x;
+              const dy = targetCenter.y - unitCenter.y;
+              const dist = Math.hypot(dx, dy);
+              
+              // Safety buffer for explosions
+              const explosionSafetyBuffer = TILE_SIZE * 0.5;
               const safeAttackDistance = Math.max(
                 TANK_FIRE_RANGE * TILE_SIZE,
                 TILE_SIZE * 2 + explosionSafetyBuffer
-              ) - TILE_SIZE
+              ) - TILE_SIZE;
               
-              const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
-              const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
-              const col = index % cols
-              const row = Math.floor(index / cols)
-              formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
-              formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
-              let destX = baseX + formationOffset.x
-              let destY = baseY + formationOffset.y
-              // Ensure the final destination maintains safe distance
-              const finalDx = targetCenter.x - destX
-              const finalDy = targetCenter.y - destY
-              let finalDist = Math.hypot(finalDx, finalDy)
+              // Calculate base position
+              const baseX = targetCenter.x - (dx / dist) * safeAttackDistance;
+              const baseY = targetCenter.y - (dy / dist) * safeAttackDistance;
+              
+              // Apply formation offset
+              const col = index % cols;
+              const row = Math.floor(index / cols);
+              formationOffset.x = col * 10 - ((cols - 1) * 10) / 2;
+              formationOffset.y = row * 10 - ((rows - 1) * 10) / 2;
+              
+              let destX = baseX + formationOffset.x;
+              let destY = baseY + formationOffset.y;
+              
+              // Ensure safe distance
+              const finalDx = targetCenter.x - destX;
+              const finalDy = targetCenter.y - destY;
+              let finalDist = Math.hypot(finalDx, finalDy);
+              
               if (finalDist < safeAttackDistance) {
-                const scale = safeAttackDistance / finalDist
-                destX = targetCenter.x - finalDx * scale
-                destY = targetCenter.y - finalDy * scale
+                const scale = safeAttackDistance / finalDist;
+                destX = targetCenter.x - finalDx * scale;
+                destY = targetCenter.y - finalDy * scale;
               }
-              const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
-              if (path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
-                unit.path = path.slice(1)
-                unit.target = target
-                playSound('movement')
-              } else {
-                unit.path = []
-                unit.target = target
-              }
-            } else {
-              // No target: move to clicked location with a basic grid formation.
-              const colsCount = Math.ceil(Math.sqrt(count))
-              const rowsCount = Math.ceil(count / colsCount)
-              const col = index % colsCount
-              const row = Math.floor(index / colsCount)
-
-              // Apply formation offsets based on whether formation mode is active
-              if (unit.formationActive && unit.formationOffset) {
-                // Use stored formation offsets for this unit
-                formationOffset = {
-                  x: unit.formationOffset.x,
-                  y: unit.formationOffset.y
-                };
-              } else {
-                // Default grid formation if formation mode is not active
-                formationOffset = {
-                  x: col * 10 - ((colsCount - 1) * 10) / 2,
-                  y: row * 10 - ((rowsCount - 1) * 10) / 2
-                };
-              }
-
-              const destX = Math.floor(worldX) + formationOffset.x
-              const destY = Math.floor(worldY) + formationOffset.y
-              const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
               
-              // Check if this tile is already targeted by previously processed units
-              const alreadyTargeted = selectedUnits.slice(0, index).some(u => 
-                u.moveTarget && u.moveTarget.x === originalDestTile.x && u.moveTarget.y === originalDestTile.y
-              );
+              const desiredTile = { 
+                x: Math.floor(destX / TILE_SIZE), 
+                y: Math.floor(destY / TILE_SIZE) 
+              };
               
-              // If already targeted, find an adjacent free tile instead
-              let destTile = originalDestTile;
-              if (alreadyTargeted) {
-                const directions = [
-                  {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0},
-                  {dx: 1, dy: -1}, {dx: 1, dy: 1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}
-                ];
-                
-                for (const dir of directions) {
-                  const newTile = { 
-                    x: originalDestTile.x + dir.dx, 
-                    y: originalDestTile.y + dir.dy 
-                  };
+              // Find path to the target position
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
+              
+              if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
+                unit.path = path.slice(1);
+                unit.target = forceAttackTarget;
+                unit.forcedAttack = true;  // Mark this as a forced attack
+                playSound('movement');
+              } else {
+                // If already at position, just set the target
+                unit.path = [];
+                unit.target = forceAttackTarget;
+                unit.forcedAttack = true;  // Mark this as a forced attack
+              }
+            });
+            
+            // Play sound for feedback
+            playSound('unitSelection');
+          }
+        }
+      }
+      
+      // If we handled Force Attack, skip normal selection/command processing
+      if (!forceAttackHandled) {
+        // Normal selection and command handling
+        if (wasDragging) {
+          handleBoundingBoxSelection(units, factories);
+        } else {
+          // Single unit or factory selection
+          let selectedFactory = null;
+          for (const factory of factories) {
+            if (factory.id === 'player') {
+              const factoryPixelX = factory.x * TILE_SIZE;
+              const factoryPixelY = factory.y * TILE_SIZE;
+              
+              if (worldX >= factoryPixelX &&
+                  worldX < factoryPixelX + factory.width * TILE_SIZE &&
+                  worldY >= factoryPixelY &&
+                  worldY < factoryPixelY + factory.height * TILE_SIZE) {
+                selectedFactory = factory;
+                break;
+              }
+            }
+          }
+          
+          if (selectedFactory) {
+            // Clear existing selection
+            units.forEach(u => { if (u.owner === 'player') u.selected = false });
+            selectedUnits.length = 0;
+            
+            // Clear factory selections
+            factories.forEach(f => f.selected = false);
+            
+            // Select factory
+            selectedFactory.selected = true;
+            selectedUnits.push(selectedFactory);
+            playSound('unitSelection');
+          } else {
+            // Normal unit selection
+            let clickedUnit = null;
+            for (const unit of units) {
+              if (unit.owner === 'player') {
+                const centerX = unit.x + TILE_SIZE / 2;
+                const centerY = unit.y + TILE_SIZE / 2;
+                const dx = worldX - centerX;
+                const dy = worldY - centerY;
+                if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
+                  clickedUnit = unit;
+                  break;
+                }
+              }
+            }
+            
+            if (clickedUnit) {
+              units.forEach(u => { if (u.owner === 'player') u.selected = false });
+              factories.forEach(f => f.selected = false); // Clear factory selections too
+              selectedUnits.length = 0;
+              clickedUnit.selected = true;
+              selectedUnits.push(clickedUnit);
+              playSound('unitSelection');
+              playSound('yesSir01'); // play sound on unit selection
+            }
+          }
+        }
+        
+        // --- Standard Command Issuing (no Force Attack) ---
+        if (selectedUnits.length > 0 && !wasDragging) {
+          // Skip command issuing for factory selection
+          if (selectedUnits[0].type !== 'factory') {
+            let target = null;
+            
+            // Check enemy buildings first (they have priority)
+            if (gameState.buildings && gameState.buildings.length > 0) {
+              for (const building of gameState.buildings) {
+                if (building.owner !== 'player') {
+                  const buildingX = building.x * TILE_SIZE;
+                  const buildingY = building.y * TILE_SIZE;
+                  const buildingWidth = building.width * TILE_SIZE;
+                  const buildingHeight = building.height * TILE_SIZE;
                   
-                  // Check if this new tile is valid and not targeted
-                  if (newTile.x >= 0 && newTile.y >= 0 && 
-                      newTile.x < mapGrid[0].length && newTile.y < mapGrid.length &&
-                      mapGrid[newTile.y][newTile.x].type !== 'water' &&
-                      mapGrid[newTile.y][newTile.x].type !== 'rock' &&
-                      mapGrid[newTile.y][newTile.x].type !== 'building' &&
-                      !selectedUnits.slice(0, index).some(u => 
-                        u.moveTarget && u.moveTarget.x === newTile.x && u.moveTarget.y === newTile.y
-                      )) {
-                    destTile = newTile;
+                  if (worldX >= buildingX && 
+                      worldX < buildingX + buildingWidth && 
+                      worldY >= buildingY && 
+                      worldY < buildingY + buildingHeight) {
+                    target = building;
                     break;
                   }
                 }
               }
-              
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
-              if (path && path.length > 0) {
-                unit.path = path.length > 1 ? path.slice(1) : path;
-                unit.target = null;
-                unit.moveTarget = destTile; // Store the final destination
-                // Clear any previous target when moving
-                unit.originalTarget = null;
-                unit.originalPath = null;
-                playSound('movement');
-                
-                // Debug to verify path is set
-                console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`);
+            }
+            
+            // Check enemy factories if no building was targeted
+            if (!target) {
+              for (const factory of factories) {
+                if (factory.id !== 'player' &&
+                    worldX >= factory.x * TILE_SIZE &&
+                    worldX < (factory.x + factory.width) * TILE_SIZE &&
+                    worldY >= factory.y * TILE_SIZE &&
+                    worldY < (factory.y + factory.height) * TILE_SIZE) {
+                  target = factory;
+                  break;
+                }
               }
             }
-          })
+            
+            // Check enemy units if no building or factory was targeted
+            if (!target) {
+              for (const unit of units) {
+                if (unit.owner !== 'player') {
+                  const centerX = unit.x + TILE_SIZE / 2;
+                  const centerY = unit.y + TILE_SIZE / 2;
+                  if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
+                    target = unit;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // Formation logic for movement/attack.
+            const count = selectedUnits.length;
+            const cols = Math.ceil(Math.sqrt(count));
+            const rows = Math.ceil(count / cols);
+            
+            selectedUnits.forEach((unit, index) => {
+              let formationOffset = { x: 0, y: 0 };
+              
+              if (target) {
+                const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
+                // Use helper to get target point (for factories, this is the closest point on its boundary)
+                let targetCenter = getTargetPoint(target, unitCenter);
+                const dx = targetCenter.x - unitCenter.x;
+                const dy = targetCenter.y - unitCenter.y;
+                const dist = Math.hypot(dx, dy);
+                const explosionSafetyBuffer = TILE_SIZE * 0.5;
+                const safeAttackDistance = Math.max(
+                  TANK_FIRE_RANGE * TILE_SIZE,
+                  TILE_SIZE * 2 + explosionSafetyBuffer
+                ) - TILE_SIZE;
+                
+                const baseX = targetCenter.x - (dx / dist) * safeAttackDistance;
+                const baseY = targetCenter.y - (dy / dist) * safeAttackDistance;
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                formationOffset.x = col * 10 - ((cols - 1) * 10) / 2;
+                formationOffset.y = row * 10 - ((rows - 1) * 10) / 2;
+                let destX = baseX + formationOffset.x;
+                let destY = baseY + formationOffset.y;
+                
+                // Ensure the final destination maintains safe distance
+                const finalDx = targetCenter.x - destX;
+                const finalDy = targetCenter.y - destY;
+                let finalDist = Math.hypot(finalDx, finalDy);
+                
+                if (finalDist < safeAttackDistance) {
+                  const scale = safeAttackDistance / finalDist;
+                  destX = targetCenter.x - finalDx * scale;
+                  destY = targetCenter.y - finalDy * scale;
+                }
+                
+                const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) };
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
+                
+                if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
+                  unit.path = path.slice(1);
+                  unit.target = target;
+                  unit.forcedAttack = false;  // Not a forced attack
+                  playSound('movement');
+                } else {
+                  unit.path = [];
+                  unit.target = target;
+                  unit.forcedAttack = false;  // Not a forced attack
+                }
+              } else {
+                // No target: move to clicked location with a basic grid formation.
+                const colsCount = Math.ceil(Math.sqrt(count));
+                const rowsCount = Math.ceil(count / colsCount);
+                const col = index % colsCount;
+                const row = Math.floor(index / colsCount);
+                
+                // Apply formation offsets based on whether formation mode is active
+                if (unit.formationActive && unit.formationOffset) {
+                  // Use stored formation offsets for this unit
+                  formationOffset = {
+                    x: unit.formationOffset.x,
+                    y: unit.formationOffset.y
+                  };
+                } else {
+                  // Default grid formation if formation mode is not active
+                  formationOffset = {
+                    x: col * 10 - ((colsCount - 1) * 10) / 2,
+                    y: row * 10 - ((rowsCount - 1) * 10) / 2
+                  };
+                }
+                
+                const destX = Math.floor(worldX) + formationOffset.x;
+                const destY = Math.floor(worldY) + formationOffset.y;
+                const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) };
+                
+                // Check if this tile is already targeted by previously processed units
+                const alreadyTargeted = selectedUnits.slice(0, index).some(u => 
+                  u.moveTarget && u.moveTarget.x === originalDestTile.x && u.moveTarget.y === originalDestTile.y
+                );
+                
+                // If already targeted, find an adjacent free tile instead
+                let destTile = originalDestTile;
+                if (alreadyTargeted) {
+                  const directions = [
+                    {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0},
+                    {dx: 1, dy: -1}, {dx: 1, dy: 1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}
+                  ];
+                  
+                  for (const dir of directions) {
+                    const newTile = { 
+                      x: originalDestTile.x + dir.dx, 
+                      y: originalDestTile.y + dir.dy 
+                    };
+                    
+                    // Check if this new tile is valid and not targeted
+                    if (newTile.x >= 0 && newTile.y >= 0 && 
+                        newTile.x < mapGrid[0].length && newTile.y < mapGrid.length &&
+                        mapGrid[newTile.y][newTile.x].type !== 'water' &&
+                        mapGrid[newTile.y][newTile.x].type !== 'rock' &&
+                        mapGrid[newTile.y][newTile.x].type !== 'building' &&
+                        !selectedUnits.slice(0, index).some(u => 
+                          u.moveTarget && u.moveTarget.x === newTile.x && u.moveTarget.y === newTile.y
+                        )) {
+                      destTile = newTile;
+                      break;
+                    }
+                  }
+                }
+                
+                // Fixed: correctly pass unit.tileX and unit.tileY as source coordinates
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null);
+                
+                if (path && path.length > 0) {
+                  unit.path = path.length > 1 ? path.slice(1) : path;
+                  // Clear any existing target when issuing a move command
+                  unit.target = null;
+                  unit.moveTarget = destTile; // Store the final destination
+                  // Clear any previous target when moving
+                  unit.originalTarget = null;
+                  unit.originalPath = null;
+                  // Clear force attack flag when issuing a move command
+                  unit.forcedAttack = false;
+                  playSound('movement');
+                  
+                  // Debug to verify path is set
+                  console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`);
+                }
+              }
+            });
+          }
         }
       }
-      isSelecting = false
-      selectionActive = false
-      gameState.selectionActive = false
+      
+      isSelecting = false;
+      selectionActive = false;
+      gameState.selectionActive = false;
     }
   })
 
@@ -799,6 +948,17 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
       });
     } 
+    // S key for stop - stop attacking
+    else if (e.key.toLowerCase() === 's') {
+      // Clear target and forced attack flag for all selected units
+      selectedUnits.forEach(unit => {
+        if (unit.target) {
+          unit.target = null;
+          unit.forcedAttack = false;
+          playSound('confirmed', 0.5);
+        }
+      });
+    }
     // D key for dodge
     else if (e.key.toLowerCase() === 'd') {
       // Fix: Make all selected units dodge to a random nearby free tile regardless of their state.
