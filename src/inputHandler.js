@@ -265,6 +265,7 @@ function showControlsHelp() {
         <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
         <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
         <li><strong>D Key:</strong> Make selected units dodge</li>
+        <li><strong>G Key:</strong> Toggle map grid visibility</li>
         <li><strong>H Key:</strong> Focus view on your factory</li>
         <li><strong>I Key:</strong> Show this help (press again to close)</li>
         <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
@@ -312,6 +313,7 @@ function toggleKeyBindingsOverview() {
         <li><strong>CTRL + Left Click</strong>: Force Attack friendly units/buildings</li>
         <li><strong>A</strong>: Toggle alert mode (for supported units)</li>
         <li><strong>D</strong>: Dodge command</li>
+        <li><strong>G</strong>: Toggle map grid visibility</li> 
         <li><strong>H</strong>: Toggle this keybindings overview</li>
         <li><strong>I</strong>: Show additional help (pause game)</li>
         <li><strong>CTRL + 1-9</strong>: Assign control groups</li>
@@ -1166,6 +1168,13 @@ export function setupInputHandlers(units, factories, mapGrid) {
           }
         });
       }
+    }
+    // G key to toggle grid visibility
+    else if (e.key.toLowerCase() === 'g') {
+      // Toggle grid visibility
+      gameState.gridVisible = !gameState.gridVisible;
+      // Play a sound for feedback
+      playSound('confirmed', 0.5);
     }
   });
 

@@ -36,5 +36,8 @@ export const gameState = {
   aimAheadCalibrationFactor: 1.0,
   
   // Radar station status - initialize to false (no radar at game start)
-  radarActive: false
+  radarActive: false,
+  
+  // Grid visibility toggle - initialize to true (grid visible by default)
+  gridVisible: true
 }
