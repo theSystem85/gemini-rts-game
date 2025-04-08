@@ -5,11 +5,15 @@ import { findPath } from './units.js'
 import { playSound } from './sound.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
-const moveCursor = document.getElementById('move-cursor')
-const attackCursor = document.getElementById('attack-cursor')
-const blockedCursor = document.getElementById('blocked-cursor')
-const repairCursor = document.getElementById('repair-cursor')
-const repairBlockedCursor = document.getElementById('repair-blocked-cursor')
+
+// Remove references to old cursor divs since we're using CSS-based cursors now
+// const moveCursor = document.getElementById('move-cursor')
+// const attackCursor = document.getElementById('attack-cursor')
+// const blockedCursor = document.getElementById('blocked-cursor')
+// const repairCursor = document.getElementById('repair-cursor')
+// const repairBlockedCursor = document.getElementById('repair-blocked-cursor')
+// const sellCursor = document.getElementById('sell-cursor')
+// const sellBlockedCursor = document.getElementById('sell-blocked-cursor')
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -44,6 +48,7 @@ let isOverGameCanvas = false
 let isOverEnemy = false
 let isOverBlockedTerrain = false
 let isOverRepairableBuilding = false
+let isOverSellableBuilding = false
 let isForceAttackMode = false // New variable to track Force Attack mode
 
 // Function to check if a location is a blocked tile (water, rock, building)
@@ -123,85 +128,98 @@ function updateCustomCursor(e, mapGrid, factories) {
     }
   }
   
-  // Position all cursors to follow mouse pointer (center them on the mouse cursor)
-  moveCursor.style.left = `${x - 16}px`; // Center horizontally (half of 32px width)
-  moveCursor.style.top = `${y - 16}px`;  // Center vertically (half of 32px height)
-  attackCursor.style.left = `${x - 16}px`;
-  attackCursor.style.top = `${y - 16}px`;
-  blockedCursor.style.left = `${x - 16}px`;
-  blockedCursor.style.top = `${y - 16}px`;
-  repairCursor.style.left = `${x - 16}px`;
-  repairCursor.style.top = `${y - 16}px`;
-  repairBlockedCursor.style.left = `${x - 16}px`;
-  repairBlockedCursor.style.top = `${y - 16}px`;
-  
-  // Hide all cursors first
-  moveCursor.style.display = 'none';
-  attackCursor.style.display = 'none';
-  blockedCursor.style.display = 'none';
-  repairCursor.style.display = 'none';
-  repairBlockedCursor.style.display = 'none';
+  // Check if mouse is over a sellable building (when in sell mode)
+  isOverSellableBuilding = false;
+  if (gameState.sellMode && isOverGameCanvas) {
+    // Check player factory first - Player factory can't be sold
+    
+    // Check player buildings
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      for (const building of gameState.buildings) {
+        if (building.owner === 'player' &&
+            tileX >= building.x && tileX < (building.x + building.width) &&
+            tileY >= building.y && tileY < (building.y + building.height)) {
+          // All player buildings can be sold
+          isOverSellableBuilding = true;
+          break;
+        }
+      }
+    }
+  }
   
   // If not over the game canvas, just use default cursor
   if (!isOverGameCanvas) {
     gameCanvas.style.cursor = 'default';
+    // Remove all cursor classes
+    gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode');
     return;
   }
   
-  // REPAIR MODE TAKES PRIORITY - if active, show repair cursors and ignore others
+  // Apply CSS classes for cursor styles (will work with external SVG files)
+  // Clear all cursor classes first
+  gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode');
+  
+  // REPAIR MODE TAKES PRIORITY
   if (gameState.repairMode) {
-    // Always hide the system cursor when in repair mode over the canvas
+    // Use CSS class for cursors and hide system cursor
     gameCanvas.style.cursor = 'none';
     
     if (isOverRepairableBuilding) {
-      // Show repair cursor when over repairable building
-      repairCursor.style.display = 'block';
+      gameCanvas.classList.add('repair-mode');
     } else {
-      // Show blocked repair cursor when not over a repairable building
-      repairBlockedCursor.style.display = 'block';
+      gameCanvas.classList.add('repair-blocked-mode');
     }
     return; // Exit early to prevent other cursors from showing
   }
   
-  // If we reach here, we're not in repair mode - handle regular movement/attack cursors
-  // Show appropriate custom cursor only when units are selected and mouse is over the game canvas
-  if (selectedUnits.length > 0) {
-    // Force Attack mode (Ctrl key pressed) takes precedence over normal cursor display
-    if (isForceAttackMode) {
-      // Show attack cursor when in Force Attack mode
-      attackCursor.style.display = 'block';
-      gameCanvas.style.cursor = 'none';
-    } else if (isOverEnemy) {
-      // Show attack cursor when over enemy
-      attackCursor.style.display = 'block';
-      gameCanvas.style.cursor = 'none';
-    } else if (isOverBlockedTerrain) {
-      // Show blocked cursor when over impassable terrain
-      blockedCursor.style.display = 'block';
-      gameCanvas.style.cursor = 'none';
-    } else if (!gameState.isRightDragging) {
-      // Show move cursor when not over enemy or blocked terrain and not dragging
-      moveCursor.style.display = 'block';
-      gameCanvas.style.cursor = 'none';
+  // SELL MODE TAKES SECOND PRIORITY
+  if (gameState.sellMode) {
+    // Use CSS class for cursors and hide system cursor
+    gameCanvas.style.cursor = 'none';
+    
+    if (isOverSellableBuilding) {
+      gameCanvas.classList.add('sell-mode');
     } else {
-      // During right-drag, use system cursor
+      gameCanvas.classList.add('sell-blocked-mode');
+    }
+    return; // Exit early to prevent other cursors from showing
+  }
+  
+  // Default cursor behavior for regular movement/attack
+  if (selectedUnits.length > 0) {
+    // Clear all cursor classes first
+    gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode');
+    
+    if (isForceAttackMode) {
+      // Force attack mode - use attack cursor
+      gameCanvas.style.cursor = 'none';
+      gameCanvas.classList.add('attack-mode');
+    } else if (isOverEnemy) {
+      // Over enemy - use attack cursor
+      gameCanvas.style.cursor = 'none';
+      gameCanvas.classList.add('attack-mode');
+    } else if (isOverBlockedTerrain) {
+      // Over blocked terrain - use move-blocked cursor
+      gameCanvas.style.cursor = 'none';
+      gameCanvas.classList.add('move-blocked-mode');
+    } else if (!gameState.isRightDragging) {
+      // Normal move cursor
+      gameCanvas.style.cursor = 'none';
+      gameCanvas.classList.add('move-mode');
+    } else {
+      // Right-drag scrolling
       gameCanvas.style.cursor = 'grabbing';
+      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode');
     }
   } else {
     // No units selected - use default cursor
     gameCanvas.style.cursor = 'default';
+    gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode');
   }
 }
 
 // Apply the initial state for the custom cursor
 document.addEventListener('DOMContentLoaded', () => {
-  // Initially hide the custom cursor
-  moveCursor.style.display = 'none';
-  attackCursor.style.display = 'none';
-  blockedCursor.style.display = 'none';
-  repairCursor.style.display = 'none';
-  repairBlockedCursor.style.display = 'none';
-  
   // Set up the document-level mousemove event
   document.addEventListener('mousemove', (e) => {
     // Update Force Attack mode status based on Ctrl key
@@ -223,11 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Always hide custom cursor over sidebar
       if (isOverSidebar) {
-        moveCursor.style.display = 'none';
-        attackCursor.style.display = 'none';
-        blockedCursor.style.display = 'none';
-        repairCursor.style.display = 'none';
-        repairBlockedCursor.style.display = 'none';
         document.body.style.cursor = 'default';
       }
     }
@@ -268,6 +281,7 @@ function showControlsHelp() {
         <li><strong>G Key:</strong> Toggle map grid visibility</li>
         <li><strong>H Key:</strong> Focus view on your factory</li>
         <li><strong>I Key:</strong> Show this help (press again to close)</li>
+        <li><strong>S Key:</strong> Toggle sell mode (sell buildings for 70% of cost)</li>
         <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
         <li><strong>1-9 Keys:</strong> Select units in that control group</li>
         <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
@@ -514,11 +528,6 @@ export function setupInputHandlers(units, factories, mapGrid) {
       if (!rightWasDragging) {
         units.forEach(u => { if (u.owner === 'player') u.selected = false })
         selectedUnits.length = 0
-        
-        // Hide custom cursor when units are deselected
-        moveCursor.style.display = 'none';
-        attackCursor.style.display = 'none';
-        blockedCursor.style.display = 'none';
       }
       rightWasDragging = false
       
@@ -925,6 +934,52 @@ export function setupInputHandlers(units, factories, mapGrid) {
     }
   })
 
+  // Add right-click event listener to cancel modes
+  gameCanvas.addEventListener('contextmenu', (e) => {
+    // Prevent the default context menu
+    e.preventDefault();
+    
+    // Track if any mode was active and canceled
+    let modeWasCanceled = false;
+    
+    // Cancel repair mode if it's active
+    if (gameState.repairMode) {
+      gameState.repairMode = false;
+      const repairBtn = document.getElementById('repairBtn');
+      if (repairBtn) {
+        repairBtn.classList.remove('active');
+      }
+      gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode');
+      modeWasCanceled = true;
+    }
+    
+    // Cancel sell mode if it's active
+    if (gameState.sellMode) {
+      gameState.sellMode = false;
+      const sellBtn = document.getElementById('sellBtn');
+      if (sellBtn) {
+        sellBtn.classList.remove('active');
+      }
+      gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode');
+      modeWasCanceled = true;
+    }
+    
+    // Reset cursor if any mode was canceled
+    if (modeWasCanceled) {
+      // Reset cursor
+      gameCanvas.style.cursor = 'default';
+      
+      // Show notification
+      showNotification('Action mode canceled');
+      
+      // Play a cancel sound for feedback
+      playSound('cancel', 0.5);
+    }
+    
+    // Allow the event to continue for other right-click handlers
+    return false;
+  });
+
   // Enhanced keydown event listener
   document.addEventListener('keydown', e => {
     // Some keys should work even when paused
@@ -950,16 +1005,79 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
       });
     } 
-    // S key for stop - stop attacking
+    // S key for sell mode or stop attacking
     else if (e.key.toLowerCase() === 's') {
-      // Clear target and forced attack flag for all selected units
-      selectedUnits.forEach(unit => {
-        if (unit.target) {
-          unit.target = null;
-          unit.forcedAttack = false;
-          playSound('confirmed', 0.5);
+      // If not in sell mode, toggle it
+      if (!gameState.sellMode) {
+        // Toggle sell mode
+        gameState.sellMode = !gameState.sellMode;
+        
+        // Deactivate repair mode if it's on
+        if (gameState.repairMode) {
+          gameState.repairMode = false;
+          document.getElementById('repairBtn').classList.remove('active');
         }
-      });
+        
+        // Update the sell button UI
+        const sellBtn = document.getElementById('sellBtn');
+        if (sellBtn) {
+          sellBtn.classList.add('active');
+          gameState.sellMode = true;
+          
+          // Use CSS class for sell cursor - this ensures consistent usage of sell.svg
+          gameCanvas.style.cursor = 'none';
+          gameCanvas.classList.add('sell-mode');
+          
+          // Show notification 
+          const message = document.createElement('div');
+          message.textContent = 'Sell mode activated - Click on a building to sell it for 70% of build price';
+          message.style.position = 'absolute';
+          message.style.left = '50%';
+          message.style.bottom = '10%';
+          message.style.transform = 'translateX(-50%)';
+          message.style.backgroundColor = 'rgba(0,0,0,0.7)';
+          message.style.color = 'white';
+          message.style.padding = '8px 16px';
+          message.style.borderRadius = '4px';
+          message.style.zIndex = '1000';
+          document.body.appendChild(message);
+          
+          // Remove message after 3 seconds
+          setTimeout(() => {
+            document.body.removeChild(message);
+          }, 3000);
+        }
+      } else {
+        // Turn off sell mode
+        gameState.sellMode = false;
+        const sellBtn = document.getElementById('sellBtn');
+        if (sellBtn) {
+          sellBtn.classList.remove('active');
+        }
+        
+        // Reset cursor and remove sell mode classes
+        gameCanvas.style.cursor = 'default';
+        gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode');
+        
+        // Show notification
+        const message = document.createElement('div');
+        message.textContent = 'Sell mode deactivated';
+        message.style.position = 'absolute';
+        message.style.left = '50%';
+        message.style.bottom = '10%';
+        message.style.transform = 'translateX(-50%)';
+        message.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        message.style.color = 'white';
+        message.style.padding = '8px 16px';
+        message.style.borderRadius = '4px';
+        message.style.zIndex = '1000';
+        document.body.appendChild(message);
+        
+        // Remove message after 2 seconds
+        setTimeout(() => {
+          document.body.removeChild(message);
+        }, 2000);
+      }
     }
     // D key for dodge
     else if (e.key.toLowerCase() === 'd') {
