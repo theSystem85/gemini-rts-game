@@ -346,7 +346,7 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
   }
   
   // Draw grid lines only if zoomed in closely enough for better performance
-  if (TILE_SIZE > 8) { // Only draw grid when tiles are big enough to see
+  if (TILE_SIZE > 8 && gameState.gridVisible) { // Only draw grid when tiles are big enough to see and grid is enabled
     gameCtx.strokeStyle = 'rgba(0,0,0,0.1)';
     gameCtx.beginPath();
     
