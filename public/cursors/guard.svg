@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg baseProfile="full" height="32" version="1.1" viewBox="0 0 128 128" width="32" xmlns="http://www.w3.org/2000/svg" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><style type="text/css"><![CDATA[
+@keyframes pulse {
+  0% { stroke-opacity: 0.4; stroke-width: 1; stroke: gold; }
+  50% { stroke-opacity: 1; stroke-width: 2; stroke: orange; }
+  100% { stroke-opacity: 0.4; stroke-width: 1; stroke: gold; }
+}
+#glow, #cross {
+  animation: pulse 2s infinite;
+}
+]]></style></defs><path d="M7,14 L5,17 L8,62 L12,80 L20,95 L39,112 L62,125 L69,123 L89,110 L90,107 L86,105 L91,102 L96,103 L97,100 L95,98 L102,90 L107,91 L105,86 L107,80 L113,78 L109,74 L111,64 L116,63 L112,59 L113,51 L117,50 L114,45 L114,36 L118,35 L118,32 L114,30 L114,22 L117,21 L116,17 L112,20 L101,19 L99,14 L91,17 L91,10 L89,10 L87,15 L86,10 L68,4 L58,4 L27,12 Z" fill="gold" id="glow" stroke="orange" stroke-width="2" /><path d="M60,20 L68,20 L68,60 L108,60 L108,68 L68,68 L68,108 L60,108 L60,68 L20,68 L20,60 L60,60 Z" fill="gray" id="cross" stroke="orange" stroke-width="1" /></svg>

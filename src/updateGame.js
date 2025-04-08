@@ -659,10 +659,18 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             }
           }
           
-          // Remove from map grid
+          // Remove from map grid and restore original tiles
           for (let y = building.y; y < building.y + building.height; y++) {
             for (let x = building.x; x < building.x + building.width; x++) {
               if (mapGrid[y] && mapGrid[y][x]) {
+                // Restore the original tile type if it was saved, otherwise default to 'land'
+                if (building.originalTiles && 
+                    building.originalTiles[y - building.y] && 
+                    building.originalTiles[y - building.y][x - building.x]) {
+                  mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x];
+                } else {
+                  mapGrid[y][x].type = 'land';  // Default to land if no original type is stored
+                }
                 mapGrid[y][x].building = null;
               }
             }

@@ -329,8 +329,17 @@ export function isTileValid(tileX, tileY, mapGrid, units, buildings, factories) 
 
 // Place building in the map grid
 export function placeBuilding(building, mapGrid) {
+  // Create an array to store original tile types
+  building.originalTiles = [];
+  
   for (let y = building.y; y < building.y + building.height; y++) {
+    building.originalTiles[y - building.y] = [];
+    
     for (let x = building.x; x < building.x + building.width; x++) {
+      // Store the original tile type before changing it
+      building.originalTiles[y - building.y][x - building.x] = mapGrid[y][x].type;
+      
+      // Mark tile as building
       mapGrid[y][x].building = building;
       mapGrid[y][x].type = 'building'; // Mark the tile as a building type for pathfinding
     }

@@ -21,6 +21,7 @@ import { initFactories } from './factories.js'
 import { initBackgroundMusic } from './sound.js'
 import { preloadBuildingImages } from './buildingImageMap.js'
 import { buildingRepairHandler } from './buildingRepairHandler.js'
+import { buildingSellHandler } from './buildingSellHandler.js'
 
 // Initialize loading states
 let texturesLoaded = false;
@@ -1065,25 +1066,63 @@ document.addEventListener('keydown', (e) => {
 // Add repair button functionality
 document.getElementById('repairBtn').addEventListener('click', () => {
   gameState.repairMode = !gameState.repairMode;
-
   // Update button appearance
   const repairBtn = document.getElementById('repairBtn');
   if (gameState.repairMode) {
     repairBtn.classList.add('active');
     showNotification('Repair mode activated. Click on a building to repair it.');
     
-    // Use data URI format to embed the SVG directly
-    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M9,2 L9,3 L10,4 L10,5 L9,6 L8,6 L7,7 L6,6 L6,5 L5,4 L5,8 L6,9 L8,9 L11,12 L11,13 L12,14 L12,15 L14,17 L14,18 L16,20 L16,21 L18,23 L18,24 L19,25 L19,28 L20,29 L20,30 L21,30 L22,31 L22,28 L23,27 L25,29 L26,28 L26,27 L25,26 L25,25 L24,24 L23,24 L21,22 L21,21 L19,19 L19,18 L17,16 L17,15 L15,13 L15,12 L13,10 L13,9 L12,8 L12,4 L11,3 L10,3 Z" fill="none" stroke="blue" stroke-width="2"/></svg>`;
-    const encodedSVG = encodeURIComponent(svgContent);
-    gameCanvas.style.cursor = `url('data:image/svg+xml;utf8,${encodedSVG}') 16 16, crosshair`;
+    // Turn off sell mode if it's active
+    if (gameState.sellMode) {
+      gameState.sellMode = false;
+      document.getElementById('sellBtn').classList.remove('active');
+    }
+    
+    // Use CSS class for cursor
+    gameCanvas.classList.add('repair-mode');
   } else {
     repairBtn.classList.remove('active');
     showNotification('Repair mode deactivated.');
     
+    // Remove CSS cursor class
+    gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode');
+    
     // Reset cursor to default
     gameCanvas.style.cursor = 'default';
   }
+  // Cancel building placement mode if active
+  if (gameState.buildingPlacementMode) {
+    productionQueue.cancelBuildingPlacement();
+  }
+});
 
+// Add sell button functionality
+document.getElementById('sellBtn').addEventListener('click', () => {
+  gameState.sellMode = !gameState.sellMode;
+  // Update button appearance
+  const sellBtn = document.getElementById('sellBtn');
+  if (gameState.sellMode) {
+    sellBtn.classList.add('active');
+    showNotification('Sell mode activated. Click on a building to sell it for 70% of build price.');
+    
+    // Turn off repair mode if it's active
+    if (gameState.repairMode) {
+      gameState.repairMode = false;
+      document.getElementById('repairBtn').classList.remove('active');
+    }
+    
+    // Use CSS class for cursor
+    gameCanvas.classList.add('sell-mode');
+  } else {
+    sellBtn.classList.remove('active');
+    showNotification('Sell mode deactivated.');
+    
+    // Remove CSS cursor class
+    gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode');
+    
+    // Reset cursor to default
+    gameCanvas.style.cursor = 'default';
+  }
   // Cancel building placement mode if active
   if (gameState.buildingPlacementMode) {
     productionQueue.cancelBuildingPlacement();
@@ -1092,6 +1131,9 @@ document.getElementById('repairBtn').addEventListener('click', () => {
 
 // Add building repair handling to the canvas click event
 gameCanvas.addEventListener('click', (e) => buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl));
+
+// Add building sell handling to the canvas click event
+gameCanvas.addEventListener('click', (e) => buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, factories, moneyEl));
 
 // Helper function to show notifications
 export function showNotification(message, duration = 3000) {
