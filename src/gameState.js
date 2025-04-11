@@ -39,5 +39,8 @@ export const gameState = {
   radarActive: false,
   
   // Grid visibility toggle - initialize to true (grid visible by default)
-  gridVisible: true
+  gridVisible: true,
+
+  // Index for round-robin vehicle spawning
+  nextVehicleFactoryIndex: 0
 }
