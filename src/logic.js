@@ -343,27 +343,37 @@ export function smoothRotateTowardsAngle(currentAngle, targetAngle, rotationSpee
   // Normalize angles to be between -PI and PI
   currentAngle = normalizeAngle(currentAngle)
   targetAngle = normalizeAngle(targetAngle)
-  
+
   // Find the shortest rotation direction
   let angleDiff = targetAngle - currentAngle
-  
+
   // Ensure we rotate in the shortest direction
   if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI
   if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI
-  
+
   // Apply rotation speed
+  let nextAngle;
   if (Math.abs(angleDiff) < rotationSpeed) {
-    return targetAngle // If very close, snap to target angle
+    nextAngle = targetAngle // If very close, snap to target angle
   } else if (angleDiff > 0) {
-    return currentAngle + rotationSpeed
+    nextAngle = currentAngle + rotationSpeed
   } else {
-    return currentAngle - rotationSpeed
+    nextAngle = currentAngle - rotationSpeed
   }
+  // Ensure the returned angle is also normalized
+  return normalizeAngle(nextAngle);
 }
 
 // Helper function to normalize angle between -PI and PI
 export function normalizeAngle(angle) {
-  return ((angle + Math.PI) % (2 * Math.PI)) - Math.PI
+  const twoPi = 2 * Math.PI;
+  // Use a more robust modulo operation
+  angle = ((angle % twoPi) + twoPi) % twoPi;
+  // Bring into range -PI to PI
+  if (angle > Math.PI) {
+    angle -= twoPi;
+  }
+  return angle;
 }
 
 // Calculate aim ahead position for moving targets

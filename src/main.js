@@ -73,50 +73,34 @@ if (startBtn) {
 sidebar.style.backgroundColor = '#333'
 sidebar.style.color = '#fff'
 
-// Create speed control element
-const speedControl = document.createElement('div')
-speedControl.innerHTML = `
-  <label style="display: flex; align-items: center; margin: 10px 0;">
-    Game Speed: 
-    <input type="number" 
-           min="0.25" 
-           max="4" 
-           step="0.25" 
-           value="1" 
-           style="width: 70px; margin-left: 10px;"
-           id="speedMultiplier">
-  </label>
-`
+// Initialize the energy bar early to ensure it's created before the game starts
+// This is crucial for the energy bar to appear properly
+addPowerIndicator();
 
-// Insert speed control at the beginning of sidebar
-if (sidebar.firstChild) {
-  sidebar.insertBefore(speedControl, sidebar.firstChild)
-} else {
-  sidebar.appendChild(speedControl)
+// Find the speed control that's now defined in HTML
+const speedMultiplier = document.getElementById('speedMultiplier')
+if (speedMultiplier) {
+  speedMultiplier.value = gameState.speedMultiplier // Set initial value to match gameState
+  speedMultiplier.addEventListener('change', (e) => {
+    const value = parseFloat(e.target.value)
+    if (value >= 0.25 && value <= 4) {
+      gameState.speedMultiplier = value
+    } else {
+      e.target.value = gameState.speedMultiplier
+    }
+  })
 }
 
-// New: Add shuffle map control with a seed input
-const shuffleControl = document.createElement('div')
-shuffleControl.innerHTML = `
-  <label style="display: flex; align-items: center; margin: 10px 0;">
-    Seed:
-    <input type="number" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
-  </label>
-  <button id="shuffleMapBtn" style="margin: 10px 0;">Shuffle Map</button>
-`
-sidebar.appendChild(shuffleControl)
-
-// Add speed control handler
-const speedMultiplier = document.getElementById('speedMultiplier')
-speedMultiplier.value = gameState.speedMultiplier // Set initial value to match gameState
-speedMultiplier.addEventListener('change', (e) => {
-  const value = parseFloat(e.target.value)
-  if (value >= 0.25 && value <= 4) {
-    gameState.speedMultiplier = value
-  } else {
-    e.target.value = gameState.speedMultiplier
-  }
-})
+// REMOVE: Don't create duplicate shuffle controls since they're already in HTML
+// const shuffleControl = document.createElement('div')
+// shuffleControl.innerHTML = `
+//   <label style="display: flex; align-items: center; margin: 10px 0;">
+//     Seed:
+//     <input type="number" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
+//   </label>
+//   <button id="shuffleMapBtn" style="margin: 10px 0;">Shuffle Map</button>
+// `
+// sidebar.appendChild(shuffleControl)
 
 function resizeCanvases() {
   const pixelRatio = window.devicePixelRatio || 1;
@@ -556,7 +540,12 @@ function initProductionTabs() {
 
 pauseBtn.addEventListener('click', () => {
   gameState.gamePaused = !gameState.gamePaused
-  pauseBtn.textContent = gameState.gamePaused ? 'Start' : 'Pause'
+  
+  // Update button icon based on game state
+  const playPauseIcon = pauseBtn.querySelector('.play-pause-icon');
+  if (playPauseIcon) {
+    playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸';
+  }
   
   // If the game was just unpaused, resume any pending productions
   if (!gameState.gamePaused) {
@@ -564,13 +553,18 @@ pauseBtn.addEventListener('click', () => {
   }
 })
 
+// In the initial setup section, set the correct initial button state 
+const playPauseIcon = document.querySelector('.play-pause-icon');
+if (playPauseIcon) {
+  playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸';
+}
+
 restartBtn.addEventListener('click', () => {
   window.location.reload()
 })
 
 gameState.gameStarted = true
 // gameState.gamePaused is already set to true in gameState.js
-pauseBtn.textContent = 'Start' // Update button text to match initial state
 
 // Instead of auto-playing background music immediately,
 // wait for the first user interaction.
@@ -580,7 +574,18 @@ const musicControlButton = document.getElementById('musicControl')
 if (musicControlButton) {
   musicControlButton.addEventListener('click', () => {
     toggleBackgroundMusic()
-    musicControlButton.textContent = musicControlButton.textContent === "Pause Music" ? "Play Music" : "Pause Music"
+    
+    // Toggle music icon
+    const musicIcon = musicControlButton.querySelector('.music-icon');
+    if (musicIcon) {
+      // If background music is available and we can check its state
+      if (typeof bgMusicAudio !== 'undefined' && bgMusicAudio) {
+        musicIcon.textContent = bgMusicAudio.paused ? '♪' : '🔇';
+      } else {
+        // Toggle based on previous state if audio object isn't available
+        musicIcon.textContent = musicIcon.textContent === '♪' ? '🔇' : '♪';
+      }
+    }
   })
 }
 
@@ -736,70 +741,70 @@ function animate(timestamp) {
 
 // Initialize animation loop
 let lastFrameTime = null
+// Use only one animation loop instead of two - comment out gameLoop call
+// gameLoop(performance.now())
 requestAnimationFrame(animate)
-
-gameLoop(performance.now())
 
 // Add power indicator to sidebar with energy bar
 function addPowerIndicator() {
-  const minimapElement = document.getElementById('minimap');
+  // Get the energy bar container that's already in the HTML
+  const energyBarContainer = document.getElementById('energyBarContainer');
+  if (!energyBarContainer) {
+    return;
+  }
   
-  // Create container for energy display
-  const powerIndicator = document.createElement('div');
-  powerIndicator.id = 'powerIndicator';
-  powerIndicator.style.marginTop = '10px';
-  powerIndicator.style.marginBottom = '10px';
-  powerIndicator.style.padding = '5px';
-  powerIndicator.style.backgroundColor = '#222';
-  powerIndicator.style.border = '1px solid #444';
-  powerIndicator.style.borderRadius = '3px';
-  
-  // Create energy bar container
-  const energyBarContainer = document.createElement('div');
-  energyBarContainer.id = 'energyBarContainer';
-  energyBarContainer.style.width = '100%';
-  energyBarContainer.style.height = '20px';
-  energyBarContainer.style.backgroundColor = '#333';
-  energyBarContainer.style.border = '1px solid #555';
-  energyBarContainer.style.position = 'relative';
-  energyBarContainer.style.borderRadius = '2px';
-  energyBarContainer.style.overflow = 'hidden';
+  // Clear any existing content to prevent duplicates
+  energyBarContainer.innerHTML = '';
   
   // Create energy bar
   const energyBar = document.createElement('div');
   energyBar.id = 'energyBar';
+  
+  // Set explicit styles for the energy bar to ensure it's visible
   energyBar.style.width = '100%';
   energyBar.style.height = '100%';
   energyBar.style.backgroundColor = '#4CAF50'; // Green
   energyBar.style.position = 'absolute';
-  energyBar.style.transition = 'width 0.3s, background-color 0.5s';
+  energyBar.style.top = '0';
+  energyBar.style.left = '0';
+  energyBar.style.zIndex = '0';
   
   // Create energy text
   const energyText = document.createElement('div');
   energyText.id = 'energyText';
+  energyText.className = 'energyBarLabel';
   energyText.style.position = 'absolute';
   energyText.style.width = '100%';
-  energyText.style.height = '100%';
-  energyText.style.display = 'flex';
-  energyText.style.justifyContent = 'center';
-  energyText.style.alignItems = 'center';
-  energyText.style.color = 'white';
-  energyText.style.fontWeight = 'bold';
+  energyText.style.textAlign = 'center';
+  energyText.style.fontSize = '12px';
+  energyText.style.lineHeight = '20px';
   energyText.style.zIndex = '1';
-  energyText.style.textShadow = '1px 1px 2px #000';
-  energyText.textContent = 'Energy: 0';
+  energyText.style.textShadow = '0 0 3px #000';
+  energyText.style.color = '#fff'; // White text
+  energyText.textContent = 'Energy: 100';
   
-  // Add elements to their parents
+  // Add elements to container
   energyBarContainer.appendChild(energyBar);
   energyBarContainer.appendChild(energyText);
-  powerIndicator.appendChild(energyBarContainer);
   
-  // Insert after minimap
-  minimapElement.parentNode.insertBefore(powerIndicator, minimapElement.nextSibling);
+  // Make sure the container itself is visible and properly styled
+  energyBarContainer.style.display = 'block';
+  energyBarContainer.style.visibility = 'visible';
+  energyBarContainer.style.height = '20px';
+  energyBarContainer.style.position = 'relative';
+  energyBarContainer.style.overflow = 'hidden';
+  energyBarContainer.style.border = '1px solid #555';
+  energyBarContainer.style.borderRadius = '2px';
+  energyBarContainer.style.margin = '0 0 10px 0';
   
-  // Initialize energy stats in gameState
-  gameState.totalPowerProduction = 0;
+  // Initialize energy stats in gameState with default values
+  gameState.totalPowerProduction = 100;
   gameState.powerConsumption = 0;
+  gameState.playerTotalPowerProduction = 100;
+  gameState.playerPowerConsumption = 0;
+  
+  // Force an immediate update
+  setTimeout(() => updateEnergyBar(), 100);
 }
 
 // Update the energy bar display
@@ -807,7 +812,11 @@ function updateEnergyBar() {
   const energyBar = document.getElementById('energyBar');
   const energyText = document.getElementById('energyText');
   
-  if (!energyBar || !energyText) return;
+  if (!energyBar || !energyText) {
+    // Try to recreate the energy bar if not found
+    addPowerIndicator();
+    return;
+  }
   
   // Use player-specific power values
   const totalProduction = gameState.playerTotalPowerProduction || 0;
@@ -851,10 +860,9 @@ function updateEnergyBar() {
   }
 }
 
-// Add this to document ready event
+// Keep DOMContentLoaded but remove the duplicate addPowerIndicator call
 document.addEventListener('DOMContentLoaded', () => {
   initProductionTabs();
-  addPowerIndicator();
   setupAllProductionButtons(); // Set up all buttons once
 });
 
