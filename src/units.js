@@ -373,29 +373,30 @@ export function spawnUnit(factory, type, units, mapGrid) {
 function createUnit(factory, unitType, x, y) {
   const unit = {
     id: getUniqueId(),
-    type: unitType,  // "tank", "rocketTank", or "harvester"
-    owner: factory.id === 'player' ? 'player' : 'enemy',
+    type: unitType,
+    // Determine owner based on factory's 'owner' property (for buildings) or 'id' (for initial factories)
+    owner: (factory.owner === 'player' || factory.id === 'player') ? 'player' : 'enemy',
     tileX: x,
     tileY: y,
     x: x * TILE_SIZE,
     y: y * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 1 : 2,
-    health: (unitType === 'harvester') ? 150 : 100,
-    maxHealth: (unitType === 'harvester') ? 150 : 100,
+    speed: (unitType === 'harvester') ? 1 : 2, // Base speed, adjust per type below
+    health: (unitType === 'harvester') ? 150 : 100, // Base health, adjust per type below
+    maxHealth: (unitType === 'harvester') ? 150 : 100, // Base maxHealth, adjust per type below
     path: [],
     target: null,
     selected: false,
     oreCarried: 0,
     harvesting: false,
     spawnTime: Date.now(),
-    spawnedInFactory: false,
+    spawnedInFactory: false, // This might need adjustment based on spawn logic
     // Add rotation properties for all unit types
     direction: 0, // Angle in radians (0 = east, PI/2 = south)
     targetDirection: 0,
     turretDirection: 0,
     rotationSpeed: 0.1, // Radians per frame
     isRotating: false,
-    useAimAhead: unitType !== 'harvester' // Enable AAF for all tanks but not harvesters
+    useAimAhead: ['tank-v2', 'tank-v3'].includes(unitType) // Enable AAF based on type
   };
 
   // Apply unit-specific properties
@@ -403,18 +404,38 @@ function createUnit(factory, unitType, x, y) {
     unit.speed = 1.5
     unit.rotationSpeed = 0.15
     unit.alertMode = true  // Start tank-v2 in alert mode by default
-  } else if (unitType === 'tank') {
+    unit.health = 130; // 30% more health than tank_v1
+    unit.maxHealth = 130;
+  } else if (unitType === 'tank' || unitType === 'tank_v1') { // Handle both names
+    unit.type = 'tank_v1'; // Standardize type name
     unit.speed = 1.5
     unit.rotationSpeed = 0.15
+    unit.health = 100;
+    unit.maxHealth = 100;
   } else if (unitType === 'rocketTank') {
     unit.speed = 1.3
     unit.rotationSpeed = 0.12
+    unit.health = 100; // Assuming base health for now
+    unit.maxHealth = 100;
   } else if (unitType === 'harvester') {
-    unit.speed = 1.8
+    unit.speed = 1.8 // Harvesters are faster now? Adjust if needed.
     unit.rotationSpeed = 0.2
     unit.oreCarried = 0
     unit.harvesting = false
+    unit.health = 150; // Base harvester health
+    unit.maxHealth = 150;
+    unit.armor = 3; // Example: 3x tank armor (assuming tank armor is 1)
   }
+  // Add tank_v3 properties if defined
+  else if (unitType === 'tank-v3') {
+      unit.speed = 1.5;
+      unit.rotationSpeed = 0.15;
+      unit.alertMode = true; // Assuming V3 also has alert mode
+      unit.health = 169; // 30% more than tank-v2 (130 * 1.3)
+      unit.maxHealth = 169;
+      unit.useAimAhead = true; // Explicitly enable AAF
+  }
+
 
   return unit;
 }

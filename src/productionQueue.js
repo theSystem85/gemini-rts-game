@@ -262,12 +262,40 @@ export const productionQueue = {
     this.unitItems.shift();
     this.updateBatchCounter(this.currentUnit.button, this.unitItems.filter(item => item.button === this.currentUnit.button).length);
     
-    // Unit production - spawn the unit
     const unitType = this.currentUnit.type;
-    const playerFactory = factories.find(f => f.id === 'player');
-    
-    if (playerFactory) {
-      const newUnit = spawnUnit(playerFactory, unitType, units, mapGrid);
+    let spawnFactory = null;
+
+    if (vehicleUnitTypes.includes(unitType)) {
+      // Find player-owned vehicle factories
+      const vehicleFactories = gameState.buildings.filter(
+        b => b.type === 'vehicleFactory' && b.owner === 'player'
+      );
+
+      if (vehicleFactories.length > 0) {
+        // Use round-robin to select the next factory
+        gameState.nextVehicleFactoryIndex = gameState.nextVehicleFactoryIndex ?? 0;
+        spawnFactory = vehicleFactories[gameState.nextVehicleFactoryIndex % vehicleFactories.length];
+        gameState.nextVehicleFactoryIndex++;
+      } else {
+        // This case should ideally not happen due to button disabling logic
+        console.error(`Cannot spawn ${unitType}: No Vehicle Factory found.`);
+        // Optional: Refund cost?
+        // gameState.money += unitCosts[unitType] || 0;
+        // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible
+        showNotification(`Production cancelled: ${unitType} requires a Vehicle Factory.`);
+        // Reset and try next production
+        this.currentUnit.button.classList.remove('active', 'paused');
+        this.currentUnit = null;
+        this.startNextUnitProduction(); // Try next in queue
+        return;
+      }
+    } else {
+      // For non-vehicles (Harvester), use the main player factory
+      spawnFactory = factories.find(f => f.id === 'player');
+    }
+
+    if (spawnFactory) {
+      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid);
       if (newUnit) {
         units.push(newUnit);
         // Play random unit ready sound
@@ -280,7 +308,8 @@ export const productionQueue = {
           // Access the targetedOreTiles from the imported module
           const targetedOreTiles = window.gameState?.targetedOreTiles || {};
           
-          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles);
+          // Find closest ore, considering assigned refinery if applicable
+          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles, newUnit.assignedRefinery);
           if (orePos) {
             // Register this ore tile as targeted by this unit
             const tileKey = `${orePos.x},${orePos.y}`;
@@ -295,16 +324,27 @@ export const productionQueue = {
             }
           }
         }
+      } else {
+        // Handle spawn failure (e.g., no valid position)
+        console.warn(`Failed to spawn ${unitType} from factory ${spawnFactory.id || spawnFactory.type}`);
+        // Optional: Refund cost?
+        // gameState.money += unitCosts[unitType] || 0;
+        // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible
+        showNotification(`Spawn failed for ${unitType}. Area might be blocked.`);
       }
+    } else {
+      console.error(`Could not find appropriate factory to spawn ${unitType}.`);
+      // Optional: Refund cost?
     }
     
     // Reset and start next production
     this.currentUnit.button.classList.remove('active', 'paused');
     this.currentUnit = null;
+    
+    // Start next if available
     if (this.unitItems.length > 0) {
       this.startNextUnitProduction();
     }
-    playSound('productionComplete');
   },
   
   completeCurrentBuildingProduction: function() {

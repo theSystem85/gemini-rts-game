@@ -173,6 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
 (x) For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
 (-) For harvesters to be build it is required to have a refinery and a vehicle factory.
 (-) Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically.
@@ -194,8 +195,6 @@ Open Features:
 (-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
 (-) make tank_v2 get 30% more health as tank_v1.
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
-
-Newly Closed Features:
 (x) improve sidebar
 (x) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
 (x) Make the map grid visibility to be able to be toggled on and off by pressing "g" key (add this to help menu overlay as well).
