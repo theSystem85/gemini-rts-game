@@ -193,6 +193,7 @@ Open Features:
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
 
 Newly Closed Features:
+(x) improve sidebar
 (x) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
 (x) Make the map grid visibility to be able to be toggled on and off by pressing "g" key (add this to help menu overlay as well).
 (x) Add Force Attack mode so the player can attack his own units or buildings when holding control key and left clicking on a building or unit. When unit(s) are selected and the control key is pressed the movment cursor turns into an attack cursor and then the player can click to attack his own units or buildings.
