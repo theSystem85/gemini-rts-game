@@ -193,6 +193,7 @@ Open Features:
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
 
 Newly Closed Features:
+(x) improve sidebar
 (x) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
 (x) Make the map grid visibility to be able to be toggled on and off by pressing "g" key (add this to help menu overlay as well).
 (x) Add Force Attack mode so the player can attack his own units or buildings when holding control key and left clicking on a building or unit. When unit(s) are selected and the control key is pressed the movment cursor turns into an attack cursor and then the player can click to attack his own units or buildings.
@@ -251,15 +252,16 @@ Newly Closed Features:
 
 Open Bugs:
 (-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
-(-) the energy consuption of the player and the enemy AI is somehow shared. Make sure they have independen energy generation and consumption.
-(-) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (-) image for the concrete wall on map is incorrect.
-(-) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
 (-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 
 Fixed Bugs:
+(x) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
+(x) units move much slower only when moving to the west
+(x) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
+(x) the energy consuption of the player and the enemy AI is somehow shared. Make sure they have independen energy generation and consumption.
 (x) images in build button do not show up immediately after clicking the tab (onyl after 2nd click)
 (x) build menu is clickable even before game was started. Disable the build button until the game gets started. Even the build progress startds before the game got started.
 (x) after scrolling on the map the units get deselected
