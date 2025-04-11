@@ -6,6 +6,15 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="stylesheet" href="./cursors.css">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <style>
+      /* ...existing styles... */
+      .production-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none; /* Prevent clicks */
+      }
+      /* ...existing styles... */
+    </style>
   </head>
   <body>
     <div id="sidebar">
