@@ -6,6 +6,9 @@ import { buildingData } from './buildings.js'
 import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 
+// List of unit types considered vehicles requiring a Vehicle Factory
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank'];
+
 // Enhanced production queue system
 export const productionQueue = {
   unitItems: [],
@@ -71,40 +74,88 @@ export const productionQueue = {
     }
   },
   
+  // Count player's vehicle factories for build speed bonus
+  getVehicleFactoryMultiplier: function() {
+    // Default multiplier is 1x speed if at least one factory exists
+    if (!gameState.buildings || gameState.buildings.length === 0) {
+      return 0; // No factories = 0 multiplier (cannot build)
+    }
+
+    // Count vehicle factories owned by player
+    const vehicleFactories = gameState.buildings.filter(
+      building => building.type === 'vehicleFactory' && building.owner === 'player'
+    );
+
+    // Speed multiplier is the number of factories (1 factory = 1x, 2 = 2x, etc.)
+    // If 0 factories, return 0 to prevent production start.
+    return vehicleFactories.length;
+  },
+
   startNextUnitProduction: function() {
     if (this.unitItems.length === 0 || this.pausedUnit) return;
-    
+
     // Don't start production if game is paused
     if (gameState.gamePaused) {
       return;
     }
-    
+
     const item = this.unitItems[0];
     const cost = unitCosts[item.type] || 0;
-    
+
+    // Check for vehicle factory requirement and multiplier
+    let vehicleMultiplier = 1; // Default multiplier
+    if (vehicleUnitTypes.includes(item.type)) {
+        vehicleMultiplier = this.getVehicleFactoryMultiplier();
+        if (vehicleMultiplier === 0) {
+            // This should ideally be caught by the button disable logic, but acts as a safeguard
+            console.error(`Attempted to start ${item.type} production without a Vehicle Factory.`);
+            showNotification(`Cannot produce ${item.type}: Vehicle Factory required.`);
+            // Cancel this item? Or just wait? Let's remove it and refund.
+            this.unitItems.shift(); // Remove the item
+            gameState.money += cost; // Refund
+            this.updateBatchCounter(item.button, this.unitItems.filter(i => i.button === item.button).length); // Update counter
+            this.startNextUnitProduction(); // Try the next item
+            return;
+        }
+    }
+    // Add specific harvester checks here if needed in the future
+
+
     // Set production duration proportional to cost.
-    const baseDuration = 3000;
-    let duration = baseDuration * (cost / 500);
-    
+    const baseDuration = 3000; // Example base duration
+    let duration = baseDuration * (cost / 500); // Example scaling
+
+    // Apply vehicle factory speedup (if applicable)
+    // Duration is inversely proportional to the multiplier
+    if (vehicleMultiplier > 0) {
+        duration = duration / vehicleMultiplier;
+    }
+
+
     // Apply energy slowdown using the new power penalty formula
     if (gameState.playerPowerSupply < 0) {
       // Use the playerBuildSpeedModifier calculated in updatePowerSupply
       // This is already set to follow the formula: 1 / (1 + (negativePower / 100))
       duration = duration / gameState.playerBuildSpeedModifier;
     }
-    
+
     this.currentUnit = {
       type: item.type,
       button: item.button,
       progress: 0,
       startTime: performance.now(),
       duration: duration,
-      isBuilding: item.isBuilding
+      isBuilding: item.isBuilding // Should always be false here
     }
-    
+
     // Mark button as active
     item.button.classList.add('active');
     playSound('productionStart');
+
+    // Show notification about production speed if multiple factories exist
+    if (vehicleUnitTypes.includes(item.type) && vehicleMultiplier > 1) {
+        showNotification(`${item.type} production speed: ${vehicleMultiplier}x`);
+    }
   },
   
   // Count player's construction yards for build speed bonus

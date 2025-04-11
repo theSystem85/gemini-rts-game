@@ -364,6 +364,35 @@ for (const [type, data] of Object.entries(buildingData)) {
 // Add factory repair cost
 buildingCosts['factory'] = 5000;
 
+// List of unit types considered vehicles requiring a Vehicle Factory
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank'];
+
+// Function to update the enabled/disabled state of vehicle production buttons
+export function updateVehicleButtonStates() {
+  const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
+  const unitButtons = document.querySelectorAll('.production-button[data-unit-type]');
+
+  unitButtons.forEach(button => {
+    const unitType = button.getAttribute('data-unit-type');
+    if (vehicleUnitTypes.includes(unitType)) {
+      if (hasVehicleFactory) {
+        button.classList.remove('disabled');
+        button.title = ''; // Clear tooltip
+      } else {
+        button.classList.add('disabled');
+        button.title = 'Requires Vehicle Factory'; // Add tooltip
+      }
+    }
+    // Potentially add logic here for harvester requirements later
+  });
+}
+
+// Placeholder function to prevent errors - implement later if needed
+export function updateBuildingButtonStates() {
+  // console.log("Checking building button states (placeholder)");
+  // Add logic here if buildings have prerequisites (e.g., Construction Yard for others)
+}
+
 // MODIFIED: Combined production button setup function that handles both unit and building buttons
 function setupAllProductionButtons() {
   console.log("Setting up all production buttons - ONE TIME ONLY");
@@ -381,23 +410,46 @@ function setupAllProductionButtons() {
   
   unitButtons.forEach(button => {
     button.addEventListener('click', () => {
+      // Prevent action if game is paused or button is disabled
+      if (gameState.gamePaused || button.classList.contains('disabled')) {
+        // Optionally show a notification if disabled
+        if (button.classList.contains('disabled')) {
+            showNotification('Cannot produce unit: Required building missing.');
+        }
+        return;
+      }
+
       const unitType = button.getAttribute('data-unit-type');
       const cost = unitCosts[unitType] || 0;
-      
+
+      // Check for Vehicle Factory requirement again just before queuing
+      if (vehicleUnitTypes.includes(unitType)) {
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
+          if (!hasVehicleFactory) {
+              showNotification('Cannot produce unit: Vehicle Factory required.');
+              button.classList.add('disabled'); // Ensure button is disabled visually
+              button.title = 'Requires Vehicle Factory';
+              return; // Stop processing
+          }
+      }
+      // Add specific harvester checks here if needed in the future
+
       if (gameState.money < cost) {
         // Show visual feedback for not enough money
         button.classList.add('error');
         setTimeout(() => button.classList.remove('error'), 300);
         return;
       }
-      
-      // Add to production queue
-      productionQueue.addItem(unitType, button);
+
+      // Add to production queue as a unit
+      productionQueue.addItem(unitType, button, false);
     });
     
     button.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      
+      // Prevent action if game is paused
+      if (gameState.gamePaused) return;
+
       // Check if this button has the current production
       if (productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
         if (!productionQueue.pausedUnit) {
@@ -503,6 +555,10 @@ function setupAllProductionButtons() {
       }
     });
   });
+
+  // Initial update of button states when setting up
+  updateVehicleButtonStates();
+  updateBuildingButtonStates(); // Now defined
 }
 
 // Initialize production tabs without setting up buttons again
@@ -1032,6 +1088,10 @@ gameCanvas.addEventListener('click', (e) => {
 
         // Save player building patterns
         savePlayerBuildPatterns(buildingType);
+
+        // ** ADDED: Update button states after successful placement **
+        updateVehicleButtonStates();
+        updateBuildingButtonStates();
       } else {
         console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`);
         // Play error sound for invalid placement
@@ -1141,7 +1201,14 @@ document.getElementById('sellBtn').addEventListener('click', () => {
 gameCanvas.addEventListener('click', (e) => buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl));
 
 // Add building sell handling to the canvas click event
-gameCanvas.addEventListener('click', (e) => buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, factories, moneyEl));
+gameCanvas.addEventListener('click', (e) => {
+  const sold = buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, factories, moneyEl);
+  // If a building was successfully sold, update button states
+  if (sold) {
+    updateVehicleButtonStates();
+    updateBuildingButtonStates();
+  }
+});
 
 // Helper function to show notifications
 export function showNotification(message, duration = 3000) {
