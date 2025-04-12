@@ -370,10 +370,12 @@ const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank'];
 // Function to update the enabled/disabled state of vehicle production buttons
 export function updateVehicleButtonStates() {
   const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
+  const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === 'player');
   const unitButtons = document.querySelectorAll('.production-button[data-unit-type]');
 
   unitButtons.forEach(button => {
     const unitType = button.getAttribute('data-unit-type');
+    
     if (vehicleUnitTypes.includes(unitType)) {
       if (hasVehicleFactory) {
         button.classList.remove('disabled');
@@ -382,8 +384,16 @@ export function updateVehicleButtonStates() {
         button.classList.add('disabled');
         button.title = 'Requires Vehicle Factory'; // Add tooltip
       }
+    } 
+    else if (unitType === 'harvester') {
+      if (hasVehicleFactory && hasRefinery) {
+        button.classList.remove('disabled');
+        button.title = ''; // Clear tooltip
+      } else {
+        button.classList.add('disabled');
+        button.title = 'Requires Vehicle Factory & Ore Refinery'; // Add tooltip
+      }
     }
-    // Potentially add logic here for harvester requirements later
   });
 }
 
@@ -422,17 +432,36 @@ function setupAllProductionButtons() {
       const unitType = button.getAttribute('data-unit-type');
       const cost = unitCosts[unitType] || 0;
 
-      // Check for Vehicle Factory requirement again just before queuing
+      // Check requirements for the unit type
+      let requirementsMet = true;
+      let requirementText = '';
+
       if (vehicleUnitTypes.includes(unitType)) {
-          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
-          if (!hasVehicleFactory) {
-              showNotification('Cannot produce unit: Vehicle Factory required.');
-              button.classList.add('disabled'); // Ensure button is disabled visually
-              button.title = 'Requires Vehicle Factory';
-              return; // Stop processing
-          }
+        const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
+        if (!hasVehicleFactory) {
+          requirementsMet = false;
+          requirementText = 'Requires Vehicle Factory';
+        }
+      } else if (unitType === 'harvester') {
+        const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player');
+        const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === 'player');
+        if (!hasVehicleFactory || !hasRefinery) {
+          requirementsMet = false;
+          requirementText = 'Requires Vehicle Factory & Ore Refinery';
+        }
       }
-      // Add specific harvester checks here if needed in the future
+
+      // If requirements are not met, disable the button and show tooltip
+      if (!requirementsMet) {
+        showNotification(`Cannot produce ${unitType}: ${requirementText}.`);
+        button.classList.add('disabled');
+        button.title = requirementText;
+        return; // Stop processing
+      }
+
+      // Re-enable button if requirements were previously unmet but now are met
+      button.classList.remove('disabled');
+      button.title = ''; // Clear requirement tooltip
 
       if (gameState.money < cost) {
         // Show visual feedback for not enough money

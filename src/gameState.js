@@ -42,5 +42,8 @@ export const gameState = {
   gridVisible: true,
 
   // Index for round-robin vehicle spawning
-  nextVehicleFactoryIndex: 0
+  nextVehicleFactoryIndex: 0,
+
+  // Refinery state tracking
+  refineryStatus: {} // Tracks which refineries are being used and by which harvester
 }
