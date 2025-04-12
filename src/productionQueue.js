@@ -7,7 +7,7 @@ import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank'];
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3']; // Added V1 and V3
 
 // Enhanced production queue system
 export const productionQueue = {
@@ -264,6 +264,9 @@ export const productionQueue = {
     
     const unitType = this.currentUnit.type;
     let spawnFactory = null;
+    // Find the main player factory to check for a rally point
+    const playerFactory = factories.find(f => f.id === 'player');
+    const rallyPointTarget = playerFactory?.rallyPoint; // Get rally point or undefined
 
     if (vehicleUnitTypes.includes(unitType)) {
       // Find player-owned vehicle factories
@@ -291,11 +294,12 @@ export const productionQueue = {
       }
     } else {
       // For non-vehicles (Harvester), use the main player factory
-      spawnFactory = factories.find(f => f.id === 'player');
+      spawnFactory = playerFactory; // Use the already found playerFactory
     }
 
     if (spawnFactory) {
-      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid);
+      // Pass the rallyPointTarget to spawnUnit
+      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid, rallyPointTarget);
       if (newUnit) {
         units.push(newUnit);
         // Play random unit ready sound
