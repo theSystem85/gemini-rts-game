@@ -17,9 +17,10 @@ import { selectedUnits, cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import {
   checkBulletCollision, triggerExplosion, isAdjacentToFactory, angleDiff, explosions,
   findClosestOre, findAdjacentTile, findPositionWithClearShot, smoothRotateTowardsAngle,
-  hasClearShot, calculateAimAheadPosition
+  hasClearShot, calculateAimAheadPosition, isAdjacentToBuilding, showUnloadingFeedback
 } from './logic.js'
 import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
+import { showNotification } from './main.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
 const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
@@ -470,7 +471,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (unit.type === 'harvester') {
         const unitTileX = Math.floor(unit.x / TILE_SIZE)
         const unitTileY = Math.floor(unit.y / TILE_SIZE)
-        if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting) {
+        
+        // Mining ore logic
+        if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery) {
           if (mapGrid[unitTileY][unitTileX].type === 'ore') {
             const tileKey = `${unitTileX},${unitTileY}`;
             if (!harvestedTiles.has(tileKey)) {
@@ -499,6 +502,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           }
         }
 
+        // Complete harvesting
         if (unit.harvesting) {
           if (now - unit.harvestTimer > 10000) {
             unit.oreCarried++
@@ -515,7 +519,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           }
         }
 
-        if (unit.oreCarried >= HARVESTER_CAPPACITY) {
+        // Find refinery to unload ore when full
+        if (unit.oreCarried >= HARVESTER_CAPPACITY && !unit.unloadingAtRefinery) {
           // Clear targeting when full of ore and returning to base
           if (unit.oreField) {
             const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
@@ -525,49 +530,175 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             unit.oreField = null;
           }
           
-          const targetFactory = unit.owner === 'player'
-            ? factories.find(f => f.id === 'player')
-            : factories.find(f => f.id === 'enemy')
-          if (isAdjacentToFactory(unit, targetFactory)) {
-            if (unit.owner === 'player') {
-              gameState.money += 1000
+          // Find a refinery to unload at
+          const refineries = gameState.buildings.filter(b => 
+            b.type === 'oreRefinery' && 
+            b.owner === unit.owner &&
+            b.health > 0
+          );
+          
+          // If there's no refinery, use the main factory as fallback
+          if (refineries.length === 0) {
+            const targetFactory = unit.owner === 'player'
+              ? factories.find(f => f.id === 'player')
+              : factories.find(f => f.id === 'enemy');
+            
+            if (isAdjacentToFactory(unit, targetFactory)) {
+              if (unit.owner === 'player') {
+                gameState.money += 1000;
+              } else {
+                targetFactory.budget += 1000;
+              }
+              unit.oreCarried = 0;
+              unit.oreField = null;
+              playSound('deposit');
+              const orePos = findClosestOre(unit, mapGrid, targetedOreTiles);
+              if (orePos) {
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+                if (path.length > 1) {
+                  unit.path = path.slice(1);
+                }
+              }
             } else {
-              targetFactory.budget += 1000
-            }
-            unit.oreCarried = 0
-            unit.oreField = null
-            playSound('deposit')
-            const orePos = findClosestOre(unit, mapGrid)
-            if (orePos) {
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
-              if (path.length > 1) {
-                unit.path = path.slice(1)
+              const unloadTarget = findAdjacentTile(targetFactory, mapGrid);
+              if (unloadTarget && (!unit.path || unit.path.length === 0)) {
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap);
+                if (path.length > 1) {
+                  unit.path = path.slice(1);
+                }
               }
             }
           } else {
-            const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
-            if (unloadTarget) {
-              if (!unit.path || unit.path.length === 0) {
-                const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap)
-                if (path.length > 1) {
-                  unit.path = path.slice(1)
+            // Find an available refinery (not in use by another harvester)
+            let targetRefinery = null;
+            let targetUnloadTile = null;
+            
+            // Check for assigned refinery first
+            if (unit.assignedRefinery) {
+              const assignedRefinery = refineries.find(r => r.id === unit.assignedRefinery);
+              if (assignedRefinery) {
+                targetRefinery = assignedRefinery;
+              }
+            }
+            
+            // If no assigned refinery or it's not found, find the closest available one
+            if (!targetRefinery) {
+              for (const refinery of refineries) {
+                const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`;
+                
+                // Check if this refinery is being used
+                if (!gameState.refineryStatus[refineryId] || gameState.refineryStatus[refineryId] === unit.id) {
+                  const adjacentTile = findAdjacentTile(refinery, mapGrid);
+                  if (adjacentTile) {
+                    if (!targetRefinery) {
+                      targetRefinery = refinery;
+                      targetUnloadTile = adjacentTile;
+                    } else {
+                      // Compare distances to choose the closest refinery
+                      const currentDist = Math.hypot(unit.tileX - adjacentTile.x, unit.tileY - adjacentTile.y);
+                      const bestDist = Math.hypot(unit.tileX - targetUnloadTile.x, unit.tileY - targetUnloadTile.y);
+                      if (currentDist < bestDist) {
+                        targetRefinery = refinery;
+                        targetUnloadTile = adjacentTile;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            
+            // If all refineries are in use, pick any refinery to queue at
+            if (!targetRefinery && refineries.length > 0) {
+              targetRefinery = refineries[0];
+              targetUnloadTile = findAdjacentTile(targetRefinery, mapGrid);
+            }
+            
+            if (targetRefinery && targetUnloadTile) {
+              const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`;
+              
+              // Check if harvester is already adjacent to the refinery
+              if (isAdjacentToBuilding(unit, targetRefinery)) {
+                // If the refinery is free or this unit is already using it, start unloading
+                if (!gameState.refineryStatus[refineryId] || gameState.refineryStatus[refineryId] === unit.id) {
+                  // Mark this refinery as in use by this harvester
+                  gameState.refineryStatus[refineryId] = unit.id;
+                  
+                  // Start unloading process (takes 20 seconds)
+                  unit.unloadingAtRefinery = true;
+                  unit.unloadStartTime = now;
+                  unit.unloadRefinery = refineryId;
+                  unit.path = []; // Clear path while unloading
+                  
+                  // Show visual feedback
+                  showUnloadingFeedback(unit, targetRefinery);
+                }
+                // If the refinery is being used by another harvester, wait nearby
+                // The harvester stays in place, which effectively means it's queued
+              } else {
+                // Move to the refinery if not already there
+                if (!unit.path || unit.path.length === 0) {
+                  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetUnloadTile, mapGrid, occupancyMap);
+                  if (path.length > 1) {
+                    unit.path = path.slice(1);
+                  }
                 }
               }
             }
           }
         }
         
+        // Handle unloading at refinery
+        if (unit.unloadingAtRefinery && unit.unloadStartTime) {
+          // Unloading takes 20 seconds
+          if (now - unit.unloadStartTime >= 20000) {
+            // Unloading complete
+            if (unit.owner === 'player') {
+              gameState.money += 1000;
+            } else if (unit.owner === 'enemy') {
+              const enemyFactory = factories.find(f => f.id === 'enemy');
+              if (enemyFactory) {
+                enemyFactory.budget += 1000;
+              }
+            }
+            
+            // Clear refinery usage
+            if (unit.unloadRefinery) {
+              delete gameState.refineryStatus[unit.unloadRefinery];
+            }
+            
+            // Reset harvester state
+            unit.oreCarried = 0;
+            unit.unloadingAtRefinery = false;
+            unit.unloadStartTime = null;
+            unit.unloadRefinery = null;
+            playSound('deposit');
+            
+            // Find next ore tile
+            const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery);
+            if (orePos) {
+              const tileKey = `${orePos.x},${orePos.y}`;
+              targetedOreTiles[tileKey] = unit.id;
+              
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+              if (path.length > 1) {
+                unit.path = path.slice(1);
+              }
+            }
+          }
+        }
+        
         // After unloading, find a new ore tile that's not targeted
-        if (unit.oreCarried === 0 && !unit.harvesting && (!unit.path || unit.path.length === 0)) {
-          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles)
+        if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery && 
+            (!unit.path || unit.path.length === 0)) {
+          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery);
           if (orePos) {
             // Mark this ore tile as targeted by this unit
             const tileKey = `${orePos.x},${orePos.y}`;
             targetedOreTiles[tileKey] = unit.id;
             
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
             if (path.length > 1) {
-              unit.path = path.slice(1)
+              unit.path = path.slice(1);
             }
           }
         }

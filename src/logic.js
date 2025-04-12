@@ -195,6 +195,40 @@ export function isAdjacentToFactory(unit, factory) {
   return false
 }
 
+// Checks if a unit is adjacent to a building (similar to isAdjacentToFactory but for any building)
+export function isAdjacentToBuilding(unit, building) {
+  const unitTileX = Math.floor(unit.x / TILE_SIZE);
+  const unitTileY = Math.floor(unit.y / TILE_SIZE);
+  
+  // Check if unit is adjacent to any tile of the building
+  for (let y = building.y - 1; y <= building.y + building.height; y++) {
+    for (let x = building.x - 1; x <= building.x + building.width; x++) {
+      // Skip tiles that are inside the building
+      if (x >= building.x && x < building.x + building.width && 
+          y >= building.y && y < building.y + building.height) {
+        continue;
+      }
+      
+      // Check if unit is on this adjacent tile
+      if (unitTileX === x && unitTileY === y) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+// Visual feedback when a harvester is unloading at a refinery
+export function showUnloadingFeedback(unit, refinery) {
+  // This function would ideally create a visual effect like a small animation
+  // or particle effect showing ore unloading at the refinery
+  // For now, we'll just log this activity
+  console.log(`Harvester ${unit.id} unloading at refinery at (${refinery.x},${refinery.y})`);
+  
+  // Add any visual effects here in the future
+}
+
 export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
   let closest = null
   let closestDist = Infinity
