@@ -278,94 +278,54 @@ function getNeighbors(node, mapGrid) {
   return neighbors
 }
 
-// Spawns a unit at the center ("under") of the factory.
-export function spawnUnit(factory, type, units, mapGrid) {
-  // Check if player has enough money
-  const unitCost = {
-    'tank': 1000,
-    'rocketTank': 2000,
-    'harvester': 500,
-    'tank-v2': 2000 // Update cost to $2000
-  };
+// Spawns a unit near the specified factory.
+// Accepts an optional rallyPointTarget from the main player factory.
+export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null) {
+  // Determine the center of the factory/building for spawn proximity check
+  const factoryCenterX = factory.x + Math.floor(factory.width / 2);
+  const factoryCenterY = factory.y + Math.floor(factory.height / 2);
 
-  const spawnX = factory.x + Math.floor(factory.width / 2);
-  const spawnY = factory.y + Math.floor(factory.height / 2);
-  
-  // First try direct spawn at factory exit point (just below the factory)
-  const exitX = spawnX;
-  const exitY = spawnY + 1; // Position below factory
-  
-  // Check if exit is blocked by another unit and try to move it
-  const exitBlocked = units.some(unit => 
-    Math.floor(unit.x / TILE_SIZE) === exitX && 
-    Math.floor(unit.y / TILE_SIZE) === exitY
-  );
-  
-  // If exit is blocked, try to move blocking units as per requirement 3.1.7
-  if (exitBlocked) {
-    const success = moveBlockingUnits(exitX, exitY, units, mapGrid);
-    if (success) {
-      // Successfully moved blocking unit, spawn at exit
-      const newUnit = createUnit(factory, type, exitX, exitY);
-      
-      // If factory has a rally point, set unit's path to it
-      if (factory.rallyPoint) {
-        const path = findPath(
-          { x: exitX, y: exitY },
-          { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
-          mapGrid,
-          null
-        );
-        if (path.length > 1) {
-          newUnit.path = path.slice(1);
-        }
-      }
-      
-      return newUnit;
-    }
-  } else if (isPositionValid(exitX, exitY, mapGrid, units)) {
-    // Exit is free, spawn there
-    const newUnit = createUnit(factory, type, exitX, exitY);
-    
-    // If factory has a rally point, set unit's path to it
-    if (factory.rallyPoint) {
-      const path = findPath(
-        { x: exitX, y: exitY },
-        { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
-        mapGrid,
-        null
-      );
-      if (path.length > 1) {
-        newUnit.path = path.slice(1);
-      }
-    }
-    playSound('unitReady')
-    
-    return newUnit;
-  }
-  
-  // If direct exit spawn failed, find another position
-  const spawnPosition = findAvailableSpawnPosition(factory, mapGrid, units);
+  // Find an available spawn position near the factory's center
+  const spawnPosition = findAvailableSpawnPosition(factoryCenterX, factoryCenterY, mapGrid, units);
+
   if (!spawnPosition) {
-    console.warn('No available spawn position for new unit');
+    console.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`);
     return null; // Return null if no position is available
   }
-  
+
   const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y);
-  
-  // If factory has a rally point, set unit's path to it
-  if (factory.rallyPoint) {
+
+  // If a rally point target was provided (from the main player factory), set the unit's path to it.
+  // This overrides any rally point the specific spawn building might have (though they shouldn't).
+  // Harvesters handle their own initial path logic in productionQueue.js
+  if (rallyPointTarget && type !== 'harvester') {
     const path = findPath(
       { x: spawnPosition.x, y: spawnPosition.y },
-      { x: factory.rallyPoint.x, y: factory.rallyPoint.y },
+      { x: rallyPointTarget.x, y: rallyPointTarget.y },
       mapGrid,
-      null
+      null // Pass null for occupancyMap initially, pathfinding handles collisions
     );
-    if (path.length > 1) {
+    if (path && path.length > 1) {
       newUnit.path = path.slice(1);
+      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y }; // Store final destination
+    } else if (path && path.length === 1) {
+      // If the rally point is the spawn point itself (unlikely but possible)
+      newUnit.path = [];
+      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y };
+    } else {
+        console.warn(`Could not find path from spawn (${spawnPosition.x}, ${spawnPosition.y}) to rally point (${rallyPointTarget.x}, ${rallyPointTarget.y}) for ${type}`);
     }
   }
   
+  // Play unit ready sound (moved here from productionQueue for consistency)
+  // Note: Harvester initial path logic is in productionQueue, so sound plays there.
+  // Consider moving harvester sound here too if spawnUnit handles initial harvester path.
+  // if (type !== 'harvester') { // Only play if not a harvester (handled in productionQueue)
+  //   const readySounds = ['unitReady01', 'unitReady02', 'unitReady03'];
+  //   const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)];
+  //   playSound(randomSound, 1.0);
+  // }
+
   return newUnit;
 }
 
@@ -440,32 +400,28 @@ function createUnit(factory, unitType, x, y) {
   return unit;
 }
 
-// Find an available position near the factory for unit spawn
-function findAvailableSpawnPosition(factory, mapGrid, units) {
-  // First, try positions around the factory in a spiral pattern
+// Find an available position near the factory center for unit spawn
+function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
+  // First, try positions around the factory center in a spiral pattern
   const directions = [
     { x: 0, y: 1 },  // south
     { x: 1, y: 0 },  // east
     { x: 0, y: -1 }, // north
-    { x: -1, y: 0 }  // west
+    { x: -1, y: 0 },  // west
     // Add diagonals for more options
-    ,{ x: 1, y: 1 },  // southeast
+    { x: 1, y: 1 },  // southeast
     { x: 1, y: -1 },  // northeast
     { x: -1, y: -1 }, // northwest
     { x: -1, y: 1 }   // southwest
   ];
   
-  // Factory center and dimensions
-  const factoryX = factory.x + Math.floor(factory.width / 2);
-  const factoryY = factory.y + Math.floor(factory.height / 2);
-  
-  // Check immediate surrounding tiles first (1 tile away)
-  for (let distance = 1; distance <= 5; distance++) {
+  // Check immediate surrounding tiles first (1 tile away from center)
+  for (let distance = 1; distance <= 5; distance++) { // Check up to 5 tiles away initially
     for (const dir of directions) {
       const x = factoryX + dir.x * distance;
       const y = factoryY + dir.y * distance;
       
-      // Check if position is valid
+      // Check if position is valid (passable terrain, within bounds, not occupied)
       if (isPositionValid(x, y, mapGrid, units)) {
         return { x, y };
       }
@@ -473,12 +429,13 @@ function findAvailableSpawnPosition(factory, mapGrid, units) {
   }
   
   // If we couldn't find a position in the immediate vicinity,
-  // expand the search with a more thorough approach
-  for (let distance = 1; distance <= 10; distance++) {
-    // Check in a square pattern around the factory
+  // expand the search with a more thorough approach (larger radius)
+  // This part might be less necessary if the initial check is sufficient
+  for (let distance = 6; distance <= 10; distance++) { // Expand search up to 10 tiles
+    // Check in a square pattern around the factory center
     for (let dx = -distance; dx <= distance; dx++) {
       for (let dy = -distance; dy <= distance; dy++) {
-        // Skip positions we've already checked (inner square)
+        // Skip positions not on the perimeter of the current distance square
         if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue;
         
         const x = factoryX + dx;
