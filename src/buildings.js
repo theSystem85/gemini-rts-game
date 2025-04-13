@@ -62,7 +62,7 @@ export const buildingData = {
     damage: 20, // Same as regular tank
     armor: 1,
     projectileType: 'bullet',
-    projectileSpeed: 6, // Increased from 3 to 6
+    projectileSpeed: 12, // 4x faster (was 3)
     useAimAhead: true // Enable aim-ahead feature for this turret
   },
   turretGunV2: {
@@ -79,7 +79,7 @@ export const buildingData = {
     damage: 24, // Same as tank-v2 (20% more than V1)
     armor: 1,
     projectileType: 'bullet',
-    projectileSpeed: 7, // Increased from 3 to 7
+    projectileSpeed: 16, // 4x faster (was 4)
     useAimAhead: true // Enable aim-ahead feature for this turret
   },
   turretGunV3: {
@@ -96,7 +96,7 @@ export const buildingData = {
     damage: 30, // Higher damage
     armor: 1.5,
     projectileType: 'bullet',
-    projectileSpeed: 8, // Increased from 4 to 8
+    projectileSpeed: 20, // 4x faster (was 5)
     burstFire: true, // Special feature: fires 3 shots in quick succession
     burstCount: 3, 
     burstDelay: 150, // ms between burst shots
@@ -116,7 +116,7 @@ export const buildingData = {
     damage: 40,
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
-    projectileSpeed: 6 // Increased from 4 to 6
+    projectileSpeed: 20 // 4x faster (was 5)
       },
   teslaCoil: {
     width: 2,
@@ -192,6 +192,44 @@ export function createBuilding(type, x, y) {
   }
   
   return building;
+}
+
+// Helper to create defensive buildings with standardized properties
+function createDefensiveBuilding(type, x, y) {
+  const building = createBuilding(type, x, y);
+
+  // Add defensive building properties
+  switch(type) {
+    case 'turretGunV1':
+      building.damage = 15;
+      building.fireRange = 8;
+      building.fireCooldown = 2000;
+      building.projectileSpeed = 12; // 4x faster (was 3)
+      break;
+    case 'turretGunV2':
+      building.damage = 20;
+      building.fireRange = 9;
+      building.fireCooldown = 1800;
+      building.projectileSpeed = 16; // 4x faster (was 4)
+      building.aimAhead = true; // Basic aim-ahead capability
+      break;
+    case 'turretGunV3':
+      building.damage = 30;
+      building.fireRange = 10;
+      building.projectileSpeed = 20; // 4x faster (was 5)
+      building.fireCooldown = 2200;
+      building.burstFire = true;
+      building.burstCount = 3;
+      building.burstDelay = 200;
+      building.useAimAhead = true; // Advanced aim-ahead
+      break;
+    case 'rocketTurret':
+      building.damage = 40;
+      building.fireRange = 12;
+      building.fireCooldown = 3000;
+      building.projectileSpeed = 20; // 4x faster (was 5)
+      break;
+  }
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building

@@ -118,11 +118,9 @@ export const productionQueue = {
             return;
         }
     }
-    // Add specific harvester checks here if needed in the future
-
 
     // Set production duration proportional to cost.
-    const baseDuration = 3000; // Example base duration
+    const baseDuration = 3000; // Restore to original (was 750 for 4x faster)
     let duration = baseDuration * (cost / 500); // Example scaling
 
     // Apply vehicle factory speedup (if applicable)
@@ -131,13 +129,16 @@ export const productionQueue = {
         duration = duration / vehicleMultiplier;
     }
 
-
     // Apply energy slowdown using the new power penalty formula
     if (gameState.playerPowerSupply < 0) {
       // Use the playerBuildSpeedModifier calculated in updatePowerSupply
       // This is already set to follow the formula: 1 / (1 + (negativePower / 100))
       duration = duration / gameState.playerBuildSpeedModifier;
     }
+
+    // Apply game speed multiplier to build speed
+    // Lower duration = faster build, so we divide by the speed multiplier
+    duration = duration / gameState.speedMultiplier;
 
     this.currentUnit = {
       type: item.type,
@@ -187,7 +188,7 @@ export const productionQueue = {
     const cost = buildingCosts[item.type] || 0;
     
     // Set production duration proportional to cost
-    const baseDuration = 3000;
+    const baseDuration = 750; // 4x faster (was 3000)
     let duration = baseDuration * (cost / 500);
     
     // Apply construction yard speedup
@@ -200,6 +201,10 @@ export const productionQueue = {
       // This is already set to follow the formula: 1 / (1 + (negativePower / 100))
       duration = duration / gameState.playerBuildSpeedModifier;
     }
+    
+    // Apply game speed multiplier to building speed
+    // Lower duration = faster build, so we divide by the speed multiplier
+    duration = duration / gameState.speedMultiplier;
     
     this.currentBuilding = {
       type: item.type,
@@ -228,7 +233,8 @@ export const productionQueue = {
     
     // Update unit production
     if (this.currentUnit && !this.pausedUnit) {
-      const elapsed = timestamp - this.currentUnit.startTime;
+      // Apply game speed multiplier to the elapsed time calculation
+      const elapsed = (timestamp - this.currentUnit.startTime) * gameState.speedMultiplier;
       const progress = Math.min(elapsed / this.currentUnit.duration, 1);
       this.currentUnit.progress = progress;
       const progressBar = this.currentUnit.button.querySelector('.production-progress');
@@ -242,7 +248,8 @@ export const productionQueue = {
     
     // Update building production
     if (this.currentBuilding && !this.pausedBuilding) {
-      const elapsed = timestamp - this.currentBuilding.startTime;
+      // Apply game speed multiplier to the elapsed time calculation
+      const elapsed = (timestamp - this.currentBuilding.startTime) * gameState.speedMultiplier;
       const progress = Math.min(elapsed / this.currentBuilding.duration, 1);
       this.currentBuilding.progress = progress;
       const progressBar = this.currentBuilding.button.querySelector('.production-progress');
