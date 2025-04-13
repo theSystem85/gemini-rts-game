@@ -340,7 +340,7 @@ function createUnit(factory, unitType, x, y) {
     tileY: y,
     x: x * TILE_SIZE,
     y: y * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 1 : 2, // Base speed, adjust per type below
+    speed: (unitType === 'harvester') ? 0.25 : 0.5, // 4x slower - Base speed, adjust per type below
     health: (unitType === 'harvester') ? 150 : 100, // Base health, adjust per type below
     maxHealth: (unitType === 'harvester') ? 150 : 100, // Base maxHealth, adjust per type below
     path: [],
@@ -348,8 +348,6 @@ function createUnit(factory, unitType, x, y) {
     selected: false,
     oreCarried: 0,
     harvesting: false,
-    spawnTime: Date.now(),
-    spawnedInFactory: false, // This might need adjustment based on spawn logic
     // Add rotation properties for all unit types
     direction: 0, // Angle in radians (0 = east, PI/2 = south)
     targetDirection: 0,
@@ -361,24 +359,24 @@ function createUnit(factory, unitType, x, y) {
 
   // Apply unit-specific properties
   if (unitType === 'tank-v2') {
-    unit.speed = 1.5
+    unit.speed = 0.375  // 4x slower (was 1.5)
     unit.rotationSpeed = 0.15
     unit.alertMode = true  // Start tank-v2 in alert mode by default
     unit.health = 130; // 30% more health than tank_v1
     unit.maxHealth = 130;
   } else if (unitType === 'tank' || unitType === 'tank_v1') { // Handle both names
     unit.type = 'tank_v1'; // Standardize type name
-    unit.speed = 1.5
+    unit.speed = 0.375  // 4x slower (was 1.5)
     unit.rotationSpeed = 0.15
     unit.health = 100;
     unit.maxHealth = 100;
   } else if (unitType === 'rocketTank') {
-    unit.speed = 1.3
+    unit.speed = 0.325  // 4x slower (was 1.3)
     unit.rotationSpeed = 0.12
     unit.health = 100; // Assuming base health for now
     unit.maxHealth = 100;
   } else if (unitType === 'harvester') {
-    unit.speed = 1.8 // Harvesters are faster now? Adjust if needed.
+    unit.speed = 0.45  // 4x slower (was 1.8)
     unit.rotationSpeed = 0.2
     unit.oreCarried = 0
     unit.harvesting = false
@@ -388,14 +386,13 @@ function createUnit(factory, unitType, x, y) {
   }
   // Add tank_v3 properties if defined
   else if (unitType === 'tank-v3') {
-      unit.speed = 1.5;
+      unit.speed = 0.375;  // 4x slower (was 1.5)
       unit.rotationSpeed = 0.15;
       unit.alertMode = true; // Assuming V3 also has alert mode
       unit.health = 169; // 30% more than tank-v2 (130 * 1.3)
       unit.maxHealth = 169;
       unit.useAimAhead = true; // Explicitly enable AAF
   }
-
 
   return unit;
 }

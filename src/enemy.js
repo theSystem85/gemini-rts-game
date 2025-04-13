@@ -494,7 +494,7 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     tileY: spawnY,
     x: spawnX * TILE_SIZE,
     y: spawnY * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 1 : 2,
+    speed: (unitType === 'harvester') ? 0.375 : 0.75, // 50% faster
     health: (unitType === 'harvester') ? 150 : 100,
     maxHealth: (unitType === 'harvester') ? 150 : 100,
     path: [],
@@ -514,14 +514,14 @@ export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
     turretDirection: 0,
     rotationSpeed: 0.1,
     isRotating: false,
-    effectiveSpeed: 0.5
+    effectiveSpeed: 0.75
   }
   if (unitType === 'harvester') {
-    unit.effectiveSpeed = 0.4
+    unit.effectiveSpeed = 0.15  // 50% faster
   } else if (unitType === 'rocketTank') {
-    unit.effectiveSpeed = 0.3
+    unit.effectiveSpeed = 0.1125  // 50% faster
   } else {
-    unit.effectiveSpeed = 0.35
+    unit.effectiveSpeed = 0.13125  // 50% faster
   }
   return unit
 }

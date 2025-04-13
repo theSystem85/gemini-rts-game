@@ -15,7 +15,7 @@ export const gameState = {
   enemyLastProductionTime: performance.now(),
   lastOreUpdate: performance.now(),
   explosions: [],  // Initialized empty explosions array for visual effects.
-  speedMultiplier: 0.25,  // Changed from 1.0 to 0.5
+  speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],
   powerSupply: 0,
@@ -38,8 +38,8 @@ export const gameState = {
   // Radar station status - initialize to false (no radar at game start)
   radarActive: false,
   
-  // Grid visibility toggle - initialize to true (grid visible by default)
-  gridVisible: true,
+  // Grid visibility toggle - initialize to false (grid hidden by default)
+  gridVisible: false,
 
   // Index for round-robin vehicle spawning
   nextVehicleFactoryIndex: 0,

@@ -270,7 +270,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
-                  speed: 3,
+                  speed: 12, // 4x faster (was 3)
                   baseDamage: 20,
                   active: true,
                   shooter: unit,
@@ -294,7 +294,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
-                  speed: 3,
+                  speed: 12, // 4x faster (was 3)
                   baseDamage: 24, // 20% more damage than regular tank
                   active: true,
                   shooter: unit,
@@ -331,7 +331,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
-                  speed: 5, // Increased from 2 to 5 for 2.5x faster rockets
+                  speed: 20, // 4x faster (was 5)
                   baseDamage: 40,
                   active: true,
                   shooter: unit,
@@ -974,8 +974,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           continue
         }
       } else {
-        bullet.x += bullet.vx
-        bullet.y += bullet.vy
+        // For non-homing projectiles, apply the effectiveSpeed to movement
+        const dx = Math.cos(Math.atan2(bullet.vy, bullet.vx));
+        const dy = Math.sin(Math.atan2(bullet.vy, bullet.vx));
+        bullet.x += dx * bullet.effectiveSpeed;
+        bullet.y += dy * bullet.effectiveSpeed;
+        
         const hitTarget = checkBulletCollision(bullet, units, factories, gameState)
         if (hitTarget) {
           const factor = 0.8 + Math.random() * 0.4
@@ -1164,7 +1168,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         return; // Wait for next burst shot
       }
       
-      // Calculate effective cooldown based on power situation
+      // Calculate effective cooldown based on power situation and game speed
       let effectiveCooldown = building.fireCooldown;
       
       // Apply power slowdown for defensive buildings using the new build speed modifier
@@ -1176,6 +1180,10 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         // Apply enemy build speed modifier to turret cooldown
         effectiveCooldown = building.fireCooldown / gameState.enemyBuildSpeedModifier;
       }
+      
+      // Apply game speed multiplier to firing cooldown
+      // Lower cooldown = faster firing rate, so we divide by the speed multiplier
+      effectiveCooldown = effectiveCooldown / gameState.speedMultiplier;
       
       // Only fire if cooldown has elapsed
       if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
