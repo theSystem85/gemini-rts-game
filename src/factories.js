@@ -16,7 +16,7 @@ export function initFactories(factories, mapGrid) {
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
-    budget: 0
+    budget: 10000
   }
   // Position enemy factory at least 5 tiles from top and right.
   const enemyFactory = {
@@ -28,7 +28,7 @@ export function initFactories(factories, mapGrid) {
     health: 1000,
     maxHealth: 1000,
     productionCountdown: 0,
-    budget: 5000
+    budget: 10000
   }
   factories.push(playerFactory, enemyFactory)
 
