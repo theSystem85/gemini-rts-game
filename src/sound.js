@@ -81,7 +81,6 @@ function playAssetSound(category, volume = 1.0) {
 }
 
 export function playSound(eventName, volume = 1.0) {
-  console.log('playSound', eventName, volume)
   if (!audioContext) return
   const category = soundMapping[eventName]
   if (category) {

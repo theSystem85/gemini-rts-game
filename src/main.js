@@ -464,14 +464,8 @@ function setupAllProductionButtons() {
       button.classList.remove('disabled');
       button.title = ''; // Clear requirement tooltip
 
-      if (gameState.money < cost) {
-        // Show visual feedback for not enough money
-        button.classList.add('error');
-        setTimeout(() => button.classList.remove('error'), 300);
-        return;
-      }
-
-      // Add to production queue as a unit
+      // Remove money check and error feedback here!
+      // Always allow queuing:
       productionQueue.addItem(unitType, button, false);
     });
     
@@ -495,7 +489,7 @@ function setupAllProductionButtons() {
           if (productionQueue.unitItems[i].button === button) {
             // Return money for the cancelled production
             gameState.money += unitCosts[productionQueue.unitItems[i].type] || 0;
-            
+            productionQueue.tryResumeProduction();
             // Remove from queue
             productionQueue.unitItems.splice(i, 1);
             
@@ -533,14 +527,8 @@ function setupAllProductionButtons() {
       
       const cost = buildingCosts[buildingType] || 0;
       
-      if (gameState.money < cost) {
-        // Show visual feedback for not enough money
-        button.classList.add('error');
-        setTimeout(() => button.classList.remove('error'), 300);
-        return;
-      }
-      
-      // Add to production queue as a building
+      // Remove money check and error feedback here!
+      // Always allow queuing:
       productionQueue.addItem(buildingType, button, true);
     });
     
@@ -568,7 +556,7 @@ function setupAllProductionButtons() {
           if (productionQueue.buildingItems[i].button === button) {
             // Return money for the cancelled production
             gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0;
-            
+            productionQueue.tryResumeProduction();
             // Remove from queue
             productionQueue.buildingItems.splice(i, 1);
             
@@ -989,7 +977,7 @@ gameCanvas.addEventListener('click', (e) => {
       // Perform the repair - use gradual repair system instead of instant repair
       gameState.money -= repairCost;
       moneyEl.textContent = gameState.money;
-      
+      productionQueue.tryResumeProduction();
       // Create repair info for factory
       if (!gameState.buildingsUnderRepair) {
         gameState.buildingsUnderRepair = [];
@@ -1049,6 +1037,7 @@ gameCanvas.addEventListener('click', (e) => {
           showNotification(`Building repaired for $${result.cost}`);
           playSound('construction_started');
           moneyEl.textContent = gameState.money;
+          productionQueue.tryResumeProduction();
         } else {
           showNotification(result.message);
         }

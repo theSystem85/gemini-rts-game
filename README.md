@@ -173,6 +173,10 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(x) ensure money for builds is gradually spend during build process
+(-) REFACTOR: move all constants into config.
+(x) lower harvester unload time to 10s.
+(-) increase map scroll speed by 3x.
 (x) Add save and load game functionality with a menu containing a list with save games and their labels.
 (-) Ensure that production queues for buildings and units can be filled even when no more money is available. Ensure the money is only charged when production is actually starting.
 (x) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
