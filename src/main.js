@@ -22,6 +22,7 @@ import { initBackgroundMusic } from './sound.js'
 import { preloadBuildingImages } from './buildingImageMap.js'
 import { buildingRepairHandler } from './buildingRepairHandler.js'
 import { buildingSellHandler } from './buildingSellHandler.js'
+import { createUnit } from './units.js'
 
 // Initialize loading states
 let texturesLoaded = false;
@@ -223,8 +224,8 @@ function generateMap(seed) {
   for (let i = 0; i < lakeCount; i++) {
     const centerX = Math.floor(rand() * MAP_TILES_X);
     const centerY = Math.floor(rand() * MAP_TILES_Y);
+    lakeCenters.push({ x: centerX, y: centerY });
     const radius = Math.floor(rand() * 4) + 4; // radius between 4 and 7
-    lakeCenters.push({ x: centerX, y: centerY, radius });
     for (let y = Math.max(0, centerY - radius); y < Math.min(MAP_TILES_Y, centerY + radius); y++) {
       for (let x = Math.max(0, centerX - radius); x < Math.min(MAP_TILES_X, centerX + radius); x++) {
         const dx = x - centerX, dy = y - centerY;
@@ -1309,3 +1310,181 @@ export function savePlayerBuildPatterns(buildingType) {
     console.error("Error saving player build patterns:", error);
   }
 }
+
+// === Save/Load Game Logic ===
+function getSaveGames() {
+  const saves = [];
+  for (let key in localStorage) {
+    if (key.startsWith('rts_save_')) {
+      try {
+        const save = JSON.parse(localStorage.getItem(key));
+        saves.push({
+          key,
+          label: save.label || '(no label)',
+          time: save.time,
+        });
+      } catch {}
+    }
+  }
+  // Sort by most recent
+  saves.sort((a, b) => b.time - a.time);
+  return saves;
+}
+
+function saveGame(label) {
+  // Gather enemy money (budget)
+  const enemyFactory = factories.find(f => f.id === 'enemy');
+  const enemyMoney = enemyFactory ? enemyFactory.budget : 0;
+
+  // Gather all units (player and enemy)
+  const allUnits = units.map(u => ({
+    type: u.type,
+    owner: u.owner,
+    x: u.x,
+    y: u.y,
+    health: u.health,
+    maxHealth: u.maxHealth,
+    id: u.id,
+    // Add more fields if needed (e.g., oreCarried, groupNumber, etc.)
+  }));
+
+  // Gather all buildings (player and enemy)
+  const allBuildings = gameState.buildings.map(b => ({
+    type: b.type,
+    owner: b.owner,
+    x: b.x,
+    y: b.y,
+    width: b.width,
+    height: b.height,
+    health: b.health,
+    maxHealth: b.maxHealth,
+    id: b.id,
+    // Add more fields if needed
+  }));
+
+  // Gather all ore positions
+  const orePositions = [];
+  for (let y = 0; y < mapGrid.length; y++) {
+    for (let x = 0; x < mapGrid[y].length; x++) {
+      if (mapGrid[y][x].type === 'ore') {
+        orePositions.push({ x, y });
+      }
+    }
+  }
+
+  // Save everything in a single object
+  const saveData = {
+    gameState: { ...gameState },
+    enemyMoney,
+    units: allUnits,
+    buildings: allBuildings,
+    orePositions,
+  };
+
+  const saveObj = {
+    label: label || 'Unnamed',
+    time: Date.now(),
+    state: JSON.stringify(saveData),
+  };
+  localStorage.setItem('rts_save_' + saveObj.label, JSON.stringify(saveObj));
+}
+
+function loadGame(key) {
+  const saveObj = JSON.parse(localStorage.getItem(key));
+  if (saveObj && saveObj.state) {
+    const loaded = JSON.parse(saveObj.state);
+    Object.assign(gameState, loaded.gameState);
+    const enemyFactory = factories.find(f => f.id === 'enemy');
+    if (enemyFactory && typeof loaded.enemyMoney === 'number') {
+      enemyFactory.budget = loaded.enemyMoney;
+    }
+    units.length = 0;
+    loaded.units.forEach(u => {
+      // Rehydrate unit using createUnit logic
+      // Find the factory for owner (player/enemy)
+      let factory = factories.find(f => (f.owner === u.owner || f.id === u.owner));
+      if (!factory) {
+        // fallback: use first factory of that owner
+        factory = factories.find(f => f.owner === u.owner) || factories[0];
+      }
+      // Use tileX/tileY if present, else calculate from x/y
+      const tileX = u.tileX !== undefined ? u.tileX : Math.floor(u.x / TILE_SIZE);
+      const tileY = u.tileY !== undefined ? u.tileY : Math.floor(u.y / TILE_SIZE);
+      const hydrated = createUnit(factory, u.type, tileX, tileY);
+      // Copy over all saved properties (health, id, etc.)
+      Object.assign(hydrated, u);
+      // Ensure tileX/tileY/x/y are consistent
+      hydrated.tileX = tileX;
+      hydrated.tileY = tileY;
+      hydrated.x = u.x;
+      hydrated.y = u.y;
+      // Ensure path is always an array
+      if (!Array.isArray(hydrated.path)) hydrated.path = [];
+      units.push(hydrated);
+    });
+    gameState.buildings.length = 0;
+    loaded.buildings.forEach(b => {
+      gameState.buildings.push({ ...b });
+    });
+    for (let y = 0; y < mapGrid.length; y++) {
+      for (let x = 0; x < mapGrid[y].length; x++) {
+        if (mapGrid[y][x].type === 'ore') mapGrid[y][x].type = 'land';
+      }
+    }
+    loaded.orePositions.forEach(pos => {
+      if (mapGrid[pos.y] && mapGrid[pos.y][pos.x]) {
+        mapGrid[pos.y][pos.x].type = 'ore';
+      }
+    });
+    // Update build menu states after loading
+    updateVehicleButtonStates();
+    updateBuildingButtonStates();
+    showNotification('Game loaded: ' + (saveObj.label || key));
+  }
+}
+
+function deleteGame(key) {
+  localStorage.removeItem(key);
+}
+
+function updateSaveGamesList() {
+  const list = document.getElementById('saveGamesList');
+  list.innerHTML = '';
+  const saves = getSaveGames();
+  saves.forEach(save => {
+    const li = document.createElement('li');
+    li.style.display = 'flex';
+    li.style.justifyContent = 'space-between';
+    li.style.alignItems = 'center';
+    li.style.padding = '2px 0';
+    const label = document.createElement('span');
+    label.textContent = save.label + ' (' + new Date(save.time).toLocaleString() + ')';
+    label.style.flex = '1';
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent = 'Load';
+    loadBtn.style.marginLeft = '6px';
+    loadBtn.onclick = () => { loadGame(save.key); };
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✗';
+    delBtn.title = 'Delete save';
+    delBtn.style.marginLeft = '3px';
+    delBtn.onclick = () => { deleteGame(save.key); updateSaveGamesList(); };
+    li.appendChild(label);
+    li.appendChild(loadBtn);
+    li.appendChild(delBtn);
+    list.appendChild(li);
+  });
+}
+
+document.getElementById('saveGameBtn').addEventListener('click', () => {
+  const label = document.getElementById('saveLabelInput').value.trim();
+  saveGame(label);
+  updateSaveGamesList();
+  showNotification('Game saved as: ' + (label || 'Unnamed'));
+});
+document.getElementById('refreshSavesBtn').addEventListener('click', updateSaveGamesList);
+document.addEventListener('DOMContentLoaded', updateSaveGamesList);
+
+// Optionally update list after every save/load
+window.updateSaveGamesList = updateSaveGamesList;
+// === End Save/Load Game Logic ===

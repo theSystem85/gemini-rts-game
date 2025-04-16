@@ -330,7 +330,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
 }
 
 // Helper to create the actual unit object
-function createUnit(factory, unitType, x, y) {
+export function createUnit(factory, unitType, x, y) {
   const unit = {
     id: getUniqueId(),
     type: unitType,

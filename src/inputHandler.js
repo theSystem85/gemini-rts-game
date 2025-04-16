@@ -3,6 +3,7 @@ import { gameState } from './gameState.js'
 import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath } from './units.js'
 import { playSound } from './sound.js'
+import { showNotification } from './main.js'
 
 const gameCanvas = document.getElementById('gameCanvas')
 

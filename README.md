@@ -173,8 +173,9 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(x) Add save and load game functionality with a menu containing a list with save games and their labels.
+(-) Ensure that production queues for buildings and units can be filled even when no more money is available. Ensure the money is only charged when production is actually starting.
 (x) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
-(-) Add save and load game functionality with a menu containing a list with save games and their labels.
 (x) Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
 (x) For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
 (x) For harvesters to be build it is required to have a refinery and a vehicle factory.
