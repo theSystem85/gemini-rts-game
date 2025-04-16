@@ -19,6 +19,10 @@ export const productionQueue = {
   pausedBuilding: false,
   completedBuilding: null,
   
+  // Store how much money has been paid so far for current productions
+  unitPaid: 0,
+  buildingPaid: 0,
+
   // Utility function to update batch counter display
   updateBatchCounter: function(button, count) {
     const batchCounter = button.querySelector('.batch-counter');
@@ -33,33 +37,21 @@ export const productionQueue = {
   },
   
   addItem: function(type, button, isBuilding = false) {
-    // Check if game is paused and don't allow adding items when paused
+    // Only block queuing if game is paused
     if (gameState.gamePaused) {
-      // Show error feedback
       button.classList.add('error');
       setTimeout(() => button.classList.remove('error'), 300);
       showNotification("Cannot build while game is paused. Press Start to begin.");
       return;
     }
 
-    const cost = isBuilding ? buildingCosts[type] : unitCosts[type] || 0;
-    
-    // Immediately deduct cost when button is clicked
-    if (gameState.money < cost) {
-      // Show error feedback
-      button.classList.add('error');
-      setTimeout(() => button.classList.remove('error'), 300);
-      return;
-    }
-    
-    gameState.money -= cost;
-    
-    // Add to the appropriate queue
+    // DO NOT check for money or deduct money here
+
     if (isBuilding) {
       this.buildingItems.push({ type, button, isBuilding });
       let currentCount = this.buildingItems.filter(item => item.button === button).length;
       this.updateBatchCounter(button, currentCount);
-      
+
       if (!this.currentBuilding && !this.pausedBuilding) {
         this.startNextBuildingProduction();
       }
@@ -67,7 +59,7 @@ export const productionQueue = {
       this.unitItems.push({ type, button, isBuilding });
       let currentCount = this.unitItems.filter(item => item.button === button).length;
       this.updateBatchCounter(button, currentCount);
-      
+
       if (!this.currentUnit && !this.pausedUnit) {
         this.startNextUnitProduction();
       }
@@ -101,6 +93,9 @@ export const productionQueue = {
 
     const item = this.unitItems[0];
     const cost = unitCosts[item.type] || 0;
+
+    // Reset paid tracker for this production
+    this.unitPaid = 0;
 
     // Check for vehicle factory requirement and multiplier
     let vehicleMultiplier = 1; // Default multiplier
@@ -187,6 +182,9 @@ export const productionQueue = {
     const item = this.buildingItems[0];
     const cost = buildingCosts[item.type] || 0;
     
+    // Reset paid tracker for this production
+    this.buildingPaid = 0;
+
     // Set production duration proportional to cost
     const baseDuration = 750; // 4x faster (was 3000)
     let duration = baseDuration * (cost / 500);
@@ -233,9 +231,27 @@ export const productionQueue = {
     
     // Update unit production
     if (this.currentUnit && !this.pausedUnit) {
-      // Apply game speed multiplier to the elapsed time calculation
+      const item = this.unitItems[0];
+      const cost = unitCosts[item.type] || 0;
       const elapsed = (timestamp - this.currentUnit.startTime) * gameState.speedMultiplier;
-      const progress = Math.min(elapsed / this.currentUnit.duration, 1);
+      let progress = Math.min(elapsed / this.currentUnit.duration, 1);
+
+      // Calculate how much should be paid up to this progress
+      const shouldHavePaid = Math.floor(cost * progress);
+      let toPay = shouldHavePaid - this.unitPaid;
+
+      if (toPay > 0) {
+        if (gameState.money >= toPay) {
+          gameState.money -= toPay;
+          this.unitPaid += toPay;
+        } else {
+          // Not enough money, pause progress here
+          this.pausedUnit = true;
+          showNotification(`Unit production paused: not enough money.`);
+          return;
+        }
+      }
+
       this.currentUnit.progress = progress;
       const progressBar = this.currentUnit.button.querySelector('.production-progress');
       if (progressBar) {
@@ -248,9 +264,27 @@ export const productionQueue = {
     
     // Update building production
     if (this.currentBuilding && !this.pausedBuilding) {
-      // Apply game speed multiplier to the elapsed time calculation
+      const item = this.buildingItems[0];
+      const cost = buildingCosts[item.type] || 0;
       const elapsed = (timestamp - this.currentBuilding.startTime) * gameState.speedMultiplier;
-      const progress = Math.min(elapsed / this.currentBuilding.duration, 1);
+      let progress = Math.min(elapsed / this.currentBuilding.duration, 1);
+
+      // Calculate how much should be paid up to this progress
+      const shouldHavePaid = Math.floor(cost * progress);
+      let toPay = shouldHavePaid - this.buildingPaid;
+
+      if (toPay > 0) {
+        if (gameState.money >= toPay) {
+          gameState.money -= toPay;
+          this.buildingPaid += toPay;
+        } else {
+          // Not enough money, pause progress here
+          this.pausedBuilding = true;
+          showNotification(`Building production paused: not enough money.`);
+          return;
+        }
+      }
+
       this.currentBuilding.progress = progress;
       const progressBar = this.currentBuilding.button.querySelector('.production-progress');
       if (progressBar) {
@@ -531,6 +565,45 @@ export const productionQueue = {
     // If there are items in the building queue but no current production, start it
     if (this.buildingItems.length > 0 && !this.currentBuilding && !this.pausedBuilding) {
       this.startNextBuildingProduction();
+    }
+  },
+
+  // Call this whenever money is added (e.g., after harvesting or selling)
+  tryResumeProduction: function() {
+    let resumed = false;
+    // Resume unit production if paused and enough money for next step
+    if (this.pausedUnit && this.currentUnit) {
+      const item = this.unitItems[0];
+      const cost = unitCosts[item.type] || 0;
+      if (gameState.money > 0 && this.unitPaid < cost) {
+        this.pausedUnit = false;
+        // Adjust startTime so progress resumes smoothly
+        this.currentUnit.startTime = performance.now() - this.currentUnit.progress * this.currentUnit.duration / gameState.speedMultiplier;
+        resumed = true;
+      }
+    }
+    // Resume building production if paused and enough money for next step
+    if (this.pausedBuilding && this.currentBuilding) {
+      const item = this.buildingItems[0];
+      const cost = buildingCosts[item.type] || 0;
+      if (gameState.money > 0 && this.buildingPaid < cost) {
+        this.pausedBuilding = false;
+        this.currentBuilding.startTime = performance.now() - this.currentBuilding.progress * this.currentBuilding.duration / gameState.speedMultiplier;
+        resumed = true;
+      }
+    }
+    // If no current production, try to start next
+    if (!this.currentUnit && this.unitItems.length > 0) {
+      this.startNextUnitProduction();
+      resumed = true;
+    }
+    if (!this.currentBuilding && this.buildingItems.length > 0) {
+      this.startNextBuildingProduction();
+      resumed = true;
+    }
+    // Force a progress update if anything resumed
+    if (resumed) {
+      this.updateProgress(performance.now());
     }
   }
 }

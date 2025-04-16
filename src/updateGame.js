@@ -21,6 +21,7 @@ import {
 } from './logic.js'
 import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
 import { showNotification } from './main.js'
+import { productionQueue } from './productionQueue.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested
 const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
@@ -546,6 +547,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             if (isAdjacentToFactory(unit, targetFactory)) {
               if (unit.owner === 'player') {
                 gameState.money += 1000;
+                if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+                  productionQueue.tryResumeProduction();
+                }
               } else {
                 targetFactory.budget += 1000;
               }
@@ -650,10 +654,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         // Handle unloading at refinery
         if (unit.unloadingAtRefinery && unit.unloadStartTime) {
           // Unloading takes 20 seconds
-          if (now - unit.unloadStartTime >= 20000) {
+          if (now - unit.unloadStartTime >= 10000) {
             // Unloading complete
             if (unit.owner === 'player') {
               gameState.money += 1000;
+              if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+                productionQueue.tryResumeProduction();
+              }
             } else if (unit.owner === 'enemy') {
               const enemyFactory = factories.find(f => f.id === 'enemy');
               if (enemyFactory) {

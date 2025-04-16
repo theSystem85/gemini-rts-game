@@ -45,6 +45,9 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       
       // Add money to player
       gameState.money += sellValue;
+      if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+        productionQueue.tryResumeProduction();
+      }
       moneyEl.textContent = gameState.money;
       
       // Remove building from the map grid and restore original tiles
