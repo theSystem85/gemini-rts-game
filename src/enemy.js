@@ -27,204 +27,114 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const targetedOreTiles = gameState.targetedOreTiles || {};
 
   // --- Enemy Building Construction ---
-  // Reduce build interval from 15 seconds to 10 seconds for faster defensive building construction
+  // Enforce strict build order: Power Plant -> Vehicle Factory -> Ore Refinery
   if (now - (gameState.enemyLastBuildingTime || 0) >= 10000 && enemyFactory && enemyFactory.budget > 1000 && gameState.buildings) {
     const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy');
     const powerPlants = enemyBuildings.filter(b => b.type === 'powerPlant');
+    const vehicleFactories = enemyBuildings.filter(b => b.type === 'vehicleFactory');
+    const oreRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery');
     const turrets = enemyBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret');
     const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester');
-    
-    // Calculate total power production and consumption
-    let totalPower = 0;
-    let totalProduction = 0;
-    let totalConsumption = 0;
-    
-    enemyBuildings.forEach(building => {
-      if (building.power > 0) {
-        totalProduction += building.power;
-      } else if (building.power < 0) {
-        totalConsumption += Math.abs(building.power);
-      }
-      totalPower += building.power || 0;
-    });
-    
-    // Check for energy efficiency (as a percentage)
-    const energyEfficiency = totalProduction > 0 ? (totalProduction - totalConsumption) / totalProduction * 100 : 0;
-    
+
     let buildingType = null;
     let cost = 0;
-    
-    // Check if we should learn from player building patterns
-    if (gameState.playerBuildHistory && gameState.playerBuildHistory.length > 0 && Math.random() < 0.3) {
-      const replicatedPattern = replicatePlayerBuildPattern(gameState, enemyBuildings);
-      if (replicatedPattern) {
-        buildingType = replicatedPattern;
-        cost = buildingData[buildingType].cost;
-      }
-    }
-    
-    // If no building was selected from player patterns or we couldn't afford it, use standard logic
-    if (!buildingType || enemyFactory.budget < cost) {
-      // New build priority: First power plant, then at least 2 turrets before anything else
-      if (powerPlants.length === 0) {
-        // Always build first power plant
-        buildingType = 'powerPlant';
-        cost = 2000;
-      } else if (turrets.length < 2) {
-        // Prioritize defensive turrets (at least 2) right after power plant
-        // Choose the best turret the enemy can afford
-        if (enemyFactory.budget >= 4000) {
-          buildingType = 'rocketTurret';
-          cost = 4000;
-        } else if (enemyFactory.budget >= 3000) {
-          buildingType = 'turretGunV3';
-          cost = 3000;
-        } else if (enemyFactory.budget >= 2000) {
-          buildingType = 'turretGunV2';
-          cost = 2000;
-        } else {
-          buildingType = 'turretGunV1';
-          cost = 1000;
-        }
-      } else if (enemyHarvesters.length === 0 || (enemyHarvesters.length < 2 && Math.random() < 0.7)) {
-        // Now encourage harvester production (first one is handled in unit production)
-        // Start with harvester support (if budget allows)
-        if (enemyFactory.budget >= 2500) {
-          buildingType = 'oreRefinery';
-          cost = 2500;
-        }
-      } else if (energyEfficiency < 20 || (powerPlants.length < 2 && enemyFactory.budget >= 3000)) {
-        // Build second power plant if energy efficiency is low or if we can afford it
-        buildingType = 'powerPlant';
-        cost = 2000;
-      } else if (turrets.length < 4) {
-        // After establishing economy, build more defensive structures
-        const rand = Math.random();
-        if (rand < 0.4 && enemyFactory.budget >= 4000) {
-          buildingType = 'rocketTurret';
-          cost = 4000;
-        } else if (rand < 0.7 && enemyFactory.budget >= 3000) {
-          buildingType = 'turretGunV3';
-          cost = 3000;
-        } else if (rand < 0.9 && enemyFactory.budget >= 2000) {
-          buildingType = 'turretGunV2';
-          cost = 2000;
-        } else {
-          buildingType = 'turretGunV1';
-          cost = 1000;
-        }
-      } else if (enemyHarvesters.length >= 2 && powerPlants.length >= 2 && enemyFactory.budget >= 2500 && Math.random() < 0.5) {
-        // Build refinery to speed up harvesting operations
-        buildingType = 'oreRefinery';
-        cost = 2500;
-      } else if (enemyFactory.budget >= 3000 && Math.random() < 0.3) {
-        // Sometimes build a vehicle factory
-        buildingType = 'vehicleFactory';
+
+    // 1. Build Power Plant first
+    if (powerPlants.length === 0) {
+      buildingType = 'powerPlant';
+      cost = buildingData.powerPlant.cost;
+    // 2. Then Vehicle Factory
+    } else if (vehicleFactories.length === 0) {
+      buildingType = 'vehicleFactory';
+      cost = buildingData.vehicleFactory.cost;
+    // 3. Then Ore Refinery
+    } else if (oreRefineries.length === 0) {
+      buildingType = 'oreRefinery';
+      cost = buildingData.oreRefinery.cost;
+    // 4. Only then build turrets or other buildings
+    } else if (turrets.length < 2) {
+      if (enemyFactory.budget >= 4000) {
+        buildingType = 'rocketTurret';
+        cost = 4000;
+      } else if (enemyFactory.budget >= 3000) {
+        buildingType = 'turretGunV3';
         cost = 3000;
-      } else if (powerPlants.length >= 2 && totalPower > 100 && Math.random() < 0.2) {
-        // Occasionally build concrete walls for extra defense
-        buildingType = 'concreteWall';
-        cost = 100;
+      } else if (enemyFactory.budget >= 2000) {
+        buildingType = 'turretGunV2';
+        cost = 2000;
+      } else {
+        buildingType = 'turretGunV1';
+        cost = 1000;
       }
+    } else if (enemyHarvesters.length < 2 && enemyFactory.budget >= buildingData.oreRefinery.cost) {
+      // Optionally build additional refineries if harvesters are low
+      buildingType = 'oreRefinery';
+      cost = buildingData.oreRefinery.cost;
     }
-    
+
     // Attempt to place the building
     if (buildingType && enemyFactory.budget >= cost) {
       const position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories);
       if (position) {
-        // Create and place the building
         const newBuilding = createBuilding(buildingType, position.x, position.y);
         newBuilding.owner = 'enemy';
         gameState.buildings.push(newBuilding);
         placeBuilding(newBuilding, mapGrid);
-        
-        // Reduce enemy budget
         enemyFactory.budget -= cost;
-        
-        // Show what's being built
         enemyFactory.currentlyBuilding = buildingType;
         enemyFactory.buildStartTime = now;
-        enemyFactory.buildDuration = 5000; // 5 seconds to show the icon
-        
-        // Update timestamp
+        enemyFactory.buildDuration = 5000;
         gameState.enemyLastBuildingTime = now;
         console.log(`Enemy started building ${buildingType} at (${position.x}, ${position.y})`);
       } else {
-        // Skip this building attempt rather than retrying continuously
         gameState.enemyLastBuildingTime = now;
         console.log(`Enemy couldn't find valid position for ${buildingType}`);
       }
     }
   }
-  
+
   // Clear building indicator after build duration
   if (enemyFactory && enemyFactory.currentlyBuilding && now - enemyFactory.buildStartTime > enemyFactory.buildDuration) {
     enemyFactory.currentlyBuilding = null;
   }
 
   // --- Enemy Unit Production ---
-  if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
-    // Ensure enemy always has at least one harvester
-    const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
-    let unitType = 'tank'
-    let cost = 1000
-    
-    if (enemyHarvesters.length === 0) {
-      unitType = 'harvester'
-      cost = 500
-    } else {
-      const rand = Math.random()
-      // Enhanced unit selection with tank-v2
-      if (rand < 0.1) {
-        unitType = 'rocketTank'
-        cost = 2000
-      } else if (rand < 0.3) {
-        unitType = 'harvester'
-        cost = 500
-      } else if (rand < 0.5) {
-        unitType = 'tank-v2'
-        cost = 2000
+  // Only allow unit production after all required buildings are present
+  if (gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'powerPlant').length > 0 && 
+      gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'vehicleFactory').length > 0 && 
+      gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'oreRefinery').length > 0) {
+    if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
+      const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester');
+      let unitType = 'tank';
+      let cost = 1000;
+      if (enemyHarvesters.length === 0) {
+        unitType = 'harvester';
+        cost = 500;
       } else {
-        unitType = 'tank'
-        cost = 1000
-      }
-    }
-    
-    if (enemyFactory.budget >= cost) {
-      const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid)
-      units.push(newEnemy)
-      
-      // Show what's being built
-      enemyFactory.currentlyBuilding = unitType;
-      enemyFactory.buildStartTime = now;
-      enemyFactory.buildDuration = 5000; // 5 seconds to show the icon
-      
-      if (unitType === 'harvester') {
-        const orePos = findClosestOre(newEnemy, mapGrid)
-        if (orePos) {
-          const path = findPath({ x: newEnemy.tileX, y: newEnemy.tileY }, orePos, mapGrid, occupancyMap)
-          if (path.length > 1) {
-            newEnemy.path = path.slice(1)
-          }
+        const rand = Math.random();
+        if (rand < 0.1) {
+          unitType = 'rocketTank';
+          cost = 2000;
+        } else if (rand < 0.3) {
+          unitType = 'harvester';
+          cost = 500;
+        } else if (rand < 0.5) {
+          unitType = 'tank-v2';
+          cost = 2000;
+        } else {
+          unitType = 'tank';
+          cost = 1000;
         }
-      } else {
-        // Combat units target player factory initially
-        const path = findPath(
-          { x: newEnemy.tileX, y: newEnemy.tileY }, 
-          { x: playerFactory.x, y: playerFactory.y }, 
-          mapGrid, 
-          null // Optimize performance for long paths
-        )
-        if (path.length > 1) {
-          newEnemy.path = path.slice(1)
-          newEnemy.moveTarget = { x: playerFactory.x, y: playerFactory.y }
-        }
-        newEnemy.target = playerFactory
-        newEnemy.lastPathCalcTime = now
-        newEnemy.lastTargetChangeTime = now
       }
-      enemyFactory.budget -= cost
-      gameState.enemyLastProductionTime = now
+      if (enemyFactory.budget >= cost) {
+        const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid);
+        units.push(newEnemy);
+        enemyFactory.currentlyBuilding = unitType;
+        enemyFactory.buildStartTime = now;
+        enemyFactory.buildDuration = 5000;
+        gameState.enemyLastProductionTime = now;
+        console.log(`Enemy started producing unit: ${unitType}`);
+      }
     }
   }
 

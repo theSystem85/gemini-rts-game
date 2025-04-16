@@ -173,15 +173,15 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(-) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
+(x) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
 (-) Add save and load game functionality with a menu containing a list with save games and their labels.
 (x) Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
 (x) For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
-(-) For harvesters to be build it is required to have a refinery and a vehicle factory.
+(x) For harvesters to be build it is required to have a refinery and a vehicle factory.
 (-) Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 (-) Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 (-) Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
-(-) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
+(x) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 (-) When player builds the radar station it enables the overview mini map. Before that map is just gray. It consumes 50 energy. When it get destroyed and no other radar station is in the players building list the mini map gets disabled again.
 (-) make a dedicated sound for attacking confirmation
 (-) refine the coloring of the power bar and its logic on impacting the production.
