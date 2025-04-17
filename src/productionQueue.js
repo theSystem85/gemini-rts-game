@@ -7,7 +7,7 @@ import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3']; // Added V1 and V3
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester']; // Added harvester as a vehicle
 
 // Enhanced production queue system
 export const productionQueue = {
@@ -309,6 +309,7 @@ export const productionQueue = {
     const playerFactory = factories.find(f => f.id === 'player');
     const rallyPointTarget = playerFactory?.rallyPoint; // Get rally point or undefined
 
+    // All vehicle units (including harvesters) should spawn from vehicle factories
     if (vehicleUnitTypes.includes(unitType)) {
       // Find player-owned vehicle factories
       const vehicleFactories = gameState.buildings.filter(
@@ -323,9 +324,6 @@ export const productionQueue = {
       } else {
         // This case should ideally not happen due to button disabling logic
         console.error(`Cannot spawn ${unitType}: No Vehicle Factory found.`);
-        // Optional: Refund cost?
-        // gameState.money += unitCosts[unitType] || 0;
-        // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible
         showNotification(`Production cancelled: ${unitType} requires a Vehicle Factory.`);
         // Reset and try next production
         this.currentUnit.button.classList.remove('active', 'paused');
@@ -334,8 +332,8 @@ export const productionQueue = {
         return;
       }
     } else {
-      // For non-vehicles (Harvester), use the main player factory
-      spawnFactory = playerFactory; // Use the already found playerFactory
+      // For any other non-vehicle units (currently none)
+      spawnFactory = playerFactory;
     }
 
     if (spawnFactory) {
