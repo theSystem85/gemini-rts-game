@@ -1417,7 +1417,35 @@ function loadGame(key) {
     });
     gameState.buildings.length = 0;
     loaded.buildings.forEach(b => {
-      gameState.buildings.push({ ...b });
+      // Rehydrate defensive buildings (turrets) so they work after loading
+      let building = { ...b };
+      // Defensive turrets: turretGunV1/V2/V3, rocketTurret
+      if (building.type && (building.type.startsWith('turretGun') || building.type === 'rocketTurret')) {
+        // Get config from buildingData
+        const data = buildingData[building.type];
+        // Set all runtime properties if missing
+        building.fireRange = data.fireRange;
+        building.fireCooldown = data.fireCooldown;
+        building.damage = data.damage;
+        building.armor = data.armor || 1;
+        building.projectileType = data.projectileType;
+        building.projectileSpeed = data.projectileSpeed;
+        if (typeof building.lastShotTime !== 'number') building.lastShotTime = 0;
+        if (typeof building.turretDirection !== 'number') building.turretDirection = 0;
+        if (typeof building.targetDirection !== 'number') building.targetDirection = 0;
+        // Aim-ahead/feature flags
+        if (data.useAimAhead) building.useAimAhead = true;
+        if (data.aimAhead) building.aimAhead = true;
+        // Burst fire
+        if (data.burstFire) {
+          building.burstFire = true;
+          building.burstCount = data.burstCount || 3;
+          building.burstDelay = data.burstDelay || 150;
+          if (typeof building.currentBurst !== 'number') building.currentBurst = 0;
+          if (typeof building.lastBurstTime !== 'number') building.lastBurstTime = 0;
+        }
+      }
+      gameState.buildings.push(building);
     });
     // Restore mapGrid tile types (including 'building' and 'wall' etc.)
     if (loaded.mapGridTypes) {

@@ -260,15 +260,14 @@ Open Features:
 (x) when a unit was produced play one of the unitReady01 or unitReady02 or unitReady03 sounds randomly
 (x) when a unit is selected play the yesSir01 sound
 
-Open Bugs:
+Bugs:
+(-) when production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
 (-) the initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
 (-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 (-) image for the concrete wall on map is incorrect.
 (-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
-
-Fixed Bugs:
 (x) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (x) units move much slower only when moving to the west
 (x) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.
