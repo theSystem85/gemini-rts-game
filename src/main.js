@@ -1361,6 +1361,9 @@ function saveGame(label) {
     }
   }
 
+  // Save the full mapGrid tile types for restoring building/wall/terrain occupancy
+  const mapGridTypes = mapGrid.map(row => row.map(tile => tile.type));
+
   // Save everything in a single object
   const saveData = {
     gameState: { ...gameState },
@@ -1368,6 +1371,7 @@ function saveGame(label) {
     units: allUnits,
     buildings: allBuildings,
     orePositions,
+    mapGridTypes, // ADDED: save mapGrid tile types
   };
 
   const saveObj = {
@@ -1415,16 +1419,28 @@ function loadGame(key) {
     loaded.buildings.forEach(b => {
       gameState.buildings.push({ ...b });
     });
-    for (let y = 0; y < mapGrid.length; y++) {
-      for (let x = 0; x < mapGrid[y].length; x++) {
-        if (mapGrid[y][x].type === 'ore') mapGrid[y][x].type = 'land';
+    // Restore mapGrid tile types (including 'building' and 'wall' etc.)
+    if (loaded.mapGridTypes) {
+      for (let y = 0; y < mapGrid.length; y++) {
+        for (let x = 0; x < mapGrid[y].length; x++) {
+          if (loaded.mapGridTypes[y] && loaded.mapGridTypes[y][x]) {
+            mapGrid[y][x].type = loaded.mapGridTypes[y][x];
+          }
+        }
       }
+    } else {
+      // Fallback: clear ore tiles
+      for (let y = 0; y < mapGrid.length; y++) {
+        for (let x = 0; x < mapGrid[y].length; x++) {
+          if (mapGrid[y][x].type === 'ore') mapGrid[y][x].type = 'land';
+        }
+      }
+      loaded.orePositions.forEach(pos => {
+        if (mapGrid[pos.y] && mapGrid[pos.y][pos.x]) {
+          mapGrid[pos.y][pos.x].type = 'ore';
+        }
+      });
     }
-    loaded.orePositions.forEach(pos => {
-      if (mapGrid[pos.y] && mapGrid[pos.y][pos.x]) {
-        mapGrid[pos.y][pos.x].type = 'ore';
-      }
-    });
     // Update build menu states after loading
     updateVehicleButtonStates();
     updateBuildingButtonStates();

@@ -173,6 +173,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
+(-) ensure harvesters spawn from the vehicle factory not the building factory.
 (x) ensure money for builds is gradually spend during build process
 (-) REFACTOR: move all constants into config.
 (x) lower harvester unload time to 10s.
