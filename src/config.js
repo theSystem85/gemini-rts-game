@@ -48,7 +48,7 @@ export const USE_TEXTURES = true
 // Number of texture variations to generate for each tile type
 export const TEXTURE_VARIATIONS = 4
 
-export const INERTIA_DECAY = 0.95
+export const INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
 
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9
