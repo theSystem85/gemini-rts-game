@@ -478,18 +478,20 @@ export function setupInputHandlers(units, factories, mapGrid) {
       const logicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
       const logicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
       
+      // Multiply by 2 to make scrolling 2x faster
+      const scrollSpeed = 2;
       gameState.scrollOffset.x = Math.max(
         0,
-        Math.min(gameState.scrollOffset.x - dx, mapGrid[0].length * TILE_SIZE - logicalWidth)
+        Math.min(gameState.scrollOffset.x - (dx * scrollSpeed), mapGrid[0].length * TILE_SIZE - logicalWidth)
       )
       gameState.scrollOffset.y = Math.max(
         0,
-        Math.min(gameState.scrollOffset.y - dy, mapGrid.length * TILE_SIZE - logicalHeight)
+        Math.min(gameState.scrollOffset.y - (dy * scrollSpeed), mapGrid.length * TILE_SIZE - logicalHeight)
       )
       
-      gameState.dragVelocity = { x: dx, y: dy }
+      // Also update dragVelocity to match the scroll speed for consistent inertia
+      gameState.dragVelocity = { x: dx * scrollSpeed, y: dy * scrollSpeed }
       gameState.lastDragPos = { x: e.clientX, y: e.clientY }
-      gameCanvas.style.cursor = 'grabbing'
       
       // Check if right-drag exceeds threshold.
       if (!rightWasDragging && Math.hypot(e.clientX - rightDragStart.x, e.clientY - rightDragStart.y) > 5) {
