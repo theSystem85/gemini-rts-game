@@ -96,7 +96,7 @@ export const buildingData = {
     damage: 30, // Higher damage
     armor: 1.5,
     projectileType: 'bullet',
-    projectileSpeed: 20, // 4x faster (was 5)
+    projectileSpeed: 15,
     burstFire: true, // Special feature: fires 3 shots in quick succession
     burstCount: 3, 
     burstDelay: 150, // ms between burst shots
@@ -106,17 +106,20 @@ export const buildingData = {
     width: 2,
     height: 2,
     cost: 4000,
-    power: -40,
+    power: -20,
     image: 'rocket_turret.jpg',
     displayName: 'Rocket Turret',
     health: 200,
     // Add combat properties
-    fireRange: 12, // Increased by 50% from 8 to 12
+    fireRange: 16, 
     fireCooldown: 3000, // 3 seconds between shots
-    damage: 40,
+    damage: 8,
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
-    projectileSpeed: 20 // 4x faster (was 5)
+    projectileSpeed: 5,
+    burstFire: true, // Special feature: fires 4 shots in quick succession
+    burstCount: 4, 
+    burstDelay: 500, // ms between burst shots
       },
   teslaCoil: {
     width: 2,
