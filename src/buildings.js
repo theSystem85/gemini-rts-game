@@ -112,8 +112,8 @@ export const buildingData = {
     health: 200,
     // Add combat properties
     fireRange: 16, 
-    fireCooldown: 3000, // 3 seconds between shots
-    damage: 8,
+    fireCooldown: 6000, // 3 seconds between shots
+    damage: 9,
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
     projectileSpeed: 5,
@@ -128,7 +128,14 @@ export const buildingData = {
     power: -60,
     image: 'tesla_coil.jpg',
     displayName: 'Tesla Coil',
-    health: 250
+    health: 250,
+    fireRange: 20, // in tiles
+    fireCooldown: 8000, // ms
+    damage: 5, // Tesla coil does not deal direct damage
+    armor: 2,
+    projectileType: 'tesla',
+    projectileSpeed: 0,
+    isTeslaCoil: true
   },
   artilleryTurret: {
     width: 2,
@@ -167,8 +174,8 @@ export function createBuilding(type, x, y) {
     isBuilding: true
   };
   
-  // Add combat properties for defensive buildings
-  if (type === 'rocketTurret' || type.startsWith('turretGun')) {
+  // Add combat properties for defensive buildings (including teslaCoil)
+  if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil') {
     building.fireRange = data.fireRange;
     building.fireCooldown = data.fireCooldown;
     building.damage = data.damage;
@@ -178,12 +185,13 @@ export function createBuilding(type, x, y) {
     building.lastShotTime = 0;
     building.turretDirection = 0; // Direction the turret is facing
     building.targetDirection = 0; // Direction the turret should face
-    
+    if (data.isTeslaCoil) {
+      building.isTeslaCoil = true;
+    }
     // Add special targeting features
     if (data.aimAhead) {
       building.aimAhead = true;
     }
-    
     // Add burst fire capabilities
     if (data.burstFire) {
       building.burstFire = true;
@@ -195,44 +203,6 @@ export function createBuilding(type, x, y) {
   }
   
   return building;
-}
-
-// Helper to create defensive buildings with standardized properties
-function createDefensiveBuilding(type, x, y) {
-  const building = createBuilding(type, x, y);
-
-  // Add defensive building properties
-  switch(type) {
-    case 'turretGunV1':
-      building.damage = 15;
-      building.fireRange = 8;
-      building.fireCooldown = 2000;
-      building.projectileSpeed = 12; // 4x faster (was 3)
-      break;
-    case 'turretGunV2':
-      building.damage = 20;
-      building.fireRange = 9;
-      building.fireCooldown = 1800;
-      building.projectileSpeed = 16; // 4x faster (was 4)
-      building.aimAhead = true; // Basic aim-ahead capability
-      break;
-    case 'turretGunV3':
-      building.damage = 30;
-      building.fireRange = 10;
-      building.projectileSpeed = 20; // 4x faster (was 5)
-      building.fireCooldown = 2200;
-      building.burstFire = true;
-      building.burstCount = 3;
-      building.burstDelay = 200;
-      building.useAimAhead = true; // Advanced aim-ahead
-      break;
-    case 'rocketTurret':
-      building.damage = 40;
-      building.fireRange = 12;
-      building.fireCooldown = 3000;
-      building.projectileSpeed = 20; // 4x faster (was 5)
-      break;
-  }
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building

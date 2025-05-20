@@ -224,7 +224,6 @@ export function showUnloadingFeedback(unit, refinery) {
   // This function would ideally create a visual effect like a small animation
   // or particle effect showing ore unloading at the refinery
   // For now, we'll just log this activity
-  console.log(`Harvester ${unit.id} unloading at refinery at (${refinery.x},${refinery.y})`);
   
   // Add any visual effects here in the future
 }
