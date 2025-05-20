@@ -249,7 +249,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
 
       // --- Firing with Clear Line-of-Sight Check (Prevent Friendly Fire) ---
-      if ((unit.type === 'tank' || unit.type === 'rocketTank' || unit.type === 'tank-v2') && unit.target) {
+      if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2') && unit.target) {
         const unitCenterX = unit.x + TILE_SIZE / 2
         const unitCenterY = unit.y + TILE_SIZE / 2
         let targetCenterX, targetCenterY
@@ -264,9 +264,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         // Only fire if target is within range and there is a clear line of sight
         if (dist <= TANK_FIRE_RANGE * TILE_SIZE && hasClearShot(unit, unit.target, units)) {
           if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
-            if (unit.type === 'tank') {
+            if (unit.type === 'tank' || unit.type === 'tank_v1') {
               const cooldown = 1600; // Normal tank reload in ms
               if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+                // Standard bullet like normal tank
                 let bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
@@ -277,12 +278,28 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   shooter: unit,
                   homing: false
                 };
-                const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX);
-                // Use correct angle formula for normal tank to fire at current target position
+                
+                // Use aim-ahead function if enabled for this unit
+                let targetingX = targetCenterX;
+                let targetingY = targetCenterY;
+                
+                if (unit.useAimAhead && unit.target.path && unit.target.path.length > 0) {
+                  // Calculate predicted position using aim-ahead
+                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState);
+                  targetingX = predictedPos.x;
+                  targetingY = predictedPos.y;
+                } else {
+                  // Standard targeting without prediction
+                  targetingX = targetCenterX;
+                  targetingY = targetCenterY;
+                }
+                
+                // Calculate bullet direction based on predicted position
+                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX);
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
+                
                 bullets.push(bullet);
-
                 playSound('shoot', 0.5);
                 
                 unit.lastShotTime = now;
