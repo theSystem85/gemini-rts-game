@@ -1,3 +1,19 @@
+// --- Tesla Coil effect: slow and disable unit fire ---
+export function updateTeslaCoilEffects(units) {
+  const now = performance.now();
+  for (const unit of units) {
+    if (unit.teslaDisabledUntil && now < unit.teslaDisabledUntil) {
+      unit.canFire = false;
+      unit.speedModifier = 0.2; // 70% slow
+    } else if (unit.teslaDisabledUntil && now >= unit.teslaDisabledUntil) {
+      unit.canFire = true;
+      unit.speedModifier = 1;
+      unit.teslaDisabledUntil = null;
+      unit.teslaSlowUntil = null;
+      unit.teslaSlowed = false;
+    }
+  }
+}
 // logic.js
 import {
   INERTIA_DECAY,
@@ -95,7 +111,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         unit.target = null
       }
 
-      let effectiveSpeed = unit.effectiveSpeed * 0.5 // Reduce base speed by half
+      // Apply Tesla Coil slow effect if present
+      let speedMod = (typeof unit.speedModifier === 'number') ? unit.speedModifier : 1;
+      let effectiveSpeed = unit.effectiveSpeed * speedMod * 0.5 // Reduce base speed by half, then apply slow
 
       // Apply street speed bonus (reduced from 2x to 1.5x)
       if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
@@ -263,10 +281,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
         // Only fire if target is within range and there is a clear line of sight
         if (dist <= TANK_FIRE_RANGE * TILE_SIZE && hasClearShot(unit, unit.target, units)) {
-          if (!unit.lastShotTime || now - unit.lastShotTime > 1600) {
+          if ((unit.canFire !== false) && (!unit.lastShotTime || now - unit.lastShotTime > 1600)) {
             if (unit.type === 'tank' || unit.type === 'tank_v1') {
               const cooldown = 1600; // Normal tank reload in ms
-              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+              if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
                 // Standard bullet like normal tank
                 let bullet = {
                   id: Date.now() + Math.random(),
@@ -306,7 +324,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
               }
             } else if (unit.type === 'tank-v2') {
               const cooldown = 1600; // Same cooldown as regular tank
-              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+              if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
                 // Standard bullet like normal tank
                 let bullet = {
                   id: Date.now() + Math.random(),
@@ -344,7 +362,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
               }
             } else if (unit.type === 'rocketTank') {
               const cooldown = 2000; // Rocket tank reload in ms
-              if (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown) {
+              if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
                 let bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
@@ -993,7 +1011,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (hitTarget) {
           triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullet.active = false
-          playSound('shoot_rocket')
+          playSound('shoot_rocket', 0.5)
           bullets.splice(i, 1)
           continue
         }
@@ -1155,6 +1173,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     if (gameState.buildings && gameState.buildings.length > 0) {
       updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState);
     }
+    // Update Tesla Coil effects on units
+    updateTeslaCoilEffects(units);
     
     // Update buildings under repair
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
@@ -1172,49 +1192,75 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now();
   
   buildings.forEach(building => {
-    // Process defensive buildings that aren't destroyed (both player and enemy)
-    if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun')) && 
-        building.health > 0) {
-      
-      // Calculate center position of the building for range calculations
+    // Defensive buildings: turrets and tesla coil
+    if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') && building.health > 0) {
       const centerX = (building.x + building.width / 2) * TILE_SIZE;
       const centerY = (building.y + building.height / 2) * TILE_SIZE;
-      
+
+      // Tesla Coil special logic
+      if (building.type === 'teslaCoil') {
+        let effectiveCooldown = building.fireCooldown / gameState.speedMultiplier;
+        if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
+          let closestEnemy = null;
+          let closestDistance = Infinity;
+          for (const unit of units) {
+            if (unit.owner !== building.owner && unit.health > 0) {
+              const unitCenterX = unit.x + TILE_SIZE / 2;
+              const unitCenterY = unit.y + TILE_SIZE / 2;
+              const dx = unitCenterX - centerX;
+              const dy = unitCenterY - centerY;
+              const distance = Math.hypot(dx, dy);
+              if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
+                closestEnemy = unit;
+                closestDistance = distance;
+              }
+            }
+          }
+          if (closestEnemy) {
+            // Only log when actually firing
+            // Play loading and firing sounds in sequence
+            playSound('teslacoil_loading');
+            setTimeout(() => playSound('teslacoil_firing'), 400);
+            // Always refresh Tesla Coil effect and animation
+            closestEnemy.teslaDisabledUntil = now + 60000; // 60 seconds
+            closestEnemy.teslaSlowUntil = now + 60000;
+            closestEnemy.teslaSlowed = true;
+            closestEnemy.teslaCoilHit = {
+              fromX: centerX,
+              fromY: centerY,
+              toX: closestEnemy.x + TILE_SIZE / 2,
+              toY: closestEnemy.y + TILE_SIZE / 2,
+              impactTime: now
+            };
+            building.lastShotTime = now;
+          }
+        }
+        return;
+      }
+
+      // --- Turret logic (existing) ---
       // For turret guns with burst fire, handle burst timing
       if (building.burstFire && building.currentBurst > 0) {
         if (now - building.lastBurstTime >= building.burstDelay) {
-          // Fire the next shot in the burst sequence
           fireTurretProjectile(building, building.currentTarget, centerX, centerY, now, bullets);
           building.lastBurstTime = now;
           building.currentBurst--;
-          return; // Skip regular firing logic during burst sequence
+          return;
         }
-        return; // Wait for next burst shot
+        return;
       }
-      
-      // Calculate effective cooldown based on power situation and game speed
+
       let effectiveCooldown = building.fireCooldown;
-      
-      // Apply power slowdown for defensive buildings using the new build speed modifier
       if (building.owner === 'player' && gameState.playerPowerSupply < 0) {
-        // Apply player build speed modifier to turret cooldown
-        // This inverts the modifier since we want cooldown to increase as speed decreases
         effectiveCooldown = building.fireCooldown / gameState.playerBuildSpeedModifier;
       } else if (building.owner === 'enemy' && gameState.enemyPowerSupply < 0) {
-        // Apply enemy build speed modifier to turret cooldown
         effectiveCooldown = building.fireCooldown / gameState.enemyBuildSpeedModifier;
       }
-      
-      // Apply game speed multiplier to firing cooldown
-      // Lower cooldown = faster firing rate, so we divide by the speed multiplier
       effectiveCooldown = effectiveCooldown / gameState.speedMultiplier;
-      
-      // Only fire if cooldown has elapsed
+
       if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
         let closestEnemy = null;
         let closestDistance = Infinity;
-        
-        // Find closest enemy in range (enemy turrets target player units, player turrets target enemy units)
         for (const unit of units) {
           if (unit.owner !== building.owner && unit.health > 0) {
             const unitCenterX = unit.x + TILE_SIZE / 2;
@@ -1222,7 +1268,6 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
             const dx = unitCenterX - centerX;
             const dy = unitCenterY - centerY;
             const distance = Math.hypot(dx, dy);
-            
             if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
               closestEnemy = unit;
               closestDistance = distance;
@@ -1330,7 +1375,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     projectile.startTime = now;
     
     // Play rocket sound
-    playSound('shoot_rocket');
+    playSound('shoot_rocket', 0.5);
   } else {
     // Standard bullet - calculate trajectory
     projectile.homing = false;

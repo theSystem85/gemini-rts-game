@@ -1,3 +1,68 @@
+// --- Tesla Coil Lightning Rendering ---
+function drawTeslaCoilLightning(gameCtx, fromX, fromY, toX, toY, scatterRadius = TILE_SIZE, colorStops = [
+  {color: 'rgba(255,255,128,0.95)', pos: 0},
+  {color: 'rgba(0,200,255,0.7)', pos: 0.5},
+  {color: 'rgba(255,255,255,1)', pos: 1}
+], boltWidth = 5) {
+  // Draw a jagged, glowing lightning bolt with some randomness
+  const numSegments = 12;
+  const points = [{x: fromX, y: fromY}];
+  for (let i = 1; i < numSegments; i++) {
+    const t = i / numSegments;
+    const x = fromX + (toX - fromX) * t + (Math.random() - 0.5) * 18;
+    const y = fromY + (toY - fromY) * t + (Math.random() - 0.5) * 18;
+    points.push({x, y});
+  }
+  points.push({x: toX, y: toY});
+
+
+  // Glow effect (keep shadow for glow only)
+  for (let glow = 18; glow > 0; glow -= 6) {
+    gameCtx.save();
+    gameCtx.strokeStyle = 'rgba(255,255,128,0.18)'; // Increased alpha for visibility
+    gameCtx.shadowColor = '#fff';
+    gameCtx.shadowBlur = glow;
+    gameCtx.lineWidth = boltWidth + glow;
+    gameCtx.beginPath();
+    gameCtx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      gameCtx.lineTo(points[i].x, points[i].y);
+    }
+    gameCtx.stroke();
+    gameCtx.restore();
+  }
+
+  // Main bolt (NO shadow, solid gradient)
+  gameCtx.save();
+  const grad = gameCtx.createLinearGradient(fromX, fromY, toX, toY);
+  colorStops.forEach(stop => grad.addColorStop(stop.pos, stop.color));
+  gameCtx.strokeStyle = grad;
+  gameCtx.shadowBlur = 0;
+  gameCtx.lineWidth = boltWidth;
+  gameCtx.beginPath();
+  gameCtx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    gameCtx.lineTo(points[i].x, points[i].y);
+  }
+  gameCtx.stroke();
+  gameCtx.restore();
+
+  // Impact scatter
+  for (let i = 0; i < 4; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = scatterRadius * (0.5 + Math.random() * 0.5);
+    const ex = toX + Math.cos(angle) * r;
+    const ey = toY + Math.sin(angle) * r;
+    gameCtx.save();
+    gameCtx.strokeStyle = 'rgba(0,200,255,0.7)';
+    gameCtx.lineWidth = 2;
+    gameCtx.beginPath();
+    gameCtx.moveTo(toX, toY);
+    gameCtx.lineTo(ex, ey);
+    gameCtx.stroke();
+    gameCtx.restore();
+  }
+}
 // rendering.js
 import { TILE_SIZE, TILE_COLORS, TILE_IMAGES, HARVESTER_CAPPACITY, USE_TEXTURES, TEXTURE_VARIATIONS } from './config.js'
 import { tileToPixel } from './utils.js'
@@ -285,6 +350,7 @@ function getTileVariation(tileType, x, y) {
 }
 
 export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+  
   if (!gameState) {
     return;
   }
@@ -399,12 +465,46 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       });
       
       // Draw turret for defensive buildings
-      if (building.type === 'rocketTurret' || building.type.startsWith('turretGun')) {
+      if (building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') {
         const centerX = screenX + width / 2;
         const centerY = screenY + height / 2;
         
+        // For Tesla Coil, draw a special base and range indicator
+        if (building.type === 'teslaCoil') {
+          // Draw Tesla Coil base
+          gameCtx.save();
+          gameCtx.translate(centerX, centerY);
+          // Draw coil base
+          gameCtx.fillStyle = '#222';
+          gameCtx.beginPath();
+          gameCtx.arc(0, 0, 14, 0, Math.PI * 2);
+          gameCtx.fill();
+          // Draw coil core
+          gameCtx.fillStyle = '#ff0';
+          gameCtx.beginPath();
+          gameCtx.arc(0, 0, 7, 0, Math.PI * 2);
+          gameCtx.fill();
+          // Draw blue electric ring
+          gameCtx.strokeStyle = '#0cf';
+          gameCtx.lineWidth = 3;
+          gameCtx.beginPath();
+          gameCtx.arc(0, 0, 11, 0, Math.PI * 2);
+          gameCtx.stroke();
+          gameCtx.restore();
+
+          // Draw range indicator if selected
+          if (building.selected) {
+            gameCtx.save();
+            gameCtx.strokeStyle = 'rgba(255, 255, 0, 0.25)';
+            gameCtx.lineWidth = 2;
+            gameCtx.beginPath();
+            gameCtx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2);
+            gameCtx.stroke();
+            gameCtx.restore();
+          }
+        }
         // For rocket turret, don't draw the rotating barrel
-        if (building.type.startsWith('turretGun')) {
+        else if (building.type.startsWith('turretGun')) {
           // Draw turret with rotation
           gameCtx.save();
           gameCtx.translate(centerX, centerY);
@@ -842,6 +942,24 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
       gameCtx.arc(exp.x - scrollOffset.x, exp.y - scrollOffset.y, currentRadius, 0, 2 * Math.PI)
       gameCtx.stroke()
     })
+  }
+  
+  // --- Render Tesla Coil Lightning Effects ON TOP ---
+  if (units && units.length > 0) {
+    const now = performance.now();
+    for (const unit of units) {
+      if (unit.teslaCoilHit && now - unit.teslaCoilHit.impactTime < 400) {
+        // Draw the lightning bolt for a short time after impact
+        drawTeslaCoilLightning(
+          gameCtx,
+          unit.teslaCoilHit.fromX - scrollOffset.x,
+          unit.teslaCoilHit.fromY - scrollOffset.y,
+          unit.teslaCoilHit.toX - scrollOffset.x,
+          unit.teslaCoilHit.toY - scrollOffset.y,
+          TILE_SIZE
+        );
+      }
+    }
   }
   
   // Draw selection rectangle if active.

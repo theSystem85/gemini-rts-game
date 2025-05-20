@@ -21,7 +21,9 @@ const soundMapping = {
   harvest: 'harvest',
   deposit: 'deposit',
   explosion: 'explosion',
-  unitLost: 'unitLost' // Adding unit lost sound mapping
+  unitLost: 'unitLost', // Adding unit lost sound mapping
+  teslacoil_loading: 'teslacoil_loading',
+  teslacoil_firing: 'teslacoil_firing'
 }
 
 const soundFiles = {
@@ -40,13 +42,14 @@ const soundFiles = {
   building: ['building.mp3'],
   buildingPlaced: ['buildingPlaced.mp3'],
   harvest: ['harvest.mp3'],
-  unitLost: ['unit_lost.mp3'] // Empty array for now, will be populated when sound asset is added
+  unitLost: ['unit_lost.mp3'],
+  teslacoil_loading: ['teslacoil_loading.mp3'],
+  teslacoil_firing: ['teslacoil_firing.mp3']
 }
 
 const activeAudioElements = new Map();
 
 function playAssetSound(category, volume = 1.0) {
-  console.log('playAssetSound', category, volume)
   const files = soundFiles[category]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
