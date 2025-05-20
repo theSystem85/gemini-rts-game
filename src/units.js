@@ -354,7 +354,7 @@ export function createUnit(factory, unitType, x, y) {
     turretDirection: 0,
     rotationSpeed: 0.1, // Radians per frame
     isRotating: false,
-    useAimAhead: ['tank-v2', 'tank-v3'].includes(unitType) // Enable AAF based on type
+    useAimAhead: ['tank-v2', 'tank-v3', 'tank', 'tank_v1'].includes(unitType) // Enable AAF based on type
   };
 
   // Apply unit-specific properties

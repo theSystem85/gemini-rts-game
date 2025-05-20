@@ -173,25 +173,18 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Open Features:
-(x) ensure harvesters spawn from the vehicle factory not the building factory.
-(x) ensure money for builds is gradually spend during build process
-(-) REFACTOR: move all constants into config.
-(x) lower harvester unload time to 10s.
-(-) increase map scroll speed inertia by 3x.
-(x) Add save and load game functionality with a menu containing a list with save games and their labels.
-(x) Ensure that production queues for buildings and units can be filled even when no more money is available. Ensure the money is only charged when production is actually starting.
-(x) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
-(x) Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
-(x) For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
-(x) For harvesters to be build it is required to have a refinery and a vehicle factory.
-(-) Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
+(-) make sure the bullets from tanks and turrets fire at an exact location on the map and explode there rather than fly over the entire map.
+(-) show some progress when the harvester is unloading the ore at the refinery by gradually adding the money to the balance of the player (or AI) and show how the load indicator at the harvesters goes to zero.
 (-) Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 (-) Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
-(x) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 (-) When player builds the radar station it enables the overview mini map. Before that map is just gray. It consumes 50 energy. When it get destroyed and no other radar station is in the players building list the mini map gets disabled again.
 (-) make a dedicated sound for attacking confirmation
 (-) refine the coloring of the power bar and its logic on impacting the production.
-(-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
+(-) add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0.
+Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit.
+When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1.
+When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3.
+To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
 (-) add meaning to the level system so
     Level 1: means that units will use the aim ahead feature
     Level 2: means that units will use the dodge feature
@@ -199,10 +192,24 @@ Open Features:
 (-) add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
 (-) add a unit repair builing to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 (-) add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
-(-) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
+(x) add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unlaod only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
 (-) add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v3.
 (-) make tank_v2 get 30% more health as tank_v1.
 (-) rename tank to tank_v1 in code and to Tank V1 in the UI.
+(x) when game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
+(x) make the enemy more intelligent so it does not just run into players defense over and over again but moves away when his units are too weak to break into players base turret defense. Then the enemy gaters units in safe distance to players base and starts another attack with more units trying to break players defense and so on. The enemy should also try to find a way around the players defense to attack weak spots of the base.
+(x) ensure harvesters spawn from the vehicle factory not the building factory.
+(x) ensure money for builds is gradually spend during build process
+(-) REFACTOR: move all constants into config.
+(x) lower harvester unload time to 10s.
+(x) increase map scroll speed inertia by 3x.
+(x) Add save and load game functionality with a menu containing a list with save games and their labels.
+(x) Ensure that production queues for buildings and units can be filled even when no more money is available. Ensure the money is only charged when production is actually starting.
+(x) Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
+(x) Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
+(x) For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
+(x) For harvesters to be build it is required to have a refinery and a vehicle factory.
+(x) Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 (x) improve sidebar
 (x) Add a sell building button to the sidebar (next to repair button). The button has the tooltip "sell for x% of the build price". The sell mode can be toggled by the button or by clicking the "s" key (add hint to help menu also). Initially x will be set to 70% of the build price. When sell mode is on turn the cursor into the "selling.svg" cursor.
 (x) Make the map grid visibility to be able to be toggled on and off by pressing "g" key (add this to help menu overlay as well).
@@ -261,6 +268,9 @@ Open Features:
 (x) when a unit is selected play the yesSir01 sound
 
 Bugs:
+(-) sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
+(-) tank v1 somehow changes color during the game. They should all be blue.
+(-) when refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 (-) when production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
 (-) the initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
 (-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
