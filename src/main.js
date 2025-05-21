@@ -1,7 +1,7 @@
 // main.js
 import { setupInputHandlers } from './inputHandler.js'
 import { unitCosts } from './units.js'
-import { renderGame, renderMinimap, preloadTileTextures } from './rendering.js'
+import { renderGame, renderMinimap } from './rendering.js'
 import { gameState } from './gameState.js'
 import { updateGame } from './updateGame.js'
 import { 
@@ -19,36 +19,20 @@ import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { playSound, toggleBackgroundMusic } from './sound.js'
 import { initFactories } from './factories.js'
 import { initBackgroundMusic } from './sound.js'
-import { preloadBuildingImages } from './buildingImageMap.js'
+// import { preloadBuildingImages } from './buildingImageMap.js' // Moved to gameSetup.js
 import { buildingRepairHandler } from './buildingRepairHandler.js'
 import { buildingSellHandler } from './buildingSellHandler.js'
 import { createUnit } from './units.js'
+import { initializeGameAssets, generateMap as generateMapFromSetup } from './gameSetup.js';
 
 // Initialize loading states
-let texturesLoaded = false;
-let buildingImagesLoaded = false;
-let gameInitialized = false;
+let allAssetsLoaded = false;
+let gameInitialized = false; // This flag indicates if the game loop has run its initial setup
 
-// Preload textures before starting the game loop
-console.log("Starting texture preloading...");
-preloadTileTextures(() => {
-  console.log("All textures preloaded successfully!");
-  texturesLoaded = true;
-  // If other initialization is done, start the game
-  if (buildingImagesLoaded && gameInitialized) {
-    console.log("Game ready to start!");
-  }
-});
-
-// Preload building images
-console.log("Starting building images preloading...");
-preloadBuildingImages(() => {
-  console.log("All building images preloaded successfully!");
-  buildingImagesLoaded = true;
-  // If other initialization is done, start the game
-  if (texturesLoaded && gameInitialized) {
-    console.log("Game ready to start!");
-  }
+initializeGameAssets(() => {
+  console.log("All game assets preloaded successfully!");
+  allAssetsLoaded = true;
+  // The game loop will pick this up.
 });
 
 const gameCanvas = document.getElementById('gameCanvas')
@@ -289,7 +273,7 @@ function generateMap(seed) {
 
 // Reset game state with the new map (clearing factories, units, bullets, and resetting the viewport)
 function resetGameWithNewMap(seed) {
-  generateMap(seed)
+  generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y); // Use imported generateMap
   factories.length = 0
   initFactories(factories, mapGrid)
   units.length = 0
@@ -298,13 +282,17 @@ function resetGameWithNewMap(seed) {
   if (playerFactory) {
     const factoryPixelX = playerFactory.x * TILE_SIZE
     const factoryPixelY = playerFactory.y * TILE_SIZE
+    // Ensure gameCanvas.width and gameCanvas.height are the CSS dimensions for centering logic
+    const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || gameCanvas.width;
+    const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || gameCanvas.height;
+
     gameState.scrollOffset.x = Math.max(0, Math.min(
-      factoryPixelX - gameCanvas.width / 2,
-      MAP_TILES_X * TILE_SIZE - gameCanvas.width
+      factoryPixelX - logicalCanvasWidth / 2,
+      MAP_TILES_X * TILE_SIZE - logicalCanvasWidth
     ))
     gameState.scrollOffset.y = Math.max(0, Math.min(
-      factoryPixelY - gameCanvas.height / 2,
-      MAP_TILES_Y * TILE_SIZE - gameCanvas.height
+      factoryPixelY - logicalCanvasHeight / 2,
+      MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight
     ))
   }
   gameState.gameTime = 0
@@ -323,7 +311,7 @@ document.getElementById('shuffleMapBtn').addEventListener('click', () => {
 })
 
 // Replace the original static map generation with the seeded generation on initial load
-generateMap(document.getElementById('mapSeed').value)
+generateMapFromSetup(document.getElementById('mapSeed').value, mapGrid, MAP_TILES_X, MAP_TILES_Y); // Use imported generateMap
 
 export const factories = []
 initFactories(factories, mapGrid)
@@ -340,14 +328,18 @@ if (playerFactory) {
   const factoryPixelX = playerFactory.x * TILE_SIZE
   const factoryPixelY = playerFactory.y * TILE_SIZE
   
+  // Ensure gameCanvas.width and gameCanvas.height are the CSS dimensions for centering logic
+  const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || gameCanvas.width;
+  const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || gameCanvas.height;
+  
   // Center the factory in the viewport
   gameState.scrollOffset.x = Math.max(0, Math.min(
-    factoryPixelX - gameCanvas.width / 2,
-    MAP_TILES_X * TILE_SIZE - gameCanvas.width
+    factoryPixelX - logicalCanvasWidth / 2,
+    MAP_TILES_X * TILE_SIZE - logicalCanvasWidth
   ))
   gameState.scrollOffset.y = Math.max(0, Math.min(
-    factoryPixelY - gameCanvas.height / 2,
-    MAP_TILES_Y * TILE_SIZE - gameCanvas.height
+    factoryPixelY - logicalCanvasHeight / 2,
+    MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight
   ))
 }
 
@@ -727,33 +719,50 @@ function handleMinimapClick(e) {
   gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight))
 }
 
-let lastTime = performance.now()
-function gameLoop(time) {
-  try {
-    const delta = (time - lastTime) * gameState.speedMultiplier
-    lastTime = time
-    
-    if (gameState.gameStarted && !gameState.gamePaused) {
-      updateGame(delta, mapGrid, factories, units, bullets, gameState)
+let lastTime = 0
+function gameLoop(timestamp) {
+  if (!gameInitialized) {
+    // Wait for assets to be loaded before initializing and starting the game loop
+    if (!allAssetsLoaded) {
+      // Display a loading message or spinner
+      gameCtx.fillStyle = '#000';
+      gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+      gameCtx.font = '20px Arial';
+      gameCtx.fillStyle = '#fff';
+      gameCtx.textAlign = 'center';
+      gameCtx.fillText('Loading assets, please wait...', gameCanvas.width / (2 * (window.devicePixelRatio || 1)), gameCanvas.height / (2 * (window.devicePixelRatio || 1)));
+      requestAnimationFrame(gameLoop);
+      return;
     }
-    
-    renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, 
-              gameState.buildings, gameState.scrollOffset, gameState.selectionActive, 
-              gameState.selectionStart, gameState.selectionEnd, gameState)
-    renderMinimap(minimapCtx, minimapCanvas, mapGrid, 
-                 gameState.scrollOffset, gameCanvas, units, gameState.buildings, gameState)
-    
-    moneyEl.textContent = gameState.money
-    gameTimeEl.textContent = Math.floor(gameState.gameTime)
-    winsEl.textContent = gameState.wins
-    lossesEl.textContent = gameState.losses
-    
-    requestAnimationFrame(gameLoop)
-  } catch (error) {
-    console.error("Critical error in game loop:", error)
-    // Try to recover by requesting next frame
-    requestAnimationFrame(gameLoop)
+    // Assets are loaded, perform one-time initializations
+    console.log("Game initialized and starting loop.");
+    gameInitialized = true;
+    lastTime = timestamp; // Initialize lastTime
+    initBackgroundMusic(); // Initialize background music now that assets might be ready
+    // Call initial button state updates
+    updateVehicleButtonStates();
+    updateBuildingButtonStates();
   }
+
+  const deltaTime = (timestamp - lastTime) * gameState.speedMultiplier;
+  lastTime = timestamp;
+
+  if (!gameState.gameOver) {
+    if (!gameState.gamePaused) {
+      updateGame(deltaTime, gameState, units, factories, bullets, mapGrid, productionQueue, moneyEl, gameTimeEl);
+      updateBuildingsUnderRepair(gameState, performance.now());
+    }
+  }
+
+  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, gameState.buildings, gameState.scrollOffset, gameState.selectionActive, gameState.selectionStart, gameState.selectionEnd, gameState);
+  renderMinimap(minimapCtx, minimapCanvas, mapGrid, gameState.scrollOffset, gameCanvas, units, gameState.buildings, gameState);
+  
+  moneyEl.textContent = gameState.money
+  gameTimeEl.textContent = Math.floor(gameState.gameTime)
+  winsEl.textContent = gameState.wins
+  lossesEl.textContent = gameState.losses
+  
+  requestAnimationFrame(gameLoop);
 }
 
 // Modify the animation loop to update production progress and handle energy effects
