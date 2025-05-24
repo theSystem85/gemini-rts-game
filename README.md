@@ -2,6 +2,9 @@
 
 [Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/theSystem85/gemini-rts-game)
 
+## Recent Updates
+- **2025-05-24**: Refactored save game functionality from `main.js` into a dedicated `saveGame.js` module, improving code organization and maintainability.
+
 ## Intro
 this game is a test for gemini advanced on how to make a complex RTS game mostly from scratch to test the 1M token context window.
 
@@ -172,7 +175,14 @@ Important Notes:
 1. Include necessary styles, scripts, and assets inline to avoid external dependencies.
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
+Imporvements:
+(-) Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
+(-) The tesla coil should make little damage to the target.
+(-) Tank projectiles make too much damage.
+(-) Turret_v3 aiming need better aim ahead.
+
 Open Features:
+(-) when units are below 25% health they start to move 
 (-) make sure the bullets from tanks and turrets fire at an exact location on the map and explode there rather than fly over the entire map.
 (-) show some progress when the harvester is unloading the ore at the refinery by gradually adding the money to the balance of the player (or AI) and show how the load indicator at the harvesters goes to zero.
 (-) Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
