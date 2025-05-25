@@ -281,6 +281,7 @@ To indicate the units level there are up to 3 yellow stars adding up from the ce
 (x) when a unit is selected play the yesSir01 sound
 
 Bugs:
+(-) When power below 0 make sure the production speed of buildings and units is only at 33%.
 (-) the initial construction yard building is not respected in the occupancy map.
 (x) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
 (x) enemy units do not defend their harvesters when being attacked.
