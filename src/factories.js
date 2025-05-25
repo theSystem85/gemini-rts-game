@@ -37,6 +37,7 @@ export function initFactories(factories, mapGrid) {
     for (let y = factory.y; y < factory.y + factory.height; y++) {
       for (let x = factory.x; x < factory.x + factory.width; x++) {
         mapGrid[y][x].type = 'building'
+        mapGrid[y][x].building = factory // Set reference to the factory object to properly block building placement
       }
     }
   })
