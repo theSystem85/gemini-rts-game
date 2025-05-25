@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Minified files
+*.min.js
+
+# Public assets (these are typically not linted)
+public/
+
+# IDE and OS files
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
