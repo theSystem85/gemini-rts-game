@@ -36,7 +36,7 @@ import {
   hasClearShot, calculateAimAheadPosition, isAdjacentToBuilding, showUnloadingFeedback
 } from './logic.js'
 import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
-import { showNotification } from './main.js'
+import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
 
 const harvestedTiles = new Set(); // Track tiles currently being harvested

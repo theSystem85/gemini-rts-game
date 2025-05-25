@@ -1,6 +1,7 @@
 import { spawnUnit, findPath } from './units.js'
 import { findClosestOre } from './logic.js'
-import { buildingCosts, factories, units, mapGrid, showNotification } from './main.js'
+import { buildingCosts, factories, units, mapGrid } from './main.js'
+import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { unitCosts } from './units.js'

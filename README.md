@@ -176,10 +176,13 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Imporvements:
+(-) The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
+(-) tanks movement speed should be 50% higher in general.
 (-) Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
 (-) The tesla coil should make little damage to the target.
 (-) Tank projectiles make too much damage.
 (-) Turret_v3 aiming need better aim ahead.
+(-) REFACTOR: move all constants into config.
 
 Open Features:
 (-) when units are below 25% health they start to move 
@@ -210,7 +213,6 @@ To indicate the units level there are up to 3 yellow stars adding up from the ce
 (x) make the enemy more intelligent so it does not just run into players defense over and over again but moves away when his units are too weak to break into players base turret defense. Then the enemy gaters units in safe distance to players base and starts another attack with more units trying to break players defense and so on. The enemy should also try to find a way around the players defense to attack weak spots of the base.
 (x) ensure harvesters spawn from the vehicle factory not the building factory.
 (x) ensure money for builds is gradually spend during build process
-(-) REFACTOR: move all constants into config.
 (x) lower harvester unload time to 10s.
 (x) increase map scroll speed inertia by 3x.
 (x) Add save and load game functionality with a menu containing a list with save games and their labels.
@@ -278,6 +280,9 @@ To indicate the units level there are up to 3 yellow stars adding up from the ce
 (x) when a unit is selected play the yesSir01 sound
 
 Bugs:
+(-) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
+(-) enemy units do not defend their harvesters when being attacked.
+(-) when selling a building the occupancy map is not updated and still blocked there.
 (-) sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
 (-) tank v1 somehow changes color during the game. They should all be blue.
 (-) when refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.

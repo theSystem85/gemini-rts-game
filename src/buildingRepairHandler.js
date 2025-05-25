@@ -1,7 +1,7 @@
 import { TILE_SIZE } from './config.js'
 import { canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply, calculateRepairCost, repairBuilding } from './buildings.js'
 import { playSound } from './sound.js'
-import { showNotification } from './main.js'
+import { showNotification } from './ui/notifications.js'
 import { buildingData } from './buildings.js'
 import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
 

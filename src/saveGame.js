@@ -6,7 +6,7 @@ import { mapGrid } from './main.js';
 import { TILE_SIZE } from './config.js';
 import { createUnit } from './units.js';
 import { buildingData } from './buildings.js';
-import { showNotification } from './main.js';
+import { showNotification } from './ui/notifications.js';
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -180,9 +180,12 @@ export function loadGame(key) {
     
     // Import these functions as needed after loading
     import('./main.js').then(module => {
-      // Update build menu states after loading
-      module.updateVehicleButtonStates();
-      module.updateBuildingButtonStates();
+      // Update build menu states after loading using ProductionController
+      const gameInstance = module.getCurrentGame();
+      if (gameInstance && gameInstance.productionController) {
+        gameInstance.productionController.updateVehicleButtonStates();
+        gameInstance.productionController.updateBuildingButtonStates();
+      }
     });
     
     showNotification('Game loaded: ' + (saveObj.label || key));
