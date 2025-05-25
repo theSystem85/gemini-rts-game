@@ -70,3 +70,82 @@ export const PATHFINDING_THRESHOLD = 10
 // Adjust this value in the browser console using:
 // window.gameState.aimAheadCalibrationFactor = newValue;
 export const AIM_AHEAD_CALIBRATION_FACTOR = 1.0
+
+// Unit costs
+export const UNIT_COSTS = {
+  tank: 1000,
+  rocketTank: 2000,
+  harvester: 500,
+  'tank-v2': 2000
+}
+
+// Unit properties
+export const UNIT_PROPERTIES = {
+  // Base properties
+  base: {
+    health: 100,
+    maxHealth: 100,
+    speed: 0.5,
+    rotationSpeed: 0.1
+  },
+  // Harvester properties
+  harvester: {
+    health: 150,
+    maxHealth: 150,
+    speed: 0.45,
+    rotationSpeed: 0.2,
+    armor: 3
+  },
+  // Tank properties
+  tank_v1: {
+    health: 100,
+    maxHealth: 100,
+    speed: 0.375,
+    rotationSpeed: 0.15,
+    useAimAhead: true
+  },
+  // Tank V2 properties
+  'tank-v2': {
+    health: 130,
+    maxHealth: 130,
+    speed: 0.375,
+    rotationSpeed: 0.15,
+    alertMode: true,
+    useAimAhead: true
+  },
+  // Tank V3 properties
+  'tank-v3': {
+    health: 169,
+    maxHealth: 169,
+    speed: 0.375,
+    rotationSpeed: 0.15,
+    alertMode: true,
+    useAimAhead: true
+  },
+  // Rocket tank properties
+  rocketTank: {
+    health: 100,
+    maxHealth: 100,
+    speed: 0.325,
+    rotationSpeed: 0.12,
+    useAimAhead: true
+  }
+}
+
+// Pathfinding constants
+export const PATHFINDING_LIMIT = 1000
+
+// Movement directions for pathfinding and position search
+export const DIRECTIONS = [
+  { x: 0, y: -1 },  // north
+  { x: 1, y: 0 },   // east
+  { x: 0, y: 1 },   // south
+  { x: -1, y: 0 },  // west
+  { x: 1, y: -1 },  // northeast
+  { x: 1, y: 1 },   // southeast
+  { x: -1, y: 1 },  // southwest
+  { x: -1, y: -1 }  // northwest
+]
+
+// Maximum search distance for spawn positions
+export const MAX_SPAWN_SEARCH_DISTANCE = 10

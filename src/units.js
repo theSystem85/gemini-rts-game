@@ -1,17 +1,18 @@
 // units.js
-import { TILE_SIZE } from './config.js'
+import { 
+  TILE_SIZE, 
+  UNIT_COSTS, 
+  UNIT_PROPERTIES, 
+  PATHFINDING_LIMIT, 
+  DIRECTIONS,
+  MAX_SPAWN_SEARCH_DISTANCE
+} from './config.js'
 import { getUniqueId } from './utils.js'
-import { playSound } from './sound.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false;
 
-export const unitCosts = {
-  tank: 1000,
-  rocketTank: 2000,
-  harvester: 500,
-  'tank-v2': 2000
-}
+export const unitCosts = UNIT_COSTS;
 
 // Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
@@ -97,7 +98,7 @@ class MinHeap {
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
-export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = 1000) {
+export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
   if (
     end.x < 0 ||
     end.y < 0 ||
@@ -114,18 +115,8 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   let adjustedEnd = { ...end }
   let destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
   if (destType === 'water' || destType === 'rock' || destType === 'building') {
-    const dirs = [
-      { x: 0, y: -1 },
-      { x: 1, y: 0 },
-      { x: 0, y: 1 },
-      { x: -1, y: 0 },
-      { x: 1, y: -1 },
-      { x: 1, y: 1 },
-      { x: -1, y: 1 },
-      { x: -1, y: -1 }
-    ]
     let found = false
-    for (const dir of dirs) {
+    for (const dir of DIRECTIONS) {
       const newX = adjustedEnd.x + dir.x
       const newY = adjustedEnd.y + dir.y
       if (newX >= 0 && newY >= 0 && newX < mapGrid[0].length && newY < mapGrid.length) {
@@ -144,7 +135,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
           start, 
           end,
           destinationType: destType,
-          surroundingTiles: dirs.map(dir => {
+          surroundingTiles: DIRECTIONS.map(dir => {
             const x = adjustedEnd.x + dir.x;
             const y = adjustedEnd.y + dir.y;
             if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
@@ -254,18 +245,8 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
 
 function getNeighbors(node, mapGrid) {
   const neighbors = []
-  const dirs = [
-    { x: 0, y: -1 },
-    { x: 1, y: 0 },
-    { x: 0, y: 1 },
-    { x: -1, y: 0 },
-    { x: 1, y: -1 },
-    { x: 1, y: 1 },
-    { x: -1, y: 1 },
-    { x: -1, y: -1 }
-  ]
   
-  for (const dir of dirs) {
+  for (const dir of DIRECTIONS) {
     const x = node.x + dir.x
     const y = node.y + dir.y
     if (y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length) {
@@ -331,67 +312,49 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
 
 // Helper to create the actual unit object
 export function createUnit(factory, unitType, x, y) {
+  // Get base unit properties
+  const baseProps = UNIT_PROPERTIES.base;
+  
+  // Get unit-specific properties or use base properties if type not found
+  const typeProps = UNIT_PROPERTIES[unitType] || baseProps;
+  
+  // Special handling for 'tank' and 'tank_v1' to use the same properties
+  const actualType = (unitType === 'tank') ? 'tank_v1' : unitType;
+  const unitProps = UNIT_PROPERTIES[actualType] || typeProps;
+
   const unit = {
     id: getUniqueId(),
-    type: unitType,
+    type: actualType,
     // Determine owner based on factory's 'owner' property (for buildings) or 'id' (for initial factories)
     owner: (factory.owner === 'player' || factory.id === 'player') ? 'player' : 'enemy',
     tileX: x,
     tileY: y,
     x: x * TILE_SIZE,
     y: y * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 0.25 : 0.5, // 4x slower - Base speed, adjust per type below
-    health: (unitType === 'harvester') ? 150 : 100, // Base health, adjust per type below
-    maxHealth: (unitType === 'harvester') ? 150 : 100, // Base maxHealth, adjust per type below
+    speed: unitProps.speed,
+    health: unitProps.health,
+    maxHealth: unitProps.maxHealth,
     path: [],
     target: null,
     selected: false,
     oreCarried: 0,
     harvesting: false,
-    // Add rotation properties for all unit types
+    // Add rotation properties
     direction: 0, // Angle in radians (0 = east, PI/2 = south)
     targetDirection: 0,
     turretDirection: 0,
-    rotationSpeed: 0.1, // Radians per frame
+    rotationSpeed: unitProps.rotationSpeed,
     isRotating: false,
-    useAimAhead: ['tank-v2', 'tank-v3', 'tank', 'tank_v1'].includes(unitType) // Enable AAF based on type
+    useAimAhead: unitProps.useAimAhead || false
   };
 
-  // Apply unit-specific properties
-  if (unitType === 'tank-v2') {
-    unit.speed = 0.375  // 4x slower (was 1.5)
-    unit.rotationSpeed = 0.15
-    unit.alertMode = true  // Start tank-v2 in alert mode by default
-    unit.health = 130; // 30% more health than tank_v1
-    unit.maxHealth = 130;
-  } else if (unitType === 'tank' || unitType === 'tank_v1') { // Handle both names
-    unit.type = 'tank_v1'; // Standardize type name
-    unit.speed = 0.375  // 4x slower (was 1.5)
-    unit.rotationSpeed = 0.15
-    unit.health = 100;
-    unit.maxHealth = 100;
-  } else if (unitType === 'rocketTank') {
-    unit.speed = 0.325  // 4x slower (was 1.3)
-    unit.rotationSpeed = 0.12
-    unit.health = 100; // Assuming base health for now
-    unit.maxHealth = 100;
+  // Add unit-specific properties
+  if (unitType === 'tank-v2' || unitType === 'tank-v3') {
+    unit.alertMode = unitProps.alertMode;
   } else if (unitType === 'harvester') {
-    unit.speed = 0.45  // 4x slower (was 1.8)
-    unit.rotationSpeed = 0.2
-    unit.oreCarried = 0
-    unit.harvesting = false
-    unit.health = 150; // Base harvester health
-    unit.maxHealth = 150;
-    unit.armor = 3; // Example: 3x tank armor (assuming tank armor is 1)
-  }
-  // Add tank_v3 properties if defined
-  else if (unitType === 'tank-v3') {
-      unit.speed = 0.375;  // 4x slower (was 1.5)
-      unit.rotationSpeed = 0.15;
-      unit.alertMode = true; // Assuming V3 also has alert mode
-      unit.health = 169; // 30% more than tank-v2 (130 * 1.3)
-      unit.maxHealth = 169;
-      unit.useAimAhead = true; // Explicitly enable AAF
+    unit.oreCarried = 0;
+    unit.harvesting = false;
+    unit.armor = unitProps.armor;
   }
 
   return unit;
@@ -400,21 +363,10 @@ export function createUnit(factory, unitType, x, y) {
 // Find an available position near the factory center for unit spawn
 function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
   // First, try positions around the factory center in a spiral pattern
-  const directions = [
-    { x: 0, y: 1 },  // south
-    { x: 1, y: 0 },  // east
-    { x: 0, y: -1 }, // north
-    { x: -1, y: 0 },  // west
-    // Add diagonals for more options
-    { x: 1, y: 1 },  // southeast
-    { x: 1, y: -1 },  // northeast
-    { x: -1, y: -1 }, // northwest
-    { x: -1, y: 1 }   // southwest
-  ];
   
   // Check immediate surrounding tiles first (1 tile away from center)
   for (let distance = 1; distance <= 5; distance++) { // Check up to 5 tiles away initially
-    for (const dir of directions) {
+    for (const dir of DIRECTIONS) {
       const x = factoryX + dir.x * distance;
       const y = factoryY + dir.y * distance;
       
@@ -427,8 +379,7 @@ function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
   
   // If we couldn't find a position in the immediate vicinity,
   // expand the search with a more thorough approach (larger radius)
-  // This part might be less necessary if the initial check is sufficient
-  for (let distance = 6; distance <= 10; distance++) { // Expand search up to 10 tiles
+  for (let distance = 6; distance <= MAX_SPAWN_SEARCH_DISTANCE; distance++) {
     // Check in a square pattern around the factory center
     for (let dx = -distance; dx <= distance; dx++) {
       for (let dy = -distance; dy <= distance; dy++) {
@@ -481,13 +432,8 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
   if (!blockingUnit) return true; // No blocking unit
   
   // Find the closest free tile to move the blocking unit
-  const directions = [
-    {x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0},  // Cardinals
-    {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}, {x: -1, y: -1}  // Diagonals
-  ];
-  
   for (let distance = 1; distance <= 3; distance++) {
-    for (const dir of directions) {
+    for (const dir of DIRECTIONS) {
       const newX = targetX + dir.x * distance;
       const newY = targetY + dir.y * distance;
       
@@ -502,7 +448,7 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
     }
   }
   
-  return false; // Couldn't move blocking unit
+  return false; // Could not move the blocking unit
 }
 
 // --- Collision Resolution for Idle Units ---
