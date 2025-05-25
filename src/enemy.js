@@ -105,7 +105,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'oreRefinery').length > 0) {
     if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
       const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester');
-      let unitType = 'tank';
+      let unitType = 'tank_v1';
       let cost = 1000;
       if (enemyHarvesters.length === 0) {
         unitType = 'harvester';
@@ -122,7 +122,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           unitType = 'tank-v2';
           cost = 2000;
         } else {
-          unitType = 'tank';
+          unitType = 'tank_v1';
           cost = 1000;
         }
       }
@@ -143,27 +143,63 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     if (unit.owner !== 'enemy') return
 
     // Combat unit behavior
-    if (unit.type === 'tank' || unit.type === 'rocketTank' || unit.type === 'tank-v2') {
+    if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
       // Target selection throttled to every 2 seconds
       const canChangeTarget = !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 2000)
       if (canChangeTarget) {
         let newTarget = null
-        const nearbyEnemies = units.filter(u => u.owner === 'enemy' && Math.hypot(u.x - unit.x, u.y - unit.y) < 100)
-        if (nearbyEnemies.length >= 3) {
-          newTarget = playerFactory
+        
+        // First priority: Defend harvesters under attack
+        const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+        let harvesterUnderAttack = null
+        for (const harvester of enemyHarvesters) {
+          const threateningPlayers = units.filter(u => 
+            u.owner === 'player' && 
+            Math.hypot(u.x - harvester.x, u.y - harvester.y) < 5 * TILE_SIZE
+          )
+          if (threateningPlayers.length > 0) {
+            harvesterUnderAttack = threateningPlayers[0] // Target closest threat to harvester
+            break
+          }
+        }
+        
+        if (harvesterUnderAttack) {
+          newTarget = harvesterUnderAttack
         } else {
-          let closestPlayer = null
-          let closestDist = Infinity
-          units.forEach(u => {
-            if (u.owner === 'player') {
-              const d = Math.hypot((u.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2), (u.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2))
-              if (d < closestDist) {
-                closestDist = d
-                closestPlayer = u
+          // Second priority: Gather for coordinated attack
+          const nearbyAllies = units.filter(u => u.owner === 'enemy' && u !== unit && 
+            (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'rocketTank') &&
+            Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
+          
+          if (nearbyAllies.length >= 2) {
+            // Enough allies nearby, attack player base or closest player unit
+            let closestPlayer = null
+            let closestDist = Infinity
+            units.forEach(u => {
+              if (u.owner === 'player') {
+                const d = Math.hypot((u.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2), (u.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2))
+                if (d < closestDist) {
+                  closestDist = d
+                  closestPlayer = u
+                }
               }
-            }
-          })
-          newTarget = (closestPlayer && closestDist < 10 * TILE_SIZE) ? closestPlayer : playerFactory
+            })
+            newTarget = (closestPlayer && closestDist < 12 * TILE_SIZE) ? closestPlayer : playerFactory
+          } else {
+            // Not enough allies nearby, find closest player unit or target factory from safe distance
+            let closestPlayer = null
+            let closestDist = Infinity
+            units.forEach(u => {
+              if (u.owner === 'player') {
+                const d = Math.hypot((u.x + TILE_SIZE/2) - (unit.x + TILE_SIZE/2), (u.y + TILE_SIZE/2) - (unit.y + TILE_SIZE/2))
+                if (d < closestDist) {
+                  closestDist = d
+                  closestPlayer = u
+                }
+              }
+            })
+            newTarget = (closestPlayer && closestDist < 8 * TILE_SIZE) ? closestPlayer : playerFactory
+          }
         }
         
         if (unit.target !== newTarget) {

@@ -280,8 +280,9 @@ To indicate the units level there are up to 3 yellow stars adding up from the ce
 (x) when a unit is selected play the yesSir01 sound
 
 Bugs:
-(-) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
-(-) enemy units do not defend their harvesters when being attacked.
+(-) the initial construction yard building is not respected in the occupancy map.
+(x) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
+(x) enemy units do not defend their harvesters when being attacked.
 (-) when selling a building the occupancy map is not updated and still blocked there.
 (-) sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
 (-) tank v1 somehow changes color during the game. They should all be blue.
