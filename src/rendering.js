@@ -225,7 +225,7 @@ function preloadAllTextures(callback) {
   let totalTextures = 0
   let loadedTextures = 0
 
-  for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
+  for (const [, tileInfo] of Object.entries(TILE_IMAGES)) {
     const paths = tileInfo.paths || []
     if (paths.length === 0) continue
     totalTextures += paths.length

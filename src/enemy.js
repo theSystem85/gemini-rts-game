@@ -3,7 +3,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
 import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
-import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid } from './buildings.js'
+import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -429,7 +429,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 }
 
 // Spawns an enemy unit at the center of the enemy factory
-export function spawnEnemyUnit(factory, unitType, units, mapGrid) {
+export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + Math.floor(factory.height / 2)
   const unit = {
@@ -1068,6 +1068,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 }
 
 // Handle enemy building production completion
+// eslint-disable-next-line no-unused-vars
 function completeEnemyBuilding(gameState, mapGrid) {
   const production = gameState.enemy.currentBuildingProduction
   if (!production) return
@@ -1102,6 +1103,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
 }
 
 // Add function to replicate player building patterns
+// eslint-disable-next-line no-unused-vars
 function replicatePlayerBuildPattern(gameState, enemyBuildings) {
   try {
     // Get build patterns from localStorage if not already loaded

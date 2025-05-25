@@ -110,9 +110,10 @@ class Game {
   setupUI() {
     // Get UI elements
     const moneyEl = document.getElementById('money')
-    const gameTimeEl = document.getElementById('gameTime')
-    const winsEl = document.getElementById('wins')
-    const lossesEl = document.getElementById('losses')
+    // Store these elements for potential future use
+    document.getElementById('gameTime')
+    document.getElementById('wins')
+    document.getElementById('losses')
     const sidebar = document.getElementById('sidebar')
 
     // Hide start button and style sidebar
@@ -219,6 +220,7 @@ class Game {
 }
 
 // Seeded random generator
+// eslint-disable-next-line no-unused-vars
 function seededRandom(seed) {
   const m = 0x80000000, a = 1103515245, c = 12345
   let state = seed

@@ -135,7 +135,7 @@ export function checkBulletCollision(bullet, units, factories, gameState) {
 }
 
 // Trigger explosion effect and apply area damage
-export function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, mapGrid) {
+export function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, _mapGrid) {
   const explosionRadius = TILE_SIZE * 2
 
   // Add explosion visual effect
@@ -220,7 +220,7 @@ export function isAdjacentToBuilding(unit, building) {
 }
 
 // Visual feedback when a harvester is unloading at a refinery
-export function showUnloadingFeedback(unit, refinery) {
+export function showUnloadingFeedback(_unit, _refinery) {
   // This function would ideally create a visual effect like a small animation
   // or particle effect showing ore unloading at the refinery
   // For now, we'll just log this activity

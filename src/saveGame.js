@@ -20,7 +20,9 @@ export function getSaveGames() {
           label: save.label || '(no label)',
           time: save.time
         })
-      } catch {}
+      } catch (err) {
+        console.warn('Error processing saved game:', err)
+      }
     }
   }
   // Sort by most recent

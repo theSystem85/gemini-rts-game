@@ -36,6 +36,7 @@ import {
   hasClearShot, calculateAimAheadPosition, isAdjacentToBuilding, showUnloadingFeedback
 } from './logic.js'
 import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
+// eslint-disable-next-line no-unused-vars
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
 
@@ -849,9 +850,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             }
           }
 
-          // Store the power value and owner before removing the building
-          const destroyedBuildingPower = building.power || 0
-          const destroyedBuildingOwner = building.owner
+          // Track power and owner info for potential future use
+          // const destroyedBuildingPower = building.power || 0
+          // const destroyedBuildingOwner = building.owner
 
           // Remove the building from the buildings array
           gameState.buildings.splice(i, 1)

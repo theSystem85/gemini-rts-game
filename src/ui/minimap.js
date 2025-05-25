@@ -50,7 +50,8 @@ export function handleMinimapClick(e, gameCanvas) {
   // Get minimap dimensions
   const minimap = e.target
   const minimapRect = minimap.getBoundingClientRect()
-  const pixelRatio = window.devicePixelRatio || 1
+  // Device pixel ratio not needed for this calculation
+  // const pixelRatio = window.devicePixelRatio || 1
 
   // Calculate click position relative to minimap
   // Use CSS dimensions (display size) for calculating click position

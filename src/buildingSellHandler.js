@@ -3,6 +3,7 @@ import { TILE_SIZE } from './config.js'
 import { playSound } from './sound.js'
 import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
+import { productionQueue } from './productionQueue.js'
 
 /**
  * Handles the selling of buildings
@@ -44,7 +45,7 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
 
       // Add money to player
       gameState.money += sellValue
-      if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+      if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
         productionQueue.tryResumeProduction()
       }
       moneyEl.textContent = gameState.money

@@ -3,7 +3,7 @@
 
 import { gameState } from '../gameState.js'
 import { productionQueue } from '../productionQueue.js'
-import { initBackgroundMusic, toggleBackgroundMusic } from '../sound.js'
+import { initBackgroundMusic, toggleBackgroundMusic, bgMusicAudio } from '../sound.js'
 import { buildingRepairHandler } from '../buildingRepairHandler.js'
 import { buildingSellHandler } from '../buildingSellHandler.js'
 import { showNotification } from './notifications.js'

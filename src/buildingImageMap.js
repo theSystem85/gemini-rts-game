@@ -140,7 +140,7 @@ export function preloadBuildingImages(callback) {
 
   // For each building type
   for (const buildingType of Object.keys(buildingImageMap)) {
-    getBuildingImage(buildingType, defaultWidth, defaultHeight, (img) => {
+    getBuildingImage(buildingType, defaultWidth, defaultHeight, (_img) => {
       loadedImages++
       console.log(`Preloaded building image: ${buildingType} (${loadedImages}/${totalImages})`)
 

@@ -2,7 +2,7 @@
 let audioContext = null
 try {
   audioContext = new (window.AudioContext || window.webkitAudioContext)()
-} catch (e) {
+} catch {
   console.error('Web Audio API is not supported.')
 }
 
@@ -127,7 +127,7 @@ export function playSound(eventName, volume = 1.0) {
 
 // --- Background Music Functionality ---
 const backgroundMusicFiles = ['music01.mp3'] // add more files as needed
-let bgMusicAudio = null
+export let bgMusicAudio = null
 
 export function initBackgroundMusic() {
   if (!backgroundMusicFiles || backgroundMusicFiles.length === 0) return

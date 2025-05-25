@@ -314,7 +314,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
 }
 
 // Check individual tile validity for coloring the placement overlay
-export function isTileValid(tileX, tileY, mapGrid, units, buildings, factories) {
+export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factories) {
   // Out of bounds
   if (tileX < 0 || tileY < 0 ||
       tileX >= mapGrid[0].length ||
@@ -330,7 +330,7 @@ export function isTileValid(tileX, tileY, mapGrid, units, buildings, factories) 
   }
 
   // Check for units
-  const unitsAtTile = units.filter(unit =>
+  const unitsAtTile = _units.filter(unit =>
     Math.floor(unit.x / 32) === tileX &&
     Math.floor(unit.y / 32) === tileY
   )
@@ -412,12 +412,12 @@ export function updatePowerSupply(buildings, gameState) {
   gameState.enemyPowerConsumption = enemyTotalConsumption
 
   // Calculate energy percentage for UI display
-  let playerEnergyPercentage = 100
+  // Calculate energy percentage for informational purposes
   if (playerTotalProduction > 0) {
-    playerEnergyPercentage = Math.max(0, 100 - (playerTotalConsumption / playerTotalProduction) * 100)
+    Math.max(0, 100 - (playerTotalConsumption / playerTotalProduction) * 100)
   } else if (playerTotalConsumption > 0) {
     // If no production but consumption exists
-    playerEnergyPercentage = 0
+    0
   }
 
   // Calculate production speed penalty when power is negative

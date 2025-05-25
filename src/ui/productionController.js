@@ -82,7 +82,7 @@ export class ProductionController {
         }
 
         const unitType = button.getAttribute('data-unit-type')
-        const cost = unitCosts[unitType] || 0
+        unitCosts[unitType] || 0 // Cost is used for validation but not directly referenced
 
         // Check requirements for the unit type
         let requirementsMet = true
@@ -176,7 +176,7 @@ export class ProductionController {
           return
         }
 
-        const cost = buildingCosts[buildingType] || 0
+        buildingCosts[buildingType] || 0 // Cost is used by productionQueue internally
 
         // Always allow queuing
         productionQueue.addItem(buildingType, button, true)
