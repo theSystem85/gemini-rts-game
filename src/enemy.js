@@ -429,9 +429,12 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 }
 
 // Spawns an enemy unit at the center of the enemy factory
+// NOTE: Enemy units now use identical stats to player units for perfect balance
 export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + Math.floor(factory.height / 2)
+  
+  // Use the same createUnit function as player units to ensure identical stats
   const unit = {
     id: getUniqueId(),
     type: unitType,
@@ -440,9 +443,10 @@ export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
     tileY: spawnY,
     x: spawnX * TILE_SIZE,
     y: spawnY * TILE_SIZE,
-    speed: (unitType === 'harvester') ? 0.375 : 0.75, // 50% faster
-    health: (unitType === 'harvester') ? 150 : 100,
-    maxHealth: (unitType === 'harvester') ? 150 : 100,
+    // Use standard unit properties instead of hardcoded values
+    speed: (unitType === 'harvester') ? 0.45 : 0.375, // Same as player units
+    health: (unitType === 'harvester') ? 150 : (unitType === 'tank-v2' ? 130 : (unitType === 'tank-v3' ? 169 : 100)),
+    maxHealth: (unitType === 'harvester') ? 150 : (unitType === 'tank-v2' ? 130 : (unitType === 'tank-v3' ? 169 : 100)),
     path: [],
     target: null,
     selected: false,
@@ -458,17 +462,23 @@ export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
     direction: 0,
     targetDirection: 0,
     turretDirection: 0,
-    rotationSpeed: 0.1,
-    isRotating: false,
-    effectiveSpeed: 0.75
+    rotationSpeed: 0.15, // Same as player units
+    isRotating: false
   }
+  
+  // Set effectiveSpeed to match the unit's speed (no more speed advantage)
+  unit.effectiveSpeed = unit.speed
+  
+  // Add armor for harvesters (same as player units)
   if (unitType === 'harvester') {
-    unit.effectiveSpeed = 0.15  // 50% faster
-  } else if (unitType === 'rocketTank') {
-    unit.effectiveSpeed = 0.1125  // 50% faster
-  } else {
-    unit.effectiveSpeed = 0.13125  // 50% faster
+    unit.armor = 3
   }
+  
+  // Add alert mode capability for tank-v2 and tank-v3 (same as player units)
+  if (unitType === 'tank-v2' || unitType === 'tank-v3') {
+    unit.alertMode = true
+  }
+  
   return unit
 }
 

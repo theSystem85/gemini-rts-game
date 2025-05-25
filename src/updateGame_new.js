@@ -49,7 +49,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // Unit system updates
     updateUnitMovement(units, mapGrid, occupancyMap, gameState, now)
     updateSpawnExit(units, factories, mapGrid, occupancyMap)
-    updateUnitCombat(units, bullets, mapGrid, gameState, now)
+    updateUnitCombat(units, bullets, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
 
     // Global pathfinding recalculation

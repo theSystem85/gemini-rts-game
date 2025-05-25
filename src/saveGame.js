@@ -143,9 +143,6 @@ export function loadGame(key) {
         if (typeof building.lastShotTime !== 'number') building.lastShotTime = 0
         if (typeof building.turretDirection !== 'number') building.turretDirection = 0
         if (typeof building.targetDirection !== 'number') building.targetDirection = 0
-        // Aim-ahead/feature flags
-        if (data.useAimAhead) building.useAimAhead = true
-        if (data.aimAhead) building.aimAhead = true
         // Burst fire
         if (data.burstFire) {
           building.burstFire = true
