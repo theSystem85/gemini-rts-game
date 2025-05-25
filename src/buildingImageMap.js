@@ -2,7 +2,7 @@
 // Maps building types to their image assets
 
 // Building image cache to store adjusted/processed images
-const buildingImageCache = {};
+const buildingImageCache = {}
 
 // Map building types to their image paths
 export const buildingImageMap = {
@@ -17,104 +17,104 @@ export const buildingImageMap = {
   teslaCoil: 'images/map/buildings/teslacoil.jpg',
   constructionYard: 'images/map/buildings/construction_yard.png',
   concreteWall: 'images/map/buildings/turret01.jpg' // Using turret01 as a fallback
-};
+}
 
 // Track loading state
-let buildingImagesPreloaded = false;
-let buildingImagesLoading = false;
+let buildingImagesPreloaded = false
+let buildingImagesLoading = false
 
 // Get device pixel ratio for high-DPI rendering
 const getDevicePixelRatio = () => {
-  return window.devicePixelRatio || 1;
-};
+  return window.devicePixelRatio || 1
+}
 
 // Get cached building image or load and cache it
 export function getBuildingImage(buildingType, width, height, callback) {
-  const cacheKey = `${buildingType}_${width}_${height}`;
-  
+  const cacheKey = `${buildingType}_${width}_${height}`
+
   // Return cached image if available
   if (buildingImageCache[cacheKey]) {
-    callback(buildingImageCache[cacheKey]);
-    return;
+    callback(buildingImageCache[cacheKey])
+    return
   }
-  
+
   // Get the image path from the mapping
-  const imagePath = buildingImageMap[buildingType];
-  
+  const imagePath = buildingImageMap[buildingType]
+
   if (!imagePath) {
-    console.warn(`No image mapping found for building type: ${buildingType}`);
-    callback(null);
-    return;
+    console.warn(`No image mapping found for building type: ${buildingType}`)
+    callback(null)
+    return
   }
-  
+
   // Load the source image
-  const img = new Image();
+  const img = new Image()
   img.onload = () => {
     // Get the device pixel ratio
-    const pixelRatio = getDevicePixelRatio();
-    
+    const pixelRatio = getDevicePixelRatio()
+
     // Create a high-resolution canvas to resize/process the image
-    const canvas = document.createElement('canvas');
-    canvas.width = width * pixelRatio;
-    canvas.height = height * pixelRatio;
-    
+    const canvas = document.createElement('canvas')
+    canvas.width = width * pixelRatio
+    canvas.height = height * pixelRatio
+
     // Set display size (CSS) to desired dimensions
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    
-    const ctx = canvas.getContext('2d');
-    
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+
+    const ctx = canvas.getContext('2d')
+
     // Enable high-quality image scaling
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+
     // Scale all drawing operations by the pixel ratio
-    ctx.scale(pixelRatio, pixelRatio);
-    
+    ctx.scale(pixelRatio, pixelRatio)
+
     // Use a two-step scaling process for better quality
     // First draw to an intermediate canvas at 2x size for better downscaling
-    const tempCanvas = document.createElement('canvas');
-    const tempSize = Math.max(width, height) * 2;
-    tempCanvas.width = tempSize;
-    tempCanvas.height = tempSize;
-    
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.imageSmoothingEnabled = true;
-    tempCtx.imageSmoothingQuality = 'high';
-    
+    const tempCanvas = document.createElement('canvas')
+    const tempSize = Math.max(width, height) * 2
+    tempCanvas.width = tempSize
+    tempCanvas.height = tempSize
+
+    const tempCtx = tempCanvas.getContext('2d')
+    tempCtx.imageSmoothingEnabled = true
+    tempCtx.imageSmoothingQuality = 'high'
+
     // Draw original image to the intermediate canvas
-    const aspectRatio = img.width / img.height;
-    let drawWidth, drawHeight;
-    
+    const aspectRatio = img.width / img.height
+    let drawWidth, drawHeight
+
     if (aspectRatio > 1) {
       // Image is wider than tall
-      drawWidth = tempSize;
-      drawHeight = tempSize / aspectRatio;
+      drawWidth = tempSize
+      drawHeight = tempSize / aspectRatio
     } else {
       // Image is taller than wide
-      drawWidth = tempSize * aspectRatio;
-      drawHeight = tempSize;
+      drawWidth = tempSize * aspectRatio
+      drawHeight = tempSize
     }
-    
+
     // Center the image in the canvas
-    tempCtx.drawImage(img, (tempSize - drawWidth) / 2, (tempSize - drawHeight) / 2, drawWidth, drawHeight);
-    
+    tempCtx.drawImage(img, (tempSize - drawWidth) / 2, (tempSize - drawHeight) / 2, drawWidth, drawHeight)
+
     // Draw from the intermediate canvas to the final canvas
-    ctx.drawImage(tempCanvas, 0, 0, width, height);
-    
+    ctx.drawImage(tempCanvas, 0, 0, width, height)
+
     // Store the processed image in the cache
-    buildingImageCache[cacheKey] = canvas;
-    
+    buildingImageCache[cacheKey] = canvas
+
     // Return the processed image
-    callback(canvas);
-  };
-  
+    callback(canvas)
+  }
+
   img.onerror = () => {
-    console.error(`Failed to load building image: ${imagePath}`);
-    callback(null);
-  };
-  
-  img.src = imagePath;
+    console.error(`Failed to load building image: ${imagePath}`)
+    callback(null)
+  }
+
+  img.src = imagePath
 }
 
 // Preload all building images
@@ -122,44 +122,44 @@ export function preloadBuildingImages(callback) {
   // Don't reload if already loaded or loading
   if (buildingImagesPreloaded || buildingImagesLoading) {
     if (callback && buildingImagesPreloaded) {
-      callback();
+      callback()
     }
-    return;
+    return
   }
-  
-  buildingImagesLoading = true;
-  console.log("Preloading building images...");
-  
+
+  buildingImagesLoading = true
+  console.log('Preloading building images...')
+
   // Count total images to preload
-  const totalImages = Object.keys(buildingImageMap).length;
-  let loadedImages = 0;
-  
+  const totalImages = Object.keys(buildingImageMap).length
+  let loadedImages = 0
+
   // Default tile size to preload (typically these will be cached and resized later)
-  const defaultWidth = 64;
-  const defaultHeight = 64;
-  
+  const defaultWidth = 64
+  const defaultHeight = 64
+
   // For each building type
   for (const buildingType of Object.keys(buildingImageMap)) {
     getBuildingImage(buildingType, defaultWidth, defaultHeight, (img) => {
-      loadedImages++;
-      console.log(`Preloaded building image: ${buildingType} (${loadedImages}/${totalImages})`);
-      
+      loadedImages++
+      console.log(`Preloaded building image: ${buildingType} (${loadedImages}/${totalImages})`)
+
       if (loadedImages === totalImages) {
-        console.log("All building images preloaded successfully!");
-        buildingImagesPreloaded = true;
-        buildingImagesLoading = false;
-        if (callback) callback();
+        console.log('All building images preloaded successfully!')
+        buildingImagesPreloaded = true
+        buildingImagesLoading = false
+        if (callback) callback()
       }
-    });
+    })
   }
 }
 
 // Clear the cache (useful for memory management or testing)
 export function clearBuildingImageCache() {
   for (const key in buildingImageCache) {
-    delete buildingImageCache[key];
+    delete buildingImageCache[key]
   }
-  buildingImagesPreloaded = false;
+  buildingImagesPreloaded = false
 }
 
 // Get cache stats for debugging
@@ -168,5 +168,5 @@ export function getBuildingImageCacheStats() {
     size: Object.keys(buildingImageCache).length,
     keys: Object.keys(buildingImageCache),
     preloaded: buildingImagesPreloaded
-  };
+  }
 }

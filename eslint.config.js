@@ -30,9 +30,9 @@ export default [
       // No semicolons at the end of statements
       'semi': ['error', 'never'],
       'semi-spacing': ['error', { before: false, after: true }],
-      
+
       // Use 2 spaces for indentation
-      'indent': ['error', 2, { 
+      'indent': ['error', 2, {
         SwitchCase: 1,
         VariableDeclarator: 1,
         outerIIFEBody: 1,
@@ -46,7 +46,7 @@ export default [
         flatTernaryExpressions: false,
         ignoreComments: false
       }],
-      
+
       // Additional code style rules for consistency
       'quotes': ['error', 'single', { avoidEscape: true }],
       'comma-dangle': ['error', 'never'],
@@ -60,13 +60,13 @@ export default [
       'no-trailing-spaces': 'error',
       'eol-last': ['error', 'always'],
       'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1 }],
-      
+
       // Modern JavaScript best practices
       'prefer-const': 'error',
       'no-var': 'error',
       'arrow-spacing': ['error', { before: true, after: true }],
       'template-curly-spacing': ['error', 'never'],
-      
+
       // Common error prevention
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-console': 'off', // Allow console for game development

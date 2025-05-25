@@ -23,21 +23,21 @@ export const gameState = {
   currentBuildingType: null,
   cursorX: 0,
   cursorY: 0,
-  
+
   // Repair mode
   repairMode: false,
-  
+
   // Enemy AI learning
   playerBuildHistory: null,  // Will be initialized from localStorage if available
   currentSessionId: null,    // Will be set when first building is placed
   enemyLastBuildingTime: 0,  // Track when enemy last built something
-  
+
   // Aim-ahead function (AAF) calibration factor
   aimAheadCalibrationFactor: 1.0,
-  
+
   // Radar station status - initialize to false (no radar at game start)
   radarActive: false,
-  
+
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 

@@ -3,7 +3,7 @@ let audioContext = null
 try {
   audioContext = new (window.AudioContext || window.webkitAudioContext)()
 } catch (e) {
-  console.error("Web Audio API is not supported.")
+  console.error('Web Audio API is not supported.')
 }
 
 const soundMapping = {
@@ -47,40 +47,40 @@ const soundFiles = {
   teslacoil_firing: ['teslacoil_firing.mp3']
 }
 
-const activeAudioElements = new Map();
+const activeAudioElements = new Map()
 
 function playAssetSound(category, volume = 1.0) {
   const files = soundFiles[category]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
-    const soundPath = 'sound/' + file;
+    const soundPath = 'sound/' + file
 
     // Check if this sound is already playing
     if (activeAudioElements.has(soundPath)) {
-      const existingAudio = activeAudioElements.get(soundPath);
-      existingAudio.currentTime = 0;
-      existingAudio.volume = volume; // Set volume
+      const existingAudio = activeAudioElements.get(soundPath)
+      existingAudio.currentTime = 0
+      existingAudio.volume = volume // Set volume
       existingAudio.play().catch(e => {
-        console.error("Error replaying sound asset:", e);
-      });
-      return true;
+        console.error('Error replaying sound asset:', e)
+      })
+      return true
     }
 
-    const audio = new Audio(soundPath);
-    audio.volume = volume; // Set volume
+    const audio = new Audio(soundPath)
+    audio.volume = volume // Set volume
     audio.addEventListener('ended', () => {
-      activeAudioElements.delete(soundPath);
-    });
-    
+      activeAudioElements.delete(soundPath)
+    })
+
     audio.play().catch(e => {
-      console.error("Error playing sound asset:", e);
-      activeAudioElements.delete(soundPath);
-    });
-    
-    activeAudioElements.set(soundPath, audio);
-    return true;
+      console.error('Error playing sound asset:', e)
+      activeAudioElements.delete(soundPath)
+    })
+
+    activeAudioElements.set(soundPath, audio)
+    return true
   }
-  return false;
+  return false
 }
 
 export function playSound(eventName, volume = 1.0) {
@@ -98,21 +98,21 @@ export function playSound(eventName, volume = 1.0) {
     gainNode.connect(audioContext.destination)
     oscillator.frequency.value =
       eventName === 'unitSelection' ? 600 :
-      eventName === 'movement' ? 400 :
-      eventName === 'shoot' ? 800 :
-      eventName === 'shoot_rocket' ? 100 :
-      eventName === 'productionStart' ? 500 :
-      eventName === 'productionReady' ? 700 :
-      eventName === 'bulletHit' ? 900 :
-      eventName === 'harvest' ? 350 :
-      eventName === 'deposit' ? 450 :
-      eventName === 'explosion' ? 200 : 500
+        eventName === 'movement' ? 400 :
+          eventName === 'shoot' ? 800 :
+            eventName === 'shoot_rocket' ? 100 :
+              eventName === 'productionStart' ? 500 :
+                eventName === 'productionReady' ? 700 :
+                  eventName === 'bulletHit' ? 900 :
+                    eventName === 'harvest' ? 350 :
+                      eventName === 'deposit' ? 450 :
+                        eventName === 'explosion' ? 200 : 500
     oscillator.type = 'sine'
     gainNode.gain.value = volume
     oscillator.start()
     oscillator.stop(audioContext.currentTime + 0.1)
   } catch (e) {
-    console.error("AudioContext error:", e)
+    console.error('AudioContext error:', e)
   }
 
   // Add new sound mapping for heavy turret
@@ -121,7 +121,7 @@ export function playSound(eventName, volume = 1.0) {
       audio: new Audio('./sounds/shoot.mp3'), // Reuse existing sound if needed
       volume: 0.5,
       playbackRate: 0.7 // Lower pitch for heavier sound
-    };
+    }
   }
 }
 
@@ -144,7 +144,7 @@ export function toggleBackgroundMusic() {
   if (bgMusicAudio) {
     if (bgMusicAudio.paused) {
       bgMusicAudio.play().catch(e => {
-        console.error("Error resuming background music:", e)
+        console.error('Error resuming background music:', e)
       })
     } else {
       bgMusicAudio.pause()

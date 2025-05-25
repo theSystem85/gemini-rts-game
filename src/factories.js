@@ -1,11 +1,11 @@
 // factories.js
-import { buildingData } from './buildings.js';
+import { buildingData } from './buildings.js'
 
 export function initFactories(factories, mapGrid) {
   // Get the factory dimensions from buildingData
-  const factoryWidth = buildingData.constructionYard.width;
-  const factoryHeight = buildingData.constructionYard.height;
-  
+  const factoryWidth = buildingData.constructionYard.width
+  const factoryHeight = buildingData.constructionYard.height
+
   // Position player factory at least 5 tiles from left and bottom.
   const playerFactory = {
     id: 'player',

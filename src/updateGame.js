@@ -1,16 +1,16 @@
 // --- Tesla Coil effect: slow and disable unit fire ---
 export function updateTeslaCoilEffects(units) {
-  const now = performance.now();
+  const now = performance.now()
   for (const unit of units) {
     if (unit.teslaDisabledUntil && now < unit.teslaDisabledUntil) {
-      unit.canFire = false;
-      unit.speedModifier = 0.2; // 70% slow
+      unit.canFire = false
+      unit.speedModifier = 0.2 // 70% slow
     } else if (unit.teslaDisabledUntil && now >= unit.teslaDisabledUntil) {
-      unit.canFire = true;
-      unit.speedModifier = 1;
-      unit.teslaDisabledUntil = null;
-      unit.teslaSlowUntil = null;
-      unit.teslaSlowed = false;
+      unit.canFire = true
+      unit.speedModifier = 1
+      unit.teslaDisabledUntil = null
+      unit.teslaSlowUntil = null
+      unit.teslaSlowed = false
     }
   }
 }
@@ -39,8 +39,8 @@ import { updatePowerSupply, updateBuildingsUnderRepair } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
 
-const harvestedTiles = new Set(); // Track tiles currently being harvested
-const targetedOreTiles = {}; // Track which ore tiles are targeted by which harvesters
+const harvestedTiles = new Set() // Track tiles currently being harvested
+const targetedOreTiles = {} // Track which ore tiles are targeted by which harvesters
 
 export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
@@ -57,7 +57,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     })
 
     // Clean up unit selection - prevent null references
-    cleanupDestroyedSelectedUnits();
+    cleanupDestroyedSelectedUnits()
 
     // --- Right Click Deselect (if not dragging) ---
     if (gameState.rightClick && !gameState.isRightDragging) {
@@ -98,12 +98,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
       // If the unit has finished dodging and reached its dodge destination
       if (unit.isDodging && unit.path.length === 0 && unit.originalPath) {
-        unit.path = unit.originalPath;
-        unit.target = unit.originalTarget;
-        unit.originalPath = null;
-        unit.originalTarget = null;
-        unit.isDodging = false;
-        unit.dodgeEndTime = null;
+        unit.path = unit.originalPath
+        unit.target = unit.originalTarget
+        unit.originalPath = null
+        unit.originalTarget = null
+        unit.isDodging = false
+        unit.dodgeEndTime = null
       }
 
       // Clear targets that are destroyed
@@ -112,7 +112,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       }
 
       // Apply Tesla Coil slow effect if present
-      let speedMod = (typeof unit.speedModifier === 'number') ? unit.speedModifier : 1;
+      const speedMod = (typeof unit.speedModifier === 'number') ? unit.speedModifier : 1
       let effectiveSpeed = unit.effectiveSpeed * speedMod * 0.5 // Reduce base speed by half, then apply slow
 
       // Apply street speed bonus (reduced from 2x to 1.5x)
@@ -177,16 +177,16 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (unit.spawnedInFactory) {
         // Check if the unit should still be held in the factory (for enemy units)
         if (unit.holdInFactory && unit.owner === 'enemy') {
-          const now = performance.now();
+          const now = performance.now()
           if (now < unit.factoryBuildEndTime) {
             // Don't allow the unit to leave the factory yet
-            continue;
+            continue
           } else {
             // Unit can now leave the factory
-            unit.holdInFactory = false;
+            unit.holdInFactory = false
           }
         }
-        
+
         const factory = unit.owner === 'player'
           ? factories.find(f => f.id === 'player')
           : factories.find(f => f.id === 'enemy')
@@ -252,15 +252,15 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
 
         // Define a threshold (90% of firing range) for moving closer to target
-        const attackRangeThreshold = TANK_FIRE_RANGE * TILE_SIZE * 0.9;
+        const attackRangeThreshold = TANK_FIRE_RANGE * TILE_SIZE * 0.9
         if (currentDist > attackRangeThreshold) {
-          const targetTile = { x: Math.floor(targetCenterX / TILE_SIZE), y: Math.floor(targetCenterY / TILE_SIZE) };
-          // Limit path recalculation frequency - for both player and enemy units 
+          const targetTile = { x: Math.floor(targetCenterX / TILE_SIZE), y: Math.floor(targetCenterY / TILE_SIZE) }
+          // Limit path recalculation frequency - for both player and enemy units
           if (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > 2000) { // 2 seconds
-            const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, null);
+            const newPath = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, null)
             if (newPath && newPath.length > 1) {
-              unit.path = newPath.slice(1);
-              unit.lastPathCalcTime = now;
+              unit.path = newPath.slice(1)
+              unit.lastPathCalcTime = now
             }
           }
         }
@@ -283,10 +283,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (dist <= TANK_FIRE_RANGE * TILE_SIZE && hasClearShot(unit, unit.target, units)) {
           if ((unit.canFire !== false) && (!unit.lastShotTime || now - unit.lastShotTime > 1600)) {
             if (unit.type === 'tank' || unit.type === 'tank_v1') {
-              const cooldown = 1600; // Normal tank reload in ms
+              const cooldown = 1600 // Normal tank reload in ms
               if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
                 // Standard bullet like normal tank
-                let bullet = {
+                const bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
@@ -295,38 +295,38 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   active: true,
                   shooter: unit,
                   homing: false
-                };
-                
+                }
+
                 // Use aim-ahead function if enabled for this unit
-                let targetingX = targetCenterX;
-                let targetingY = targetCenterY;
-                
+                let targetingX = targetCenterX
+                let targetingY = targetCenterY
+
                 if (unit.useAimAhead && unit.target.path && unit.target.path.length > 0) {
                   // Calculate predicted position using aim-ahead
-                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState);
-                  targetingX = predictedPos.x;
-                  targetingY = predictedPos.y;
+                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState)
+                  targetingX = predictedPos.x
+                  targetingY = predictedPos.y
                 } else {
                   // Standard targeting without prediction
-                  targetingX = targetCenterX;
-                  targetingY = targetCenterY;
+                  targetingX = targetCenterX
+                  targetingY = targetCenterY
                 }
-                
+
                 // Calculate bullet direction based on predicted position
-                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX);
-                bullet.vx = bullet.speed * Math.cos(angle);
-                bullet.vy = bullet.speed * Math.sin(angle);
-                
-                bullets.push(bullet);
-                playSound('shoot', 0.5);
-                
-                unit.lastShotTime = now;
+                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX)
+                bullet.vx = bullet.speed * Math.cos(angle)
+                bullet.vy = bullet.speed * Math.sin(angle)
+
+                bullets.push(bullet)
+                playSound('shoot', 0.5)
+
+                unit.lastShotTime = now
               }
             } else if (unit.type === 'tank-v2') {
-              const cooldown = 1600; // Same cooldown as regular tank
+              const cooldown = 1600 // Same cooldown as regular tank
               if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
                 // Standard bullet like normal tank
-                let bullet = {
+                const bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
@@ -335,35 +335,35 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   active: true,
                   shooter: unit,
                   homing: false
-                };
-                
+                }
+
                 // Use aim-ahead function if enabled for this unit
-                let targetingX = targetCenterX;
-                let targetingY = targetCenterY;
-                
+                let targetingX = targetCenterX
+                let targetingY = targetCenterY
+
                 if (unit.useAimAhead && unit.target.path && unit.target.path.length > 0) {
                   // Calculate predicted position using aim-ahead
-                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState);
-                  targetingX = predictedPos.x;
-                  targetingY = predictedPos.y;
+                  const predictedPos = calculateAimAheadPosition(unit, unit.target, bullet.speed, gameState)
+                  targetingX = predictedPos.x
+                  targetingY = predictedPos.y
                 } else {
                   // Standard targeting without prediction
-                  targetingX = targetCenterX;
-                  targetingY = targetCenterY;
+                  targetingX = targetCenterX
+                  targetingY = targetCenterY
                 }
-                
+
                 // Calculate bullet direction based on predicted position
-                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX);
-                bullet.vx = bullet.speed * Math.cos(angle);
-                bullet.vy = bullet.speed * Math.sin(angle);
-                
-                bullets.push(bullet);
-                unit.lastShotTime = now;
+                const angle = Math.atan2(targetingY - unitCenterY, targetingX - unitCenterX)
+                bullet.vx = bullet.speed * Math.cos(angle)
+                bullet.vy = bullet.speed * Math.sin(angle)
+
+                bullets.push(bullet)
+                unit.lastShotTime = now
               }
             } else if (unit.type === 'rocketTank') {
-              const cooldown = 2000; // Rocket tank reload in ms
+              const cooldown = 2000 // Rocket tank reload in ms
               if ((unit.canFire !== false) && (!unit.lastShotTime || (now - unit.lastShotTime) >= cooldown)) {
-                let bullet = {
+                const bullet = {
                   id: Date.now() + Math.random(),
                   x: unitCenterX,
                   y: unitCenterY,
@@ -373,132 +373,132 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
                   shooter: unit,
                   homing: true,
                   target: unit.target  // Fixed: changed from 'target' to 'unit.target'
-                };
-                const angle = Math.atan2(targetCenterY - unitCenterX, targetCenterX - unitCenterX);
-                bullet.vx = bullet.speed * Math.cos(angle);
-                bullet.vy = bullet.speed * Math.sin(angle);
+                }
+                const angle = Math.atan2(targetCenterY - unitCenterX, targetCenterX - unitCenterX)
+                bullet.vx = bullet.speed * Math.cos(angle)
+                bullet.vy = bullet.speed * Math.sin(angle)
 
-                bullets.push(bullet);
-                unit.lastShotTime = now;
+                bullets.push(bullet)
+                unit.lastShotTime = now
               }
             }
           }
         } else if (!hasClearShot(unit, unit.target, units) && !unit.findingClearShot) {
           // If no clear shot, find a nearby position with clear shot
-          unit.findingClearShot = true;
-          findPositionWithClearShot(unit, unit.target, units, mapGrid);
+          unit.findingClearShot = true
+          findPositionWithClearShot(unit, unit.target, units, mapGrid)
         }
       }
 
       // --- Alert Mode Firing for Player Units ---
       if (unit.owner === 'player' && unit.alertMode) {
         // Calculate center of current unit.
-        const unitCenterX = unit.x + TILE_SIZE / 2;
-        const unitCenterY = unit.y + TILE_SIZE / 2;
-        
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+
         // Define alert range (same as firing range)
-        const alertRange = TANK_FIRE_RANGE * TILE_SIZE;
-        
+        const alertRange = TANK_FIRE_RANGE * TILE_SIZE
+
         // Only proceed if unit doesn't already have a target
         if (!unit.target) {
           // First, check for enemy units within range
-          const enemyUnits = units.filter(u => 
-            u.owner !== 'player' && 
-            u.health > 0 && 
+          const enemyUnits = units.filter(u =>
+            u.owner !== 'player' &&
+            u.health > 0 &&
             Math.hypot(
-              (u.x + TILE_SIZE / 2) - unitCenterX, 
+              (u.x + TILE_SIZE / 2) - unitCenterX,
               (u.y + TILE_SIZE / 2) - unitCenterY
             ) <= alertRange
-          );
-          
+          )
+
           // Also check for enemy buildings (particularly defensive ones) within range
-          const enemyBuildings = [];
+          const enemyBuildings = []
           if (gameState.buildings && gameState.buildings.length > 0) {
             for (const building of gameState.buildings) {
               if (building.owner !== 'player' && building.health > 0) {
                 // Calculate building center
-                const buildingCenterX = (building.x + building.width/2) * TILE_SIZE;
-                const buildingCenterY = (building.y + building.height/2) * TILE_SIZE;
-                const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY);
-                
+                const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+                const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+                const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY)
+
                 // Prioritize defensive buildings like turrets
-                const isDefensive = building.type === 'rocketTurret' || 
-                                   building.type.startsWith('turretGun');
-                                   
+                const isDefensive = building.type === 'rocketTurret' ||
+                                   building.type.startsWith('turretGun')
+
                 if (distance <= alertRange) {
                   enemyBuildings.push({
                     building: building,
                     distance: distance,
                     isDefensive: isDefensive
-                  });
+                  })
                 }
               }
             }
           }
-          
+
           // Determine target - prioritize closest enemy
-          let closestTarget = null;
-          let closestDistance = Infinity;
-          
+          let closestTarget = null
+          let closestDistance = Infinity
+
           // Check enemy units first
           if (enemyUnits.length > 0) {
             enemyUnits.forEach(u => {
               const distance = Math.hypot(
-                (u.x + TILE_SIZE / 2) - unitCenterX, 
+                (u.x + TILE_SIZE / 2) - unitCenterX,
                 (u.y + TILE_SIZE / 2) - unitCenterY
-              );
-              
+              )
+
               if (distance < closestDistance) {
-                closestDistance = distance;
-                closestTarget = u;
+                closestDistance = distance
+                closestTarget = u
               }
-            });
+            })
           }
-          
+
           // Then check enemy buildings, prioritizing defensive structures
           if (enemyBuildings.length > 0) {
             // First check defensive buildings
-            const defensiveBuildings = enemyBuildings.filter(b => b.isDefensive);
-            
+            const defensiveBuildings = enemyBuildings.filter(b => b.isDefensive)
+
             if (defensiveBuildings.length > 0) {
-              defensiveBuildings.sort((a, b) => a.distance - b.distance);
-              
+              defensiveBuildings.sort((a, b) => a.distance - b.distance)
+
               if (!closestTarget || defensiveBuildings[0].distance < closestDistance) {
-                closestDistance = defensiveBuildings[0].distance;
-                closestTarget = defensiveBuildings[0].building;
+                closestDistance = defensiveBuildings[0].distance
+                closestTarget = defensiveBuildings[0].building
               }
-            } 
+            }
             // If no defensive buildings or none closer than units, check other buildings
             else if (!closestTarget) {
-              enemyBuildings.sort((a, b) => a.distance - b.distance);
-              closestTarget = enemyBuildings[0].building;
+              enemyBuildings.sort((a, b) => a.distance - b.distance)
+              closestTarget = enemyBuildings[0].building
             }
           }
-          
+
           // Set the closest enemy as target
           if (closestTarget) {
-            unit.target = closestTarget;
+            unit.target = closestTarget
           }
         }
-        
+
         // If the target went out of range, clear it
         if (unit.target) {
-          let targetCenterX, targetCenterY;
-          
+          let targetCenterX, targetCenterY
+
           if (unit.target.isBuilding) {
             // Target is a building
-            targetCenterX = (unit.target.x + unit.target.width/2) * TILE_SIZE;
-            targetCenterY = (unit.target.y + unit.target.height/2) * TILE_SIZE;
+            targetCenterX = (unit.target.x + unit.target.width / 2) * TILE_SIZE
+            targetCenterY = (unit.target.y + unit.target.height / 2) * TILE_SIZE
           } else {
             // Target is a unit
-            targetCenterX = unit.target.x + TILE_SIZE / 2;
-            targetCenterY = unit.target.y + TILE_SIZE / 2;
+            targetCenterX = unit.target.x + TILE_SIZE / 2
+            targetCenterY = unit.target.y + TILE_SIZE / 2
           }
-          
-          const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
-          
+
+          const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+
           if (distance > alertRange) {
-            unit.target = null;
+            unit.target = null
           }
         }
       }
@@ -507,33 +507,33 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (unit.type === 'harvester') {
         const unitTileX = Math.floor(unit.x / TILE_SIZE)
         const unitTileY = Math.floor(unit.y / TILE_SIZE)
-        
+
         // Mining ore logic
         if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery) {
           if (mapGrid[unitTileY][unitTileX].type === 'ore') {
-            const tileKey = `${unitTileX},${unitTileY}`;
+            const tileKey = `${unitTileX},${unitTileY}`
             if (!harvestedTiles.has(tileKey)) {
               if (!unit.oreField) {
                 unit.oreField = { x: unitTileX, y: unitTileY }
                 // Register this tile as targeted by this unit
-                targetedOreTiles[tileKey] = unit.id;
+                targetedOreTiles[tileKey] = unit.id
               }
               if (unit.oreField.x === unitTileX && unit.oreField.y === unitTileY) {
                 unit.harvesting = true
                 unit.harvestTimer = now
-                harvestedTiles.add(tileKey); // Mark tile as being harvested
+                harvestedTiles.add(tileKey) // Mark tile as being harvested
                 playSound('harvest')
               }
             } else {
               // Tile is being harvested by another unit, find a new ore tile
               if (unit.oreField) {
                 // Remove the previous targeting
-                const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`;
+                const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
                 if (targetedOreTiles[prevTileKey] === unit.id) {
-                  delete targetedOreTiles[prevTileKey];
+                  delete targetedOreTiles[prevTileKey]
                 }
               }
-              unit.oreField = null;
+              unit.oreField = null
             }
           }
         }
@@ -543,15 +543,15 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           if (now - unit.harvestTimer > 10000) {
             unit.oreCarried++
             unit.harvesting = false
-            const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
-            harvestedTiles.delete(tileKey); // Free up the tile
-            
+            const tileKey = `${unit.oreField.x},${unit.oreField.y}`
+            harvestedTiles.delete(tileKey) // Free up the tile
+
             // Keep targeting this tile until it's depleted
             mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
-            
+
             // Remove targeting once the tile is depleted
-            delete targetedOreTiles[tileKey];
-            unit.oreField = null;
+            delete targetedOreTiles[tileKey]
+            unit.oreField = null
           }
         }
 
@@ -559,188 +559,188 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (unit.oreCarried >= HARVESTER_CAPPACITY && !unit.unloadingAtRefinery) {
           // Clear targeting when full of ore and returning to base
           if (unit.oreField) {
-            const tileKey = `${unit.oreField.x},${unit.oreField.y}`;
+            const tileKey = `${unit.oreField.x},${unit.oreField.y}`
             if (targetedOreTiles[tileKey] === unit.id) {
-              delete targetedOreTiles[tileKey];
+              delete targetedOreTiles[tileKey]
             }
-            unit.oreField = null;
+            unit.oreField = null
           }
-          
+
           // Find a refinery to unload at
-          const refineries = gameState.buildings.filter(b => 
-            b.type === 'oreRefinery' && 
+          const refineries = gameState.buildings.filter(b =>
+            b.type === 'oreRefinery' &&
             b.owner === unit.owner &&
             b.health > 0
-          );
-          
+          )
+
           // If there's no refinery, use the main factory as fallback
           if (refineries.length === 0) {
             const targetFactory = unit.owner === 'player'
               ? factories.find(f => f.id === 'player')
-              : factories.find(f => f.id === 'enemy');
-            
+              : factories.find(f => f.id === 'enemy')
+
             if (isAdjacentToFactory(unit, targetFactory)) {
               if (unit.owner === 'player') {
-                gameState.money += 1000;
+                gameState.money += 1000
                 if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
-                  productionQueue.tryResumeProduction();
+                  productionQueue.tryResumeProduction()
                 }
               } else {
-                targetFactory.budget += 1000;
+                targetFactory.budget += 1000
               }
-              unit.oreCarried = 0;
-              unit.oreField = null;
-              playSound('deposit');
-              const orePos = findClosestOre(unit, mapGrid, targetedOreTiles);
+              unit.oreCarried = 0
+              unit.oreField = null
+              playSound('deposit')
+              const orePos = findClosestOre(unit, mapGrid, targetedOreTiles)
               if (orePos) {
-                const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
                 if (path.length > 1) {
-                  unit.path = path.slice(1);
+                  unit.path = path.slice(1)
                 }
               }
             } else {
-              const unloadTarget = findAdjacentTile(targetFactory, mapGrid);
+              const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
               if (unloadTarget && (!unit.path || unit.path.length === 0)) {
-                const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap);
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap)
                 if (path.length > 1) {
-                  unit.path = path.slice(1);
+                  unit.path = path.slice(1)
                 }
               }
             }
           } else {
             // Find an available refinery (not in use by another harvester)
-            let targetRefinery = null;
-            let targetUnloadTile = null;
-            
+            let targetRefinery = null
+            let targetUnloadTile = null
+
             // Check for assigned refinery first
             if (unit.assignedRefinery) {
-              const assignedRefinery = refineries.find(r => r.id === unit.assignedRefinery);
+              const assignedRefinery = refineries.find(r => r.id === unit.assignedRefinery)
               if (assignedRefinery) {
-                targetRefinery = assignedRefinery;
+                targetRefinery = assignedRefinery
               }
             }
-            
+
             // If no assigned refinery or it's not found, find the closest available one
             if (!targetRefinery) {
               for (const refinery of refineries) {
-                const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`;
-                
+                const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`
+
                 // Check if this refinery is being used
                 if (!gameState.refineryStatus[refineryId] || gameState.refineryStatus[refineryId] === unit.id) {
-                  const adjacentTile = findAdjacentTile(refinery, mapGrid);
+                  const adjacentTile = findAdjacentTile(refinery, mapGrid)
                   if (adjacentTile) {
                     if (!targetRefinery) {
-                      targetRefinery = refinery;
-                      targetUnloadTile = adjacentTile;
+                      targetRefinery = refinery
+                      targetUnloadTile = adjacentTile
                     } else {
                       // Compare distances to choose the closest refinery
-                      const currentDist = Math.hypot(unit.tileX - adjacentTile.x, unit.tileY - adjacentTile.y);
-                      const bestDist = Math.hypot(unit.tileX - targetUnloadTile.x, unit.tileY - targetUnloadTile.y);
+                      const currentDist = Math.hypot(unit.tileX - adjacentTile.x, unit.tileY - adjacentTile.y)
+                      const bestDist = Math.hypot(unit.tileX - targetUnloadTile.x, unit.tileY - targetUnloadTile.y)
                       if (currentDist < bestDist) {
-                        targetRefinery = refinery;
-                        targetUnloadTile = adjacentTile;
+                        targetRefinery = refinery
+                        targetUnloadTile = adjacentTile
                       }
                     }
                   }
                 }
               }
             }
-            
+
             // If all refineries are in use, pick any refinery to queue at
             if (!targetRefinery && refineries.length > 0) {
-              targetRefinery = refineries[0];
-              targetUnloadTile = findAdjacentTile(targetRefinery, mapGrid);
+              targetRefinery = refineries[0]
+              targetUnloadTile = findAdjacentTile(targetRefinery, mapGrid)
             }
-            
+
             if (targetRefinery && targetUnloadTile) {
-              const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`;
-              
+              const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`
+
               // Check if harvester is already adjacent to the refinery
               if (isAdjacentToBuilding(unit, targetRefinery)) {
                 // If the refinery is free or this unit is already using it, start unloading
                 if (!gameState.refineryStatus[refineryId] || gameState.refineryStatus[refineryId] === unit.id) {
                   // Mark this refinery as in use by this harvester
-                  gameState.refineryStatus[refineryId] = unit.id;
-                  
+                  gameState.refineryStatus[refineryId] = unit.id
+
                   // Start unloading process (takes 20 seconds)
-                  unit.unloadingAtRefinery = true;
-                  unit.unloadStartTime = now;
-                  unit.unloadRefinery = refineryId;
-                  unit.path = []; // Clear path while unloading
-                  
+                  unit.unloadingAtRefinery = true
+                  unit.unloadStartTime = now
+                  unit.unloadRefinery = refineryId
+                  unit.path = [] // Clear path while unloading
+
                   // Show visual feedback
-                  showUnloadingFeedback(unit, targetRefinery);
+                  showUnloadingFeedback(unit, targetRefinery)
                 }
                 // If the refinery is being used by another harvester, wait nearby
                 // The harvester stays in place, which effectively means it's queued
               } else {
                 // Move to the refinery if not already there
                 if (!unit.path || unit.path.length === 0) {
-                  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetUnloadTile, mapGrid, occupancyMap);
+                  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetUnloadTile, mapGrid, occupancyMap)
                   if (path.length > 1) {
-                    unit.path = path.slice(1);
+                    unit.path = path.slice(1)
                   }
                 }
               }
             }
           }
         }
-        
+
         // Handle unloading at refinery
         if (unit.unloadingAtRefinery && unit.unloadStartTime) {
           // Unloading takes 20 seconds
           if (now - unit.unloadStartTime >= 10000) {
             // Unloading complete
             if (unit.owner === 'player') {
-              gameState.money += 1000;
+              gameState.money += 1000
               if (typeof productionQueue !== 'undefined' && productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
-                productionQueue.tryResumeProduction();
+                productionQueue.tryResumeProduction()
               }
             } else if (unit.owner === 'enemy') {
-              const enemyFactory = factories.find(f => f.id === 'enemy');
+              const enemyFactory = factories.find(f => f.id === 'enemy')
               if (enemyFactory) {
-                enemyFactory.budget += 1000;
+                enemyFactory.budget += 1000
               }
             }
-            
+
             // Clear refinery usage
             if (unit.unloadRefinery) {
-              delete gameState.refineryStatus[unit.unloadRefinery];
+              delete gameState.refineryStatus[unit.unloadRefinery]
             }
-            
+
             // Reset harvester state
-            unit.oreCarried = 0;
-            unit.unloadingAtRefinery = false;
-            unit.unloadStartTime = null;
-            unit.unloadRefinery = null;
-            playSound('deposit');
-            
+            unit.oreCarried = 0
+            unit.unloadingAtRefinery = false
+            unit.unloadStartTime = null
+            unit.unloadRefinery = null
+            playSound('deposit')
+
             // Find next ore tile
-            const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery);
+            const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
             if (orePos) {
-              const tileKey = `${orePos.x},${orePos.y}`;
-              targetedOreTiles[tileKey] = unit.id;
-              
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+              const tileKey = `${orePos.x},${orePos.y}`
+              targetedOreTiles[tileKey] = unit.id
+
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
               if (path.length > 1) {
-                unit.path = path.slice(1);
+                unit.path = path.slice(1)
               }
             }
           }
         }
-        
+
         // After unloading, find a new ore tile that's not targeted
-        if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery && 
+        if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery &&
             (!unit.path || unit.path.length === 0)) {
-          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery);
+          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
           if (orePos) {
             // Mark this ore tile as targeted by this unit
-            const tileKey = `${orePos.x},${orePos.y}`;
-            targetedOreTiles[tileKey] = unit.id;
-            
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap);
+            const tileKey = `${orePos.x},${orePos.y}`
+            targetedOreTiles[tileKey] = unit.id
+
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
             if (path.length > 1) {
-              unit.path = path.slice(1);
+              unit.path = path.slice(1)
             }
           }
         }
@@ -797,7 +797,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           // Only move if not significantly rotating
           if (!unit.isRotating) {
             const distance = Math.hypot(dx, dy)
-            let effectiveSpeed = unit.effectiveSpeed
+            const effectiveSpeed = unit.effectiveSpeed
 
             if (distance < effectiveSpeed) {
               unit.x = targetPos.x
@@ -820,54 +820,54 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Building Updates (make buildings attackable) ---
     if (gameState.buildings && gameState.buildings.length > 0) {
       for (let i = gameState.buildings.length - 1; i >= 0; i--) {
-        const building = gameState.buildings[i];
-        
+        const building = gameState.buildings[i]
+
         // Skip destroyed buildings and remove them
         if (building.health <= 0) {
           // Remove building from selected units if it was selected
           if (building.selected) {
-            const idx = selectedUnits.findIndex(u => u === building);
+            const idx = selectedUnits.findIndex(u => u === building)
             if (idx !== -1) {
-              selectedUnits.splice(idx, 1);
+              selectedUnits.splice(idx, 1)
             }
           }
-          
+
           // Remove from map grid and restore original tiles
           for (let y = building.y; y < building.y + building.height; y++) {
             for (let x = building.x; x < building.x + building.width; x++) {
               if (mapGrid[y] && mapGrid[y][x]) {
                 // Restore the original tile type if it was saved, otherwise default to 'land'
-                if (building.originalTiles && 
-                    building.originalTiles[y - building.y] && 
+                if (building.originalTiles &&
+                    building.originalTiles[y - building.y] &&
                     building.originalTiles[y - building.y][x - building.x]) {
-                  mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x];
+                  mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x]
                 } else {
-                  mapGrid[y][x].type = 'land';  // Default to land if no original type is stored
+                  mapGrid[y][x].type = 'land'  // Default to land if no original type is stored
                 }
-                mapGrid[y][x].building = null;
+                mapGrid[y][x].building = null
               }
             }
           }
-          
+
           // Store the power value and owner before removing the building
-          const destroyedBuildingPower = building.power || 0;
-          const destroyedBuildingOwner = building.owner;
-          
+          const destroyedBuildingPower = building.power || 0
+          const destroyedBuildingOwner = building.owner
+
           // Remove the building from the buildings array
-          gameState.buildings.splice(i, 1);
-          
+          gameState.buildings.splice(i, 1)
+
           // Update power supply after building is destroyed
-          updatePowerSupply(gameState.buildings, gameState);
-          
+          updatePowerSupply(gameState.buildings, gameState)
+
           // Play explosion sound with reduced volume (0.5)
-          playSound('explosion', 0.5);
-          
+          playSound('explosion', 0.5)
+
           // Add explosion effect
-          const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2);
-          const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2);
-          triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now, mapGrid);
-          
-          continue;
+          const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
+          const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
+          triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now, mapGrid)
+
+          continue
         }
       }
     }
@@ -875,10 +875,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // --- Global Path Recalculation ---
     if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
       gameState.lastGlobalPathCalc = now
-      
+
       // Group units by formation to calculate centers before path recalculations
-      const formationGroups = {};
-      
+      const formationGroups = {}
+
       // First pass: identify all formation groups and calculate centers
       units.forEach(unit => {
         if (unit.formationActive && unit.groupNumber) {
@@ -887,20 +887,20 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
               units: [],
               centerX: 0,
               centerY: 0
-            };
+            }
           }
-          formationGroups[unit.groupNumber].units.push(unit);
+          formationGroups[unit.groupNumber].units.push(unit)
         }
-      });
-      
+      })
+
       // Calculate the center position of each formation group
       Object.values(formationGroups).forEach(group => {
         if (group.units.length > 0) {
-          group.centerX = group.units.reduce((sum, unit) => sum + unit.x, 0) / group.units.length;
-          group.centerY = group.units.reduce((sum, unit) => sum + unit.y, 0) / group.units.length;
+          group.centerX = group.units.reduce((sum, unit) => sum + unit.x, 0) / group.units.length
+          group.centerY = group.units.reduce((sum, unit) => sum + unit.y, 0) / group.units.length
         }
-      });
-      
+      })
+
       // Second pass: recalculate paths for all units
       units.forEach(unit => {
         // Only recalculate if unit has no path or is near the end of its current path
@@ -908,66 +908,66 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
           // For enemy units, respect target change timer
           if (unit.owner === 'enemy' && unit.lastTargetChangeTime &&
             now - unit.lastTargetChangeTime < 2000) {
-            return; // Skip recalculation if target was changed recently
+            return // Skip recalculation if target was changed recently
           }
-          
+
           // Preserve movement command even when path is empty
-          let targetPos = null;
+          let targetPos = null
           if (unit.moveTarget) {
             // Use stored move target if it exists
-            targetPos = unit.moveTarget;
+            targetPos = unit.moveTarget
           } else if (unit.target) {
             // Handle combat targets
             targetPos = unit.target.tileX !== undefined
               ? { x: unit.target.tileX, y: unit.target.tileY }
-              : { x: unit.target.x, y: unit.target.y };
+              : { x: unit.target.x, y: unit.target.y }
           }
-          
+
           if (targetPos) {
             // Store move target for future recalculations
-            unit.moveTarget = targetPos;
-            
+            unit.moveTarget = targetPos
+
             // Apply formation offset if unit is in formation mode
-            let adjustedTarget = {...targetPos};
-            
+            let adjustedTarget = { ...targetPos }
+
             // If unit is in formation mode and has formation offset, adjust the target
             if (unit.formationActive && unit.formationOffset && unit.groupNumber) {
-              const formationGroup = formationGroups[unit.groupNumber];
-              
+              const formationGroup = formationGroups[unit.groupNumber]
+
               // If this unit is part of a known formation group
               if (formationGroup && formationGroup.units.some(u => u.moveTarget)) {
                 // Use the first unit with a moveTarget as the formation reference point
-                const referenceUnit = formationGroup.units.find(u => u.moveTarget);
-                
+                const referenceUnit = formationGroup.units.find(u => u.moveTarget)
+
                 if (referenceUnit && referenceUnit !== unit) {
                   // Apply formation offset to target position
                   adjustedTarget = {
                     x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
                     y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
-                  };
+                  }
                 }
               }
             }
-            
+
             // Compute distance to decide pathfinding strategy
-            const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY);
-            
+            const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY)
+
             // Use occupancy map for close range, ignore for long distance
             const newPath = distance > PATHFINDING_THRESHOLD
               ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
-              : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap);
-            
+              : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
+
             if (newPath.length > 1) {
-              unit.path = newPath.slice(1);
+              unit.path = newPath.slice(1)
               // Update last path calculation time for all units
-              unit.lastPathCalcTime = now;
+              unit.lastPathCalcTime = now
             } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < 1) {
               // Clear moveTarget if we've reached destination
-              unit.moveTarget = null;
+              unit.moveTarget = null
             }
           }
         }
-      });
+      })
     }
 
     // --- Bullet Updates ---
@@ -1017,11 +1017,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         }
       } else {
         // For non-homing projectiles, apply the effectiveSpeed to movement
-        const dx = Math.cos(Math.atan2(bullet.vy, bullet.vx));
-        const dy = Math.sin(Math.atan2(bullet.vy, bullet.vx));
-        bullet.x += dx * bullet.effectiveSpeed;
-        bullet.y += dy * bullet.effectiveSpeed;
-        
+        const dx = Math.cos(Math.atan2(bullet.vy, bullet.vx))
+        const dy = Math.sin(Math.atan2(bullet.vy, bullet.vx))
+        bullet.x += dx * bullet.effectiveSpeed
+        bullet.y += dy * bullet.effectiveSpeed
+
         const hitTarget = checkBulletCollision(bullet, units, factories, gameState)
         if (hitTarget) {
           const factor = 0.8 + Math.random() * 0.4
@@ -1043,41 +1043,41 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (bullet.active && gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
           // Skip checking owner's own buildings UNLESS this is a forced attack
-          if (bullet.shooter && bullet.shooter.owner === building.owner && 
+          if (bullet.shooter && bullet.shooter.owner === building.owner &&
               !(bullet.shooter.forcedAttack && bullet.shooter.target === building)) {
-            continue;
+            continue
           }
-          
+
           // Calculate building boundaries
-          const buildingLeft = building.x * TILE_SIZE;
-          const buildingRight = buildingLeft + building.width * TILE_SIZE;
-          const buildingTop = building.y * TILE_SIZE;
-          const buildingBottom = buildingTop + building.height * TILE_SIZE;
-          
+          const buildingLeft = building.x * TILE_SIZE
+          const buildingRight = buildingLeft + building.width * TILE_SIZE
+          const buildingTop = building.y * TILE_SIZE
+          const buildingBottom = buildingTop + building.height * TILE_SIZE
+
           // Check if bullet is inside building
           if (bullet.x >= buildingLeft && bullet.x <= buildingRight &&
               bullet.y >= buildingTop && bullet.y <= buildingBottom) {
-            
+
             // Calculate damage
-            const factor = 0.8 + Math.random() * 0.4;
-            const damage = bullet.baseDamage * factor;
-            
+            const factor = 0.8 + Math.random() * 0.4
+            const damage = bullet.baseDamage * factor
+
             // Apply damage to building
-            building.health -= damage;
+            building.health -= damage
             if (building.health <= 0) {
-              building.health = 0;
+              building.health = 0
             }
-            
+
             // Create explosion effect
-            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid);
-            
+            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+
             // Play sound
-            playSound('bulletHit', 0.5);
-            
+            playSound('bulletHit', 0.5)
+
             // Deactivate bullet
-            bullet.active = false;
-            bullets.splice(i, 1);
-            break;
+            bullet.active = false
+            bullets.splice(i, 1)
+            break
           }
         }
       }
@@ -1090,14 +1090,14 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // If game over, display win/loss ratio message on screen
     if (gameState.gameOver) {
-      const gameOverEl = document.getElementById('gameOverMessage');
+      const gameOverEl = document.getElementById('gameOverMessage')
       if (gameOverEl) {
-        gameOverEl.innerText = `Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`;
+        gameOverEl.innerText = `Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`
       } else {
-        console.log(`Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`);
+        console.log(`Game Over! Wins: ${gameState.wins}, Losses: ${gameState.losses}`)
       }
       // Optionally, halt further game processing
-      return;
+      return
     }
 
     // --- Update Explosion Effects ---
@@ -1140,10 +1140,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     for (let i = units.length - 1; i >= 0; i--) {
       if (units[i].health <= 0) {
         if (units[i].owner === 'player') {
-          playSound('unitLost', 1.0); // Play unit lost sound only for player units
+          playSound('unitLost', 1.0) // Play unit lost sound only for player units
         }
-        units.splice(i, 1);
-        continue;
+        units.splice(i, 1)
+        continue
       }
     }
 
@@ -1168,20 +1168,20 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // --- Update Enemy AI ---
     updateEnemyAI(units, factories, bullets, mapGrid, gameState)
-    
+
     // Update defensive buildings
     if (gameState.buildings && gameState.buildings.length > 0) {
-      updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState);
+      updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState)
     }
     // Update Tesla Coil effects on units
-    updateTeslaCoilEffects(units);
-    
+    updateTeslaCoilEffects(units)
+
     // Update buildings under repair
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
-      updateBuildingsUnderRepair(gameState, now);
+      updateBuildingsUnderRepair(gameState, now)
     }
   } catch (error) {
-    console.error("Critical error in updateGame:", error)
+    console.error('Critical error in updateGame:', error)
     console.trace() // Add stack trace to see exactly where the error occurs
     // Don't allow the game to completely crash
   }
@@ -1189,176 +1189,176 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
 // Function to update defensive buildings like rocket turrets
 function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
-  const now = performance.now();
-  
+  const now = performance.now()
+
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil
     if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') && building.health > 0) {
-      const centerX = (building.x + building.width / 2) * TILE_SIZE;
-      const centerY = (building.y + building.height / 2) * TILE_SIZE;
+      const centerX = (building.x + building.width / 2) * TILE_SIZE
+      const centerY = (building.y + building.height / 2) * TILE_SIZE
 
       // Tesla Coil special logic
       if (building.type === 'teslaCoil') {
-        let effectiveCooldown = building.fireCooldown / gameState.speedMultiplier;
+        const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
-          let closestEnemy = null;
-          let closestDistance = Infinity;
+          let closestEnemy = null
+          let closestDistance = Infinity
           for (const unit of units) {
             if (unit.owner !== building.owner && unit.health > 0) {
-              const unitCenterX = unit.x + TILE_SIZE / 2;
-              const unitCenterY = unit.y + TILE_SIZE / 2;
-              const dx = unitCenterX - centerX;
-              const dy = unitCenterY - centerY;
-              const distance = Math.hypot(dx, dy);
+              const unitCenterX = unit.x + TILE_SIZE / 2
+              const unitCenterY = unit.y + TILE_SIZE / 2
+              const dx = unitCenterX - centerX
+              const dy = unitCenterY - centerY
+              const distance = Math.hypot(dx, dy)
               if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
-                closestEnemy = unit;
-                closestDistance = distance;
+                closestEnemy = unit
+                closestDistance = distance
               }
             }
           }
           if (closestEnemy) {
             // Only log when actually firing
             // Play loading and firing sounds in sequence
-            playSound('teslacoil_loading');
-            setTimeout(() => playSound('teslacoil_firing'), 400);
+            playSound('teslacoil_loading')
+            setTimeout(() => playSound('teslacoil_firing'), 400)
             // Always refresh Tesla Coil effect and animation
-            closestEnemy.teslaDisabledUntil = now + 60000; // 60 seconds
-            closestEnemy.teslaSlowUntil = now + 60000;
-            closestEnemy.teslaSlowed = true;
+            closestEnemy.teslaDisabledUntil = now + 60000 // 60 seconds
+            closestEnemy.teslaSlowUntil = now + 60000
+            closestEnemy.teslaSlowed = true
             closestEnemy.teslaCoilHit = {
               fromX: centerX,
               fromY: centerY,
               toX: closestEnemy.x + TILE_SIZE / 2,
               toY: closestEnemy.y + TILE_SIZE / 2,
               impactTime: now
-            };
-            building.lastShotTime = now;
+            }
+            building.lastShotTime = now
           }
         }
-        return;
+        return
       }
 
       // --- Turret logic (existing) ---
       // For turret guns with burst fire, handle burst timing
       if (building.burstFire && building.currentBurst > 0) {
         if (now - building.lastBurstTime >= building.burstDelay) {
-          fireTurretProjectile(building, building.currentTarget, centerX, centerY, now, bullets);
-          building.lastBurstTime = now;
-          building.currentBurst--;
-          return;
+          fireTurretProjectile(building, building.currentTarget, centerX, centerY, now, bullets)
+          building.lastBurstTime = now
+          building.currentBurst--
+          return
         }
-        return;
+        return
       }
 
-      let effectiveCooldown = building.fireCooldown;
+      let effectiveCooldown = building.fireCooldown
       if (building.owner === 'player' && gameState.playerPowerSupply < 0) {
-        effectiveCooldown = building.fireCooldown / gameState.playerBuildSpeedModifier;
+        effectiveCooldown = building.fireCooldown / gameState.playerBuildSpeedModifier
       } else if (building.owner === 'enemy' && gameState.enemyPowerSupply < 0) {
-        effectiveCooldown = building.fireCooldown / gameState.enemyBuildSpeedModifier;
+        effectiveCooldown = building.fireCooldown / gameState.enemyBuildSpeedModifier
       }
-      effectiveCooldown = effectiveCooldown / gameState.speedMultiplier;
+      effectiveCooldown = effectiveCooldown / gameState.speedMultiplier
 
       if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
-        let closestEnemy = null;
-        let closestDistance = Infinity;
+        let closestEnemy = null
+        let closestDistance = Infinity
         for (const unit of units) {
           if (unit.owner !== building.owner && unit.health > 0) {
-            const unitCenterX = unit.x + TILE_SIZE / 2;
-            const unitCenterY = unit.y + TILE_SIZE / 2;
-            const dx = unitCenterX - centerX;
-            const dy = unitCenterY - centerY;
-            const distance = Math.hypot(dx, dy);
+            const unitCenterX = unit.x + TILE_SIZE / 2
+            const unitCenterY = unit.y + TILE_SIZE / 2
+            const dx = unitCenterX - centerX
+            const dy = unitCenterY - centerY
+            const distance = Math.hypot(dx, dy)
             if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
-              closestEnemy = unit;
-              closestDistance = distance;
+              closestEnemy = unit
+              closestDistance = distance
             }
           }
         }
-        
+
         // If enemy in range, rotate turret and fire
         if (closestEnemy) {
-          building.currentTarget = closestEnemy; // Store current target for burst fire
-          
-          const unitCenterX = closestEnemy.x + TILE_SIZE / 2;
-          const unitCenterY = closestEnemy.y + TILE_SIZE / 2;
-          
+          building.currentTarget = closestEnemy // Store current target for burst fire
+
+          const unitCenterX = closestEnemy.x + TILE_SIZE / 2
+          const unitCenterY = closestEnemy.y + TILE_SIZE / 2
+
           // Standard target prediction
-          let targetX = unitCenterX;
-          let targetY = unitCenterY;
-          
+          let targetX = unitCenterX
+          let targetY = unitCenterY
+
           // For V2 turret, implement aim-ahead feature
           if (building.useAimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
             // Use the centralized aim-ahead function instead of manual velocity calculation
-            const predictedPos = calculateAimAheadPosition(building, closestEnemy, building.projectileSpeed, gameState);
-            targetX = predictedPos.x;
-            targetY = predictedPos.y;
+            const predictedPos = calculateAimAheadPosition(building, closestEnemy, building.projectileSpeed, gameState)
+            targetX = predictedPos.x
+            targetY = predictedPos.y
           } else if (building.aimAhead && closestEnemy.path && closestEnemy.path.length > 0) {
             // Calculate target velocity
-            let vx = 0, vy = 0;
-            
+            let vx = 0, vy = 0
+
             if (closestEnemy.lastKnownX !== undefined && closestEnemy.lastKnownY !== undefined) {
               // Calculate velocity based on position change
-              vx = (unitCenterX - closestEnemy.lastKnownX) / delta;
-              vy = (unitCenterY - closestEnemy.lastKnownY) / delta;
+              vx = (unitCenterX - closestEnemy.lastKnownX) / delta
+              vy = (unitCenterY - closestEnemy.lastKnownY) / delta
             } else if (closestEnemy.path && closestEnemy.path.length > 0) {
               // Estimate velocity based on path direction
-              const nextTile = closestEnemy.path[0];
-              const nextX = nextTile.x * TILE_SIZE + TILE_SIZE / 2;
-              const nextY = nextTile.y * TILE_SIZE + TILE_SIZE / 2;
-              const dx = nextX - unitCenterX;
-              const dy = nextY - unitCenterY;
-              const dist = Math.hypot(dx, dy);
+              const nextTile = closestEnemy.path[0]
+              const nextX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
+              const nextY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
+              const dx = nextX - unitCenterX
+              const dy = nextY - unitCenterY
+              const dist = Math.hypot(dx, dy)
               if (dist > 0) {
-                vx = dx / dist * closestEnemy.speed;
-                vy = dy / dist * closestEnemy.speed;
+                vx = dx / dist * closestEnemy.speed
+                vy = dy / dist * closestEnemy.speed
               }
             }
-            
+
             // Calculate time to reach target based on bullet speed
-            const distToTarget = Math.hypot(unitCenterX - centerX, unitCenterY - centerY);
-            const timeToTarget = distToTarget / (building.projectileSpeed * TILE_SIZE);
-            
+            const distToTarget = Math.hypot(unitCenterX - centerX, unitCenterY - centerY)
+            const timeToTarget = distToTarget / (building.projectileSpeed * TILE_SIZE)
+
             // Predict future position
-            targetX = unitCenterX + vx * timeToTarget;
-            targetY = unitCenterY + vy * timeToTarget;
+            targetX = unitCenterX + vx * timeToTarget
+            targetY = unitCenterY + vy * timeToTarget
           }
-          
+
           // Store current target position for velocity calculation in next update
-          closestEnemy.lastKnownX = unitCenterX;
-          closestEnemy.lastKnownY = unitCenterY;
-          
+          closestEnemy.lastKnownX = unitCenterX
+          closestEnemy.lastKnownY = unitCenterY
+
           // Calculate target direction for the turret
-          building.targetDirection = Math.atan2(targetY - centerY, targetX - centerX);
-          
+          building.targetDirection = Math.atan2(targetY - centerY, targetX - centerX)
+
           // Smoothly rotate turret - use 0.5 for 5x faster rotation (previously 0.1)
           building.turretDirection = smoothRotateTowardsAngle(
-            building.turretDirection || 0, 
-            building.targetDirection, 
+            building.turretDirection || 0,
+            building.targetDirection,
             0.5
-          );
-          
+          )
+
           // Only fire if the turret is facing close enough to the target
-          const angleToTarget = Math.abs(angleDiff(building.turretDirection, building.targetDirection));
+          const angleToTarget = Math.abs(angleDiff(building.turretDirection, building.targetDirection))
           if (angleToTarget < 0.2) { // Only fire if pointing within ~11 degrees
             // Fire the projectile
-            fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets);
-            
+            fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets)
+
             // For burst fire, set up burst sequence
             if (building.burstFire) {
-              building.currentBurst = building.burstCount - 1; // Already fired first shot
-              building.lastBurstTime = now;
+              building.currentBurst = building.burstCount - 1 // Already fired first shot
+              building.lastBurstTime = now
             }
           }
         }
       }
     }
-  });
+  })
 }
 
 // Helper function to fire a projectile from a turret
 function fireTurretProjectile(building, target, centerX, centerY, now, bullets) {
   // Create a bullet object with all required properties
-  let projectile = {
+  const projectile = {
     id: Date.now() + Math.random(),
     x: centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
     y: centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
@@ -1366,34 +1366,34 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     baseDamage: building.damage,
     active: true,
     shooter: building
-  };
-  
+  }
+
   if (building.type === 'rocketTurret') {
     // Rocket projectile - homing
-    projectile.homing = true;
-    projectile.target = target;
-    projectile.startTime = now;
-    
+    projectile.homing = true
+    projectile.target = target
+    projectile.startTime = now
+
     // Play rocket sound
-    playSound('shoot_rocket', 0.5);
+    playSound('shoot_rocket', 0.5)
   } else {
     // Standard bullet - calculate trajectory
-    projectile.homing = false;
-    projectile.vx = Math.cos(building.turretDirection) * building.projectileSpeed;
-    projectile.vy = Math.sin(building.turretDirection) * building.projectileSpeed;
-    
+    projectile.homing = false
+    projectile.vx = Math.cos(building.turretDirection) * building.projectileSpeed
+    projectile.vy = Math.sin(building.turretDirection) * building.projectileSpeed
+
     // Play appropriate sound based on turret type
     if (building.type === 'turretGunV3') {
-      playSound('shoot_heavy');
+      playSound('shoot_heavy')
     } else {
-      playSound('shoot');
+      playSound('shoot')
     }
   }
-  
-  bullets.push(projectile);
-  
+
+  bullets.push(projectile)
+
   // Update last shot time unless we're in a burst sequence
   if (!building.burstFire || building.currentBurst === 0) {
-    building.lastShotTime = now;
+    building.lastShotTime = now
   }
 }

@@ -1,292 +1,292 @@
 // eventHandlers.js
 // Handle game control and building placement event handlers
 
-import { gameState } from '../gameState.js';
-import { productionQueue } from '../productionQueue.js';
-import { initBackgroundMusic, toggleBackgroundMusic } from '../sound.js';
-import { buildingRepairHandler } from '../buildingRepairHandler.js';
-import { buildingSellHandler } from '../buildingSellHandler.js';
-import { showNotification } from './notifications.js';
-import { 
-  canPlaceBuilding, 
-  createBuilding, 
-  placeBuilding, 
+import { gameState } from '../gameState.js'
+import { productionQueue } from '../productionQueue.js'
+import { initBackgroundMusic, toggleBackgroundMusic } from '../sound.js'
+import { buildingRepairHandler } from '../buildingRepairHandler.js'
+import { buildingSellHandler } from '../buildingSellHandler.js'
+import { showNotification } from './notifications.js'
+import {
+  canPlaceBuilding,
+  createBuilding,
+  placeBuilding,
   updatePowerSupply,
-  buildingData 
-} from '../buildings.js';
-import { playSound } from '../sound.js';
-import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js';
-import { TILE_SIZE } from '../config.js';
+  buildingData
+} from '../buildings.js'
+import { playSound } from '../sound.js'
+import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
+import { TILE_SIZE } from '../config.js'
 
 export class EventHandlers {
   constructor(canvasManager, factories, units, mapGrid, moneyEl) {
-    this.canvasManager = canvasManager;
-    this.factories = factories;
-    this.units = units;
-    this.mapGrid = mapGrid;
-    this.moneyEl = moneyEl;
-    
-    this.setupGameControls();
-    this.setupBuildingPlacement();
-    this.setupRepairAndSellModes();
+    this.canvasManager = canvasManager
+    this.factories = factories
+    this.units = units
+    this.mapGrid = mapGrid
+    this.moneyEl = moneyEl
+
+    this.setupGameControls()
+    this.setupBuildingPlacement()
+    this.setupRepairAndSellModes()
   }
 
   setupGameControls() {
-    const pauseBtn = document.getElementById('pauseBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const musicControlButton = document.getElementById('musicControl');
+    const pauseBtn = document.getElementById('pauseBtn')
+    const restartBtn = document.getElementById('restartBtn')
+    const musicControlButton = document.getElementById('musicControl')
 
     // Pause/resume functionality
     pauseBtn.addEventListener('click', () => {
-      gameState.gamePaused = !gameState.gamePaused;
-      
+      gameState.gamePaused = !gameState.gamePaused
+
       // Update button icon based on game state
-      const playPauseIcon = pauseBtn.querySelector('.play-pause-icon');
+      const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
       if (playPauseIcon) {
-        playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸';
+        playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸'
       }
-      
+
       // If the game was just unpaused, resume any pending productions
       if (!gameState.gamePaused) {
-        productionQueue.resumeProductionAfterUnpause();
+        productionQueue.resumeProductionAfterUnpause()
       }
-    });
+    })
 
     // Set initial button state
-    const playPauseIcon = document.querySelector('.play-pause-icon');
+    const playPauseIcon = document.querySelector('.play-pause-icon')
     if (playPauseIcon) {
-      playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸';
+      playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸'
     }
 
     // Restart functionality
     restartBtn.addEventListener('click', () => {
-      window.location.reload();
-    });
+      window.location.reload()
+    })
 
     // Background music initialization and control
-    document.addEventListener('click', initBackgroundMusic, { once: true });
+    document.addEventListener('click', initBackgroundMusic, { once: true })
 
     if (musicControlButton) {
       musicControlButton.addEventListener('click', () => {
-        toggleBackgroundMusic();
-        
+        toggleBackgroundMusic()
+
         // Toggle music icon
-        const musicIcon = musicControlButton.querySelector('.music-icon');
+        const musicIcon = musicControlButton.querySelector('.music-icon')
         if (musicIcon) {
           // If background music is available and we can check its state
           if (typeof bgMusicAudio !== 'undefined' && bgMusicAudio) {
-            musicIcon.textContent = bgMusicAudio.paused ? '♪' : '🔇';
+            musicIcon.textContent = bgMusicAudio.paused ? '♪' : '🔇'
           } else {
             // Toggle based on previous state if audio object isn't available
-            musicIcon.textContent = musicIcon.textContent === '♪' ? '🔇' : '♪';
+            musicIcon.textContent = musicIcon.textContent === '♪' ? '🔇' : '♪'
           }
         }
-      });
+      })
     }
 
     // Handle escape key to cancel building placement
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement();
+        productionQueue.cancelBuildingPlacement()
       }
-    });
+    })
   }
 
   setupBuildingPlacement() {
-    const gameCanvas = this.canvasManager.getGameCanvas();
-    
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
     // Add building placement handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
-      this.handleBuildingPlacement(e);
-    });
+      this.handleBuildingPlacement(e)
+    })
 
     // Add mousemove event to show building placement overlay
     gameCanvas.addEventListener('mousemove', (e) => {
-      this.handleBuildingPlacementOverlay(e);
-    });
-    
+      this.handleBuildingPlacementOverlay(e)
+    })
+
     // Add building repair handling to the canvas click event
-    gameCanvas.addEventListener('click', (e) => 
+    gameCanvas.addEventListener('click', (e) =>
       buildingRepairHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)
-    );
+    )
 
     // Add building sell handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
-      const sold = buildingSellHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, this.moneyEl);
+      const sold = buildingSellHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, this.moneyEl)
       // If a building was successfully sold, update button states
       if (sold && this.productionController) {
-        this.productionController.updateVehicleButtonStates();
-        this.productionController.updateBuildingButtonStates();
+        this.productionController.updateVehicleButtonStates()
+        this.productionController.updateBuildingButtonStates()
       }
-    });
+    })
   }
 
   handleBuildingPlacement(e) {
-    const gameCanvas = this.canvasManager.getGameCanvas();
-    
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
     if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
-      const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
-      const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
-      
+      const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+      const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+
       // Convert to tile coordinates
-      const tileX = Math.floor(mouseX / TILE_SIZE);
-      const tileY = Math.floor(mouseY / TILE_SIZE);
-      
+      const tileX = Math.floor(mouseX / TILE_SIZE)
+      const tileY = Math.floor(mouseY / TILE_SIZE)
+
       // Get building data
-      const buildingType = gameState.currentBuildingType;
-      
+      const buildingType = gameState.currentBuildingType
+
       try {
         // Check if placement is valid - pass buildings and factories arrays
         if (canPlaceBuilding(buildingType, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories)) {
           // Create and place the building
-          const newBuilding = createBuilding(buildingType, tileX, tileY);
-          
+          const newBuilding = createBuilding(buildingType, tileX, tileY)
+
           // Add owner property to the building
-          newBuilding.owner = 'player';
-          
+          newBuilding.owner = 'player'
+
           // Add the building to gameState.buildings
           if (!gameState.buildings) {
-            gameState.buildings = [];
+            gameState.buildings = []
           }
-          gameState.buildings.push(newBuilding);
-          
+          gameState.buildings.push(newBuilding)
+
           // Mark building tiles in the map grid
-          placeBuilding(newBuilding, this.mapGrid);
-          
+          placeBuilding(newBuilding, this.mapGrid)
+
           // Update power supply
-          updatePowerSupply(gameState.buildings, gameState);
-          
+          updatePowerSupply(gameState.buildings, gameState)
+
           // Exit placement mode
-          gameState.buildingPlacementMode = false;
-          gameState.currentBuildingType = null;
-          
+          gameState.buildingPlacementMode = false
+          gameState.currentBuildingType = null
+
           // Remove ready-for-placement class from the button
           document.querySelectorAll('.ready-for-placement').forEach(button => {
-            button.classList.remove('ready-for-placement');
-          });
-          
+            button.classList.remove('ready-for-placement')
+          })
+
           // Clear the completed building reference
-          productionQueue.completedBuilding = null;
-          
+          productionQueue.completedBuilding = null
+
           // Play placement sound
-          playSound('buildingPlaced');
+          playSound('buildingPlaced')
 
           // Show notification
-          showNotification(`${buildingData[buildingType].displayName} constructed`);
-          
+          showNotification(`${buildingData[buildingType].displayName} constructed`)
+
           // Start next production if any
           if (productionQueue.buildingItems.length > 0) {
-            productionQueue.startNextBuildingProduction();
+            productionQueue.startNextBuildingProduction()
           }
 
           // Save player building patterns
-          savePlayerBuildPatterns(buildingType);
+          savePlayerBuildPatterns(buildingType)
 
           // UPDATE: Update button states after successful placement
           if (this.productionController) {
-            this.productionController.updateVehicleButtonStates();
-            this.productionController.updateBuildingButtonStates();
+            this.productionController.updateVehicleButtonStates()
+            this.productionController.updateBuildingButtonStates()
           }
         } else {
-          console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`);
+          console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`)
           // Play error sound for invalid placement
-          playSound('error');
+          playSound('error')
         }
       } catch (error) {
-        console.error("Error during building placement:", error);
-        showNotification("Error placing building: " + error.message, 5000);
-        playSound('error');
+        console.error('Error during building placement:', error)
+        showNotification('Error placing building: ' + error.message, 5000)
+        playSound('error')
       }
     }
   }
 
   handleBuildingPlacementOverlay(e) {
-    const gameCanvas = this.canvasManager.getGameCanvas();
-    
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
     if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
-      const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x;
-      const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y;
-      
+      const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+      const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+
       // Update cursor position for the overlay renderer
-      gameState.cursorX = mouseX;
-      gameState.cursorY = mouseY;
-      
+      gameState.cursorX = mouseX
+      gameState.cursorY = mouseY
+
       // Force a redraw to show the overlay - this will be handled by the game loop
       // No need to manually trigger rendering here as the game loop handles it
     }
   }
 
   setupRepairAndSellModes() {
-    const gameCanvas = this.canvasManager.getGameCanvas();
-    
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
     // Add repair button functionality
     document.getElementById('repairBtn').addEventListener('click', () => {
-      gameState.repairMode = !gameState.repairMode;
+      gameState.repairMode = !gameState.repairMode
       // Update button appearance
-      const repairBtn = document.getElementById('repairBtn');
+      const repairBtn = document.getElementById('repairBtn')
       if (gameState.repairMode) {
-        repairBtn.classList.add('active');
-        showNotification('Repair mode activated. Click on a building to repair it.');
-        
+        repairBtn.classList.add('active')
+        showNotification('Repair mode activated. Click on a building to repair it.')
+
         // Turn off sell mode if it's active
         if (gameState.sellMode) {
-          gameState.sellMode = false;
-          document.getElementById('sellBtn').classList.remove('active');
+          gameState.sellMode = false
+          document.getElementById('sellBtn').classList.remove('active')
         }
-        
+
         // Use CSS class for cursor
-        gameCanvas.classList.add('repair-mode');
+        gameCanvas.classList.add('repair-mode')
       } else {
-        repairBtn.classList.remove('active');
-        showNotification('Repair mode deactivated.');
-        
+        repairBtn.classList.remove('active')
+        showNotification('Repair mode deactivated.')
+
         // Remove CSS cursor class
-        gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode');
-        
+        gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode')
+
         // Reset cursor to default
-        gameCanvas.style.cursor = 'default';
+        gameCanvas.style.cursor = 'default'
       }
       // Cancel building placement mode if active
       if (gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement();
+        productionQueue.cancelBuildingPlacement()
       }
-    });
+    })
 
     // Add sell button functionality
     document.getElementById('sellBtn').addEventListener('click', () => {
-      gameState.sellMode = !gameState.sellMode;
+      gameState.sellMode = !gameState.sellMode
       // Update button appearance
-      const sellBtn = document.getElementById('sellBtn');
+      const sellBtn = document.getElementById('sellBtn')
       if (gameState.sellMode) {
-        sellBtn.classList.add('active');
-        showNotification('Sell mode activated. Click on a building to sell it for 70% of build price.');
-        
+        sellBtn.classList.add('active')
+        showNotification('Sell mode activated. Click on a building to sell it for 70% of build price.')
+
         // Turn off repair mode if it's active
         if (gameState.repairMode) {
-          gameState.repairMode = false;
-          document.getElementById('repairBtn').classList.remove('active');
+          gameState.repairMode = false
+          document.getElementById('repairBtn').classList.remove('active')
         }
-        
+
         // Use CSS class for cursor
-        gameCanvas.classList.add('sell-mode');
+        gameCanvas.classList.add('sell-mode')
       } else {
-        sellBtn.classList.remove('active');
-        showNotification('Sell mode deactivated.');
-        
+        sellBtn.classList.remove('active')
+        showNotification('Sell mode deactivated.')
+
         // Remove CSS cursor class
-        gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode');
-        
+        gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode')
+
         // Reset cursor to default
-        gameCanvas.style.cursor = 'default';
+        gameCanvas.style.cursor = 'default'
       }
       // Cancel building placement mode if active
       if (gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement();
+        productionQueue.cancelBuildingPlacement()
       }
-    });
+    })
   }
 
   setProductionController(productionController) {
-    this.productionController = productionController;
+    this.productionController = productionController
   }
 }

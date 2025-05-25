@@ -1,18 +1,18 @@
 // units.js
-import { 
-  TILE_SIZE, 
-  UNIT_COSTS, 
-  UNIT_PROPERTIES, 
-  PATHFINDING_LIMIT, 
+import {
+  TILE_SIZE,
+  UNIT_COSTS,
+  UNIT_PROPERTIES,
+  PATHFINDING_LIMIT,
   DIRECTIONS,
   MAX_SPAWN_SEARCH_DISTANCE
 } from './config.js'
 import { getUniqueId } from './utils.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
-let pathfindingWarningShown = false;
+let pathfindingWarningShown = false
 
-export const unitCosts = UNIT_COSTS;
+export const unitCosts = UNIT_COSTS
 
 // Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid) {
@@ -70,17 +70,17 @@ class MinHeap {
     const length = this.content.length
     const element = this.content[n]
     while (true) {
-      let child2N = (n + 1) * 2
-      let child1N = child2N - 1
+      const child2N = (n + 1) * 2
+      const child1N = child2N - 1
       let swap = null
       if (child1N < length) {
-        let child1 = this.content[child1N]
+        const child1 = this.content[child1N]
         if (child1.f < element.f) {
           swap = child1N
         }
       }
       if (child2N < length) {
-        let child2 = this.content[child2N]
+        const child2 = this.content[child2N]
         if ((swap === null ? element.f : this.content[child1N].f) > child2.f) {
           swap = child2N
         }
@@ -106,14 +106,14 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     end.y >= mapGrid.length
   ) {
     if (!pathfindingWarningShown) {
-      console.warn('findPath: destination tile out of bounds', {start, end});
-      pathfindingWarningShown = true;
+      console.warn('findPath: destination tile out of bounds', { start, end })
+      pathfindingWarningShown = true
     }
     return []
   }
   // Begin destination adjustment if not passable
   let adjustedEnd = { ...end }
-  let destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
+  const destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
   if (destType === 'water' || destType === 'rock' || destType === 'building') {
     let found = false
     for (const dir of DIRECTIONS) {
@@ -132,31 +132,31 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       // Only show the warning once and include detailed information to help diagnose
       if (!pathfindingWarningShown) {
         console.warn('findPath: destination tile not passable and no adjacent free tile found', {
-          start, 
+          start,
           end,
           destinationType: destType,
           surroundingTiles: DIRECTIONS.map(dir => {
-            const x = adjustedEnd.x + dir.x;
-            const y = adjustedEnd.y + dir.y;
+            const x = adjustedEnd.x + dir.x
+            const y = adjustedEnd.y + dir.y
             if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
-              return { 
-                x, y, 
+              return {
+                x, y,
                 type: mapGrid[y][x].type,
                 building: mapGrid[y][x].building ? {
                   type: mapGrid[y][x].building.type,
-                  owner: mapGrid[y][x].building.owner,
+                  owner: mapGrid[y][x].building.owner
                 } : null
-              };
+              }
             }
-            return { x, y, outOfBounds: true };
+            return { x, y, outOfBounds: true }
           })
-        });
-        pathfindingWarningShown = true;
+        })
+        pathfindingWarningShown = true
       }
       return []
     }
   }
-  
+
   // Initialize A* search.
   const openHeap = new MinHeap()
   const closedSet = new Set()
@@ -172,14 +172,14 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   openHeap.push(startNode)
 
   // Removed any maximum iteration check to ensure players' units can always move.
-  let nodesExplored = 0;
+  let nodesExplored = 0
   while (openHeap.size() > 0) {
     const currentNode = openHeap.pop()
     const currentKey = `${currentNode.x},${currentNode.y}`
 
     if (currentNode.x === adjustedEnd.x && currentNode.y === adjustedEnd.y) {
       // Reconstruct path.
-      let path = []
+      const path = []
       let curr = currentNode
       while (curr) {
         path.push({ x: curr.x, y: curr.y })
@@ -187,7 +187,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       }
       return path.reverse()
     }
-    
+
     closedSet.add(currentKey)
     const neighbors = getNeighbors(currentNode, mapGrid)
     for (const neighbor of neighbors) {
@@ -195,7 +195,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       if (closedSet.has(neighborKey)) continue
       // Skip if occupancyMap is provided and the tile is occupied.
       if (occupancyMap && occupancyMap[neighbor.y][neighbor.x]) continue
-      
+
       const gScore = currentNode.g + Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
       let foundInHeap = false
       for (const node of openHeap.content) {
@@ -223,20 +223,20 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
         openHeap.push(neighborNode)
       }
     }
-    nodesExplored++;
+    nodesExplored++
     if (nodesExplored > pathFindingLimit) {
       const bestNode = openHeap.content.reduce((best, node) => {
-        const fScore = node.g + node.h;
-        const bestFScore = best.g + best.h;
-        return fScore < bestFScore ? node : best;
-      }, openHeap.content[0]);
-      let path = [];
-      let curr = bestNode;
+        const fScore = node.g + node.h
+        const bestFScore = best.g + best.h
+        return fScore < bestFScore ? node : best
+      }, openHeap.content[0])
+      const path = []
+      let curr = bestNode
       while (curr) {
-        path.push({ x: curr.x, y: curr.y });
-        curr = curr.parent;
+        path.push({ x: curr.x, y: curr.y })
+        curr = curr.parent
       }
-      return path.reverse();
+      return path.reverse()
     }
   }
   // If no path is found, return an empty array.
@@ -245,7 +245,7 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
 
 function getNeighbors(node, mapGrid) {
   const neighbors = []
-  
+
   for (const dir of DIRECTIONS) {
     const x = node.x + dir.x
     const y = node.y + dir.y
@@ -263,18 +263,18 @@ function getNeighbors(node, mapGrid) {
 // Accepts an optional rallyPointTarget from the main player factory.
 export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null) {
   // Determine the center of the factory/building for spawn proximity check
-  const factoryCenterX = factory.x + Math.floor(factory.width / 2);
-  const factoryCenterY = factory.y + Math.floor(factory.height / 2);
+  const factoryCenterX = factory.x + Math.floor(factory.width / 2)
+  const factoryCenterY = factory.y + Math.floor(factory.height / 2)
 
   // Find an available spawn position near the factory's center
-  const spawnPosition = findAvailableSpawnPosition(factoryCenterX, factoryCenterY, mapGrid, units);
+  const spawnPosition = findAvailableSpawnPosition(factoryCenterX, factoryCenterY, mapGrid, units)
 
   if (!spawnPosition) {
-    console.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`);
-    return null; // Return null if no position is available
+    console.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`)
+    return null // Return null if no position is available
   }
 
-  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y);
+  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y)
 
   // If a rally point target was provided (from the main player factory), set the unit's path to it.
   // This overrides any rally point the specific spawn building might have (though they shouldn't).
@@ -285,19 +285,19 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
       { x: rallyPointTarget.x, y: rallyPointTarget.y },
       mapGrid,
       null // Pass null for occupancyMap initially, pathfinding handles collisions
-    );
+    )
     if (path && path.length > 1) {
-      newUnit.path = path.slice(1);
-      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y }; // Store final destination
+      newUnit.path = path.slice(1)
+      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y } // Store final destination
     } else if (path && path.length === 1) {
       // If the rally point is the spawn point itself (unlikely but possible)
-      newUnit.path = [];
-      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y };
+      newUnit.path = []
+      newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y }
     } else {
-        console.warn(`Could not find path from spawn (${spawnPosition.x}, ${spawnPosition.y}) to rally point (${rallyPointTarget.x}, ${rallyPointTarget.y}) for ${type}`);
+      console.warn(`Could not find path from spawn (${spawnPosition.x}, ${spawnPosition.y}) to rally point (${rallyPointTarget.x}, ${rallyPointTarget.y}) for ${type}`)
     }
   }
-  
+
   // Play unit ready sound (moved here from productionQueue for consistency)
   // Note: Harvester initial path logic is in productionQueue, so sound plays there.
   // Consider moving harvester sound here too if spawnUnit handles initial harvester path.
@@ -307,20 +307,20 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   //   playSound(randomSound, 1.0);
   // }
 
-  return newUnit;
+  return newUnit
 }
 
 // Helper to create the actual unit object
 export function createUnit(factory, unitType, x, y) {
   // Get base unit properties
-  const baseProps = UNIT_PROPERTIES.base;
-  
+  const baseProps = UNIT_PROPERTIES.base
+
   // Get unit-specific properties or use base properties if type not found
-  const typeProps = UNIT_PROPERTIES[unitType] || baseProps;
-  
+  const typeProps = UNIT_PROPERTIES[unitType] || baseProps
+
   // Special handling for 'tank' and 'tank_v1' to use the same properties
-  const actualType = (unitType === 'tank') ? 'tank_v1' : unitType;
-  const unitProps = UNIT_PROPERTIES[actualType] || typeProps;
+  const actualType = (unitType === 'tank') ? 'tank_v1' : unitType
+  const unitProps = UNIT_PROPERTIES[actualType] || typeProps
 
   const unit = {
     id: getUniqueId(),
@@ -346,37 +346,37 @@ export function createUnit(factory, unitType, x, y) {
     rotationSpeed: unitProps.rotationSpeed,
     isRotating: false,
     useAimAhead: unitProps.useAimAhead || false
-  };
+  }
 
   // Add unit-specific properties
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
-    unit.alertMode = unitProps.alertMode;
+    unit.alertMode = unitProps.alertMode
   } else if (unitType === 'harvester') {
-    unit.oreCarried = 0;
-    unit.harvesting = false;
-    unit.armor = unitProps.armor;
+    unit.oreCarried = 0
+    unit.harvesting = false
+    unit.armor = unitProps.armor
   }
 
-  return unit;
+  return unit
 }
 
 // Find an available position near the factory center for unit spawn
 function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
   // First, try positions around the factory center in a spiral pattern
-  
+
   // Check immediate surrounding tiles first (1 tile away from center)
   for (let distance = 1; distance <= 5; distance++) { // Check up to 5 tiles away initially
     for (const dir of DIRECTIONS) {
-      const x = factoryX + dir.x * distance;
-      const y = factoryY + dir.y * distance;
-      
+      const x = factoryX + dir.x * distance
+      const y = factoryY + dir.y * distance
+
       // Check if position is valid (passable terrain, within bounds, not occupied)
       if (isPositionValid(x, y, mapGrid, units)) {
-        return { x, y };
+        return { x, y }
       }
     }
   }
-  
+
   // If we couldn't find a position in the immediate vicinity,
   // expand the search with a more thorough approach (larger radius)
   for (let distance = 6; distance <= MAX_SPAWN_SEARCH_DISTANCE; distance++) {
@@ -384,71 +384,71 @@ function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
     for (let dx = -distance; dx <= distance; dx++) {
       for (let dy = -distance; dy <= distance; dy++) {
         // Skip positions not on the perimeter of the current distance square
-        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue;
-        
-        const x = factoryX + dx;
-        const y = factoryY + dy;
-        
+        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+
+        const x = factoryX + dx
+        const y = factoryY + dy
+
         if (isPositionValid(x, y, mapGrid, units)) {
-          return { x, y };
+          return { x, y }
         }
       }
     }
   }
-  
+
   // No valid position found
-  return null;
+  return null
 }
 
 // Helper function to check if a position is valid for unit spawn
 function isPositionValid(x, y, mapGrid, units) {
   // Check if position is within bounds
   if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) {
-    return false;
+    return false
   }
-  
+
   // Check if tile is passable (not a building, rock, etc.)
   if (mapGrid[y][x].type !== 'land' && mapGrid[y][x].type !== 'street' && mapGrid[y][x].type !== 'ore') {
-    return false;
+    return false
   }
-  
+
   // Check if tile is occupied by another unit
-  const isOccupied = units.some(unit => 
-    Math.floor(unit.x / TILE_SIZE) === x && 
+  const isOccupied = units.some(unit =>
+    Math.floor(unit.x / TILE_SIZE) === x &&
     Math.floor(unit.y / TILE_SIZE) === y
-  );
-  
-  return !isOccupied;
+  )
+
+  return !isOccupied
 }
 
 // Implementation of algorithm A1: move blocking units to make room
 export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
   // Find any unit blocking the target position
-  const blockingUnit = units.find(unit => 
-    Math.floor(unit.x / TILE_SIZE) === targetX && 
+  const blockingUnit = units.find(unit =>
+    Math.floor(unit.x / TILE_SIZE) === targetX &&
     Math.floor(unit.y / TILE_SIZE) === targetY
-  );
-  
-  if (!blockingUnit) return true; // No blocking unit
-  
+  )
+
+  if (!blockingUnit) return true // No blocking unit
+
   // Find the closest free tile to move the blocking unit
   for (let distance = 1; distance <= 3; distance++) {
     for (const dir of DIRECTIONS) {
-      const newX = targetX + dir.x * distance;
-      const newY = targetY + dir.y * distance;
-      
+      const newX = targetX + dir.x * distance
+      const newY = targetY + dir.y * distance
+
       if (isPositionValid(newX, newY, mapGrid, units)) {
         // Move the blocking unit
-        blockingUnit.tileX = newX;
-        blockingUnit.tileY = newY;
-        blockingUnit.x = newX * TILE_SIZE;
-        blockingUnit.y = newY * TILE_SIZE;
-        return true;
+        blockingUnit.tileX = newX
+        blockingUnit.tileY = newY
+        blockingUnit.x = newX * TILE_SIZE
+        blockingUnit.y = newY * TILE_SIZE
+        return true
       }
     }
   }
-  
-  return false; // Could not move the blocking unit
+
+  return false // Could not move the blocking unit
 }
 
 // --- Collision Resolution for Idle Units ---
