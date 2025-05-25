@@ -806,14 +806,19 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
     
     // Set fill color based on unit type
-    if (unit.type === 'tank') {
-      gameCtx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'
+    if (unit.type === 'tank' || unit.type === 'tank_v1') {
+      gameCtx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'  // Blue for player, red for enemy
     } else if (unit.type === 'tank-v2') {
-      gameCtx.fillStyle = '#FFF'  // White for tank-v2
+      gameCtx.fillStyle = unit.owner === 'player' ? '#FFFFFF' : '#FFB6C1'  // White for player, light pink for enemy
+    } else if (unit.type === 'tank-v3') {
+      gameCtx.fillStyle = unit.owner === 'player' ? '#32CD32' : '#90EE90'  // Lime green for player, light green for enemy
     } else if (unit.type === 'harvester') {
-      gameCtx.fillStyle = '#9400D3'  // Purple for harvesters
+      gameCtx.fillStyle = unit.owner === 'player' ? '#9400D3' : '#DDA0DD'  // Purple for player, light purple for enemy
     } else if (unit.type === 'rocketTank') {
-      gameCtx.fillStyle = '#800000'  // Dark red for rocket tanks
+      gameCtx.fillStyle = unit.owner === 'player' ? '#800000' : '#F08080'  // Dark red for player, light red for enemy
+    } else {
+      // Fallback color
+      gameCtx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'
     }
     
     // Draw rectangular body instead of circle
