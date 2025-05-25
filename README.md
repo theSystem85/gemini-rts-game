@@ -282,20 +282,23 @@ To indicate the units level there are up to 3 yellow stars adding up from the ce
 
 Bugs:
 (-) When power below 0 make sure the production speed of buildings and units is only at 33%.
-(-) the initial construction yard building is not respected in the occupancy map.
+(x) the initial construction yard building is not respected in the occupancy map.
 (x) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
 (x) enemy units do not defend their harvesters when being attacked.
 (-) when selling a building the occupancy map is not updated and still blocked there.
 (-) sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
-(-) tank v1 somehow changes color during the game. They should all be blue.
 (-) when refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 (-) when production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
 (-) the initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
 (-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 (-) image for the concrete wall on map is incorrect.
-(-) there are colored bars on the edgese of some buildings that do not fit directly into the tile map grid. Those bars should be removed.
+(-) there are colored bars on the edgese of some buildings who's map images do not fit exactly into the tile map grid. Those bars should be removed. Make sure when the image to place on the map does not fit into the grid that the map tiles from before are still visible in the background.
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
+(-) when selling a building the occupancy map is not updated and still blocked there.
+(x) tank v1 somehow changes color during the game. They should all be blue.
+(x) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
+(x) enemy units do not defend their harvesters when being attacked.
 (x) the game gets extremely slow when power is low. The game speed should not be affected by the power level only the production speed and the defence buildings loading speed.
 (x) units move much slower only when moving to the west
 (x) when selecting a group using number buttons the autofocus on the group is totally off. Fix the coordinates (maybe a retian issue) and then disable the feature on first keypress of a number key but enable it when the key was pressed twice within 500ms.

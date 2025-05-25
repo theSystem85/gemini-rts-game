@@ -50,7 +50,7 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       }
       moneyEl.textContent = gameState.money
 
-      // Remove building from the map grid and restore original tiles
+      // Remove building from the map grid: restore original tiles and clear building flag
       for (let y = building.y; y < building.y + building.height; y++) {
         for (let x = building.x; x < building.x + building.width; x++) {
           if (mapGrid[y] && mapGrid[y][x]) {
@@ -60,8 +60,10 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
                 building.originalTiles[y - building.y][x - building.x]) {
               mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x]
             } else {
-              mapGrid[y][x].type = 'land'  // Default to land if no original type is stored
+              mapGrid[y][x].type = 'land'
             }
+            // Clear any building reference to unblock this tile
+            delete mapGrid[y][x].building
           }
         }
       }
