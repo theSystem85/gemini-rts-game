@@ -288,7 +288,6 @@ Bugs:
 (-) when selling a building the occupancy map is not updated and still blocked there.
 (-) sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
 (-) when refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
-(-) when production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
 (-) the initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
 (-) repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 (-) image for the concrete wall on map is incorrect.
@@ -296,6 +295,7 @@ Bugs:
 (-) enemy units come out of factory immediatly before the build indicator shows that the build is done
 (-) players units can end up on not passable terrain I guess when in alert mode or sth else
 (-) when selling a building the occupancy map is not updated and still blocked there.
+(x) when production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
 (x) tank v1 somehow changes color during the game. They should all be blue.
 (x) when tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
 (x) enemy units do not defend their harvesters when being attacked.

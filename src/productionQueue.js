@@ -457,8 +457,8 @@ export const productionQueue = {
     // Play cancel sound before cancelling
     playSound('productionCancelled')
 
-    // Return money for the current production
-    gameState.money += unitCosts[type] || 0
+    // Return money for the current production (refund only paid amount)
+    gameState.money += this.unitPaid || 0
 
     // Remove item from queue
     this.unitItems.shift()
@@ -494,8 +494,8 @@ export const productionQueue = {
     // Play cancel sound before cancelling
     playSound('productionCancelled')
 
-    // Return money for the current production
-    gameState.money += buildingCosts[type] || 0
+    // Return money for the current production (refund only paid amount)
+    gameState.money += this.buildingPaid || 0
 
     // Remove item from queue
     this.buildingItems.shift()
