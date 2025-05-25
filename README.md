@@ -176,6 +176,7 @@ Important Notes:
 3. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 Imporvements:
+(-) Refactor: Rendering.js is too big and needs to be modularized.
 (-) The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 (-) tanks movement speed should be 50% higher in general.
 (-) Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.

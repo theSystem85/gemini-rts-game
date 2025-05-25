@@ -67,10 +67,22 @@ function drawTeslaCoilLightning(gameCtx, fromX, fromY, toX, toY, scatterRadius =
 import { TILE_SIZE, TILE_COLORS, TILE_IMAGES, HARVESTER_CAPPACITY, USE_TEXTURES, TEXTURE_VARIATIONS } from './config.js'
 import { tileToPixel } from './utils.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from './buildings.js'
+import { buildingImageMap } from './buildingImageMap.js'
 import { getBuildingImage } from './buildingImageMap.js'
 
 // Create an image cache to avoid repeated loading
 const imageCache = {}
+
+// Map unit types to their image paths
+const unitImageMap = {
+  tank: 'images/tank.webp',
+  tank_v1: 'images/tank.webp',
+  'tank-v2': 'images/tank_v2.jpg',
+  tank_v2: 'images/tank_v2.jpg',
+  rocketTank: 'images/rocket_tank.webp',
+  harvester: 'images/harvester.webp',
+  artilleryTank: 'images/artillery_tank.jpg'
+}
 
 // Create a tile texture cache with variations for randomization
 const tileTextureCache = {}
@@ -117,7 +129,14 @@ function getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback)
         cb(null)
       }
       delete loadingImages[baseName]
-      console.warn(`Failed to load image: ${baseName}`)
+      console.warn(`Failed to load image: ${baseName}. Tried extensions: ${extensions.join(', ')}`)
+      // Show which image maps contain this asset for debugging
+      if (buildingImageMap && Object.values(buildingImageMap).includes(baseName)) {
+        console.info(`Note: This image is referenced in buildingImageMap`)
+      }
+      if (unitImageMap && Object.values(unitImageMap).includes(baseName)) {
+        console.info(`Note: This image is referenced in unitImageMap`)
+      }
       return
     }
 
@@ -706,30 +725,37 @@ export function renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bulle
         iconSize
       )
 
-      // Simplified and more direct image name determination
-      let imageName
-
-      // Handle unit types
-      if (factory.currentlyBuilding === 'tank') {
-        imageName = 'tank'
-      } else if (factory.currentlyBuilding === 'tank-v2') {
-        imageName = 'tank_v2'
-      } else if (factory.currentlyBuilding === 'rocketTank') {
-        imageName = 'rocket_tank'
-      } else if (factory.currentlyBuilding === 'harvester') {
-        imageName = 'harvester'
-      }
-      // Handle building types
+      // Get the correct image path based on what is being built
+      let imagePath
+      
+      // First check if it's a building
+      if (buildingImageMap[factory.currentlyBuilding]) {
+        // It's a building, use its path from buildingImageMap
+        imagePath = buildingImageMap[factory.currentlyBuilding]
+      } 
+      // Then check if it's a unit
+      else if (unitImageMap[factory.currentlyBuilding]) {
+        // It's a unit, use its path from unitImageMap
+        imagePath = unitImageMap[factory.currentlyBuilding]
+      } 
+      // Special handling for turret guns
       else if (factory.currentlyBuilding.startsWith('turretGun')) {
         const version = factory.currentlyBuilding.slice(-2).toLowerCase()
-        imageName = `turret_gun_${version}`
-      } else {
-        // For other buildings, use the type directly
-        imageName = factory.currentlyBuilding
+        imagePath = `images/turret_gun_${version}.jpg`
+      } 
+      // Fallback case
+      else {
+        // This is a fallback path, using lowercase name
+        imagePath = `images/${factory.currentlyBuilding.toLowerCase()}`
       }
 
       // Use the image cache function instead of creating a new Image every time
-      getOrLoadImage(`images/${imageName}`, ['jpg', 'webp', 'png'], (img) => {
+      // If the path already has an extension, use it as is; otherwise try multiple extensions
+      const hasExtension = /\.(jpg|webp|png)$/.test(imagePath);
+      const imagePathToUse = hasExtension ? imagePath.replace(/\.(jpg|webp|png)$/, '') : imagePath;
+      const extensionsToTry = hasExtension ? [imagePath.match(/\.(jpg|webp|png)$/)[1], 'jpg', 'webp', 'png'] : ['jpg', 'webp', 'png'];
+      
+      getOrLoadImage(imagePathToUse, extensionsToTry, (img) => {
         if (img) {
           gameCtx.drawImage(img,
             centerX - iconSize / 2,
