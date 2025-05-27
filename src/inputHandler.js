@@ -298,55 +298,6 @@ function showControlsHelp() {
   gameState.paused = !gameState.paused
 }
 
-// Updated: Toggle keybindings overview overlay with modern, futuristic styling
-function toggleKeyBindingsOverview() {
-  let overview = document.getElementById('keyBindingsOverview')
-  if (!overview) {
-    overview = document.createElement('div')
-    overview.id = 'keyBindingsOverview'
-    // Updated futuristic styling
-    overview.style.position = 'absolute'
-    overview.style.top = '50%'
-    overview.style.left = '50%'
-    overview.style.transform = 'translate(-50%, -50%)'
-    overview.style.background = 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)'
-    overview.style.color = '#fff'
-    overview.style.padding = '20px'
-    overview.style.borderRadius = '8px'
-    overview.style.boxShadow = '0 4px 15px rgba(0, 255, 255, 0.2)'
-    overview.style.fontFamily = 'Roboto, sans-serif'
-    overview.style.zIndex = '1000'
-    overview.style.maxWidth = '80%'
-    overview.style.maxHeight = '80%'
-    overview.style.overflowY = 'auto'
-    overview.innerHTML = `
-      <h2 style="margin-top:0;">Key Bindings</h2>
-      <ul>
-        <li><strong>Left Click</strong>: Select unit or factory</li>
-        <li><strong>Left Click + Drag</strong>: Multi-unit selection</li>
-        <li><strong>Right Click</strong>: Issue move or attack command</li>
-        <li><strong>CTRL + Left Click</strong>: Force Attack friendly units/buildings</li>
-        <li><strong>A</strong>: Toggle alert mode (for supported units)</li>
-        <li><strong>D</strong>: Dodge command</li>
-        <li><strong>G</strong>: Toggle map grid visibility</li> 
-        <li><strong>H</strong>: Toggle this keybindings overview</li>
-        <li><strong>I</strong>: Show additional help (pause game)</li>
-        <li><strong>CTRL + 1-9</strong>: Assign control groups</li>
-        <li><strong>1-9</strong>: Recall control groups</li>
-        <li><strong>F</strong>: Toggle formation mode</li>
-      </ul>
-    `
-    document.body.appendChild(overview)
-  } else {
-    // Toggle the display
-    if (overview.style.display === 'none' || overview.style.display === '') {
-      overview.style.display = 'block'
-    } else {
-      overview.style.display = 'none'
-    }
-  }
-}
-
 // Helper: For a given target and unit center, return the appropriate aiming point.
 // For factories, this returns the closest point on the factory rectangle.
 function getTargetPoint(target, unitCenter) {
@@ -986,13 +937,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
   // Enhanced keydown event listener
   document.addEventListener('keydown', e => {
     // Some keys should work even when paused
-    if (e.key.toLowerCase() === 'i') {
-      showControlsHelp()
-      return
-    }
     // New: Toggle keybindings overview when H is pressed
-    else if (e.key.toLowerCase() === 'h') {
-      toggleKeyBindingsOverview()
+    if (e.key.toLowerCase() === 'h') {
+      showControlsHelp()
+      // toggleKeyBindingsOverview()
       return
     }
 

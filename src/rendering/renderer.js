@@ -7,6 +7,7 @@ import { FactoryRenderer } from './factoryRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
+import { HarvesterHUD } from '../ui/harvesterHUD.js'
 
 export class Renderer {
   constructor() {
@@ -18,6 +19,7 @@ export class Renderer {
     this.effectsRenderer = new EffectsRenderer()
     this.uiRenderer = new UIRenderer()
     this.minimapRenderer = new MinimapRenderer()
+    this.harvesterHUD = new HarvesterHUD()
   }
 
   // Initialize texture loading
@@ -48,6 +50,10 @@ export class Renderer {
     this.factoryRenderer.render(gameCtx, factories, scrollOffset)
     this.unitRenderer.render(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
+    
+    // Render harvester HUD overlay (if enabled)
+    this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)
+    
     this.uiRenderer.render(gameCtx, gameCanvas, gameState, selectionActive, selectionStart, selectionEnd, scrollOffset, factories, buildings, mapGrid, units)
   }
 

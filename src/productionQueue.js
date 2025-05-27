@@ -6,6 +6,7 @@ import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
+import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester'] // Added harvester as a vehicle
@@ -349,16 +350,19 @@ export const productionQueue = {
 
         // If the produced unit is a harvester, automatically send it to harvest
         if (newUnit.type === 'harvester') {
+          // Assign harvester to optimal refinery for even distribution
+          assignHarvesterToOptimalRefinery(newUnit, gameState)
+          
           // Access the targetedOreTiles from the imported module
-          const targetedOreTiles = window.gameState?.targetedOreTiles || {}
+          const targetedOreTiles = gameState?.targetedOreTiles || {}
 
           // Find closest ore, considering assigned refinery if applicable
           const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles, newUnit.assignedRefinery)
           if (orePos) {
             // Register this ore tile as targeted by this unit
             const tileKey = `${orePos.x},${orePos.y}`
-            if (window.gameState?.targetedOreTiles) {
-              window.gameState.targetedOreTiles[tileKey] = newUnit.id
+            if (gameState?.targetedOreTiles) {
+              gameState.targetedOreTiles[tileKey] = newUnit.id
             }
 
             const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null)

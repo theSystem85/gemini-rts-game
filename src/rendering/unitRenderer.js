@@ -47,7 +47,13 @@ export class UnitRenderer {
   }
 
   renderTurret(ctx, unit, centerX, centerY) {
-    // Draw turret - use the turretDirection for rotation
+    // Harvesters have a mining bar instead of a turret
+    if (unit.type === 'harvester') {
+      this.renderHarvesterMiningBar(ctx, unit, centerX, centerY)
+      return
+    }
+
+    // Draw turret for combat units - use the turretDirection for rotation
     ctx.save()
     ctx.translate(centerX, centerY)
     ctx.rotate(unit.turretDirection)
@@ -58,6 +64,33 @@ export class UnitRenderer {
     ctx.moveTo(0, 0)
     ctx.lineTo(TILE_SIZE / 2, 0)
     ctx.stroke()
+
+    ctx.restore()
+  }
+
+  renderHarvesterMiningBar(ctx, unit, centerX, centerY) {
+    // Only show mining bar when harvesting
+    if (!unit.harvesting) return
+
+    const now = performance.now()
+    const miningProgress = unit.harvestTimer ? 
+      Math.sin((now - unit.harvestTimer) / 200) * 0.5 + 0.5 : 0  // Oscillating animation
+    
+    const barWidth = TILE_SIZE * 0.6
+    const barHeight = 4
+    const barExtension = miningProgress * (barWidth * 0.3) // Bar moves back and forth
+
+    ctx.save()
+    ctx.translate(centerX, centerY)
+    ctx.rotate(unit.direction) // Orient with the unit
+
+    // Draw mining bar base
+    ctx.fillStyle = '#444'
+    ctx.fillRect(-barWidth / 2, -barHeight / 2, barWidth, barHeight)
+
+    // Draw moving part of the bar
+    ctx.fillStyle = '#FFD700'
+    ctx.fillRect(-barWidth / 2 + barExtension, -barHeight / 2, 8, barHeight)
 
     ctx.restore()
   }
@@ -103,21 +136,44 @@ export class UnitRenderer {
     // Draw ore carried indicator for harvesters
     if (unit.type === 'harvester') {
       let progress = 0
-      if (unit.harvesting) {
+      let barColor = '#FFD700' // Gold for ore
+      
+      if (unit.unloadingAtRefinery && unit.unloadStartTime) {
+        // Show unloading progress (reverse direction)
+        const unloadProgress = Math.min((performance.now() - unit.unloadStartTime) / 10000, 1)
+        progress = 1 - unloadProgress // Reverse the progress
+        barColor = '#FF6B6B' // Red-ish for unloading
+      } else if (unit.harvesting && unit.harvestTimer) {
+        // Show harvesting progress
         progress = Math.min((performance.now() - unit.harvestTimer) / 10000, 1)
+        barColor = '#32CD32' // Green for harvesting
+      } else {
+        // Show current ore load
+        progress = unit.oreCarried / HARVESTER_CAPPACITY
       }
-      if (unit.oreCarried >= HARVESTER_CAPPACITY) {
-        progress = 1
-      }
+      
       const progressBarWidth = TILE_SIZE * 0.8
       const progressBarHeight = 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
       const progressBarY = unit.y - 5 - scrollOffset.y
-      ctx.fillStyle = '#FFD700'
+      
+      // Background bar
+      ctx.fillStyle = '#333'
+      ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+      
+      // Progress fill
+      ctx.fillStyle = barColor
       ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+      
+      // Border
       ctx.strokeStyle = '#000'
       ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
     }
+  }
+
+  renderQueueNumber(ctx, unit, scrollOffset) {
+    // Queue numbers are now handled by the HarvesterHUD overlay
+    // This function is kept for compatibility but no longer renders anything
   }
 
   renderGroupNumber(ctx, unit, scrollOffset) {
@@ -148,6 +204,7 @@ export class UnitRenderer {
     this.renderTurret(ctx, unit, centerX, centerY)
     this.renderHealthBar(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
+    this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)
   }
 
