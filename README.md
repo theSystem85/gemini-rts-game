@@ -4,7 +4,7 @@
 
 ## Intro
 
-This game is a test for Gemini Advanced on how to make a complex RTS game mostly from scratch to test the 1M token context window.
+This game is a test for me to work with frontier coding LLMs (mostly openAI and claude) on how to make a complex RTS game mostly from scratch without libraries to test the performance on a larger codebase while using prompting only (almost no handwritten code). Initially the project was just one HTML file but after a few iterations and more and more features built in the game needed to be refactored in multiple files to be maintainabble for an LLM because almost all LLMs did not work well with a file that had more than 1000 LOC. All assets in the game are also AI generated (Sound-Effects, Music, Images/Sprites).
 
 ### Setup
 npm i
