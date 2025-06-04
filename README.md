@@ -228,11 +228,10 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ### Pending Issues:
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
-- [ ] Tanks movement speed should be 50% higher in general.
-- [ ] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
+- [x] Tanks movement speed should be 50% higher in general.
+- [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
 - [ ] The tesla coil should make little damage to the target.
-- [ ] Tank projectiles make too much damage.
-- [ ] Turret_v3 aiming need better aim ahead.
+- [x] Tank projectiles make too much damage.
 - [ ] **REFACTOR:** move all constants into config.
 - [ ] **Refactor:** updateGame.js is too big and needs to be modularized.
 - [x] **Refactor:** Rendering.js is too big and needs to be modularized.
