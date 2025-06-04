@@ -114,14 +114,16 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   // Begin destination adjustment if not passable
   let adjustedEnd = { ...end }
   const destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
-  if (destType === 'water' || destType === 'rock' || destType === 'building') {
+  const destHasBuilding = mapGrid[adjustedEnd.y][adjustedEnd.x].building
+  if (destType === 'water' || destType === 'rock' || destHasBuilding) {
     let found = false
     for (const dir of DIRECTIONS) {
       const newX = adjustedEnd.x + dir.x
       const newY = adjustedEnd.y + dir.y
       if (newX >= 0 && newY >= 0 && newX < mapGrid[0].length && newY < mapGrid.length) {
         const newType = mapGrid[newY][newX].type
-        if (newType !== 'water' && newType !== 'rock' && newType !== 'building') {
+        const newHasBuilding = mapGrid[newY][newX].building
+        if (newType !== 'water' && newType !== 'rock' && !newHasBuilding) {
           adjustedEnd = { x: newX, y: newY }
           found = true
           break
@@ -251,7 +253,8 @@ function getNeighbors(node, mapGrid) {
     const y = node.y + dir.y
     if (y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length) {
       const tileType = mapGrid[y][x].type
-      if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+      const hasBuilding = mapGrid[y][x].building
+      if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
         neighbors.push({ x, y })
       }
     }
@@ -512,7 +515,8 @@ export function resolveUnitCollisions(units, mapGrid) {
         )
           continue
         const tileType = mapGrid[newTileY][newTileX].type
-        if (tileType === 'water' || tileType === 'rock' || tileType === 'building')
+        const hasBuilding = mapGrid[newTileY][newTileX].building
+        if (tileType === 'water' || tileType === 'rock' || hasBuilding)
           continue
         const newKey = `${newTileX},${newTileY}`
         if (assignedTiles.has(newKey)) continue

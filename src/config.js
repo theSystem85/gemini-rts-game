@@ -18,7 +18,8 @@ export const TILE_COLORS = {
   water: '#1E90FF',
   rock: '#808080',
   street: '#D3D3D3',
-  ore: '#FFD700'
+  ore: '#FFD700',
+  building: 'transparent' // Buildings should be transparent so background shows through
 }
 
 // Image paths for tile types, with variations to select from randomly and rotation setting

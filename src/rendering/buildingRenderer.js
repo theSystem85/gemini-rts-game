@@ -9,33 +9,56 @@ export class BuildingRenderer {
     const width = building.width * TILE_SIZE
     const height = building.height * TILE_SIZE
 
-    // Use the building image if available
-    getBuildingImage(building.type, width, height, (img) => {
-      if (img) {
-        // Draw the building image
-        ctx.drawImage(img, screenX, screenY, width, height)
-      } else {
-        // Fallback to the old rectangle rendering if no image is available
-        ctx.fillStyle = '#777'
-        ctx.fillRect(screenX, screenY, width, height)
-
-        // Draw building outline
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 2
-        ctx.strokeRect(screenX, screenY, width, height)
-
-        // Draw building type identifier as text
-        ctx.fillStyle = '#fff'
-        ctx.font = '10px Arial'
-        ctx.textAlign = 'center'
-        ctx.fillText(building.type, screenX + width / 2, screenY + height / 2)
-      }
-    })
+    // Try to get the building image synchronously first
+    const img = getBuildingImage(building.type)
+    
+    if (img) {
+      // Image is available, draw it immediately at natural size, positioned at top-left
+      this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
+    } else {
+      // No image available, use fallback
+      this.drawFallbackBuilding(ctx, building, screenX, screenY, width, height)
+    }
 
     this.renderTurret(ctx, building, screenX, screenY, width, height)
     this.renderSelection(ctx, building, screenX, screenY, width, height)
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderOwnerIndicator(ctx, building, screenX, screenY)
+  }
+
+  drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
+    // Save canvas state to isolate our rendering
+    ctx.save()
+    
+    // Don't reset transforms - use the existing canvas state to maintain proper coordinate system
+    ctx.globalAlpha = 1
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    
+    // Draw the image to fill the entire building grid space
+    // This ensures buildings appear at the correct size and position
+    ctx.drawImage(img, screenX, screenY, maxWidth, maxHeight)
+    
+    // Restore canvas state
+    ctx.restore()
+  }
+
+  drawFallbackBuilding(ctx, building, screenX, screenY, width, height) {
+    // Fallback to the old rectangle rendering if no image is available
+    ctx.fillStyle = '#777'
+    ctx.fillRect(screenX, screenY, width, height)
+
+    // Draw building outline
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.strokeRect(screenX, screenY, width, height)
+
+    // Draw building type identifier as text
+    ctx.fillStyle = '#fff'
+    ctx.font = '10px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText(building.type, screenX + width / 2, screenY + height / 2)
   }
 
   renderTurret(ctx, building, screenX, screenY, width, height) {

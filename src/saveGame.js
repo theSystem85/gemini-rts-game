@@ -158,12 +158,15 @@ export function loadGame(key) {
       }
       gameState.buildings.push(building)
     })
-    // Restore mapGrid tile types (including 'building' and 'wall' etc.)
+    // Restore mapGrid tile types (excluding 'building' to avoid black spots)
     if (loaded.mapGridTypes) {
       for (let y = 0; y < mapGrid.length; y++) {
         for (let x = 0; x < mapGrid[y].length; x++) {
           if (loaded.mapGridTypes[y] && loaded.mapGridTypes[y][x]) {
-            mapGrid[y][x].type = loaded.mapGridTypes[y][x]
+            // Don't restore 'building' tile type - let building placement handle this
+            if (loaded.mapGridTypes[y][x] !== 'building') {
+              mapGrid[y][x].type = loaded.mapGridTypes[y][x]
+            }
           }
         }
       }
@@ -180,6 +183,17 @@ export function loadGame(key) {
         }
       })
     }
+
+    // Re-place all buildings on the map to set building properties correctly
+    gameState.buildings.forEach(building => {
+      for (let y = building.y; y < building.y + building.height; y++) {
+        for (let x = building.x; x < building.x + building.width; x++) {
+          if (mapGrid[y] && mapGrid[y][x]) {
+            mapGrid[y][x].building = building
+          }
+        }
+      }
+    })
 
     // Import these functions as needed after loading
     import('./main.js').then(module => {

@@ -68,47 +68,33 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
 
   // Debug: Count Tesla coils
   const teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
-  console.log(`Total Tesla coils: ${teslaCoils.length}, Total units: ${units.length}`)
-
+  
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil
     if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') && building.health > 0) {
-      if (building.type === 'teslaCoil') {
-        console.log(`Processing Tesla coil at (${building.x}, ${building.y}), owner: ${building.owner}, fireRange: ${building.fireRange}`)
-      }
+
       const centerX = (building.x + building.width / 2) * TILE_SIZE
       const centerY = (building.y + building.height / 2) * TILE_SIZE      // Find closest enemy for all defensive buildings
       let closestEnemy = null
       let closestDistance = Infinity
       for (const unit of units) {
-        if (building.type === 'teslaCoil') {
-          console.log(`Checking unit: owner=${unit.owner}, building.owner=${building.owner}, health=${unit.health}`)
-        }
         if (unit.owner !== building.owner && unit.health > 0) {
           const unitCenterX = unit.x + TILE_SIZE / 2
           const unitCenterY = unit.y + TILE_SIZE / 2
           const dx = unitCenterX - centerX
           const dy = unitCenterY - centerY
           const distance = Math.hypot(dx, dy)
-          if (building.type === 'teslaCoil') {
-            console.log(`Enemy unit at distance ${distance}, fireRange: ${building.fireRange * TILE_SIZE}`)
-          }
           if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
             closestEnemy = unit
             closestDistance = distance
           }
         }
       }
-      
-      if (building.type === 'teslaCoil') {
-        console.log(`Tesla Coil: Found ${closestEnemy ? 'enemy' : 'no enemy'} in range. Range: ${building.fireRange * TILE_SIZE}px, Distance: ${closestDistance}px`)
-      }// Tesla Coil special logic
+      // Tesla Coil special logic
       if (building.type === 'teslaCoil') {
         const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
-            console.log(`Tesla Coil firing at enemy at (${closestEnemy.x}, ${closestEnemy.y})`)
-            
             // Play loading sound immediately
             playSound('teslacoil_loading')
             

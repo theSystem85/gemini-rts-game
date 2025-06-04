@@ -343,9 +343,10 @@ export function placeBuilding(building, mapGrid) {
       // Store the original tile type before changing it
       building.originalTiles[y - building.y][x - building.x] = mapGrid[y][x].type
 
-      // Mark tile as building
+      // Mark tile as having a building (for collision detection) but preserve the original tile type for rendering
       mapGrid[y][x].building = building
-      mapGrid[y][x].type = 'building' // Mark the tile as a building type for pathfinding
+      // DON'T change the tile type - keep the original background texture visible
+      // mapGrid[y][x].type = 'building' // REMOVED: This was causing solid color rendering
     }
   }
 }

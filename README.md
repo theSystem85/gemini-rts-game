@@ -283,12 +283,12 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] When tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
 - [x] Enemy units do not defend their harvesters when being attacked.
 - [ ] When selling a building the occupancy map is not updated and still blocked there.
-- [ ] Sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
+- [x] Sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
 - [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 - [ ] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
 - [ ] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 - [ ] Image for the concrete wall on map is incorrect.
-- [ ] There are colored bars on the edges of some buildings who's map images do not fit exactly into the tile map grid. Those bars should be removed. Make sure when the image to place on the map does not fit into the grid that the map tiles from before are still visible in the background.
+- [x] There are colored bars on the edges of some buildings who's map images do not fit exactly into the tile map grid. Those bars should be removed. Make sure when the image to place on the map does not fit into the grid that the map tiles from before are still visible in the background.
 - [ ] Enemy units come out of factory immediately before the build indicator shows that the build is done
 
 ### Fixed Issues:

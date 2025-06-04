@@ -71,7 +71,8 @@ function isBlockedTerrain(tileX, tileY, mapGrid) {
 
   // Check if the tile type is impassable
   const tileType = mapGrid[tileY][tileX].type
-  return tileType === 'water' || tileType === 'rock' || tileType === 'building'
+  const hasBuilding = mapGrid[tileY][tileX].building
+  return tileType === 'water' || tileType === 'rock' || hasBuilding
 }
 
 // Function to update custom cursor position and visibility
@@ -848,7 +849,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                         newTile.x < mapGrid[0].length && newTile.y < mapGrid.length &&
                         mapGrid[newTile.y][newTile.x].type !== 'water' &&
                         mapGrid[newTile.y][newTile.x].type !== 'rock' &&
-                        mapGrid[newTile.y][newTile.x].type !== 'building' &&
+                        !mapGrid[newTile.y][newTile.x].building &&
                         !selectedUnits.slice(0, index).some(u =>
                           u.moveTarget && u.moveTarget.x === newTile.x && u.moveTarget.y === newTile.y
                         )) {
@@ -1054,7 +1055,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
           // Check boundaries.
           if (newX >= 0 && newX < mapGrid[0].length && newY >= 0 && newY < mapGrid.length) {
             const tileType = mapGrid[newY][newX].type
-            if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+            const hasBuilding = mapGrid[newY][newX].building
+            if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
               // Check that no unit occupies the candidate tile.
               const occupied = units.some(u => Math.floor(u.x / TILE_SIZE) === newX && Math.floor(u.y / TILE_SIZE) === newY)
               if (!occupied) {

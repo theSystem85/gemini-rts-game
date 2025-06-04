@@ -11,10 +11,24 @@ export class FactoryRenderer {
 
   renderFactoryBase(ctx, factory, screenX, screenY, width, height) {
     // Use the construction yard image for factories
-    getBuildingImage('constructionYard', width, height, (img) => {
+    getBuildingImage('constructionYard', (img) => {
       if (img) {
-        // Draw the construction yard image without color overlay
-        ctx.drawImage(img, screenX, screenY, width, height)
+        // Calculate the scale to fit the image within the factory's grid space
+        // while maintaining aspect ratio and positioning at top-left
+        const maxWidth = width
+        const maxHeight = height
+        
+        // Calculate scale to fit within the grid space
+        const scaleX = maxWidth / img.width
+        const scaleY = maxHeight / img.height
+        const scale = Math.min(scaleX, scaleY, 1) // Don't scale up beyond original size
+        
+        // Calculate the final dimensions
+        const drawWidth = img.width * scale
+        const drawHeight = img.height * scale
+        
+        // Draw the construction yard image at top-left corner
+        ctx.drawImage(img, screenX, screenY, drawWidth, drawHeight)
 
         // Draw a small colored indicator in the corner instead of an overlay
         const indicatorColor = factory.id === 'player' ? '#0A0' : '#A00'

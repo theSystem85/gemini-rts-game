@@ -132,7 +132,7 @@ export function findAdjacentTile(factory, mapGrid) {
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
       if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue
-      if (mapGrid[y][x].type !== 'building') {
+      if (!mapGrid[y][x].building) {
         return { x, y }
       }
     }
@@ -204,7 +204,7 @@ export function findPositionWithClearShot(unit, target, units, mapGrid) {
     // Check if tile is valid and passable
     if (testX >= 0 && testX < mapGrid[0].length &&
         testY >= 0 && testY < mapGrid.length &&
-        mapGrid[testY][testX].type !== 'building' &&
+        !mapGrid[testY][testX].building &&
         mapGrid[testY][testX].type !== 'water') {
 
       // Check if tile is not occupied using the occupancy map

@@ -286,7 +286,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
               if (destTileX >= 0 && destTileX < mapGrid[0].length &&
                   destTileY >= 0 && destTileY < mapGrid.length) {
                 const tileType = mapGrid[destTileY][destTileX].type
-                if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+                const hasBuilding = mapGrid[destTileY][destTileX].building
+                if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
                   if (!unit.originalPath) {
                     unit.originalPath = unit.path ? [...unit.path] : []
                     unit.originalTarget = unit.target
@@ -408,7 +409,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             if (destTileX >= 0 && destTileX < mapGrid[0].length &&
                 destTileY >= 0 && destTileY < mapGrid.length) {
               const tileType = mapGrid[destTileY][destTileX].type
-              if (tileType !== 'water' && tileType !== 'rock' && tileType !== 'building') {
+              const hasBuilding = mapGrid[destTileY][destTileX].building
+              if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
                 const newPath = findPath(
                   { x: unit.tileX, y: unit.tileY },
                   { x: destTileX, y: destTileY },
@@ -487,7 +489,7 @@ function findAdjacentTile(factory, mapGrid) {
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
       if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue
-      if (mapGrid[y][x].type !== 'building') {
+      if (!mapGrid[y][x].building) {
         return { x, y }
       }
     }
@@ -664,7 +666,7 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
     // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].type === 'building' ||
+    if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock') {
       northClear = false
@@ -686,7 +688,7 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
     // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].type === 'building' ||
+    if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock') {
       southClear = false
@@ -708,7 +710,7 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
     // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].type === 'building' ||
+    if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock') {
       westClear = false
@@ -730,7 +732,7 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
     // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].type === 'building' ||
+    if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock') {
       eastClear = false
@@ -876,7 +878,7 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
       }
 
       // Check if passable
-      if (mapGrid[nextY][nextX].type === 'building' ||
+      if (mapGrid[nextY][nextX].building ||
           mapGrid[nextY][nextX].type === 'water' ||
           mapGrid[nextY][nextX].type === 'rock') {
         continue
