@@ -262,6 +262,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ### Completed Features:
 - [x] When game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
+- [x] Implement milestone system and show first milestone of building a refinery by showing a video with sound of a tank running over crystals.
 - [x] Make the enemy more intelligent so it does not just run into players defense over and over again but moves away when his units are too weak to break into players base turret defense. Then the enemy gaters units in safe distance to players base and starts another attack with more units trying to break players defense and so on. The enemy should also try to find a way around the players defense to attack weak spots of the base.
 - [x] Ensure harvesters spawn from the vehicle factory not the building factory.
 - [x] Ensure money for builds is gradually spend during build process

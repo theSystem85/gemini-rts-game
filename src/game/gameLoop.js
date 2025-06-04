@@ -6,6 +6,7 @@ import { updateGame } from '../updateGame.js'
 import { renderGame, renderMinimap } from '../rendering.js'
 import { updateBuildingsUnderRepair } from '../buildings.js'
 import { updateEnergyBar } from '../ui/energyBar.js'
+import { milestoneSystem } from './milestoneSystem.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -57,6 +58,14 @@ export class GameLoop {
 
     // Update energy bar display
     updateEnergyBar()
+
+    // Increment frame counter
+    gameState.frameCount++
+
+    // Check for milestones periodically (every 60 frames)
+    if (gameState.frameCount % 60 === 0) {
+      milestoneSystem.checkMilestones(gameState)
+    }
 
     // Update game elements
     updateGame(delta / 1000, this.mapGrid, this.factories, this.units, this.bullets, gameState)

@@ -1,5 +1,6 @@
 // rendering/minimapRenderer.js
 import { TILE_SIZE, TILE_COLORS } from '../config.js'
+import { videoOverlay } from '../ui/videoOverlay.js'
 
 export class MinimapRenderer {
   render(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState) {
@@ -20,6 +21,13 @@ export class MinimapRenderer {
 
     // Apply pixel ratio scaling
     minimapCtx.scale(pixelRatio, pixelRatio)
+
+    // Check if there's a video overlay playing
+    if (videoOverlay.isVideoPlaying()) {
+      // Render video overlay over the minimap
+      this.renderVideoOverlay(minimapCtx, minimapLogicalWidth, minimapLogicalHeight)
+      return // Skip normal minimap rendering while video is playing
+    }
 
     // Modified: Check if radar is active instead of lowEnergyMode to determine visibility
     // Only draw the minimap if we have radar capability
@@ -97,5 +105,87 @@ export class MinimapRenderer {
       gameLogicalWidth * scaleX,
       gameLogicalHeight * scaleY
     )
+  }
+
+  /**
+   * Render video overlay directly on the minimap canvas
+   */
+  renderVideoOverlay(minimapCtx, minimapWidth, minimapHeight) {
+    // Get the current video element from the overlay
+    const videoElement = videoOverlay.getCurrentVideo()
+    
+    if (!videoElement || videoElement.readyState < 2) {
+      // Video not ready, show loading state
+      minimapCtx.fillStyle = '#000'
+      minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight)
+      
+      minimapCtx.fillStyle = '#00ff00'
+      minimapCtx.font = '14px Arial'
+      minimapCtx.textAlign = 'center'
+      minimapCtx.fillText('Loading...', minimapWidth / 2, minimapHeight / 2)
+      return
+    }
+
+    // Calculate video dimensions maintaining aspect ratio
+    const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight
+    const minimapAspectRatio = minimapWidth / minimapHeight
+    
+    let renderWidth, renderHeight, offsetX, offsetY
+    
+    if (videoAspectRatio > minimapAspectRatio) {
+      // Video is wider, fit to width
+      renderWidth = minimapWidth
+      renderHeight = minimapWidth / videoAspectRatio
+      offsetX = 0
+      offsetY = (minimapHeight - renderHeight) / 2
+    } else {
+      // Video is taller or same ratio, fit to height
+      renderHeight = minimapHeight
+      renderWidth = minimapHeight * videoAspectRatio
+      offsetX = (minimapWidth - renderWidth) / 2
+      offsetY = 0
+    }
+
+    // Clear the minimap area
+    minimapCtx.fillStyle = '#000'
+    minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight)
+
+    // Draw the video frame
+    try {
+      minimapCtx.drawImage(
+        videoElement,
+        offsetX,
+        offsetY,
+        renderWidth,
+        renderHeight
+      )
+    } catch (error) {
+      console.warn('Failed to draw video frame:', error)
+      // Fallback to loading text
+      minimapCtx.fillStyle = '#ff0000'
+      minimapCtx.font = '12px Arial'
+      minimapCtx.textAlign = 'center'
+      minimapCtx.fillText('Video Error', minimapWidth / 2, minimapHeight / 2)
+    }
+
+    // Add a border to indicate video mode
+    minimapCtx.strokeStyle = '#00ff00'
+    minimapCtx.lineWidth = 2
+    minimapCtx.strokeRect(1, 1, minimapWidth - 2, minimapHeight - 2)
+
+    // Add video progress indicator
+    const progress = videoOverlay.getVideoProgress()
+    if (progress >= 0) {
+      const progressBarHeight = 3
+      const progressBarY = minimapHeight - progressBarHeight - 2
+      
+      // Progress background
+      minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+      minimapCtx.fillRect(2, progressBarY, minimapWidth - 4, progressBarHeight)
+      
+      // Progress bar
+      minimapCtx.fillStyle = '#00ff00'
+      minimapCtx.fillRect(2, progressBarY, (minimapWidth - 4) * progress, progressBarHeight)
+    }
   }
 }

@@ -7,6 +7,7 @@ import { initBackgroundMusic, toggleBackgroundMusic, bgMusicAudio } from '../sou
 import { buildingRepairHandler } from '../buildingRepairHandler.js'
 import { buildingSellHandler } from '../buildingSellHandler.js'
 import { showNotification } from './notifications.js'
+import { milestoneSystem } from '../game/milestoneSystem.js'
 import {
   canPlaceBuilding,
   createBuilding,
@@ -173,6 +174,10 @@ export class EventHandlers {
 
           // Show notification
           showNotification(`${buildingData[buildingType].displayName} constructed`)
+
+          // Check for milestones after building placement
+          console.log('Checking milestones after building placement:', buildingType)
+          milestoneSystem.checkMilestones(gameState)
 
           // Start next production if any
           if (productionQueue.buildingItems.length > 0) {
