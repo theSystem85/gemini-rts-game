@@ -260,7 +260,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
 
     // Play appropriate sound based on turret type
     if (building.type === 'turretGunV3') {
-      playSound('shoot_heavy')
+      playSound('shoot_heavy', 0.5)
     } else {
       playSound('shoot')
     }

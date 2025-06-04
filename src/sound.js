@@ -11,6 +11,7 @@ const soundMapping = {
   movement: 'tankMove',
   shoot: 'tankShot',
   shoot_rocket: 'patriotMissile', // updated: rocket tank now uses patriotMissile sounds
+  shoot_heavy: 'tankShot03', // turretGunV3 uses tankShot03.mp3
   productionStart: 'constructionStarted',
   productionPaused: 'constructionPaused',
   productionCancelled: 'constructionCancelled',
@@ -29,6 +30,7 @@ const soundMapping = {
 const soundFiles = {
   explosion: ['explosion01.mp3', 'explosion02.mp3', 'explosion03.mp3', 'explosion04.mp3'],
   tankShot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'],
+  tankShot03: ['tankShot03.mp3'], // Specific sound for turretGunV3
   tankMove: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'],
   constructionComplete: ['constructionComplete.mp3'],
   unitReady: ['unitReady01.mp3', 'unitReady02.mp3', 'unitReady03.mp3'],
@@ -113,15 +115,6 @@ export function playSound(eventName, volume = 1.0) {
     oscillator.stop(audioContext.currentTime + 0.1)
   } catch (e) {
     console.error('AudioContext error:', e)
-  }
-
-  // Add new sound mapping for heavy turret
-  if (eventName === 'shoot_heavy' && !soundMapping['shoot_heavy']) {
-    soundMapping['shoot_heavy'] = {
-      audio: new Audio('./sounds/shoot.mp3'), // Reuse existing sound if needed
-      volume: 0.5,
-      playbackRate: 0.7 // Lower pitch for heavier sound
-    }
   }
 }
 
