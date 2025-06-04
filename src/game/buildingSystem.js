@@ -66,41 +66,85 @@ export function updateBuildings(gameState, units, bullets, factories, delta) {
 function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now()
 
+  // Debug: Count Tesla coils
+  const teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
+  console.log(`Total Tesla coils: ${teslaCoils.length}, Total units: ${units.length}`)
+
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil
     if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') && building.health > 0) {
+      if (building.type === 'teslaCoil') {
+        console.log(`Processing Tesla coil at (${building.x}, ${building.y}), owner: ${building.owner}, fireRange: ${building.fireRange}`)
+      }
       const centerX = (building.x + building.width / 2) * TILE_SIZE
-      const centerY = (building.y + building.height / 2) * TILE_SIZE
-
-      // Find closest enemy for all defensive buildings
+      const centerY = (building.y + building.height / 2) * TILE_SIZE      // Find closest enemy for all defensive buildings
       let closestEnemy = null
       let closestDistance = Infinity
       for (const unit of units) {
+        if (building.type === 'teslaCoil') {
+          console.log(`Checking unit: owner=${unit.owner}, building.owner=${building.owner}, health=${unit.health}`)
+        }
         if (unit.owner !== building.owner && unit.health > 0) {
           const unitCenterX = unit.x + TILE_SIZE / 2
           const unitCenterY = unit.y + TILE_SIZE / 2
           const dx = unitCenterX - centerX
           const dy = unitCenterY - centerY
           const distance = Math.hypot(dx, dy)
+          if (building.type === 'teslaCoil') {
+            console.log(`Enemy unit at distance ${distance}, fireRange: ${building.fireRange * TILE_SIZE}`)
+          }
           if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
             closestEnemy = unit
             closestDistance = distance
           }
         }
       }
-
-      // Tesla Coil special logic
+      
+      if (building.type === 'teslaCoil') {
+        console.log(`Tesla Coil: Found ${closestEnemy ? 'enemy' : 'no enemy'} in range. Range: ${building.fireRange * TILE_SIZE}px, Distance: ${closestDistance}px`)
+      }// Tesla Coil special logic
       if (building.type === 'teslaCoil') {
         const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
-            // Play loading and firing sounds in sequence
+            console.log(`Tesla Coil firing at enemy at (${closestEnemy.x}, ${closestEnemy.y})`)
+            
+            // Play loading sound immediately
             playSound('teslacoil_loading')
-            setTimeout(() => playSound('teslacoil_firing'), 400)
-            // Always refresh Tesla Coil effect and animation
-            closestEnemy.teslaDisabledUntil = now + 60000 // 60 seconds
-            closestEnemy.teslaSlowUntil = now + 60000
-            closestEnemy.teslaSlowed = true
+            
+            // Schedule the firing sequence
+            setTimeout(() => {
+              // Play firing sound first
+              playSound('teslacoil_firing')
+              
+              // Apply effects after a short delay to sync with bolt sound
+              setTimeout(() => {
+                // Check if enemy is still alive and in range
+                if (closestEnemy.health > 0) {
+                  // Apply Tesla Coil effects
+                  closestEnemy.teslaDisabledUntil = now + 60000 // 60 seconds
+                  closestEnemy.teslaSlowUntil = now + 60000
+                  closestEnemy.teslaSlowed = true
+                  
+                  // Apply damage to the target
+                  closestEnemy.health -= building.damage
+                }
+              }, 200) // Small delay after bolt sound starts
+            }, 400) // Delay for loading sound to finish
+            
+            // Create visual lightning effect synchronized with firing sound
+            setTimeout(() => {
+              const targetX = closestEnemy.x + TILE_SIZE / 2
+              const targetY = closestEnemy.y + TILE_SIZE / 2
+              closestEnemy.teslaCoilHit = {
+                fromX: centerX,
+                fromY: centerY,
+                toX: targetX,
+                toY: targetY,
+                impactTime: performance.now()
+              }
+            }, 400) // Same timing as firing sound
+            
             building.lastShotTime = now
             building.firingAt = closestEnemy
             building.fireStartTime = now
