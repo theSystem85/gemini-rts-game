@@ -4,6 +4,7 @@ import { findPath, buildOccupancyMap } from './units.js'
 import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
+import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -127,13 +128,40 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         }
       }
       if (enemyFactory.budget >= cost) {
-        const newEnemy = spawnEnemyUnit(enemyFactory, unitType, units, mapGrid)
-        units.push(newEnemy)
-        enemyFactory.currentlyBuilding = unitType
-        enemyFactory.buildStartTime = now
-        enemyFactory.buildDuration = 5000
-        gameState.enemyLastProductionTime = now
-        console.log(`Enemy started producing unit: ${unitType}`)
+        // Find appropriate spawn factory for this unit type
+        let spawnFactory = enemyFactory // Default to main construction yard
+        
+        // Harvesters and other vehicle units should spawn from vehicle factories
+        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'rocketTank') {
+          const enemyVehicleFactories = gameState.buildings.filter(
+            b => b.type === 'vehicleFactory' && b.owner === 'enemy'
+          )
+          
+          if (enemyVehicleFactories.length > 0) {
+            // Use round-robin to select the next vehicle factory
+            gameState.nextEnemyVehicleFactoryIndex = gameState.nextEnemyVehicleFactoryIndex ?? 0
+            spawnFactory = enemyVehicleFactories[gameState.nextEnemyVehicleFactoryIndex % enemyVehicleFactories.length]
+            gameState.nextEnemyVehicleFactoryIndex++
+          } else {
+            console.error(`Cannot spawn ${unitType}: Enemy has no Vehicle Factory.`)
+            // Skip this production cycle and try again later
+            gameState.enemyLastProductionTime = now
+            return
+          }
+        }
+        
+        const newEnemy = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState)
+        if (newEnemy) {
+          units.push(newEnemy)
+          enemyFactory.currentlyBuilding = unitType
+          enemyFactory.buildStartTime = now
+          enemyFactory.buildDuration = 5000
+          gameState.enemyLastProductionTime = now
+          console.log(`Enemy started producing unit: ${unitType} from ${spawnFactory.type || 'construction yard'}`)
+        } else {
+          console.warn(`Failed to spawn enemy ${unitType}`)
+          gameState.enemyLastProductionTime = now
+        }
       }
     }
   }
@@ -324,56 +352,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         }
       }
     }
-    // Harvester behavior
-    else if (unit.type === 'harvester') {
-      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 3000)
-      if (pathRecalcNeeded && (!unit.path || unit.path.length === 0)) {
-        if (unit.oreCarried >= 5) {
-          // Clear targeting when full of ore and returning to base
-          if (unit.oreField) {
-            const tileKey = `${unit.oreField.x},${unit.oreField.y}`
-            if (targetedOreTiles[tileKey] === unit.id) {
-              delete targetedOreTiles[tileKey]
-            }
-            unit.oreField = null
-          }
-
-          const targetFactory = factories.find(f => f.id === 'enemy')
-          const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
-          if (unloadTarget) {
-            const path = findPath(
-              { x: unit.tileX, y: unit.tileY },
-              unloadTarget,
-              mapGrid,
-              occupancyMap
-            )
-            if (path.length > 1) {
-              unit.path = path.slice(1)
-              unit.lastPathCalcTime = now
-            }
-          }
-        } else if (!unit.harvesting) {
-          const orePos = findClosestOre(unit, mapGrid, targetedOreTiles)
-          if (orePos) {
-            // Mark this ore tile as targeted by this unit
-            const tileKey = `${orePos.x},${orePos.y}`
-            targetedOreTiles[tileKey] = unit.id
-
-            const path = findPath(
-              { x: unit.tileX, y: unit.tileY },
-              orePos,
-              mapGrid,
-              occupancyMap
-            )
-            if (path.length > 1) {
-              unit.path = path.slice(1)
-              unit.lastPathCalcTime = now
-              unit.oreField = orePos // Set target ore field
-            }
-          }
-        }
-      }
-    }
+    // NOTE: Harvester behavior is now handled by the unified harvesterLogic.js module
+    // Enemy harvesters use the same logic as player harvesters for consistent behavior
   })
 
   // Maintain safe attack distance for combat units
@@ -430,21 +410,35 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   }
 }
 
-// Spawns an enemy unit at the center of the enemy factory
+// Spawns an enemy unit at the specified building (factory or vehicle factory)
 // NOTE: Enemy units now use identical stats to player units for perfect balance
-export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
-  const spawnX = factory.x + Math.floor(factory.width / 2)
-  const spawnY = factory.y + Math.floor(factory.height / 2)
+export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState) {
+  // Use the same spawn position logic as player units
+  const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
+  const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
+  
+  // Import spawnUnit to use the same spawning logic as players
+  import('./units.js').then(({ spawnUnit }) => {
+    // This approach won't work synchronously, let's use the existing logic but fix it
+  })
+  
+  // Find an available spawn position near the building's center (same as player logic)
+  let spawnPosition = findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units)
+  
+  if (!spawnPosition) {
+    // Fallback to center position if no adjacent position available
+    spawnPosition = { x: buildingCenterX, y: buildingCenterY }
+  }
   
   // Use the same createUnit function as player units to ensure identical stats
   const unit = {
     id: getUniqueId(),
     type: unitType,
     owner: 'enemy',
-    tileX: spawnX,
-    tileY: spawnY,
-    x: spawnX * TILE_SIZE,
-    y: spawnY * TILE_SIZE,
+    tileX: spawnPosition.x,
+    tileY: spawnPosition.y,
+    x: spawnPosition.x * TILE_SIZE,
+    y: spawnPosition.y * TILE_SIZE,
     // Use standard unit properties instead of hardcoded values
     speed: (unitType === 'harvester') ? 0.45 : 0.375, // Same as player units
     health: (unitType === 'harvester') ? 150 : (unitType === 'tank-v2' ? 130 : (unitType === 'tank-v3' ? 169 : 100)),
@@ -457,7 +451,7 @@ export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
     spawnTime: Date.now(),
     spawnedInFactory: true,
     holdInFactory: true, // Flag to hold unit in factory until loading indicator completes
-    factoryBuildEndTime: factory.buildStartTime + factory.buildDuration, // Store when the factory's build timer ends
+    factoryBuildEndTime: spawnBuilding.buildStartTime + spawnBuilding.buildDuration, // Store when the building's build timer ends
     lastPathCalcTime: 0,
     lastPositionCheckTime: 0,
     lastTargetChangeTime: 0,
@@ -481,7 +475,104 @@ export function spawnEnemyUnit(factory, unitType, _units, _mapGrid) {
     unit.alertMode = true
   }
   
+  // If this is a harvester, assign it to an optimal enemy refinery and give it an initial ore target (same as player harvesters)
+  if (unitType === 'harvester') {
+    // Find enemy refineries for assignment
+    const enemyGameState = {
+      buildings: gameState?.buildings?.filter(b => b.owner === 'enemy') || []
+    }
+    assignHarvesterToOptimalRefinery(unit, enemyGameState)
+    
+    // Give enemy harvester initial ore target (same as player harvesters)
+    const targetedOreTiles = gameState?.targetedOreTiles || {}
+    const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
+    if (orePos) {
+      // Register this ore tile as targeted by this unit
+      const tileKey = `${orePos.x},${orePos.y}`
+      if (gameState?.targetedOreTiles) {
+        gameState.targetedOreTiles[tileKey] = unit.id
+      }
+
+      const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, null)
+      if (newPath.length > 1) {
+        unit.path = newPath.slice(1)
+        unit.oreField = orePos // Set initial ore field target
+      }
+    }
+  }
+
   return unit
+}
+
+// Find an available position near the building center for unit spawn (same logic as player units)
+function findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units) {
+  const DIRECTIONS = [
+    { x: 0, y: -1 }, // North
+    { x: 1, y: 0 },  // East  
+    { x: 0, y: 1 },  // South
+    { x: -1, y: 0 }, // West
+    { x: 1, y: -1 }, // Northeast
+    { x: 1, y: 1 },  // Southeast
+    { x: -1, y: 1 }, // Southwest
+    { x: -1, y: -1 } // Northwest
+  ]
+  
+  // Check immediate surrounding tiles first (1 tile away from center)
+  for (let distance = 1; distance <= 5; distance++) {
+    for (const dir of DIRECTIONS) {
+      const x = buildingCenterX + dir.x * distance
+      const y = buildingCenterY + dir.y * distance
+
+      // Check if position is valid (passable terrain, within bounds, not occupied)
+      if (isPositionValidForSpawn(x, y, mapGrid, units)) {
+        return { x, y }
+      }
+    }
+  }
+
+  // If we couldn't find a position in the immediate vicinity, expand the search
+  for (let distance = 6; distance <= 10; distance++) {
+    // Check in a square pattern around the building center
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        // Skip positions not on the perimeter of the current distance square
+        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+
+        const x = buildingCenterX + dx
+        const y = buildingCenterY + dy
+
+        if (isPositionValidForSpawn(x, y, mapGrid, units)) {
+          return { x, y }
+        }
+      }
+    }
+  }
+
+  // No valid position found
+  return null
+}
+
+// Helper function to check if a position is valid for unit spawn
+function isPositionValidForSpawn(x, y, mapGrid, units) {
+  // Check bounds
+  if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) {
+    return false
+  }
+
+  // Check terrain
+  const tile = mapGrid[y][x]
+  if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+    return false
+  }
+
+  // Check if any unit is already at this position
+  for (const unit of units) {
+    if (unit.tileX === x && unit.tileY === y) {
+      return false
+    }
+  }
+
+  return true
 }
 
 // Find an adjacent tile to the factory that is not a building

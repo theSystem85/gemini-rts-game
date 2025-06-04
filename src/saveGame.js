@@ -41,10 +41,19 @@ export function saveGame(label) {
     owner: u.owner,
     x: u.x,
     y: u.y,
+    tileX: u.tileX,
+    tileY: u.tileY,
     health: u.health,
     maxHealth: u.maxHealth,
-    id: u.id
-    // Add more fields if needed (e.g., oreCarried, groupNumber, etc.)
+    id: u.id,
+    // Harvester-specific properties
+    oreCarried: u.oreCarried,
+    assignedRefinery: u.assignedRefinery,
+    oreField: u.oreField,
+    path: u.path || [],
+    target: u.target,
+    groupNumber: u.groupNumber
+    // Add more fields if needed
   }))
 
   // Gather all buildings (player and enemy)
@@ -81,7 +90,8 @@ export function saveGame(label) {
     units: allUnits,
     buildings: allBuildings,
     orePositions,
-    mapGridTypes // ADDED: save mapGrid tile types
+    mapGridTypes, // ADDED: save mapGrid tile types
+    targetedOreTiles: gameState.targetedOreTiles || {} // Save targeted ore tiles for harvesters
   }
 
   const saveObj = {
@@ -123,6 +133,22 @@ export function loadGame(key) {
       hydrated.y = u.y
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
+      
+      // Restore harvester-specific properties and re-assign to refineries if needed
+      if (hydrated.type === 'harvester') {
+        hydrated.oreCarried = u.oreCarried || 0
+        hydrated.oreField = u.oreField || null
+        
+        // If harvester had an assigned refinery but it's lost during save/load, reassign
+        if (u.assignedRefinery) {
+          hydrated.assignedRefinery = u.assignedRefinery
+        } else {
+          // Re-assign harvester to optimal refinery after loading
+          // This will be handled after all buildings are loaded
+          hydrated.needsRefineryAssignment = true
+        }
+      }
+      
       units.push(hydrated)
     })
     gameState.buildings.length = 0
@@ -193,6 +219,29 @@ export function loadGame(key) {
           }
         }
       }
+    })
+
+    // Restore targeted ore tiles for harvester system
+    if (loaded.targetedOreTiles) {
+      gameState.targetedOreTiles = loaded.targetedOreTiles
+    } else {
+      gameState.targetedOreTiles = {}
+    }
+
+    // Re-assign harvesters to refineries after all buildings are loaded
+    import('./game/harvesterLogic.js').then(harvesterModule => {
+      units.forEach(unit => {
+        if (unit.type === 'harvester' && unit.needsRefineryAssignment) {
+          // Filter buildings by owner for assignment
+          const ownerGameState = {
+            buildings: gameState.buildings.filter(b => b.owner === unit.owner)
+          }
+          harvesterModule.assignHarvesterToOptimalRefinery(unit, ownerGameState)
+          delete unit.needsRefineryAssignment
+        }
+      })
+    }).catch(err => {
+      console.warn('Could not re-assign harvesters to refineries after loading:', err)
     })
 
     // Import these functions as needed after loading
