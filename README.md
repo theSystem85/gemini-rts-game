@@ -225,21 +225,20 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 2. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 ## Improvements
-
-### Pending Issues:
+- [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
+- [ ] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
+- [ ] Implement attack group feature (aka AGF): All selected players units can attack a group of enemy units by holding the shift key and dragging a box around the enemy units to be attacked. Then all those units will be attacked one after another.
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] Tanks movement speed should be 50% higher in general.
 - [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
-- [ ] The tesla coil should make little damage to the target.
+- [x] The tesla coil should make little damage to the target.
 - [x] Tank projectiles make too much damage.
 - [ ] **REFACTOR:** move all constants into config.
-- [ ] **Refactor:** updateGame.js is too big and needs to be modularized.
+- [x] **Refactor:** updateGame.js is too big and needs to be modularized.
 - [ ] **Refactor:** enemy.js is too big and needs to be modularized.
 - [x] **Refactor:** Rendering.js is too big and needs to be modularized.
 
-## Open Features
-
-### To Be Implemented:
+## Features
 - [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] Show some progress when the harvester is unloading the ore at the refinery by gradually adding the money to the balance of the player (or AI) and show how the load indicator at the harvesters goes to zero.
 - [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
@@ -260,8 +259,6 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] Rename tank to tank_v1 in code and to Tank V1 in the UI.
 - [x] When player builds the radar station it enables the overview mini map. Before that map is just gray. It consumes 50 energy. When it get destroyed and no other radar station is in the players building list the mini map gets disabled again.
 - [x] Make sure the bullets from tanks and turrets fire at an exact location on the map and explode there rather than fly over the entire map.
-
-### Completed Features:
 - [x] When game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
 - [x] Implement milestone system and show first milestone of building a refinery by showing a video with sound of a tank running over crystals.
 - [x] Make the enemy more intelligent so it does not just run into players defense over and over again but moves away when his units are too weak to break into players base turret defense. Then the enemy gaters units in safe distance to players base and starts another attack with more units trying to break players defense and so on. The enemy should also try to find a way around the players defense to attack weak spots of the base.
@@ -278,8 +275,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
-
-### Current Issues:
+- [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
 - [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
 - [x] The initial construction yard building is not respected in the occupancy map.
 - [x] When tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
@@ -292,8 +288,6 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] Image for the concrete wall on map is incorrect.
 - [x] There are colored bars on the edges of some buildings who's map images do not fit exactly into the tile map grid. Those bars should be removed. Make sure when the image to place on the map does not fit into the grid that the map tiles from before are still visible in the background.
 - [ ] Enemy units come out of factory immediately before the build indicator shows that the build is done
-
-### Fixed Issues:
 - [x] When selling a building the occupancy map is not updated and still blocked there.
 - [x] The initial construction yard building is not respected in the occupancy map.
 - [x] When production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!

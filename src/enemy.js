@@ -5,6 +5,7 @@ import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
+import { initializeUnitMovement } from './game/unifiedMovement.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -500,6 +501,9 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       }
     }
   }
+
+  // Initialize unified movement system for the new enemy unit
+  initializeUnitMovement(unit)
 
   return unit
 }

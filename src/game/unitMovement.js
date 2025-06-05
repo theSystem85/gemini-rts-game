@@ -1,8 +1,9 @@
 // unitMovement.js - Handles all unit movement logic
-import { TILE_SIZE, TANK_FIRE_RANGE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD } from '../config.js'
+import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD } from '../config.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
+import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
 
 /**
  * Updates unit movement, pathfinding, and formation handling
@@ -27,6 +28,9 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now)
       continue
     }
 
+    // Initialize movement system for all units
+    initializeUnitMovement(unit)
+
     // Store previous position for collision detection
     const prevX = unit.x, prevY = unit.y
 
@@ -47,56 +51,10 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now)
 
     // Apply speed modifiers
     const speedMod = (typeof unit.speedModifier === 'number') ? unit.speedModifier : 1
-    let effectiveSpeed = unit.effectiveSpeed * speedMod
+    unit.speedModifier = speedMod
 
-    // Apply street speed bonus
-    if (mapGrid[unit.tileY]?.[unit.tileX]?.type === 'street') {
-      effectiveSpeed *= 2 // Full street speed bonus
-    }
-
-    // Apply movement bonuses for different terrain
-    if (unit.target || unit.isDodging) {
-      effectiveSpeed *= 0.8 // Small speed reduction when in combat
-    }
-
-    // Cap maximum speed
-    effectiveSpeed = Math.min(effectiveSpeed, 4)
-
-    // Clamp tile indices to prevent out-of-bounds access
-    unit.tileX = Math.max(0, Math.min(unit.tileX || 0, mapGrid[0].length - 1))
-    unit.tileY = Math.max(0, Math.min(unit.tileY || 0, mapGrid.length - 1))
-
-    // Movement along path
-    if (unit.path && unit.path.length > 0) {
-      const nextTile = unit.path[0]
-      
-      // Prevent path finding errors if nextTile is out of bounds
-      if (nextTile && (nextTile.x < 0 || nextTile.x >= mapGrid[0].length ||
-        nextTile.y < 0 || nextTile.y >= mapGrid.length)) {
-        unit.path.shift()
-      } else if (nextTile) {
-        const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
-        const dx = targetPos.x - unit.x
-        const dy = targetPos.y - unit.y
-        const distance = Math.hypot(dx, dy)
-        
-        if (distance < effectiveSpeed) {
-          unit.x = targetPos.x
-          unit.y = targetPos.y
-          unit.tileX = nextTile.x
-          unit.tileY = nextTile.y
-          unit.path.shift()
-          
-          if (unit.tileY >= 0 && unit.tileY < occupancyMap.length &&
-            unit.tileX >= 0 && unit.tileX < occupancyMap[0].length) {
-            occupancyMap[unit.tileY][unit.tileX] = true
-          }
-        } else {
-          unit.x += (dx / distance) * effectiveSpeed
-          unit.y += (dy / distance) * effectiveSpeed
-        }
-      }
-    }
+    // Use unified movement system for natural movement
+    updateUnitPosition(unit, mapGrid, occupancyMap, now, units)
 
     // Update last moved time
     if (unit.x !== prevX || unit.y !== prevY) {

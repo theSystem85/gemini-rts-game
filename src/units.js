@@ -8,6 +8,7 @@ import {
   MAX_SPAWN_SEARCH_DISTANCE
 } from './config.js'
 import { getUniqueId } from './utils.js'
+import { initializeUnitMovement } from './game/unifiedMovement.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -359,6 +360,9 @@ export function createUnit(factory, unitType, x, y) {
     unit.armor = unitProps.armor
   }
 
+  // Initialize unified movement system for the new unit
+  initializeUnitMovement(unit)
+
   return unit
 }
 
@@ -454,9 +458,12 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
 }
 
 // --- Collision Resolution for Idle Units ---
-// When multiple units share the same tile, smoothly move them to their target positions
+// When multiple units share the same tile, naturally guide them to separate positions
 export function resolveUnitCollisions(units, mapGrid) {
   const assignedTiles = new Set()
+  const COLLISION_RADIUS = TILE_SIZE * 0.4; // Collision detection radius
+  const SEPARATION_FORCE = 0.5; // Force to separate overlapping units
+  
   // Update each unit's tile coordinates based on their current positions.
   units.forEach(u => {
     if (!u.path || u.path.length === 0) {
@@ -464,78 +471,45 @@ export function resolveUnitCollisions(units, mapGrid) {
       u.tileY = Math.floor(u.y / TILE_SIZE)
     }
   })
-  const tileOccupants = {}
-  units.forEach(u => {
-    if (!u.path || u.path.length === 0) {
-      const key = `${u.tileX},${u.tileY}`
-      if (!tileOccupants[key]) tileOccupants[key] = []
-      tileOccupants[key].push(u)
+  
+  // Find overlapping units and apply gentle separation forces
+  for (let i = 0; i < units.length; i++) {
+    const unit1 = units[i];
+    if (unit1.path && unit1.path.length > 0) continue; // Skip moving units
+    
+    for (let j = i + 1; j < units.length; j++) {
+      const unit2 = units[j];
+      if (unit2.path && unit2.path.length > 0) continue; // Skip moving units
+      
+      const dx = unit2.x - unit1.x;
+      const dy = unit2.y - unit1.y;
+      const distance = Math.hypot(dx, dy);
+      
+      // If units are overlapping, apply gentle separation
+      if (distance < COLLISION_RADIUS && distance > 0) {
+        const overlap = COLLISION_RADIUS - distance;
+        const separationX = (dx / distance) * overlap * SEPARATION_FORCE;
+        const separationY = (dy / distance) * overlap * SEPARATION_FORCE;
+        
+        // Apply separation force (split the movement between both units)
+        unit1.x -= separationX * 0.5;
+        unit1.y -= separationY * 0.5;
+        unit2.x += separationX * 0.5;
+        unit2.y += separationY * 0.5;
+        
+        // Ensure units stay within map bounds
+        unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE));
+        unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE));
+        unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE));
+        unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE));
+        
+        // Update tile positions
+        unit1.tileX = Math.floor(unit1.x / TILE_SIZE);
+        unit1.tileY = Math.floor(unit1.y / TILE_SIZE);
+        unit2.tileX = Math.floor(unit2.x / TILE_SIZE);
+        unit2.tileY = Math.floor(unit2.y / TILE_SIZE);
+      }
     }
-  })
-  for (const key in tileOccupants) {
-    const group = tileOccupants[key]
-    const [tileX, tileY] = key.split(',').map(Number)
-    // Desired center for units on this tile:
-    const centerX = tileX * TILE_SIZE
-    const centerY = tileY * TILE_SIZE
-    // For primary unit, smoothly interpolate toward tile center.
-    const primary = group[0]
-    primary.x += (centerX - primary.x) * 0.2
-    primary.y += (centerY - primary.y) * 0.2
-    assignedTiles.add(key)
-    // Directions for adjacent free tiles.
-    const directions = [
-      { dx: 1, dy: 0 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: 0, dy: -1 },
-      { dx: 1, dy: 1 },
-      { dx: 1, dy: -1 },
-      { dx: -1, dy: 1 },
-      { dx: -1, dy: -1 }
-    ]
-    // For additional units, find a free neighboring tile and smoothly move them.
-    group.slice(1).forEach(u => {
-      let placed = false
-      // Shuffle directions for randomness.
-      for (let i = directions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        const temp = directions[i]
-        directions[i] = directions[j]
-        directions[j] = temp
-      }
-      for (const { dx, dy } of directions) {
-        const newTileX = tileX + dx
-        const newTileY = tileY + dy
-        if (
-          newTileX < 0 ||
-          newTileY < 0 ||
-          newTileX >= mapGrid[0].length ||
-          newTileY >= mapGrid.length
-        )
-          continue
-        const tileType = mapGrid[newTileY][newTileX].type
-        const hasBuilding = mapGrid[newTileY][newTileX].building
-        if (tileType === 'water' || tileType === 'rock' || hasBuilding)
-          continue
-        const newKey = `${newTileX},${newTileY}`
-        if (assignedTiles.has(newKey)) continue
-        const targetX = newTileX * TILE_SIZE
-        const targetY = newTileY * TILE_SIZE
-        u.x += (targetX - u.x) * 0.2
-        u.y += (targetY - u.y) * 0.2
-        u.tileX = newTileX
-        u.tileY = newTileY
-        assignedTiles.add(newKey)
-        placed = true
-        break
-      }
-      if (!placed) {
-        // If no adjacent tile is free, smoothly move toward the center.
-        u.x += (centerX - u.x) * 0.2
-        u.y += (centerY - u.y) * 0.2
-      }
-    })
   }
 }
 

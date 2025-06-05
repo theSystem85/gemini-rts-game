@@ -7,6 +7,7 @@ import { TILE_SIZE } from './config.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
+import { milestoneSystem } from './game/milestoneSystem.js'
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -91,7 +92,8 @@ export function saveGame(label) {
     buildings: allBuildings,
     orePositions,
     mapGridTypes, // ADDED: save mapGrid tile types
-    targetedOreTiles: gameState.targetedOreTiles || {} // Save targeted ore tiles for harvesters
+    targetedOreTiles: gameState.targetedOreTiles || {}, // Save targeted ore tiles for harvesters
+    achievedMilestones: milestoneSystem.getAchievedMilestones() // Save milestone progress
   }
 
   const saveObj = {
@@ -226,6 +228,15 @@ export function loadGame(key) {
       gameState.targetedOreTiles = loaded.targetedOreTiles
     } else {
       gameState.targetedOreTiles = {}
+    }
+
+    // Restore milestone progress
+    if (loaded.achievedMilestones && Array.isArray(loaded.achievedMilestones)) {
+      // Use the new method to set milestones
+      milestoneSystem.setAchievedMilestones(loaded.achievedMilestones)
+      console.log('Restored milestones:', loaded.achievedMilestones)
+    } else {
+      console.log('No milestone data found in save, keeping current progress')
     }
 
     // Re-assign harvesters to refineries after all buildings are loaded

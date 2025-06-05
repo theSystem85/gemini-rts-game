@@ -27,6 +27,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       continue
     }
 
+    // Initialize start time if not set (for non-homing projectiles)
+    if (!bullet.startTime) {
+      bullet.startTime = now
+    }
+
     // Handle homing projectiles
     if (bullet.homing) {
       if (now - bullet.startTime > 5000) {
@@ -50,6 +55,25 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           bullet.vx = (dx / distance) * bullet.effectiveSpeed
           bullet.vy = (dy / distance) * bullet.effectiveSpeed
         }
+      }
+    } else {
+      // Handle non-homing projectiles - check if they've traveled too far or too long
+      const timeLimit = 3000 // 3 seconds max flight time
+      const distanceFromTarget = bullet.targetPosition ? 
+        Math.hypot(bullet.x - bullet.targetPosition.x, bullet.y - bullet.targetPosition.y) : 0
+      const maxDistance = TILE_SIZE * 6 // Maximum travel distance (6 tiles past target)
+      
+      // Explode if bullet has been flying too long, traveled too far past target, or near target position
+      if (now - bullet.startTime > timeLimit || 
+          (bullet.targetPosition && distanceFromTarget > maxDistance) ||
+          (bullet.targetPosition && distanceFromTarget < 15)) { // Close enough to target to explode
+        
+        // Explode at target position or current bullet position if no target
+        const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
+        const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
+        triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+        bullets.splice(i, 1)
+        continue
       }
     }
 
@@ -238,13 +262,14 @@ export function fireBullet(unit, target, bullets, now) {
     // Set target position for explosion
     bullet.targetPosition = { x: targetCenterX, y: targetCenterY }
     
+    // Set start time for all bullets
+    bullet.startTime = now
+    
     // Calculate bullet direction for non-homing projectiles
     if (!bullet.homing) {
       const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
       bullet.vx = bullet.speed * Math.cos(angle)
       bullet.vy = bullet.speed * Math.sin(angle)
-    } else {
-      bullet.startTime = now
     }
 
     bullets.push(bullet)

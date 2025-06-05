@@ -57,29 +57,32 @@ export class VideoOverlay {
     style.textContent = `
       .video-overlay {
         position: fixed;
-        top: 50px;
-        right: 20px;
-        width: 300px;
-        height: 200px;
-        z-index: 1000;
-        background: rgba(0, 0, 0, 0.9);
+        top: -1000px;
+        left: -1000px;
+        width: 240px;
+        height: 160px;
+        z-index: -1;
+        background: rgba(0, 0, 0, 0.95);
         border: 2px solid #00ff00;
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(0, 255, 0, 0.3);
-        transition: all 0.3s ease;
+        transition: none;
         overflow: hidden;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
       }
 
       .video-overlay.hidden {
         opacity: 0;
-        transform: translateX(100%);
+        visibility: hidden;
         pointer-events: none;
       }
 
       .video-overlay.show {
-        opacity: 1;
-        transform: translateX(0);
-        pointer-events: all;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
       }
 
       .video-container {
@@ -92,7 +95,7 @@ export class VideoOverlay {
 
       .milestone-video {
         width: 100%;
-        height: 140px;
+        height: 110px;
         object-fit: cover;
         background: #000;
       }
@@ -234,18 +237,109 @@ export class VideoOverlay {
       // Set priority styling
       this.overlayElement.className = `video-overlay priority-${milestoneInfo.priority || 'low'}`
 
-      // Load video
-      video.src = `/video/${videoFile}`
-      
-      // Load and play audio
-      if (audioFile) {
-        this.currentAudio = new Audio(`/video/${audioFile}`)
-        this.currentAudio.volume = 0.7 // Slightly lower volume than game sounds
+      // Load video with comprehensive error handling
+      const tryLoadVideo = async (videoPath) => {
+        return new Promise((resolve, reject) => {
+          video.src = videoPath
+          
+          const onLoad = () => {
+            console.log('Video loaded successfully:', videoPath)
+            video.removeEventListener('canplay', onLoad)
+            video.removeEventListener('error', onError)
+            resolve()
+          }
+          
+          const onError = (e) => {
+            console.warn('Video failed to load:', videoPath, e)
+            video.removeEventListener('canplay', onLoad)
+            video.removeEventListener('error', onError)
+            reject(e)
+          }
+          
+          video.addEventListener('canplay', onLoad, { once: true })
+          video.addEventListener('error', onError, { once: true })
+        })
       }
 
-      // Show overlay (but make it invisible since we'll render on minimap)
+      // Try multiple video paths
+      const videoPaths = [
+        `public/video/${videoFile}`,
+        `video/${videoFile}`,
+        `/video/${videoFile}`,
+        `./public/video/${videoFile}`,
+        `./video/${videoFile}`
+      ]
+
+      let videoLoaded = false
+      for (const path of videoPaths) {
+        try {
+          await tryLoadVideo(path)
+          videoLoaded = true
+          break
+        } catch (e) {
+          console.warn(`Failed to load video from ${path}:`, e)
+        }
+      }
+
+      if (!videoLoaded) {
+        console.error('Failed to load video from all attempted paths:', videoPaths)
+        this.stopCurrentVideo()
+        return
+      }
+      
+      // Load and play audio with error handling
+      if (audioFile) {
+        const audioPaths = [
+          `public/video/${audioFile}`,
+          `video/${audioFile}`,
+          `/video/${audioFile}`,
+          `./public/video/${audioFile}`,
+          `./video/${audioFile}`
+        ]
+
+        let audioLoaded = false
+        for (const path of audioPaths) {
+          try {
+            this.currentAudio = new Audio(path)
+            this.currentAudio.volume = 0.7
+            
+            // Test if audio can load
+            await new Promise((resolve, reject) => {
+              const onLoad = () => {
+                this.currentAudio.removeEventListener('canplaythrough', onLoad)
+                this.currentAudio.removeEventListener('error', onError)
+                resolve()
+              }
+              const onError = (e) => {
+                this.currentAudio.removeEventListener('canplaythrough', onLoad)
+                this.currentAudio.removeEventListener('error', onError)
+                reject(e)
+              }
+              this.currentAudio.addEventListener('canplaythrough', onLoad, { once: true })
+              this.currentAudio.addEventListener('error', onError, { once: true })
+            })
+            
+            audioLoaded = true
+            console.log('Audio loaded successfully:', path)
+            break
+          } catch (e) {
+            console.warn(`Failed to load audio from ${path}:`, e)
+            if (this.currentAudio) {
+              this.currentAudio = null
+            }
+          }
+        }
+
+        if (!audioLoaded) {
+          console.warn('Failed to load audio from all attempted paths, video will play without sound')
+          this.currentAudio = null
+        }
+      }
+
+      // Keep overlay hidden - only use for video element, render on minimap instead
       this.overlayElement.classList.add('show')
-      this.overlayElement.style.opacity = '0' // Hide DOM overlay, use minimap rendering
+      this.overlayElement.style.opacity = '0' // Hide DOM overlay completely
+      this.overlayElement.style.pointerEvents = 'none' // Disable all interactions
       this.isPlaying = true
       this.currentVideo = video
 
@@ -279,8 +373,10 @@ export class VideoOverlay {
   stopCurrentVideo() {
     this.isPlaying = false
 
-    // Hide overlay
+    // Hide overlay completely
     this.overlayElement.classList.remove('show')
+    this.overlayElement.style.opacity = '0'
+    this.overlayElement.style.pointerEvents = 'none'
 
     // Stop and clean up video
     if (this.currentVideo) {

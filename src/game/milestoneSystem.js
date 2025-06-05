@@ -155,6 +155,16 @@ export class MilestoneSystem {
   isAchieved(milestoneId) {
     return this.achievedMilestones.has(milestoneId)
   }
+
+  /**
+   * Set achieved milestones (used for loading saved games)
+   */
+  setAchievedMilestones(milestoneIds) {
+    this.achievedMilestones.clear()
+    if (Array.isArray(milestoneIds)) {
+      milestoneIds.forEach(id => this.achievedMilestones.add(id))
+    }
+  }
 }
 
 // Create global instance

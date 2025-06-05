@@ -581,11 +581,12 @@ export function setupInputHandlers(units, factories, mapGrid) {
               const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
               const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
 
-              // Apply formation offset
+              // Apply formation offset with proper spacing
               const col = index % cols
               const row = Math.floor(index / cols)
-              formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
-              formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
+              const formationSpacing = TILE_SIZE * 1.2; // 1.2 tiles spacing to prevent overlap
+              formationOffset.x = col * formationSpacing - ((cols - 1) * formationSpacing) / 2
+              formationOffset.y = row * formationSpacing - ((rows - 1) * formationSpacing) / 2
 
               let destX = baseX + formationOffset.x
               let destY = baseY + formationOffset.y
@@ -770,8 +771,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
                 const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
                 const col = index % cols
                 const row = Math.floor(index / cols)
-                formationOffset.x = col * 10 - ((cols - 1) * 10) / 2
-                formationOffset.y = row * 10 - ((rows - 1) * 10) / 2
+                const formationSpacing = TILE_SIZE * 1.2; // 1.2 tiles spacing to prevent overlap
+                formationOffset.x = col * formationSpacing - ((cols - 1) * formationSpacing) / 2
+                formationOffset.y = row * formationSpacing - ((rows - 1) * formationSpacing) / 2
                 let destX = baseX + formationOffset.x
                 let destY = baseY + formationOffset.y
 
@@ -815,9 +817,10 @@ export function setupInputHandlers(units, factories, mapGrid) {
                   }
                 } else {
                   // Default grid formation if formation mode is not active
+                  const formationSpacing = TILE_SIZE * 1.2; // 1.2 tiles spacing to prevent overlap
                   formationOffset = {
-                    x: col * 10 - ((colsCount - 1) * 10) / 2,
-                    y: row * 10 - ((rowsCount - 1) * 10) / 2
+                    x: col * formationSpacing - ((colsCount - 1) * formationSpacing) / 2,
+                    y: row * formationSpacing - ((rowsCount - 1) * formationSpacing) / 2
                   }
                 }
 

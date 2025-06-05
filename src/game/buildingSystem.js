@@ -226,14 +226,14 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     speed: building.projectileSpeed,
     baseDamage: building.damage,
     active: true,
-    shooter: building
+    shooter: building,
+    startTime: now
   }
 
   if (building.type === 'rocketTurret') {
     // Rocket projectile - homing but also store target position for explosion
     projectile.homing = true
     projectile.target = target
-    projectile.startTime = now
     
     // Store target position for explosion even if homing
     if (building.currentTargetPosition) {
