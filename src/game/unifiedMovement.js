@@ -135,6 +135,11 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [])
   unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1));
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE));
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE));
+  
+  // Handle stuck unit detection and recovery for harvesters
+  if (unit.type === 'harvester') {
+    handleStuckUnit(unit, mapGrid, occupancyMap, units);
+  }
 }
 
 /**
@@ -274,4 +279,118 @@ export function stopUnitMovement(unit) {
 export function isUnitMoving(unit) {
   initializeUnitMovement(unit);
   return unit.movement.currentSpeed > MOVEMENT_CONFIG.MIN_SPEED;
+}
+
+/**
+ * Force rotate a unit to try different directions when stuck
+ */
+export function rotateUnitInPlace(unit, targetDirection = null) {
+  initializeUnitMovement(unit);
+  
+  const movement = unit.movement;
+  
+  if (targetDirection !== null) {
+    // Rotate towards a specific direction
+    movement.targetRotation = targetDirection;
+  } else {
+    // Random rotation to try different directions when stuck
+    movement.targetRotation = Math.random() * Math.PI * 2;
+  }
+  
+  // Force rotation even if not moving
+  const rotationDiff = normalizeAngle(movement.targetRotation - movement.rotation);
+  
+  if (Math.abs(rotationDiff) > 0.1) {
+    const rotationStep = MOVEMENT_CONFIG.ROTATION_SPEED * 2; // Faster rotation when stuck
+    
+    if (rotationDiff > 0) {
+      movement.rotation += Math.min(rotationStep, rotationDiff);
+    } else {
+      movement.rotation -= Math.min(rotationStep, Math.abs(rotationDiff));
+    }
+    
+    movement.rotation = normalizeAngle(movement.rotation);
+    unit.rotation = movement.rotation;
+    return true; // Still rotating
+  }
+  
+  return false; // Rotation complete
+}
+
+/**
+ * Check if a unit appears to be stuck and try to help it
+ */
+export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
+  initializeUnitMovement(unit);
+  
+  // Initialize stuck detection if not present
+  if (!unit.movement.stuckDetection) {
+    unit.movement.stuckDetection = {
+      lastPosition: { x: unit.x, y: unit.y },
+      stuckTime: 0,
+      lastMovementCheck: performance.now(),
+      rotationAttempts: 0,
+      isRotating: false
+    };
+  }
+  
+  const now = performance.now();
+  const stuck = unit.movement.stuckDetection;
+  
+  // Check if unit has moved significantly in the last 2 seconds
+  if (now - stuck.lastMovementCheck > 2000) {
+    const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y);
+    
+    if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
+      // Unit hasn't moved much but has a path - likely stuck
+      stuck.stuckTime += now - stuck.lastMovementCheck;
+      
+      if (stuck.stuckTime > 3000 && !stuck.isRotating) {
+        // Been stuck for 3+ seconds, try rotation
+        stuck.isRotating = true;
+        stuck.rotationAttempts++;
+        
+        // Try different strategies based on attempt number
+        if (stuck.rotationAttempts <= 3) {
+          // Try random rotation
+          rotateUnitInPlace(unit);
+        } else if (stuck.rotationAttempts <= 6) {
+          // Try rotating towards the target destination
+          if (unit.path.length > 0) {
+            const target = unit.path[0];
+            const targetX = target.x * TILE_SIZE;
+            const targetY = target.y * TILE_SIZE;
+            const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
+            rotateUnitInPlace(unit, targetDirection);
+          }
+        } else {
+          // Clear path and force new pathfinding
+          unit.path = [];
+          stuck.stuckTime = 0;
+          stuck.rotationAttempts = 0;
+          stuck.isRotating = false;
+        }
+      }
+    } else {
+      // Unit is moving normally, reset stuck detection
+      stuck.stuckTime = 0;
+      stuck.rotationAttempts = 0;
+      stuck.isRotating = false;
+    }
+    
+    // Update position tracking
+    stuck.lastPosition.x = unit.x;
+    stuck.lastPosition.y = unit.y;
+    stuck.lastMovementCheck = now;
+  }
+  
+  // Handle ongoing rotation
+  if (stuck.isRotating) {
+    const stillRotating = rotateUnitInPlace(unit);
+    if (!stillRotating) {
+      // Rotation complete, allow movement again
+      stuck.isRotating = false;
+      stuck.stuckTime = 0;
+    }
+  }
 }

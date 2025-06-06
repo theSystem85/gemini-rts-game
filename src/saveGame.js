@@ -160,7 +160,8 @@ export function loadGame(key) {
       
       // Ensure all buildings have maxHealth restored for proper health bar rendering
       const data = buildingData[building.type]
-      if (data && typeof building.maxHealth !== 'number') {
+      if (data) {
+        // Always restore maxHealth from building data to ensure consistency
         building.maxHealth = data.health
       }
       
@@ -175,8 +176,6 @@ export function loadGame(key) {
         building.armor = data.armor || 1
         building.projectileType = data.projectileType
         building.projectileSpeed = data.projectileSpeed
-        // Ensure maxHealth is properly restored for health bar rendering
-        if (typeof building.maxHealth !== 'number') building.maxHealth = data.health
         if (typeof building.lastShotTime !== 'number') building.lastShotTime = 0
         if (typeof building.turretDirection !== 'number') building.turretDirection = 0
         if (typeof building.targetDirection !== 'number') building.targetDirection = 0

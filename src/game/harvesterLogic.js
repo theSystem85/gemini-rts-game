@@ -87,19 +87,28 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
         }
         mapGrid[unit.oreField.y][unit.oreField.x].harvests++
         
-        // Deplete ore tile after 3-5 harvests
+        // Deplete ore tile after 3 harvests (make it more frequent)
         if (mapGrid[unit.oreField.y][unit.oreField.x].harvests >= 3) {
           mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
+          // Clear any cached texture variations for this tile to force re-render
+          mapGrid[unit.oreField.y][unit.oreField.x].textureVariation = null
           // Remove targeting once the tile is depleted
           delete targetedOreTiles[tileKey]
           unit.oreField = null
+          
+          // Force all harvesters targeting this depleted tile to find new ore
+          Object.keys(targetedOreTiles).forEach(key => {
+            if (key === tileKey) {
+              delete targetedOreTiles[key]
+            }
+          })
         }
       }
     }
 
     // Handle unloading when at capacity
     if (unit.oreCarried >= HARVESTER_CAPPACITY && !unit.unloadingAtRefinery && !unit.harvesting) {
-      handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap)
+      handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap, units)
     }
 
     // Handle unloading process at refinery
@@ -129,7 +138,7 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
 /**
  * Handles harvester unloading logic at refineries
  */
-function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap) {
+function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap, units) {
   // Clear targeting when full of ore and returning to base
   if (unit.oreField) {
     const tileKey = `${unit.oreField.x},${unit.oreField.y}`
@@ -199,28 +208,39 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   
   // Only assign new refinery if no valid current assignment
   if (!targetRefinery) {
-    // Sort refineries by current load for even distribution
-    const refineryLoads = refineries.map(refinery => {
+    // **DISTANCE-BASED REFINERY ASSIGNMENT** - Consider both distance and current load
+    const refineryOptions = refineries.map(refinery => {
       const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`
       const unloadTile = findAdjacentTile(refinery, mapGrid)
       
       if (!unloadTile) return null
       
+      // Calculate distance from harvester to refinery
+      const distance = Math.hypot(
+        unit.tileX - (refinery.x + refinery.width / 2),
+        unit.tileY - (refinery.y + refinery.height / 2)
+      )
+      
       const queueLength = getRefineryQueue(refineryId).length
       const isInUse = gameState.refineryStatus[refineryId] ? 1 : 0
       const totalWait = queueLength + isInUse
+      
+      // Combine distance and wait time for scoring (prefer closer refineries with less wait)
+      const score = distance * 2 + totalWait * 5 // Weight wait time more heavily
       
       return {
         refinery,
         refineryId,
         unloadTile,
-        totalWait
+        distance,
+        totalWait,
+        score
       }
-    }).filter(Boolean).sort((a, b) => a.totalWait - b.totalWait)
+    }).filter(Boolean).sort((a, b) => a.score - b.score) // Sort by best score (lowest)
     
-    // Choose the refinery with the least load
-    if (refineryLoads.length > 0) {
-      const chosen = refineryLoads[0]
+    // Choose the refinery with the best score (closest with least wait)
+    if (refineryOptions.length > 0) {
+      const chosen = refineryOptions[0]
       targetRefinery = chosen.refinery
       targetUnloadTile = chosen.unloadTile
       
@@ -230,6 +250,12 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   }
 
   if (targetRefinery && targetUnloadTile) {
+    // Try to get a better unloading position (prefer tiles directly below refinery)
+    const preferredUnloadTile = findPreferredUnloadTile(targetRefinery, mapGrid)
+    if (preferredUnloadTile) {
+      targetUnloadTile = preferredUnloadTile
+    }
+    
     const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`
 
     // **STABLE QUEUE MANAGEMENT** - Only modify queue if switching refineries
@@ -248,12 +274,45 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     const queuePosition = getQueuePosition(refineryId, unit.id)
     unit.queuePosition = queuePosition // Store for rendering
 
-    // Check if harvester is adjacent to the refinery
-    if (isAdjacentToBuilding(unit, targetRefinery)) {
-      // Check if this harvester is next in line
+    // Check if harvester is near the refinery (more tolerant detection)
+    const isNearRefinery = isAdjacentToBuilding(unit, targetRefinery) || isAtRefineryUnloadingPosition(unit, targetRefinery)
+    
+    if (isNearRefinery) {
+      // **DISTANCE-BASED PRIORITY SYSTEM** - Check if this harvester is the closest
       const nextInQueue = getNextInQueue(refineryId)
+      const isNextInQueue = nextInQueue === unit.id
+      const refineryInUse = gameState.refineryStatus[refineryId]
       
-      if (nextInQueue === unit.id && (!gameState.refineryStatus[refineryId] || gameState.refineryStatus[refineryId] === unit.id)) {
+      // Get all harvesters waiting for this refinery and sort by distance
+      const waitingHarvesters = units.filter(u => 
+        u.type === 'harvester' && 
+        u.targetRefinery === refineryId && 
+        u.health > 0 && 
+        (isAdjacentToBuilding(u, targetRefinery) || isAtRefineryUnloadingPosition(u, targetRefinery))
+      ).sort((a, b) => {
+        // Calculate distance to refinery center with preference for proper unloading positions
+        const refineryCenter = {
+          x: (targetRefinery.x + targetRefinery.width / 2) * TILE_SIZE,
+          y: (targetRefinery.y + targetRefinery.height / 2) * TILE_SIZE
+        }
+        
+        // Give priority to harvesters in proper unloading positions
+        const aInUnloadPosition = isAtRefineryUnloadingPosition(a, targetRefinery)
+        const bInUnloadPosition = isAtRefineryUnloadingPosition(b, targetRefinery)
+        
+        if (aInUnloadPosition && !bInUnloadPosition) return -1
+        if (!aInUnloadPosition && bInUnloadPosition) return 1
+        
+        // If both or neither are in unloading positions, sort by distance
+        const distA = Math.hypot(a.x - refineryCenter.x, a.y - refineryCenter.y)
+        const distB = Math.hypot(b.x - refineryCenter.x, b.y - refineryCenter.y)
+        return distA - distB
+      })
+      
+      // This harvester can unload if it's the closest and refinery is free
+      const isClosest = waitingHarvesters.length > 0 && waitingHarvesters[0].id === unit.id
+      
+      if (isClosest && (!refineryInUse || refineryInUse === unit.id)) {
         // Mark this refinery as in use by this harvester
         gameState.refineryStatus[refineryId] = unit.id
 
@@ -270,15 +329,33 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
         // Show visual feedback
         showUnloadingFeedback(unit, targetRefinery)
       } else {
-        // Wait in queue - stay in position, don't move unnecessarily
+        // **STAY PUT** - Don't move when wanting to unload but not closest
         unit.path = [] // Clear any movement when waiting
+        // Update queue position based on distance ranking
+        const position = waitingHarvesters.findIndex(h => h.id === unit.id) + 1
+        unit.queuePosition = position > 0 ? position : 1
       }
     } else {
-      // **DIRECT MOVEMENT** - Go straight to refinery, no complex queue positioning until adjacent
+      // **DIRECT MOVEMENT WITH UNLOAD PRIORITY** - Go straight to refinery, but stick around once there
       if (!unit.path || unit.path.length === 0) {
         const path = findPath({ x: unit.tileX, y: unit.tileY }, targetUnloadTile, mapGrid, occupancyMap)
         if (path.length > 1) {
           unit.path = path.slice(1)
+        }
+      }
+      
+      // **PREVENT MOVING AWAY WHEN WANTING TO UNLOAD**
+      // If harvester is full of ore and close to refinery, don't accept new movement commands
+      if (unit.oreCarried >= HARVESTER_CAPPACITY) {
+        const distanceToRefinery = Math.hypot(
+          unit.tileX - (targetRefinery.x + targetRefinery.width / 2),
+          unit.tileY - (targetRefinery.y + targetRefinery.height / 2)
+        )
+        
+        // If close to refinery (within 3 tiles), stay focused on unloading
+        if (distanceToRefinery <= 3) {
+          // Clear any other movement orders that might take harvester away
+          unit.orderQueue = []
         }
       }
     }
@@ -592,4 +669,44 @@ export function assignHarvesterToOptimalRefinery(harvester, gameState) {
   }
   
   return optimalRefineryId
+}
+
+/**
+ * Check if harvester is at a valid unloading position for the refinery
+ * Allows unloading from any of the 3 tiles directly below the refinery
+ */
+function isAtRefineryUnloadingPosition(harvester, refinery) {
+  const harvesterTileX = Math.floor(harvester.x / TILE_SIZE)
+  const harvesterTileY = Math.floor(harvester.y / TILE_SIZE)
+  
+  // Check if harvester is at any of the 3 tiles directly below the refinery
+  const refineryBottomY = refinery.y + refinery.height
+  
+  if (harvesterTileY === refineryBottomY) {
+    // Check if harvester is within the refinery's width (3 tiles wide)
+    return harvesterTileX >= refinery.x && harvesterTileX < refinery.x + refinery.width
+  }
+  
+  return false
+}
+
+/**
+ * Find the preferred unloading tile (directly below refinery)
+ */
+function findPreferredUnloadTile(refinery, mapGrid) {
+  const bottomY = refinery.y + refinery.height
+  
+  // Check tiles directly below the refinery (preferred unloading spots)
+  for (let x = refinery.x; x < refinery.x + refinery.width; x++) {
+    if (bottomY < mapGrid.length && 
+        x < mapGrid[0].length && 
+        !mapGrid[bottomY][x].building &&
+        mapGrid[bottomY][x].type !== 'water' && 
+        mapGrid[bottomY][x].type !== 'rock') {
+      return { x, y: bottomY }
+    }
+  }
+  
+  // Fallback to any adjacent tile
+  return findAdjacentTile(refinery, mapGrid)
 }
