@@ -279,7 +279,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.
 - [ ] Enemy does not loose money when building units.
 - [x] Enemy defense buildings are missing healthbar and don't take damage.
-- [ ] The ore tiles do not get removed after harvesting.
+- [x] The ore tiles do not get removed after harvesting.
 - [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
 - [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
 - [x] The initial construction yard building is not respected in the occupancy map.

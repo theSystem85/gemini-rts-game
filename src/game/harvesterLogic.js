@@ -31,6 +31,9 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
   // Clean up invalid queue entries and reassign harvesters from destroyed refineries
   cleanupQueues(units)
   
+  // Clean up stale ore tile reservations
+  cleanupStaleOreReservations(units)
+  
   // Only check for destroyed refineries periodically or when buildings change
   if (!gameState.lastRefineryCheck || now - gameState.lastRefineryCheck > 1000) {
     cleanupDestroyedRefineries(units, gameState)
@@ -69,6 +72,8 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
             }
           }
           unit.oreField = null
+          // Immediately try to find new ore to prevent getting stuck
+          findNewOreTarget(unit, mapGrid, occupancyMap)
         }
       }
     }
@@ -81,14 +86,22 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
         const tileKey = `${unit.oreField.x},${unit.oreField.y}`
         harvestedTiles.delete(tileKey) // Free up the tile
 
+        // Clear manual ore target when harvesting is complete
+        if (unit.manualOreTarget && 
+            unit.manualOreTarget.x === unit.oreField.x && 
+            unit.manualOreTarget.y === unit.oreField.y) {
+          unit.manualOreTarget = null
+          console.log(`Harvester ${unit.id || 'unknown'} completed manual ore target, cleared`)
+        }
+
         // Only deplete the tile after multiple harvests (simulate limited ore)
         if (!mapGrid[unit.oreField.y][unit.oreField.x].harvests) {
           mapGrid[unit.oreField.y][unit.oreField.x].harvests = 0
         }
         mapGrid[unit.oreField.y][unit.oreField.x].harvests++
         
-        // Deplete ore tile after 3 harvests (make it more frequent)
-        if (mapGrid[unit.oreField.y][unit.oreField.x].harvests >= 3) {
+        // Deplete ore tile after 1 harvest (matches HARVESTER_CAPPACITY = 1)
+        if (mapGrid[unit.oreField.y][unit.oreField.x].harvests >= 1) {
           mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
           // Clear any cached texture variations for this tile to force re-render
           mapGrid[unit.oreField.y][unit.oreField.x].textureVariation = null
@@ -119,7 +132,54 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     // Find new ore when idle and not carrying ore
     if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery &&
         (!unit.path || unit.path.length === 0) && !unit.oreField) {
-      findNewOreTarget(unit, mapGrid, occupancyMap)
+      // Check if there's a manual ore target first
+      if (unit.manualOreTarget) {
+        handleManualOreTarget(unit, mapGrid, occupancyMap)
+      } else {
+        findNewOreTarget(unit, mapGrid, occupancyMap)
+      }
+    }
+
+    // Handle harvesters that have an ore field but no path and aren't harvesting
+    // This can happen when they get stuck or lose their path
+    if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery &&
+        unit.oreField && (!unit.path || unit.path.length === 0)) {
+      const tileKey = `${unit.oreField.x},${unit.oreField.y}`
+      const currentTileX = Math.floor(unit.x / TILE_SIZE)
+      const currentTileY = Math.floor(unit.y / TILE_SIZE)
+      
+      // Check if we're already at the ore field
+      if (currentTileX === unit.oreField.x && currentTileY === unit.oreField.y) {
+        // We're at the ore field, check if we can harvest
+        if (mapGrid[unit.oreField.y][unit.oreField.x].type === 'ore' && 
+            !harvestedTiles.has(tileKey)) {
+          // Start harvesting
+          unit.harvesting = true
+          unit.harvestTimer = now
+          harvestedTiles.add(tileKey)
+          playSound('harvest')
+        } else {
+          // Ore field is no longer valid, find new one
+          if (targetedOreTiles[tileKey] === unit.id) {
+            delete targetedOreTiles[tileKey]
+          }
+          unit.oreField = null
+          findNewOreTarget(unit, mapGrid, occupancyMap)
+        }
+      } else {
+        // Try to path to the ore field again
+        const path = findPath({ x: unit.tileX, y: unit.tileY }, unit.oreField, mapGrid, occupancyMap)
+        if (path.length > 1) {
+          unit.path = path.slice(1)
+        } else {
+          // Can't path to ore field, abandon it and find new one
+          if (targetedOreTiles[tileKey] === unit.id) {
+            delete targetedOreTiles[tileKey]
+          }
+          unit.oreField = null
+          findNewOreTarget(unit, mapGrid, occupancyMap)
+        }
+      }
     }
 
     // Handle scheduled ore search after unloading
@@ -419,15 +479,45 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
     unit.targetRefinery = null
   }
   
+  // Clear any existing ore field reservation
+  if (unit.oreField) {
+    const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
+    if (targetedOreTiles[prevTileKey] === unit.id) {
+      delete targetedOreTiles[prevTileKey]
+    }
+    unit.oreField = null
+  }
+  
   const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
   if (orePos) {
     const tileKey = `${orePos.x},${orePos.y}`
+    
+    // Double-check the tile isn't already taken (race condition protection)
+    if (targetedOreTiles[tileKey] && targetedOreTiles[tileKey] !== unit.id) {
+      // Try again with a small delay to avoid multiple harvesters fighting over the same tile
+      setTimeout(() => {
+        if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
+          findNewOreTarget(unit, mapGrid, occupancyMap)
+        }
+      }, 100 + Math.random() * 200) // Random delay between 100-300ms
+      return
+    }
+    
+    // Reserve the tile
     targetedOreTiles[tileKey] = unit.id
+    unit.oreField = orePos
 
     const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
     if (path.length > 1) {
       unit.path = path.slice(1)
     }
+  } else {
+    // No ore available, try again after a delay
+    setTimeout(() => {
+      if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
+        findNewOreTarget(unit, mapGrid, occupancyMap)
+      }
+    }, 1000 + Math.random() * 1000) // Random delay between 1-2 seconds
   }
 }
 
@@ -436,6 +526,19 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
  */
 export function getHarvestedTiles() {
   return harvestedTiles
+}
+
+/**
+ * Clear ore field assignment for a stuck harvester (called from movement system)
+ */
+export function clearStuckHarvesterOreField(unit) {
+  if (unit.type === 'harvester' && unit.oreField) {
+    const tileKey = `${unit.oreField.x},${unit.oreField.y}`
+    if (targetedOreTiles[tileKey] === unit.id) {
+      delete targetedOreTiles[tileKey]
+    }
+    unit.oreField = null
+  }
 }
 
 /**
@@ -491,6 +594,34 @@ function getQueuePosition(refineryId, harvesterId) {
 function getNextInQueue(refineryId) {
   const queue = getRefineryQueue(refineryId)
   return queue.length > 0 ? queue[0] : null
+}
+
+/**
+ * Cleans up stale ore tile reservations
+ */
+function cleanupStaleOreReservations(units) {
+  const validHarvesterIds = new Set(units.filter(u => u.type === 'harvester' && u.health > 0).map(u => u.id))
+  
+  // Remove reservations for dead or non-existent harvesters
+  for (const [tileKey, harvesterId] of Object.entries(targetedOreTiles)) {
+    if (!validHarvesterIds.has(harvesterId)) {
+      delete targetedOreTiles[tileKey]
+      continue
+    }
+    
+    // Check if the harvester still has this as their ore field
+    const harvester = units.find(u => u.id === harvesterId)
+    if (harvester && harvester.oreField) {
+      const harvesterTileKey = `${harvester.oreField.x},${harvester.oreField.y}`
+      if (harvesterTileKey !== tileKey) {
+        // Harvester is targeting a different tile, clean up this reservation
+        delete targetedOreTiles[tileKey]
+      }
+    } else if (harvester && !harvester.oreField) {
+      // Harvester has no ore field but still has a reservation, clean it up
+      delete targetedOreTiles[tileKey]
+    }
+  }
 }
 
 /**
@@ -709,4 +840,65 @@ function findPreferredUnloadTile(refinery, mapGrid) {
   
   // Fallback to any adjacent tile
   return findAdjacentTile(refinery, mapGrid)
+}
+
+/**
+ * Handle manually targeted ore tiles for harvesters
+ */
+function handleManualOreTarget(unit, mapGrid, occupancyMap) {
+  const target = unit.manualOreTarget
+  
+  // Validate the manual target
+  if (!target || 
+      target.x < 0 || target.y < 0 || 
+      target.x >= mapGrid[0].length || target.y >= mapGrid.length ||
+      mapGrid[target.y][target.x].type !== 'ore') {
+    // Invalid manual target, clear it and find automatic target
+    unit.manualOreTarget = null
+    findNewOreTarget(unit, mapGrid, occupancyMap)
+    return
+  }
+  
+  const tileKey = `${target.x},${target.y}`
+  
+  // Check if another harvester is already harvesting this tile
+  if (harvestedTiles.has(tileKey)) {
+    // Tile is being actively harvested, wait or find alternative
+    // For manual targets, we can wait briefly then try again
+    setTimeout(() => {
+      if (unit.health > 0 && unit.oreCarried === 0 && unit.manualOreTarget) {
+        handleManualOreTarget(unit, mapGrid, occupancyMap)
+      }
+    }, 500 + Math.random() * 1000) // Wait 0.5-1.5 seconds
+    return
+  }
+  
+  // Clear any existing ore field reservation
+  if (unit.oreField) {
+    const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
+    if (targetedOreTiles[prevTileKey] === unit.id) {
+      delete targetedOreTiles[prevTileKey]
+    }
+  }
+  
+  // Reserve the manual target
+  targetedOreTiles[tileKey] = unit.id
+  unit.oreField = target
+  
+  // Calculate path to manual target
+  const path = findPath({ x: unit.tileX, y: unit.tileY }, target, mapGrid, occupancyMap)
+  if (path.length > 1) {
+    unit.path = path.slice(1)
+    console.log(`Harvester ${unit.id || 'unknown'} pathing to manual ore target at ${target.x},${target.y}`)
+  } else if (path.length === 1) {
+    // Already at the target
+    unit.path = []
+  } else {
+    // Can't path to manual target, clear it and find automatic target
+    console.log(`Harvester ${unit.id || 'unknown'} cannot path to manual ore target, finding automatic target`)
+    delete targetedOreTiles[tileKey]
+    unit.oreField = null
+    unit.manualOreTarget = null
+    findNewOreTarget(unit, mapGrid, occupancyMap)
+  }
 }

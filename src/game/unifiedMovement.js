@@ -1,5 +1,6 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import { TILE_SIZE } from '../config.js'
+import { clearStuckHarvesterOreField } from './harvesterLogic.js'
 
 /**
  * Unified movement configuration
@@ -330,51 +331,95 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
       stuckTime: 0,
       lastMovementCheck: performance.now(),
       rotationAttempts: 0,
-      isRotating: false
+      isRotating: false,
+      dodgeAttempts: 0,
+      lastDodgeTime: 0
     };
   }
   
   const now = performance.now();
   const stuck = unit.movement.stuckDetection;
   
-  // Check if unit has moved significantly in the last 2 seconds
-  if (now - stuck.lastMovementCheck > 2000) {
+  // Enhanced stuck detection for harvesters - check more frequently
+  const checkInterval = unit.type === 'harvester' ? 1500 : 2000; // Check harvesters every 1.5 seconds
+  const stuckThreshold = unit.type === 'harvester' ? 2000 : 3000; // Consider harvesters stuck after 2 seconds
+  
+  // Check if unit has moved significantly
+  if (now - stuck.lastMovementCheck > checkInterval) {
     const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y);
     
     if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
       // Unit hasn't moved much but has a path - likely stuck
       stuck.stuckTime += now - stuck.lastMovementCheck;
       
-      if (stuck.stuckTime > 3000 && !stuck.isRotating) {
-        // Been stuck for 3+ seconds, try rotation
-        stuck.isRotating = true;
-        stuck.rotationAttempts++;
-        
-        // Try different strategies based on attempt number
-        if (stuck.rotationAttempts <= 3) {
-          // Try random rotation
-          rotateUnitInPlace(unit);
-        } else if (stuck.rotationAttempts <= 6) {
-          // Try rotating towards the target destination
-          if (unit.path.length > 0) {
-            const target = unit.path[0];
-            const targetX = target.x * TILE_SIZE;
-            const targetY = target.y * TILE_SIZE;
-            const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
-            rotateUnitInPlace(unit, targetDirection);
+      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating) {
+        // Enhanced recovery strategies for harvesters
+        if (unit.type === 'harvester') {
+          // Clear ore field assignment if harvester is stuck trying to reach it
+          if (unit.oreField && stuck.stuckTime > stuckThreshold) {
+            clearStuckHarvesterOreField(unit)
+            unit.path = [] // Clear path to force new ore finding
+            stuck.stuckTime = 0 // Reset stuck time after clearing ore field
+          }
+          
+          // Try dodge movement first for harvesters
+          if (stuck.dodgeAttempts < 3 && now - stuck.lastDodgeTime > 2000) {
+            if (tryDodgeMovement(unit, mapGrid, occupancyMap, units)) {
+              stuck.dodgeAttempts++;
+              stuck.lastDodgeTime = now;
+              stuck.stuckTime = 0; // Reset stuck time after successful dodge
+              return;
+            }
+          }
+          
+          // If dodge failed, try rotation
+          if (stuck.rotationAttempts < 4) {
+            stuck.isRotating = true;
+            stuck.rotationAttempts++;
+            
+            // For harvesters, try rotating towards a nearby free space
+            const freeDirection = findFreeDirection(unit, mapGrid, occupancyMap, units);
+            if (freeDirection !== null) {
+              rotateUnitInPlace(unit, freeDirection);
+            } else {
+              rotateUnitInPlace(unit);
+            }
+          } else {
+            // Last resort: clear path and force new pathfinding
+            unit.path = [];
+            stuck.stuckTime = 0;
+            stuck.rotationAttempts = 0;
+            stuck.dodgeAttempts = 0;
+            stuck.isRotating = false;
           }
         } else {
-          // Clear path and force new pathfinding
-          unit.path = [];
-          stuck.stuckTime = 0;
-          stuck.rotationAttempts = 0;
-          stuck.isRotating = false;
+          // Original logic for non-harvester units
+          stuck.isRotating = true;
+          stuck.rotationAttempts++;
+          
+          if (stuck.rotationAttempts <= 3) {
+            rotateUnitInPlace(unit);
+          } else if (stuck.rotationAttempts <= 6) {
+            if (unit.path.length > 0) {
+              const target = unit.path[0];
+              const targetX = target.x * TILE_SIZE;
+              const targetY = target.y * TILE_SIZE;
+              const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
+              rotateUnitInPlace(unit, targetDirection);
+            }
+          } else {
+            unit.path = [];
+            stuck.stuckTime = 0;
+            stuck.rotationAttempts = 0;
+            stuck.isRotating = false;
+          }
         }
       }
     } else {
       // Unit is moving normally, reset stuck detection
       stuck.stuckTime = 0;
       stuck.rotationAttempts = 0;
+      stuck.dodgeAttempts = 0;
       stuck.isRotating = false;
     }
     
@@ -393,4 +438,126 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
       stuck.stuckTime = 0;
     }
   }
+}
+
+/**
+ * Try to perform a dodge movement around obstacles for stuck harvesters
+ */
+async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
+  const currentTileX = Math.floor(unit.x / TILE_SIZE);
+  const currentTileY = Math.floor(unit.y / TILE_SIZE);
+  
+  // Look for free tiles in a wider pattern around the harvester
+  const dodgePositions = [];
+  
+  // Check in expanding circles for better dodge positions
+  for (let radius = 1; radius <= 3; radius++) {
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+      const dodgeX = Math.round(currentTileX + Math.cos(angle) * radius);
+      const dodgeY = Math.round(currentTileY + Math.sin(angle) * radius);
+      
+      if (isValidDodgePosition(dodgeX, dodgeY, mapGrid, units)) {
+        dodgePositions.push({ x: dodgeX, y: dodgeY, radius });
+      }
+    }
+    
+    // Prefer closer positions first
+    if (dodgePositions.length > 0) break;
+  }
+  
+  if (dodgePositions.length > 0) {
+    // Choose a random dodge position from available options
+    const dodgePos = dodgePositions[Math.floor(Math.random() * dodgePositions.length)];
+    
+    // Store original path for restoration after dodge
+    if (!unit.originalPath && unit.path) {
+      unit.originalPath = [...unit.path];
+      unit.originalTarget = unit.target;
+    }
+    
+    // Set dodge state
+    unit.isDodging = true;
+    unit.dodgeEndTime = performance.now() + 3000; // 3 second dodge timeout
+    
+    // Create path to dodge position using pathfinding
+    const { findPath } = await import('../units.js');
+    const dodgePath = findPath(
+      { x: currentTileX, y: currentTileY },
+      dodgePos,
+      mapGrid,
+      null // Don't use occupancy map for dodge movement to avoid other stuck units
+    );
+    
+    if (dodgePath.length > 1) {
+      unit.path = dodgePath.slice(1);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a position is valid for dodge movement
+ */
+function isValidDodgePosition(x, y, mapGrid, units) {
+  // Check bounds
+  if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) {
+    return false;
+  }
+  
+  // Check terrain
+  const tile = mapGrid[y][x];
+  if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+    return false;
+  }
+  
+  // Check for other units (allow some overlap for dodge movements)
+  const tileCenter = { x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 };
+  const unitRadius = TILE_SIZE * 0.4;
+  
+  for (const otherUnit of units) {
+    if (otherUnit.health <= 0) continue;
+    
+    const otherCenter = { x: otherUnit.x + TILE_SIZE / 2, y: otherUnit.y + TILE_SIZE / 2 };
+    const distance = Math.hypot(tileCenter.x - otherCenter.x, tileCenter.y - otherCenter.y);
+    
+    // Allow closer spacing during dodge movements
+    if (distance < unitRadius * 1.5) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Find a free direction around the unit for rotation-based unsticking
+ */
+function findFreeDirection(unit, mapGrid, occupancyMap, units) {
+  const currentTileX = Math.floor(unit.x / TILE_SIZE);
+  const currentTileY = Math.floor(unit.y / TILE_SIZE);
+  
+  // Check 8 directions around the unit
+  const directions = [
+    { x: 0, y: -1, angle: -Math.PI / 2 },     // North
+    { x: 1, y: -1, angle: -Math.PI / 4 },     // Northeast  
+    { x: 1, y: 0, angle: 0 },                 // East
+    { x: 1, y: 1, angle: Math.PI / 4 },       // Southeast
+    { x: 0, y: 1, angle: Math.PI / 2 },       // South
+    { x: -1, y: 1, angle: 3 * Math.PI / 4 },  // Southwest
+    { x: -1, y: 0, angle: Math.PI },          // West
+    { x: -1, y: -1, angle: -3 * Math.PI / 4 } // Northwest
+  ];
+  
+  for (const dir of directions) {
+    const checkX = currentTileX + dir.x;
+    const checkY = currentTileY + dir.y;
+    
+    if (isValidDodgePosition(checkX, checkY, mapGrid, units)) {
+      return dir.angle;
+    }
+  }
+  
+  return null; // No free direction found
 }

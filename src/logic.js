@@ -104,8 +104,25 @@ export function showUnloadingFeedback(_unit, _refinery) {
 }
 
 export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
+  // Add validation to prevent undefined unit errors
+  if (!unit) {
+    console.error('findClosestOre called with undefined unit')
+    return null
+  }
+  
+  if (!unit.hasOwnProperty('x') || !unit.hasOwnProperty('y')) {
+    console.error('findClosestOre called with unit missing x/y properties:', unit)
+    return null
+  }
+  
   let closest = null
   let closestDist = Infinity
+  const candidates = [] // Store all available ore tiles for better distribution
+  
+  // Calculate unit's tile position from its pixel coordinates
+  const unitTileX = Math.floor(unit.x / TILE_SIZE)
+  const unitTileY = Math.floor(unit.y / TILE_SIZE)
+  
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       if (mapGrid[y][x].type === 'ore') {
@@ -115,9 +132,13 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
           continue
         }
 
-        const dx = x - unit.tileX
-        const dy = y - unit.tileY
+        const dx = x - unitTileX
+        const dy = y - unitTileY
         const dist = Math.hypot(dx, dy)
+        
+        // Store candidate for potential selection
+        candidates.push({ x, y, dist })
+        
         if (dist < closestDist) {
           closestDist = dist
           closest = { x, y }
@@ -125,6 +146,25 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
       }
     }
   }
+  
+  // If we have multiple nearby candidates, add some randomization to prevent clustering
+  if (candidates.length > 1) {
+    const closeDistance = closestDist * 1.5 // Allow tiles up to 50% further than closest
+    const closeCandidates = candidates.filter(c => c.dist <= closeDistance)
+    
+    if (closeCandidates.length > 1) {
+      // Add unit ID based selection to ensure different harvesters pick different tiles
+      const unitId = unit.id || Math.floor(Math.random() * 1000) // Fallback to random if no ID
+      const unitBasedIndex = unitId % closeCandidates.length
+      const selectedCandidate = closeCandidates[unitBasedIndex]
+      
+      // Extra safety check
+      if (selectedCandidate && selectedCandidate.x !== undefined && selectedCandidate.y !== undefined) {
+        return { x: selectedCandidate.x, y: selectedCandidate.y }
+      }
+    }
+  }
+  
   return closest
 }
 

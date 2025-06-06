@@ -50,6 +50,7 @@ let isOverEnemy = false
 let isOverBlockedTerrain = false
 let isOverRepairableBuilding = false
 let isOverSellableBuilding = false
+let isOverOreTile = false // New variable to track when hovering over ore tiles
 let isForceAttackMode = false // New variable to track Force Attack mode
 
 // Function to check if a location is a blocked tile (water, rock, building)
@@ -101,6 +102,17 @@ function updateCustomCursor(e, mapGrid, factories) {
   isOverBlockedTerrain = isOverGameCanvas &&
     mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
     isBlockedTerrain(tileX, tileY, mapGrid)
+
+  // Check if mouse is over an ore tile when harvesters are selected
+  isOverOreTile = false
+  if (isOverGameCanvas && mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
+      tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+    // Only show ore tile cursor if harvesters are selected
+    const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+    if (hasSelectedHarvesters && mapGrid[tileY][tileX].type === 'ore') {
+      isOverOreTile = true
+    }
+  }
 
   // Check if mouse is over a repairable building (when in repair mode)
   isOverRepairableBuilding = false
@@ -198,6 +210,10 @@ function updateCustomCursor(e, mapGrid, factories) {
       gameCanvas.classList.add('attack-mode')
     } else if (isOverEnemy) {
       // Over enemy - use attack cursor
+      gameCanvas.style.cursor = 'none'
+      gameCanvas.classList.add('attack-mode')
+    } else if (isOverOreTile) {
+      // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
       gameCanvas.style.cursor = 'none'
       gameCanvas.classList.add('attack-mode')
     } else if (isOverBlockedTerrain) {
@@ -697,6 +713,19 @@ export function setupInputHandlers(units, factories, mapGrid) {
           // Skip command issuing for factory selection
           if (selectedUnits[0].type !== 'factory') {
             let target = null
+            let oreTarget = null // New variable for ore tile targeting
+
+            // Check if clicking on an ore tile with harvesters selected
+            const tileX = Math.floor(worldX / TILE_SIZE)
+            const tileY = Math.floor(worldY / TILE_SIZE)
+            const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+            
+            if (hasSelectedHarvesters && 
+                mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
+                tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length &&
+                mapGrid[tileY][tileX].type === 'ore') {
+              oreTarget = { x: tileX, y: tileY }
+            }
 
             // Check enemy buildings first (they have priority)
             if (gameState.buildings && gameState.buildings.length > 0) {
@@ -754,7 +783,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
             selectedUnits.forEach((unit, index) => {
               let formationOffset = { x: 0, y: 0 }
 
-              if (target) {
+              if (oreTarget && unit.type === 'harvester') {
+                // Handle ore tile targeting for harvesters
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, oreTarget, mapGrid, null)
+                
+                if (path && path.length > 0) {
+                  unit.path = path.length > 1 ? path.slice(1) : path
+                  // Set the harvester's manual ore target
+                  unit.manualOreTarget = oreTarget
+                  unit.oreField = null // Clear any automatic ore field assignment
+                  unit.target = null // Clear any combat target
+                  unit.moveTarget = oreTarget
+                  unit.forcedAttack = false
+                  playSound('movement')
+                  console.log(`Harvester ${unit.id || 'unknown'} manually targeted ore at ${oreTarget.x},${oreTarget.y}`)
+                }
+              } else if (target) {
                 const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
                 // Use helper to get target point (for factories, this is the closest point on its boundary)
                 const targetCenter = getTargetPoint(target, unitCenter)
