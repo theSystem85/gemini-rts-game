@@ -275,6 +275,9 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Enemy does not loose money when building units.
+- [x] Enemy defense buildings are missing healthbar and don't take damage.
+- [ ] The ore tiles do not get removed after harvesting.
 - [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
 - [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
 - [x] The initial construction yard building is not respected in the occupancy map.
