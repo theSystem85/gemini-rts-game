@@ -12,6 +12,9 @@ export const TARGETING_SPREAD = TILE_SIZE * 0.75
 // HARVESTER_CAPPACITY is now 1 (so a harvester unloads as soon as it harvests one unit)
 export const HARVESTER_CAPPACITY = 1
 
+// Harvester unload time (in milliseconds)
+export const HARVESTER_UNLOAD_TIME = 5000  // 5 seconds (2x faster than before)
+
 // Fallback colors for tiles when images aren't available
 export const TILE_COLORS = {
   land: '#A0522D',
@@ -62,7 +65,7 @@ export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
 export const TANK_BULLET_SPEED = 8 // Radians per frame
 
-export const ORE_SPREAD_INTERVAL = 90000
+export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 export const ORE_SPREAD_PROBABILITY = 0.06
 
 // New: Path recalculation interval (in milliseconds)

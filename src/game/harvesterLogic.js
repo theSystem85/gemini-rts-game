@@ -1,5 +1,5 @@
 // harvesterLogic.js - Handles all harvester-specific logic
-import { TILE_SIZE, HARVESTER_CAPPACITY } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME } from '../config.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
@@ -432,8 +432,8 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
  * Completes the unloading process at a refinery
  */
 function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMap) {
-  // Unloading takes 10 seconds
-  if (now - unit.unloadStartTime >= 10000) {
+  // Unloading takes 5 seconds (2x faster than before)
+  if (now - unit.unloadStartTime >= HARVESTER_UNLOAD_TIME) {
     // Calculate money based on ore carried
     const moneyEarned = unit.oreCarried * 1000
     

@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME } from '../config.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -140,7 +140,7 @@ export class UnitRenderer {
       
       if (unit.unloadingAtRefinery && unit.unloadStartTime) {
         // Show unloading progress (reverse direction)
-        const unloadProgress = Math.min((performance.now() - unit.unloadStartTime) / 10000, 1)
+        const unloadProgress = Math.min((performance.now() - unit.unloadStartTime) / HARVESTER_UNLOAD_TIME, 1)
         progress = 1 - unloadProgress // Reverse the progress
         barColor = '#FF6B6B' // Red-ish for unloading
       } else if (unit.harvesting && unit.harvestTimer) {
