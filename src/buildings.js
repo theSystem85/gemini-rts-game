@@ -7,7 +7,7 @@ export const buildingData = {
     width: 3,
     height: 3,
     cost: 2000,
-    power: 100,
+    power: 200,
     image: 'power_plant.jpg',
     displayName: 'Power Plant',
     health: 200
