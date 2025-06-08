@@ -204,13 +204,35 @@ export class VideoOverlay {
 
     // Handle video end
     video.addEventListener('ended', () => {
-      this.stopCurrentVideo()
+      // Add a small delay to prevent race conditions
+      setTimeout(() => {
+        if (this.isPlaying) {
+          this.stopCurrentVideo()
+        }
+      }, 100)
     })
 
-    // Handle video errors
+    // Handle video errors with better error information
     video.addEventListener('error', (e) => {
-      console.error('Video playback error:', e)
-      this.stopCurrentVideo()
+      // Only log/handle error if video is currently active and not during cleanup
+      if (this.isPlaying && this.currentVideo === video && video.src) {
+        console.warn('Video playback error (video may have ended normally):', {
+          error: e,
+          videoSrc: video.src,
+          networkState: video.networkState,
+          readyState: video.readyState,
+          currentTime: video.currentTime,
+          duration: video.duration,
+          errorCode: video.error?.code,
+          errorMessage: video.error?.message
+        })
+        
+        // Only stop if we're actually playing and this is a real error
+        this.stopCurrentVideo()
+      } else {
+        // Silently ignore errors during cleanup or when video is not active
+        console.debug('Video error during cleanup (ignored):', e.type)
+      }
     })
   }
 
@@ -240,9 +262,17 @@ export class VideoOverlay {
       // Load video with comprehensive error handling
       const tryLoadVideo = async (videoPath) => {
         return new Promise((resolve, reject) => {
-          video.src = videoPath
+          const video = this.overlayElement.querySelector('.milestone-video')
+          
+          // Add timeout to prevent hanging
+          const timeout = setTimeout(() => {
+            video.removeEventListener('canplay', onLoad)
+            video.removeEventListener('error', onError)
+            reject(new Error(`Video load timeout for ${videoPath}`))
+          }, 10000) // 10 second timeout
           
           const onLoad = () => {
+            clearTimeout(timeout)
             console.log('Video loaded successfully:', videoPath)
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
@@ -250,6 +280,7 @@ export class VideoOverlay {
           }
           
           const onError = (e) => {
+            clearTimeout(timeout)
             console.warn('Video failed to load:', videoPath, e)
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
@@ -258,6 +289,10 @@ export class VideoOverlay {
           
           video.addEventListener('canplay', onLoad, { once: true })
           video.addEventListener('error', onError, { once: true })
+          
+          // Set video source
+          video.src = videoPath
+          video.load() // Explicitly trigger load
         })
       }
 
@@ -346,8 +381,20 @@ export class VideoOverlay {
       // Reset progress
       progressBar.style.width = '0%'
 
-      // Start video playback
-      await video.play()
+      // Start video playback with error handling
+      try {
+        await video.play()
+        console.log('Video playback started successfully')
+      } catch (playError) {
+        console.error('Video play() failed:', playError)
+        // Try to handle specific play errors
+        if (playError.name === 'NotAllowedError') {
+          console.warn('Video autoplay blocked by browser - user interaction required')
+        } else if (playError.name === 'NotSupportedError') {
+          console.warn('Video format not supported')
+        }
+        throw playError // Re-throw to be caught by outer try-catch
+      }
 
       // Synchronize audio
       if (this.currentAudio) {
@@ -363,7 +410,10 @@ export class VideoOverlay {
 
     } catch (error) {
       console.error('Failed to play milestone video:', error)
-      this.stopCurrentVideo()
+      // Ensure cleanup happens even if there's an error
+      if (this.isPlaying) {
+        this.stopCurrentVideo()
+      }
     }
   }
 
@@ -371,6 +421,11 @@ export class VideoOverlay {
    * Stop current video and play next in queue
    */
   stopCurrentVideo() {
+    // Prevent multiple calls during cleanup
+    if (!this.isPlaying) {
+      return
+    }
+    
     this.isPlaying = false
 
     // Hide overlay completely
@@ -378,30 +433,48 @@ export class VideoOverlay {
     this.overlayElement.style.opacity = '0'
     this.overlayElement.style.pointerEvents = 'none'
 
-    // Stop and clean up video
+    // Stop and clean up video with error handling
     if (this.currentVideo) {
-      this.currentVideo.pause()
-      this.currentVideo.currentTime = 0
-      this.currentVideo.src = ''
-      this.currentVideo = null
+      try {
+        this.currentVideo.pause()
+        this.currentVideo.currentTime = 0
+        // Remove src to prevent further events
+        this.currentVideo.removeAttribute('src')
+        this.currentVideo.load() // Reset the video element
+      } catch (e) {
+        console.warn('Error during video cleanup:', e)
+      } finally {
+        this.currentVideo = null
+      }
     }
 
-    // Stop and clean up audio
+    // Stop and clean up audio with error handling
     if (this.currentAudio) {
-      this.currentAudio.pause()
-      this.currentAudio.currentTime = 0
-      this.currentAudio = null
+      try {
+        this.currentAudio.pause()
+        this.currentAudio.currentTime = 0
+      } catch (e) {
+        console.warn('Error during audio cleanup:', e)
+      } finally {
+        this.currentAudio = null
+      }
     }
 
     // Reset progress bar
     const progressBar = this.overlayElement.querySelector('.progress-bar')
-    progressBar.style.width = '0%'
+    if (progressBar) {
+      progressBar.style.width = '0%'
+    }
 
-    // Play next video in queue
+    // Play next video in queue with improved error handling
     if (this.videoQueue.length > 0) {
       const nextVideo = this.videoQueue.shift()
       setTimeout(() => {
-        this.playMilestoneVideo(nextVideo.videoFile, nextVideo.audioFile, nextVideo.milestoneInfo)
+        try {
+          this.playMilestoneVideo(nextVideo.videoFile, nextVideo.audioFile, nextVideo.milestoneInfo)
+        } catch (e) {
+          console.error('Error playing next queued video:', e)
+        }
       }, 500) // Small delay between videos
     }
   }
