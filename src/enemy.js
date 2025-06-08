@@ -214,11 +214,13 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         const newEnemy = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState)
         if (newEnemy) {
           units.push(newEnemy)
+          // Deduct the cost from enemy budget just like player money is deducted
+          enemyFactory.budget -= cost
           enemyFactory.currentlyBuilding = unitType
           enemyFactory.buildStartTime = now
           enemyFactory.buildDuration = 5000
           gameState.enemyLastProductionTime = now
-          console.log(`Enemy started producing unit: ${unitType} from ${spawnFactory.type || 'construction yard'}`)
+          console.log(`Enemy started producing unit: ${unitType} from ${spawnFactory.type || 'construction yard'} - Budget reduced by ${cost} to ${enemyFactory.budget}`)
           
           // Reset attack directions periodically to ensure varied attack patterns
           // This happens roughly every 4-5 unit productions (40-50 seconds)

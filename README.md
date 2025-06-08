@@ -277,6 +277,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] The harvesting animation is now working anymore.
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.
 - [ ] Enemy does not loose money when building units.
