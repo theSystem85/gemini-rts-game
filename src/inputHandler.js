@@ -571,73 +571,58 @@ export function setupInputHandlers(units, factories, mapGrid) {
           if (forceAttackTarget) {
             forceAttackHandled = true // Mark that we've handled this click
 
-            // Formation logic for attack
+            // Semicircle formation logic for attack
             const count = selectedUnits.length
-            const cols = Math.ceil(Math.sqrt(count))
-            const rows = Math.ceil(count / cols)
+            
+            // Calculate safe attack distance with explosion buffer
+            const explosionSafetyBuffer = TILE_SIZE * 0.5
+            const safeAttackDistance = Math.max(
+              TANK_FIRE_RANGE * TILE_SIZE,
+              TILE_SIZE * 2 + explosionSafetyBuffer
+            ) - TILE_SIZE
+
+            // Get semicircle formation positions
+            const formationPositions = calculateSemicircleFormation(selectedUnits, forceAttackTarget, safeAttackDistance);
 
             selectedUnits.forEach((unit, index) => {
-              const formationOffset = { x: 0, y: 0 }
-              const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
+              const position = formationPositions[index];
+              
+              // Ensure position is within safe distance
+              const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
+              const targetCenter = getTargetPoint(forceAttackTarget, unitCenter);
+              const finalDx = targetCenter.x - position.x;
+              const finalDy = targetCenter.y - position.y;
+              const finalDist = Math.hypot(finalDx, finalDy);
 
-              // Use helper to get target point
-              const targetCenter = getTargetPoint(forceAttackTarget, unitCenter)
-              const dx = targetCenter.x - unitCenter.x
-              const dy = targetCenter.y - unitCenter.y
-              const dist = Math.hypot(dx, dy)
-
-              // Safety buffer for explosions
-              const explosionSafetyBuffer = TILE_SIZE * 0.5
-              const safeAttackDistance = Math.max(
-                TANK_FIRE_RANGE * TILE_SIZE,
-                TILE_SIZE * 2 + explosionSafetyBuffer
-              ) - TILE_SIZE
-
-              // Calculate base position
-              const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
-              const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
-
-              // Apply formation offset with proper spacing
-              const col = index % cols
-              const row = Math.floor(index / cols)
-              const formationSpacing = TILE_SIZE * 1.2; // 1.2 tiles spacing to prevent overlap
-              formationOffset.x = col * formationSpacing - ((cols - 1) * formationSpacing) / 2
-              formationOffset.y = row * formationSpacing - ((rows - 1) * formationSpacing) / 2
-
-              let destX = baseX + formationOffset.x
-              let destY = baseY + formationOffset.y
-
-              // Ensure safe distance
-              const finalDx = targetCenter.x - destX
-              const finalDy = targetCenter.y - destY
-              const finalDist = Math.hypot(finalDx, finalDy)
+              let destX = position.x;
+              let destY = position.y;
 
               if (finalDist < safeAttackDistance) {
-                const scale = safeAttackDistance / finalDist
-                destX = targetCenter.x - finalDx * scale
-                destY = targetCenter.y - finalDy * scale
+                const scale = safeAttackDistance / finalDist;
+                destX = targetCenter.x - finalDx * scale;
+                destY = targetCenter.y - finalDy * scale;
               }
 
               const desiredTile = {
                 x: Math.floor(destX / TILE_SIZE),
                 y: Math.floor(destY / TILE_SIZE)
-              }
+              };
 
               // Find path to the target position
-              const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
+              const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
 
               if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
-                unit.path = path.slice(1)
-                unit.target = forceAttackTarget
-                unit.forcedAttack = true  // Mark this as a forced attack
-                playSound('movement')
+                unit.path = path.slice(1);
+                unit.target = forceAttackTarget;
+                unit.forcedAttack = true; // Mark this as a forced attack
+                playSound('movement');
               } else {
                 // If already at position, just set the target
-                unit.path = []
-                unit.target = forceAttackTarget
-                unit.forcedAttack = true  // Mark this as a forced attack
+                unit.path = [];
+                unit.target = forceAttackTarget;
+                unit.forcedAttack = true; // Mark this as a forced attack
               }
-            })
+            });
 
             // Play sound for feedback
             playSound('unitSelection')
@@ -799,51 +784,45 @@ export function setupInputHandlers(units, factories, mapGrid) {
                   console.log(`Harvester ${unit.id || 'unknown'} manually targeted ore at ${oreTarget.x},${oreTarget.y}`)
                 }
               } else if (target) {
-                const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
-                // Use helper to get target point (for factories, this is the closest point on its boundary)
-                const targetCenter = getTargetPoint(target, unitCenter)
-                const dx = targetCenter.x - unitCenter.x
-                const dy = targetCenter.y - unitCenter.y
-                const dist = Math.hypot(dx, dy)
-                const explosionSafetyBuffer = TILE_SIZE * 0.5
+                // Semicircle attack formation for regular attacks
+                const explosionSafetyBuffer = TILE_SIZE * 0.5;
                 const safeAttackDistance = Math.max(
                   TANK_FIRE_RANGE * TILE_SIZE,
                   TILE_SIZE * 2 + explosionSafetyBuffer
-                ) - TILE_SIZE
+                ) - TILE_SIZE;
 
-                const baseX = targetCenter.x - (dx / dist) * safeAttackDistance
-                const baseY = targetCenter.y - (dy / dist) * safeAttackDistance
-                const col = index % cols
-                const row = Math.floor(index / cols)
-                const formationSpacing = TILE_SIZE * 1.2; // 1.2 tiles spacing to prevent overlap
-                formationOffset.x = col * formationSpacing - ((cols - 1) * formationSpacing) / 2
-                formationOffset.y = row * formationSpacing - ((rows - 1) * formationSpacing) / 2
-                let destX = baseX + formationOffset.x
-                let destY = baseY + formationOffset.y
+                // Get semicircle formation positions for all selected units
+                const formationPositions = calculateSemicircleFormation(selectedUnits, target, safeAttackDistance);
+                const position = formationPositions[index];
+                
+                // Ensure position is within safe distance
+                const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 };
+                const targetCenter = getTargetPoint(target, unitCenter);
+                const finalDx = targetCenter.x - position.x;
+                const finalDy = targetCenter.y - position.y;
+                const finalDist = Math.hypot(finalDx, finalDy);
 
-                // Ensure the final destination maintains safe distance
-                const finalDx = targetCenter.x - destX
-                const finalDy = targetCenter.y - destY
-                const finalDist = Math.hypot(finalDx, finalDy)
+                let destX = position.x;
+                let destY = position.y;
 
                 if (finalDist < safeAttackDistance) {
-                  const scale = safeAttackDistance / finalDist
-                  destX = targetCenter.x - finalDx * scale
-                  destY = targetCenter.y - finalDy * scale
+                  const scale = safeAttackDistance / finalDist;
+                  destX = targetCenter.x - finalDx * scale;
+                  destY = targetCenter.y - finalDy * scale;
                 }
 
-                const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
-                const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
+                const desiredTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) };
+                const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null);
 
                 if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
-                  unit.path = path.slice(1)
-                  unit.target = target
-                  unit.forcedAttack = false  // Not a forced attack
-                  playSound('movement')
+                  unit.path = path.slice(1);
+                  unit.target = target;
+                  unit.forcedAttack = false; // Not a forced attack
+                  playSound('movement');
                 } else {
-                  unit.path = []
-                  unit.target = target
-                  unit.forcedAttack = false  // Not a forced attack
+                  unit.path = [];
+                  unit.target = target;
+                  unit.forcedAttack = false; // Not a forced attack
                 }
               } else {
                 // No target: move to clicked location with a basic grid formation.
@@ -1379,4 +1358,37 @@ export function cleanupDestroyedSelectedUnits() {
     console.error('Error in cleanupDestroyedSelectedUnits:', error)
     selectedUnits.length = 0 // Safety reset
   }
+}
+
+/**
+ * Calculate semicircle attack formation positions around a target
+ */
+function calculateSemicircleFormation(units, target, safeAttackDistance) {
+  const positions = [];
+  const unitCount = units.length;
+  
+  // Get target center point
+  const targetCenter = getTargetPoint(target, { x: 0, y: 0 });
+  
+  if (unitCount === 1) {
+    // Single unit - position directly in front
+    const angle = 0; // Face the target directly
+    const x = targetCenter.x - Math.cos(angle) * safeAttackDistance;
+    const y = targetCenter.y - Math.sin(angle) * safeAttackDistance;
+    positions.push({ x, y });
+  } else {
+    // Multiple units - arrange in semicircle
+    const arcSpan = Math.PI; // 180 degrees
+    const angleStep = arcSpan / Math.max(1, unitCount - 1);
+    const startAngle = -arcSpan / 2; // Start from left side
+    
+    for (let i = 0; i < unitCount; i++) {
+      const angle = startAngle + (i * angleStep);
+      const x = targetCenter.x - Math.cos(angle) * safeAttackDistance;
+      const y = targetCenter.y - Math.sin(angle) * safeAttackDistance;
+      positions.push({ x, y });
+    }
+  }
+  
+  return positions;
 }

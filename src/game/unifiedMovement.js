@@ -11,7 +11,10 @@ const MOVEMENT_CONFIG = {
   ROTATION_SPEED: 0.12,    // How fast units rotate (radians per frame)
   MAX_SPEED: 1.8,          // Maximum movement speed (slightly slower)
   MIN_SPEED: 0.05,         // Minimum speed before stopping
-  COLLISION_BUFFER: 8      // Buffer distance for collision avoidance
+  COLLISION_BUFFER: 8,     // Buffer distance for collision avoidance
+  MIN_UNIT_DISTANCE: 24,   // Minimum distance between unit centers (increased from implicit 16)
+  AVOIDANCE_FORCE: 0.3,    // Strength of collision avoidance force
+  BACKWARD_MOVE_THRESHOLD: 0.5  // When to allow backward movement when stuck
 };
 
 /**
@@ -91,11 +94,20 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [])
   const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation));
   const canMove = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
   
-  // Apply acceleration/deceleration
+  // Apply acceleration/deceleration with collision avoidance
+  let avoidanceForce = { x: 0, y: 0 };
+  if (movement.isMoving && canMove) {
+    avoidanceForce = calculateCollisionAvoidance(unit, units);
+  }
+  
   const accelRate = (movement.isMoving && canMove) ? MOVEMENT_CONFIG.ACCELERATION : MOVEMENT_CONFIG.DECELERATION;
   
-  movement.velocity.x += (movement.targetVelocity.x - movement.velocity.x) * accelRate;
-  movement.velocity.y += (movement.targetVelocity.y - movement.velocity.y) * accelRate;
+  // Apply target velocity with avoidance force
+  const targetVelX = movement.targetVelocity.x + avoidanceForce.x;
+  const targetVelY = movement.targetVelocity.y + avoidanceForce.y;
+  
+  movement.velocity.x += (targetVelX - movement.velocity.x) * accelRate;
+  movement.velocity.y += (targetVelY - movement.velocity.y) * accelRate;
   
   // Apply minimum speed threshold
   const currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y);
@@ -194,9 +206,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
     return true;
   }
   
-  // Check for other units using proper distance-based collision detection
+  // Check for other units using improved distance-based collision detection
   if (units) {
-    const unitRadius = TILE_SIZE * 0.4; // Units have a smaller collision radius than tiles
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
@@ -207,16 +218,21 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
       const otherCenterY = otherUnit.y + TILE_SIZE / 2;
       const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY);
       
-      // Check if units are too close (collision)
-      if (distance < unitRadius * 2) {
-        // Allow movement if the other unit is moving away or unit is backing off
-        const otherMoving = otherUnit.movement && otherUnit.movement.currentSpeed > 0.1;
-        const unitMoving = unit.movement && unit.movement.currentSpeed > 0.1;
+      // Use improved minimum distance to prevent getting stuck
+      if (distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE) {
+        // Allow movement if units are moving away from each other
+        const dx = unitCenterX - otherCenterX;
+        const dy = unitCenterY - otherCenterY;
+        const unitVelX = unit.movement?.velocity?.x || 0;
+        const unitVelY = unit.movement?.velocity?.y || 0;
         
-        if (otherMoving || !unitMoving) {
-          return false; // Allow movement to avoid deadlocks
+        // Check if this unit's movement increases distance (moving away)
+        const dotProduct = dx * unitVelX + dy * unitVelY;
+        if (dotProduct > 0) {
+          return false; // Allow movement away from other unit
         }
-        return true; // Block movement
+        
+        return true; // Block movement toward other unit
       }
     }
   }
@@ -560,4 +576,87 @@ function findFreeDirection(unit, mapGrid, occupancyMap, units) {
   }
   
   return null; // No free direction found
+}
+
+/**
+ * Calculate collision avoidance force to prevent units from getting too close
+ */
+function calculateCollisionAvoidance(unit, units) {
+  if (!units) return { x: 0, y: 0 };
+  
+  const unitCenterX = unit.x + TILE_SIZE / 2;
+  const unitCenterY = unit.y + TILE_SIZE / 2;
+  let avoidanceX = 0;
+  let avoidanceY = 0;
+  
+  for (const otherUnit of units) {
+    if (otherUnit.id === unit.id || otherUnit.health <= 0) continue;
+    
+    const otherCenterX = otherUnit.x + TILE_SIZE / 2;
+    const otherCenterY = otherUnit.y + TILE_SIZE / 2;
+    const dx = unitCenterX - otherCenterX;
+    const dy = unitCenterY - otherCenterY;
+    const distance = Math.hypot(dx, dy);
+    
+    // Apply avoidance force if too close
+    if (distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE && distance > 0) {
+      const avoidanceStrength = (MOVEMENT_CONFIG.MIN_UNIT_DISTANCE - distance) / MOVEMENT_CONFIG.MIN_UNIT_DISTANCE;
+      const normalizedDx = dx / distance;
+      const normalizedDy = dy / distance;
+      
+      avoidanceX += normalizedDx * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE;
+      avoidanceY += normalizedDy * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE;
+    }
+  }
+  
+  return { x: avoidanceX, y: avoidanceY };
+}
+
+/**
+ * Try to move unit backward when stuck
+ */
+function tryBackwardMovement(unit, units) {
+  if (!unit.movement) return false;
+  
+  // Calculate backward direction (opposite to current facing)
+  const backwardAngle = unit.rotation + Math.PI;
+  const backwardDistance = TILE_SIZE * 0.8; // Move back less than a full tile
+  
+  const backwardX = unit.x + Math.cos(backwardAngle) * backwardDistance;
+  const backwardY = unit.y + Math.sin(backwardAngle) * backwardDistance;
+  
+  // Check if backward position is valid
+  const backwardTileX = Math.floor(backwardX / TILE_SIZE);
+  const backwardTileY = Math.floor(backwardY / TILE_SIZE);
+  
+  // Temporarily move to check collision
+  const originalX = unit.x;
+  const originalY = unit.y;
+  unit.x = backwardX;
+  unit.y = backwardY;
+  
+  // Use a minimal collision check (no need for full map grid access)
+  const hasCollision = units && units.some(otherUnit => {
+    if (otherUnit.id === unit.id || otherUnit.health <= 0) return false;
+    const otherCenterX = otherUnit.x + TILE_SIZE / 2;
+    const otherCenterY = otherUnit.y + TILE_SIZE / 2;
+    const unitCenterX = unit.x + TILE_SIZE / 2;
+    const unitCenterY = unit.y + TILE_SIZE / 2;
+    const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY);
+    return distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE;
+  });
+  
+  // Restore original position
+  unit.x = originalX;
+  unit.y = originalY;
+  
+  if (!hasCollision && backwardTileX >= 0 && backwardTileY >= 0) {
+    // Set backward movement
+    unit.movement.targetVelocity.x = Math.cos(backwardAngle) * MOVEMENT_CONFIG.MAX_SPEED * MOVEMENT_CONFIG.BACKWARD_MOVE_THRESHOLD;
+    unit.movement.targetVelocity.y = Math.sin(backwardAngle) * MOVEMENT_CONFIG.MAX_SPEED * MOVEMENT_CONFIG.BACKWARD_MOVE_THRESHOLD;
+    unit.movement.isMoving = true;
+    return true;
+  }
+  
+  return false;
 }
