@@ -92,6 +92,13 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
       }
       // Tesla Coil special logic
       if (building.type === 'teslaCoil') {
+        // Check power level - Tesla coil doesn't work when power is below 0
+        const currentPowerSupply = building.owner === 'player' ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+        if (currentPowerSupply < 0) {
+          // Tesla coil is disabled due to insufficient power
+          return
+        }
+        
         const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
@@ -138,6 +145,15 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         }
       }      // Regular turret logic
       else {
+        // Check power level for rocket turrets - they don't work when power is below 0
+        if (building.type === 'rocketTurret') {
+          const currentPowerSupply = building.owner === 'player' ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+          if (currentPowerSupply < 0) {
+            // Rocket turret is disabled due to insufficient power
+            return
+          }
+        }
+        
         // Check burst fire status first
         if (building.burstFire && building.currentBurst > 0) {
           // Continue burst fire sequence

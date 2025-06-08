@@ -4,6 +4,7 @@ import { playSound } from './sound.js'
 import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
+import { updatePowerSupply } from './buildings.js'
 
 /**
  * Handles the selling of buildings
@@ -71,24 +72,8 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       // Remove the building from the gameState.buildings array
       gameState.buildings.splice(i, 1)
 
-      // Update power supply calculations
-      gameState.playerTotalPowerProduction = 0
-      gameState.playerPowerConsumption = 0
-
-      // Recalculate power for remaining buildings
-      for (const remainingBuilding of gameState.buildings) {
-        if (remainingBuilding.owner === 'player') {
-          // Add power production
-          if (remainingBuilding.powerProduction) {
-            gameState.playerTotalPowerProduction += remainingBuilding.powerProduction
-          }
-
-          // Add power consumption
-          if (remainingBuilding.powerConsumption) {
-            gameState.playerPowerConsumption += remainingBuilding.powerConsumption
-          }
-        }
-      }
+      // Update power supply using the proper function that allows negative power
+      updatePowerSupply(gameState.buildings, gameState)
 
       // Play selling sound and show notification
       playSound('deposit')
