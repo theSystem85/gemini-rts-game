@@ -68,10 +68,32 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         buildingType = 'turretGunV1'
         cost = 1000
       }
-    } else if (enemyHarvesters.length < 2 && enemyFactory.budget >= buildingData.oreRefinery.cost) {
-      // Optionally build additional refineries if harvesters are low
-      buildingType = 'oreRefinery'
-      cost = buildingData.oreRefinery.cost
+    } else {
+      // Calculate current refinery to harvester ratio
+      const enemyRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
+      const maxHarvestersForRefineries = enemyRefineries.length * 4 // 1:4 ratio
+      
+      // Build more refineries if we have too many harvesters per refinery
+      if (enemyHarvesters.length >= maxHarvestersForRefineries && enemyFactory.budget >= buildingData.oreRefinery.cost) {
+        buildingType = 'oreRefinery'
+        cost = buildingData.oreRefinery.cost
+        console.log(`Enemy building additional refinery: ${enemyHarvesters.length} harvesters / ${enemyRefineries.length} refineries`)
+      } else if (turrets.length < 3) {
+        // Build more turrets for defense
+        if (enemyFactory.budget >= 4000) {
+          buildingType = 'rocketTurret'
+          cost = 4000
+        } else if (enemyFactory.budget >= 3000) {
+          buildingType = 'turretGunV3'
+          cost = 3000
+        } else if (enemyFactory.budget >= 2000) {
+          buildingType = 'turretGunV2'
+          cost = 2000
+        } else {
+          buildingType = 'turretGunV1'
+          cost = 1000
+        }
+      }
     }
 
     // Attempt to place the building
@@ -107,20 +129,45 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'oreRefinery').length > 0) {
     if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
       const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+      const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy')
+      const enemyRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
+      
       let unitType = 'tank_v1'
       let cost = 1000
+      
+      // Calculate optimal harvester count based on refineries (1:4 ratio)
+      const maxHarvestersForRefineries = enemyRefineries.length * 4
+      const shouldBuildHarvester = enemyHarvesters.length < maxHarvestersForRefineries
+      
+      console.log(`Enemy AI: ${enemyHarvesters.length} harvesters, ${enemyRefineries.length} refineries, max harvesters: ${maxHarvestersForRefineries}`)
+      
       if (enemyHarvesters.length === 0) {
+        // Always build first harvester
         unitType = 'harvester'
         cost = 500
-      } else {
+      } else if (shouldBuildHarvester) {
+        // Build harvesters to maintain 1:4 ratio with refineries
         const rand = Math.random()
-        if (rand < 0.1) {
-          unitType = 'rocketTank'
-          cost = 2000
-        } else if (rand < 0.3) {
+        if (rand < 0.5) {
           unitType = 'harvester'
           cost = 500
-        } else if (rand < 0.5) {
+        } else if (rand < 0.7) {
+          unitType = 'tank_v1'
+          cost = 1000
+        } else if (rand < 0.85) {
+          unitType = 'tank-v2'
+          cost = 2000
+        } else {
+          unitType = 'rocketTank'
+          cost = 2000
+        }
+      } else {
+        // We have enough harvesters, focus on combat units
+        const rand = Math.random()
+        if (rand < 0.15) {
+          unitType = 'rocketTank'
+          cost = 2000
+        } else if (rand < 0.4) {
           unitType = 'tank-v2'
           cost = 2000
         } else {

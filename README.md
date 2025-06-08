@@ -225,6 +225,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 2. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 ## Improvements
+- [ ] only show health bars if units or buildings are damaged
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [ ] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
 - [ ] Implement attack group feature (aka AGF): All selected players units can attack a group of enemy units by holding the shift key and dragging a box around the enemy units to be attacked. Then all those units will be attacked one after another.
