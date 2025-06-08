@@ -317,13 +317,13 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           unit.target = newTarget
           unit.lastTargetChangeTime = now
           let targetPos = null
-          if (unit.target.tileX !== undefined) {
+          if (unit.target && unit.target.tileX !== undefined) {
             targetPos = { x: unit.target.tileX, y: unit.target.tileY }
-          } else {
+          } else if (unit.target) {
             targetPos = { x: unit.target.x, y: unit.target.y }
           }
           unit.moveTarget = targetPos
-          if (!unit.isDodging) {
+          if (!unit.isDodging && targetPos) {
             const path = findPath(
               { x: unit.tileX, y: unit.tileY },
               targetPos,
