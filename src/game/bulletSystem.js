@@ -58,16 +58,14 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       }
     } else {
       // Handle non-homing projectiles - check if they've traveled too far or too long
+      // Non-homing projectile flight limits
       const timeLimit = 3000 // 3 seconds max flight time
       const distanceFromTarget = bullet.targetPosition ? 
         Math.hypot(bullet.x - bullet.targetPosition.x, bullet.y - bullet.targetPosition.y) : 0
-      const maxDistance = TILE_SIZE * 6 // Maximum travel distance (6 tiles past target)
       
-      // Explode if bullet has been flying too long, traveled too far past target, or near target position
+      // Explode if bullet has been flying too long or is close enough to target
       if (now - bullet.startTime > timeLimit || 
-          (bullet.targetPosition && distanceFromTarget > maxDistance) ||
-          (bullet.targetPosition && distanceFromTarget < 15)) { // Close enough to target to explode
-        
+          (bullet.targetPosition && distanceFromTarget < 15)) {
         // Explode at target position or current bullet position if no target
         const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
         const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y

@@ -106,14 +106,34 @@ const COMBAT_CONFIG = {
 /**
  * Common firing logic helper - handles bullet creation
  */
-function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid) {
+function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false) {
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
-        if (unit.canFire !== false && hasClearShot(unit, target, units, mapGrid)) {
+        if (unit.canFire !== false && hasClearShot(unit, target, units)) {
+            // Calculate aim position (with predictive aiming if enabled)
+            let aimX = targetCenterX;
+            let aimY = targetCenterY;
+
+            if (usePredictiveAiming && target.lastKnownX !== undefined && target.lastKnownY !== undefined) {
+                const targetVelX = targetCenterX - target.lastKnownX;
+                const targetVelY = targetCenterY - target.lastKnownY;
+                const bulletSpeed = projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED;
+                const distance = Math.sqrt((targetCenterX - unitCenterX) ** 2 + (targetCenterY - unitCenterY) ** 2);
+                const timeToTarget = distance / (bulletSpeed * TILE_SIZE);
+                aimX = targetCenterX + targetVelX * timeToTarget * 8; // Reduced multiplier for better accuracy
+                aimY = targetCenterY + targetVelY * timeToTarget * 8;
+            }
+
+            // Store current position for next frame's velocity calculation (for predictive aiming)
+            if (usePredictiveAiming) {
+                target.lastKnownX = targetCenterX;
+                target.lastKnownY = targetCenterY;
+            }
+            
             // Apply targeting spread
-            const spreadTarget = applyTargetingSpread(targetCenterX, targetCenterY, projectileType);
+            const spreadTarget = applyTargetingSpread(aimX, aimY, projectileType);
             
             const bullet = {
                 id: Date.now() + Math.random(),
@@ -279,55 +299,21 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range with predictive aiming
+    // Fire if in range using unified firing system with predictive aiming
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE) {
-      if (!unit.lastShotTime || now - unit.lastShotTime >= COMBAT_CONFIG.FIRE_RATES.STANDARD) {
-        if (unit.canFire !== false && hasClearShot(unit, unit.target, units, mapGrid)) {
-          const unitCenterX = unit.x + TILE_SIZE / 2;
-          const unitCenterY = unit.y + TILE_SIZE / 2;
-          
-          // Calculate aim-ahead position
-          let aimX = targetCenterX;
-          let aimY = targetCenterY;
-
-          if (unit.target.lastKnownX !== undefined && unit.target.lastKnownY !== undefined) {
-            const targetVelX = targetCenterX - unit.target.lastKnownX;
-            const targetVelY = targetCenterY - unit.target.lastKnownY;
-            const bulletSpeed = TANK_BULLET_SPEED;
-            const timeToTarget = distance / (bulletSpeed * TILE_SIZE);
-            aimX = targetCenterX + targetVelX * timeToTarget * 8; // Reduced multiplier for better accuracy
-            aimY = targetCenterY + targetVelY * timeToTarget * 8;
-          }
-
-          // Store current position for next frame's velocity calculation
-          unit.target.lastKnownX = targetCenterX;
-          unit.target.lastKnownY = targetCenterY;
-
-          // Apply minimal spread to predictive shots
-          const spreadTarget = applyTargetingSpread(aimX, aimY, 'bullet');
-          
-          const bullet = {
-            id: Date.now() + Math.random(),
-            x: unitCenterX,
-            y: unitCenterY,
-            speed: TANK_BULLET_SPEED,
-            baseDamage: COMBAT_CONFIG.DAMAGE.TANK_V3,
-            active: true,
-            shooter: unit,
-            homing: false,
-            targetPosition: { x: spreadTarget.x, y: spreadTarget.y },
-            startTime: now
-          };
-
-          const angle = Math.atan2(spreadTarget.y - unitCenterY, spreadTarget.x - unitCenterX);
-          bullet.vx = bullet.speed * Math.cos(angle);
-          bullet.vy = bullet.speed * Math.sin(angle);
-
-          bullets.push(bullet);
-          playSound('shoot', 0.5);
-          unit.lastShotTime = now;
-        }
-      }
+      handleTankFiring(
+        unit, 
+        unit.target, 
+        bullets, 
+        now, 
+        COMBAT_CONFIG.FIRE_RATES.STANDARD, 
+        targetCenterX, 
+        targetCenterY, 
+        'bullet', 
+        units, 
+        mapGrid, 
+        true // Enable predictive aiming for tank-v3
+      );
     }
   }
 }
@@ -350,7 +336,7 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
       if (!unit.burstState) {
         // Start new burst if cooldown has passed
         if (!unit.lastShotTime || now - unit.lastShotTime >= COMBAT_CONFIG.FIRE_RATES.ROCKET) {
-          if (unit.canFire !== false && hasClearShot(unit, unit.target, units, mapGrid)) {
+          if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
             unit.burstState = {
               rocketsToFire: COMBAT_CONFIG.ROCKET_BURST.COUNT,
               lastRocketTime: 0

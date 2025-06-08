@@ -80,6 +80,12 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
 
     // Complete harvesting
     if (unit.harvesting) {
+      // Guard against missing oreField to avoid null errors
+      if (!unit.oreField) {
+        console.warn(`Harvesting state but oreField is null for unit ${unit.id}`)
+        unit.harvesting = false
+        return // skip to next unit
+      }
       if (now - unit.harvestTimer > 10000) {
         unit.oreCarried++
         unit.harvesting = false
