@@ -6,6 +6,7 @@ import { findClosestOre } from './logic.js'
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
+import { applyEnemyStrategies, shouldConductGroupAttack, resetAttackDirections } from './ai/enemyStrategies.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -129,50 +130,62 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'oreRefinery').length > 0) {
     if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
       const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+      const enemyCombatUnits = units.filter(u => u.owner === 'enemy' && 
+        (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank'))
       const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy')
       const enemyRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
       
       let unitType = 'tank_v1'
       let cost = 1000
       
-      // Calculate optimal harvester count based on refineries (1:4 ratio)
-      const maxHarvestersForRefineries = enemyRefineries.length * 4
-      const shouldBuildHarvester = enemyHarvesters.length < maxHarvestersForRefineries
+      // New production rules:
+      // 1. Build up to 8 harvesters first as priority
+      // 2. Once at 8 harvesters, focus on tanks
+      // 3. Only replace destroyed harvesters (maintain 8 max)
+      // 4. When budget > 15k, focus on advanced tanks
       
-      console.log(`Enemy AI: ${enemyHarvesters.length} harvesters, ${enemyRefineries.length} refineries, max harvesters: ${maxHarvestersForRefineries}`)
+      const MAX_HARVESTERS = 8
+      const HIGH_BUDGET_THRESHOLD = 15000
+      const isHighBudget = enemyFactory.budget >= HIGH_BUDGET_THRESHOLD
       
-      if (enemyHarvesters.length === 0) {
-        // Always build first harvester
+      console.log(`Enemy AI: ${enemyHarvesters.length} harvesters, ${enemyCombatUnits.length} combat units, budget: ${enemyFactory.budget}`)
+      
+      if (enemyHarvesters.length < MAX_HARVESTERS) {
+        // Priority: Build up to 8 harvesters first
         unitType = 'harvester'
         cost = 500
-      } else if (shouldBuildHarvester) {
-        // Build harvesters to maintain 1:4 ratio with refineries
-        const rand = Math.random()
-        if (rand < 0.5) {
-          unitType = 'harvester'
-          cost = 500
-        } else if (rand < 0.7) {
-          unitType = 'tank_v1'
-          cost = 1000
-        } else if (rand < 0.85) {
-          unitType = 'tank-v2'
-          cost = 2000
-        } else {
-          unitType = 'rocketTank'
-          cost = 2000
-        }
+        console.log(`Building harvester ${enemyHarvesters.length + 1}/8`)
       } else {
-        // We have enough harvesters, focus on combat units
+        // We have 8 harvesters, now focus entirely on combat units
         const rand = Math.random()
-        if (rand < 0.15) {
-          unitType = 'rocketTank'
-          cost = 2000
-        } else if (rand < 0.4) {
-          unitType = 'tank-v2'
-          cost = 2000
+        
+        if (isHighBudget) {
+          // High budget: heavily favor advanced units
+          if (rand < 0.15) {
+            unitType = 'tank_v1'
+            cost = 1000
+          } else if (rand < 0.4) {
+            unitType = 'tank-v2'
+            cost = 2000
+          } else if (rand < 0.7) {
+            unitType = 'rocketTank'
+            cost = 2000
+          } else {
+            unitType = 'tank-v3'
+            cost = 3000
+          }
         } else {
-          unitType = 'tank_v1'
-          cost = 1000
+          // Normal budget: balanced unit mix
+          if (rand < 0.4) {
+            unitType = 'tank_v1'
+            cost = 1000
+          } else if (rand < 0.7) {
+            unitType = 'tank-v2'
+            cost = 2000
+          } else {
+            unitType = 'rocketTank'
+            cost = 2000
+          }
         }
       }
       if (enemyFactory.budget >= cost) {
@@ -206,6 +219,13 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           enemyFactory.buildDuration = 5000
           gameState.enemyLastProductionTime = now
           console.log(`Enemy started producing unit: ${unitType} from ${spawnFactory.type || 'construction yard'}`)
+          
+          // Reset attack directions periodically to ensure varied attack patterns
+          // This happens roughly every 4-5 unit productions (40-50 seconds)
+          if (Math.random() < 0.25) {
+            resetAttackDirections()
+            console.log('Enemy AI: Reset attack directions for varied assault patterns')
+          }
         } else {
           console.warn(`Failed to spawn enemy ${unitType}`)
           gameState.enemyLastProductionTime = now
@@ -217,6 +237,12 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   // --- Update Enemy Units ---
   units.forEach(unit => {
     if (unit.owner !== 'enemy') return
+
+    // Apply new AI strategies first
+    applyEnemyStrategies(unit, units, gameState, mapGrid, now)
+    
+    // Skip further processing if unit is retreating
+    if (unit.isRetreating) return
 
     // Combat unit behavior
     if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
@@ -242,13 +268,14 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         if (harvesterUnderAttack) {
           newTarget = harvesterUnderAttack
         } else {
-          // Second priority: Gather for coordinated attack
+          // Check if we should conduct group attack before selecting targets
           const nearbyAllies = units.filter(u => u.owner === 'enemy' && u !== unit &&
             (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'rocketTank') &&
             Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
+          // Use group attack strategy
           if (nearbyAllies.length >= 2) {
-            // Enough allies nearby, attack player base or closest player unit
+            // Find appropriate target for group attack
             let closestPlayer = null
             let closestDist = Infinity
             units.forEach(u => {
@@ -260,9 +287,14 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
                 }
               }
             })
-            newTarget = (closestPlayer && closestDist < 12 * TILE_SIZE) ? closestPlayer : playerFactory
+            
+            // Only attack if group is large enough for the target's defenses
+            const potentialTarget = (closestPlayer && closestDist < 12 * TILE_SIZE) ? closestPlayer : playerFactory
+            if (shouldConductGroupAttack(unit, units, gameState, potentialTarget)) {
+              newTarget = potentialTarget
+            }
           } else {
-            // Not enough allies nearby, find closest player unit or target factory from safe distance
+            // Not enough allies nearby, avoid attacking alone unless absolutely necessary
             let closestPlayer = null
             let closestDist = Infinity
             units.forEach(u => {
@@ -274,7 +306,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
                 }
               }
             })
-            newTarget = (closestPlayer && closestDist < 8 * TILE_SIZE) ? closestPlayer : playerFactory
+            // Only engage if very close or no other choice
+            newTarget = (closestPlayer && closestDist < 6 * TILE_SIZE) ? closestPlayer : null
           }
         }
 

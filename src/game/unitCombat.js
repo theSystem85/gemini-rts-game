@@ -261,8 +261,8 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range using common logic
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE) {
+    // Fire if in range and allowed to attack (for enemy AI strategy)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
@@ -280,8 +280,8 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range using common logic (same as tank-v1 but with spread)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE) {
+    // Fire if in range and allowed to attack (for enemy AI strategy)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
@@ -299,8 +299,8 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range using unified firing system with predictive aiming
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE) {
+    // Fire if in range and allowed to attack (for enemy AI strategy)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
       handleTankFiring(
         unit, 
         unit.target, 
@@ -330,8 +330,9 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire rockets if in range (longer range than regular tanks)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET) {
+    // Fire rockets if in range and allowed to attack (for enemy AI strategy)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET && 
+        (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed

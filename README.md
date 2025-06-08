@@ -225,6 +225,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 2. Prioritize simplicity and functionality over advanced optimizations or extensive features.
 
 ## Improvements
+- [ ] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
 - [ ] only show health bars if units or buildings are damaged
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [ ] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.

@@ -12,6 +12,7 @@ import { initBackgroundMusic } from './sound.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
+import { resetAttackDirections } from './ai/enemyStrategies.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -78,6 +79,9 @@ class Game {
       factory.rallyPoint = null
       factory.selected = false
     })
+
+    // Reset enemy AI attack directions for fresh game
+    resetAttackDirections()
 
     // Center viewport on player factory
     this.centerOnPlayerFactory()
