@@ -1,6 +1,6 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import { TILE_SIZE } from '../config.js'
-import { clearStuckHarvesterOreField } from './harvesterLogic.js'
+import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 
 /**
  * Unified movement configuration
@@ -36,7 +36,7 @@ export function initializeUnitMovement(unit) {
 /**
  * Update unit position using natural movement physics
  */
-export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = []) {
+export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit);
   
   const movement = unit.movement;
@@ -151,7 +151,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [])
   
   // Handle stuck unit detection and recovery for harvesters
   if (unit.type === 'harvester') {
-    handleStuckUnit(unit, mapGrid, occupancyMap, units);
+    handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState, factories);
   }
 }
 
@@ -337,7 +337,7 @@ export function rotateUnitInPlace(unit, targetDirection = null) {
 /**
  * Check if a unit appears to be stuck and try to help it
  */
-export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
+export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = null, factories = null) {
   initializeUnitMovement(unit);
   
   // Initialize stuck detection if not present
@@ -349,28 +349,54 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
       rotationAttempts: 0,
       isRotating: false,
       dodgeAttempts: 0,
-      lastDodgeTime: 0
+      lastDodgeTime: 0,
+      lastStuckHandling: 0 // Add cooldown for stuck handling
     };
   }
   
   const now = performance.now();
   const stuck = unit.movement.stuckDetection;
   
-  // Enhanced stuck detection for harvesters - check more frequently
-  const checkInterval = unit.type === 'harvester' ? 1500 : 2000; // Check harvesters every 1.5 seconds
+  // Enhanced stuck detection for harvesters - check every 2 seconds as requested
+  const checkInterval = unit.type === 'harvester' ? 2000 : 2000; // Check harvesters every 2 seconds
   const stuckThreshold = unit.type === 'harvester' ? 2000 : 3000; // Consider harvesters stuck after 2 seconds
   
   // Check if unit has moved significantly
   if (now - stuck.lastMovementCheck > checkInterval) {
     const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y);
     
-    if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
-      // Unit hasn't moved much but has a path - likely stuck
-      stuck.stuckTime += now - stuck.lastMovementCheck;
+    // Special handling for harvesters - don't consider them stuck if they're performing valid actions
+    if (unit.type === 'harvester') {
+      const isPerformingValidAction = unit.harvesting || 
+                                    unit.unloadingAtRefinery || 
+                                    (unit.oreCarried === 0 && !unit.oreField && (!unit.path || unit.path.length === 0)) || // Idle without task
+                                    (unit.manualOreTarget && !unit.path); // Manually commanded to wait
       
-      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating) {
-        // Enhanced recovery strategies for harvesters
-        if (unit.type === 'harvester') {
+      if (isPerformingValidAction) {
+        // Reset stuck detection for valid harvester actions
+        stuck.stuckTime = 0;
+        stuck.rotationAttempts = 0;
+        stuck.dodgeAttempts = 0;
+        stuck.isRotating = false;
+      } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
+        // Only consider stuck if harvester has a path but isn't moving and isn't doing valid actions
+        stuck.stuckTime += now - stuck.lastMovementCheck;
+        
+        if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
+          console.log(`Harvester ${unit.id} detected as stuck after ${stuck.stuckTime}ms (not performing valid action)`);
+          
+          stuck.lastStuckHandling = now; // Set cooldown
+          
+          // Enhanced recovery strategies for harvesters
+          if (gameState && factories) {
+            handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories)
+            stuck.stuckTime = 0 // Reset stuck time after handling
+            stuck.rotationAttempts = 0
+            stuck.dodgeAttempts = 0
+            return
+          }
+          
+          // Fallback to original logic if parameters not available
           // Clear ore field assignment if harvester is stuck trying to reach it
           if (unit.oreField && stuck.stuckTime > stuckThreshold) {
             clearStuckHarvesterOreField(unit)
@@ -408,27 +434,39 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units) {
             stuck.dodgeAttempts = 0;
             stuck.isRotating = false;
           }
-        } else {
-          // Original logic for non-harvester units
-          stuck.isRotating = true;
-          stuck.rotationAttempts++;
-          
-          if (stuck.rotationAttempts <= 3) {
-            rotateUnitInPlace(unit);
-          } else if (stuck.rotationAttempts <= 6) {
-            if (unit.path.length > 0) {
-              const target = unit.path[0];
-              const targetX = target.x * TILE_SIZE;
-              const targetY = target.y * TILE_SIZE;
-              const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
-              rotateUnitInPlace(unit, targetDirection);
-            }
-          } else {
-            unit.path = [];
-            stuck.stuckTime = 0;
-            stuck.rotationAttempts = 0;
-            stuck.isRotating = false;
+        }
+      } else {
+        // Unit is moving normally or has no path, reset stuck detection
+        stuck.stuckTime = 0;
+        stuck.rotationAttempts = 0;
+        stuck.dodgeAttempts = 0;
+        stuck.isRotating = false;
+      }
+    } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
+      // Non-harvester unit logic - original behavior
+      // Unit hasn't moved much but has a path - likely stuck
+      stuck.stuckTime += now - stuck.lastMovementCheck;
+      
+      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating) {
+        // Original logic for non-harvester units
+        stuck.isRotating = true;
+        stuck.rotationAttempts++;
+        
+        if (stuck.rotationAttempts <= 3) {
+          rotateUnitInPlace(unit);
+        } else if (stuck.rotationAttempts <= 6) {
+          if (unit.path.length > 0) {
+            const target = unit.path[0];
+            const targetX = target.x * TILE_SIZE;
+            const targetY = target.y * TILE_SIZE;
+            const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
+            rotateUnitInPlace(unit, targetDirection);
           }
+        } else {
+          unit.path = [];
+          stuck.stuckTime = 0;
+          stuck.rotationAttempts = 0;
+          stuck.isRotating = false;
         }
       }
     } else {
@@ -612,51 +650,4 @@ function calculateCollisionAvoidance(unit, units) {
   return { x: avoidanceX, y: avoidanceY };
 }
 
-/**
- * Try to move unit backward when stuck
- */
-function tryBackwardMovement(unit, units) {
-  if (!unit.movement) return false;
-  
-  // Calculate backward direction (opposite to current facing)
-  const backwardAngle = unit.rotation + Math.PI;
-  const backwardDistance = TILE_SIZE * 0.8; // Move back less than a full tile
-  
-  const backwardX = unit.x + Math.cos(backwardAngle) * backwardDistance;
-  const backwardY = unit.y + Math.sin(backwardAngle) * backwardDistance;
-  
-  // Check if backward position is valid
-  const backwardTileX = Math.floor(backwardX / TILE_SIZE);
-  const backwardTileY = Math.floor(backwardY / TILE_SIZE);
-  
-  // Temporarily move to check collision
-  const originalX = unit.x;
-  const originalY = unit.y;
-  unit.x = backwardX;
-  unit.y = backwardY;
-  
-  // Use a minimal collision check (no need for full map grid access)
-  const hasCollision = units && units.some(otherUnit => {
-    if (otherUnit.id === unit.id || otherUnit.health <= 0) return false;
-    const otherCenterX = otherUnit.x + TILE_SIZE / 2;
-    const otherCenterY = otherUnit.y + TILE_SIZE / 2;
-    const unitCenterX = unit.x + TILE_SIZE / 2;
-    const unitCenterY = unit.y + TILE_SIZE / 2;
-    const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY);
-    return distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE;
-  });
-  
-  // Restore original position
-  unit.x = originalX;
-  unit.y = originalY;
-  
-  if (!hasCollision && backwardTileX >= 0 && backwardTileY >= 0) {
-    // Set backward movement
-    unit.movement.targetVelocity.x = Math.cos(backwardAngle) * MOVEMENT_CONFIG.MAX_SPEED * MOVEMENT_CONFIG.BACKWARD_MOVE_THRESHOLD;
-    unit.movement.targetVelocity.y = Math.sin(backwardAngle) * MOVEMENT_CONFIG.MAX_SPEED * MOVEMENT_CONFIG.BACKWARD_MOVE_THRESHOLD;
-    unit.movement.isMoving = true;
-    return true;
-  }
-  
-  return false;
-}
+

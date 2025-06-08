@@ -8,7 +8,7 @@ import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './
 /**
  * Updates unit movement, pathfinding, and formation handling
  */
-export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now) {
+export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories = null) {
   // Clean up unit selection - prevent null references
   cleanupDestroyedSelectedUnits()
 
@@ -54,7 +54,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now)
     unit.speedModifier = speedMod
 
     // Use unified movement system for natural movement
-    updateUnitPosition(unit, mapGrid, occupancyMap, now, units)
+    updateUnitPosition(unit, mapGrid, occupancyMap, now, units, gameState, factories)
 
     // Update last moved time
     if (unit.x !== prevX || unit.y !== prevY) {

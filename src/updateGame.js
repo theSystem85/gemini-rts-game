@@ -47,7 +47,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateMapScrolling(gameState, mapGrid)
 
     // Unit system updates
-    updateUnitMovement(units, mapGrid, occupancyMap, gameState, now)
+    updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories)
     updateSpawnExit(units, factories, mapGrid, occupancyMap)
     updateUnitCombat(units, bullets, mapGrid, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
