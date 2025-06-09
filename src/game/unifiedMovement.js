@@ -149,10 +149,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE));
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE));
   
-  // Handle stuck unit detection and recovery for harvesters
-  if (unit.type === 'harvester') {
-    handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState, factories);
-  }
+  // Handle stuck unit detection and recovery for all units (as requested)
+  handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState, factories);
 }
 
 /**
@@ -342,27 +340,30 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   
   // Initialize stuck detection if not present
   if (!unit.movement.stuckDetection) {
+    // Add random offset (0-2000ms) to distribute stuck checks across time and prevent performance spikes
+    const randomOffset = Math.random() * 2000;
     unit.movement.stuckDetection = {
       lastPosition: { x: unit.x, y: unit.y },
       stuckTime: 0,
-      lastMovementCheck: performance.now(),
+      lastMovementCheck: performance.now() - randomOffset, // Start with random offset
       rotationAttempts: 0,
       isRotating: false,
       dodgeAttempts: 0,
       lastDodgeTime: 0,
-      lastStuckHandling: 0 // Add cooldown for stuck handling
+      lastStuckHandling: 0, // Add cooldown for stuck handling
+      checkInterval: 2000 + randomOffset // Each unit gets its own check interval with offset
     };
   }
   
   const now = performance.now();
   const stuck = unit.movement.stuckDetection;
   
-  // Enhanced stuck detection for harvesters - check every 2 seconds as requested
-  const checkInterval = unit.type === 'harvester' ? 2000 : 2000; // Check harvesters every 2 seconds
-  const stuckThreshold = unit.type === 'harvester' ? 2000 : 3000; // Consider harvesters stuck after 2 seconds
+  // Enhanced stuck detection for all units - each unit has its own randomized check interval
+  const stuckThreshold = 2000; // Consider units stuck after 2 seconds
+  const unitCheckInterval = stuck.checkInterval || 2000; // Use unit's individual interval or fallback
   
   // Check if unit has moved significantly
-  if (now - stuck.lastMovementCheck > checkInterval) {
+  if (now - stuck.lastMovementCheck > unitCheckInterval) {
     const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y);
     
     // Special handling for harvesters - don't consider them stuck if they're performing valid actions
@@ -387,7 +388,15 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
           
           stuck.lastStuckHandling = now; // Set cooldown
           
-          // Enhanced recovery strategies for harvesters
+          // Try the new random movement pattern first (90 degrees left/right + 1-2 tiles forward)
+          if (tryRandomStuckMovement(unit, mapGrid, occupancyMap, units)) {
+            stuck.stuckTime = 0;
+            stuck.rotationAttempts = 0;
+            stuck.dodgeAttempts = 0;
+            return;
+          }
+          
+          // Enhanced recovery strategies for harvesters as fallback
           if (gameState && factories) {
             handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories)
             stuck.stuckTime = 0 // Reset stuck time after handling
@@ -443,29 +452,39 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
         stuck.isRotating = false;
       }
     } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
-      // Non-harvester unit logic - original behavior
-      // Unit hasn't moved much but has a path - likely stuck
+      // All other unit types (tanks, etc.) - new unified stuck detection logic
       stuck.stuckTime += now - stuck.lastMovementCheck;
       
-      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating) {
-        // Original logic for non-harvester units
-        stuck.isRotating = true;
-        stuck.rotationAttempts++;
+      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
+        console.log(`${unit.type} unit ${unit.id} detected as stuck after ${stuck.stuckTime}ms`);
         
-        if (stuck.rotationAttempts <= 3) {
-          rotateUnitInPlace(unit);
-        } else if (stuck.rotationAttempts <= 6) {
-          if (unit.path.length > 0) {
-            const target = unit.path[0];
-            const targetX = target.x * TILE_SIZE;
-            const targetY = target.y * TILE_SIZE;
-            const targetDirection = Math.atan2(targetY - unit.y, targetX - unit.x);
-            rotateUnitInPlace(unit, targetDirection);
+        stuck.lastStuckHandling = now; // Set cooldown
+        
+        // Try the new random movement pattern first (90 degrees left/right + 1-2 tiles forward)
+        if (tryRandomStuckMovement(unit, mapGrid, occupancyMap, units)) {
+          stuck.stuckTime = 0;
+          stuck.rotationAttempts = 0;
+          stuck.dodgeAttempts = 0;
+          return;
+        }
+        
+        // Fallback to rotation if random movement fails
+        if (stuck.rotationAttempts < 3) {
+          stuck.isRotating = true;
+          stuck.rotationAttempts++;
+          
+          const freeDirection = findFreeDirection(unit, mapGrid, occupancyMap, units);
+          if (freeDirection !== null) {
+            rotateUnitInPlace(unit, freeDirection);
+          } else {
+            rotateUnitInPlace(unit);
           }
         } else {
+          // Last resort: clear path and force new pathfinding
           unit.path = [];
           stuck.stuckTime = 0;
           stuck.rotationAttempts = 0;
+          stuck.dodgeAttempts = 0;
           stuck.isRotating = false;
         }
       }
@@ -492,6 +511,56 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       stuck.stuckTime = 0;
     }
   }
+}
+
+/**
+ * Try random 90-degree movement as requested
+ * Moves unit 90 degrees left or right, then 1-2 tiles forward
+ */
+function tryRandomStuckMovement(unit, mapGrid, occupancyMap, units) {
+  const currentTileX = Math.floor(unit.x / TILE_SIZE);
+  const currentTileY = Math.floor(unit.y / TILE_SIZE);
+  
+  // Get current unit rotation or path direction
+  let currentDirection = unit.movement?.rotation || 0;
+  if (unit.path && unit.path.length > 0) {
+    const nextTile = unit.path[0];
+    const dx = nextTile.x * TILE_SIZE - unit.x;
+    const dy = nextTile.y * TILE_SIZE - unit.y;
+    currentDirection = Math.atan2(dy, dx);
+  }
+  
+  // Randomly choose left or right 90-degree turn
+  const turnDirection = Math.random() < 0.5 ? -Math.PI/2 : Math.PI/2; // -90 or +90 degrees
+  const newDirection = currentDirection + turnDirection;
+  
+  // Randomly choose 1 or 2 tiles forward
+  const forwardDistance = Math.random() < 0.5 ? 1 : 2;
+  
+  // Calculate target position
+  const targetX = Math.round(currentTileX + Math.cos(newDirection) * forwardDistance);
+  const targetY = Math.round(currentTileY + Math.sin(newDirection) * forwardDistance);
+  
+  // Validate target position
+  if (isValidDodgePosition(targetX, targetY, mapGrid, units)) {
+    // Store original path and target for restoration
+    if (!unit.originalPath && unit.path) {
+      unit.originalPath = [...unit.path];
+      unit.originalTarget = unit.target;
+    }
+    
+    // Set stuck recovery state
+    unit.isDodging = true;
+    unit.dodgeEndTime = performance.now() + 3000; // 3 second timeout
+    
+    // Create simple path to target position
+    unit.path = [{ x: targetX, y: targetY }];
+    
+    console.log(`Unit ${unit.id} (${unit.type}) stuck - moving randomly ${turnDirection > 0 ? 'right' : 'left'} 90° then ${forwardDistance} tiles forward`);
+    return true;
+  }
+  
+  return false;
 }
 
 /**
