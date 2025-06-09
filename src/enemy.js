@@ -97,20 +97,18 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       }
     }
 
-    // Attempt to place the building
+    // Attempt to start building construction (don't place immediately)
     if (buildingType && enemyFactory.budget >= cost) {
       const position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories)
       if (position) {
-        const newBuilding = createBuilding(buildingType, position.x, position.y)
-        newBuilding.owner = 'enemy'
-        gameState.buildings.push(newBuilding)
-        placeBuilding(newBuilding, mapGrid)
+        // Start construction process instead of placing immediately
         enemyFactory.budget -= cost
         enemyFactory.currentlyBuilding = buildingType
         enemyFactory.buildStartTime = now
         enemyFactory.buildDuration = 5000
+        enemyFactory.buildingPosition = position // Store position for completion
         gameState.enemyLastBuildingTime = now
-        console.log(`Enemy started building ${buildingType} at (${position.x}, ${position.y})`)
+        console.log(`Enemy started constructing ${buildingType} at (${position.x}, ${position.y})`)
       } else {
         gameState.enemyLastBuildingTime = now
         console.log(`Enemy couldn't find valid position for ${buildingType}`)
@@ -118,9 +116,29 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     }
   }
 
-  // Clear building indicator after build duration
+  // Complete building construction when timer finishes
   if (enemyFactory && enemyFactory.currentlyBuilding && now - enemyFactory.buildStartTime > enemyFactory.buildDuration) {
+    const buildingType = enemyFactory.currentlyBuilding
+    const position = enemyFactory.buildingPosition
+    
+    if (position) {
+      // Double-check position is still valid before placing
+      if (canPlaceBuilding(buildingType, position.x, position.y, mapGrid, units, gameState.buildings, factories, 'enemy')) {
+        const newBuilding = createBuilding(buildingType, position.x, position.y)
+        newBuilding.owner = 'enemy'
+        gameState.buildings.push(newBuilding)
+        placeBuilding(newBuilding, mapGrid)
+        console.log(`Enemy completed building ${buildingType} at (${position.x}, ${position.y})`)
+      } else {
+        // Position became invalid, refund the cost
+        enemyFactory.budget += buildingData[buildingType]?.cost || 0
+        console.log(`Enemy building placement failed - position became invalid for ${buildingType} at (${position.x}, ${position.y})`)
+      }
+    }
+    
+    // Clear construction state
     enemyFactory.currentlyBuilding = null
+    enemyFactory.buildingPosition = null
   }
 
   // --- Enemy Unit Production ---
@@ -211,7 +229,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           }
         }
         
-        const newEnemy = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState)
+        const newEnemy = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now)
         if (newEnemy) {
           units.push(newEnemy)
           // Deduct the cost from enemy budget just like player money is deducted
@@ -495,7 +513,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 
 // Spawns an enemy unit at the specified building (factory or vehicle factory)
 // NOTE: Enemy units now use identical stats to player units for perfect balance
-export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState) {
+export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState, productionStartTime) {
   // Use the same spawn position logic as player units
   const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
   const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
@@ -534,7 +552,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     spawnTime: Date.now(),
     spawnedInFactory: true,
     holdInFactory: true, // Flag to hold unit in factory until loading indicator completes
-    factoryBuildEndTime: spawnBuilding.buildStartTime + spawnBuilding.buildDuration, // Store when the building's build timer ends
+    factoryBuildEndTime: productionStartTime + 5000, // Use unit production duration (5 seconds) instead of building construction
     lastPathCalcTime: 0,
     lastPositionCheckTime: 0,
     lastTargetChangeTime: 0,
