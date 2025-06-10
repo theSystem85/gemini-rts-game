@@ -518,7 +518,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
 
         // Visual feedback for rally point setting
-        playSound('movement')
+        playSound('movement', 0.5)
       }
     } else if (e.button === 0 && isSelecting) {
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
@@ -615,7 +615,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                 unit.path = path.slice(1);
                 unit.target = forceAttackTarget;
                 unit.forcedAttack = true; // Mark this as a forced attack
-                playSound('movement');
+                playSound('movement', 0.5);
               } else {
                 // If already at position, just set the target
                 unit.path = [];
@@ -780,7 +780,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                   unit.target = null // Clear any combat target
                   unit.moveTarget = oreTarget
                   unit.forcedAttack = false
-                  playSound('movement')
+                  playSound('movement', 0.5)
                   console.log(`Harvester ${unit.id || 'unknown'} manually targeted ore at ${oreTarget.x},${oreTarget.y}`)
                 }
               } else if (target) {
@@ -818,7 +818,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                   unit.path = path.slice(1);
                   unit.target = target;
                   unit.forcedAttack = false; // Not a forced attack
-                  playSound('movement');
+                  playSound('movement', 0.5);
                 } else {
                   unit.path = [];
                   unit.target = target;
@@ -898,7 +898,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
                   unit.originalPath = null
                   // Clear force attack flag when issuing a move command
                   unit.forcedAttack = false
-                  playSound('movement')
+                  playSound('movement', 0.5)
 
                   // Debug to verify path is set
                   console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`)
