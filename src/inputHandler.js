@@ -30,6 +30,11 @@ let wasDragging = false
 let rightDragStart = { x: 0, y: 0 }
 let rightWasDragging = false
 
+// Add double-click detection variables
+let lastClickTime = 0
+let lastClickedUnit = null
+const doubleClickThreshold = 300 // milliseconds
+
 // Add control groups functionality
 const controlGroups = {}
 
@@ -291,6 +296,9 @@ function showControlsHelp() {
       <h2 style="margin-top:0;">Game Controls</h2>
       <ul>
         <li><strong>Left Click:</strong> Select unit or factory</li>
+        <li><strong>Double Click:</strong> Select all visible units of same type</li>
+        <li><strong>Shift + Click:</strong> Add/remove unit to/from selection</li>
+        <li><strong>Shift + Double Click:</strong> Add all visible units of same type to selection</li>
         <li><strong>Left Click + Drag:</strong> Select multiple units</li>
         <li><strong>Right Click:</strong> Move units / Attack enemy</li>
         <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
@@ -654,17 +662,34 @@ export function setupInputHandlers(units, factories, mapGrid) {
           }
 
           if (selectedFactory) {
-            // Clear existing selection
-            units.forEach(u => { if (u.owner === 'player') u.selected = false })
-            selectedUnits.length = 0
+            if (e.shiftKey) {
+              // Shift+click on factory: Add/remove factory to/from current selection
+              if (selectedFactory.selected) {
+                // Remove from selection
+                selectedFactory.selected = false
+                const index = selectedUnits.indexOf(selectedFactory)
+                if (index > -1) {
+                  selectedUnits.splice(index, 1)
+                }
+              } else {
+                // Add to selection
+                selectedFactory.selected = true
+                selectedUnits.push(selectedFactory)
+              }
+              playSound('unitSelection')
+            } else {
+              // Normal click: Clear existing selection and select factory
+              units.forEach(u => { if (u.owner === 'player') u.selected = false })
+              selectedUnits.length = 0
 
-            // Clear factory selections
-            factories.forEach(f => f.selected = false)
+              // Clear factory selections
+              factories.forEach(f => f.selected = false)
 
-            // Select factory
-            selectedFactory.selected = true
-            selectedUnits.push(selectedFactory)
-            playSound('unitSelection')
+              // Select factory
+              selectedFactory.selected = true
+              selectedUnits.push(selectedFactory)
+              playSound('unitSelection')
+            }
           } else {
             // Normal unit selection
             let clickedUnit = null
@@ -682,19 +707,85 @@ export function setupInputHandlers(units, factories, mapGrid) {
             }
 
             if (clickedUnit) {
-              units.forEach(u => { if (u.owner === 'player') u.selected = false })
-              factories.forEach(f => f.selected = false) // Clear factory selections too
-              selectedUnits.length = 0
-              clickedUnit.selected = true
-              selectedUnits.push(clickedUnit)
-              playSound('unitSelection')
-              playSound('yesSir01') // play sound on unit selection
+              const currentTime = performance.now()
+              const isDoubleClick = lastClickedUnit === clickedUnit && 
+                                  (currentTime - lastClickTime) < doubleClickThreshold
+
+              if (e.shiftKey && !isDoubleClick) {
+                // Shift+single click: Add/remove unit to/from current selection
+                if (clickedUnit.selected) {
+                  // Remove from selection
+                  clickedUnit.selected = false
+                  const index = selectedUnits.indexOf(clickedUnit)
+                  if (index > -1) {
+                    selectedUnits.splice(index, 1)
+                  }
+                } else {
+                  // Add to selection
+                  clickedUnit.selected = true
+                  selectedUnits.push(clickedUnit)
+                }
+                playSound('unitSelection')
+              } else if (e.shiftKey && isDoubleClick) {
+                // Shift+double click: Add all visible units of this type to selection
+                const gameCanvas = document.getElementById('gameCanvas')
+                const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+                const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+                
+                const visibleUnitsOfType = getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+                
+                visibleUnitsOfType.forEach(unit => {
+                  if (!unit.selected) {
+                    unit.selected = true
+                    selectedUnits.push(unit)
+                  }
+                })
+                
+                playSound('unitSelection')
+                playSound('yesSir01')
+                showNotification(`Added ${visibleUnitsOfType.length} ${clickedUnit.type}(s) to selection`)
+              } else if (isDoubleClick) {
+                // Double click: Select all visible units of this type
+                const gameCanvas = document.getElementById('gameCanvas')
+                const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+                const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+                
+                // Clear current selection
+                units.forEach(u => { if (u.owner === 'player') u.selected = false })
+                factories.forEach(f => f.selected = false)
+                selectedUnits.length = 0
+                
+                // Select all visible units of this type
+                const visibleUnitsOfType = getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+                
+                visibleUnitsOfType.forEach(unit => {
+                  unit.selected = true
+                  selectedUnits.push(unit)
+                })
+                
+                playSound('unitSelection')
+                playSound('yesSir01')
+                showNotification(`Selected ${visibleUnitsOfType.length} ${clickedUnit.type}(s)`)
+              } else {
+                // Normal single click: Select only this unit
+                units.forEach(u => { if (u.owner === 'player') u.selected = false })
+                factories.forEach(f => f.selected = false) // Clear factory selections too
+                selectedUnits.length = 0
+                clickedUnit.selected = true
+                selectedUnits.push(clickedUnit)
+                playSound('unitSelection')
+                playSound('yesSir01') // play sound on unit selection
+              }
+
+              // Update double-click tracking
+              lastClickTime = currentTime
+              lastClickedUnit = clickedUnit
             }
           }
         }
 
         // --- Standard Command Issuing (no Force Attack) ---
-        if (selectedUnits.length > 0 && !wasDragging) {
+        if (selectedUnits.length > 0 && !wasDragging && !e.shiftKey) {
           // Skip command issuing for factory selection
           if (selectedUnits[0].type !== 'factory') {
             let target = null
@@ -1391,4 +1482,24 @@ function calculateSemicircleFormation(units, target, safeAttackDistance) {
   }
   
   return positions;
+}
+
+// Function to get all visible units of the same type on screen
+function getVisibleUnitsOfType(unitType, units, scrollOffset, canvasWidth, canvasHeight) {
+  const visibleUnits = []
+  
+  for (const unit of units) {
+    if (unit.owner === 'player' && unit.type === unitType && unit.health > 0) {
+      // Check if unit is visible on screen
+      const unitScreenX = unit.x - scrollOffset.x
+      const unitScreenY = unit.y - scrollOffset.y
+      
+      if (unitScreenX >= -TILE_SIZE && unitScreenX <= canvasWidth + TILE_SIZE &&
+          unitScreenY >= -TILE_SIZE && unitScreenY <= canvasHeight + TILE_SIZE) {
+        visibleUnits.push(unit)
+      }
+    }
+  }
+  
+  return visibleUnits
 }

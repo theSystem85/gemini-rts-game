@@ -241,6 +241,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] **Refactor:** Rendering.js is too big and needs to be modularized.
 
 ## Features
+- [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] Show some progress when the harvester is unloading the ore at the refinery by gradually adding the money to the balance of the player (or AI) and show how the load indicator at the harvesters goes to zero.
