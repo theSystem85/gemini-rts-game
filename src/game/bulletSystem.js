@@ -94,6 +94,17 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             unit.health -= actualDamage
           }
 
+          // Track when units are being attacked for AI response
+          if (bullet.shooter && bullet.shooter.owner !== unit.owner) {
+            unit.lastDamageTime = now
+            unit.lastAttacker = bullet.shooter
+            // Mark as being attacked if it's an enemy unit
+            if (unit.owner === 'enemy') {
+              unit.isBeingAttacked = true
+              console.log(`Enemy unit ${unit.id} is being attacked by ${bullet.shooter.id || bullet.shooter.type}`)
+            }
+          }
+
           // Play hit sound
           playSound('hit', 0.5)
 

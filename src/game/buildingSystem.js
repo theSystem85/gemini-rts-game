@@ -121,6 +121,17 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
                   
                   // Apply damage to the target
                   closestEnemy.health -= building.damage
+                  
+                  // Track when units are being attacked for AI response
+                  if (building.owner !== closestEnemy.owner) {
+                    closestEnemy.lastDamageTime = now
+                    closestEnemy.lastAttacker = building
+                    // Mark as being attacked if it's an enemy unit
+                    if (closestEnemy.owner === 'enemy') {
+                      closestEnemy.isBeingAttacked = true
+                      console.log(`Enemy unit ${closestEnemy.id} is being attacked by Tesla coil ${building.type}`)
+                    }
+                  }
                 }
               }, 200) // Small delay after bolt sound starts
             }, 400) // Delay for loading sound to finish

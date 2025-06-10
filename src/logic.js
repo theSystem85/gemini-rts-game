@@ -35,6 +35,17 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       const falloff = 1 - (distance / explosionRadius)
       const damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
       unit.health -= damage
+      
+      // Track when units are being attacked for AI response
+      if (shooter && shooter.owner !== unit.owner) {
+        unit.lastDamageTime = now
+        unit.lastAttacker = shooter
+        // Mark as being attacked if it's an enemy unit
+        if (unit.owner === 'enemy') {
+          unit.isBeingAttacked = true
+          console.log(`Enemy unit ${unit.id} is being attacked by explosion from ${shooter.id || shooter.type}`)
+        }
+      }
     }
   })
 

@@ -6,7 +6,7 @@ import { findClosestOre } from './logic.js'
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
-import { applyEnemyStrategies, shouldConductGroupAttack, resetAttackDirections } from './ai/enemyStrategies.js'
+import { applyEnemyStrategies, shouldConductGroupAttack, resetAttackDirections, shouldRetreatLowHealth } from './ai/enemyStrategies.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
@@ -258,6 +258,20 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   units.forEach(unit => {
     if (unit.owner !== 'enemy') return
 
+    // Reset being attacked flag if enough time has passed since last damage
+    if (unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime > 5000)) {
+      unit.isBeingAttacked = false
+      unit.lastAttacker = null
+    }
+
+    // Clear invalid attacker references
+    if (unit.lastAttacker && (unit.lastAttacker.health <= 0 || unit.lastAttacker.destroyed)) {
+      unit.lastAttacker = null
+      if (!unit.lastDamageTime || (now - unit.lastDamageTime > 3000)) {
+        unit.isBeingAttacked = false
+      }
+    }
+
     // Apply new AI strategies first
     applyEnemyStrategies(unit, units, gameState, mapGrid, now)
     
@@ -271,23 +285,67 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       if (canChangeTarget) {
         let newTarget = null
 
-        // First priority: Defend harvesters under attack
-        const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
-        let harvesterUnderAttack = null
-        for (const harvester of enemyHarvesters) {
-          const threateningPlayers = units.filter(u =>
-            u.owner === 'player' &&
-            Math.hypot(u.x - harvester.x, u.y - harvester.y) < 5 * TILE_SIZE
-          )
-          if (threateningPlayers.length > 0) {
-            harvesterUnderAttack = threateningPlayers[0] // Target closest threat to harvester
-            break
+        // Check if unit should retreat due to low health (flee to base mode)
+        const shouldFlee = shouldRetreatLowHealth(unit)
+        
+        // Highest priority: Retaliate against attacker when being attacked (unless fleeing)
+        if (!shouldFlee && unit.isBeingAttacked && unit.lastAttacker && 
+            unit.lastAttacker.health > 0 && unit.lastAttacker.owner === 'player') {
+          
+          let validTarget = false
+          let attackerDist = Infinity
+          
+          // Handle unit attackers
+          if (unit.lastAttacker.tileX !== undefined) {
+            attackerDist = Math.hypot(
+              (unit.lastAttacker.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), 
+              (unit.lastAttacker.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+            )
+            if (attackerDist < 15 * TILE_SIZE) { // Within reasonable retaliation range
+              validTarget = true
+            }
+          }
+          // Handle building attackers (like Tesla coils, turrets)
+          else if (unit.lastAttacker.x !== undefined && unit.lastAttacker.y !== undefined) {
+            const buildingCenterX = (unit.lastAttacker.x + (unit.lastAttacker.width || 1) / 2) * TILE_SIZE
+            const buildingCenterY = (unit.lastAttacker.y + (unit.lastAttacker.height || 1) / 2) * TILE_SIZE
+            attackerDist = Math.hypot(
+              buildingCenterX - (unit.x + TILE_SIZE / 2), 
+              buildingCenterY - (unit.y + TILE_SIZE / 2)
+            )
+            if (attackerDist < 20 * TILE_SIZE) { // Longer range for buildings
+              validTarget = true
+            }
+          }
+          
+          if (validTarget) {
+            newTarget = unit.lastAttacker
+            console.log(`Enemy unit ${unit.id} retaliating against attacker ${unit.lastAttacker.id || unit.lastAttacker.type}`)
           }
         }
 
-        if (harvesterUnderAttack) {
-          newTarget = harvesterUnderAttack
-        } else {
+        // Second priority: Defend harvesters under attack (if not retaliating)
+        if (!newTarget) {
+          const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+          let harvesterUnderAttack = null
+          for (const harvester of enemyHarvesters) {
+            const threateningPlayers = units.filter(u =>
+              u.owner === 'player' &&
+              Math.hypot(u.x - harvester.x, u.y - harvester.y) < 5 * TILE_SIZE
+            )
+            if (threateningPlayers.length > 0) {
+              harvesterUnderAttack = threateningPlayers[0] // Target closest threat to harvester
+              break
+            }
+          }
+
+          if (harvesterUnderAttack) {
+            newTarget = harvesterUnderAttack
+          }
+        }
+
+        // Third priority: Group attack strategy (if not retaliating or defending harvesters)
+        if (!newTarget) {
           // Check if we should conduct group attack before selecting targets
           const nearbyAllies = units.filter(u => u.owner === 'enemy' && u !== unit &&
             (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'rocketTank') &&
