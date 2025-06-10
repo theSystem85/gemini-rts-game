@@ -72,7 +72,6 @@ export function preloadBuildingImages(callback) {
   }
 
   buildingImagesLoading = true
-  console.log('Preloading building images...')
 
   // Count total images to preload
   const totalImages = Object.keys(buildingImageMap).length
@@ -82,10 +81,8 @@ export function preloadBuildingImages(callback) {
   for (const buildingType of Object.keys(buildingImageMap)) {
     getBuildingImage(buildingType, (_img) => {
       loadedImages++
-      console.log(`Preloaded building image: ${buildingType} (${loadedImages}/${totalImages})`)
-
+      
       if (loadedImages === totalImages) {
-        console.log('All building images preloaded successfully!')
         buildingImagesPreloaded = true
         buildingImagesLoading = false
         if (callback) callback()

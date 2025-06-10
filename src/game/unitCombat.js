@@ -110,8 +110,12 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
+    console.log(`handleTankFiring called for unit ${unit.id}, canFire: ${unit.canFire}, lastShotTime: ${unit.lastShotTime}, now: ${now}`)
+    
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
+        console.log(`Fire cooldown check passed for unit ${unit.id}`)
         if (unit.canFire !== false && hasClearShot(unit, target, units)) {
+            console.log(`Unit ${unit.id} has clear shot, creating bullet`)
             // Calculate aim position (with predictive aiming if enabled)
             let aimX = targetCenterX;
             let aimY = targetCenterY;
@@ -228,10 +232,18 @@ function handleTeslaEffects(unit, now) {
  */
 export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
   const occupancyMap = buildOccupancyMap(units, mapGrid)
+  
+  let combatUnitsCount = 0
+  let unitsWithTargets = 0
 
   units.forEach(unit => {
     // Skip if unit has no combat capabilities
     if (unit.type === 'harvester') return
+
+    combatUnitsCount++
+    if (unit.target) {
+      unitsWithTargets++
+    }
 
     // Handle status effects
     handleTeslaEffects(unit, now);
@@ -247,6 +259,10 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
+  
+  if (combatUnitsCount > 0 && unitsWithTargets > 0) {
+    console.log(`Combat update: ${combatUnitsCount} combat units, ${unitsWithTargets} with targets`)
+  }
 }
 
 /**
@@ -261,8 +277,10 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range and allowed to attack (for enemy AI strategy)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
+    // Fire if in range and allowed to attack
+    // Player units can always attack, enemy units need AI permission
+    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
@@ -280,8 +298,10 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range and allowed to attack (for enemy AI strategy)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
+    // Fire if in range and allowed to attack
+    // Player units can always attack, enemy units need AI permission
+    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
@@ -299,8 +319,10 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire if in range and allowed to attack (for enemy AI strategy)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
+    // Fire if in range and allowed to attack
+    // Player units can always attack, enemy units need AI permission
+    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(
         unit, 
         unit.target, 
@@ -330,9 +352,10 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     );
     
-    // Fire rockets if in range and allowed to attack (for enemy AI strategy)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET && 
-        (unit.owner !== 'enemy' || unit.allowedToAttack !== false)) {
+    // Fire rockets if in range and allowed to attack
+    // Player units can always attack, enemy units need AI permission
+    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET && canAttack) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed

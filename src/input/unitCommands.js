@@ -1,0 +1,227 @@
+// unitCommands.js
+import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
+import { findPath } from '../units.js'
+import { playSound } from '../sound.js'
+
+export class UnitCommandsHandler {
+  handleMovementCommand(units, targetX, targetY, mapGrid, selectedUnits) {
+    const count = selectedUnits.length
+    const cols = Math.ceil(Math.sqrt(count))
+
+    selectedUnits.forEach((unit, index) => {
+      let formationOffset = { x: 0, y: 0 }
+
+      const colsCount = Math.ceil(Math.sqrt(count))
+      const col = index % colsCount
+      const row = Math.floor(index / colsCount)
+
+      // Apply formation offsets based on whether formation mode is active
+      if (unit.formationActive && unit.formationOffset) {
+        // Use stored formation offsets for this unit
+        formationOffset = {
+          x: unit.formationOffset.x,
+          y: unit.formationOffset.y
+        }
+      } else {
+        // Default grid formation if formation mode is not active
+        const formationSpacing = TILE_SIZE * 1.2 // 1.2 tiles spacing to prevent overlap
+        formationOffset = {
+          x: col * formationSpacing - ((colsCount - 1) * formationSpacing) / 2,
+          y: row * formationSpacing - ((colsCount - 1) * formationSpacing) / 2
+        }
+      }
+
+      const destX = Math.floor(targetX) + formationOffset.x
+      const destY = Math.floor(targetY) + formationOffset.y
+      const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
+
+      // Check if this tile is already targeted by previously processed units
+      const alreadyTargeted = selectedUnits.slice(0, index).some(u =>
+        u.moveTarget && u.moveTarget.x === originalDestTile.x && u.moveTarget.y === originalDestTile.y
+      )
+
+      // If already targeted, find an adjacent free tile instead
+      let destTile = originalDestTile
+      if (alreadyTargeted) {
+        const directions = [
+          { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 },
+          { dx: 1, dy: -1 }, { dx: 1, dy: 1 }, { dx: -1, dy: 1 }, { dx: -1, dy: -1 }
+        ]
+
+        for (const dir of directions) {
+          const newTile = {
+            x: originalDestTile.x + dir.dx,
+            y: originalDestTile.y + dir.dy
+          }
+
+          // Check if this new tile is valid and not targeted
+          if (newTile.x >= 0 && newTile.y >= 0 &&
+              newTile.x < mapGrid[0].length && newTile.y < mapGrid.length &&
+              mapGrid[newTile.y][newTile.x].type !== 'water' &&
+              mapGrid[newTile.y][newTile.x].type !== 'rock' &&
+              !mapGrid[newTile.y][newTile.x].building &&
+              !selectedUnits.slice(0, index).some(u =>
+                u.moveTarget && u.moveTarget.x === newTile.x && u.moveTarget.y === newTile.y
+              )) {
+            destTile = newTile
+            break
+          }
+        }
+      }
+
+      // Fixed: correctly pass unit.tileX and unit.tileY as source coordinates
+      const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
+
+      if (path && path.length > 0) {
+        unit.path = path.length > 1 ? path.slice(1) : path
+        // Clear any existing target when issuing a move command
+        unit.target = null
+        unit.moveTarget = destTile // Store the final destination
+        // Clear any previous target when moving
+        unit.originalTarget = null
+        unit.originalPath = null
+        // Clear force attack flag when issuing a move command
+        unit.forcedAttack = false
+        playSound('movement', 0.5)
+
+        // Debug to verify path is set
+        console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`)
+      }
+    })
+  }
+
+  handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false) {
+    console.log('handleAttackCommand called with target:', target, 'isForceAttack:', isForceAttack)
+    console.log('Target type:', target.type, 'Target owner:', target.owner, 'selectedUnits:', selectedUnits.length)
+    
+    // Semicircle formation logic for attack
+    const count = selectedUnits.length
+    
+    // Calculate safe attack distance with explosion buffer
+    const explosionSafetyBuffer = TILE_SIZE * 0.5
+    const safeAttackDistance = Math.max(
+      TANK_FIRE_RANGE * TILE_SIZE,
+      TILE_SIZE * 2 + explosionSafetyBuffer
+    ) - TILE_SIZE
+
+    // Get semicircle formation positions
+    const formationPositions = this.calculateSemicircleFormation(selectedUnits, target, safeAttackDistance)
+
+    selectedUnits.forEach((unit, index) => {
+      const position = formationPositions[index]
+      
+      // Ensure position is within safe distance
+      const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
+      const targetCenter = this.getTargetPoint(target, unitCenter)
+      const finalDx = targetCenter.x - position.x
+      const finalDy = targetCenter.y - position.y
+      const finalDist = Math.hypot(finalDx, finalDy)
+
+      let destX = position.x
+      let destY = position.y
+
+      if (finalDist < safeAttackDistance) {
+        const scale = safeAttackDistance / finalDist
+        destX = targetCenter.x - finalDx * scale
+        destY = targetCenter.y - finalDy * scale
+      }
+
+      const desiredTile = {
+        x: Math.floor(destX / TILE_SIZE),
+        y: Math.floor(destY / TILE_SIZE)
+      }
+
+      // Find path to the target position
+      const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
+
+      if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
+        unit.path = path.slice(1)
+        unit.target = target
+        unit.forcedAttack = isForceAttack
+        console.log(`Unit ${unit.id} assigned target:`, target, 'forcedAttack:', isForceAttack)
+        playSound('movement', 0.5)
+      } else {
+        // If already at position, just set the target
+        unit.path = []
+        unit.target = target
+        unit.forcedAttack = isForceAttack
+        console.log(`Unit ${unit.id} already at position, assigned target:`, target, 'forcedAttack:', isForceAttack)
+      }
+    })
+
+    // Play sound for feedback
+    playSound('unitSelection')
+  }
+
+  handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {
+    selectedUnits.forEach(unit => {
+      if (unit.type === 'harvester') {
+        const path = findPath({ x: unit.tileX, y: unit.tileY }, oreTarget, mapGrid, null)
+        
+        if (path && path.length > 0) {
+          unit.path = path.length > 1 ? path.slice(1) : path
+          // Set the harvester's manual ore target
+          unit.manualOreTarget = oreTarget
+          unit.oreField = null // Clear any automatic ore field assignment
+          unit.target = null // Clear any combat target
+          unit.moveTarget = oreTarget
+          unit.forcedAttack = false
+          playSound('movement', 0.5)
+          console.log(`Harvester ${unit.id || 'unknown'} manually targeted ore at ${oreTarget.x},${oreTarget.y}`)
+        }
+      }
+    })
+  }
+
+  /**
+   * Calculate semicircle attack formation positions around a target
+   */
+  calculateSemicircleFormation(units, target, safeAttackDistance) {
+    const positions = []
+    const unitCount = units.length
+    
+    // Get target center point
+    const targetCenter = this.getTargetPoint(target, { x: 0, y: 0 })
+    
+    if (unitCount === 1) {
+      // Single unit - position directly in front
+      const angle = 0 // Face the target directly
+      const x = targetCenter.x - Math.cos(angle) * safeAttackDistance
+      const y = targetCenter.y - Math.sin(angle) * safeAttackDistance
+      positions.push({ x, y })
+    } else {
+      // Multiple units - arrange in semicircle
+      const arcSpan = Math.PI // 180 degrees
+      const angleStep = arcSpan / Math.max(1, unitCount - 1)
+      const startAngle = -arcSpan / 2 // Start from left side
+      
+      for (let i = 0; i < unitCount; i++) {
+        const angle = startAngle + (i * angleStep)
+        const x = targetCenter.x - Math.cos(angle) * safeAttackDistance
+        const y = targetCenter.y - Math.sin(angle) * safeAttackDistance
+        positions.push({ x, y })
+      }
+    }
+    
+    return positions
+  }
+
+  // Helper: For a given target and unit center, return the appropriate aiming point.
+  // For factories, this returns the closest point on the factory rectangle.
+  getTargetPoint(target, unitCenter) {
+    if (target.tileX !== undefined) {
+      return { x: target.x + TILE_SIZE / 2, y: target.y + TILE_SIZE / 2 }
+    } else {
+      const rect = {
+        x: target.x * TILE_SIZE,
+        y: target.y * TILE_SIZE,
+        width: target.width * TILE_SIZE,
+        height: target.height * TILE_SIZE
+      }
+      return {
+        x: Math.max(rect.x, Math.min(unitCenter.x, rect.x + rect.width)),
+        y: Math.max(rect.y, Math.min(unitCenter.y, rect.y + rect.height))
+      }
+    }
+  }
+}

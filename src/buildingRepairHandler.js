@@ -65,8 +65,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
       })
 
       // Log for debugging
-      console.log(`Starting repair of factory with duration ${repairDuration}ms`)
-
+      
       showNotification(`Factory repair started for $${repairCost}`)
       playSound('construction_started')
 
@@ -171,7 +170,6 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         // Save player building patterns
         savePlayerBuildPatterns(buildingType)
       } else {
-        console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`)
         // Play error sound for invalid placement
         playSound('error')
       }

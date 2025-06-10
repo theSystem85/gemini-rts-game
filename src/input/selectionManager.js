@@ -1,0 +1,239 @@
+// selectionManager.js
+import { TILE_SIZE } from '../config.js'
+import { gameState } from '../gameState.js'
+import { playSound } from '../sound.js'
+import { showNotification } from '../ui/notifications.js'
+
+export class SelectionManager {
+  constructor() {
+    this.lastClickTime = 0
+    this.lastClickedUnit = null
+    this.doubleClickThreshold = 300 // milliseconds
+  }
+
+  handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
+    const currentTime = performance.now()
+    const isDoubleClick = this.lastClickedUnit === clickedUnit && 
+                          (currentTime - this.lastClickTime) < this.doubleClickThreshold
+
+    if (e.shiftKey && !isDoubleClick) {
+      // Shift+single click: Add/remove unit to/from current selection
+      if (clickedUnit.selected) {
+        // Remove from selection
+        clickedUnit.selected = false
+        const index = selectedUnits.indexOf(clickedUnit)
+        if (index > -1) {
+          selectedUnits.splice(index, 1)
+        }
+      } else {
+        // Add to selection
+        clickedUnit.selected = true
+        selectedUnits.push(clickedUnit)
+      }
+      playSound('unitSelection')
+    } else if (e.shiftKey && isDoubleClick) {
+      // Shift+double click: Add all visible units of this type to selection
+      const gameCanvas = document.getElementById('gameCanvas')
+      const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+      const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      
+      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+      
+      visibleUnitsOfType.forEach(unit => {
+        if (!unit.selected) {
+          unit.selected = true
+          selectedUnits.push(unit)
+        }
+      })
+      
+      playSound('unitSelection')
+      playSound('yesSir01')
+      showNotification(`Added ${visibleUnitsOfType.length} ${clickedUnit.type}(s) to selection`)
+    } else if (isDoubleClick) {
+      // Double click: Select all visible units of this type
+      const gameCanvas = document.getElementById('gameCanvas')
+      const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+      const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      
+      // Clear current selection
+      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      factories.forEach(f => f.selected = false)
+      selectedUnits.length = 0
+      
+      // Select all visible units of this type
+      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+      
+      visibleUnitsOfType.forEach(unit => {
+        unit.selected = true
+        selectedUnits.push(unit)
+      })
+      
+      playSound('unitSelection')
+      playSound('yesSir01')
+      showNotification(`Selected ${visibleUnitsOfType.length} ${clickedUnit.type}(s)`)
+    } else {
+      // Normal single click: Select only this unit
+      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      factories.forEach(f => f.selected = false) // Clear factory selections too
+      selectedUnits.length = 0
+      clickedUnit.selected = true
+      selectedUnits.push(clickedUnit)
+      playSound('unitSelection')
+      playSound('yesSir01') // play sound on unit selection
+    }
+
+    // Update double-click tracking
+    this.lastClickTime = currentTime
+    this.lastClickedUnit = clickedUnit
+  }
+
+  handleFactorySelection(selectedFactory, e, units, selectedUnits) {
+    if (e.shiftKey) {
+      // Shift+click on factory: Add/remove factory to/from current selection
+      if (selectedFactory.selected) {
+        // Remove from selection
+        selectedFactory.selected = false
+        const index = selectedUnits.indexOf(selectedFactory)
+        if (index > -1) {
+          selectedUnits.splice(index, 1)
+        }
+      } else {
+        // Add to selection
+        selectedFactory.selected = true
+        selectedUnits.push(selectedFactory)
+      }
+      playSound('unitSelection')
+    } else {
+      // Normal click: Clear existing selection and select factory
+      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      selectedUnits.length = 0
+
+      // Clear factory selections
+      const factories = gameState.factories || []
+      factories.forEach(f => f.selected = false)
+
+      // Select factory
+      selectedFactory.selected = true
+      selectedUnits.push(selectedFactory)
+      playSound('unitSelection')
+    }
+  }
+
+  handleBoundingBoxSelection(units, factories, selectedUnits, selectionStart, selectionEnd) {
+    try {
+      const x1 = Math.min(selectionStart.x, selectionEnd.x)
+      const y1 = Math.min(selectionStart.y, selectionEnd.y)
+      const x2 = Math.max(selectionStart.x, selectionEnd.x)
+      const y2 = Math.max(selectionStart.y, selectionEnd.y)
+
+      // Clear current selection first
+      selectedUnits.length = 0
+
+      // Clear any factory selections
+      if (factories) {
+        factories.forEach(factory => {
+          factory.selected = false
+        })
+      }
+
+      // Find units within selection rectangle
+      for (const unit of units) {
+        if (unit.owner === 'player' && unit.health > 0) {  // Ensure unit is alive
+          const centerX = unit.x + TILE_SIZE / 2
+          const centerY = unit.y + TILE_SIZE / 2
+
+          if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
+            unit.selected = true
+            selectedUnits.push(unit)
+            playSound('unitSelection')
+          } else {
+            unit.selected = false
+          }
+        }
+      }
+
+      // Now check for player buildings in the selection rectangle
+      if (gameState.buildings && gameState.buildings.length > 0) {
+        for (const building of gameState.buildings) {
+          if (building.owner === 'player') {
+            const buildingX = building.x * TILE_SIZE
+            const buildingY = building.y * TILE_SIZE
+            const buildingWidth = building.width * TILE_SIZE
+            const buildingHeight = building.height * TILE_SIZE
+
+            // Check if any part of the building is within the selection rectangle
+            if (buildingX + buildingWidth > x1 && buildingX < x2 &&
+                buildingY + buildingHeight > y1 && buildingY < y2) {
+              building.selected = true
+              selectedUnits.push(building)
+              playSound('unitSelection')
+            } else {
+              building.selected = false
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleBoundingBoxSelection:', error)
+      // Reset selection state in case of error
+      selectedUnits.length = 0
+    }
+  }
+
+  // Function to get all visible units of the same type on screen
+  getVisibleUnitsOfType(unitType, units, scrollOffset, canvasWidth, canvasHeight) {
+    const visibleUnits = []
+    
+    for (const unit of units) {
+      if (unit.owner === 'player' && unit.type === unitType && unit.health > 0) {
+        // Check if unit is visible on screen
+        const unitScreenX = unit.x - scrollOffset.x
+        const unitScreenY = unit.y - scrollOffset.y
+        
+        if (unitScreenX >= -TILE_SIZE && unitScreenX <= canvasWidth + TILE_SIZE &&
+            unitScreenY >= -TILE_SIZE && unitScreenY <= canvasHeight + TILE_SIZE) {
+          visibleUnits.push(unit)
+        }
+      }
+    }
+    
+    return visibleUnits
+  }
+
+  selectAllOfType(unitType, units, selectedUnits) {
+    // Clear current selection
+    units.forEach(u => { if (u.owner === 'player') u.selected = false })
+    selectedUnits.length = 0
+    
+    // Select all units of this type
+    const unitsOfType = units.filter(unit => 
+      unit.owner === 'player' && unit.type === unitType && unit.health > 0
+    )
+    
+    unitsOfType.forEach(unit => {
+      unit.selected = true
+      selectedUnits.push(unit)
+    })
+    
+    return unitsOfType.length
+  }
+
+  // Safety function: Call this at the beginning of each frame update
+  // to remove any destroyed units from selection
+  cleanupDestroyedSelectedUnits(selectedUnits) {
+    try {
+      // Filter out any invalid or destroyed units
+      const validSelectedUnits = selectedUnits.filter(unit =>
+        unit && typeof unit === 'object' && unit.health > 0)
+
+      // If we found units to remove, update the array
+      if (validSelectedUnits.length !== selectedUnits.length) {
+        selectedUnits.length = 0
+        selectedUnits.push(...validSelectedUnits)
+      }
+    } catch (error) {
+      console.error('Error in cleanupDestroyedSelectedUnits:', error)
+      selectedUnits.length = 0 // Safety reset
+    }
+  }
+}

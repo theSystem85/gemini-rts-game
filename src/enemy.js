@@ -78,7 +78,6 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       if (enemyHarvesters.length >= maxHarvestersForRefineries && enemyFactory.budget >= buildingData.oreRefinery.cost) {
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
-        console.log(`Enemy building additional refinery: ${enemyHarvesters.length} harvesters / ${enemyRefineries.length} refineries`)
       } else if (turrets.length < 3) {
         // Build more turrets for defense
         if (enemyFactory.budget >= 4000) {
@@ -108,10 +107,8 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         enemyFactory.buildDuration = 5000
         enemyFactory.buildingPosition = position // Store position for completion
         gameState.enemyLastBuildingTime = now
-        console.log(`Enemy started constructing ${buildingType} at (${position.x}, ${position.y})`)
       } else {
         gameState.enemyLastBuildingTime = now
-        console.log(`Enemy couldn't find valid position for ${buildingType}`)
       }
     }
   }

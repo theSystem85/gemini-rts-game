@@ -256,7 +256,6 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   if (tileX < 0 || tileY < 0 ||
       tileX + width > mapGrid[0].length ||
       tileY + height > mapGrid.length) {
-    console.log('Building placement failed: Out of map boundaries')
     return false
   }
 
@@ -274,7 +273,6 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
 
   // If no tile is in range, return false
   if (!isAnyTileInRange) {
-    console.log('Building placement failed: Not near an existing building')
     return false
   }
 
@@ -285,7 +283,6 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       if (mapGrid[y][x].type === 'water' ||
           mapGrid[y][x].type === 'rock' ||
           mapGrid[y][x].building) {
-        console.log(`Building placement failed: Invalid terrain at (${x},${y}): ${mapGrid[y][x].type}`)
         return false
       }
 
@@ -296,13 +293,11 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       )
 
       if (unitsAtTile.length > 0) {
-        console.log(`Building placement failed: Unit present at (${x},${y})`)
         return false
       }
     }
   }
 
-  console.log(`Building placement successful for ${type} at (${tileX},${tileY})`)
   return true
 }
 
@@ -509,10 +504,6 @@ export function repairBuilding(building, gameState) {
     targetHealth: building.maxHealth,
     healthToRepair: healthToRepair
   })
-
-  // Log for debugging
-  console.log(`Starting repair of ${building.type} with duration ${repairDuration}ms`)
-
   return { success: true, message: 'Building repair started', cost: repairCost }
 }
 
