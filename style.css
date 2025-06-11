@@ -271,6 +271,25 @@ html, body {
   z-index: 3; /* Ensure counter appears above everything */
 }
 
+/* Ready building counter for production buttons */
+.ready-counter {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: rgba(76, 175, 80, 0.9); /* Green background */
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 2;
+  border: 1px solid #4CAF50;
+}
+
 /* Building labels styling */
 .production-button .building-name,
 .production-button .unit-name {
@@ -392,6 +411,25 @@ html, body {
   z-index: 2;
 }
 
+/* Ready building counter for production buttons */
+.ready-counter {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: rgba(76, 175, 80, 0.9); /* Green background */
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 2;
+  border: 1px solid #4CAF50;
+}
+
 /* Production button states */
 .production-button.paused {
   border: 2px solid yellow;
@@ -465,21 +503,6 @@ html, body {
 
 #musicControlContainer {
   margin-top: 10px;
-}
-
-/* Remove the conflicting music control button styling at the bottom of the file */
-/* Music control button styling to match the other buttons */
-#musicControl {
-  /* These styles are not needed as they're covered by .action-button.icon-button */
-  /* width: 100%;
-  padding: 8px 12px;
-  background-color: #2a2a2a;
-  color: #eee;
-  border: 1px solid #444;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s; */
 }
 
 /* Make sure music icon is visible and properly sized */

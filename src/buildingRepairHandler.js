@@ -153,19 +153,35 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           button.classList.remove('ready-for-placement')
         })
 
-        // Clear the completed building reference
-        productionQueue.completedBuilding = null
+        // Remove the placed building from the completed buildings array
+        const completedBuildingIndex = productionQueue.completedBuildings.findIndex(
+          building => building.type === buildingType
+        )
+        let placedBuildingButton = null
+        if (completedBuildingIndex !== -1) {
+          placedBuildingButton = productionQueue.completedBuildings[completedBuildingIndex].button
+          productionQueue.completedBuildings.splice(completedBuildingIndex, 1)
+        }
+
+        // Update the ready counter for the button that had a building placed
+        if (placedBuildingButton) {
+          productionQueue.updateReadyBuildingCounter(placedBuildingButton)
+        }
+
+        // Restore ready-for-placement class for buttons that still have completed buildings
+        productionQueue.completedBuildings.forEach(building => {
+          if (!building.button.classList.contains('ready-for-placement')) {
+            building.button.classList.add('ready-for-placement')
+          }
+          // Update ready building counter for remaining buildings
+          productionQueue.updateReadyBuildingCounter(building.button)
+        })
 
         // Play placement sound
         playSound('buildingPlaced')
 
         // Show notification
         showNotification(`${buildingData[buildingType].displayName} constructed`)
-
-        // Start next production if any
-        if (productionQueue.buildingItems.length > 0) {
-          productionQueue.startNextBuildingProduction()
-        }
 
         // Save player building patterns
         savePlayerBuildPatterns(buildingType)

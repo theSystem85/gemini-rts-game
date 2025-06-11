@@ -5,6 +5,7 @@ import { gameState } from '../gameState.js'
 import { unitCosts, buildingCosts } from '../main.js'
 import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
+import { buildingData } from '../buildings.js'
 
 export class ProductionController {
   constructor() {
@@ -160,12 +161,32 @@ export class ProductionController {
     const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
 
     buildingButtons.forEach(button => {
+      // Track double-click timing
+      let lastClickTime = 0
+      const DOUBLE_CLICK_THRESHOLD = 500 // 500ms for double-click
+
       button.addEventListener('click', () => {
         const buildingType = button.getAttribute('data-building-type')
+        const currentTime = performance.now()
 
-        // If button has "ready-for-placement" class, do nothing
-        // The placement is handled by the canvas click event
+        // Handle ready-for-placement buildings
         if (button.classList.contains('ready-for-placement')) {
+          // Check if this is a double-click
+          const timeSinceLastClick = currentTime - lastClickTime
+          lastClickTime = currentTime
+
+          if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD) {
+            // Double-click: Queue another building of the same type (stacking)
+            productionQueue.addItem(buildingType, button, true)
+            showNotification(`Queued another ${buildingData[buildingType].displayName}`)
+          } else {
+            // Single click: Enable placement mode
+            if (productionQueue.enableBuildingPlacementMode(buildingType, button)) {
+              // Placement mode enabled successfully
+            } else {
+              console.warn('Failed to enable placement mode for building:', buildingType)
+            }
+          }
           return
         }
 
@@ -178,14 +199,43 @@ export class ProductionController {
 
         // Always allow queuing
         productionQueue.addItem(buildingType, button, true)
+        lastClickTime = currentTime
       })
 
       button.addEventListener('contextmenu', (e) => {
         e.preventDefault()
 
-        // If this is a ready-for-placement building, cancel its placement
+        // If this is a ready-for-placement building, handle cancellation properly
         if (button.classList.contains('ready-for-placement')) {
-          productionQueue.cancelBuildingPlacement()
+          // Check if there are stacked buildings in queue
+          const stackedCount = productionQueue.buildingItems.filter(item => item.button === button).length
+          
+          if (stackedCount > 0) {
+            // If there are stacked buildings, cancel the last one from the queue
+            for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
+              if (productionQueue.buildingItems[i].button === button) {
+                // Return money for the cancelled production
+                gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0
+                productionQueue.tryResumeProduction()
+                // Remove from queue
+                productionQueue.buildingItems.splice(i, 1)
+
+                // Update batch counter
+                const remainingCount = productionQueue.buildingItems.filter(
+                  item => item.button === button
+                ).length
+
+                productionQueue.updateBatchCounter(button, remainingCount)
+                
+                showNotification('Cancelled stacked building construction')
+                break // Only remove one at a time
+              }
+            }
+          } else {
+            // No stacked buildings, cancel the ready-for-placement building
+            const buildingType = button.getAttribute('data-building-type')
+            productionQueue.cancelReadyBuilding(buildingType, button)
+          }
           return
         }
 

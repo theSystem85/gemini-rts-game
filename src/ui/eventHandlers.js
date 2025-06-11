@@ -85,10 +85,10 @@ export class EventHandlers {
       })
     }
 
-    // Handle escape key to cancel building placement
+    // Handle escape key to exit building placement mode (without canceling the building)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement()
+        productionQueue.exitBuildingPlacementMode()
       }
     })
   }
@@ -164,10 +164,29 @@ export class EventHandlers {
           // Remove ready-for-placement class from the button
           document.querySelectorAll('.ready-for-placement').forEach(button => {
             button.classList.remove('ready-for-placement')
-          })
+          })          // Remove the placed building from the completed buildings array
+          const completedBuildingIndex = productionQueue.completedBuildings.findIndex(
+            building => building.type === buildingType
+          )
+          let placedBuildingButton = null
+          if (completedBuildingIndex !== -1) {
+            placedBuildingButton = productionQueue.completedBuildings[completedBuildingIndex].button
+            productionQueue.completedBuildings.splice(completedBuildingIndex, 1)
+          }
 
-          // Clear the completed building reference
-          productionQueue.completedBuilding = null
+          // Update the ready counter for the button that had a building placed
+          if (placedBuildingButton) {
+            productionQueue.updateReadyBuildingCounter(placedBuildingButton)
+          }
+
+          // Restore ready-for-placement class for buttons that still have completed buildings
+          productionQueue.completedBuildings.forEach(building => {
+            if (!building.button.classList.contains('ready-for-placement')) {
+              building.button.classList.add('ready-for-placement')
+            }
+            // Update ready building counter for remaining buildings
+            productionQueue.updateReadyBuildingCounter(building.button)
+          })
 
           // Play placement sound
           playSound('buildingPlaced')
@@ -177,11 +196,6 @@ export class EventHandlers {
 
           // Check for milestones after building placement
           milestoneSystem.checkMilestones(gameState)
-
-          // Start next production if any
-          if (productionQueue.buildingItems.length > 0) {
-            productionQueue.startNextBuildingProduction()
-          }
 
           // Save player building patterns
           savePlayerBuildPatterns(buildingType)
@@ -249,9 +263,9 @@ export class EventHandlers {
         // Reset cursor to default
         gameCanvas.style.cursor = 'default'
       }
-      // Cancel building placement mode if active
+      // Exit building placement mode if active (don't cancel the building)
       if (gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement()
+        productionQueue.exitBuildingPlacementMode()
       }
     })
 
@@ -282,9 +296,9 @@ export class EventHandlers {
         // Reset cursor to default
         gameCanvas.style.cursor = 'default'
       }
-      // Cancel building placement mode if active
+      // Exit building placement mode if active (don't cancel the building)
       if (gameState.buildingPlacementMode) {
-        productionQueue.cancelBuildingPlacement()
+        productionQueue.exitBuildingPlacementMode()
       }
     })
   }

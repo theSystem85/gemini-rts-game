@@ -19,7 +19,7 @@ export const productionQueue = {
   currentBuilding: null,
   pausedUnit: false,
   pausedBuilding: false,
-  completedBuilding: null,
+  completedBuildings: [], // Changed from completedBuilding to array
 
   // Store how much money has been paid so far for current productions
   unitPaid: 0,
@@ -176,6 +176,9 @@ export const productionQueue = {
   startNextBuildingProduction: function() {
     if (this.buildingItems.length === 0 || this.pausedBuilding) return
 
+    // Don't start production if there's already a building in production
+    if (this.currentBuilding) return
+
     // Don't start production if game is paused
     if (gameState.gamePaused) {
       return
@@ -266,6 +269,13 @@ export const productionQueue = {
 
     // Update building production
     if (this.currentBuilding && !this.pausedBuilding) {
+      // Safety check: ensure there's a building item in the queue
+      if (this.buildingItems.length === 0) {
+        console.warn('Current building exists but buildingItems queue is empty, clearing current building')
+        this.currentBuilding = null
+        return
+      }
+      
       const item = this.buildingItems[0]
       const cost = buildingCosts[item.type] || 0
       const elapsed = (timestamp - this.currentBuilding.startTime) * gameState.speedMultiplier
@@ -398,32 +408,43 @@ export const productionQueue = {
   completeCurrentBuildingProduction: function() {
     if (!this.currentBuilding) return
 
-    // Remove item from queue
+    // Remove item from queue immediately when completed
     this.buildingItems.shift()
+    
+    // Update batch counter (subtract 1 for the completed building)
     this.updateBatchCounter(this.currentBuilding.button, this.buildingItems.filter(item => item.button === this.currentBuilding.button).length)
 
-    // Building completion - enter placement mode
-    gameState.buildingPlacementMode = true
-    gameState.currentBuildingType = this.currentBuilding.type
+    // Building completion - DO NOT automatically enter placement mode
+    // Add the completed building to the array for placement when user clicks the button
+    this.completedBuildings.push({
+      type: this.currentBuilding.type,
+      button: this.currentBuilding.button
+    })
 
-    // Show notification to place building
-    showNotification(`Click on the map to place your ${buildingData[this.currentBuilding.type].displayName}`)
+    // Show notification to click build button for placement
+    showNotification(`${buildingData[this.currentBuilding.type].displayName} ready! Click build button to place.`)
 
     // Remove active state but keep button marked for placement
     this.currentBuilding.button.classList.remove('active')
     this.currentBuilding.button.classList.add('ready-for-placement')
 
-    playSound('productionReady')
-
-    // Temporarily store the current item for cancellation
-    this.completedBuilding = {
-      type: this.currentBuilding.type,
-      button: this.currentBuilding.button
+    // Clear the progress bar since construction is complete
+    const progressBar = this.currentBuilding.button.querySelector('.production-progress')
+    if (progressBar) {
+      progressBar.style.width = '0%'
     }
+
+    // Update ready building counter
+    this.updateReadyBuildingCounter(this.currentBuilding.button)
+
+    playSound('productionReady')
 
     this.currentBuilding = null
 
-    // Don't automatically start next building production until this one is placed
+    // Start next building production if available
+    if (this.buildingItems.length > 0) {
+      this.startNextBuildingProduction()
+    }
   },
 
   togglePauseUnit: function() {
@@ -528,10 +549,16 @@ export const productionQueue = {
 
   // Method to cancel a building placement
   cancelBuildingPlacement: function() {
-    if (!this.completedBuilding) return
+    // Find the completed building that matches the current placement mode
+    const buildingType = gameState.currentBuildingType
+    if (!buildingType) return
 
-    const button = this.completedBuilding.button
-    const type = this.completedBuilding.type
+    const completedBuildingIndex = this.completedBuildings.findIndex(building => building.type === buildingType)
+    if (completedBuildingIndex === -1) return
+
+    const completedBuilding = this.completedBuildings[completedBuildingIndex]
+    const button = completedBuilding.button
+    const type = completedBuilding.type
 
     // Play cancel sound
     playSound('productionCancelled')
@@ -539,23 +566,51 @@ export const productionQueue = {
     // Return money for the building
     gameState.money += buildingCosts[type] || 0
 
+    // Remove the completed building from the array
+    this.completedBuildings.splice(completedBuildingIndex, 1)
+
     // Clear building placement mode
     gameState.buildingPlacementMode = false
     gameState.currentBuildingType = null
 
-    // Remove ready-for-placement class
-    button.classList.remove('ready-for-placement')
-
-    // Clear the completed building reference
-    this.completedBuilding = null
+    // Remove ready-for-placement class only if there are no more completed buildings of this type
+    const hasMoreOfThisType = this.completedBuildings.some(building => building.button === button)
+    if (!hasMoreOfThisType) {
+      button.classList.remove('ready-for-placement')
+    }
 
     // Show notification
     showNotification(`${buildingData[type].displayName} construction canceled`)
+  },
 
-    // Start next building in queue if available
-    if (this.buildingItems.length > 0) {
-      this.startNextBuildingProduction()
+  // Method to enable building placement mode for a ready building
+  enableBuildingPlacementMode: function(buildingType, button) {
+    // Find the completed building for this button
+    const completedBuilding = this.completedBuildings.find(building => building.button === button)
+    if (!completedBuilding) {
+      return false
     }
+
+    // Enable placement mode
+    gameState.buildingPlacementMode = true
+    gameState.currentBuildingType = buildingType
+
+    // Show notification to place building
+    showNotification(`Click on the map to place your ${buildingData[buildingType].displayName}`)
+
+    return true
+  },
+
+  // Method to exit building placement mode without canceling the building
+  exitBuildingPlacementMode: function() {
+    if (!gameState.buildingPlacementMode) return
+
+    // Clear building placement mode
+    gameState.buildingPlacementMode = false
+    gameState.currentBuildingType = null
+
+    // Show notification
+    showNotification('Exited placement mode. Click build button again to place.')
   },
 
   // Resume production after the game is unpaused
@@ -607,6 +662,64 @@ export const productionQueue = {
     // Force a progress update if anything resumed
     if (resumed) {
       this.updateProgress(performance.now())
+    }
+  },
+
+  // Method to cancel a specific ready building (called from right-click)
+  cancelReadyBuilding: function(buildingType, button) {
+    // Find the completed building for this button
+    const completedBuildingIndex = this.completedBuildings.findIndex(
+      building => building.type === buildingType && building.button === button
+    )
+    
+    if (completedBuildingIndex === -1) return
+
+    const completedBuilding = this.completedBuildings[completedBuildingIndex]
+
+    // Play cancel sound
+    playSound('productionCancelled')
+
+    // Return money for the building
+    gameState.money += buildingCosts[buildingType] || 0
+
+    // Remove the completed building from the array
+    this.completedBuildings.splice(completedBuildingIndex, 1)
+
+    // Remove ready-for-placement class only if there are no more completed buildings of this type
+    const hasMoreOfThisType = this.completedBuildings.some(building => building.button === button)
+    if (!hasMoreOfThisType) {
+      button.classList.remove('ready-for-placement')
+      // Clear progress bar when no more ready buildings of this type
+      const progressBar = button.querySelector('.production-progress')
+      if (progressBar) {
+        progressBar.style.width = '0%'
+      }
+    }
+
+    // Update ready building counter
+    this.updateReadyBuildingCounter(button)
+
+    // Show notification
+    showNotification(`${buildingData[buildingType].displayName} construction canceled`)
+  },
+
+  // Method to update the ready building counter display
+  updateReadyBuildingCounter: function(button) {
+    const readyCount = this.completedBuildings.filter(building => building.button === button).length
+    
+    let readyCounter = button.querySelector('.ready-counter')
+    if (!readyCounter) {
+      // Create the ready counter element if it doesn't exist
+      readyCounter = document.createElement('div')
+      readyCounter.classList.add('ready-counter')
+      button.appendChild(readyCounter)
+    }
+    
+    if (readyCount > 0) {
+      readyCounter.textContent = readyCount
+      readyCounter.style.display = 'flex'
+    } else {
+      readyCounter.style.display = 'none'
     }
   }
 }
