@@ -41,8 +41,8 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 's') {
         this.handleSellMode()
       }
-      // D key for dodge
-      else if (e.key.toLowerCase() === 'd') {
+      // X key for dodge
+      else if (e.key.toLowerCase() === 'x') {
         this.handleDodgeCommand(selectedUnits, units, mapGrid)
       }
       // H key to focus on factory
@@ -126,54 +126,118 @@ export class KeyboardHandler {
   }
 
   handleDodgeCommand(selectedUnits, units, mapGrid) {
-    // Fix: Make all selected units dodge to a random nearby free tile regardless of their state.
+    if (selectedUnits.length === 0) {
+      this.showNotification('No units selected for dodge command', 2000)
+      return
+    }
+
+    let dodgeSuccessCount = 0
+    
+    // Make all selected units try to dodge by moving one tile forward or backward
     selectedUnits.forEach(unit => {
-      // Compute current tile coordinates from unit position.
+      // Get current tile coordinates
       const tileX = Math.floor(unit.x / TILE_SIZE)
       const tileY = Math.floor(unit.y / TILE_SIZE)
-      const candidates = []
-      const directions = [
-        { dx: -1, dy:  0 },
-        { dx:  1, dy:  0 },
-        { dx:  0, dy: -1 },
-        { dx:  0, dy:  1 },
-        { dx: -1, dy: -1 },
-        { dx: -1, dy:  1 },
-        { dx:  1, dy: -1 },
-        { dx:  1, dy:   1 }
-      ]
-      directions.forEach(dir => {
-        const newX = tileX + dir.dx
-        const newY = tileY + dir.dy
-        // Check boundaries.
-        if (newX >= 0 && newX < mapGrid[0].length && newY >= 0 && newY < mapGrid.length) {
-          const tileType = mapGrid[newY][newX].type
-          const hasBuilding = mapGrid[newY][newX].building
-          if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
-            // Check that no unit occupies the candidate tile.
-            const occupied = units.some(u => Math.floor(u.x / TILE_SIZE) === newX && Math.floor(u.y / TILE_SIZE) === newY)
-            if (!occupied) {
-              candidates.push({ x: newX, y: newY })
-            }
-          }
-        }
-      })
-
-      if (candidates.length > 0) {
-        const candidate = candidates[Math.floor(Math.random() * candidates.length)]
-        // Store current path and target regardless of state so dodge can always be triggered.
+      
+      // Determine unit's facing direction (use movement direction if available, otherwise use last direction)
+      let facingAngle = 0
+      
+      // Use movement direction if unit is moving
+      if (unit.movement && unit.movement.isMoving && (unit.movement.velocity.x !== 0 || unit.movement.velocity.y !== 0)) {
+        facingAngle = Math.atan2(unit.movement.velocity.y, unit.movement.velocity.x)
+      }
+      // Use target rotation if available
+      else if (unit.movement && unit.movement.targetRotation !== undefined) {
+        facingAngle = unit.movement.targetRotation
+      }
+      // Use stored rotation if available
+      else if (unit.rotation !== undefined) {
+        facingAngle = unit.rotation
+      }
+      // Use path direction if unit has a path
+      else if (unit.path && unit.path.length > 0) {
+        const nextTile = unit.path[0]
+        const dx = nextTile.x * TILE_SIZE - unit.x
+        const dy = nextTile.y * TILE_SIZE - unit.y
+        facingAngle = Math.atan2(dy, dx)
+      }
+      
+      // Calculate forward and backward positions (one tile away)
+      const forwardX = Math.round(tileX + Math.cos(facingAngle))
+      const forwardY = Math.round(tileY + Math.sin(facingAngle))
+      const backwardX = Math.round(tileX - Math.cos(facingAngle))
+      const backwardY = Math.round(tileY - Math.sin(facingAngle))
+      
+      // Check if forward position is valid
+      const isForwardValid = this.isValidDodgePosition(forwardX, forwardY, mapGrid, units)
+      
+      // Check if backward position is valid
+      const isBackwardValid = this.isValidDodgePosition(backwardX, backwardY, mapGrid, units)
+      
+      let dodgeTarget = null
+      
+      // Apply dodge logic based on requirements
+      if (isForwardValid && isBackwardValid) {
+        // Both are free - random decision
+        dodgeTarget = Math.random() < 0.5 
+          ? { x: forwardX, y: forwardY }
+          : { x: backwardX, y: backwardY }
+      } else if (isForwardValid && !isBackwardValid) {
+        // Only forward is free
+        dodgeTarget = { x: forwardX, y: forwardY }
+      } else if (!isForwardValid && isBackwardValid) {
+        // Only backward is free
+        dodgeTarget = { x: backwardX, y: backwardY }
+      }
+      // If both are blocked, do not dodge (dodgeTarget remains null)
+      
+      if (dodgeTarget) {
+        // Store current path and target for restoration after dodge
         unit.originalPath = unit.path ? [...unit.path] : []
         unit.originalTarget = unit.target
         unit.isDodging = true
-        unit.dodgeEndTime = performance.now() + 3000 // Dodge lasts up to 3 seconds.
-
-        // Compute a new path to the dodge destination using existing pathfinding.
-        const newPath = findPath({ x: tileX, y: tileY }, candidate, mapGrid, null)
+        unit.dodgeEndTime = performance.now() + 3000 // Dodge lasts up to 3 seconds
+        
+        // Compute a new path to the dodge destination
+        const newPath = findPath({ x: tileX, y: tileY }, dodgeTarget, mapGrid, null)
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
+          dodgeSuccessCount++
         }
       }
     })
+
+    // Show feedback to user
+    if (dodgeSuccessCount > 0) {
+      const message = dodgeSuccessCount === 1 
+        ? 'Unit dodging!' 
+        : `${dodgeSuccessCount} units dodging!`
+      this.showNotification(message, 1500)
+      playSound('movement', 0.3) // Play a subtle movement sound
+    } else {
+      this.showNotification('Unable to dodge - no clear path available', 2000)
+    }
+  }
+
+  // Helper method to check if a position is valid for dodging
+  isValidDodgePosition(x, y, mapGrid, units) {
+    // Check boundaries
+    if (x < 0 || x >= mapGrid[0].length || y < 0 || y >= mapGrid.length) {
+      return false
+    }
+    
+    // Check tile type and buildings
+    const tile = mapGrid[y][x]
+    if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+      return false
+    }
+    
+    // Check if any unit occupies this tile
+    const occupied = units.some(u => 
+      Math.floor(u.x / TILE_SIZE) === x && Math.floor(u.y / TILE_SIZE) === y
+    )
+    
+    return !occupied
   }
 
   handleFactoryFocus(mapGrid) {

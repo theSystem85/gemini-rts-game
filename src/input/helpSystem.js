@@ -34,7 +34,7 @@ export class HelpSystem {
           <li><strong>Right Click:</strong> Move units / Attack enemy</li>
           <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
           <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
-          <li><strong>D Key:</strong> Make selected units dodge</li>
+          <li><strong>X Key:</strong> Make selected units dodge</li>
           <li><strong>G Key:</strong> Toggle map grid visibility</li>
           <li><strong>H Key:</strong> Focus view on your factory</li>
           <li><strong>I Key:</strong> Show this help (press again to close)</li>
