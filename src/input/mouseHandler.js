@@ -389,7 +389,6 @@ export class MouseHandler {
   }
 
   findEnemyTarget(worldX, worldY) {
-    console.log(`findEnemyTarget called at world coords: ${worldX}, ${worldY}`)
     
     // Check enemy buildings first (they have priority)
     if (gameState.buildings && gameState.buildings.length > 0) {
@@ -404,7 +403,6 @@ export class MouseHandler {
               worldX < buildingX + buildingWidth &&
               worldY >= buildingY &&
               worldY < buildingY + buildingHeight) {
-            console.log('Found enemy building target:', building)
             return building
           }
         }
@@ -419,26 +417,22 @@ export class MouseHandler {
           worldX < (factory.x + factory.width) * TILE_SIZE &&
           worldY >= factory.y * TILE_SIZE &&
           worldY < (factory.y + factory.height) * TILE_SIZE) {
-        console.log('Found enemy factory target:', factory)
         return factory
       }
     }
 
     // Check enemy units if no building or factory was targeted
-    console.log(`Checking ${units.length} units for enemy targets`)
     for (const unit of units) {
       if (unit.owner !== 'player') {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         const distance = Math.hypot(worldX - centerX, worldY - centerY)
         if (distance < TILE_SIZE / 2) {
-          console.log('Found enemy unit target:', unit, 'distance:', distance)
           return unit
         }
       }
     }
 
-    console.log('No enemy target found')
     return null
   }
 

@@ -60,7 +60,6 @@ class Game {
   async loadAssets() {
     return new Promise((resolve) => {
       initializeGameAssets(() => {
-        console.log('All game assets preloaded successfully!')
         allAssetsLoaded = true
         resolve()
       })

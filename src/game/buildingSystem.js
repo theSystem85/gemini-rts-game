@@ -129,7 +129,6 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
                     // Mark as being attacked if it's an enemy unit
                     if (closestEnemy.owner === 'enemy') {
                       closestEnemy.isBeingAttacked = true
-                      console.log(`Enemy unit ${closestEnemy.id} is being attacked by Tesla coil ${building.type}`)
                     }
                   }
                 }

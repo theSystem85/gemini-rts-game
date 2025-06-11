@@ -40,7 +40,6 @@ export function savePlayerBuildPatterns(buildingType) {
     // Save to localStorage
     localStorage.setItem('playerBuildHistory', JSON.stringify(gameState.playerBuildHistory))
 
-    console.log(`Saved building ${buildingType} to player build patterns. Session: ${gameState.currentSessionId}`)
   } catch (error) {
     console.error('Error saving player build patterns:', error)
   }

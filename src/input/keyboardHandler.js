@@ -193,7 +193,6 @@ export class KeyboardHandler {
   }
 
   handleControlGroupAssignment(groupNum, selectedUnits) {
-    console.log(`Attempting to assign control group ${groupNum} with ctrl key`)
 
     if (selectedUnits.length > 0) {
       // Only store units, not factories
@@ -205,7 +204,6 @@ export class KeyboardHandler {
         onlyUnits.forEach(unit => {
           unit.groupNumber = groupNum
         })
-        console.log(`Successfully assigned control group ${groupNum} with ${onlyUnits.length} units`)
         playSound('unitSelection')
 
         // Visual feedback
@@ -215,12 +213,9 @@ export class KeyboardHandler {
   }
 
   handleControlGroupSelection(groupNum, units, selectedUnits, mapGrid) {
-    console.log(`Trying to select control group ${groupNum}`)
-    console.log(`Available control groups: ${Object.keys(this.controlGroups).join(', ')}`)
 
     // Check if we have units in this control group
     if (this.controlGroups[groupNum] && Array.isArray(this.controlGroups[groupNum]) && this.controlGroups[groupNum].length > 0) {
-      console.log(`Found control group ${groupNum} with ${this.controlGroups[groupNum].length} units`)
 
       // Clear current selection
       units.forEach(u => { if (u.owner === 'player') u.selected = false })
@@ -236,8 +231,6 @@ export class KeyboardHandler {
         unit.health > 0 && // is alive
         unit.owner === 'player' // belongs to player (safety check)
       )
-
-      console.log(`Found ${aliveUnits.length} alive units in group ${groupNum}`)
 
       // Update the control group to only include alive units
       this.controlGroups[groupNum] = aliveUnits

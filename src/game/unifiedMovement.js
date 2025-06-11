@@ -384,7 +384,6 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
         stuck.stuckTime += now - stuck.lastMovementCheck;
         
         if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
-          console.log(`Harvester ${unit.id} detected as stuck after ${stuck.stuckTime}ms (not performing valid action)`);
           
           stuck.lastStuckHandling = now; // Set cooldown
           
@@ -456,7 +455,6 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       stuck.stuckTime += now - stuck.lastMovementCheck;
       
       if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
-        console.log(`${unit.type} unit ${unit.id} detected as stuck after ${stuck.stuckTime}ms`);
         
         stuck.lastStuckHandling = now; // Set cooldown
         
@@ -556,7 +554,6 @@ function tryRandomStuckMovement(unit, mapGrid, occupancyMap, units) {
     // Create simple path to target position
     unit.path = [{ x: targetX, y: targetY }];
     
-    console.log(`Unit ${unit.id} (${unit.type}) stuck - moving randomly ${turnDirection > 0 ? 'right' : 'left'} 90° then ${forwardDistance} tiles forward`);
     return true;
   }
   

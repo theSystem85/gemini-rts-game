@@ -125,11 +125,9 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         newBuilding.owner = 'enemy'
         gameState.buildings.push(newBuilding)
         placeBuilding(newBuilding, mapGrid)
-        console.log(`Enemy completed building ${buildingType} at (${position.x}, ${position.y})`)
       } else {
         // Position became invalid, refund the cost
         enemyFactory.budget += buildingData[buildingType]?.cost || 0
-        console.log(`Enemy building placement failed - position became invalid for ${buildingType} at (${position.x}, ${position.y})`)
       }
     }
     
@@ -163,13 +161,10 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       const HIGH_BUDGET_THRESHOLD = 15000
       const isHighBudget = enemyFactory.budget >= HIGH_BUDGET_THRESHOLD
       
-      console.log(`Enemy AI: ${enemyHarvesters.length} harvesters, ${enemyCombatUnits.length} combat units, budget: ${enemyFactory.budget}`)
-      
       if (enemyHarvesters.length < MAX_HARVESTERS) {
         // Priority: Build up to 8 harvesters first
         unitType = 'harvester'
         cost = 500
-        console.log(`Building harvester ${enemyHarvesters.length + 1}/8`)
       } else {
         // We have 8 harvesters, now focus entirely on combat units
         const rand = Math.random()
@@ -235,13 +230,11 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           enemyFactory.buildStartTime = now
           enemyFactory.buildDuration = 5000
           gameState.enemyLastProductionTime = now
-          console.log(`Enemy started producing unit: ${unitType} from ${spawnFactory.type || 'construction yard'} - Budget reduced by ${cost} to ${enemyFactory.budget}`)
           
           // Reset attack directions periodically to ensure varied attack patterns
           // This happens roughly every 4-5 unit productions (40-50 seconds)
           if (Math.random() < 0.25) {
             resetAttackDirections()
-            console.log('Enemy AI: Reset attack directions for varied assault patterns')
           }
         } else {
           console.warn(`Failed to spawn enemy ${unitType}`)
@@ -317,7 +310,6 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           
           if (validTarget) {
             newTarget = unit.lastAttacker
-            console.log(`Enemy unit ${unit.id} retaliating against attacker ${unit.lastAttacker.id || unit.lastAttacker.type}`)
           }
         }
 
@@ -446,7 +438,6 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 
         if (underFire) {
           if (!unit.lastDodgeTime || now - unit.lastDodgeTime > dodgeTimeDelay) {
-            console.log('Dodging! unit:', unit.id)
             unit.lastDodgeTime = now
             const dodgeDir = { x: 0, y: 0 }
             bullets.forEach(bullet => {
@@ -517,7 +508,6 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     units.forEach(unit => {
       if (unit.owner !== 'enemy') return
       if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
-        console.log('Maintain safe attack distance for combat units')
         const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > lastPositionCheckTimeDelay)
         if (positionCheckNeeded) {
           unit.lastPositionCheckTime = now
@@ -894,13 +884,11 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
       if (!hasClearPaths) continue
 
       // If we got here, the position is valid
-      console.log(`Found valid position for ${buildingType} at (${x}, ${y}) with distance ${distance}`)
       return { x, y }
     }
   }
 
   // If we couldn't find a position with our preferred approach, try the fallback
-  console.log(`Switching to fallback search for ${buildingType}`)
   return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories)
 }
 
@@ -1259,7 +1247,6 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         if (!hasClearPaths) continue
 
-        console.log(`Fallback found valid position for ${buildingType} at (${x}, ${y}) with distance ${distance}`)
         return { x, y }
       }
     }
@@ -1319,13 +1306,11 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         if (!hasClearPaths) continue
 
-        console.log(`Last resort found valid position for ${buildingType} at (${x}, ${y})`)
         return { x, y }
       }
     }
   }
 
-  console.log(`Could not find any valid position for ${buildingType}`)
   return null
 }
 
@@ -1355,9 +1340,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
     // Update power supply
     updatePowerSupply(gameState.buildings, gameState)
 
-    console.log(`Enemy completed building ${buildingType} at (${x}, ${y})`)
   } else {
-    console.log(`Enemy building placement failed for ${buildingType} at (${x}, ${y})`)
   }
 
   // Reset production state
@@ -1403,7 +1386,6 @@ function replicatePlayerBuildPattern(gameState, enemyBuildings) {
         .filter(type => type === buildingType).length
 
       if (currentCount < patternCount) {
-        console.log(`Enemy AI learning: Replicating building ${buildingType} from player session ${randomSession.id}`)
         return buildingType
       }
     }

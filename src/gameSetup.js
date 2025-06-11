@@ -14,16 +14,12 @@ function checkAllAssetsLoaded() {
 export function initializeGameAssets(callback) {
   onAllAssetsLoadedCallback = callback
 
-  console.log('Starting texture preloading...')
   preloadTileTextures(() => {
-    console.log('All textures preloaded successfully!')
     texturesLoaded = true
     checkAllAssetsLoaded()
   })
 
-  console.log('Starting building images preloading...')
   preloadBuildingImages(() => {
-    console.log('All building images preloaded successfully!')
     buildingImagesLoaded = true
     checkAllAssetsLoaded()
   })

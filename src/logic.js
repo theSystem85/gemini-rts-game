@@ -43,7 +43,6 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
         // Mark as being attacked if it's an enemy unit
         if (unit.owner === 'enemy') {
           unit.isBeingAttacked = true
-          console.log(`Enemy unit ${unit.id} is being attacked by explosion from ${shooter.id || shooter.type}`)
         }
       }
     }

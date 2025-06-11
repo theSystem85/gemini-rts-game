@@ -43,13 +43,11 @@ export class ProductionController {
 
   // Placeholder function to prevent errors - implement later if needed
   updateBuildingButtonStates() {
-    // console.log("Checking building button states (placeholder)");
     // Add logic here if buildings have prerequisites (e.g., Construction Yard for others)
   }
 
   // Combined production button setup function that handles both unit and building buttons
   setupAllProductionButtons() {
-    console.log('Setting up all production buttons - ONE TIME ONLY')
 
     // Clear any existing event listeners by cloning and replacing elements
     document.querySelectorAll('.production-button').forEach(button => {

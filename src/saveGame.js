@@ -242,9 +242,6 @@ export function loadGame(key) {
     if (loaded.achievedMilestones && Array.isArray(loaded.achievedMilestones)) {
       // Use the new method to set milestones
       milestoneSystem.setAchievedMilestones(loaded.achievedMilestones)
-      console.log('Restored milestones:', loaded.achievedMilestones)
-    } else {
-      console.log('No milestone data found in save, keeping current progress')
     }
 
     // Re-assign harvesters to refineries after all buildings are loaded

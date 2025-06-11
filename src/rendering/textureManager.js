@@ -77,7 +77,6 @@ export class TextureManager {
 
       img.onerror = () => {
         // Try next extension
-        console.log(`Failed to load ${baseName}.${extensions[index]}, trying next format...`)
         tryLoadImage(baseName, extensions, index + 1)
       }
 
@@ -159,8 +158,7 @@ export class TextureManager {
   preloadAllTextures(callback) {
     if (this.loadingStarted) return
     this.loadingStarted = true
-    console.log('Starting texture preloading...')
-
+    
     // Count total textures to load
     let totalTextures = 0
     let loadedTextures = 0
@@ -172,7 +170,6 @@ export class TextureManager {
     }
 
     if (totalTextures === 0) {
-      console.log('No textures to preload.')
       this.allTexturesLoaded = true
       if (callback) callback()
       return
@@ -193,8 +190,6 @@ export class TextureManager {
       for (const imagePath of paths) {
         this.getOrLoadImage(imagePath, ['jpg', 'webp', 'png'], (img) => {
           if (img) {
-            console.log(`Loaded texture: ${imagePath} (rotation: ${shouldRotate ? 'enabled' : 'disabled'})`)
-
             const pixelRatio = getDevicePixelRatio()
 
             // Create a canvas for the texture at the correct size, accounting for pixel ratio
@@ -252,10 +247,8 @@ export class TextureManager {
           }
 
           loadedTextures++
-          console.log(`Texture loading progress: ${loadedTextures}/${totalTextures}`)
-
+          
           if (loadedTextures === totalTextures) {
-            console.log('All textures loaded successfully!')
             this.allTexturesLoaded = true
             if (callback) callback()
           }

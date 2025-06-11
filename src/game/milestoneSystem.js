@@ -42,14 +42,12 @@ export class MilestoneSystem {
    * Check if a milestone should be triggered based on game state
    */
   checkMilestones(gameState) {
-    console.log('Checking milestones, buildings:', gameState.buildings?.length || 0)
     
     // Check for first refinery
     if (!this.achievedMilestones.has('firstRefinery')) {
       const hasRefinery = gameState.buildings?.some(building => 
         building.type === 'oreRefinery' && building.owner === 'player'
       )
-      console.log('Checking for refinery:', hasRefinery)
       if (hasRefinery) {
         this.triggerMilestone('firstRefinery')
       }
@@ -90,10 +88,8 @@ export class MilestoneSystem {
    * Trigger a specific milestone
    */
   triggerMilestone(milestoneId) {
-    console.log('triggerMilestone called with:', milestoneId)
     
     if (this.achievedMilestones.has(milestoneId)) {
-      console.log('Milestone already achieved:', milestoneId)
       return // Already achieved
     }
 
@@ -103,7 +99,6 @@ export class MilestoneSystem {
       return
     }
 
-    console.log(`Milestone achieved: ${milestone.displayName}`)
     this.achievedMilestones.add(milestoneId)
 
     // Show notification
@@ -111,7 +106,6 @@ export class MilestoneSystem {
 
     // Play video if available
     if (milestone.videoFilename) {
-      console.log('Playing milestone video:', milestone.videoFilename)
       playSyncedVideoAudio(milestone.videoFilename, {
         title: milestone.displayName,
         description: milestone.description,

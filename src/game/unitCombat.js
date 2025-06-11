@@ -110,12 +110,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
-    console.log(`handleTankFiring called for unit ${unit.id}, canFire: ${unit.canFire}, lastShotTime: ${unit.lastShotTime}, now: ${now}`)
-    
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
-        console.log(`Fire cooldown check passed for unit ${unit.id}`)
         if (unit.canFire !== false && hasClearShot(unit, target, units)) {
-            console.log(`Unit ${unit.id} has clear shot, creating bullet`)
             // Calculate aim position (with predictive aiming if enabled)
             let aimX = targetCenterX;
             let aimY = targetCenterY;

@@ -105,7 +105,6 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
             unit.manualOreTarget.x === unit.oreField.x && 
             unit.manualOreTarget.y === unit.oreField.y) {
           unit.manualOreTarget = null
-          console.log(`Harvester ${unit.id || 'unknown'} completed manual ore target, cleared`)
         }
 
         // Only deplete the tile after multiple harvests (simulate limited ore)
@@ -913,13 +912,11 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
   if (path.length > 1) {
     unit.path = path.slice(1)
     unit.moveTarget = target // Set move target so the harvester actually moves
-    console.log(`Harvester ${unit.id || 'unknown'} pathing to manual ore target at ${target.x},${target.y}`)
-  } else if (path.length === 1) {
+    } else if (path.length === 1) {
     // Already at the target
     unit.path = []
   } else {
     // Can't path to manual target, clear it and find automatic target
-    console.log(`Harvester ${unit.id || 'unknown'} cannot path to manual ore target, finding automatic target`)
     delete targetedOreTiles[tileKey]
     unit.oreField = null
     unit.manualOreTarget = null
@@ -931,17 +928,14 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
  * Handle stuck harvester by finding alternative targets
  */
 export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories) {
-  console.log(`Harvester ${unit.id} is stuck, analyzing situation`)
   
   // Don't interfere if harvester is manually commanded to a specific location
   if (unit.manualOreTarget) {
-    console.log(`Harvester ${unit.id} has manual target, not interfering`)
     return
   }
   
   // Don't interfere if harvester is performing valid actions
   if (unit.harvesting || unit.unloadingAtRefinery) {
-    console.log(`Harvester ${unit.id} is harvesting or unloading, not stuck`)
     return
   }
   
@@ -954,7 +948,6 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
     const tileKey = `${unitTileX},${unitTileY}`
     if (!harvestedTiles.has(tileKey)) {
       // Harvester should start harvesting this tile
-      console.log(`Harvester ${unit.id} should start harvesting current tile`)
       unit.oreField = { x: unitTileX, y: unitTileY }
       targetedOreTiles[tileKey] = unit.id
       unit.harvesting = true
@@ -965,8 +958,6 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
       return
     }
   }
-  
-  console.log(`Harvester ${unit.id} is truly stuck, finding alternative target`)
   
   // Clear current targets and path
   if (unit.oreField) {
@@ -1000,7 +991,6 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
  * Find alternative unload location for stuck harvester
  */
 function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occupancyMap) {
-  console.log(`Stuck harvester ${unit.id} looking for alternative unload location`)
   
   // Try to find a different refinery than the one it was trying to reach
   const refineries = gameState.buildings?.filter(b => 
@@ -1041,7 +1031,6 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
         if (path.length > 1) {
           unit.path = path.slice(1)
           unit.moveTarget = unloadTile // Set move target so the harvester actually moves
-          console.log(`Stuck harvester ${unit.id} found alternative refinery, pathing to it`)
           return
         }
       }
@@ -1061,7 +1050,6 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
       if (path.length > 1) {
         unit.path = path.slice(1)
         unit.moveTarget = factoryTile // Set move target so the harvester actually moves
-        console.log(`Stuck harvester ${unit.id} pathing to factory as fallback`)
       }
     }
   }
@@ -1071,7 +1059,6 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
  * Find alternative ore target for stuck harvester
  */
 function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
-  console.log(`Stuck harvester ${unit.id} looking for alternative ore tile`)
   
   // Try to find ore tiles that are farther away or in different directions
   const unitTileX = Math.floor(unit.x / TILE_SIZE)
@@ -1116,14 +1103,12 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
         unit.oreField = orePos
         unit.path = path.slice(1)
         unit.moveTarget = orePos // Set move target so the harvester actually moves
-        console.log(`Stuck harvester ${unit.id} found alternative ore at ${orePos.x},${orePos.y}`)
         return
       }
     }
   }
   
   // If no alternative ore found, wait and try again later
-  console.log(`Stuck harvester ${unit.id} couldn't find alternative ore, will retry later`)
   setTimeout(() => {
     if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
       findNewOreTarget(unit, mapGrid, occupancyMap)
@@ -1189,16 +1174,13 @@ function checkHarvesterProductivity(unit, mapGrid, occupancyMap, now) {
                       ) > 0.3)
   
   if (!isProductive) {
-    console.log(`Harvester ${unit.id} detected as unproductive, finding new task`)
     
     if (unit.oreCarried >= HARVESTER_CAPPACITY) {
       // Full harvester should be unloading
-      console.log(`Unproductive harvester ${unit.id} is full, clearing path to trigger unload`)
       unit.path = []
       unit.moveTarget = null
     } else {
       // Empty harvester should be finding ore
-      console.log(`Unproductive harvester ${unit.id} is empty, finding new ore target`)
       
       // Clear current targets
       if (unit.oreField) {

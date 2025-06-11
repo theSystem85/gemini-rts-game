@@ -176,7 +176,6 @@ export class EventHandlers {
           showNotification(`${buildingData[buildingType].displayName} constructed`)
 
           // Check for milestones after building placement
-          console.log('Checking milestones after building placement:', buildingType)
           milestoneSystem.checkMilestones(gameState)
 
           // Start next production if any
@@ -193,7 +192,6 @@ export class EventHandlers {
             this.productionController.updateBuildingButtonStates()
           }
         } else {
-          console.log(`Building placement failed for ${buildingType} at (${tileX},${tileY})`)
           // Play error sound for invalid placement
           playSound('error')
         }

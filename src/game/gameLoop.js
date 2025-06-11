@@ -120,7 +120,6 @@ export class GameLoop {
         return
       }
       // Assets are loaded, perform one-time initializations
-      console.log('Game initialized and starting loop.')
       this.gameInitialized = true
       this.lastTime = timestamp // Initialize lastTime
       // Call initial button state updates

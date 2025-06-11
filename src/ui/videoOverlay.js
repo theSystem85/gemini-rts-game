@@ -273,7 +273,6 @@ export class VideoOverlay {
           
           const onLoad = () => {
             clearTimeout(timeout)
-            console.log('Video loaded successfully:', videoPath)
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
             resolve()
@@ -355,7 +354,6 @@ export class VideoOverlay {
             })
             
             audioLoaded = true
-            console.log('Audio loaded successfully:', path)
             break
           } catch (e) {
             console.warn(`Failed to load audio from ${path}:`, e)
@@ -384,7 +382,6 @@ export class VideoOverlay {
       // Start video playback with error handling
       try {
         await video.play()
-        console.log('Video playback started successfully')
       } catch (playError) {
         console.error('Video play() failed:', playError)
         // Try to handle specific play errors
@@ -538,7 +535,6 @@ export function playMilestoneVideo(videoFile, audioFile, milestoneInfo) {
  * @param {object} options - Optional settings for the video playback
  */
 export function playSyncedVideoAudio(baseFilename, options = {}) {
-  console.log('playSyncedVideoAudio called with:', baseFilename, options)
   const videoFile = `${baseFilename}.mp4`
   const audioFile = `${baseFilename}.mp3`
   

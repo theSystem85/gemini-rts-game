@@ -84,15 +84,11 @@ export class UnitCommandsHandler {
         unit.forcedAttack = false
         playSound('movement', 0.5)
 
-        // Debug to verify path is set
-        console.log(`Unit ${unit.id || 'unknown'} path set, length: ${unit.path.length}, destination: ${destTile.x},${destTile.y}`)
       }
     })
   }
 
   handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false) {
-    console.log('handleAttackCommand called with target:', target, 'isForceAttack:', isForceAttack)
-    console.log('Target type:', target.type, 'Target owner:', target.owner, 'selectedUnits:', selectedUnits.length)
     
     // Semicircle formation logic for attack
     const count = selectedUnits.length
@@ -138,14 +134,12 @@ export class UnitCommandsHandler {
         unit.path = path.slice(1)
         unit.target = target
         unit.forcedAttack = isForceAttack
-        console.log(`Unit ${unit.id} assigned target:`, target, 'forcedAttack:', isForceAttack)
         playSound('movement', 0.5)
       } else {
         // If already at position, just set the target
         unit.path = []
         unit.target = target
         unit.forcedAttack = isForceAttack
-        console.log(`Unit ${unit.id} already at position, assigned target:`, target, 'forcedAttack:', isForceAttack)
       }
     })
 
@@ -167,7 +161,6 @@ export class UnitCommandsHandler {
           unit.moveTarget = oreTarget
           unit.forcedAttack = false
           playSound('movement', 0.5)
-          console.log(`Harvester ${unit.id || 'unknown'} manually targeted ore at ${oreTarget.x},${oreTarget.y}`)
         }
       }
     })

@@ -18,7 +18,6 @@ export class HarvesterHUD {
 
   toggle() {
     this.isVisible = !this.isVisible
-    console.log(`Harvester HUD ${this.isVisible ? 'enabled' : 'disabled'}`)
   }
 
   render(ctx, units, gameState, scrollOffset) {
