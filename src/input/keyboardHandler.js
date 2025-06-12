@@ -70,12 +70,27 @@ export class KeyboardHandler {
 
   handleAlertMode(selectedUnits) {
     // Toggle alert mode on all selected player units.
+    let alertToggledCount = 0
+    let tankV2Count = 0
+    
     selectedUnits.forEach(unit => {
       // Only tank-v2 units can use alert mode
       if (unit.type === 'tank-v2') {
+        tankV2Count++
         unit.alertMode = !unit.alertMode
+        alertToggledCount++
       }
     })
+    
+    // Provide feedback to the user
+    if (tankV2Count === 0) {
+      this.showNotification('Alert mode only works with Tank V2 units', 2000)
+    } else if (alertToggledCount > 0) {
+      const tank = selectedUnits.find(u => u.type === 'tank-v2')
+      const modeStatus = tank.alertMode ? 'ON' : 'OFF'
+      this.showNotification(`Alert mode ${modeStatus} for ${alertToggledCount} Tank V2 unit(s)`, 2000)
+      playSound('unitSelection')
+    }
   }
 
   handleSellMode() {

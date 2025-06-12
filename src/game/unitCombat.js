@@ -4,6 +4,7 @@ import { playSound } from '../sound.js'
 import { hasClearShot } from '../logic.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
+import { gameState } from '../gameState.js'
 
 /**
  * Enhanced targeting spread with controlled randomness for better accuracy
@@ -288,16 +289,91 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
 }
 
 /**
- * Updates tank-v2 combat with improved targeting
+ * Updates tank-v2 combat with improved targeting and alert mode
  */
 function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  // Alert mode: automatically scan for targets when no target is assigned
+  if (unit.alertMode && unit.owner === 'player' && (!unit.target || unit.target.health <= 0)) {
+    const ALERT_SCAN_RANGE = TANK_FIRE_RANGE * TILE_SIZE;
+    const unitCenterX = unit.x + TILE_SIZE / 2;
+    const unitCenterY = unit.y + TILE_SIZE / 2;
+    
+    let closestEnemy = null;
+    let closestDistance = Infinity;
+    
+    // Scan for enemy units within range
+    units.forEach(potentialTarget => {
+      if (potentialTarget.owner === 'enemy' && potentialTarget.health > 0) {
+        const targetCenterX = potentialTarget.x + TILE_SIZE / 2;
+        const targetCenterY = potentialTarget.y + TILE_SIZE / 2;
+        const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+        
+        if (distance <= ALERT_SCAN_RANGE && distance < closestDistance) {
+          closestDistance = distance;
+          closestEnemy = potentialTarget;
+        }
+      }
+    });
+    
+    // Also scan for enemy buildings within range
+    if (gameState.buildings) {
+      gameState.buildings.forEach(building => {
+        if (building.owner === 'enemy' && building.health > 0) {
+          const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2;
+          const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2;
+          const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY);
+          
+          if (distance <= ALERT_SCAN_RANGE && distance < closestDistance) {
+            closestDistance = distance;
+            closestEnemy = building;
+          }
+        }
+      });
+    }
+    
+    // Assign target if found, but don't move to chase it (alert mode stays in position)
+    if (closestEnemy) {
+      unit.target = closestEnemy;
+    }
+  }
+  
   if (unit.target && unit.target.health > 0) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.STANDARD;
     
-    // Handle movement using common logic
-    const { distance, targetCenterX, targetCenterY } = handleTankMovement(
-      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
-    );
+    // Handle movement using common logic, but prevent chasing if in alert mode
+    let distance, targetCenterX, targetCenterY;
+    
+    if (unit.alertMode && unit.owner === 'player') {
+      // Alert mode: don't move, just calculate distance for firing
+      const unitCenterX = unit.x + TILE_SIZE / 2;
+      const unitCenterY = unit.y + TILE_SIZE / 2;
+      
+      if (unit.target.tileX !== undefined) {
+        // Target is a unit
+        targetCenterX = unit.target.x + TILE_SIZE / 2;
+        targetCenterY = unit.target.y + TILE_SIZE / 2;
+      } else {
+        // Target is a building
+        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2;
+        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2;
+      }
+      
+      distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+      
+      // Clear target if it moves out of range in alert mode
+      if (distance > TANK_FIRE_RANGE * TILE_SIZE) {
+        unit.target = null;
+        return;
+      }
+    } else {
+      // Normal mode: use standard movement logic
+      const result = handleTankMovement(
+        unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
+      );
+      distance = result.distance;
+      targetCenterX = result.targetCenterX;
+      targetCenterY = result.targetCenterY;
+    }
     
     // Fire if in range and allowed to attack
     // Player units can always attack, enemy units need AI permission

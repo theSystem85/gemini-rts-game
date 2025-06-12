@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE } from '../config.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -151,10 +151,20 @@ export class UnitRenderer {
   renderAlertMode(ctx, unit, centerX, centerY) {
     // If unit is alert, draw an outer red circle.
     if (unit.alertMode && unit.type === 'tank-v2') {
-      ctx.strokeStyle = 'red'
+      const now = performance.now()
+      const pulse = Math.sin(now * 0.005) * 0.3 + 0.7 // Pulsing effect between 0.4 and 1.0
+      
+      ctx.strokeStyle = `rgba(255, 0, 0, ${pulse})`
       ctx.lineWidth = 3
       ctx.beginPath()
       ctx.arc(centerX, centerY, TILE_SIZE / 2, 0, 2 * Math.PI)
+      ctx.stroke()
+      
+      // Add inner range indicator
+      ctx.strokeStyle = `rgba(255, 100, 100, ${pulse * 0.3})`
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, TANK_FIRE_RANGE * TILE_SIZE, 0, 2 * Math.PI)
       ctx.stroke()
     }
   }
