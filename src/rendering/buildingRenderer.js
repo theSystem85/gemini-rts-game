@@ -1,5 +1,5 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 
 export class BuildingRenderer {
@@ -103,10 +103,24 @@ export class BuildingRenderer {
       }
       // For turret guns, draw rotating barrel
       else if (building.type.startsWith('turretGun')) {
+        const now = performance.now()
+        
+        // Calculate recoil offset
+        let recoilOffset = 0
+        if (building.recoilStartTime && now - building.recoilStartTime <= RECOIL_DURATION) {
+          const progress = (now - building.recoilStartTime) / RECOIL_DURATION
+          // Use a smooth easing function for recoil
+          const easedProgress = 1 - Math.pow(1 - progress, 3)
+          recoilOffset = TURRET_RECOIL_DISTANCE * (1 - easedProgress)
+        }
+        
         // Draw turret with rotation
         ctx.save()
         ctx.translate(centerX, centerY)
         ctx.rotate(building.turretDirection || 0)
+        
+        // Apply recoil offset (move turret backwards)
+        ctx.translate(-recoilOffset, 0)
 
         // Draw the turret barrel with different styles based on turret type
         if (building.type === 'turretGunV1') {
@@ -151,6 +165,28 @@ export class BuildingRenderer {
           ctx.stroke()
         }
 
+        // Render muzzle flash for turrets
+        if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+          const flashProgress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+          const flashAlpha = 1 - flashProgress
+          const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)
+          
+          ctx.save()
+          ctx.globalAlpha = flashAlpha
+          
+          // Create radial gradient for muzzle flash
+          const gradient = ctx.createRadialGradient(TILE_SIZE * 0.7, 0, 0, TILE_SIZE * 0.7, 0, flashSize)
+          gradient.addColorStop(0, '#FFF')
+          gradient.addColorStop(0.3, '#FF0')
+          gradient.addColorStop(1, 'rgba(255, 165, 0, 0)')
+          
+          ctx.fillStyle = gradient
+          ctx.beginPath()
+          ctx.arc(TILE_SIZE * 0.7, 0, flashSize, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.restore()
+        }
+
         // Draw turret base
         ctx.fillStyle = '#222'
         ctx.beginPath()
@@ -167,6 +203,31 @@ export class BuildingRenderer {
 
         ctx.restore()
       } else if (building.type === 'rocketTurret') {
+        const now = performance.now()
+        
+        // Render muzzle flash for rocket turret (appears at center of building)
+        if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+          const flashProgress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+          const flashAlpha = 1 - flashProgress
+          const flashSize = MUZZLE_FLASH_SIZE * 1.5 * (1 - flashProgress * 0.5) // Larger flash for rockets
+          
+          ctx.save()
+          ctx.globalAlpha = flashAlpha
+          
+          // Create radial gradient for rocket muzzle flash
+          const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, flashSize)
+          gradient.addColorStop(0, '#FFF')
+          gradient.addColorStop(0.2, '#FF0')
+          gradient.addColorStop(0.5, '#FF4500')
+          gradient.addColorStop(1, 'rgba(255, 69, 0, 0)')
+          
+          ctx.fillStyle = gradient
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, flashSize, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.restore()
+        }
+        
         // For rocket turret, only draw the ready indicator in bottom left corner
         if (!building.lastShotTime || performance.now() - building.lastShotTime >= building.fireCooldown) {
           ctx.fillStyle = '#0F0'

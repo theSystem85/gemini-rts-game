@@ -323,6 +323,10 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
   }
 
   bullets.push(projectile)
+  
+  // Trigger recoil and muzzle flash animations for turrets
+  building.recoilStartTime = now
+  building.muzzleFlashStartTime = now
 
   // Don't update lastShotTime here - it's handled in the main firing logic
 }

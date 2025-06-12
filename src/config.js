@@ -65,6 +65,13 @@ export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
 export const TANK_BULLET_SPEED = 8 // Radians per frame
 
+// Recoil and muzzle flash animation constants
+export const RECOIL_DISTANCE = 8 // pixels to move back during recoil
+export const RECOIL_DURATION = 300 // milliseconds
+export const MUZZLE_FLASH_DURATION = 150 // milliseconds
+export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
+export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
+
 export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 export const ORE_SPREAD_PROBABILITY = 0.06
 

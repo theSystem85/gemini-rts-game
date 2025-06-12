@@ -226,6 +226,9 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
+- [x] Make sure the tanks (and turrets) when they fire have:
+  - [x] (1) a recoil animation on their gun.
+  - [x] (2) a muzzle flash animation
 - [ ] only show health bars if units or buildings are damaged
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [ ] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.

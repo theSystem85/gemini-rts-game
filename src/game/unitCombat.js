@@ -158,6 +158,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
             bullets.push(bullet);
             playSound(projectileType === 'rocket' ? 'shoot_rocket' : 'shoot', projectileType === 'rocket' ? 0.3 : 0.5);
             unit.lastShotTime = now;
+            
+            // Trigger recoil and muzzle flash animations
+            unit.recoilStartTime = now;
+            unit.muzzleFlashStartTime = now;
+            
             return true;
         }
     }

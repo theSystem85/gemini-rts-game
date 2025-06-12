@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -53,10 +53,30 @@ export class UnitRenderer {
       return
     }
 
+    const now = performance.now()
+    
+    // Special handling for rocket tanks - render 3 static tubes instead of turret
+    if (unit.type === 'rocketTank') {
+      this.renderRocketTubes(ctx, unit, centerX, centerY, now)
+      return
+    }
+    
+    // Calculate recoil offset
+    let recoilOffset = 0
+    if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
+      const progress = (now - unit.recoilStartTime) / RECOIL_DURATION
+      // Use a smooth easing function for recoil
+      const easedProgress = 1 - Math.pow(1 - progress, 3)
+      recoilOffset = RECOIL_DISTANCE * (1 - easedProgress)
+    }
+
     // Draw turret for combat units - use the turretDirection for rotation
     ctx.save()
     ctx.translate(centerX, centerY)
     ctx.rotate(unit.turretDirection)
+
+    // Apply recoil offset (move turret backwards)
+    ctx.translate(-recoilOffset, 0)
 
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 3
@@ -64,6 +84,28 @@ export class UnitRenderer {
     ctx.moveTo(0, 0)
     ctx.lineTo(TILE_SIZE / 2, 0)
     ctx.stroke()
+
+    // Render muzzle flash
+    if (unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+      const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+      const flashAlpha = 1 - flashProgress
+      const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)
+      
+      ctx.save()
+      ctx.globalAlpha = flashAlpha
+      
+      // Create radial gradient for muzzle flash
+      const gradient = ctx.createRadialGradient(TILE_SIZE / 2, 0, 0, TILE_SIZE / 2, 0, flashSize)
+      gradient.addColorStop(0, '#FFF')
+      gradient.addColorStop(0.3, '#FF0')
+      gradient.addColorStop(1, 'rgba(255, 165, 0, 0)')
+      
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(TILE_SIZE / 2, 0, flashSize, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
 
     ctx.restore()
   }
@@ -213,5 +255,68 @@ export class UnitRenderer {
     units.forEach(unit => {
       this.renderUnit(ctx, unit, scrollOffset)
     })
+  }
+
+  renderRocketTubes(ctx, unit, centerX, centerY, now) {
+    // Draw 3 static rocket tubes on top of the tank
+    ctx.save()
+    ctx.translate(centerX, centerY)
+    ctx.rotate(unit.direction) // Use body direction instead of turret direction
+
+    // Calculate recoil offset for rocket tubes
+    let recoilOffset = 0
+    if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
+      const progress = (now - unit.recoilStartTime) / RECOIL_DURATION
+      const easedProgress = 1 - Math.pow(1 - progress, 3)
+      recoilOffset = RECOIL_DISTANCE * 0.5 * (1 - easedProgress) // Smaller recoil for rockets
+    }
+
+    // Apply recoil offset
+    ctx.translate(-recoilOffset, 0)
+
+    // Draw 3 rocket tubes in a row
+    const tubeWidth = 3
+    const tubeLength = TILE_SIZE * 0.4
+    const tubeSpacing = 6
+
+    for (let i = 0; i < 3; i++) {
+      const tubeY = (i - 1) * tubeSpacing // Center tube at 0, others at +/- spacing
+      
+      ctx.fillStyle = '#444'
+      ctx.fillRect(0, tubeY - tubeWidth/2, tubeLength, tubeWidth)
+      
+      // Add tube caps
+      ctx.fillStyle = '#222'
+      ctx.fillRect(tubeLength - 2, tubeY - tubeWidth/2, 2, tubeWidth)
+    }
+
+    // Render muzzle flash for rocket tubes
+    if (unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+      const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+      const flashAlpha = 1 - flashProgress
+      const flashSize = MUZZLE_FLASH_SIZE * 0.8 * (1 - flashProgress * 0.5)
+      
+      ctx.save()
+      ctx.globalAlpha = flashAlpha
+      
+      // Create muzzle flash for each tube
+      for (let i = 0; i < 3; i++) {
+        const tubeY = (i - 1) * tubeSpacing
+        
+        const gradient = ctx.createRadialGradient(tubeLength, tubeY, 0, tubeLength, tubeY, flashSize)
+        gradient.addColorStop(0, '#FFF')
+        gradient.addColorStop(0.3, '#FF0')
+        gradient.addColorStop(0.7, '#FF4500')
+        gradient.addColorStop(1, 'rgba(255, 69, 0, 0)')
+        
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(tubeLength, tubeY, flashSize, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
+    ctx.restore()
   }
 }
