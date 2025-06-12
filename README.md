@@ -242,7 +242,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] **Refactor:** updateGame.js is too big and needs to be modularized.
 - [ ] **Refactor:** enemy.js is too big and needs to be modularized.
 - [x] **Refactor:** Rendering.js is too big and needs to be modularized.
-- [ ] **Refactor:** inputHandler.js is too big and needs to be modularized.
+- [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
 - [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
