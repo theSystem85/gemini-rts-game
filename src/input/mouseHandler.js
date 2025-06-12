@@ -13,9 +13,11 @@ export class MouseHandler {
     this.selectionStart = { x: 0, y: 0 }
     this.selectionEnd = { x: 0, y: 0 }
     this.rightDragStart = { x: 0, y: 0 }
+    this.gameFactories = [] // Initialize gameFactories
   }
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
+    this.gameFactories = factories // Store the passed factories list
     // Disable right-click context menu
     gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
@@ -410,7 +412,7 @@ export class MouseHandler {
     }
 
     // Check enemy factories if no building was targeted
-    const factories = gameState.factories || []
+    const factories = this.gameFactories || [] // Use stored gameFactories
     for (const factory of factories) {
       if (factory.id !== 'player' &&
           worldX >= factory.x * TILE_SIZE &&
