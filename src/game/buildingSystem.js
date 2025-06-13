@@ -4,6 +4,7 @@ import { playSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { updatePowerSupply } from '../buildings.js'
+import { checkGameEndConditions } from './gameStateManager.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -22,6 +23,13 @@ export function updateBuildings(gameState, units, bullets, factories, delta) {
 
       // Skip destroyed buildings and remove them
       if (building.health <= 0) {
+        // Track destroyed buildings for statistics
+        if (building.owner === 'player') {
+          gameState.playerBuildingsDestroyed++
+        } else if (building.owner === 'enemy') {
+          gameState.enemyBuildingsDestroyed++
+        }
+
         // Remove building from selected units if it was selected
         if (building.selected) {
           const idx = selectedUnits.findIndex(u => u === building)
@@ -43,6 +51,9 @@ export function updateBuildings(gameState, units, bullets, factories, delta) {
         const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
         const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
         triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now)
+
+        // Check for game end conditions after a building is destroyed
+        checkGameEndConditions(factories, gameState)
 
         continue
       }

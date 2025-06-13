@@ -9,6 +9,14 @@ export const gameState = {
   gamePaused: true, // Changed from false to true to start paused
   gameOver: false,
   gameOverMessage: null,
+  gameResult: null, // 'victory' or 'defeat'
+  
+  // Statistics tracking for game over screen
+  playerUnitsDestroyed: 0,
+  enemyUnitsDestroyed: 0,
+  playerBuildingsDestroyed: 0,
+  enemyBuildingsDestroyed: 0,
+  totalMoneyEarned: 0,
   scrollOffset: { x: 0, y: 0 },
   dragVelocity: { x: 0, y: 0 },
   isRightDragging: false,

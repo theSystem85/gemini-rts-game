@@ -168,7 +168,8 @@ export function createBuilding(type, x, y) {
     health: data.health,
     maxHealth: data.health,
     power: data.power,
-    isBuilding: true
+    isBuilding: true,
+    owner: 'neutral' // Default owner, should be set explicitly when added to gameState
   }
 
   // Add combat properties for defensive buildings (including teslaCoil)

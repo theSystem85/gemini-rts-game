@@ -103,21 +103,26 @@ export function updateUnitCollisions(units, mapGrid) {
  * @returns {boolean} - True if game should end
  */
 export function checkGameEndConditions(factories, gameState) {
-  const playerFactory = factories.find(f => f.id === 'player')
-  const enemyFactory = factories.find(f => f.id === 'enemy')
-
-  // Check if player factory is destroyed
-  if (!playerFactory || playerFactory.health <= 0) {
+  if (!gameState.buildings) return false
+  
+  // Count remaining buildings for each player
+  const playerBuildings = gameState.buildings.filter(b => b.owner === 'player' && b.health > 0)
+  const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy' && b.health > 0)
+  
+  // Check if player has no buildings left
+  if (playerBuildings.length === 0) {
     gameState.gameOver = true
     gameState.gameResult = 'defeat'
+    gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
     gameState.losses++
     return true
   }
 
-  // Check if enemy factory is destroyed
-  if (!enemyFactory || enemyFactory.health <= 0) {
+  // Check if enemy has no buildings left
+  if (enemyBuildings.length === 0) {
     gameState.gameOver = true
     gameState.gameResult = 'victory'
+    gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
     gameState.wins++
     return true
   }

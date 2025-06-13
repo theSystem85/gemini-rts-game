@@ -5,6 +5,7 @@ import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
 import { updatePowerSupply } from './buildings.js'
+import { checkGameEndConditions } from './game/gameStateManager.js'
 
 /**
  * Handles the selling of buildings
@@ -78,6 +79,9 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       // Play selling sound and show notification
       playSound('deposit')
       showNotification(`Building sold for $${sellValue}.`)
+
+      // Check for game end conditions after a building is sold
+      checkGameEndConditions(factories, gameState)
 
       return
     }

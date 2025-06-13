@@ -17,7 +17,6 @@ import {
   updateExplosions, 
   cleanupDestroyedUnits, 
   updateUnitCollisions,
-  checkGameEndConditions,
   updateGameTime,
   handleRightClickDeselect
 } from './game/gameStateManager.js'
@@ -83,9 +82,6 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
       updateBuildingsUnderRepair(gameState, now)
     }
-
-    // Check for game end conditions
-    checkGameEndConditions(factories, gameState)
 
   } catch (error) {
     console.error('Critical error in updateGame:', error)

@@ -204,6 +204,38 @@ class Game {
     pauseBtn.textContent = 'Start'
   }
 
+  resetGame() {
+    // Reset game state
+    gameState.money = 10000
+    gameState.gameTime = 0
+    gameState.frameCount = 0
+    gameState.wins = 0
+    gameState.losses = 0
+    gameState.gameStarted = false
+    gameState.gamePaused = true
+    gameState.gameOver = false
+    gameState.gameOverMessage = null
+    gameState.gameResult = null
+    gameState.playerUnitsDestroyed = 0
+    gameState.enemyUnitsDestroyed = 0
+    gameState.playerBuildingsDestroyed = 0
+    gameState.enemyBuildingsDestroyed = 0
+    gameState.totalMoneyEarned = 0
+
+    // Reset map and units
+    generateMapFromSetup(Date.now(), this.mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    this.factories.length = 0
+    initFactories(this.factories, this.mapGrid)
+    this.units.length = 0
+    this.bullets.length = 0
+
+    // Center camera on player factory
+    this.centerOnPlayerFactory()
+
+    // Restart game loop
+    this.startGameLoop()
+  }
+
   startGameLoop() {
     this.gameLoop = new GameLoop(
       this.canvasManager,

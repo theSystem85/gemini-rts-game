@@ -245,6 +245,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
+- [ ] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
 - [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
 - [x] Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
@@ -284,6 +285,12 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Saving games does not work anymore.
+- [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
+- [ ] Enemy is still building buildings even when his base is destroyed.
+- [ ] The sound for bullet impact seems to be missing.
+- [ ] The rocket tank does not correctly fire at enemy buildings. the projectiles seem to go into another direction.
+- [ ] The rocket tank rockets do not detonate where the rockets are impacting. Make sure the explosions happen where the rockets move to before they vanish.
 - [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] The harvesting animation is now working anymore.
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.
