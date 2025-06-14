@@ -23,6 +23,8 @@ export class GameLoop {
     this.lastFrameTime = null
     this.gameInitialized = false
     this.allAssetsLoaded = false
+    this.running = false
+    this.animationId = null
   }
 
   setAssetsLoaded(loaded) {
@@ -30,12 +32,26 @@ export class GameLoop {
   }
 
   start() {
-    requestAnimationFrame((timestamp) => this.animate(timestamp))
+    this.running = true
+    this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+  }
+
+  stop() {
+    this.running = false
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId)
+      this.animationId = null
+    }
   }
 
   animate(timestamp) {
+    // Stop if the loop has been stopped
+    if (!this.running) {
+      return
+    }
+
     if (!gameState.gameStarted || gameState.gamePaused) {
-      requestAnimationFrame((timestamp) => this.animate(timestamp))
+      this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
       return
     }
 
@@ -96,14 +112,23 @@ export class GameLoop {
     // Use setTimeout to ensure we don't overload the browser
     if (this.units.length > 20) {
       // For large number of units, use setTimeout to give browser breathing room
-      setTimeout(() => requestAnimationFrame((timestamp) => this.animate(timestamp)), 5)
+      setTimeout(() => {
+        if (this.running) {
+          this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+        }
+      }, 5)
     } else {
-      requestAnimationFrame((timestamp) => this.animate(timestamp))
+      this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
     }
   }
 
   // Legacy game loop for compatibility (if needed)
   legacyGameLoop(timestamp) {
+    // Stop if the loop has been stopped
+    if (!this.running) {
+      return
+    }
+
     if (!this.gameInitialized) {
       // Wait for assets to be loaded before initializing and starting the game loop
       if (!this.allAssetsLoaded) {
@@ -116,7 +141,9 @@ export class GameLoop {
         gameCtx.fillStyle = '#fff'
         gameCtx.textAlign = 'center'
         gameCtx.fillText('Loading assets, please wait...', gameCanvas.width / (2 * (window.devicePixelRatio || 1)), gameCanvas.height / (2 * (window.devicePixelRatio || 1)))
-        requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
+        if (this.running) {
+          this.animationId = requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
+        }
         return
       }
       // Assets are loaded, perform one-time initializations
@@ -148,6 +175,8 @@ export class GameLoop {
     this.moneyEl.textContent = gameState.money
     this.gameTimeEl.textContent = Math.floor(gameState.gameTime)
 
-    requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
+    if (this.running) {
+      this.animationId = requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
+    }
   }
 }

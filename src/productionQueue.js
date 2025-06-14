@@ -437,7 +437,7 @@ export const productionQueue = {
     // Update ready building counter
     this.updateReadyBuildingCounter(this.currentBuilding.button)
 
-    playSound('productionReady')
+    playSound('constructionComplete')
 
     this.currentBuilding = null
 

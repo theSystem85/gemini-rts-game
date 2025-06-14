@@ -20,12 +20,13 @@ import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
 import { TILE_SIZE } from '../config.js'
 
 export class EventHandlers {
-  constructor(canvasManager, factories, units, mapGrid, moneyEl) {
+  constructor(canvasManager, factories, units, mapGrid, moneyEl, gameInstance = null) {
     this.canvasManager = canvasManager
     this.factories = factories
     this.units = units
     this.mapGrid = mapGrid
     this.moneyEl = moneyEl
+    this.gameInstance = gameInstance
 
     this.setupGameControls()
     this.setupBuildingPlacement()
@@ -60,8 +61,37 @@ export class EventHandlers {
     }
 
     // Restart functionality
-    restartBtn.addEventListener('click', () => {
-      window.location.reload()
+    restartBtn.addEventListener('click', async () => {
+      try {
+        // Use the stored game instance first, fallback to dynamic import, then window
+        let gameInstance = this.gameInstance
+        
+        if (!gameInstance) {
+          // Fallback 1: Get the current game instance via dynamic import
+          try {
+            const module = await import('../main.js')
+            gameInstance = module.getCurrentGame()
+          } catch (importErr) {
+            console.warn('Import failed:', importErr)
+          }
+        }
+        
+        if (!gameInstance) {
+          // Fallback 2: Try window.gameInstance
+          gameInstance = window.gameInstance
+        }
+        
+        if (gameInstance && typeof gameInstance.resetGame === 'function') {
+          await gameInstance.resetGame()
+          showNotification('Game restarted while preserving win/loss statistics')
+        } else {
+          console.warn('Game instance not found or resetGame method missing, falling back to page reload')
+          window.location.reload()
+        }
+      } catch (err) {
+        console.error('Error in restart handler, falling back to page reload:', err)
+        window.location.reload()
+      }
     })
 
     // Background music initialization and control

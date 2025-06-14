@@ -104,7 +104,7 @@ export function playSound(eventName, volume = 1.0) {
           eventName === 'shoot' ? 800 :
             eventName === 'shoot_rocket' ? 100 :
               eventName === 'productionStart' ? 500 :
-                eventName === 'productionReady' ? 700 :
+                eventName === 'constructionComplete' ? 700 :
                   eventName === 'bulletHit' ? 900 :
                     eventName === 'harvest' ? 350 :
                       eventName === 'deposit' ? 450 :
@@ -113,6 +113,7 @@ export function playSound(eventName, volume = 1.0) {
     gainNode.gain.value = volume
     oscillator.start()
     oscillator.stop(audioContext.currentTime + 0.1)
+    console.log(`Fallback sound played for event: ${eventName}`)
   } catch (e) {
     console.error('AudioContext error:', e)
   }

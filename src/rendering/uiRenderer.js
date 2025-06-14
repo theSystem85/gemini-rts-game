@@ -169,8 +169,30 @@ export class UIRenderer {
             clickY >= currentMessageY + 100 &&
             clickY <= currentMessageY + 140
           ) {
-            // Use the same reset method as the sidebar button for consistency
-            window.location.reload()
+            // Reset the game instead of reloading the page
+            (async () => {
+              try {
+                const module = await import('../main.js')
+                const gameInstance = module.getCurrentGame()
+                
+                if (gameInstance && typeof gameInstance.resetGame === 'function') {
+                  await gameInstance.resetGame()
+                  // Import and show notification
+                  try {
+                    const notifModule = await import('../ui/notifications.js')
+                    notifModule.showNotification('Game restarted while preserving win/loss statistics')
+                  } catch (err) {
+                    console.warn('Could not show notification:', err)
+                  }
+                } else {
+                  console.warn('Game instance not found or resetGame method missing, falling back to page reload')
+                  window.location.reload()
+                }
+              } catch (err) {
+                console.error('Could not import game instance, falling back to page reload:', err)
+                window.location.reload()
+              }
+            })()
           }
         }
         

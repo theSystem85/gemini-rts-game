@@ -105,7 +105,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Play hit sound
-          playSound('hit', 0.5)
+          playSound('bulletHit', 0.5)
 
           // Handle unit destruction
           if (unit.health <= 0) {
@@ -139,7 +139,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           building.health -= actualDamage
 
           // Play hit sound
-          playSound('hit', 0.5)
+          playSound('bulletHit', 0.5)
 
           // Handle building destruction
           if (building.health <= 0) {
@@ -168,7 +168,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           factory.health -= actualDamage
 
           // Play hit sound
-          playSound('hit', 0.5)
+          playSound('bulletHit', 0.5)
 
           // Handle factory destruction
           if (factory.health <= 0) {

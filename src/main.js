@@ -146,7 +146,8 @@ class Game {
       factories,
       units,
       mapGrid,
-      moneyEl
+      moneyEl,
+      this // Pass the game instance
     )
     this.eventHandlers.setProductionController(this.productionController)
 
@@ -204,15 +205,27 @@ class Game {
     pauseBtn.textContent = 'Start'
   }
 
-  resetGame() {
+  async resetGame() {
+    console.log('Resetting game...')
+    
+    // Stop existing game loop to prevent conflicts
+    if (this.gameLoop) {
+      if (typeof this.gameLoop.stop === 'function') {
+        this.gameLoop.stop()
+      }
+      this.gameLoop = null
+    }
+    
+    // Preserve win/loss statistics
+    const preservedWins = gameState.wins
+    const preservedLosses = gameState.losses
+    
     // Reset game state
     gameState.money = 10000
     gameState.gameTime = 0
     gameState.frameCount = 0
-    gameState.wins = 0
-    gameState.losses = 0
-    gameState.gameStarted = false
-    gameState.gamePaused = true
+    gameState.gameStarted = true  // Auto-start the game
+    gameState.gamePaused = false  // Make sure it's not paused
     gameState.gameOver = false
     gameState.gameOverMessage = null
     gameState.gameResult = null
@@ -222,21 +235,124 @@ class Game {
     gameState.enemyBuildingsDestroyed = 0
     gameState.totalMoneyEarned = 0
 
+    // Reset other game state properties
+    gameState.buildings = []
+    gameState.powerSupply = 0
+    gameState.buildingPlacementMode = false
+    gameState.currentBuildingType = null
+    gameState.repairMode = false
+    gameState.radarActive = false
+    gameState.targetedOreTiles = {}
+    gameState.refineryStatus = {}
+
+    // Restore preserved statistics
+    gameState.wins = preservedWins
+    gameState.losses = preservedLosses
+
     // Reset map and units
-    generateMapFromSetup(Date.now(), this.mapGrid, MAP_TILES_X, MAP_TILES_Y)
-    this.factories.length = 0
-    initFactories(this.factories, this.mapGrid)
-    this.units.length = 0
-    this.bullets.length = 0
+    generateMapFromSetup(Date.now(), mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    factories.length = 0
+    initFactories(factories, mapGrid)
+    units.length = 0
+    bullets.length = 0
+
+    // Reset production queue and clear all pending items
+    if (typeof productionQueue !== 'undefined') {
+      productionQueue.unitItems.length = 0
+      productionQueue.buildingItems.length = 0
+      productionQueue.completedBuildings.length = 0
+      productionQueue.currentUnit = null
+      productionQueue.currentBuilding = null
+      productionQueue.pausedUnit = false
+      productionQueue.pausedBuilding = false
+      productionQueue.unitPaid = 0
+      productionQueue.buildingPaid = 0
+    }
+
+    // Reset milestone system
+    try {
+      const milestoneModule = await import('./game/milestoneSystem.js')
+      if (milestoneModule.milestoneSystem) {
+        milestoneModule.milestoneSystem.reset()
+      }
+    } catch (err) {
+      console.warn('Could not reset milestone system:', err)
+    }
+
+    // Reset UI elements
+    this.updateUIAfterReset()
 
     // Center camera on player factory
     this.centerOnPlayerFactory()
 
-    // Restart game loop
-    this.startGameLoop()
+    // Update win/loss display to show preserved statistics
+    this.updateStatsDisplay()
+
+    // Start new game loop with a small delay to ensure cleanup is complete
+    setTimeout(() => {
+      this.startGameLoop()
+      console.log('Game reset complete!')
+    }, 100)
+  }
+
+  updateUIAfterReset() {
+    // Reset production button states
+    if (this.productionController) {
+      this.productionController.updateVehicleButtonStates()
+      this.productionController.updateBuildingButtonStates()
+    }
+
+    // Reset pause button state for auto-start
+    const pauseBtn = document.getElementById('pauseBtn')
+    if (pauseBtn) {
+      const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
+      if (playPauseIcon) {
+        playPauseIcon.textContent = '⏸'  // Show pause icon since game is running
+      }
+    }
+
+    // Clear all progress bars and counters
+    document.querySelectorAll('.production-progress').forEach(bar => {
+      bar.style.width = '0%'
+    })
+    
+    document.querySelectorAll('.batch-counter').forEach(counter => {
+      counter.style.display = 'none'
+    })
+
+    document.querySelectorAll('.ready-counter').forEach(counter => {
+      counter.style.display = 'none'
+    })
+
+    // Remove active states from production buttons
+    document.querySelectorAll('.production-button').forEach(button => {
+      button.classList.remove('active', 'paused', 'ready-for-placement')
+    })
+  }
+
+  updateStatsDisplay() {
+    // Update wins/losses display
+    const winsEl = document.getElementById('wins')
+    const lossesEl = document.getElementById('losses')
+    
+    if (winsEl) {
+      winsEl.textContent = gameState.wins
+    }
+    
+    if (lossesEl) {
+      lossesEl.textContent = gameState.losses
+    }
   }
 
   startGameLoop() {
+    // Ensure any existing game loop is stopped first
+    if (this.gameLoop) {
+      if (typeof this.gameLoop.stop === 'function') {
+        this.gameLoop.stop()
+      }
+      this.gameLoop = null
+    }
+    
     this.gameLoop = new GameLoop(
       this.canvasManager,
       this.productionController,
@@ -287,6 +403,9 @@ export { showNotification }
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   gameInstance = new Game()
+  
+  // Also make it available globally for debugging
+  window.gameInstance = gameInstance
 })
 
 // Export functions for backward compatibility - these are now handled by ProductionController
