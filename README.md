@@ -285,10 +285,12 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
-- [ ] Saving games does not work anymore.
+- [x] Saving games does not work anymore.
+- [ ] When about 10 units get stuck the game slows down significantly.
+- [ ] When initial building factory gets destroyed there is not map background left, just black.
 - [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
 - [ ] Enemy is still building buildings even when his base is destroyed.
-- [ ] The sound for bullet impact seems to be missing.
+- [x] The sound for bullet impact seems to be missing.
 - [ ] The rocket tank does not correctly fire at enemy buildings. the projectiles seem to go into another direction.
 - [ ] The rocket tank rockets do not detonate where the rockets are impacting. Make sure the explosions happen where the rockets move to before they vanish.
 - [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
