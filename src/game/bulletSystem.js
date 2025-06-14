@@ -1,5 +1,5 @@
 // Bullet System Module - Handles all bullet/projectile updates and collision detection
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, BULLET_DAMAGES } from '../config.js'
 import { triggerExplosion } from '../logic.js'
 import { playSound } from '../sound.js'
 import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
@@ -34,28 +34,42 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
 
     // Handle homing projectiles
     if (bullet.homing) {
-      if (now - bullet.startTime > 5000) {
-        // Use target position for explosion if available, otherwise use current location
-        const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
-        const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
-        triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+      if (now - bullet.startTime > 5000) { // Max flight time for homing missiles
+        // Explode at the bullet's current position upon timeout
+        triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
         bullets.splice(i, 1)
         continue
       }
 
       // Update homing logic
       if (bullet.target && bullet.target.health > 0) {
-        const targetX = bullet.target.x + TILE_SIZE / 2
-        const targetY = bullet.target.y + TILE_SIZE / 2
-        const dx = targetX - bullet.x
-        const dy = targetY - bullet.y
+        let targetCenterX_pixels
+        let targetCenterY_pixels
+
+        // Check if the target is a building/factory by presence of width/height properties
+        // Buildings have tile-based x, y and width, height in tiles.
+        if (typeof bullet.target.width === 'number' && typeof bullet.target.height === 'number') {
+          targetCenterX_pixels = (bullet.target.x * TILE_SIZE) + (bullet.target.width * TILE_SIZE) / 2
+          targetCenterY_pixels = (bullet.target.y * TILE_SIZE) + (bullet.target.height * TILE_SIZE) / 2
+        } else {
+          // Target is likely a unit. Assume unit.x, .y are pixel coordinates (top-left).
+          // Assume units are TILE_SIZE x TILE_SIZE for centering.
+          targetCenterX_pixels = bullet.target.x + TILE_SIZE / 2
+          targetCenterY_pixels = bullet.target.y + TILE_SIZE / 2
+        }
+        
+        const dx = targetCenterX_pixels - bullet.x
+        const dy = targetCenterY_pixels - bullet.y
         const distance = Math.hypot(dx, dy)
 
-        if (distance > 5) {
+        if (distance > 5) { // Only adjust if not too close
           bullet.vx = (dx / distance) * bullet.effectiveSpeed
           bullet.vy = (dy / distance) * bullet.effectiveSpeed
         }
+        // If distance <= 5, velocity is not updated by this homing logic step.
+        // The bullet continues with its current velocity. Collision detection should handle impact.
       }
+      // If target is null or dead, bullet continues on current trajectory until timeout.
     } else {
       // Handle non-homing projectiles - check if they've traveled too far or too long
       // Non-homing projectile flight limits
@@ -63,12 +77,13 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       const distanceFromTarget = bullet.targetPosition ? 
         Math.hypot(bullet.x - bullet.targetPosition.x, bullet.y - bullet.targetPosition.y) : 0
       
-      // Explode if bullet has been flying too long or is close enough to target
+      // Explode if bullet has been flying too long or is close enough to its original target destination (for non-homing)
+      // For non-homing, targetPosition is the intended destination.
       if (now - bullet.startTime > timeLimit || 
-          (bullet.targetPosition && distanceFromTarget < 15)) {
-        // Explode at target position or current bullet position if no target
-        const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
-        const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
+          (bullet.targetPosition && distanceFromTarget < 15 && !bullet.homing)) { // Only use distance for non-homing termination
+        // Explode at the bullet's current position or original target if non-homing and close
+        const explosionX = !bullet.homing && bullet.targetPosition ? bullet.targetPosition.x : bullet.x
+        const explosionY = !bullet.homing && bullet.targetPosition ? bullet.targetPosition.y : bullet.y
         triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
         bullets.splice(i, 1)
         continue
@@ -119,9 +134,8 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // If bullet has a target position, explode there; otherwise explode at hit location
-          const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
-          const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
-          triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          // ALWAYS explode at the bullet's current position for accurate impact
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullets.splice(i, 1)
           continue
         }
@@ -148,9 +162,8 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Explode at target position or bullet location
-          const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
-          const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
-          triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          // ALWAYS explode at the bullet's current position for accurate impact
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullets.splice(i, 1)
           break
         }
@@ -178,9 +191,8 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Explode at target position or bullet location
-          const explosionX = bullet.targetPosition ? bullet.targetPosition.x : bullet.x
-          const explosionY = bullet.targetPosition ? bullet.targetPosition.y : bullet.y
-          triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          // ALWAYS explode at the bullet's current position for accurate impact
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
           bullets.splice(i, 1)
           break
         }
@@ -224,7 +236,7 @@ export function fireBullet(unit, target, bullets, now) {
       x: unitCenterX,
       y: unitCenterY,
       speed: 12,
-      baseDamage: 20,
+      baseDamage: BULLET_DAMAGES.tank_v1,
       active: true,
       shooter: unit,
       homing: false
@@ -235,7 +247,7 @@ export function fireBullet(unit, target, bullets, now) {
       x: unitCenterX,
       y: unitCenterY,
       speed: 12,
-      baseDamage: 24,
+      baseDamage: BULLET_DAMAGES.tank_v2,
       active: true,
       shooter: unit,
       homing: false
@@ -246,7 +258,7 @@ export function fireBullet(unit, target, bullets, now) {
       x: unitCenterX,
       y: unitCenterY,
       speed: 14,
-      baseDamage: 30,
+      baseDamage: BULLET_DAMAGES.tank_v3,
       active: true,
       shooter: unit,
       homing: false
@@ -257,7 +269,7 @@ export function fireBullet(unit, target, bullets, now) {
       x: unitCenterX,
       y: unitCenterY,
       speed: 20,
-      baseDamage: 40,
+      baseDamage: BULLET_DAMAGES.rocketTank,
       active: true,
       shooter: unit,
       homing: true,

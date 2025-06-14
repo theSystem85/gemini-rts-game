@@ -291,8 +291,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
 - [ ] Enemy is still building buildings even when his base is destroyed.
 - [x] The sound for bullet impact seems to be missing.
-- [ ] The rocket tank does not correctly fire at enemy buildings. the projectiles seem to go into another direction.
-- [ ] The rocket tank rockets do not detonate where the rockets are impacting. Make sure the explosions happen where the rockets move to before they vanish.
+- [x] The rocket tank does not correctly fire at enemy buildings. the projectiles seem to go into another direction.
+- [x] The rocket tank rockets do not detonate where the rockets are impacting. Make sure the explosions happen where the rockets move to before they vanish.
 - [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] The harvesting animation is now working anymore.
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.

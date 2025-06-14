@@ -155,3 +155,10 @@ export const DIRECTIONS = [
 
 // Maximum search distance for spawn positions
 export const MAX_SPAWN_SEARCH_DISTANCE = 10
+
+export const BULLET_DAMAGES = {
+  tank_v1: 20,
+  tank_v2: 24,
+  tank_v3: 30,
+  rocketTank: 60
+}
