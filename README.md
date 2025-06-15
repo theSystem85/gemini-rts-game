@@ -296,7 +296,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] The harvesting animation is now working anymore.
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.
-- [ ] Enemy does not loose money when building units.
+- [x] Enemy does not loose money when building units.
 - [x] Enemy defense buildings are missing healthbar and don't take damage.
 - [x] The ore tiles do not get removed after harvesting.
 - [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.

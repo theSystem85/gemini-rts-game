@@ -7,31 +7,37 @@ export class MapRenderer {
   }
 
   renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
+    // Disable image smoothing to prevent antialiasing gaps between tiles
+    ctx.imageSmoothingEnabled = false
+    
     // Draw map tiles - optimized rendering
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
         const tileType = tile.type
-        const tileX = x * TILE_SIZE - scrollOffset.x
-        const tileY = y * TILE_SIZE - scrollOffset.y
+        const tileX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+        const tileY = Math.floor(y * TILE_SIZE - scrollOffset.y)
 
         // Try to use texture if available and enabled - IMPORTANT: Don't try to load here!
         if (USE_TEXTURES && this.textureManager.allTexturesLoaded && this.textureManager.tileTextureCache[tileType]) {
           // Get consistent variation for this tile position
           const variationIndex = this.textureManager.getTileVariation(tileType, x, y)
 
-          // If valid variation found, draw it
+          // If valid variation found, draw it with slight overlap to prevent gaps
           if (variationIndex >= 0 && variationIndex < this.textureManager.tileTextureCache[tileType].length) {
-            ctx.drawImage(this.textureManager.tileTextureCache[tileType][variationIndex], tileX, tileY, TILE_SIZE, TILE_SIZE)
+            ctx.drawImage(this.textureManager.tileTextureCache[tileType][variationIndex], tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
             continue // Skip to next tile, no need for fallback
           }
         }
 
-        // Fall back to color if texture not available or disabled
+        // Fall back to color if texture not available or disabled - also with slight overlap
         ctx.fillStyle = TILE_COLORS[tileType]
-        ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE)
+        ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
       }
     }
+    
+    // Re-enable image smoothing for other rendering
+    ctx.imageSmoothingEnabled = true
   }
 
   renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState) {
