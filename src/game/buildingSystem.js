@@ -131,7 +131,15 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
                   closestEnemy.teslaSlowed = true
                   
                   // Apply damage to the target
-                  closestEnemy.health -= building.damage
+                  let actualDamage = building.damage
+                  if (window.cheatSystem) {
+                    actualDamage = window.cheatSystem.preventDamage(closestEnemy, building.damage)
+                  }
+                  
+                  // Only apply damage if actualDamage > 0 (god mode protection)
+                  if (actualDamage > 0) {
+                    closestEnemy.health -= actualDamage
+                  }
                   
                   // Track when units are being attacked for AI response
                   if (building.owner !== closestEnemy.owner) {

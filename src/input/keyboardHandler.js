@@ -4,6 +4,7 @@ import { TILE_SIZE } from '../config.js'
 import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
+import { CheatSystem } from './cheatSystem.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -14,6 +15,7 @@ export class KeyboardHandler {
     this.groupFormationMode = false
     this.helpSystem = new HelpSystem()
     this.playerFactory = null
+    this.cheatSystem = new CheatSystem()
   }
 
   setPlayerFactory(factory) {
@@ -30,8 +32,14 @@ export class KeyboardHandler {
         return
       }
 
-      // Don't process other inputs if game is paused
-      if (gameState.paused) return
+      // C key for cheat console (works even when paused)
+      if (e.key.toLowerCase() === 'c' && !gameState.cheatDialogOpen) {
+        this.cheatSystem.openDialog()
+        return
+      }
+
+      // Don't process other inputs if game is paused or cheat dialog is open
+      if (gameState.paused || gameState.cheatDialogOpen) return
 
       // A key for alert mode
       if (e.key.toLowerCase() === 'a') {
@@ -396,6 +404,21 @@ export class KeyboardHandler {
     gameState.gridVisible = !gameState.gridVisible
     // Play a sound for feedback
     playSound('confirmed', 0.5)
+  }
+
+  // Add method to access cheat system for damage prevention
+  getCheatSystem() {
+    return this.cheatSystem
+  }
+
+  // Method to update new units with god mode if enabled
+  updateNewUnitForCheat(unit) {
+    this.cheatSystem.updateNewUnit(unit)
+  }
+
+  // Method to clean up destroyed units from cheat tracking
+  cleanupDestroyedUnitFromCheat(unitId) {
+    this.cheatSystem.cleanupDestroyedUnit(unitId)
   }
 
   showNotification(message, duration = 2000) {

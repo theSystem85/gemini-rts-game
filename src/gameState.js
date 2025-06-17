@@ -47,6 +47,9 @@ export const gameState = {
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 
+  // Cheat dialog state
+  cheatDialogOpen: false,
+
   // Index for round-robin vehicle spawning
   nextVehicleFactoryIndex: 0,
 

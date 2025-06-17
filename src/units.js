@@ -363,6 +363,11 @@ export function createUnit(factory, unitType, x, y) {
   // Initialize unified movement system for the new unit
   initializeUnitMovement(unit)
 
+  // Apply god mode if it's active for this unit's owner
+  if (window.cheatSystem && window.cheatSystem.isGodModeActive()) {
+    window.cheatSystem.addUnitToGodMode(unit)
+  }
+
   return unit
 }
 

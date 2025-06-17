@@ -77,11 +77,19 @@ export function updateExplosions(gameState) {
 export function cleanupDestroyedUnits(units, gameState) {
   for (let i = units.length - 1; i >= 0; i--) {
     if (units[i].health <= 0) {
-      if (units[i].owner === 'player') {
+      const unit = units[i]
+      
+      if (unit.owner === 'player') {
         gameState.playerUnitsDestroyed++
       } else {
         gameState.enemyUnitsDestroyed++
       }
+      
+      // Remove unit from cheat system tracking if it exists
+      if (window.cheatSystem) {
+        window.cheatSystem.removeUnitFromTracking(unit.id)
+      }
+      
       units.splice(i, 1)
     }
   }

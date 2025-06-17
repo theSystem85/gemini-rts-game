@@ -24,6 +24,12 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
           selectedUnits.splice(idx, 1)
         }
       }
+      
+      // Remove unit from cheat system tracking if it exists
+      if (window.cheatSystem) {
+        window.cheatSystem.removeUnitFromTracking(unit.id)
+      }
+      
       units.splice(i, 1)
       continue
     }

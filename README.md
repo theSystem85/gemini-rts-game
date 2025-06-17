@@ -286,6 +286,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
 - [ ] When about 10 units get stuck the game slows down significantly.
 - [ ] When initial building factory gets destroyed there is not map background left, just black.
 - [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.

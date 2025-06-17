@@ -100,13 +100,21 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         if (unit.health > 0 && checkUnitCollision(bullet, unit)) {
           // Apply damage with some randomization
           const damageMultiplier = 0.8 + Math.random() * 0.4
-          const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+          let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
           
-          // Apply damage reduction from armor if the unit has armor
-          if (unit.armor) {
-            unit.health -= Math.max(1, Math.round(actualDamage / unit.armor))
-          } else {
-            unit.health -= actualDamage
+          // Check for god mode protection
+          if (window.cheatSystem) {
+            actualDamage = window.cheatSystem.preventDamage(unit, actualDamage)
+          }
+          
+          // Only apply damage if actualDamage > 0 (god mode protection)
+          if (actualDamage > 0) {
+            // Apply damage reduction from armor if the unit has armor
+            if (unit.armor) {
+              unit.health -= Math.max(1, Math.round(actualDamage / unit.armor))
+            } else {
+              unit.health -= actualDamage
+            }
           }
 
           // Track when units are being attacked for AI response
@@ -148,9 +156,17 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         if (checkBuildingCollision(bullet, building)) {
           // Apply damage with some randomization
           const damageMultiplier = 0.8 + Math.random() * 0.4
-          const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+          let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
           
-          building.health -= actualDamage
+          // Check for god mode protection for player buildings
+          if (window.cheatSystem && building.owner === 'player') {
+            actualDamage = window.cheatSystem.preventDamage(building, actualDamage)
+          }
+          
+          // Only apply damage if actualDamage > 0 (god mode protection)
+          if (actualDamage > 0) {
+            building.health -= actualDamage
+          }
 
           // Play hit sound
           playSound('bulletHit', 0.5)
@@ -176,9 +192,17 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         if (checkFactoryCollision(bullet, factory)) {
           // Apply damage with some randomization
           const damageMultiplier = 0.8 + Math.random() * 0.4
-          const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+          let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
           
-          factory.health -= actualDamage
+          // Check for god mode protection for player factories
+          if (window.cheatSystem && factory.id === 'player') {
+            actualDamage = window.cheatSystem.preventDamage(factory, actualDamage)
+          }
+          
+          // Only apply damage if actualDamage > 0 (god mode protection)
+          if (actualDamage > 0) {
+            factory.health -= actualDamage
+          }
 
           // Play hit sound
           playSound('bulletHit', 0.5)

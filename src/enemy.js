@@ -650,6 +650,11 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
   // Initialize unified movement system for the new enemy unit
   initializeUnitMovement(unit)
 
+  // Apply god mode if it's active for enemy units
+  if (window.cheatSystem && window.cheatSystem.isGodModeActive()) {
+    window.cheatSystem.addUnitToGodMode(unit)
+  }
+
   return unit
 }
 

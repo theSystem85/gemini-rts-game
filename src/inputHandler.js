@@ -34,6 +34,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
   mouseHandler.setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
   keyboardHandler.setupKeyboardEvents(units, selectedUnits, mapGrid)
 
+  // Make cheat system globally accessible for damage prevention
+  window.cheatSystem = keyboardHandler.getCheatSystem()
+
   // Apply the initial state for the custom cursor
   document.addEventListener('DOMContentLoaded', () => {
     // Set up the document-level mousemove event

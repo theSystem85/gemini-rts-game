@@ -34,7 +34,14 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       if (shooter && unit.id === shooter.id) return
       const falloff = 1 - (distance / explosionRadius)
       const damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
-      unit.health -= damage
+      
+      // Check for god mode protection
+      let actualDamage = damage
+      if (window.cheatSystem) {
+        actualDamage = window.cheatSystem.preventDamage(unit, damage)
+      }
+      
+      unit.health -= actualDamage
       
       // Track when units are being attacked for AI response
       if (shooter && shooter.owner !== unit.owner) {
@@ -60,8 +67,17 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
 
     if (distance < explosionRadius) {
       const falloff = 1 - (distance / explosionRadius)
-      const damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
-      factory.health -= damage
+      let damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+      
+      // Check for god mode protection for player factories
+      if (window.cheatSystem && factory.id === 'player') {
+        damage = window.cheatSystem.preventDamage(factory, damage)
+      }
+      
+      // Only apply damage if damage > 0 (god mode protection)
+      if (damage > 0) {
+        factory.health -= damage
+      }
     }
   })
 }
