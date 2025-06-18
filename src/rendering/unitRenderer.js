@@ -1,5 +1,6 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED } from '../config.js'
+import { gameState } from '../gameState.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -244,6 +245,38 @@ export class UnitRenderer {
     }
   }
 
+  renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
+    // Check if this unit is in the attack group targets
+    const isAttackTarget = gameState.attackGroupTargets && 
+                           gameState.attackGroupTargets.some(target => target === unit)
+    
+    if (isAttackTarget) {
+      const now = performance.now()
+      const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
+      
+      // Position above the health bar
+      const indicatorX = centerX
+      const indicatorY = centerY - TILE_SIZE / 2 - 15 + bounceOffset
+      
+      // Draw semi-transparent red triangle
+      ctx.save()
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'
+      ctx.strokeStyle = 'rgba(255, 0, 0, 1)'
+      ctx.lineWidth = 1
+      
+      // Draw triangle pointing down
+      ctx.beginPath()
+      ctx.moveTo(indicatorX, indicatorY + ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.lineTo(indicatorX - ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.lineTo(indicatorX + ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+      
+      ctx.restore()
+    }
+  }
+
   renderUnit(ctx, unit, scrollOffset) {
     if (unit.health <= 0) return
 
@@ -258,6 +291,8 @@ export class UnitRenderer {
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)
+    this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
+    this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
   }
 
   render(ctx, units, scrollOffset) {

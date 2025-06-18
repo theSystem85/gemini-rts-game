@@ -162,3 +162,8 @@ export const BULLET_DAMAGES = {
   tank_v3: 30,
   rocketTank: 60
 }
+
+// Attack Group Feature (AGF) constants
+export const ATTACK_GROUP_MIN_DRAG_DISTANCE = 10 // Minimum pixels to drag before attack group mode activates
+export const ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
+export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators

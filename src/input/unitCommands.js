@@ -2,9 +2,33 @@
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
 import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
+import { gameState } from '../gameState.js'
 
 export class UnitCommandsHandler {
-  handleMovementCommand(units, targetX, targetY, mapGrid, selectedUnits) {
+  
+  // Helper function to clear attack group feature state for units
+  clearAttackGroupState(units) {
+    units.forEach(unit => {
+      // Clear attack queue for this unit
+      if (unit.attackQueue) {
+        unit.attackQueue = null
+      }
+    })
+    
+    // If no units have attack queues anymore, clear the global attack group targets
+    const hasActiveAttackQueues = gameState.units && gameState.units.some(unit => 
+      unit.attackQueue && unit.attackQueue.length > 0
+    )
+    
+    if (!hasActiveAttackQueues) {
+      gameState.attackGroupTargets = []
+    }
+  }
+
+  handleMovementCommand(selectedUnits, targetX, targetY, mapGrid) {
+    // Clear attack group feature state when issuing movement commands
+    this.clearAttackGroupState(selectedUnits)
+    
     const count = selectedUnits.length
     const cols = Math.ceil(Math.sqrt(count))
 
@@ -89,6 +113,11 @@ export class UnitCommandsHandler {
   }
 
   handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false) {
+    // Clear attack group feature state when issuing single target attack commands
+    // Only clear if this is not part of an attack group operation (when isForceAttack is not from AGF)
+    if (!this.isAttackGroupOperation) {
+      this.clearAttackGroupState(selectedUnits)
+    }
     
     // Semicircle formation logic for attack
     const count = selectedUnits.length
@@ -148,6 +177,9 @@ export class UnitCommandsHandler {
   }
 
   handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {
+    // Clear attack group feature state when issuing harvester commands
+    this.clearAttackGroupState(selectedUnits)
+    
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
         const path = findPath({ x: unit.tileX, y: unit.tileY }, oreTarget, mapGrid, null)

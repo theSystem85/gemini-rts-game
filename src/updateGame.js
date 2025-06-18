@@ -7,7 +7,7 @@ import { updateBuildingsUnderRepair } from './buildings.js'
 
 // Import modular game systems
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
-import { updateUnitCombat } from './game/unitCombat.js'
+import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.js'
 import { updateHarvesterLogic } from './game/harvesterLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
@@ -50,6 +50,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateSpawnExit(units, factories, mapGrid, occupancyMap)
     updateUnitCombat(units, bullets, mapGrid, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
+
+    // Cleanup destroyed attack group targets
+    cleanupAttackGroupTargets(gameState)
 
     // Global pathfinding recalculation
     updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)

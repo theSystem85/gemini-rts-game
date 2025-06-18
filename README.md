@@ -226,13 +226,14 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
+- [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire this unit need to walk around the target in circles unti line of sight is free to attack the target.
 - [x] Make sure the tanks (and turrets) when they fire have:
   - [x] (1) a recoil animation on their gun.
   - [x] (2) a muzzle flash animation
 - [ ] only show health bars if units or buildings are damaged
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
-- [ ] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
-- [ ] Implement attack group feature (aka AGF): All selected players units can attack a group of enemy units by holding the shift key and dragging a box around the enemy units to be attacked. Then all those units will be attacked one after another.
+- [x] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
+- [ ] Implement attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box around the enemy units to be attacked. Then all those units will be attacked one after another.
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] Tanks movement speed should be 50% higher in general.
 - [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
@@ -245,7 +246,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
-- [ ] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
+- [x] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
+- [ ] Implement an attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box (displayed in red) around the enemy units to be attacked. Then all those units will be attacked one after another. All units to be attacked will then have a small semi transparent slightly bouncing red triangle above the health bar to indicate that they are being attacked. Make any unit in ADF mode will leave that mode when commanded to do sth. else (including another AGF mode).
 - [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
 - [x] Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
@@ -286,6 +288,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
 - [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
 - [ ] When about 10 units get stuck the game slows down significantly.
 - [ ] When initial building factory gets destroyed there is not map background left, just black.

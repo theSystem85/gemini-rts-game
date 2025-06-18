@@ -33,6 +33,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
   // Setup input handlers
   mouseHandler.setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
   keyboardHandler.setupKeyboardEvents(units, selectedUnits, mapGrid)
+  
+  // Give keyboard handler access to mouse handler for ESC key functionality
+  keyboardHandler.setMouseHandler(mouseHandler)
 
   // Make cheat system globally accessible for damage prevention
   window.cheatSystem = keyboardHandler.getCheatSystem()

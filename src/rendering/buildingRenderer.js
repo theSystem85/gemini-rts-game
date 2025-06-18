@@ -1,6 +1,7 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
+import { gameState } from '../gameState.js'
 
 export class BuildingRenderer {
   renderBuilding(ctx, building, scrollOffset) {
@@ -24,6 +25,7 @@ export class BuildingRenderer {
     this.renderSelection(ctx, building, screenX, screenY, width, height)
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderOwnerIndicator(ctx, building, screenX, screenY)
+    this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -289,6 +291,38 @@ export class BuildingRenderer {
       8,
       8
     )
+  }
+
+  renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height) {
+    // Check if this building is in the attack group targets
+    const isAttackTarget = gameState.attackGroupTargets && 
+                           gameState.attackGroupTargets.some(target => target === building)
+    
+    if (isAttackTarget) {
+      const now = performance.now()
+      const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
+      
+      // Position above the building center
+      const indicatorX = screenX + width / 2
+      const indicatorY = screenY - 15 + bounceOffset
+      
+      // Draw semi-transparent red triangle
+      ctx.save()
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'
+      ctx.strokeStyle = 'rgba(255, 0, 0, 1)'
+      ctx.lineWidth = 1
+      
+      // Draw triangle pointing down
+      ctx.beginPath()
+      ctx.moveTo(indicatorX, indicatorY + ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.lineTo(indicatorX - ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.lineTo(indicatorX + ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+      
+      ctx.restore()
+    }
   }
 
   render(ctx, buildings, scrollOffset) {

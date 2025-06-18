@@ -54,5 +54,12 @@ export const gameState = {
   nextVehicleFactoryIndex: 0,
 
   // Refinery state tracking
-  refineryStatus: {} // Tracks which refineries are being used and by which harvester
+  refineryStatus: {}, // Tracks which refineries are being used and by which harvester
+
+  // Attack Group Feature (AGF) state
+  attackGroupMode: false,
+  attackGroupStart: { x: 0, y: 0 },
+  attackGroupEnd: { x: 0, y: 0 },
+  attackGroupTargets: [], // Array of enemy units to be attacked
+  disableAGFRendering: false // Flag to temporarily disable AGF rendering
 }

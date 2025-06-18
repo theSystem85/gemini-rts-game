@@ -230,6 +230,56 @@ function handleTeslaEffects(unit, now) {
 }
 
 /**
+ * Process attack queue for units with multiple targets
+ */
+function processAttackQueue(unit, units) {
+  // Only process if unit has an attack queue
+  if (!unit.attackQueue || unit.attackQueue.length === 0) {
+    return
+  }
+
+  // Remove any dead targets from the queue first
+  unit.attackQueue = unit.attackQueue.filter(target => target && target.health > 0)
+  
+  // If queue is now empty, clear everything
+  if (unit.attackQueue.length === 0) {
+    unit.attackQueue = null
+    unit.target = null
+    return
+  }
+  
+  // If current target is dead/invalid or we don't have a target, set the first target from queue
+  if (!unit.target || unit.target.health <= 0) {
+    unit.target = unit.attackQueue[0]
+  }
+  
+  // If current target is destroyed and it was in our queue, remove it and advance
+  if (unit.target && unit.target.health <= 0) {
+    // Remove the destroyed target from queue (it might be the first one)
+    unit.attackQueue = unit.attackQueue.filter(target => target.id !== unit.target.id)
+    
+    // Set next target if available
+    if (unit.attackQueue.length > 0) {
+      unit.target = unit.attackQueue[0]
+    } else {
+      unit.attackQueue = null
+      unit.target = null
+    }
+  }
+}
+
+/**
+ * Clean up attack group targets that have been destroyed
+ */
+export function cleanupAttackGroupTargets() {
+  if (gameState.attackGroupTargets && gameState.attackGroupTargets.length > 0) {
+    gameState.attackGroupTargets = gameState.attackGroupTargets.filter(target => 
+      target && target.health > 0
+    )
+  }
+}
+
+/**
  * Updates unit combat behavior including targeting and shooting
  */
 export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
@@ -249,6 +299,9 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
 
     // Handle status effects
     handleTeslaEffects(unit, now);
+
+    // Process attack queue for units with queued targets
+    processAttackQueue(unit, units);
 
     // Combat logic for different unit types
     if (unit.type === 'tank' || unit.type === 'tank_v1') {

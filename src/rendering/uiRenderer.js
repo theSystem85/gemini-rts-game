@@ -1,13 +1,14 @@
 // rendering/uiRenderer.js
 import { TILE_SIZE } from '../config.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from '../buildings.js'
+import { gameState } from '../gameState.js'
 
 export class UIRenderer {
   constructor() {
     this.gameOverEventListenerAdded = false
   }
   renderSelectionRectangle(ctx, selectionActive, selectionStart, selectionEnd, scrollOffset) {
-    // Draw selection rectangle if active.
+    // Draw normal selection rectangle if active
     if (selectionActive && selectionStart && selectionEnd) {
       const rectX = Math.min(selectionStart.x, selectionEnd.x) - scrollOffset.x
       const rectY = Math.min(selectionStart.y, selectionEnd.y) - scrollOffset.y
@@ -16,6 +17,38 @@ export class UIRenderer {
       ctx.strokeStyle = '#FF0'
       ctx.lineWidth = 2
       ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+    }
+    
+    // Draw attack group rectangle in red - with debug logging and disable check
+    const shouldDrawAGF = !gameState.disableAGFRendering &&
+        gameState.attackGroupMode && 
+        gameState.attackGroupStart && gameState.attackGroupEnd &&
+        (gameState.attackGroupStart.x !== gameState.attackGroupEnd.x || 
+         gameState.attackGroupStart.y !== gameState.attackGroupEnd.y)
+    
+    // Debug logging
+    if (shouldDrawAGF) {
+      console.log('Drawing AGF box:', {
+        mode: gameState.attackGroupMode,
+        disabled: gameState.disableAGFRendering,
+        start: gameState.attackGroupStart,
+        end: gameState.attackGroupEnd
+      })
+    }
+    
+    if (shouldDrawAGF) {
+      const rectX = Math.min(gameState.attackGroupStart.x, gameState.attackGroupEnd.x) - scrollOffset.x
+      const rectY = Math.min(gameState.attackGroupStart.y, gameState.attackGroupEnd.y) - scrollOffset.y
+      const rectWidth = Math.abs(gameState.attackGroupEnd.x - gameState.attackGroupStart.x)
+      const rectHeight = Math.abs(gameState.attackGroupEnd.y - gameState.attackGroupStart.y)
+      
+      ctx.strokeStyle = '#FF0000'
+      ctx.lineWidth = 2
+      ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+      
+      // Add a subtle red fill
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.1)'
+      ctx.fillRect(rectX, rectY, rectWidth, rectHeight)
     }
   }
 

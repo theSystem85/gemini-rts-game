@@ -1,5 +1,5 @@
 // mouseHandler.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, ATTACK_GROUP_MIN_DRAG_DISTANCE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { units } from '../main.js'
 import { playSound } from '../sound.js'
@@ -14,6 +14,18 @@ export class MouseHandler {
     this.selectionEnd = { x: 0, y: 0 }
     this.rightDragStart = { x: 0, y: 0 }
     this.gameFactories = [] // Initialize gameFactories
+    this.mouseDownTime = 0
+    this.isDraggingThreshold = 150 // 150ms threshold before dragging activates
+    
+    // Attack Group Feature state
+    this.isAttackGroupSelecting = false
+    this.attackGroupStartWorld = { x: 0, y: 0 }
+    this.attackGroupWasDragging = false
+    this.potentialAttackGroupStart = { x: 0, y: 0 }
+    this.hasSelectedCombatUnits = false
+    
+    // Add a flag to forcibly disable AGF rendering
+    this.disableAGFRendering = false
   }
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -34,7 +46,7 @@ export class MouseHandler {
         this.handleRightMouseDown(e, gameCanvas)
       } else if (e.button === 0) {
         // Left-click: start selection
-        this.handleLeftMouseDown(worldX, worldY, gameCanvas)
+        this.handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits)
       }
     })
 
@@ -53,12 +65,13 @@ export class MouseHandler {
       if (gameState.isRightDragging) {
         this.handleRightDragScrolling(e, mapGrid, gameCanvas)
         return
-      } else if (!this.isSelecting) {
+      } else if (!this.isSelecting && !this.isAttackGroupSelecting) {
         gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
       }
 
-      // Update selection rectangle
-      if (this.isSelecting) {
+      // Update selection rectangle if we're actively selecting 
+      // Remove the unreliable (e.buttons & 1) check that was causing cancellations
+      if (this.isSelecting || this.isAttackGroupSelecting) {
         this.updateSelectionRectangle(worldX, worldY)
       }
 
@@ -72,7 +85,8 @@ export class MouseHandler {
 
       if (e.button === 2) {
         this.handleRightMouseUp(e, units, factories, selectedUnits, cursorManager)
-      } else if (e.button === 0 && this.isSelecting) {
+      } else if (e.button === 0) {
+        // Handle left mouse up regardless of selection state to ensure cleanup
         this.handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
       }
     })
@@ -91,7 +105,15 @@ export class MouseHandler {
     gameCanvas.style.cursor = 'grabbing'
   }
 
-  handleLeftMouseDown(worldX, worldY, gameCanvas) {
+  handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits) {
+    // Track mouse down time and position
+    this.mouseDownTime = performance.now()
+    
+    // Store potential attack group start position
+    this.potentialAttackGroupStart = { x: worldX, y: worldY }
+    this.hasSelectedCombatUnits = this.shouldStartAttackGroupMode(selectedUnits)
+    
+    // Always start with normal selection mode, but be ready to switch to AGF
     this.isSelecting = true
     gameState.selectionActive = true
     this.wasDragging = false
@@ -99,6 +121,33 @@ export class MouseHandler {
     this.selectionEnd = { x: worldX, y: worldY }
     gameState.selectionStart = { ...this.selectionStart }
     gameState.selectionEnd = { ...this.selectionEnd }
+    
+    // Reset AGF state initially
+    gameState.attackGroupMode = false
+    this.isAttackGroupSelecting = false
+    this.attackGroupWasDragging = false
+    gameState.attackGroupStart = { x: 0, y: 0 }
+    gameState.attackGroupEnd = { x: 0, y: 0 }
+    gameState.disableAGFRendering = false
+  }
+
+  shouldStartAttackGroupMode(selectedUnits) {
+    // Attack group mode activates when:
+    // 1. Player has units selected
+    // 2. At least one selected unit is a combat unit (not harvester)
+    // 3. Not in any special mode (building placement, repair, sell)
+    // 4. No modifier keys pressed (to avoid conflicts with other commands)
+    
+    const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+    const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit => 
+      unit.type !== 'harvester' && unit.owner === 'player'
+    )
+    const notInSpecialMode = !gameState.buildingPlacementMode && 
+                            !gameState.repairMode && 
+                            !gameState.sellMode &&
+                            !gameState.attackGroupMode // Don't start if already in attack group mode
+    
+    return hasSelectedUnits && hasCombatUnits && notInSpecialMode
   }
 
   updateEnemyHover(worldX, worldY, units, factories, selectedUnits, cursorManager) {
@@ -188,11 +237,44 @@ export class MouseHandler {
   }
 
   updateSelectionRectangle(worldX, worldY) {
-    this.selectionEnd = { x: worldX, y: worldY }
-    gameState.selectionEnd = { ...this.selectionEnd }
+    // Check if we should transition to attack group mode during dragging
+    if (!this.isAttackGroupSelecting && this.hasSelectedCombatUnits && this.isSelecting) {
+      const dragDistance = Math.hypot(
+        worldX - this.potentialAttackGroupStart.x,
+        worldY - this.potentialAttackGroupStart.y
+      )
+      
+      // Transition to AGF mode immediately if combat units are selected and we start dragging
+      if (dragDistance > 5) { // Small threshold to avoid accidental activation
+        // Transition from normal selection to attack group mode
+        this.isAttackGroupSelecting = true
+        this.isSelecting = false
+        gameState.selectionActive = false // Clear normal selection
+        gameState.attackGroupMode = true
+        this.attackGroupStartWorld = { ...this.potentialAttackGroupStart }
+        gameState.attackGroupStart = { ...this.potentialAttackGroupStart }
+        gameState.attackGroupEnd = { x: worldX, y: worldY }
+        this.attackGroupWasDragging = true
+        
+        // Clear normal selection rectangle coordinates to prevent rendering
+        gameState.selectionStart = { x: 0, y: 0 }
+        gameState.selectionEnd = { x: 0, y: 0 }
+        return
+      }
+    }
+    
+    if (this.isAttackGroupSelecting) {
+      // Update attack group rectangle (red box)
+      gameState.attackGroupEnd = { x: worldX, y: worldY }
+      this.attackGroupWasDragging = true
+    } else if (this.isSelecting) {
+      // Update normal selection rectangle (yellow box)
+      this.selectionEnd = { x: worldX, y: worldY }
+      gameState.selectionEnd = { ...this.selectionEnd }
 
-    if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 5 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 5)) {
-      this.wasDragging = true
+      if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 5 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 5)) {
+        this.wasDragging = true
+      }
     }
   }
 
@@ -235,6 +317,12 @@ export class MouseHandler {
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
+    // Handle attack group mode (only if it was actually activated during dragging)
+    if (this.isAttackGroupSelecting && gameState.attackGroupMode) {
+      this.handleAttackGroupMouseUp(worldX, worldY, units, selectedUnits, unitCommands, mapGrid)
+      return // Exit early after handling attack group
+    }
+
     // Variable to store if we've handled the Force Attack command
     let forceAttackHandled = false
 
@@ -245,16 +333,188 @@ export class MouseHandler {
 
     // If we handled Force Attack, skip normal selection/command processing
     if (!forceAttackHandled) {
-      // Normal selection and command handling
+      // Normal selection and command handling - always check for unit selection first
       if (this.wasDragging) {
         selectionManager.handleBoundingBoxSelection(units, factories, selectedUnits, this.selectionStart, this.selectionEnd)
       } else {
+        // Handle single click - either unit selection or movement command
+        // Always call handleSingleClick for non-dragging left clicks to preserve double-click functionality
         this.handleSingleClick(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid)
       }
     }
 
+    // ALWAYS reset selection state after mouse up to prevent stuck selection rectangles
     this.isSelecting = false
     gameState.selectionActive = false
+    this.wasDragging = false
+    this.hasSelectedCombatUnits = false
+    
+    // Also reset potential attack group state
+    this.potentialAttackGroupStart = { x: 0, y: 0 }
+    
+    // Clear any remaining AGF state if not handled above
+    if (!this.isAttackGroupSelecting) {
+      gameState.attackGroupMode = false
+      gameState.attackGroupStart = { x: 0, y: 0 }
+      gameState.attackGroupEnd = { x: 0, y: 0 }
+      gameState.disableAGFRendering = false
+    }
+  }
+
+  handleAttackGroupMouseUp(worldX, worldY, units, selectedUnits, unitCommands, mapGrid = null) {
+    console.log('AGF Mouse Up - Before clearing:', {
+      mode: gameState.attackGroupMode,
+      start: gameState.attackGroupStart,
+      end: gameState.attackGroupEnd,
+      isSelecting: this.isAttackGroupSelecting,
+      wasDragging: this.attackGroupWasDragging
+    })
+    
+    // Immediately stop all selection activity to prevent further updates
+    this.isAttackGroupSelecting = false
+    this.isSelecting = false
+    
+    // Forcibly disable AGF rendering in gameState
+    gameState.disableAGFRendering = true
+    
+    // Process commands based on whether this was a drag or click
+    if (this.attackGroupWasDragging) {
+      // Handle AGF drag - find enemies in the box
+      const enemyTargets = this.findEnemyUnitsInAttackGroup(units)
+      
+      if (enemyTargets.length > 0) {
+        // Set up attack queue for selected units
+        this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands)
+        playSound('movement', 0.5)
+      }
+    } else {
+      // Handle single click in AGF mode - issue normal commands
+      this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+    }
+    
+    // Immediately clear the visual elements to stop red box rendering
+    gameState.attackGroupMode = false
+    gameState.attackGroupStart = { x: 0, y: 0 }
+    gameState.attackGroupEnd = { x: 0, y: 0 }
+    
+    console.log('AGF Mouse Up - After clearing:', {
+      mode: gameState.attackGroupMode,
+      start: gameState.attackGroupStart,
+      end: gameState.attackGroupEnd
+    })
+    
+    // Reset the rest of the state
+    this.resetAttackGroupState()
+    
+    // Re-enable AGF rendering after a delay to ensure this frame is rendered
+    setTimeout(() => {
+      gameState.disableAGFRendering = false
+    }, 50)
+  }
+
+  resetAttackGroupState() {
+    // Reset all attack group related state
+    this.isAttackGroupSelecting = false
+    this.attackGroupWasDragging = false
+    this.hasSelectedCombatUnits = false
+    this.potentialAttackGroupStart = { x: 0, y: 0 }
+    this.attackGroupStartWorld = { x: 0, y: 0 }
+    this.isSelecting = false
+    
+    // Reset selection state (visual elements already cleared in handleAttackGroupMouseUp)
+    gameState.selectionActive = false
+    
+    // Also clear normal selection coordinates to prevent any rectangle rendering
+    gameState.selectionStart = { x: 0, y: 0 }
+    gameState.selectionEnd = { x: 0, y: 0 }
+    
+    // Clear instance selection coordinates
+    this.selectionStart = { x: 0, y: 0 }
+    this.selectionEnd = { x: 0, y: 0 }
+    
+    // Note: attackGroupTargets is cleared separately in setupAttackQueue with a delay
+    // to allow units to register their targets before cleanup
+  }
+
+  findEnemyUnitsInAttackGroup(units) {
+    const x1 = Math.min(gameState.attackGroupStart.x, gameState.attackGroupEnd.x)
+    const y1 = Math.min(gameState.attackGroupStart.y, gameState.attackGroupEnd.y)
+    const x2 = Math.max(gameState.attackGroupStart.x, gameState.attackGroupEnd.x)
+    const y2 = Math.max(gameState.attackGroupStart.y, gameState.attackGroupEnd.y)
+
+    const enemyTargets = []
+    
+    // Check all enemy units and buildings
+    for (const unit of units) {
+      if (unit.owner !== 'player' && unit.health > 0) {
+        const centerX = unit.x + TILE_SIZE / 2
+        const centerY = unit.y + TILE_SIZE / 2
+        
+        if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
+          enemyTargets.push(unit)
+        }
+      }
+    }
+    
+    // Check enemy buildings
+    if (gameState.buildings) {
+      for (const building of gameState.buildings) {
+        if (building.owner !== 'player' && building.health > 0) {
+          const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+          const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+          
+          if (buildingCenterX >= x1 && buildingCenterX <= x2 && 
+              buildingCenterY >= y1 && buildingCenterY <= y2) {
+            enemyTargets.push(building)
+          }
+        }
+      }
+    }
+    
+    return enemyTargets
+  }
+
+  setupAttackQueue(selectedUnits, enemyTargets, unitCommands) {
+    // Store the attack targets in gameState for visual indicators temporarily
+    gameState.attackGroupTargets = [...enemyTargets]
+    
+    // Set flag to prevent clearing AGF state during AGF operations
+    unitCommands.isAttackGroupOperation = true
+    
+    // Assign targets to units - ALL units attack ALL targets in the SAME order for efficiency
+    const combatUnits = selectedUnits.filter(unit => 
+      unit.type !== 'harvester' && unit.owner === 'player'
+    )
+    
+    // Process all units BEFORE clearing the flag
+    combatUnits.forEach((unit) => {
+      // Clear any existing attack queue and target
+      unit.attackQueue = []
+      unit.target = null
+      
+      // Add all targets to the queue in the same order for all units
+      enemyTargets.forEach(target => {
+        unit.attackQueue.push(target)
+      })
+      
+      // Set the first target as the current target
+      if (unit.attackQueue.length > 0) {
+        unit.target = unit.attackQueue[0]
+      }
+    })
+    
+    // Now issue attack commands to all units at once
+    if (combatUnits.length > 0 && combatUnits[0].target) {
+      unitCommands.handleAttackCommand(combatUnits, combatUnits[0].target, null, false)
+    }
+    
+    // Clear the flag after ALL AGF operations are complete
+    unitCommands.isAttackGroupOperation = false
+    
+    // Clear attack targets after a brief delay to allow units to register them
+    setTimeout(() => {
+      gameState.attackGroupTargets = []
+    }, 50)
   }
 
   handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid) {
@@ -348,17 +608,17 @@ export class MouseHandler {
 
     if (clickedUnit) {
       selectionManager.handleUnitSelection(clickedUnit, e, units, factories, selectedUnits)
-    }
-
-    // Standard Command Issuing (no Force Attack)
-    if (selectedUnits.length > 0 && !this.wasDragging && !e.shiftKey) {
-      this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+    } else {
+      // No unit clicked - handle as movement command if units are selected and not in special modes
+      if (selectedUnits.length > 0 && !e.shiftKey && !e.ctrlKey && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+        this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+      }
     }
   }
 
   handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid) {
     // Skip command issuing for factory selection
-    if (selectedUnits[0].type !== 'factory') {
+    if (selectedUnits.length > 0 && selectedUnits[0].type !== 'factory') {
       let target = null
       let oreTarget = null
 
@@ -384,7 +644,7 @@ export class MouseHandler {
           unitCommands.handleAttackCommand(selectedUnits, target, mapGrid, false)
         } else {
           // No target: move to clicked location
-          unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid, selectedUnits)
+          unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid)
         }
       }
     }
@@ -481,5 +741,10 @@ export class MouseHandler {
 
     // Allow the event to continue for other right-click handlers
     return false
+  }
+
+  // Method to check if AGF rendering should be disabled
+  shouldDisableAGFRendering() {
+    return this.disableAGFRendering
   }
 }

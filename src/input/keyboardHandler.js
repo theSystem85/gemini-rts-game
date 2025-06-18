@@ -41,6 +41,12 @@ export class KeyboardHandler {
       // Don't process other inputs if game is paused or cheat dialog is open
       if (gameState.paused || gameState.cheatDialogOpen) return
 
+      // ESC key to cancel attack group mode
+      if (e.key === 'Escape') {
+        this.handleEscapeKey()
+        return
+      }
+
       // A key for alert mode
       if (e.key.toLowerCase() === 'a') {
         this.handleAlertMode(selectedUnits)
@@ -74,6 +80,46 @@ export class KeyboardHandler {
         this.handleGridToggle()
       }
     })
+  }
+
+  setMouseHandler(mouseHandler) {
+    this.mouseHandler = mouseHandler
+  }
+
+  handleEscapeKey() {
+    let modeWasCanceled = false
+    
+    // Cancel attack group mode if active
+    if (gameState.attackGroupMode && this.mouseHandler) {
+      this.mouseHandler.resetAttackGroupState()
+      modeWasCanceled = true
+    }
+    
+    // Cancel any other active modes
+    if (gameState.buildingPlacementMode) {
+      gameState.buildingPlacementMode = false
+      gameState.selectedBuilding = null
+      modeWasCanceled = true
+    }
+    
+    if (gameState.repairMode) {
+      gameState.repairMode = false
+      const repairBtn = document.getElementById('repairBtn')
+      if (repairBtn) repairBtn.classList.remove('active')
+      modeWasCanceled = true
+    }
+    
+    if (gameState.sellMode) {
+      gameState.sellMode = false
+      const sellBtn = document.getElementById('sellBtn')
+      if (sellBtn) sellBtn.classList.remove('active')
+      modeWasCanceled = true
+    }
+    
+    if (modeWasCanceled) {
+      this.showNotification('Mode cancelled', 1000)
+      playSound('cancel', 0.5)
+    }
   }
 
   handleAlertMode(selectedUnits) {
