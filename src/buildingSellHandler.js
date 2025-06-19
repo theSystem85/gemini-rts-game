@@ -1,10 +1,9 @@
-// buildingSellHandler.js
 import { TILE_SIZE } from './config.js'
 import { playSound } from './sound.js'
 import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
-import { updatePowerSupply } from './buildings.js'
+import { updatePowerSupply, clearBuildingFromMapGrid } from './buildings.js'
 import { checkGameEndConditions } from './game/gameStateManager.js'
 
 /**
@@ -53,22 +52,7 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       moneyEl.textContent = gameState.money
 
       // Remove building from the map grid: restore original tiles and clear building flag
-      for (let y = building.y; y < building.y + building.height; y++) {
-        for (let x = building.x; x < building.x + building.width; x++) {
-          if (mapGrid[y] && mapGrid[y][x]) {
-            // Restore the original tile type if it was saved, otherwise default to 'land'
-            if (building.originalTiles &&
-                building.originalTiles[y - building.y] &&
-                building.originalTiles[y - building.y][x - building.x]) {
-              mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x]
-            } else {
-              mapGrid[y][x].type = 'land'
-            }
-            // Clear any building reference to unblock this tile
-            delete mapGrid[y][x].building
-          }
-        }
-      }
+      clearBuildingFromMapGrid(building, mapGrid)
 
       // Remove the building from the gameState.buildings array
       gameState.buildings.splice(i, 1)

@@ -3,7 +3,7 @@ import { TILE_SIZE } from '../config.js'
 import { playSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
-import { updatePowerSupply } from '../buildings.js'
+import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 
 /**
@@ -12,9 +12,10 @@ import { checkGameEndConditions } from './gameStateManager.js'
  * @param {Array} units - Array of unit objects
  * @param {Array} bullets - Array of bullet objects
  * @param {Array} factories - Array of factory objects
+ * @param {Array} mapGrid - 2D array representing the map
  * @param {number} delta - Time delta
  */
-export function updateBuildings(gameState, units, bullets, factories, delta) {
+export function updateBuildings(gameState, units, bullets, factories, mapGrid, delta) {
   const now = performance.now()
 
   if (gameState.buildings && gameState.buildings.length > 0) {
@@ -37,6 +38,9 @@ export function updateBuildings(gameState, units, bullets, factories, delta) {
             selectedUnits.splice(idx, 1)
           }
         }
+
+        // Clear the building from the map grid to unblock tiles for pathfinding
+        clearBuildingFromMapGrid(building, mapGrid)
 
         // Remove the building from the buildings array
         gameState.buildings.splice(i, 1)

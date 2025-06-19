@@ -347,6 +347,26 @@ export function placeBuilding(building, mapGrid) {
   }
 }
 
+// Remove building from the map grid: restore original tiles and clear building flag
+export function clearBuildingFromMapGrid(building, mapGrid) {
+  for (let y = building.y; y < building.y + building.height; y++) {
+    for (let x = building.x; x < building.x + building.width; x++) {
+      if (mapGrid[y] && mapGrid[y][x]) {
+        // Restore the original tile type if it was saved, otherwise default to 'land'
+        if (building.originalTiles &&
+            building.originalTiles[y - building.y] &&
+            building.originalTiles[y - building.y][x - building.x]) {
+          mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x]
+        } else {
+          mapGrid[y][x].type = 'land'
+        }
+        // Clear any building reference to unblock this tile for pathfinding
+        delete mapGrid[y][x].building
+      }
+    }
+  }
+}
+
 // Update the game's power supply
 export function updatePowerSupply(buildings, gameState) {
   // Player power calculation

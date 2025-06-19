@@ -61,7 +61,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateBullets(bullets, units, factories, gameState, mapGrid)
 
     // Building system updates
-    updateBuildings(gameState, units, bullets, factories, delta)
+    updateBuildings(gameState, units, bullets, factories, mapGrid, delta)
 
     // Tesla Coil effects
     updateTeslaCoilEffects(units)
