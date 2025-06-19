@@ -119,6 +119,43 @@ export class SelectionManager {
     }
   }
 
+  handleBuildingSelection(selectedBuilding, e, units, selectedUnits) {
+    if (e.shiftKey) {
+      // Shift+click on building: Add/remove building to/from current selection
+      if (selectedBuilding.selected) {
+        // Remove from selection
+        selectedBuilding.selected = false
+        const index = selectedUnits.indexOf(selectedBuilding)
+        if (index > -1) {
+          selectedUnits.splice(index, 1)
+        }
+      } else {
+        // Add to selection
+        selectedBuilding.selected = true
+        selectedUnits.push(selectedBuilding)
+      }
+      playSound('unitSelection')
+    } else {
+      // Normal click: Clear existing selection and select building
+      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      selectedUnits.length = 0
+
+      // Clear factory selections
+      const factories = gameState.factories || []
+      factories.forEach(f => f.selected = false)
+
+      // Clear other building selections
+      if (gameState.buildings) {
+        gameState.buildings.forEach(b => { if (b.owner === 'player') b.selected = false })
+      }
+
+      // Select building
+      selectedBuilding.selected = true
+      selectedUnits.push(selectedBuilding)
+      playSound('unitSelection')
+    }
+  }
+
   handleBoundingBoxSelection(units, factories, selectedUnits, selectionStart, selectionEnd) {
     try {
       const x1 = Math.min(selectionStart.x, selectionEnd.x)
@@ -152,10 +189,15 @@ export class SelectionManager {
         }
       }
 
-      // Now check for player buildings in the selection rectangle
+      // Now check for player buildings in the selection rectangle (excluding factories)
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
           if (building.owner === 'player') {
+            // Exclude unit-producing factories from drag selection
+            if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
+              continue // Skip factories - they can only be selected by direct clicking
+            }
+            
             const buildingX = building.x * TILE_SIZE
             const buildingY = building.y * TILE_SIZE
             const buildingWidth = building.width * TILE_SIZE

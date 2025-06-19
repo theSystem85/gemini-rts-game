@@ -32,7 +32,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
 
   // Setup input handlers
   mouseHandler.setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
-  keyboardHandler.setupKeyboardEvents(units, selectedUnits, mapGrid)
+  keyboardHandler.setupKeyboardEvents(units, selectedUnits, mapGrid, factories)
   
   // Give keyboard handler access to mouse handler for ESC key functionality
   keyboardHandler.setMouseHandler(mouseHandler)

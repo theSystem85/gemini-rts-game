@@ -22,7 +22,13 @@ export class KeyboardHandler {
     this.playerFactory = factory
   }
 
-  setupKeyboardEvents(units, selectedUnits, mapGrid) {
+  setupKeyboardEvents(units, selectedUnits, mapGrid, factories) {
+    // Store references for use in other methods
+    this.selectedUnits = selectedUnits
+    this.units = units
+    this.mapGrid = mapGrid
+    this.factories = factories
+    
     // Enhanced keydown event listener
     document.addEventListener('keydown', e => {
       // Some keys should work even when paused
@@ -116,8 +122,39 @@ export class KeyboardHandler {
       modeWasCanceled = true
     }
     
+    // Deselect any selected factories or buildings (clear all selections)
+    let hadSelections = false
+    if (this.selectedUnits && this.selectedUnits.length > 0) {
+      hadSelections = true
+      // Clear unit selections
+      if (this.units) {
+        this.units.forEach(unit => { if (unit.owner === 'player') unit.selected = false })
+      }
+      
+      // Clear factory selections  
+      if (this.factories) {
+        this.factories.forEach(factory => factory.selected = false)
+      }
+      
+      // Clear building selections
+      if (gameState.buildings) {
+        gameState.buildings.forEach(building => { if (building.owner === 'player') building.selected = false })
+      }
+      
+      // Clear selectedUnits array
+      this.selectedUnits.length = 0
+      
+      // Update AGF capability after clearing selections
+      if (this.mouseHandler) {
+        this.mouseHandler.updateAGFCapability(this.selectedUnits)
+      }
+      
+      modeWasCanceled = true
+    }
+    
     if (modeWasCanceled) {
-      this.showNotification('Mode cancelled', 1000)
+      const message = hadSelections ? 'Selection cleared' : 'Mode cancelled'
+      this.showNotification(message, 1000)
       playSound('cancel', 0.5)
     }
   }

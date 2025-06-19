@@ -137,17 +137,22 @@ export class MouseHandler {
     // 2. At least one selected unit is a combat unit (not harvester)
     // 3. Not in any special mode (building placement, repair, sell)
     // 4. No modifier keys pressed (to avoid conflicts with other commands)
+    // 5. No factories are selected (factories should not trigger AGF)
     
     const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
     const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit => 
-      unit.type !== 'harvester' && unit.owner === 'player'
+      unit.type !== 'harvester' && unit.owner === 'player' && !unit.isBuilding
+    )
+    const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit => 
+      (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
+      (unit.id && (unit.id === 'player' || unit.id === 'enemy')) // Main factories
     )
     const notInSpecialMode = !gameState.buildingPlacementMode && 
                             !gameState.repairMode && 
                             !gameState.sellMode &&
                             !gameState.attackGroupMode // Don't start if already in attack group mode
     
-    return hasSelectedUnits && hasCombatUnits && notInSpecialMode
+    return hasSelectedUnits && hasCombatUnits && !hasSelectedFactory && notInSpecialMode
   }
 
   updateEnemyHover(worldX, worldY, units, factories, selectedUnits, cursorManager) {
@@ -284,32 +289,83 @@ export class MouseHandler {
     const gameCanvas = document.getElementById('gameCanvas')
     gameCanvas.style.cursor = 'grab'
 
-    // Only deselect units if this was NOT a drag operation
+    // Check if any unit-producing factory/building is selected BEFORE deselecting
+    const rect = gameCanvas.getBoundingClientRect()
+    const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+    const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    
+    // Check selected factories first
+    const selectedFactory = factories.find(f => f.selected && f.id === 'player')
+    if (selectedFactory && !this.rightWasDragging) {
+      // Set rally point at clicked tile
+      selectedFactory.rallyPoint = {
+        x: Math.floor(worldX / TILE_SIZE),
+        y: Math.floor(worldY / TILE_SIZE)
+      }
+      playSound('movement', 0.5)
+      
+      // Deselect the factory after setting rally point
+      selectedFactory.selected = false
+      const factoryIndex = selectedUnits.indexOf(selectedFactory)
+      if (factoryIndex > -1) {
+        selectedUnits.splice(factoryIndex, 1)
+      }
+      // Update AGF capability after deselection
+      this.updateAGFCapability(selectedUnits)
+      
+      // Show notification
+      showNotification('Rally point set for Construction Yard', 1500)
+      
+      this.rightWasDragging = false
+      // Update custom cursor visibility after unit selection changes
+      cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
+      return
+    }
+    
+    // Check selected buildings that can produce units
+    const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
+      building.selected && 
+      building.owner === 'player' && 
+      (building.type === 'vehicleFactory' || building.type === 'constructionYard')
+    )
+    if (selectedBuilding && !this.rightWasDragging) {
+      // Set rally point at clicked tile
+      selectedBuilding.rallyPoint = {
+        x: Math.floor(worldX / TILE_SIZE),
+        y: Math.floor(worldY / TILE_SIZE)
+      }
+      playSound('movement', 0.5)
+      
+      // Deselect the building after setting rally point
+      selectedBuilding.selected = false
+      const buildingIndex = selectedUnits.indexOf(selectedBuilding)
+      if (buildingIndex > -1) {
+        selectedUnits.splice(buildingIndex, 1)
+      }
+      // Update AGF capability after deselection
+      this.updateAGFCapability(selectedUnits)
+      
+      // Show notification
+      const buildingName = selectedBuilding.type === 'vehicleFactory' ? 'Vehicle Factory' : 'Factory'
+      showNotification(`Rally point set for ${buildingName}`, 1500)
+      
+      this.rightWasDragging = false
+      // Update custom cursor visibility after unit selection changes
+      cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
+      return
+    }
+
+    // Only deselect other units if this was NOT a drag operation AND no factory was selected
     if (!this.rightWasDragging) {
       units.forEach(u => { if (u.owner === 'player') u.selected = false })
       selectedUnits.length = 0
+      // Update AGF capability after deselection
+      this.updateAGFCapability(selectedUnits)
     }
     this.rightWasDragging = false
 
     // Update custom cursor visibility after unit selection changes
     cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
-
-    // Check if the player factory is selected
-    const playerFactory = factories.find(f => f.id === 'player' && f.selected)
-    if (playerFactory) {
-      const rect = gameCanvas.getBoundingClientRect()
-      const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-      const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-
-      // Set rally point at clicked tile
-      playerFactory.rallyPoint = {
-        x: Math.floor(worldX / TILE_SIZE),
-        y: Math.floor(worldY / TILE_SIZE)
-      }
-
-      // Visual feedback for rally point setting
-      playSound('movement', 0.5)
-    }
   }
 
   handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -336,6 +392,8 @@ export class MouseHandler {
       // Normal selection and command handling - always check for unit selection first
       if (this.wasDragging) {
         selectionManager.handleBoundingBoxSelection(units, factories, selectedUnits, this.selectionStart, this.selectionEnd)
+        // Update AGF capability after selection changes
+        this.updateAGFCapability(selectedUnits)
       } else {
         // Handle single click - either unit selection or movement command
         // Always call handleSingleClick for non-dragging left clicks to preserve double-click functionality
@@ -566,7 +624,7 @@ export class MouseHandler {
   }
 
   handleSingleClick(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
-    // Single unit or factory selection
+    // Priority 1: Check main construction yard factory first
     let selectedFactory = null
     for (const factory of factories) {
       if (factory.id === 'player') {
@@ -585,12 +643,43 @@ export class MouseHandler {
 
     if (selectedFactory) {
       selectionManager.handleFactorySelection(selectedFactory, e, units, selectedUnits)
-    } else {
-      this.handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid)
+      // Update AGF capability after factory selection
+      this.updateAGFCapability(selectedUnits)
+      return
     }
+
+    // Priority 2: Check other buildings (including vehicle factories)
+    this.handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid)
   }
 
   handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
+    // Check for building selection first (including vehicle factories)
+    let clickedBuilding = null
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      for (const building of gameState.buildings) {
+        if (building.owner === 'player') {
+          const buildingX = building.x * TILE_SIZE
+          const buildingY = building.y * TILE_SIZE
+          const buildingWidth = building.width * TILE_SIZE
+          const buildingHeight = building.height * TILE_SIZE
+
+          if (worldX >= buildingX && worldX < buildingX + buildingWidth &&
+              worldY >= buildingY && worldY < buildingY + buildingHeight) {
+            clickedBuilding = building
+            break
+          }
+        }
+      }
+    }
+
+    if (clickedBuilding) {
+      // Handle building selection (including unit-producing factories)
+      selectionManager.handleBuildingSelection(clickedBuilding, e, units, selectedUnits)
+      // Update AGF capability after building selection
+      this.updateAGFCapability(selectedUnits)
+      return
+    }
+
     // Normal unit selection
     let clickedUnit = null
     for (const unit of units) {
@@ -608,6 +697,8 @@ export class MouseHandler {
 
     if (clickedUnit) {
       selectionManager.handleUnitSelection(clickedUnit, e, units, factories, selectedUnits)
+      // Update AGF capability after unit selection
+      this.updateAGFCapability(selectedUnits)
     } else {
       // No unit clicked - handle as movement command if units are selected and not in special modes
       if (selectedUnits.length > 0 && !e.shiftKey && !e.ctrlKey && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
@@ -746,5 +837,10 @@ export class MouseHandler {
   // Method to check if AGF rendering should be disabled
   shouldDisableAGFRendering() {
     return this.disableAGFRendering
+  }
+
+  updateAGFCapability(selectedUnits) {
+    // Update AGF capability based on current selection
+    this.hasSelectedCombatUnits = this.shouldStartAttackGroupMode(selectedUnits)
   }
 }

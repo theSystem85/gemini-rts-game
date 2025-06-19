@@ -79,6 +79,13 @@ class Game {
       factory.selected = false
     })
 
+    // Also initialize rally points for vehicle factories and other unit-producing buildings
+    gameState.buildings.forEach(building => {
+      if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
+        building.rallyPoint = null
+      }
+    })
+
     // Reset enemy AI attack directions for fresh game
     resetAttackDirections()
 

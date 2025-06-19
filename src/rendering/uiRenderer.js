@@ -53,35 +53,53 @@ export class UIRenderer {
   }
 
   renderRallyPoints(ctx, factories, scrollOffset) {
-    // Draw rally point flag if any factory has one
+    // Draw rally point flags only for selected unit-producing factories/buildings
+    
+    // Check selected factories
     factories.forEach(factory => {
-      if (factory.rallyPoint && factory.id === 'player') {
-        const flagX = factory.rallyPoint.x * TILE_SIZE - scrollOffset.x
-        const flagY = factory.rallyPoint.y * TILE_SIZE - scrollOffset.y
-
-        // Draw flag pole
-        ctx.strokeStyle = '#8B4513' // Brown color for pole
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(flagX + TILE_SIZE / 2, flagY + TILE_SIZE)
-        ctx.lineTo(flagX + TILE_SIZE / 2, flagY)
-        ctx.stroke()
-
-        // Draw triangular flag
-        ctx.fillStyle = '#FFFF00' // Yellow flag
-        ctx.beginPath()
-        ctx.moveTo(flagX + TILE_SIZE / 2, flagY)
-        ctx.lineTo(flagX + TILE_SIZE, flagY + TILE_SIZE / 3)
-        ctx.lineTo(flagX + TILE_SIZE / 2, flagY + TILE_SIZE / 2)
-        ctx.closePath()
-        ctx.fill()
-
-        // Draw outline around the rally point tile
-        ctx.strokeStyle = '#FFFF00'
-        ctx.lineWidth = 1
-        ctx.strokeRect(flagX, flagY, TILE_SIZE, TILE_SIZE)
+      if (factory.rallyPoint && factory.id === 'player' && factory.selected) {
+        this.drawRallyPointFlag(ctx, factory.rallyPoint, scrollOffset)
       }
     })
+    
+    // Check selected buildings that can produce units
+    if (gameState.buildings) {
+      gameState.buildings.forEach(building => {
+        if (building.rallyPoint && 
+            building.owner === 'player' && 
+            building.selected && 
+            (building.type === 'vehicleFactory' || building.type === 'constructionYard')) {
+          this.drawRallyPointFlag(ctx, building.rallyPoint, scrollOffset)
+        }
+      })
+    }
+  }
+
+  drawRallyPointFlag(ctx, rallyPoint, scrollOffset) {
+    const flagX = rallyPoint.x * TILE_SIZE - scrollOffset.x
+    const flagY = rallyPoint.y * TILE_SIZE - scrollOffset.y
+
+    // Draw flag pole
+    ctx.strokeStyle = '#8B4513' // Brown color for pole
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(flagX + TILE_SIZE / 2, flagY + TILE_SIZE)
+    ctx.lineTo(flagX + TILE_SIZE / 2, flagY)
+    ctx.stroke()
+
+    // Draw triangular flag
+    ctx.fillStyle = '#FFFF00' // Yellow flag
+    ctx.beginPath()
+    ctx.moveTo(flagX + TILE_SIZE / 2, flagY)
+    ctx.lineTo(flagX + TILE_SIZE, flagY + TILE_SIZE / 3)
+    ctx.lineTo(flagX + TILE_SIZE / 2, flagY + TILE_SIZE / 2)
+    ctx.closePath()
+    ctx.fill()
+
+    // Draw outline around the rally point tile
+    ctx.strokeStyle = '#FFFF00'
+    ctx.lineWidth = 1
+    ctx.strokeRect(flagX, flagY, TILE_SIZE, TILE_SIZE)
   }
 
   renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units) {

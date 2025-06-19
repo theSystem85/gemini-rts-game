@@ -317,9 +317,7 @@ export const productionQueue = {
 
     const unitType = this.currentUnit.type
     let spawnFactory = null
-    // Find the main player factory to check for a rally point
-    const playerFactory = factories.find(f => f.id === 'player')
-    const rallyPointTarget = playerFactory?.rallyPoint // Get rally point or undefined
+    let rallyPointTarget = null // Will be set to the specific factory's rally point
 
     // All vehicle units (including harvesters) should spawn from vehicle factories
     if (vehicleUnitTypes.includes(unitType)) {
@@ -333,6 +331,9 @@ export const productionQueue = {
         gameState.nextVehicleFactoryIndex = gameState.nextVehicleFactoryIndex ?? 0
         spawnFactory = vehicleFactories[gameState.nextVehicleFactoryIndex % vehicleFactories.length]
         gameState.nextVehicleFactoryIndex++
+        
+        // Use this specific factory's rally point
+        rallyPointTarget = spawnFactory.rallyPoint
       } else {
         // This case should ideally not happen due to button disabling logic
         console.error(`Cannot spawn ${unitType}: No Vehicle Factory found.`)
@@ -344,12 +345,14 @@ export const productionQueue = {
         return
       }
     } else {
-      // For any other non-vehicle units (currently none)
+      // For any other non-vehicle units (currently none), use main factory
+      const playerFactory = factories.find(f => f.id === 'player')
       spawnFactory = playerFactory
+      rallyPointTarget = playerFactory?.rallyPoint
     }
 
     if (spawnFactory) {
-      // Pass the rallyPointTarget to spawnUnit
+      // Pass the specific factory's rally point to spawnUnit
       const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid, rallyPointTarget)
       if (newUnit) {
         units.push(newUnit)

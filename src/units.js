@@ -264,7 +264,7 @@ function getNeighbors(node, mapGrid) {
 }
 
 // Spawns a unit near the specified factory.
-// Accepts an optional rallyPointTarget from the main player factory.
+// Accepts an optional rallyPointTarget from the specific spawning factory.
 export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null) {
   // Determine the center of the factory/building for spawn proximity check
   const factoryCenterX = factory.x + Math.floor(factory.width / 2)
@@ -280,8 +280,8 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
 
   const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y)
 
-  // If a rally point target was provided (from the main player factory), set the unit's path to it.
-  // This overrides any rally point the specific spawn building might have (though they shouldn't).
+  // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
+  // This allows each factory to have its own individual assembly point.
   // Harvesters handle their own initial path logic in productionQueue.js
   if (rallyPointTarget && type !== 'harvester') {
     const path = findPath(

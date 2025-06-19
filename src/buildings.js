@@ -172,6 +172,11 @@ export function createBuilding(type, x, y) {
     owner: 'neutral' // Default owner, should be set explicitly when added to gameState
   }
 
+  // Initialize rally point for unit-producing buildings
+  if (type === 'vehicleFactory' || type === 'constructionYard') {
+    building.rallyPoint = null
+  }
+
   // Add combat properties for defensive buildings (including teslaCoil)
   if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil') {
     building.fireRange = data.fireRange

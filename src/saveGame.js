@@ -67,8 +67,15 @@ export function saveGame(label) {
     height: b.height,
     health: b.health,
     maxHealth: b.maxHealth,
-    id: b.id
+    id: b.id,
+    rallyPoint: b.rallyPoint // Save rally point if it exists
     // Add more fields if needed
+  }))
+
+  // Gather factory rally points as well
+  const factoryRallyPoints = factories.map(f => ({
+    id: f.id,
+    rallyPoint: f.rallyPoint
   }))
 
   // Gather all ore positions
@@ -90,6 +97,7 @@ export function saveGame(label) {
     enemyMoney,
     units: allUnits,
     buildings: allBuildings,
+    factoryRallyPoints, // Save factory rally points
     orePositions,
     mapGridTypes, // ADDED: save mapGrid tile types
     targetedOreTiles: gameState.targetedOreTiles || {}, // Save targeted ore tiles for harvesters
@@ -192,8 +200,27 @@ export function loadGame(key) {
           building.isTeslaCoil = true
         }
       }
+      
+      // Restore rally point for unit-producing buildings
+      if (building.rallyPoint) {
+        // Rally point is already in the building data from save
+      } else if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
+        // Initialize rally point as null for unit-producing buildings
+        building.rallyPoint = null
+      }
+      
       gameState.buildings.push(building)
     })
+
+    // Restore factory rally points
+    if (loaded.factoryRallyPoints) {
+      loaded.factoryRallyPoints.forEach(factoryData => {
+        const factory = factories.find(f => f.id === factoryData.id)
+        if (factory && factoryData.rallyPoint) {
+          factory.rallyPoint = factoryData.rallyPoint
+        }
+      })
+    }
     // Restore mapGrid tile types (excluding 'building' to avoid black spots)
     if (loaded.mapGridTypes) {
       for (let y = 0; y < mapGrid.length; y++) {

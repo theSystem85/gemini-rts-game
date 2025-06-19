@@ -226,6 +226,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
+- [x] Make sure every unit factory has its own individual assembly point that can be set by selecting the factory and then right clicking on the map. This will replace the current mechanism where the building factory is selected to define the assembly point. Whenever a factory gets selected their assembly points get visible otherwise they are hidden.
 - [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
 - [x] Make sure the tanks (and turrets) when they fire have:
   - [x] (1) a recoil animation on their gun.
@@ -233,7 +234,6 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] only show health bars if units or buildings are damaged
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [x] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
-- [ ] Implement attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box around the enemy units to be attacked. Then all those units will be attacked one after another.
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] Tanks movement speed should be 50% higher in general.
 - [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
