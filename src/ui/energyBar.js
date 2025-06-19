@@ -51,8 +51,6 @@ export function addPowerIndicator() {
   energyBarContainer.style.height = '20px'
   energyBarContainer.style.position = 'relative'
   energyBarContainer.style.overflow = 'hidden'
-  energyBarContainer.style.border = '1px solid #555'
-  energyBarContainer.style.borderRadius = '2px'
   energyBarContainer.style.margin = '0 0 10px 0'
 
   // Initialize energy stats in gameState with default values
