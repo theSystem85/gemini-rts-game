@@ -78,11 +78,11 @@ export function saveGame(label) {
     rallyPoint: f.rallyPoint
   }))
 
-  // Gather all ore positions
+  // Gather all ore positions (now using ore property instead of tile type)
   const orePositions = []
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[y].length; x++) {
-      if (mapGrid[y][x].type === 'ore') {
+      if (mapGrid[y][x].ore) {
         orePositions.push({ x, y })
       }
     }
@@ -234,15 +234,19 @@ export function loadGame(key) {
         }
       }
     } else {
-      // Fallback: clear ore tiles
+      // Fallback: clear ore overlays
       for (let y = 0; y < mapGrid.length; y++) {
         for (let x = 0; x < mapGrid[y].length; x++) {
-          if (mapGrid[y][x].type === 'ore') mapGrid[y][x].type = 'land'
+          mapGrid[y][x].ore = false
         }
       }
+    }
+
+    // Restore ore overlays from saved positions
+    if (loaded.orePositions) {
       loaded.orePositions.forEach(pos => {
         if (mapGrid[pos.y] && mapGrid[pos.y][pos.x]) {
-          mapGrid[pos.y][pos.x].type = 'ore'
+          mapGrid[pos.y][pos.x].ore = true
         }
       })
     }

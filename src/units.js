@@ -419,7 +419,8 @@ function isPositionValid(x, y, mapGrid, units) {
   }
 
   // Check if tile is passable (not a building, rock, etc.)
-  if (mapGrid[y][x].type !== 'land' && mapGrid[y][x].type !== 'street' && mapGrid[y][x].type !== 'ore') {
+  // Note: Tiles with ore overlay (mapGrid[y][x].ore = true) are still passable based on their underlying type
+  if (mapGrid[y][x].type !== 'land' && mapGrid[y][x].type !== 'street') {
     return false
   }
 

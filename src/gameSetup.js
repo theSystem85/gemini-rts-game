@@ -61,8 +61,8 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
   for (let y = 0; y < MAP_TILES_Y; y++) {
     mapGrid[y] = []
     for (let x = 0; x < MAP_TILES_X; x++) {
-      // Initially all land
-      mapGrid[y][x] = { type: 'land' }
+      // Initially all land with no ore overlay
+      mapGrid[y][x] = { type: 'land', ore: false }
     }
   }
   // -------- Step 0: Generate Ore Fields --------
@@ -77,7 +77,8 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
       for (let x = Math.max(0, clusterCenterX - clusterRadius); x < Math.min(MAP_TILES_X, clusterCenterX + clusterRadius); x++) {
         const dx = x - clusterCenterX, dy = y - clusterCenterY
         if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.9) {
-          mapGrid[y][x].type = 'ore'
+          // Set ore as an overlay property instead of replacing tile type
+          mapGrid[y][x].ore = true
         }
       }
     }

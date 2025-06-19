@@ -721,7 +721,7 @@ export class MouseHandler {
       if (hasSelectedHarvesters && 
           mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
           tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length &&
-          mapGrid[tileY][tileX].type === 'ore') {
+          mapGrid[tileY][tileX].ore) {
         oreTarget = { x: tileX, y: tileY }
       }
 

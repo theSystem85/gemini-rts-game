@@ -70,7 +70,7 @@ export class CursorManager {
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show ore tile cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
-      if (hasSelectedHarvesters && mapGrid[tileY][tileX].type === 'ore') {
+      if (hasSelectedHarvesters && mapGrid[tileY][tileX].ore) {
         this.isOverOreTile = true
       }
     }

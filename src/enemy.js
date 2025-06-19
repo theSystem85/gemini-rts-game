@@ -777,7 +777,7 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
   // Search for ore fields
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
-      if (mapGrid[y][x].type === 'ore') {
+      if (mapGrid[y][x].ore) {
         const dist = Math.hypot(x - factoryX, y - factoryY)
         if (dist < closestOreDist) {
           closestOreDist = dist

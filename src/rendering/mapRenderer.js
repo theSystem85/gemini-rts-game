@@ -26,13 +26,35 @@ export class MapRenderer {
           // If valid variation found, draw it with slight overlap to prevent gaps
           if (variationIndex >= 0 && variationIndex < this.textureManager.tileTextureCache[tileType].length) {
             ctx.drawImage(this.textureManager.tileTextureCache[tileType][variationIndex], tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-            continue // Skip to next tile, no need for fallback
+          } else {
+            // Fall back to color if texture variation not available
+            ctx.fillStyle = TILE_COLORS[tileType]
+            ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
           }
+        } else {
+          // Fall back to color if texture not available or disabled - also with slight overlap
+          ctx.fillStyle = TILE_COLORS[tileType]
+          ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
         }
 
-        // Fall back to color if texture not available or disabled - also with slight overlap
-        ctx.fillStyle = TILE_COLORS[tileType]
-        ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
+        // Render ore overlay if present
+        if (tile.ore) {
+          if (USE_TEXTURES && this.textureManager.allTexturesLoaded && this.textureManager.tileTextureCache['ore']) {
+            // Get consistent variation for ore overlay
+            const oreVariationIndex = this.textureManager.getTileVariation('ore', x, y)
+            if (oreVariationIndex >= 0 && oreVariationIndex < this.textureManager.tileTextureCache['ore'].length) {
+              ctx.drawImage(this.textureManager.tileTextureCache['ore'][oreVariationIndex], tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
+            } else {
+              // Fall back to color overlay for ore
+              ctx.fillStyle = TILE_COLORS['ore']
+              ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
+            }
+          } else {
+            // Fall back to color overlay for ore
+            ctx.fillStyle = TILE_COLORS['ore']
+            ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
+          }
+        }
       }
     }
     

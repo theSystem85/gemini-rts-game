@@ -151,7 +151,7 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
   
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
-      if (mapGrid[y][x].type === 'ore') {
+      if (mapGrid[y][x].ore) {
         // Skip this ore tile if it's already targeted by another unit
         const tileKey = `${x},${y}`
         if (targetedOreTiles[tileKey] && targetedOreTiles[tileKey] !== unit.id) {

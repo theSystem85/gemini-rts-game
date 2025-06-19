@@ -37,13 +37,13 @@ export function updateOreSpread(gameState, mapGrid) {
     
     for (let y = 0; y < mapGrid.length; y++) {
       for (let x = 0; x < mapGrid[0].length; x++) {
-        if (mapGrid[y][x].type === 'ore') {
+        if (mapGrid[y][x].ore) {
           directions.forEach(dir => {
             const nx = x + dir.x, ny = y + dir.y
             if (nx >= 0 && nx < mapGrid[0].length && ny >= 0 && ny < mapGrid.length) {
-              // Only spread to land tiles - prevent spreading to streets, water, or rock
-              if (mapGrid[ny][nx].type === 'land' && Math.random() < ORE_SPREAD_PROBABILITY) {
-                mapGrid[ny][nx].type = 'ore'
+              // Only spread to land tiles that don't already have ore - prevent spreading to streets, water, or rock
+              if (mapGrid[ny][nx].type === 'land' && !mapGrid[ny][nx].ore && Math.random() < ORE_SPREAD_PROBABILITY) {
+                mapGrid[ny][nx].ore = true
               }
             }
           })

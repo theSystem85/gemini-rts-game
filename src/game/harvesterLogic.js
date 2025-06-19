@@ -115,7 +115,8 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
         
         // Deplete ore tile after 1 harvest (matches HARVESTER_CAPPACITY = 1)
         if (mapGrid[unit.oreField.y][unit.oreField.x].harvests >= 1) {
-          mapGrid[unit.oreField.y][unit.oreField.x].type = 'land'
+          // Remove ore overlay instead of changing tile type
+          mapGrid[unit.oreField.y][unit.oreField.x].ore = false
           // Clear any cached texture variations for this tile to force re-render
           mapGrid[unit.oreField.y][unit.oreField.x].textureVariation = null
           // Remove targeting once the tile is depleted
@@ -169,7 +170,7 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
       
       if (distanceToOreField <= 0.7) { // Allow harvester to be within 0.7 tiles of the ore field
         // We're close enough to the ore field, check if we can harvest
-        if (mapGrid[unit.oreField.y][unit.oreField.x].type === 'ore' && 
+        if (mapGrid[unit.oreField.y][unit.oreField.x].ore && 
             !harvestedTiles.has(tileKey)) {
           // Start harvesting
           unit.harvesting = true
@@ -874,7 +875,7 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
   if (!target || 
       target.x < 0 || target.y < 0 || 
       target.x >= mapGrid[0].length || target.y >= mapGrid.length ||
-      mapGrid[target.y][target.x].type !== 'ore') {
+      !mapGrid[target.y][target.x].ore) {
     // Invalid manual target, clear it and find automatic target
     unit.manualOreTarget = null
     findNewOreTarget(unit, mapGrid, occupancyMap)
@@ -944,7 +945,7 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
   const currentTile = mapGrid[unitTileY] && mapGrid[unitTileY][unitTileX]
   
-  if (currentTile && currentTile.type === 'ore' && unit.oreCarried < HARVESTER_CAPPACITY) {
+  if (currentTile && currentTile.ore && unit.oreCarried < HARVESTER_CAPPACITY) {
     const tileKey = `${unitTileX},${unitTileY}`
     if (!harvestedTiles.has(tileKey)) {
       // Harvester should start harvesting this tile
@@ -1074,7 +1075,7 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
       
       if (searchX >= 0 && searchY >= 0 && 
           searchX < mapGrid[0].length && searchY < mapGrid.length &&
-          mapGrid[searchY][searchX].type === 'ore') {
+          mapGrid[searchY][searchX].ore) {
         
         const tileKey = `${searchX},${searchY}`
         
@@ -1128,7 +1129,7 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
       
       if (checkX >= 0 && checkY >= 0 && 
           checkX < mapGrid[0].length && checkY < mapGrid.length &&
-          mapGrid[checkY][checkX].type === 'ore') {
+          mapGrid[checkY][checkX].ore) {
         
         // Calculate distance from harvester center to tile center
         const tileCenter = {

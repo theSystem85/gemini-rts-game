@@ -364,6 +364,10 @@ export function clearBuildingFromMapGrid(building, mapGrid) {
           mapGrid[y][x].type = building.originalTiles[y - building.y][x - building.x]
         } else {
           mapGrid[y][x].type = 'land'
+          // Make sure ore property exists when restoring tiles
+          if (mapGrid[y][x].ore === undefined) {
+            mapGrid[y][x].ore = false
+          }
         }
         // Clear any building reference to unblock this tile for pathfinding
         delete mapGrid[y][x].building
