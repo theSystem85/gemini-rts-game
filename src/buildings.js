@@ -8,7 +8,7 @@ export const buildingData = {
     height: 3,
     cost: 2000,
     power: 200,
-    image: 'power_plant.jpg',
+    image: 'power_plant.webp',
     displayName: 'Power Plant',
     health: 200
   },
@@ -17,7 +17,7 @@ export const buildingData = {
     height: 3,
     cost: 2500,
     power: -30,
-    image: 'ore_refinery.jpg',
+    image: 'ore_refinery.webp',
     displayName: 'Ore Refinery',
     health: 200
   },
@@ -26,7 +26,7 @@ export const buildingData = {
     height: 3,
     cost: 3000,
     power: -50,
-    image: 'vehicle_factory.jpg',
+    image: 'vehicle_factory.webp',
     displayName: 'Vehicle Factory',
     health: 300
   },
@@ -35,7 +35,7 @@ export const buildingData = {
     height: 3,
     cost: 5000,
     power: 50,
-    image: 'construction_yard.jpg',
+    image: 'construction_yard.webp',
     displayName: 'Construction Yard',
     health: 350
   },
@@ -44,7 +44,7 @@ export const buildingData = {
     height: 2,
     cost: 1500,
     power: -50,
-    image: 'radar_station.jpg',
+    image: 'radar_station.webp',
     displayName: 'Radar Station',
     health: 200
   },
@@ -53,7 +53,7 @@ export const buildingData = {
     height: 1,
     cost: 1000,
     power: -10,
-    image: 'turret_gun_v1.jpg',
+    image: 'turret_gun_v1.webp',
     displayName: 'Turret Gun V1',
     health: 300,
     // Add combat properties
@@ -69,7 +69,7 @@ export const buildingData = {
     height: 1,
     cost: 2000,
     power: -15,
-    image: 'turret_gun_v2.jpg',
+    image: 'turret_gun_v2.webp',
     displayName: 'Turret Gun V2',
     health: 300,
     // Add combat properties
@@ -85,7 +85,7 @@ export const buildingData = {
     height: 1,
     cost: 3000,
     power: -25,
-    image: 'turret_gun_v3.jpg',
+    image: 'turret_gun_v3.webp',
     displayName: 'Turret Gun V3',
     health: 300,
     // Add combat properties
@@ -104,7 +104,7 @@ export const buildingData = {
     height: 2,
     cost: 4000,
     power: -20,
-    image: 'rocket_turret.jpg',
+    image: 'rocket_turret.webp',
     displayName: 'Rocket Turret',
     health: 200,
     // Add combat properties
@@ -123,7 +123,7 @@ export const buildingData = {
     height: 2,
     cost: 5000,
     power: -60,
-    image: 'tesla_coil.jpg',
+    image: 'tesla_coil.webp',
     displayName: 'Tesla Coil',
     health: 250,
     fireRange: 20, // in tiles
@@ -139,7 +139,7 @@ export const buildingData = {
     height: 2,
     cost: 3500,
     power: -45,
-    image: 'artillery_turret.jpg',
+    image: 'artillery_turret.webp',
     displayName: 'Artillery Turret',
     health: 300
   },
@@ -148,7 +148,7 @@ export const buildingData = {
     height: 1,
     cost: 100,
     power: 0,
-    image: 'concrete_wall.jpg',
+    image: 'concrete_wall.webp',
     displayName: 'Concrete Wall',
     health: 200
   }

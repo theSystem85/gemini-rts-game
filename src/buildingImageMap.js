@@ -6,17 +6,17 @@ const buildingImageCache = {}
 
 // Map building types to their image paths
 export const buildingImageMap = {
-  powerPlant: 'images/map/buildings/power_plant.jpg',
-  oreRefinery: 'images/map/buildings/refinery.jpg',
-  vehicleFactory: 'images/map/buildings/vehicle_factory.jpg',
-  radarStation: 'images/map/buildings/radar_station.jpg',
-  turretGunV1: 'images/map/buildings/turret01.jpg',
-  turretGunV2: 'images/map/buildings/turret02.jpg',
-  turretGunV3: 'images/map/buildings/turret02.jpg', // Using turret02 as fallback
-  rocketTurret: 'images/map/buildings/rocket_gun.png',
-  teslaCoil: 'images/map/buildings/teslacoil.jpg',
-  constructionYard: 'images/map/buildings/construction_yard.png',
-  concreteWall: 'images/map/buildings/turret01.jpg' // Using turret01 as a fallback
+  powerPlant: 'images/map/buildings/power_plant.webp',
+  oreRefinery: 'images/map/buildings/refinery.webp',
+  vehicleFactory: 'images/map/buildings/vehicle_factory.webp',
+  radarStation: 'images/map/buildings/radar_station.webp',
+  turretGunV1: 'images/map/buildings/turret01.webp',
+  turretGunV2: 'images/map/buildings/turret02.webp',
+  turretGunV3: 'images/map/buildings/turret02.webp', // Using turret02 as fallback
+  rocketTurret: 'images/map/buildings/rocket_gun.webp',
+  teslaCoil: 'images/map/buildings/teslacoil.webp',
+  constructionYard: 'images/map/buildings/construction_yard.webp',
+  concreteWall: 'images/map/buildings/turret01.webp' // Using turret01 as a fallback
 }
 
 // Track loading state
