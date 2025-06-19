@@ -177,9 +177,9 @@
       <!-- Save/Load Game Menu -->
       <div id="saveLoadMenu" style="margin-top: 20px;">
         <h3>Save/Load Game</h3>
-        <input id="saveLabelInput" type="text" placeholder="Save label" maxlength="32" style="width: 110px;">
-        <button id="saveGameBtn">Save Game</button>
-        <button id="refreshSavesBtn">⟳</button>
+        <input id="saveLabelInput" class="sidebar-input mb-5" type="text" placeholder="Save label" maxlength="32" style="width: 108px;">
+        <button id="saveGameBtn" class="action-button">Save</button>
+        <button id="refreshSavesBtn" class="action-button">⟳</button>
         <ul id="saveGamesList" style="max-height: 120px; overflow-y: auto; margin: 8px 0 0 0; padding: 0; list-style: none;"></ul>
       </div>
       
@@ -193,22 +193,16 @@
         <div id="speedControl">
           <label style="display: flex; align-items: center; margin: 10px 0;">
             Game Speed: 
-            <input type="number" 
-                min="0.25" 
-                max="4" 
-                step="0.25" 
-                value="1" 
-                style="width: 70px; margin-left: 10px;"
-                id="speedMultiplier">
+            <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1" style="width: 70px; margin-left: 10px;" id="speedMultiplier">
           </label>
         </div>
         
         <div id="shuffleControl">
           <label style="display: flex; align-items: center; margin: 10px 0;">
             Seed:
-            <input type="number" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
+            <input type="number" class="sidebar-input" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
           </label>
-          <button id="shuffleMapBtn" style="margin: 10px 0;">Shuffle Map</button>
+          <button id="shuffleMapBtn" class="action-button" style="margin: 10px 0;">Shuffle Map</button>
         </div>
       </div>
     </div>

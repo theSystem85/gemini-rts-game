@@ -322,12 +322,14 @@ export function updateSaveGamesList() {
     label.style.flex = '1'
     const loadBtn = document.createElement('button')
     loadBtn.textContent = 'Load'
+    loadBtn.classList.add('action-button')
     loadBtn.style.marginLeft = '6px'
     loadBtn.onclick = () => { loadGame(save.key) }
     const delBtn = document.createElement('button')
     delBtn.textContent = '✗'
     delBtn.title = 'Delete save'
-    delBtn.style.marginLeft = '3px'
+    delBtn.classList.add('action-button')
+    delBtn.style.marginLeft = '5px'
     delBtn.onclick = () => { deleteGame(save.key); updateSaveGamesList() }
     li.appendChild(label)
     li.appendChild(loadBtn)
