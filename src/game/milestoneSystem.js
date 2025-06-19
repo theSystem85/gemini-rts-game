@@ -34,6 +34,13 @@ export class MilestoneSystem {
         displayName: 'First Unit Produced',
         description: 'Your first military unit is ready',
         priority: 'medium'
+      },
+      firstTeslaCoil: {
+        id: 'firstTeslaCoil',
+        displayName: 'First Tesla Coil Built',
+        description: 'Advanced defensive technology has been deployed',
+        videoFilename: 'tesla_coil_hits_tank',
+        priority: 'high'
       }
     }
   }
@@ -80,6 +87,16 @@ export class MilestoneSystem {
       )
       if (hasUnit) {
         this.triggerMilestone('firstUnit')
+      }
+    }
+
+    // Check for first Tesla coil
+    if (!this.achievedMilestones.has('firstTeslaCoil')) {
+      const hasTeslaCoil = gameState.buildings?.some(building => 
+        building.type === 'teslaCoil' && building.owner === 'player'
+      )
+      if (hasTeslaCoil) {
+        this.triggerMilestone('firstTeslaCoil')
       }
     }
   }
