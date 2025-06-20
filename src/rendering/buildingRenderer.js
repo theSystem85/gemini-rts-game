@@ -1,5 +1,5 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 
@@ -292,8 +292,9 @@ export class BuildingRenderer {
   }
 
   renderOwnerIndicator(ctx, building, screenX, screenY) {
-    // Draw owner indicator
-    const ownerColor = building.owner === 'player' ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)'
+    // Draw owner indicator using party colors
+    const partyColor = PARTY_COLORS[building.owner] || PARTY_COLORS.player
+    const ownerColor = partyColor.replace(')', ', 0.3)').replace('rgb', 'rgba')
     ctx.fillStyle = ownerColor
     ctx.fillRect(
       screenX + 2,

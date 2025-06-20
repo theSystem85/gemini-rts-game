@@ -185,8 +185,24 @@ export const UNIT_TYPE_COLORS = {
   rocketTank: '#800000'   // Dark red
 }
 
-// Party/owner colors for indicators
+// Party/owner colors for indicators (4 distinct colors for multiplayer)
 export const PARTY_COLORS = {
+  player1: '#00FF00',     // Green (Human player by default)
+  player2: '#FF0000',     // Red
+  player3: '#0080FF',     // Blue
+  player4: '#FFFF00',     // Yellow
+  // Legacy aliases for backwards compatibility
   player: '#00FF00',      // Green
   enemy: '#FF0000'        // Red
 }
+
+// Player position constants for 4-corner setup
+export const PLAYER_POSITIONS = {
+  player1: { x: 0.1, y: 0.9 },   // Bottom-left (current player position)
+  player2: { x: 0.9, y: 0.1 },   // Top-right (current enemy position)
+  player3: { x: 0.1, y: 0.1 },   // Top-left
+  player4: { x: 0.9, y: 0.9 }    // Bottom-right
+}
+
+// Default number of players
+export const DEFAULT_PLAYER_COUNT = 2

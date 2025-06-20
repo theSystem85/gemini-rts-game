@@ -7,37 +7,97 @@ import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearEx
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, resetAttackDirections, shouldRetreatLowHealth } from './ai/enemyStrategies.js'
+import { gameState } from './gameState.js'
 
 const ENABLE_DODGING = false // Constant to toggle dodging behavior, disabled by default
 const lastPositionCheckTimeDelay = 3000
 const dodgeTimeDelay = 3000
 const useSafeAttackDistance = false
 
+// Helper function to check if two players are enemies (in FFA mode, everyone is enemies)
+function areEnemies(player1, player2) {
+  return player1 !== player2
+}
+
+// Helper function to get all enemy players for a given player
+function getEnemyPlayers(playerId) {
+  const playerCount = gameState.playerCount || 2
+  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  return allPlayers.filter(p => p !== playerId)
+}
+
+// Helper function to check if a unit/building belongs to an enemy player
+function isEnemyTo(unit, currentPlayer) {
+  return areEnemies(unit.owner, currentPlayer)
+}
+
+// Helper function to get closest enemy factory
+function getClosestEnemyFactory(unit, factories, aiPlayerId) {
+  let closestFactory = null
+  let closestDist = Infinity
+  
+  factories.forEach(factory => {
+    if (areEnemies(factory.id, aiPlayerId)) {
+      const factoryCenterX = (factory.x + factory.width / 2) * TILE_SIZE
+      const factoryCenterY = (factory.y + factory.height / 2) * TILE_SIZE
+      const dist = Math.hypot(
+        factoryCenterX - (unit.x + TILE_SIZE / 2),
+        factoryCenterY - (unit.y + TILE_SIZE / 2)
+      )
+      if (dist < closestDist) {
+        closestDist = dist
+        closestFactory = factory
+      }
+    }
+  })
+  
+  return closestFactory
+}
+
 /*
   updateEnemyAI:
-  - Handles enemy production and target selection
+  - Handles enemy production and target selection for all AI players
   - Dodging behavior is now toggled by ENABLE_DODGING constant
   - Units recalculate paths no more often than every 2 seconds
   - Now includes building construction logic for turrets and power plants
+  - Supports multiple AI players in FFA mode
 */
 export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const occupancyMap = buildOccupancyMap(units, mapGrid)
   const now = performance.now()
-  const playerFactory = factories.find(f => f.id === 'player')
-  const enemyFactory = factories.find(f => f.id === 'enemy')
+  const humanPlayer = gameState.humanPlayer || 'player1'
+  
+  // Get all AI players (non-human players)
+  const playerCount = gameState.playerCount || 2
+  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  const aiPlayers = allPlayers.filter(p => p !== humanPlayer)
 
   // Get targeted ore tiles from gameState
   const targetedOreTiles = gameState.targetedOreTiles || {}
 
-  // --- Enemy Building Construction ---
+  // Run AI logic for each AI player
+  aiPlayers.forEach(aiPlayerId => {
+    updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles)
+  })
+}
+
+function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
+  const aiFactory = factories.find(f => f.id === aiPlayerId)
+  if (!aiFactory) return
+
+  // Define the keys we'll use for this AI player's state
+  const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`
+  const lastProductionKey = `${aiPlayerId}LastProductionTime`
+
+  // --- AI Building Construction ---
   // Enforce strict build order: Power Plant -> Vehicle Factory -> Ore Refinery
-  if (now - (gameState.enemyLastBuildingTime || 0) >= 10000 && enemyFactory && enemyFactory.budget > 1000 && gameState.buildings) {
-    const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy')
-    const powerPlants = enemyBuildings.filter(b => b.type === 'powerPlant')
-    const vehicleFactories = enemyBuildings.filter(b => b.type === 'vehicleFactory')
-    const oreRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
-    const turrets = enemyBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret')
-    const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+  if (now - (gameState[lastBuildingTimeKey] || 0) >= 10000 && aiFactory && aiFactory.budget > 1000 && gameState.buildings) {
+    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+    const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
+    const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
+    const oreRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
+    const turrets = aiBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret')
+    const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
 
     let buildingType = null
     let cost = 0
@@ -56,13 +116,13 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       cost = buildingData.oreRefinery.cost
     // 4. Only then build turrets or other buildings
     } else if (turrets.length < 2) {
-      if (enemyFactory.budget >= 4000) {
+      if (aiFactory.budget >= 4000) {
         buildingType = 'rocketTurret'
         cost = 4000
-      } else if (enemyFactory.budget >= 3000) {
+      } else if (aiFactory.budget >= 3000) {
         buildingType = 'turretGunV3'
         cost = 3000
-      } else if (enemyFactory.budget >= 2000) {
+      } else if (aiFactory.budget >= 2000) {
         buildingType = 'turretGunV2'
         cost = 2000
       } else {
@@ -71,22 +131,22 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       }
     } else {
       // Calculate current refinery to harvester ratio
-      const enemyRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
-      const maxHarvestersForRefineries = enemyRefineries.length * 4 // 1:4 ratio
+      const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
+      const maxHarvestersForRefineries = aiRefineries.length * 4 // 1:4 ratio
       
       // Build more refineries if we have too many harvesters per refinery
-      if (enemyHarvesters.length >= maxHarvestersForRefineries && enemyFactory.budget >= buildingData.oreRefinery.cost) {
+      if (aiHarvesters.length >= maxHarvestersForRefineries && aiFactory.budget >= buildingData.oreRefinery.cost) {
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
       } else if (turrets.length < 3) {
         // Build more turrets for defense
-        if (enemyFactory.budget >= 4000) {
+        if (aiFactory.budget >= 4000) {
           buildingType = 'rocketTurret'
           cost = 4000
-        } else if (enemyFactory.budget >= 3000) {
+        } else if (aiFactory.budget >= 3000) {
           buildingType = 'turretGunV3'
           cost = 3000
-        } else if (enemyFactory.budget >= 2000) {
+        } else if (aiFactory.budget >= 2000) {
           buildingType = 'turretGunV2'
           cost = 2000
         } else {
@@ -97,56 +157,56 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
     }
 
     // Attempt to start building construction (don't place immediately)
-    if (buildingType && enemyFactory.budget >= cost) {
-      const position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories)
+    if (buildingType && aiFactory.budget >= cost) {
+      const position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories, aiPlayerId)
       if (position) {
         // Start construction process instead of placing immediately
-        enemyFactory.budget -= cost
-        enemyFactory.currentlyBuilding = buildingType
-        enemyFactory.buildStartTime = now
-        enemyFactory.buildDuration = 5000
-        enemyFactory.buildingPosition = position // Store position for completion
-        gameState.enemyLastBuildingTime = now
+        aiFactory.budget -= cost
+        aiFactory.currentlyBuilding = buildingType
+        aiFactory.buildStartTime = now
+        aiFactory.buildDuration = 5000
+        aiFactory.buildingPosition = position // Store position for completion
+        gameState[lastBuildingTimeKey] = now
       } else {
-        gameState.enemyLastBuildingTime = now
+        gameState[lastBuildingTimeKey] = now
       }
     }
   }
 
   // Complete building construction when timer finishes
-  if (enemyFactory && enemyFactory.currentlyBuilding && now - enemyFactory.buildStartTime > enemyFactory.buildDuration) {
-    const buildingType = enemyFactory.currentlyBuilding
-    const position = enemyFactory.buildingPosition
+  if (aiFactory && aiFactory.currentlyBuilding && now - aiFactory.buildStartTime > aiFactory.buildDuration) {
+    const buildingType = aiFactory.currentlyBuilding
+    const position = aiFactory.buildingPosition
     
     if (position) {
       // Double-check position is still valid before placing
-      if (canPlaceBuilding(buildingType, position.x, position.y, mapGrid, units, gameState.buildings, factories, 'enemy')) {
+      if (canPlaceBuilding(buildingType, position.x, position.y, mapGrid, units, gameState.buildings, factories, aiPlayerId)) {
         const newBuilding = createBuilding(buildingType, position.x, position.y)
-        newBuilding.owner = 'enemy'
+        newBuilding.owner = aiPlayerId
         gameState.buildings.push(newBuilding)
         placeBuilding(newBuilding, mapGrid)
       } else {
         // Position became invalid, refund the cost
-        enemyFactory.budget += buildingData[buildingType]?.cost || 0
+        aiFactory.budget += buildingData[buildingType]?.cost || 0
       }
     }
     
     // Clear construction state
-    enemyFactory.currentlyBuilding = null
-    enemyFactory.buildingPosition = null
+    aiFactory.currentlyBuilding = null
+    aiFactory.buildingPosition = null
   }
 
-  // --- Enemy Unit Production ---
+  // --- AI Unit Production ---
   // Only allow unit production after all required buildings are present
-  if (gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'powerPlant').length > 0 &&
-      gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'vehicleFactory').length > 0 &&
-      gameState.buildings.filter(b => b.owner === 'enemy' && b.type === 'oreRefinery').length > 0) {
-    if (now - gameState.enemyLastProductionTime >= 10000 && enemyFactory) {
-      const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
-      const enemyCombatUnits = units.filter(u => u.owner === 'enemy' && 
+  if (gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'powerPlant').length > 0 &&
+      gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'vehicleFactory').length > 0 &&
+      gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'oreRefinery').length > 0) {
+    if (now - (gameState[lastProductionKey] || 0) >= 10000 && aiFactory) {
+      const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+      const aiCombatUnits = units.filter(u => u.owner === aiPlayerId && 
         (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank'))
-      const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy')
-      const enemyRefineries = enemyBuildings.filter(b => b.type === 'oreRefinery')
+      const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+      const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       
       let unitType = 'tank_v1'
       let cost = 1000
@@ -159,9 +219,9 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       
       const MAX_HARVESTERS = 8
       const HIGH_BUDGET_THRESHOLD = 15000
-      const isHighBudget = enemyFactory.budget >= HIGH_BUDGET_THRESHOLD
+      const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       
-      if (enemyHarvesters.length < MAX_HARVESTERS) {
+      if (aiHarvesters.length < MAX_HARVESTERS) {
         // Priority: Build up to 8 harvesters first
         unitType = 'harvester'
         cost = 500
@@ -198,38 +258,39 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           }
         }
       }
-      if (enemyFactory.budget >= cost) {
+      if (aiFactory.budget >= cost) {
         // Find appropriate spawn factory for this unit type
-        let spawnFactory = enemyFactory // Default to main construction yard
+        let spawnFactory = aiFactory // Default to main construction yard
         
         // Harvesters and other vehicle units should spawn from vehicle factories
         if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'rocketTank') {
-          const enemyVehicleFactories = gameState.buildings.filter(
-            b => b.type === 'vehicleFactory' && b.owner === 'enemy'
+          const aiVehicleFactories = gameState.buildings.filter(
+            b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
           )
           
-          if (enemyVehicleFactories.length > 0) {
+          if (aiVehicleFactories.length > 0) {
             // Use round-robin to select the next vehicle factory
-            gameState.nextEnemyVehicleFactoryIndex = gameState.nextEnemyVehicleFactoryIndex ?? 0
-            spawnFactory = enemyVehicleFactories[gameState.nextEnemyVehicleFactoryIndex % enemyVehicleFactories.length]
-            gameState.nextEnemyVehicleFactoryIndex++
+            const factoryIndexKey = `next${aiPlayerId}VehicleFactoryIndex`
+            gameState[factoryIndexKey] = gameState[factoryIndexKey] ?? 0
+            spawnFactory = aiVehicleFactories[gameState[factoryIndexKey] % aiVehicleFactories.length]
+            gameState[factoryIndexKey]++
           } else {
-            console.error(`Cannot spawn ${unitType}: Enemy has no Vehicle Factory.`)
+            console.error(`Cannot spawn ${unitType}: AI player ${aiPlayerId} has no Vehicle Factory.`)
             // Skip this production cycle and try again later
-            gameState.enemyLastProductionTime = now
+            gameState[lastProductionKey] = now
             return
           }
         }
         
-        const newEnemy = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now)
-        if (newEnemy) {
-          units.push(newEnemy)
-          // Deduct the cost from enemy budget just like player money is deducted
-          enemyFactory.budget -= cost
-          enemyFactory.currentlyBuilding = unitType
-          enemyFactory.buildStartTime = now
-          enemyFactory.buildDuration = 5000
-          gameState.enemyLastProductionTime = now
+        const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now, aiPlayerId)
+        if (newUnit) {
+          units.push(newUnit)
+          // Deduct the cost from AI factory budget just like player money is deducted
+          aiFactory.budget -= cost
+          aiFactory.currentlyBuilding = unitType
+          aiFactory.buildStartTime = now
+          aiFactory.buildDuration = 5000
+          gameState[lastProductionKey] = now
           
           // Reset attack directions periodically to ensure varied attack patterns
           // This happens roughly every 4-5 unit productions (40-50 seconds)
@@ -237,32 +298,37 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             resetAttackDirections()
           }
         } else {
-          console.warn(`Failed to spawn enemy ${unitType}`)
-          gameState.enemyLastProductionTime = now
+          console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
+          gameState[lastProductionKey] = now
         }
       }
     }
   }
 
-  // --- Update Enemy Units ---
+  // --- Update AI Units ---
   units.forEach(unit => {
-    if (unit.owner !== 'enemy') return
+    if (unit.owner !== aiPlayerId) return
 
-    // Reset being attacked flag if enough time has passed since last damage
-    if (unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime > 5000)) {
+    updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles)
+  })
+}
+
+function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles) {
+  // Reset being attacked flag if enough time has passed since last damage
+  if (unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime > 5000)) {
+    unit.isBeingAttacked = false
+    unit.lastAttacker = null
+  }
+
+  // Clear invalid attacker references
+  if (unit.lastAttacker && (unit.lastAttacker.health <= 0 || unit.lastAttacker.destroyed)) {
+    unit.lastAttacker = null
+    if (!unit.lastDamageTime || (now - unit.lastDamageTime > 3000)) {
       unit.isBeingAttacked = false
-      unit.lastAttacker = null
     }
+  }
 
-    // Clear invalid attacker references
-    if (unit.lastAttacker && (unit.lastAttacker.health <= 0 || unit.lastAttacker.destroyed)) {
-      unit.lastAttacker = null
-      if (!unit.lastDamageTime || (now - unit.lastDamageTime > 3000)) {
-        unit.isBeingAttacked = false
-      }
-    }
-
-    // Apply new AI strategies first
+  // Apply new AI strategies first
     applyEnemyStrategies(unit, units, gameState, mapGrid, now)
     
     // Skip further processing if unit is retreating
@@ -280,7 +346,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         
         // Highest priority: Retaliate against attacker when being attacked (unless fleeing)
         if (!shouldFlee && unit.isBeingAttacked && unit.lastAttacker && 
-            unit.lastAttacker.health > 0 && unit.lastAttacker.owner === 'player') {
+            unit.lastAttacker.health > 0 && isEnemyTo(unit.lastAttacker, aiPlayerId)) {
           
           let validTarget = false
           let attackerDist = Infinity
@@ -315,15 +381,15 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 
         // Second priority: Defend harvesters under attack (if not retaliating)
         if (!newTarget) {
-          const enemyHarvesters = units.filter(u => u.owner === 'enemy' && u.type === 'harvester')
+          const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
           let harvesterUnderAttack = null
-          for (const harvester of enemyHarvesters) {
-            const threateningPlayers = units.filter(u =>
-              u.owner === 'player' &&
+          for (const harvester of aiHarvesters) {
+            const threateningEnemies = units.filter(u =>
+              isEnemyTo(u, aiPlayerId) &&
               Math.hypot(u.x - harvester.x, u.y - harvester.y) < 5 * TILE_SIZE
             )
-            if (threateningPlayers.length > 0) {
-              harvesterUnderAttack = threateningPlayers[0] // Target closest threat to harvester
+            if (threateningEnemies.length > 0) {
+              harvesterUnderAttack = threateningEnemies[0] // Target closest threat to harvester
               break
             }
           }
@@ -336,27 +402,27 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
         // Third priority: Group attack strategy (if not retaliating or defending harvesters)
         if (!newTarget) {
           // Check if we should conduct group attack before selecting targets
-          const nearbyAllies = units.filter(u => u.owner === 'enemy' && u !== unit &&
+          const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
             (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'rocketTank') &&
             Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
           // Use group attack strategy
           if (nearbyAllies.length >= 2) {
-            // Find appropriate target for group attack
-            let closestPlayer = null
+            // Find appropriate target for group attack - target closest enemy
+            let closestEnemy = null
             let closestDist = Infinity
             units.forEach(u => {
-              if (u.owner === 'player') {
+              if (isEnemyTo(u, aiPlayerId)) {
                 const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
                 if (d < closestDist) {
                   closestDist = d
-                  closestPlayer = u
+                  closestEnemy = u
                 }
               }
             })
             
             // Only attack if group is large enough for the target's defenses
-            const potentialTarget = (closestPlayer && closestDist < 12 * TILE_SIZE) ? closestPlayer : playerFactory
+            const potentialTarget = (closestEnemy && closestDist < 12 * TILE_SIZE) ? closestEnemy : getClosestEnemyFactory(unit, gameState.factories, aiPlayerId)
             if (shouldConductGroupAttack(unit, units, gameState, potentialTarget)) {
               newTarget = potentialTarget
             }
@@ -428,7 +494,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       if (ENABLE_DODGING) {
         let underFire = false
         bullets.forEach(bullet => {
-          if (bullet.shooter && bullet.shooter.owner === 'player') {
+          if (bullet.shooter && isEnemyTo(bullet.shooter, aiPlayerId)) {
             const d = Math.hypot(bullet.x - (unit.x + TILE_SIZE / 2), bullet.y - (unit.y + TILE_SIZE / 2))
             if (d < 2 * TILE_SIZE) {
               underFire = true
@@ -441,7 +507,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
             unit.lastDodgeTime = now
             const dodgeDir = { x: 0, y: 0 }
             bullets.forEach(bullet => {
-              if (bullet.shooter && bullet.shooter.owner === 'player') {
+              if (bullet.shooter && isEnemyTo(bullet.shooter, aiPlayerId)) {
                 const dx = (unit.x + TILE_SIZE / 2) - bullet.x
                 const dy = (unit.y + TILE_SIZE / 2) - bullet.y
                 const mag = Math.hypot(dx, dy)
@@ -500,21 +566,18 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
       }
     }
     // NOTE: Harvester behavior is now handled by the unified harvesterLogic.js module
-    // Enemy harvesters use the same logic as player harvesters for consistent behavior
-  })
-
+    // AI harvesters use the same logic as player harvesters for consistent behavior
+  
   // Maintain safe attack distance for combat units
   if (useSafeAttackDistance) {
-    units.forEach(unit => {
-      if (unit.owner !== 'enemy') return
-      if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
-        const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > lastPositionCheckTimeDelay)
-        if (positionCheckNeeded) {
-          unit.lastPositionCheckTime = now
-          const unitCenterX = unit.x + TILE_SIZE / 2
-          const unitCenterY = unit.y + TILE_SIZE / 2
-          let targetCenterX, targetCenterY
-          if (unit.target.tileX !== undefined) {
+    if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
+      const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > lastPositionCheckTimeDelay)
+      if (positionCheckNeeded) {
+        unit.lastPositionCheckTime = now
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+        let targetCenterX, targetCenterY
+        if (unit.target.tileX !== undefined) {
             targetCenterX = unit.target.x + TILE_SIZE / 2
             targetCenterY = unit.target.y + TILE_SIZE / 2
           } else {
@@ -552,21 +615,17 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
           }
         }
       }
-    })
+    }
   }
-}
 
-// Spawns an enemy unit at the specified building (factory or vehicle factory)
-// NOTE: Enemy units now use identical stats to player units for perfect balance
-export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState, productionStartTime) {
+// Spawns an AI unit at the specified building (factory or vehicle factory)
+// NOTE: AI units now use identical stats to player units for perfect balance
+export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState, productionStartTime, aiPlayerId) {
   // Use the same spawn position logic as player units
   const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
   const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
   
-  // Import spawnUnit to use the same spawning logic as players
-  import('./units.js').then(({ spawnUnit }) => {
-    // This approach won't work synchronously, let's use the existing logic but fix it
-  })
+  // Find a clear spawn position around the building
   
   // Find an available spawn position near the building's center (same as player logic)
   let spawnPosition = findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units)
@@ -580,7 +639,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
   const unit = {
     id: getUniqueId(),
     type: unitType,
-    owner: 'enemy',
+    owner: aiPlayerId, // Use the AI player ID instead of hardcoded 'enemy'
     tileX: spawnPosition.x,
     tileY: spawnPosition.y,
     x: spawnPosition.x * TILE_SIZE,
@@ -621,13 +680,13 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     unit.alertMode = true
   }
   
-  // If this is a harvester, assign it to an optimal enemy refinery and give it an initial ore target (same as player harvesters)
+  // If this is a harvester, assign it to an optimal AI refinery and give it an initial ore target (same as player harvesters)
   if (unitType === 'harvester') {
-    // Find enemy refineries for assignment
-    const enemyGameState = {
-      buildings: gameState?.buildings?.filter(b => b.owner === 'enemy') || []
+    // Find AI refineries for assignment
+    const aiGameState = {
+      buildings: gameState?.buildings?.filter(b => b.owner === aiPlayerId) || []
     }
-    assignHarvesterToOptimalRefinery(unit, enemyGameState)
+    assignHarvesterToOptimalRefinery(unit, aiGameState)
     
     // Give enemy harvester initial ore target (same as player harvesters)
     const targetedOreTiles = gameState?.targetedOreTiles || {}
@@ -744,23 +803,23 @@ function findAdjacentTile(factory, mapGrid) {
 
 // Let's improve this function to fix issues with enemy building placement
 // Modified to improve building placement with better spacing and factory avoidance
-function findBuildingPosition(buildingType, mapGrid, units, buildings, factories) {
-  const factory = factories.find(f => f.owner === 'enemy' || f.id === 'enemy')
+function findBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+  const factory = factories.find(f => f.id === aiPlayerId)
   if (!factory) return null
 
   const buildingWidth = buildingData[buildingType].width
   const buildingHeight = buildingData[buildingType].height
 
-  // Get player factory for directional placement
-  const playerFactory = factories.find(f => f.id === 'player')
+  // Get human player factory for directional placement (to build defenses toward them)
+  const humanPlayerFactory = factories.find(f => f.id === 'player1') // Assume human is always player1
   const factoryX = factory.x + Math.floor(factory.width / 2)
   const factoryY = factory.y + Math.floor(factory.height / 2)
 
-  // Direction toward player (for defensive buildings)
+  // Direction toward human player (for defensive buildings)
   const playerDirection = { x: 0, y: 0 }
-  if (playerFactory) {
-    const playerX = playerFactory.x + Math.floor(playerFactory.width / 2)
-    const playerY = playerFactory.y + Math.floor(playerFactory.height / 2)
+  if (humanPlayerFactory) {
+    const playerX = humanPlayerFactory.x + Math.floor(humanPlayerFactory.width / 2)
+    const playerY = humanPlayerFactory.y + Math.floor(humanPlayerFactory.height / 2)
     playerDirection.x = playerX - factoryX
     playerDirection.y = playerY - factoryY
     const mag = Math.hypot(playerDirection.x, playerDirection.y)
@@ -791,7 +850,7 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
   let directionVector = { x: 0, y: 0 }
   const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
 
-  if (isDefensiveBuilding && playerFactory) {
+  if (isDefensiveBuilding && humanPlayerFactory) {
     // For defensive buildings, strongly prefer direction toward player
     directionVector = playerDirection
   } else if (closestOrePos) {
@@ -804,7 +863,7 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
       directionVector.x /= mag
       directionVector.y /= mag
     }
-  } else if (playerFactory) {
+  } else if (humanPlayerFactory) {
     // Fallback to player direction if no ore fields
     directionVector = playerDirection
   }
@@ -875,7 +934,7 @@ function findBuildingPosition(buildingType, mapGrid, units, buildings, factories
       let isNearBase = false
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
         for (let checkX = x; checkX < x + buildingWidth && !isNearBase; checkX++) {
-          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 5, 'enemy')) {
+          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 5, aiPlayerId)) {
             isNearBase = true
           }
         }
@@ -1227,7 +1286,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         let isNearBase = false
         for (let cy = y; cy < y + buildingHeight && !isNearBase; cy++) {
           for (let cx = x; cx < x + buildingWidth && !isNearBase; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, 'enemy')) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
               isNearBase = true
             }
           }
@@ -1295,7 +1354,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         for (let cy = y; cy < y + buildingHeight; cy++) {
           for (let cx = x; cx < x + buildingWidth; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, 'enemy')) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
               isNearBase = true
             }
             if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {

@@ -97,7 +97,8 @@ class Game {
   }
 
   centerOnPlayerFactory() {
-    const playerFactory = factories.find(f => f.id === 'player')
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const playerFactory = factories.find(f => f.id === humanPlayer) || factories.find(f => f.id === 'player')
     if (playerFactory) {
       const factoryPixelX = playerFactory.x * TILE_SIZE
       const factoryPixelY = playerFactory.y * TILE_SIZE
@@ -140,6 +141,9 @@ class Game {
     // Setup speed control
     this.setupSpeedControl()
 
+    // Setup player count control
+    this.setupPlayerCountControl()
+
     // Setup map shuffle
     this.setupMapShuffle()
 
@@ -181,6 +185,22 @@ class Game {
           gameState.speedMultiplier = value
         } else {
           e.target.value = gameState.speedMultiplier
+        }
+      })
+    }
+  }
+
+  setupPlayerCountControl() {
+    const playerCountInput = document.getElementById('playerCount')
+    if (playerCountInput) {
+      playerCountInput.value = gameState.playerCount || 2
+      playerCountInput.addEventListener('change', (e) => {
+        const value = parseInt(e.target.value)
+        if (value >= 2 && value <= 4) {
+          gameState.playerCount = value
+          // Note: Map will be regenerated on next shuffle
+        } else {
+          e.target.value = gameState.playerCount || 2
         }
       })
     }

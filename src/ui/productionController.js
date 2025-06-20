@@ -14,8 +14,8 @@ export class ProductionController {
 
   // Function to update the enabled/disabled state of vehicle production buttons
   updateVehicleButtonStates() {
-    const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player')
-    const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === 'player')
+    const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+    const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer)
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
@@ -88,14 +88,14 @@ export class ProductionController {
         let requirementText = ''
 
         if (this.vehicleUnitTypes.includes(unitType)) {
-          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player')
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
           if (!hasVehicleFactory) {
             requirementsMet = false
             requirementText = 'Requires Vehicle Factory'
           }
         } else if (unitType === 'harvester') {
-          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === 'player')
-          const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === 'player')
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+          const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer)
           if (!hasVehicleFactory || !hasRefinery) {
             requirementsMet = false
             requirementText = 'Requires Vehicle Factory & Ore Refinery'

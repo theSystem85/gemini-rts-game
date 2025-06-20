@@ -330,7 +330,7 @@ export function createUnit(factory, unitType, x, y) {
     id: getUniqueId(),
     type: actualType,
     // Determine owner based on factory's 'owner' property (for buildings) or 'id' (for initial factories)
-    owner: (factory.owner === 'player' || factory.id === 'player') ? 'player' : 'enemy',
+    owner: factory.owner || factory.id,
     tileX: x,
     tileY: y,
     x: x * TILE_SIZE,

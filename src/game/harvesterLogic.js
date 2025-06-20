@@ -237,17 +237,14 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
 
   if (refineries.length === 0) {
     // No refineries available - fallback to factory (backward compatibility)
-    const targetFactory = factories.find(f => 
-      (unit.owner === 'player' && f.id === 'player') ||
-      (unit.owner === 'enemy' && f.id === 'enemy')
-    )
+    const targetFactory = factories.find(f => f.id === unit.owner)
     
     if (targetFactory && isAdjacentToBuilding(unit, targetFactory)) {
       // Calculate money based on ore carried
       const moneyEarned = unit.oreCarried * 1000
       
       // Unload at factory immediately
-      if (unit.owner === 'player') {
+      if (unit.owner === gameState.humanPlayer) {
         gameState.money += moneyEarned
         if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
           productionQueue.tryResumeProduction()
@@ -454,7 +451,7 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     const moneyEarned = unit.oreCarried * 1000
     
     // Unloading complete
-    if (unit.owner === 'player') {
+    if (unit.owner === gameState.humanPlayer) {
       gameState.money += moneyEarned
       if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
         productionQueue.tryResumeProduction()
@@ -1039,10 +1036,7 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
   }
   
   // Fallback to factory if no refineries available or pathable
-  const targetFactory = factories.find(f => 
-    (unit.owner === 'player' && f.id === 'player') ||
-    (unit.owner === 'enemy' && f.id === 'enemy')
-  )
+  const targetFactory = factories.find(f => f.id === unit.owner)
   
   if (targetFactory) {
     const factoryTile = findAdjacentTile(targetFactory, mapGrid)

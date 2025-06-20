@@ -11,6 +11,23 @@ export class SelectionManager {
     this.doubleClickThreshold = 300 // milliseconds
   }
 
+  // Helper function to get the human player ID
+  getHumanPlayer() {
+    return gameState.humanPlayer || 'player1'
+  }
+
+  // Helper function to check if a unit belongs to the human player
+  isHumanPlayerUnit(unit) {
+    const humanPlayer = this.getHumanPlayer()
+    return unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')
+  }
+
+  // Helper function to check if a building belongs to the human player
+  isHumanPlayerBuilding(building) {
+    const humanPlayer = this.getHumanPlayer()
+    return building.owner === humanPlayer || (humanPlayer === 'player1' && building.owner === 'player')
+  }
+
   handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
     const currentTime = performance.now()
     const isDoubleClick = this.lastClickedUnit === clickedUnit && 
@@ -56,7 +73,7 @@ export class SelectionManager {
       const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
       
       // Clear current selection
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
       factories.forEach(f => f.selected = false)
       selectedUnits.length = 0
       
@@ -73,7 +90,7 @@ export class SelectionManager {
       showNotification(`Selected ${visibleUnitsOfType.length} ${clickedUnit.type}(s)`)
     } else {
       // Normal single click: Select only this unit
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
       factories.forEach(f => f.selected = false) // Clear factory selections too
       selectedUnits.length = 0
       clickedUnit.selected = true
@@ -105,7 +122,7 @@ export class SelectionManager {
       playSound('unitSelection')
     } else {
       // Normal click: Clear existing selection and select factory
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
       selectedUnits.length = 0
 
       // Clear factory selections
@@ -137,7 +154,7 @@ export class SelectionManager {
       playSound('unitSelection')
     } else {
       // Normal click: Clear existing selection and select building
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
       selectedUnits.length = 0
 
       // Clear factory selections
@@ -146,7 +163,7 @@ export class SelectionManager {
 
       // Clear other building selections
       if (gameState.buildings) {
-        gameState.buildings.forEach(b => { if (b.owner === 'player') b.selected = false })
+        gameState.buildings.forEach(b => { if (this.isHumanPlayerBuilding(b)) b.selected = false })
       }
 
       // Select building
@@ -175,7 +192,7 @@ export class SelectionManager {
 
       // Find units within selection rectangle
       for (const unit of units) {
-        if (unit.owner === 'player' && unit.health > 0) {  // Ensure unit is alive
+        if (this.isHumanPlayerUnit(unit) && unit.health > 0) {  // Ensure unit is alive
           const centerX = unit.x + TILE_SIZE / 2
           const centerY = unit.y + TILE_SIZE / 2
 
@@ -193,7 +210,7 @@ export class SelectionManager {
       // Buildings can only be selected by direct clicking, not by drag selection
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          if (building.owner === 'player') {
+          if (this.isHumanPlayerBuilding(building)) {
             building.selected = false
           }
         }
@@ -210,7 +227,7 @@ export class SelectionManager {
     const visibleUnits = []
     
     for (const unit of units) {
-      if (unit.owner === 'player' && unit.type === unitType && unit.health > 0) {
+      if (this.isHumanPlayerUnit(unit) && unit.type === unitType && unit.health > 0) {
         // Check if unit is visible on screen
         const unitScreenX = unit.x - scrollOffset.x
         const unitScreenY = unit.y - scrollOffset.y
@@ -227,12 +244,12 @@ export class SelectionManager {
 
   selectAllOfType(unitType, units, selectedUnits) {
     // Clear current selection
-    units.forEach(u => { if (u.owner === 'player') u.selected = false })
+    units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
     selectedUnits.length = 0
     
     // Select all units of this type
     const unitsOfType = units.filter(unit => 
-      unit.owner === 'player' && unit.type === unitType && unit.health > 0
+      this.isHumanPlayerUnit(unit) && unit.type === unitType && unit.health > 0
     )
     
     unitsOfType.forEach(unit => {

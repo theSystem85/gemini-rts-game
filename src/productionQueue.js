@@ -77,7 +77,7 @@ export const productionQueue = {
 
     // Count vehicle factories owned by player
     const vehicleFactories = gameState.buildings.filter(
-      building => building.type === 'vehicleFactory' && building.owner === 'player'
+      building => building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
     )
 
     // Speed multiplier is the number of factories (1 factory = 1x, 2 = 2x, etc.)
@@ -165,7 +165,7 @@ export const productionQueue = {
 
     // Count construction yards owned by player
     const constructionYards = gameState.buildings.filter(
-      building => building.type === 'constructionYard' && building.owner === 'player'
+      building => building.type === 'constructionYard' && building.owner === gameState.humanPlayer
     )
 
     // Each construction yard speeds up building by 1x (returns # of yards + 1)
@@ -323,7 +323,7 @@ export const productionQueue = {
     if (vehicleUnitTypes.includes(unitType)) {
       // Find player-owned vehicle factories
       const vehicleFactories = gameState.buildings.filter(
-        b => b.type === 'vehicleFactory' && b.owner === 'player'
+        b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer
       )
 
       if (vehicleFactories.length > 0) {

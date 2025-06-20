@@ -1,5 +1,5 @@
 // rendering/factoryRenderer.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, PARTY_COLORS } from '../config.js'
 import { tileToPixel } from '../utils.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { buildingImageMap } from '../buildingImageMap.js'
@@ -30,8 +30,8 @@ export class FactoryRenderer {
         // Draw the construction yard image at top-left corner
         ctx.drawImage(img, screenX, screenY, drawWidth, drawHeight)
 
-        // Draw a small colored indicator in the corner instead of an overlay
-        const indicatorColor = factory.id === 'player' ? '#0A0' : '#A00'
+        // Draw a small colored indicator in the corner using party colors
+        const indicatorColor = PARTY_COLORS[factory.id] || PARTY_COLORS[factory.owner] || (factory.id === 'player' ? '#0A0' : '#A00')
         ctx.fillStyle = indicatorColor
         ctx.fillRect(
           screenX + 4,

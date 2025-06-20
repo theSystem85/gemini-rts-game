@@ -61,5 +61,9 @@ export const gameState = {
   attackGroupStart: { x: 0, y: 0 },
   attackGroupEnd: { x: 0, y: 0 },
   attackGroupTargets: [], // Array of enemy units to be attacked
-  disableAGFRendering: false // Flag to temporarily disable AGF rendering
+  disableAGFRendering: false, // Flag to temporarily disable AGF rendering
+
+  // Multiplayer settings
+  playerCount: 2,  // Number of players (2-4)
+  humanPlayer: 'player1',  // Which player is controlled by human
 }
