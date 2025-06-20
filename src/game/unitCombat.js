@@ -93,7 +93,7 @@ const COMBAT_CONFIG = {
     DAMAGE: {
         STANDARD: 25,
         TANK_V3: 30,
-        ROCKET: 10
+        ROCKET: 20
     },
     RANGE_MULTIPLIER: {
         ROCKET: 1.5

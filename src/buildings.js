@@ -110,7 +110,7 @@ export const buildingData = {
     // Add combat properties
     fireRange: 16,
     fireCooldown: 6000, // 3 seconds between shots
-    damage: 9,
+    damage: 18,
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
     projectileSpeed: 5,

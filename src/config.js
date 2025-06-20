@@ -160,7 +160,7 @@ export const BULLET_DAMAGES = {
   tank_v1: 20,
   tank_v2: 24,
   tank_v3: 30,
-  rocketTank: 60
+  rocketTank: 120
 }
 
 // Attack Group Feature (AGF) constants
