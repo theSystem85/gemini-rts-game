@@ -72,6 +72,10 @@ class Game {
 
     // Initialize factories and units
     initFactories(factories, mapGrid)
+    
+    // Sync factories with gameState
+    gameState.factories.length = 0
+    gameState.factories.push(...factories)
 
     // Initialize rally points as null
     factories.forEach(factory => {
@@ -218,6 +222,11 @@ class Game {
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     factories.length = 0
     initFactories(factories, mapGrid)
+    
+    // Sync factories with gameState
+    gameState.factories.length = 0
+    gameState.factories.push(...factories)
+    
     units.length = 0
     bullets.length = 0
 
@@ -280,6 +289,11 @@ class Game {
     generateMapFromSetup(Date.now(), mapGrid, MAP_TILES_X, MAP_TILES_Y)
     factories.length = 0
     initFactories(factories, mapGrid)
+    
+    // Sync factories with gameState
+    gameState.factories.length = 0
+    gameState.factories.push(...factories)
+    
     units.length = 0
     bullets.length = 0
 

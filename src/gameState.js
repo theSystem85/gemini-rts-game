@@ -27,6 +27,7 @@ export const gameState = {
   speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],
+  factories: [], // Add factories array to gameState
   powerSupply: 0,
   buildingPlacementMode: false,
   currentBuildingType: null,

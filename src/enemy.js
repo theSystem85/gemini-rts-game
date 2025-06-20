@@ -33,6 +33,11 @@ function isEnemyTo(unit, currentPlayer) {
 
 // Helper function to get closest enemy factory
 function getClosestEnemyFactory(unit, factories, aiPlayerId) {
+  if (!factories || !Array.isArray(factories)) {
+    console.warn('getClosestEnemyFactory: factories is undefined or not an array')
+    return null
+  }
+  
   let closestFactory = null
   let closestDist = Infinity
   
@@ -422,7 +427,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
             })
             
             // Only attack if group is large enough for the target's defenses
-            const potentialTarget = (closestEnemy && closestDist < 12 * TILE_SIZE) ? closestEnemy : getClosestEnemyFactory(unit, gameState.factories, aiPlayerId)
+            const potentialTarget = (closestEnemy && closestDist < 12 * TILE_SIZE) ? closestEnemy : getClosestEnemyFactory(unit, gameState.factories || [], aiPlayerId)
             if (shouldConductGroupAttack(unit, units, gameState, potentialTarget)) {
               newTarget = potentialTarget
             }
@@ -1397,7 +1402,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
   const y = production.y
 
   // Validate the building placement one final time
-  if (canPlaceBuilding(buildingType, x, y, mapGrid, gameState.units, gameState.buildings, gameState.factories, 'enemy')) {
+  if (canPlaceBuilding(buildingType, x, y, mapGrid, gameState.units, gameState.buildings, gameState.factories || [], 'enemy')) {
     // Create and place the building
     const newBuilding = createBuilding(buildingType, x, y)
     newBuilding.owner = 'enemy'
