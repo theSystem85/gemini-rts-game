@@ -2,6 +2,7 @@
 import {
   TILE_SIZE
 } from './config.js'
+import { gameState } from './gameState.js'
 import { buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 
@@ -47,8 +48,8 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       if (shooter && shooter.owner !== unit.owner) {
         unit.lastDamageTime = now
         unit.lastAttacker = shooter
-        // Mark as being attacked if it's an enemy unit
-        if (unit.owner === 'enemy') {
+        // Mark as being attacked if it's an AI unit
+        if (unit.owner !== gameState.humanPlayer) {
           unit.isBeingAttacked = true
         }
       }
@@ -70,7 +71,7 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       let damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
       
       // Check for god mode protection for player factories
-      if (window.cheatSystem && factory.id === 'player') {
+      if (window.cheatSystem && factory.id === gameState.humanPlayer) {
         damage = window.cheatSystem.preventDamage(factory, damage)
       }
       

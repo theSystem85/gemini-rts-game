@@ -80,7 +80,7 @@ export function cleanupDestroyedUnits(units, gameState) {
     if (units[i].health <= 0) {
       const unit = units[i]
       
-      if (unit.owner === 'player') {
+      if (unit.owner === gameState.humanPlayer) {
         gameState.playerUnitsDestroyed++
       } else {
         gameState.enemyUnitsDestroyed++
@@ -116,12 +116,11 @@ export function updateUnitCollisions(units, mapGrid) {
 export function checkGameEndConditions(factories, gameState) {
   if (!gameState.buildings) return false
   
-  // Count remaining buildings for each player
-  const playerBuildings = gameState.buildings.filter(b => b.owner === 'player' && b.health > 0)
-  const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy' && b.health > 0)
+  // Count remaining buildings for human player
+  const humanPlayerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
   
-  // Check if player has no buildings left
-  if (playerBuildings.length === 0) {
+  // Check if human player has no buildings left
+  if (humanPlayerBuildings.length === 0) {
     gameState.gameOver = true
     gameState.gameResult = 'defeat'
     gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
@@ -129,8 +128,19 @@ export function checkGameEndConditions(factories, gameState) {
     return true
   }
 
-  // Check if enemy has no buildings left
-  if (enemyBuildings.length === 0) {
+  // Count remaining AI players (any player that isn't the human player)
+  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  let remainingAiPlayers = 0
+  
+  for (const aiPlayerId of aiPlayerIds) {
+    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
+    if (aiBuildings.length > 0) {
+      remainingAiPlayers++
+    }
+  }
+  
+  // Check if human player has eliminated all AI players
+  if (remainingAiPlayers === 0 && aiPlayerIds.length > 0) {
     gameState.gameOver = true
     gameState.gameResult = 'victory'
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'

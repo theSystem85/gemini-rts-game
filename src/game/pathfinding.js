@@ -44,8 +44,8 @@ export function updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
     units.forEach(unit => {
       // Only recalculate if unit has no path or is near the end of its current path
       if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
-        // For enemy units, respect target change timer
-        if (unit.owner === 'enemy' && unit.lastTargetChangeTime &&
+        // For AI units, respect target change timer
+        if (unit.owner !== gameState.humanPlayer && unit.lastTargetChangeTime &&
           now - unit.lastTargetChangeTime < 2000) {
           return // Skip recalculation if target was changed recently
         }

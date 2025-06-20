@@ -456,10 +456,11 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
       if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
         productionQueue.tryResumeProduction()
       }
-    } else if (unit.owner === 'enemy') {
-      const enemyFactory = factories.find(f => f.id === 'enemy')
-      if (enemyFactory) {
-        enemyFactory.budget += moneyEarned
+    } else if (unit.owner !== gameState.humanPlayer) {
+      // Find the AI player's factory to credit money to
+      const aiFactory = factories.find(f => f.owner === unit.owner || f.id === unit.owner)
+      if (aiFactory) {
+        aiFactory.budget += moneyEarned
       }
     }
 

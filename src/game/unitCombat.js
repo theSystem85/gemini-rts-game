@@ -333,8 +333,8 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     );
     
     // Fire if in range and allowed to attack
-    // Player units can always attack, enemy units need AI permission
-    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    // Human player units can always attack, AI units need AI permission
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
@@ -346,7 +346,7 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
  */
 function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
   // Alert mode: automatically scan for targets when no target is assigned
-  if (unit.alertMode && unit.owner === 'player' && (!unit.target || unit.target.health <= 0)) {
+  if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0)) {
     const ALERT_SCAN_RANGE = TANK_FIRE_RANGE * TILE_SIZE;
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
@@ -356,7 +356,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     
     // Scan for enemy units within range
     units.forEach(potentialTarget => {
-      if (potentialTarget.owner === 'enemy' && potentialTarget.health > 0) {
+      if (potentialTarget.owner !== unit.owner && potentialTarget.health > 0) {
         const targetCenterX = potentialTarget.x + TILE_SIZE / 2;
         const targetCenterY = potentialTarget.y + TILE_SIZE / 2;
         const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
@@ -371,7 +371,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Also scan for enemy buildings within range
     if (gameState.buildings) {
       gameState.buildings.forEach(building => {
-        if (building.owner === 'enemy' && building.health > 0) {
+        if (building.owner !== unit.owner && building.health > 0) {
           const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2;
           const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2;
           const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY);
@@ -396,7 +396,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Handle movement using common logic, but prevent chasing if in alert mode
     let distance, targetCenterX, targetCenterY;
     
-    if (unit.alertMode && unit.owner === 'player') {
+    if (unit.alertMode && unit.owner === gameState.humanPlayer) {
       // Alert mode: don't move, just calculate distance for firing
       const unitCenterX = unit.x + TILE_SIZE / 2;
       const unitCenterY = unit.y + TILE_SIZE / 2;
@@ -429,8 +429,8 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     }
     
     // Fire if in range and allowed to attack
-    // Player units can always attack, enemy units need AI permission
-    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    // Human player units can always attack, AI units need AI permission
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
@@ -450,8 +450,8 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     );
     
     // Fire if in range and allowed to attack
-    // Player units can always attack, enemy units need AI permission
-    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    // Human player units can always attack, AI units need AI permission
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
       handleTankFiring(
         unit, 
@@ -483,8 +483,8 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     );
     
     // Fire rockets if in range and allowed to attack
-    // Player units can always attack, enemy units need AI permission
-    const canAttack = unit.owner === 'player' || (unit.owner === 'enemy' && unit.allowedToAttack === true)
+    // Human player units can always attack, AI units need AI permission
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET && canAttack) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {

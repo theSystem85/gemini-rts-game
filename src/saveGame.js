@@ -32,11 +32,15 @@ export function getSaveGames() {
 }
 
 export function saveGame(label) {
-  // Gather enemy money (budget)
-  const enemyFactory = factories.find(f => f.id === 'enemy')
-  const enemyMoney = enemyFactory ? enemyFactory.budget : 0
+  // Gather AI player money (budget) from all AI factories
+  const aiFactoryBudgets = {}
+  factories.forEach(factory => {
+    if (factory.owner !== gameState.humanPlayer && factory.budget !== undefined) {
+      aiFactoryBudgets[factory.owner || factory.id] = factory.budget
+    }
+  })
 
-  // Gather all units (player and enemy)
+  // Gather all units (human player and AI players)
   const allUnits = units.map(u => ({
     type: u.type,
     owner: u.owner,
@@ -94,7 +98,7 @@ export function saveGame(label) {
   // Save everything in a single object
   const saveData = {
     gameState: { ...gameState },
-    enemyMoney,
+    aiFactoryBudgets, // Save AI player budgets
     units: allUnits,
     buildings: allBuildings,
     factoryRallyPoints, // Save factory rally points
@@ -117,10 +121,23 @@ export function loadGame(key) {
   if (saveObj && saveObj.state) {
     const loaded = JSON.parse(saveObj.state)
     Object.assign(gameState, loaded.gameState)
-    const enemyFactory = factories.find(f => f.id === 'enemy')
-    if (enemyFactory && typeof loaded.enemyMoney === 'number') {
-      enemyFactory.budget = loaded.enemyMoney
+    
+    // Restore AI player budgets
+    if (loaded.aiFactoryBudgets) {
+      Object.entries(loaded.aiFactoryBudgets).forEach(([playerId, budget]) => {
+        const aiFactory = factories.find(f => f.owner === playerId || f.id === playerId)
+        if (aiFactory && typeof budget === 'number') {
+          aiFactory.budget = budget
+        }
+      })
+    } else if (loaded.enemyMoney !== undefined) {
+      // Fallback for old save format
+      const enemyFactory = factories.find(f => f.id === 'enemy')
+      if (enemyFactory && typeof loaded.enemyMoney === 'number') {
+        enemyFactory.budget = loaded.enemyMoney
+      }
     }
+    
     units.length = 0
     loaded.units.forEach(u => {
       // Rehydrate unit using createUnit logic

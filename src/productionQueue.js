@@ -346,7 +346,7 @@ export const productionQueue = {
       }
     } else {
       // For any other non-vehicle units (currently none), use main factory
-      const playerFactory = factories.find(f => f.id === 'player')
+      const playerFactory = factories.find(f => f.id === gameState.humanPlayer)
       spawnFactory = playerFactory
       rallyPointTarget = playerFactory?.rallyPoint
     }

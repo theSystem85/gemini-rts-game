@@ -395,7 +395,7 @@ export function updatePowerSupply(buildings, gameState) {
     // Skip buildings with no owner
     if (!building.owner) return
 
-    if (building.owner === 'player') {
+    if (building.owner === gameState.humanPlayer) {
       playerTotalPower += building.power
 
       // Track production and consumption separately
@@ -409,7 +409,8 @@ export function updatePowerSupply(buildings, gameState) {
       if (building.type === 'radarStation' && building.health > 0) {
         playerHasRadarStation = true
       }
-    } else if (building.owner === 'enemy') {
+    } else if (building.owner !== gameState.humanPlayer) {
+      // For now, aggregate all non-human players as "enemy" for power tracking
       enemyTotalPower += building.power
 
       // Track production and consumption separately

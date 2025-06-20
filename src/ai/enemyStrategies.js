@@ -1,5 +1,6 @@
 // enemyStrategies.js - Enhanced enemy AI strategies
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
+import { gameState } from '../gameState.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 
 // Configuration constants for AI behavior
@@ -41,7 +42,7 @@ function evaluatePlayerDefenses(target, gameState) {
   
   // Check for defensive buildings near target
   gameState.buildings
-    .filter(b => b.owner === 'player')
+    .filter(b => b.owner === gameState.humanPlayer)
     .forEach(building => {
       const distance = Math.hypot(
         (building.x + building.width / 2) - targetX,
@@ -225,7 +226,7 @@ export function shouldHarvesterSeekProtection(harvester, units) {
   
   // Check for nearby enemy units threatening the harvester
   const nearbyThreats = units.filter(u =>
-    u.owner === 'player' &&
+    u.owner === gameState.humanPlayer &&
     u.health > 0 &&
     Math.hypot(u.x - harvester.x, u.y - harvester.y) < AI_CONFIG.HARVESTER_DEFENSE_RANGE * TILE_SIZE
   )
@@ -335,7 +336,7 @@ function isUnitInPlayerBase(unit, gameState) {
   
   // Check if unit is near any player buildings
   return gameState.buildings
-    .filter(b => b.owner === 'player')
+    .filter(b => b.owner === gameState.humanPlayer)
     .some(building => {
       const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
       const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
@@ -496,7 +497,7 @@ function getTileAtPosition(x, y, mapGrid) {
 function findPlayerBaseCenter(gameState) {
   if (!gameState.buildings) return null
   
-  const playerBuildings = gameState.buildings.filter(b => b.owner === 'player')
+  const playerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer)
   if (playerBuildings.length === 0) return null
   
   // Find construction yard or command center as primary target

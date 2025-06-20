@@ -136,7 +136,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             unit.health = 0
             
             // Play unit lost sound if player unit dies
-            if (unit.owner === 'player') {
+            if (unit.owner === gameState.humanPlayer) {
               playSound('unitLost', 1.0)
             }
           }
@@ -159,7 +159,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
           
           // Check for god mode protection for player buildings
-          if (window.cheatSystem && building.owner === 'player') {
+          if (window.cheatSystem && building.owner === gameState.humanPlayer) {
             actualDamage = window.cheatSystem.preventDamage(building, actualDamage)
           }
           
@@ -195,7 +195,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
           
           // Check for god mode protection for player factories
-          if (window.cheatSystem && factory.id === 'player') {
+          if (window.cheatSystem && factory.id === gameState.humanPlayer) {
             actualDamage = window.cheatSystem.preventDamage(factory, actualDamage)
           }
           
