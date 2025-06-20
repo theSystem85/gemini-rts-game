@@ -243,21 +243,27 @@ export class BuildingRenderer {
   }
 
   renderHealthBar(ctx, building, screenX, screenY, width) {
-    // Draw health bar if damaged
-    if (building.health < building.maxHealth) {
-      const healthBarWidth = width
-      const healthBarHeight = 5
-      const healthPercentage = building.health / building.maxHealth
-
-      // Background
-      ctx.fillStyle = '#333'
-      ctx.fillRect(screenX, screenY - 10, healthBarWidth, healthBarHeight)
-
-      // Health
-      ctx.fillStyle = healthPercentage > 0.6 ? '#0f0' :
-        healthPercentage > 0.3 ? '#ff0' : '#f00'
-      ctx.fillRect(screenX, screenY - 10, healthBarWidth * healthPercentage, healthBarHeight)
+    // Only show health bar if building is damaged or selected
+    const isDamaged = building.health < building.maxHealth
+    const isSelected = building.selected
+    
+    if (!isDamaged && !isSelected) {
+      return
     }
+    
+    // Draw health bar
+    const healthBarWidth = width
+    const healthBarHeight = 5
+    const healthPercentage = building.health / building.maxHealth
+
+    // Background
+    ctx.fillStyle = '#333'
+    ctx.fillRect(screenX, screenY - 10, healthBarWidth, healthBarHeight)
+
+    // Health
+    ctx.fillStyle = healthPercentage > 0.6 ? '#0f0' :
+      healthPercentage > 0.3 ? '#ff0' : '#f00'
+    ctx.fillRect(screenX, screenY - 10, healthBarWidth * healthPercentage, healthBarHeight)
   }
 
   renderOwnerIndicator(ctx, building, screenX, screenY) {

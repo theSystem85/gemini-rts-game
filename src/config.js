@@ -81,6 +81,13 @@ export const PATH_CALC_INTERVAL = 2000
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export const PATHFINDING_THRESHOLD = 10
 
+// Unit stuck detection and productivity check intervals (in milliseconds)
+export const STUCK_CHECK_INTERVAL = 500  // Check every 0.5 seconds for stuck units
+export const HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
+export const STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
+export const STUCK_HANDLING_COOLDOWN = 1250  // Cooldown between stuck handling attempts
+export const DODGE_ATTEMPT_COOLDOWN = 500  // Cooldown between dodge attempts
+
 // Unit costs
 export const UNIT_COSTS = {
   tank: 1000,

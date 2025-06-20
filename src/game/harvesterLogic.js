@@ -1,5 +1,5 @@
 // harvesterLogic.js - Handles all harvester-specific logic
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, HARVESTER_PRODUCTIVITY_CHECK_INTERVAL } from '../config.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
@@ -46,8 +46,8 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     const unitTileX = Math.floor(unit.x / TILE_SIZE)
     const unitTileY = Math.floor(unit.y / TILE_SIZE)
 
-    // Periodic productivity check - ensure harvester is doing something useful every 2 seconds
-    if (!unit.lastProductivityCheck || now - unit.lastProductivityCheck > 2000) {
+    // Periodic productivity check - ensure harvester is doing something useful every 0.5 seconds
+    if (!unit.lastProductivityCheck || now - unit.lastProductivityCheck > HARVESTER_PRODUCTIVITY_CHECK_INTERVAL) {
       unit.lastProductivityCheck = now
       checkHarvesterProductivity(unit, mapGrid, occupancyMap, now)
     }

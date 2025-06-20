@@ -1,5 +1,5 @@
 // unifiedMovement.js - Unified movement system for all ground units
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 
 /**
@@ -340,8 +340,8 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   
   // Initialize stuck detection if not present
   if (!unit.movement.stuckDetection) {
-    // Add random offset (0-2000ms) to distribute stuck checks across time and prevent performance spikes
-    const randomOffset = Math.random() * 2000;
+    // Add random offset (0-500ms) to distribute stuck checks across time and prevent performance spikes
+    const randomOffset = Math.random() * STUCK_CHECK_INTERVAL;
     unit.movement.stuckDetection = {
       lastPosition: { x: unit.x, y: unit.y },
       stuckTime: 0,
@@ -351,7 +351,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       dodgeAttempts: 0,
       lastDodgeTime: 0,
       lastStuckHandling: 0, // Add cooldown for stuck handling
-      checkInterval: 2000 + randomOffset // Each unit gets its own check interval with offset
+      checkInterval: STUCK_CHECK_INTERVAL + randomOffset // Each unit gets its own check interval with offset
     };
   }
   
@@ -359,8 +359,8 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   const stuck = unit.movement.stuckDetection;
   
   // Enhanced stuck detection for all units - each unit has its own randomized check interval
-  const stuckThreshold = 2000; // Consider units stuck after 2 seconds
-  const unitCheckInterval = stuck.checkInterval || 2000; // Use unit's individual interval or fallback
+  const stuckThreshold = STUCK_THRESHOLD; // Consider units stuck after 0.5 seconds
+  const unitCheckInterval = stuck.checkInterval || STUCK_CHECK_INTERVAL; // Use unit's individual interval or fallback
   
   // Check if unit has moved significantly
   if (now - stuck.lastMovementCheck > unitCheckInterval) {
@@ -383,7 +383,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
         // Only consider stuck if harvester has a path but isn't moving and isn't doing valid actions
         stuck.stuckTime += now - stuck.lastMovementCheck;
         
-        if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
+        if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
           
           stuck.lastStuckHandling = now; // Set cooldown
           
@@ -413,7 +413,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
           }
           
           // Try dodge movement first for harvesters
-          if (stuck.dodgeAttempts < 3 && now - stuck.lastDodgeTime > 2000) {
+          if (stuck.dodgeAttempts < 3 && now - stuck.lastDodgeTime > DODGE_ATTEMPT_COOLDOWN) {
             if (tryDodgeMovement(unit, mapGrid, occupancyMap, units)) {
               stuck.dodgeAttempts++;
               stuck.lastDodgeTime = now;
@@ -454,7 +454,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       // All other unit types (tanks, etc.) - new unified stuck detection logic
       stuck.stuckTime += now - stuck.lastMovementCheck;
       
-      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > 5000)) {
+      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
         
         stuck.lastStuckHandling = now; // Set cooldown
         

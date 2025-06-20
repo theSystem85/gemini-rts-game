@@ -171,6 +171,14 @@ export class UnitRenderer {
   }
 
   renderHealthBar(ctx, unit, scrollOffset) {
+    // Only show health bar if unit is damaged or selected
+    const isDamaged = unit.health < unit.maxHealth
+    const isSelected = unit.selected
+    
+    if (!isDamaged && !isSelected) {
+      return
+    }
+    
     // Draw health bar. For enemy units, force red fill.
     const unitHealthRatio = unit.health / unit.maxHealth
     const healthBarWidth = TILE_SIZE * 0.8

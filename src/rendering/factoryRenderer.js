@@ -58,6 +58,14 @@ export class FactoryRenderer {
   }
 
   renderHealthBar(ctx, factory, screenX, screenY, width) {
+    // Only show health bar if factory is damaged or selected
+    const isDamaged = factory.health < factory.maxHealth
+    const isSelected = factory.selected
+    
+    if (!isDamaged && !isSelected) {
+      return
+    }
+    
     // Draw health bar
     const barWidth = width
     const healthRatio = factory.health / factory.maxHealth
