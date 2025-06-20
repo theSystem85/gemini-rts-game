@@ -189,29 +189,12 @@ export class SelectionManager {
         }
       }
 
-      // Now check for player buildings in the selection rectangle (excluding factories)
+      // Clear building selections but don't select buildings during drag selection
+      // Buildings can only be selected by direct clicking, not by drag selection
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
           if (building.owner === 'player') {
-            // Exclude unit-producing factories from drag selection
-            if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
-              continue // Skip factories - they can only be selected by direct clicking
-            }
-            
-            const buildingX = building.x * TILE_SIZE
-            const buildingY = building.y * TILE_SIZE
-            const buildingWidth = building.width * TILE_SIZE
-            const buildingHeight = building.height * TILE_SIZE
-
-            // Check if any part of the building is within the selection rectangle
-            if (buildingX + buildingWidth > x1 && buildingX < x2 &&
-                buildingY + buildingHeight > y1 && buildingY < y2) {
-              building.selected = true
-              selectedUnits.push(building)
-              playSound('unitSelection')
-            } else {
-              building.selected = false
-            }
+            building.selected = false
           }
         }
       }

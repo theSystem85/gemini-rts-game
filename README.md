@@ -226,7 +226,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Refine the coloring of the power bar and its logic on impacting the production.
-- [ ] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
+- [x] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
 - [ ] Make the box that indicates a selection around a building only 2px wide and only show it at the corners not the entire edges.
 - [x] The health bar for player's own units and buildings as well as the one for the enemies should only be visible if those units/buildings are damaged or selected.
 - [ ] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
