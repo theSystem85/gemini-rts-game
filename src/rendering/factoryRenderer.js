@@ -76,16 +76,41 @@ export class FactoryRenderer {
   }
 
   renderSelection(ctx, factory, screenX, screenY, width, height) {
-    // Draw yellow selection outline for selected factories
+    // Draw selection corner indicators for selected factories
     if (factory.selected) {
       ctx.strokeStyle = '#FF0'
-      ctx.lineWidth = 3
-      ctx.strokeRect(
-        screenX - 2,
-        screenY - 2,
-        width + 4,
-        height + 4
-      )
+      ctx.lineWidth = 2
+      
+      const cornerSize = 12 // Size of corner brackets
+      const offset = 2 // Offset from factory edge
+      
+      // Top-left corner
+      ctx.beginPath()
+      ctx.moveTo(screenX - offset, screenY - offset + cornerSize)
+      ctx.lineTo(screenX - offset, screenY - offset)
+      ctx.lineTo(screenX - offset + cornerSize, screenY - offset)
+      ctx.stroke()
+      
+      // Top-right corner
+      ctx.beginPath()
+      ctx.moveTo(screenX + width + offset - cornerSize, screenY - offset)
+      ctx.lineTo(screenX + width + offset, screenY - offset)
+      ctx.lineTo(screenX + width + offset, screenY - offset + cornerSize)
+      ctx.stroke()
+      
+      // Bottom-left corner
+      ctx.beginPath()
+      ctx.moveTo(screenX - offset, screenY + height + offset - cornerSize)
+      ctx.lineTo(screenX - offset, screenY + height + offset)
+      ctx.lineTo(screenX - offset + cornerSize, screenY + height + offset)
+      ctx.stroke()
+      
+      // Bottom-right corner
+      ctx.beginPath()
+      ctx.moveTo(screenX + width + offset - cornerSize, screenY + height + offset)
+      ctx.lineTo(screenX + width + offset, screenY + height + offset)
+      ctx.lineTo(screenX + width + offset, screenY + height + offset - cornerSize)
+      ctx.stroke()
     }
   }
 
