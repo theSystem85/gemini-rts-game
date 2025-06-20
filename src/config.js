@@ -174,3 +174,19 @@ export const BULLET_DAMAGES = {
 export const ATTACK_GROUP_MIN_DRAG_DISTANCE = 10 // Minimum pixels to drag before attack group mode activates
 export const ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
 export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
+
+// Unit type colors (same for all players/enemies of same type)
+export const UNIT_TYPE_COLORS = {
+  tank: '#0000FF',        // Blue
+  tank_v1: '#0000FF',     // Blue  
+  'tank-v2': '#FFFFFF',   // White
+  'tank-v3': '#32CD32',   // Lime green
+  harvester: '#9400D3',   // Purple
+  rocketTank: '#800000'   // Dark red
+}
+
+// Party/owner colors for indicators
+export const PARTY_COLORS = {
+  player: '#00FF00',      // Green
+  enemy: '#FF0000'        // Red
+}

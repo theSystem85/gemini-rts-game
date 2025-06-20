@@ -1,24 +1,11 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS } from '../config.js'
 import { gameState } from '../gameState.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
-    // Set fill color based on unit type
-    if (unit.type === 'tank' || unit.type === 'tank_v1') {
-      ctx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'  // Blue for player, red for enemy
-    } else if (unit.type === 'tank-v2') {
-      ctx.fillStyle = unit.owner === 'player' ? '#FFFFFF' : '#FFB6C1'  // White for player, light pink for enemy
-    } else if (unit.type === 'tank-v3') {
-      ctx.fillStyle = unit.owner === 'player' ? '#32CD32' : '#90EE90'  // Lime green for player, light green for enemy
-    } else if (unit.type === 'harvester') {
-      ctx.fillStyle = unit.owner === 'player' ? '#9400D3' : '#DDA0DD'  // Purple for player, light purple for enemy
-    } else if (unit.type === 'rocketTank') {
-      ctx.fillStyle = unit.owner === 'player' ? '#800000' : '#F08080'  // Dark red for player, light red for enemy
-    } else {
-      // Fallback color
-      ctx.fillStyle = unit.owner === 'player' ? '#0000FF' : '#FF0000'
-    }
+    // Use consistent colors for unit types regardless of owner
+    ctx.fillStyle = UNIT_TYPE_COLORS[unit.type] || '#0000FF' // Default to blue if type not found
 
     // Draw rectangular body instead of circle
     const bodyWidth = TILE_SIZE * 0.7
@@ -34,8 +21,8 @@ export class UnitRenderer {
     // Draw the rectangular body centered on the unit position
     ctx.fillRect(-bodyWidth / 2, -bodyHeight / 2, bodyWidth, bodyHeight)
 
-    // Draw front direction indicator (triangle)
-    ctx.fillStyle = unit.owner === 'player' ? '#00FF00' : '#FFFF00'
+    // Draw front direction indicator (triangle) - use party color for this
+    ctx.fillStyle = PARTY_COLORS[unit.owner] || PARTY_COLORS.player
     ctx.beginPath()
     ctx.moveTo(bodyWidth / 2, 0)
     ctx.lineTo(bodyWidth / 2 - 8, -8)
@@ -179,7 +166,7 @@ export class UnitRenderer {
       return
     }
     
-    // Draw health bar. For enemy units, force red fill.
+    // Draw health bar with party colors for owner distinction
     const unitHealthRatio = unit.health / unit.maxHealth
     const healthBarWidth = TILE_SIZE * 0.8
     const healthBarHeight = 4
@@ -188,8 +175,8 @@ export class UnitRenderer {
     ctx.strokeStyle = '#000'
     ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
 
-    // Use green for player units, red for enemy units.
-    ctx.fillStyle = (unit.owner === 'enemy') ? '#F00' : '#0F0'
+    // Use party colors for health bar fill
+    ctx.fillStyle = PARTY_COLORS[unit.owner] || PARTY_COLORS.player
     ctx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight)
   }
 
