@@ -443,7 +443,6 @@ export class MouseHandler {
       if (enemyTargets.length > 0) {
         // Set up attack queue for selected units
         this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands)
-        playSound('movement', 0.5)
       }
     } else {
       // Handle single click in AGF mode - issue normal commands

@@ -23,6 +23,9 @@ const soundMapping = {
   deposit: 'deposit',
   explosion: 'explosion',
   unitLost: 'unitLost', // Adding unit lost sound mapping
+  attacking: 'attacking', // New attacking sound
+  enemyUnitDestroyed: 'enemyUnitDestroyed', // New enemy destruction sound
+  enemyBuildingDestroyed: 'enemyBuildingDestroyed', // New enemy building destruction sound
   teslacoil_loading: 'teslacoil_loading',
   teslacoil_firing: 'teslacoil_firing'
 }
@@ -45,6 +48,9 @@ const soundFiles = {
   buildingPlaced: ['buildingPlaced.mp3'],
   harvest: ['harvest.mp3'],
   unitLost: ['unit_lost.mp3'],
+  attacking: ['attacking.mp3'], // New attacking sound
+  enemyUnitDestroyed: ['enemy_unit_destroyed.mp3'], // New enemy destruction sound
+  enemyBuildingDestroyed: ['enemy_building_destroyed.mp3'], // New enemy building destruction sound
   teslacoil_loading: ['teslacoil_loading.mp3'],
   teslacoil_firing: ['teslacoil_firing.mp3']
 }

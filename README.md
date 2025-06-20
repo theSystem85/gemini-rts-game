@@ -253,7 +253,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
-- [ ] Show some progress when the harvester is unloading the ore at the refinery by gradually adding the money to the balance of the player (or AI) and show how the load indicator at the harvesters goes to zero.
+- [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.
+- [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
 - [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Make a dedicated sound for attacking confirmation

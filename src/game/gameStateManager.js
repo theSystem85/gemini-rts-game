@@ -2,6 +2,7 @@
 import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY } from '../config.js'
 import { resolveUnitCollisions } from '../units.js'
 import { explosions } from '../logic.js'
+import { playSound } from '../sound.js'
 
 /**
  * Updates map scrolling with inertia
@@ -83,6 +84,8 @@ export function cleanupDestroyedUnits(units, gameState) {
         gameState.playerUnitsDestroyed++
       } else {
         gameState.enemyUnitsDestroyed++
+        // Play enemy unit destroyed sound when an enemy unit is killed
+        playSound('enemyUnitDestroyed', 1.0)
       }
       
       // Remove unit from cheat system tracking if it exists

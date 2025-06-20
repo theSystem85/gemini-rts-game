@@ -163,7 +163,6 @@ export class UnitCommandsHandler {
         unit.path = path.slice(1)
         unit.target = target
         unit.forcedAttack = isForceAttack
-        playSound('movement', 0.5)
       } else {
         // If already at position, just set the target
         unit.path = []
@@ -172,8 +171,8 @@ export class UnitCommandsHandler {
       }
     })
 
-    // Play sound for feedback
-    playSound('unitSelection')
+    // Play attacking sound for user-initiated attack commands
+    playSound('attacking', 1.0)
   }
 
   handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {
