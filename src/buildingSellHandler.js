@@ -23,7 +23,7 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
   const tileY = Math.floor(mouseY / TILE_SIZE)
 
   // Player factory cannot be sold
-  const playerFactory = factories.find(factory => factory.id === 'player')
+  const playerFactory = factories.find(factory => factory.id === gameState.humanPlayer)
   if (playerFactory &&
       tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
       tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
@@ -35,7 +35,7 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
   // Check player buildings
   for (let i = 0; i < gameState.buildings.length; i++) {
     const building = gameState.buildings[i]
-    if (building.owner === 'player' &&
+    if (building.owner === gameState.humanPlayer &&
         tileX >= building.x && tileX < (building.x + building.width) &&
         tileY >= building.y && tileY < (building.y + building.height)) {
 

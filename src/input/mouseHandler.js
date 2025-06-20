@@ -145,7 +145,7 @@ export class MouseHandler {
     )
     const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit => 
       (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
-      (unit.id && (unit.id === 'player' || unit.id === 'enemy')) // Main factories
+      (unit.id && (unit.id === gameState.humanPlayer)) // Human player factory
     )
     const notInSpecialMode = !gameState.buildingPlacementMode && 
                             !gameState.repairMode && 
@@ -295,7 +295,7 @@ export class MouseHandler {
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
     
     // Check selected factories first
-    const selectedFactory = factories.find(f => f.selected && f.id === 'player')
+    const selectedFactory = factories.find(f => f.selected && f.id === gameState.humanPlayer)
     if (selectedFactory && !this.rightWasDragging) {
       // Set rally point at clicked tile
       selectedFactory.rallyPoint = {
@@ -635,7 +635,7 @@ export class MouseHandler {
     // Priority 1: Check main construction yard factory first
     let selectedFactory = null
     for (const factory of factories) {
-      if (factory.id === 'player') {
+      if (factory.id === gameState.humanPlayer) {
         const factoryPixelX = factory.x * TILE_SIZE
         const factoryPixelY = factory.y * TILE_SIZE
 

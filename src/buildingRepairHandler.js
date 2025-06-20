@@ -16,7 +16,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
     const tileY = Math.floor(mouseY / TILE_SIZE)
 
     // First check if we clicked on the player factory
-    const playerFactory = factories.find(factory => factory.id === 'player')
+    const playerFactory = factories.find(factory => factory.id === gameState.humanPlayer)
     if (playerFactory &&
           tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
           tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
@@ -74,7 +74,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
 
     // Then check player buildings
     for (const building of gameState.buildings) {
-      if (building.owner === 'player' &&
+      if (building.owner === gameState.humanPlayer &&
             tileX >= building.x && tileX < (building.x + building.width) &&
             tileY >= building.y && tileY < (building.y + building.height)) {
 

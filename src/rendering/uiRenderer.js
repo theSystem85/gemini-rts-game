@@ -57,7 +57,7 @@ export class UIRenderer {
     
     // Check selected factories
     factories.forEach(factory => {
-      if (factory.rallyPoint && factory.id === 'player' && factory.selected) {
+      if (factory.rallyPoint && factory.id === gameState.humanPlayer && factory.selected) {
         this.drawRallyPointFlag(ctx, factory.rallyPoint, scrollOffset)
       }
     })
@@ -66,7 +66,7 @@ export class UIRenderer {
     if (gameState.buildings) {
       gameState.buildings.forEach(building => {
         if (building.rallyPoint && 
-            building.owner === 'player' && 
+            building.owner === gameState.humanPlayer && 
             building.selected && 
             (building.type === 'vehicleFactory' || building.type === 'constructionYard')) {
           this.drawRallyPointFlag(ctx, building.rallyPoint, scrollOffset)

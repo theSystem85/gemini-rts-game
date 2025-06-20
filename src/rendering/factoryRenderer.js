@@ -1,5 +1,6 @@
 // rendering/factoryRenderer.js
 import { TILE_SIZE, PARTY_COLORS } from '../config.js'
+import { gameState } from '../gameState.js'
 import { tileToPixel } from '../utils.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { buildingImageMap } from '../buildingImageMap.js'
@@ -31,7 +32,7 @@ export class FactoryRenderer {
         ctx.drawImage(img, screenX, screenY, drawWidth, drawHeight)
 
         // Draw a small colored indicator in the corner using party colors
-        const indicatorColor = PARTY_COLORS[factory.id] || PARTY_COLORS[factory.owner] || (factory.id === 'player' ? '#0A0' : '#A00')
+        const indicatorColor = PARTY_COLORS[factory.id] || PARTY_COLORS[factory.owner] || (factory.id === gameState.humanPlayer ? '#0A0' : '#A00')
         ctx.fillStyle = indicatorColor
         ctx.fillRect(
           screenX + 4,
@@ -51,7 +52,7 @@ export class FactoryRenderer {
         )
       } else {
         // Fallback to the original colored rectangle if image fails to load
-        ctx.fillStyle = factory.id === 'player' ? '#0A0' : '#A00'
+        ctx.fillStyle = factory.id === gameState.humanPlayer ? '#0A0' : '#A00'
         ctx.fillRect(screenX, screenY, width, height)
       }
     })
@@ -115,8 +116,8 @@ export class FactoryRenderer {
   }
 
   renderCurrentlyBuilding(ctx, factory, screenX, screenY, width, height) {
-    // Show what the enemy is currently building (if anything)
-    if (factory.id === 'enemy' && factory.currentlyBuilding) {
+    // Show what AI players are currently building (if anything)
+    if (factory.id !== gameState.humanPlayer && factory.currentlyBuilding) {
       // Calculate center of factory for image placement
       const centerX = screenX + (width / 2)
       const centerY = screenY + (height / 2)
@@ -231,7 +232,7 @@ export class FactoryRenderer {
   }
 
   renderBudget(ctx, factory, screenX, screenY) {
-    if (factory.id === 'enemy' && factory.budget !== undefined) {
+    if (factory.id !== gameState.humanPlayer && factory.budget !== undefined) {
       ctx.fillStyle = '#FFF'
       ctx.font = '12px Arial'
       ctx.fillText(`Budget: ${factory.budget}`, screenX, screenY - 20)

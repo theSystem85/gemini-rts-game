@@ -293,6 +293,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] all selected units try to go to the same tile when commanded to move. That causes them to get stuck there and dodge around instead of standing still. Make sure when a group is commanded to move that all units get different nearby tiles to move to.
+- [ ] Ensure that ore does not grow on occupant tiles. (Currently is is grows on and into rocks and buildings). It should only be on plain grass and street tiles that are unoccupied by buildings or anything else.
 - [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
 - [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
 - [ ] When about 10 units get stuck the game slows down significantly.

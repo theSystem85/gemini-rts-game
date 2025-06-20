@@ -431,7 +431,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
             let closestPlayer = null
             let closestDist = Infinity
             units.forEach(u => {
-              if (u.owner === 'player') {
+              if (u.owner === gameState.humanPlayer) {
                 const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
                 if (d < closestDist) {
                   closestDist = d
@@ -1070,28 +1070,31 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     }
   }
 
-  // Get the enemy factory for path testing
-  const enemyFactory = factories.find(f => f.owner === 'enemy' || f.id === 'enemy')
-  if (!enemyFactory) return true // If no enemy factory, placement should be allowed
+  // Get an AI factory for path testing (use first AI player)
+  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  const aiFactory = aiPlayerIds.length > 0 
+    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
+    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
+  if (!aiFactory) return true // If no AI factory, placement should be allowed
 
   // Find existing buildings to test paths between
-  const enemyBuildings = buildings ? buildings.filter(b => b.owner === 'enemy') : []
+  const aiBuildings = buildings ? buildings.filter(b => b.owner === (aiPlayerIds[0] || 'enemy')) : []
 
-  if (enemyBuildings.length < 1) {
+  if (aiBuildings.length < 1) {
     return true // No existing buildings to test paths between
   }
 
-  // Create test points around the enemy base
+  // Create test points around the AI base
   const testPoints = []
 
   // Add factory exit points
   testPoints.push({
-    x: enemyFactory.x + Math.floor(enemyFactory.width / 2),
-    y: enemyFactory.y + enemyFactory.height + 1  // Below the factory
+    x: aiFactory.x + Math.floor(aiFactory.width / 2),
+    y: aiFactory.y + aiFactory.height + 1  // Below the factory
   })
 
   // Add points near existing buildings
-  enemyBuildings.forEach(building => {
+  aiBuildings.forEach(building => {
     // Add points around the building
     testPoints.push({ x: building.x - 1, y: building.y }) // Left
     testPoints.push({ x: building.x + building.width, y: building.y }) // Right
@@ -1197,7 +1200,11 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
 
 // Fallback position search with the original spiral pattern
 function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories) {
-  const factory = factories.find(f => f.owner === 'enemy' || f.id === 'enemy')
+  // Use first AI player factory, fallback to 'enemy' for legacy compatibility
+  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  const factory = aiPlayerIds.length > 0 
+    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
+    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
   if (!factory) return null
 
   const buildingWidth = buildingData[buildingType].width
@@ -1206,8 +1213,8 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   // Special case for walls - they can be placed closer together
   const minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2
 
-  // Get player factory for directional placement of defensive buildings
-  const playerFactory = factories.find(f => f.id === 'player')
+  // Get human player factory for directional placement of defensive buildings
+  const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player')
   const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
 
   // Preferred distances for building placement

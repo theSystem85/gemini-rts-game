@@ -329,7 +329,7 @@ export class CheatSystem {
 
     // Store original health values and set all units to invincible
     units.forEach(unit => {
-      if (unit.owner === 'player') {
+      if (unit.owner === gameState.humanPlayer) {
         this.originalHealthValues.set(unit.id, {
           health: unit.health,
           maxHealth: unit.maxHealth
@@ -357,7 +357,7 @@ export class CheatSystem {
 
     // Restore original health values
     units.forEach(unit => {
-      if (unit.owner === 'player') {
+      if (unit.owner === gameState.humanPlayer) {
         const originalValues = this.originalHealthValues.get(unit.id)
         if (originalValues) {
           unit.health = Math.min(originalValues.health, unit.maxHealth)
@@ -393,9 +393,9 @@ export class CheatSystem {
     const statusLines = [
       `💰 Money: $${gameState.money.toLocaleString()}`,
       `🛡️ God Mode: ${this.godModeEnabled ? 'ENABLED' : 'DISABLED'}`,
-      `👥 Player Units: ${units.filter(u => u.owner === 'player').length}`,
-      `🤖 Enemy Units: ${units.filter(u => u.owner === 'enemy').length}`,
-      `🏭 Player Buildings: ${gameState.buildings.filter(b => b.owner === 'player').length}`
+      `👥 Player Units: ${units.filter(u => u.owner === gameState.humanPlayer).length}`,
+      `🤖 AI Units: ${units.filter(u => u.owner !== gameState.humanPlayer).length}`,
+      `🏭 Player Buildings: ${gameState.buildings.filter(b => b.owner === gameState.humanPlayer).length}`
     ]
 
     showNotification(statusLines.join('\n'), 5000)
@@ -411,17 +411,17 @@ export class CheatSystem {
     if (!this.godModeEnabled) return damage
     
     // Handle units
-    if (target.owner === 'player' && target.id && this.godModeUnits.has(target.id)) {
+    if (target.owner === gameState.humanPlayer && target.id && this.godModeUnits.has(target.id)) {
       return 0 // Prevent all damage to player units
     }
     
     // Handle buildings (buildings have owner but different structure)
-    if (target.owner === 'player' && target.type && !target.id) {
+    if (target.owner === gameState.humanPlayer && target.type && !target.id) {
       return 0 // Prevent all damage to player buildings
     }
     
-    // Handle factories (factories use id as 'player' or 'enemy')
-    if (target.id === 'player') {
+    // Handle factories (factories use id as human player ID)
+    if (target.id === gameState.humanPlayer) {
       return 0 // Prevent all damage to player factory
     }
     
@@ -430,7 +430,7 @@ export class CheatSystem {
 
   // Update god mode for new units
   updateNewUnit(unit) {
-    if (this.godModeEnabled && unit.owner === 'player') {
+    if (this.godModeEnabled && unit.owner === gameState.humanPlayer) {
       unit.isInvincible = true
       this.godModeUnits.add(unit.id)
       this.originalHealthValues.set(unit.id, {

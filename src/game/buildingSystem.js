@@ -25,9 +25,9 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
       // Skip destroyed buildings and remove them
       if (building.health <= 0) {
         // Track destroyed buildings for statistics
-        if (building.owner === 'player') {
+        if (building.owner === gameState.humanPlayer) {
           gameState.playerBuildingsDestroyed++
-        } else if (building.owner === 'enemy') {
+        } else if (building.owner !== gameState.humanPlayer) {
           gameState.enemyBuildingsDestroyed++
           // Play enemy building destroyed sound when an enemy building is killed
           playSound('enemyBuildingDestroyed', 1.0)
@@ -110,7 +110,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
       // Tesla Coil special logic
       if (building.type === 'teslaCoil') {
         // Check power level - Tesla coil doesn't work when power is below 0
-        const currentPowerSupply = building.owner === 'player' ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+        const currentPowerSupply = building.owner === gameState.humanPlayer ? gameState.playerPowerSupply : gameState.enemyPowerSupply
         if (currentPowerSupply < 0) {
           // Tesla coil is disabled due to insufficient power
           return
@@ -182,7 +182,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
       else {
         // Check power level for rocket turrets - they don't work when power is below 0
         if (building.type === 'rocketTurret') {
-          const currentPowerSupply = building.owner === 'player' ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+          const currentPowerSupply = building.owner === gameState.humanPlayer ? gameState.playerPowerSupply : gameState.enemyPowerSupply
           if (currentPowerSupply < 0) {
             // Rocket turret is disabled due to insufficient power
             return

@@ -80,7 +80,7 @@ export class CursorManager {
     if (gameState.repairMode && this.isOverGameCanvas) {
       // Check player factory first - Added null check for factories
       if (factories && Array.isArray(factories)) {
-        const playerFactory = factories.find(factory => factory && factory.id === 'player')
+        const playerFactory = factories.find(factory => factory && factory.id === gameState.humanPlayer)
         if (playerFactory &&
             tileX >= playerFactory.x && tileX < (playerFactory.x + playerFactory.width) &&
             tileY >= playerFactory.y && tileY < (playerFactory.y + playerFactory.height)) {
@@ -92,7 +92,7 @@ export class CursorManager {
       // Check player buildings
       if (!this.isOverRepairableBuilding && gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          if (building.owner === 'player' &&
+          if (building.owner === gameState.humanPlayer &&
               tileX >= building.x && tileX < (building.x + building.width) &&
               tileY >= building.y && tileY < (building.y + building.height)) {
             // Building is repairable if it's not at full health
@@ -111,7 +111,7 @@ export class CursorManager {
       // Check player buildings
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          if (building.owner === 'player' &&
+          if (building.owner === gameState.humanPlayer &&
               tileX >= building.x && tileX < (building.x + building.width) &&
               tileY >= building.y && tileY < (building.y + building.height)) {
             // All player buildings can be sold

@@ -1,5 +1,6 @@
 // unitMovement.js - Handles all unit movement logic
 import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD } from '../config.js'
+import { gameState } from '../gameState.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
@@ -129,8 +130,8 @@ export function updateSpawnExit(units, factories, mapGrid, occupancyMap) {
 
   units.forEach(unit => {
     if (unit.spawnedInFactory) {
-      // Check if the unit should still be held in the factory (for enemy units)
-      if (unit.holdInFactory && unit.owner === 'enemy') {
+      // Check if the unit should still be held in the factory (for AI units)
+      if (unit.holdInFactory && unit.owner !== gameState.humanPlayer) {
         if (now < unit.factoryBuildEndTime) {
           // Don't allow the unit to leave the factory yet
           return
@@ -141,9 +142,9 @@ export function updateSpawnExit(units, factories, mapGrid, occupancyMap) {
       }
 
       // Find the appropriate factory for this unit
-      const factory = unit.owner === 'player'
-        ? factories.find(f => f.id === 'player')
-        : factories.find(f => f.id === 'enemy')
+      const factory = unit.owner === gameState.humanPlayer
+        ? factories.find(f => f.id === gameState.humanPlayer || f.id === 'player')
+        : factories.find(f => f.owner === unit.owner)
       
       if (factory && unit.tileX >= factory.x && unit.tileX < factory.x + factory.width &&
         unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
