@@ -125,12 +125,12 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
 
     try {
       // Check if placement is valid - pass buildings and factories arrays
-      if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories)) {
+      if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories, gameState.humanPlayer)) {
         // Create and place the building
         const newBuilding = createBuilding(buildingType, tileX, tileY)
 
         // Add owner property to the building
-        newBuilding.owner = 'player'
+        newBuilding.owner = gameState.humanPlayer
 
         // Add the building to gameState.buildings
         if (!gameState.buildings) {

@@ -1,5 +1,5 @@
 // rendering/minimapRenderer.js
-import { TILE_SIZE, TILE_COLORS } from '../config.js'
+import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
 
 export class MinimapRenderer {
@@ -68,9 +68,10 @@ export class MinimapRenderer {
       }
     }
 
-    // Draw units
+    // Draw units with party colors
     units.forEach(unit => {
-      minimapCtx.fillStyle = unit.owner === 'player' ? '#00F' : '#F00'
+      const partyColor = PARTY_COLORS[unit.owner]
+      minimapCtx.fillStyle = partyColor || '#888' // Gray for unknown players
       const unitX = (unit.x + TILE_SIZE / 2) * scaleX
       const unitY = (unit.y + TILE_SIZE / 2) * scaleY
       minimapCtx.beginPath()
@@ -78,11 +79,11 @@ export class MinimapRenderer {
       minimapCtx.fill()
     })
 
-    // Draw buildings if they exist
+    // Draw buildings if they exist with party colors
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
-        // Use different colors for player vs enemy buildings
-        minimapCtx.fillStyle = building.owner === 'player' ? '#0A0' : '#A00'
+        const partyColor = PARTY_COLORS[building.owner]
+        minimapCtx.fillStyle = partyColor || '#888' // Gray for unknown players
         minimapCtx.fillRect(
           building.x * TILE_SIZE * scaleX,
           building.y * TILE_SIZE * scaleY,

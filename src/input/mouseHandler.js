@@ -84,7 +84,7 @@ export class MouseHandler {
       if (gameState.paused) return
 
       if (e.button === 2) {
-        this.handleRightMouseUp(e, units, factories, selectedUnits, cursorManager)
+        this.handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager)
       } else if (e.button === 0) {
         // Handle left mouse up regardless of selection state to ensure cleanup
         this.handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
@@ -141,7 +141,7 @@ export class MouseHandler {
     
     const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
     const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit => 
-      unit.type !== 'harvester' && unit.owner === 'player' && !unit.isBuilding
+      unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
     )
     const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit => 
       (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
@@ -283,7 +283,7 @@ export class MouseHandler {
     }
   }
 
-  handleRightMouseUp(e, units, factories, selectedUnits, cursorManager) {
+  handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager) {
     // End right-click drag
     gameState.isRightDragging = false
     const gameCanvas = document.getElementById('gameCanvas')
@@ -325,7 +325,7 @@ export class MouseHandler {
     // Check selected buildings that can produce units
     const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
       building.selected && 
-      building.owner === 'player' && 
+      building.owner === gameState.humanPlayer && 
       (building.type === 'vehicleFactory' || building.type === 'constructionYard')
     )
     if (selectedBuilding && !this.rightWasDragging) {
@@ -357,7 +357,16 @@ export class MouseHandler {
 
     // Only deselect other units if this was NOT a drag operation AND no factory was selected
     if (!this.rightWasDragging) {
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (selectionManager.isHumanPlayerUnit(u)) u.selected = false })
+      
+      // Clear factory selections
+      factories.forEach(f => f.selected = false)
+      
+      // Clear building selections
+      if (gameState.buildings) {
+        gameState.buildings.forEach(b => { if (selectionManager.isHumanPlayerBuilding(b)) b.selected = false })
+      }
+      
       selectedUnits.length = 0
       // Update AGF capability after deselection
       this.updateAGFCapability(selectedUnits)
@@ -540,7 +549,7 @@ export class MouseHandler {
     
     // Assign targets to units - ALL units attack ALL targets in the SAME order for efficiency
     const combatUnits = selectedUnits.filter(unit => 
-      unit.type !== 'harvester' && unit.owner === 'player'
+      unit.type !== 'harvester' && unit.owner === gameState.humanPlayer
     )
     
     // Process all units BEFORE clearing the flag
@@ -582,7 +591,7 @@ export class MouseHandler {
       // Check friendly buildings first
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          if (building.owner === 'player') {
+          if (selectionManager.isHumanPlayerBuilding(building)) {
             const buildingX = building.x * TILE_SIZE
             const buildingY = building.y * TILE_SIZE
             const buildingWidth = building.width * TILE_SIZE
@@ -602,7 +611,7 @@ export class MouseHandler {
       // Check friendly units if no building was targeted
       if (!forceAttackTarget) {
         for (const unit of units) {
-          if (unit.owner === 'player' && !unit.selected) {
+          if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -656,7 +665,7 @@ export class MouseHandler {
     let clickedBuilding = null
     if (gameState.buildings && gameState.buildings.length > 0) {
       for (const building of gameState.buildings) {
-        if (building.owner === 'player') {
+        if (selectionManager.isHumanPlayerBuilding(building)) {
           const buildingX = building.x * TILE_SIZE
           const buildingY = building.y * TILE_SIZE
           const buildingWidth = building.width * TILE_SIZE
@@ -682,7 +691,7 @@ export class MouseHandler {
     // Normal unit selection
     let clickedUnit = null
     for (const unit of units) {
-      if (unit.owner === 'player') {
+      if (selectionManager.isHumanPlayerUnit(unit)) {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         const dx = worldX - centerX

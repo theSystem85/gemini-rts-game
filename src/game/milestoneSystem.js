@@ -53,7 +53,7 @@ export class MilestoneSystem {
     // Check for first refinery
     if (!this.achievedMilestones.has('firstRefinery')) {
       const hasRefinery = gameState.buildings?.some(building => 
-        building.type === 'oreRefinery' && building.owner === 'player'
+        building.type === 'oreRefinery' && building.owner === gameState.humanPlayer
       )
       if (hasRefinery) {
         this.triggerMilestone('firstRefinery')
@@ -63,7 +63,7 @@ export class MilestoneSystem {
     // Check for first factory
     if (!this.achievedMilestones.has('firstFactory')) {
       const hasFactory = gameState.buildings?.some(building => 
-        building.type === 'vehicleFactory' && building.owner === 'player'
+        building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
       )
       if (hasFactory) {
         this.triggerMilestone('firstFactory')
@@ -73,7 +73,7 @@ export class MilestoneSystem {
     // Check for ten buildings
     if (!this.achievedMilestones.has('tenBuildings')) {
       const playerBuildings = gameState.buildings?.filter(building => 
-        building.owner === 'player'
+        building.owner === gameState.humanPlayer
       )
       if (playerBuildings && playerBuildings.length >= 10) {
         this.triggerMilestone('tenBuildings')
@@ -83,7 +83,7 @@ export class MilestoneSystem {
     // Check for first unit
     if (!this.achievedMilestones.has('firstUnit')) {
       const hasUnit = gameState.units?.some(unit => 
-        unit.owner === 'player' && unit.type !== 'harvester'
+        unit.owner === gameState.humanPlayer && unit.type !== 'harvester'
       )
       if (hasUnit) {
         this.triggerMilestone('firstUnit')
@@ -93,7 +93,7 @@ export class MilestoneSystem {
     // Check for first Tesla coil
     if (!this.achievedMilestones.has('firstTeslaCoil')) {
       const hasTeslaCoil = gameState.buildings?.some(building => 
-        building.type === 'teslaCoil' && building.owner === 'player'
+        building.type === 'teslaCoil' && building.owner === gameState.humanPlayer
       )
       if (hasTeslaCoil) {
         this.triggerMilestone('firstTeslaCoil')

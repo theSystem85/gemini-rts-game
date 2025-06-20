@@ -168,12 +168,12 @@ export class EventHandlers {
 
       try {
         // Check if placement is valid - pass buildings and factories arrays
-        if (canPlaceBuilding(buildingType, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories)) {
+        if (canPlaceBuilding(buildingType, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
           // Create and place the building
           const newBuilding = createBuilding(buildingType, tileX, tileY)
 
           // Add owner property to the building
-          newBuilding.owner = 'player'
+          newBuilding.owner = gameState.humanPlayer
 
           // Add the building to gameState.buildings
           if (!gameState.buildings) {

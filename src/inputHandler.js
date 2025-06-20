@@ -19,8 +19,9 @@ const selectionManager = new SelectionManager()
 const unitCommands = new UnitCommandsHandler()
 
 export function setupInputHandlers(units, factories, mapGrid) {
-  // Store player factory reference for later use
-  const playerFactory = factories.find(factory => factory.id === 'player')
+  // Store human player factory reference for later use
+  const humanPlayer = gameState.humanPlayer || 'player1'
+  const playerFactory = factories.find(factory => factory.id === humanPlayer) || factories.find(factory => factory.id === 'player')
   keyboardHandler.setPlayerFactory(playerFactory)
 
   // Store a reference to gameState for direct updates

@@ -1,5 +1,7 @@
 import { preloadTileTextures } from './rendering.js'
 import { preloadBuildingImages } from './buildingImageMap.js'
+import { MAP_TILES_X, MAP_TILES_Y, PLAYER_POSITIONS } from './config.js'
+import { gameState } from './gameState.js'
 
 let texturesLoaded = false
 let buildingImagesLoaded = false
@@ -149,27 +151,52 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
   }
 
   // -------- Step 3: Generate Streets --------
-  const playerFactoryPos = { x: Math.floor(MAP_TILES_X * 0.1), y: Math.floor(MAP_TILES_Y * 0.9) }
-  const enemyFactoryPos = { x: Math.floor(MAP_TILES_X * 0.9), y: Math.floor(MAP_TILES_Y * 0.1) }
-
-  // Connect ore fields to player factory
-  oreClusters.forEach(cluster => {
-    drawThickLine(mapGrid, playerFactoryPos, cluster, 'street', 2)
+  // Get player count and positions from gameState
+  const playerCount = gameState?.playerCount || 2
+  const playerPositions = []
+  
+  // Calculate factory positions for current player count
+  const playerIds = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  playerIds.forEach(playerId => {
+    const position = PLAYER_POSITIONS[playerId]
+    playerPositions.push({
+      id: playerId,
+      x: Math.floor(MAP_TILES_X * position.x),
+      y: Math.floor(MAP_TILES_Y * position.y)
+    })
   })
-  // Connect the two bases
-  drawThickLine(mapGrid, playerFactoryPos, enemyFactoryPos, 'street', 2)
 
-  // Existing base connectivity for redundancy
-  const dxx = enemyFactoryPos.x - playerFactoryPos.x
-  const dyy = enemyFactoryPos.y - playerFactoryPos.y
-  const connectSteps = Math.max(Math.abs(dxx), Math.abs(dyy))
-  for (let j = 0; j <= connectSteps; j++) {
-    const x = Math.floor(playerFactoryPos.x + (dxx * j) / connectSteps)
-    const y = Math.floor(playerFactoryPos.y + (dyy * j) / connectSteps)
-    if (x >= 0 && y >= 0 && x < MAP_TILES_X && y < MAP_TILES_Y) {
-      mapGrid[y][x].type = 'street'
-      if (x + 1 < MAP_TILES_X) { mapGrid[y][x + 1].type = 'street' }
-      if (y + 1 < MAP_TILES_Y) { mapGrid[y + 1][x].type = 'street' }
+  // Connect ore fields to all player positions
+  oreClusters.forEach(cluster => {
+    playerPositions.forEach(playerPos => {
+      drawThickLine(mapGrid, playerPos, cluster, 'street', 2)
+    })
+  })
+  
+  // Connect all players to each other with streets
+  for (let i = 0; i < playerPositions.length; i++) {
+    for (let j = i + 1; j < playerPositions.length; j++) {
+      drawThickLine(mapGrid, playerPositions[i], playerPositions[j], 'street', 2)
     }
   }
+
+  // Create additional connectivity (existing base connectivity for redundancy)
+  playerPositions.forEach((playerPos, index) => {
+    playerPositions.forEach((otherPos, otherIndex) => {
+      if (index !== otherIndex) {
+        const dxx = otherPos.x - playerPos.x
+        const dyy = otherPos.y - playerPos.y
+        const connectSteps = Math.max(Math.abs(dxx), Math.abs(dyy))
+        for (let j = 0; j <= connectSteps; j++) {
+          const x = Math.floor(playerPos.x + (dxx * j) / connectSteps)
+          const y = Math.floor(playerPos.y + (dyy * j) / connectSteps)
+          if (x >= 0 && y >= 0 && x < MAP_TILES_X && y < MAP_TILES_Y) {
+            mapGrid[y][x].type = 'street'
+            if (x + 1 < MAP_TILES_X) { mapGrid[y][x + 1].type = 'street' }
+            if (y + 1 < MAP_TILES_Y) { mapGrid[y + 1][x].type = 'street' }
+          }
+        }
+      }
+    })
+  })
 }

@@ -1,46 +1,43 @@
 // factories.js
 import { buildingData } from './buildings.js'
-import { MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { MAP_TILES_X, MAP_TILES_Y, PLAYER_POSITIONS } from './config.js'
+import { gameState } from './gameState.js'
 
 export function initFactories(factories, mapGrid) {
+  // Clear existing factories
+  factories.length = 0
+  
   // Get the factory dimensions from buildingData
   const factoryWidth = buildingData.constructionYard.width
   const factoryHeight = buildingData.constructionYard.height
 
-  // Calculate positions - align with street planning from gameSetup.js
-  const playerFactoryX = Math.floor(MAP_TILES_X * 0.1) - Math.floor(factoryWidth / 2)
-  const playerFactoryY = Math.floor(MAP_TILES_Y * 0.9) - Math.floor(factoryHeight / 2)
-  const enemyFactoryX = Math.floor(MAP_TILES_X * 0.9) - Math.floor(factoryWidth / 2)
-  const enemyFactoryY = Math.floor(MAP_TILES_Y * 0.1) - Math.floor(factoryHeight / 2)
-
-  // Position player factory to align with street planning
-  const playerFactory = {
-    id: 'player',
-    x: playerFactoryX,
-    y: playerFactoryY,
-    width: factoryWidth,
-    height: factoryHeight,
-    health: 1000,
-    maxHealth: 1000,
-    productionCountdown: 0,
-    budget: 10000
-  }
+  // Create factories for each player based on player count
+  const playerCount = gameState.playerCount || 2
+  const playerIds = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   
-  // Position enemy factory to align with street planning
-  const enemyFactory = {
-    id: 'enemy',
-    x: enemyFactoryX,
-    y: enemyFactoryY,
-    width: factoryWidth,
-    height: factoryHeight,
-    health: 1000,
-    maxHealth: 1000,
-    productionCountdown: 0,
-    budget: 10000
-  }
+  playerIds.forEach(playerId => {
+    const position = PLAYER_POSITIONS[playerId]
+    const factoryX = Math.floor(MAP_TILES_X * position.x) - Math.floor(factoryWidth / 2)
+    const factoryY = Math.floor(MAP_TILES_Y * position.y) - Math.floor(factoryHeight / 2)
 
-  // Add factories to the array first
-  factories.push(playerFactory, enemyFactory)
+    // Create factory object
+    const factory = {
+      id: playerId,
+      owner: playerId,
+      x: factoryX,
+      y: factoryY,
+      width: factoryWidth,
+      height: factoryHeight,
+      health: 1000,
+      maxHealth: 1000,
+      productionCountdown: 0,
+      budget: 10000,
+      // Keep legacy compatibility
+      isHuman: playerId === gameState.humanPlayer
+    }
+
+    factories.push(factory)
+  })
 
   // Ensure factory areas have proper background tiles (street or land)
   // Use the factories array instead of creating a new array
@@ -77,26 +74,28 @@ export function initFactories(factories, mapGrid) {
     }
   })
 
-  // Carve an L-shaped corridor between the factories.
-  const playerFactoryFromArray = factories.find(f => f.id === 'player')
-  const enemyFactoryFromArray = factories.find(f => f.id === 'enemy')
-  
-  if (playerFactoryFromArray && enemyFactoryFromArray) {
-    for (let x = playerFactoryFromArray.x + playerFactoryFromArray.width; x < enemyFactoryFromArray.x; x++) {
-      if (mapGrid[playerFactoryFromArray.y] && mapGrid[playerFactoryFromArray.y][x]) {
-        mapGrid[playerFactoryFromArray.y][x].type = 'street'
-      }
-    }
-    if (enemyFactoryFromArray.y < playerFactoryFromArray.y) {
-      for (let y = enemyFactoryFromArray.y; y < playerFactoryFromArray.y; y++) {
-        if (mapGrid[y] && mapGrid[y][enemyFactoryFromArray.x]) {
-          mapGrid[y][enemyFactoryFromArray.x].type = 'street'
+  // Carve streets between factories for connectivity
+  // Connect all factories to each other with streets for multi-player connectivity
+  for (let i = 0; i < factories.length; i++) {
+    for (let j = i + 1; j < factories.length; j++) {
+      const factory1 = factories[i]
+      const factory2 = factories[j]
+      
+      // Create L-shaped connection between each pair of factories
+      const startX = factory1.x + Math.floor(factory1.width / 2)
+      const startY = factory1.y + Math.floor(factory1.height / 2)
+      const endX = factory2.x + Math.floor(factory2.width / 2)
+      const endY = factory2.y + Math.floor(factory2.height / 2)
+      
+      // Horizontal then vertical connection
+      for (let x = Math.min(startX, endX); x <= Math.max(startX, endX); x++) {
+        if (mapGrid[startY] && mapGrid[startY][x]) {
+          mapGrid[startY][x].type = 'street'
         }
       }
-    } else {
-      for (let y = playerFactoryFromArray.y; y < enemyFactoryFromArray.y; y++) {
-        if (mapGrid[y] && mapGrid[y][enemyFactoryFromArray.x]) {
-          mapGrid[y][enemyFactoryFromArray.x].type = 'street'
+      for (let y = Math.min(startY, endY); y <= Math.max(startY, endY); y++) {
+        if (mapGrid[y] && mapGrid[y][endX]) {
+          mapGrid[y][endX].type = 'street'
         }
       }
     }

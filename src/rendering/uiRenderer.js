@@ -122,7 +122,7 @@ export class UIRenderer {
             const currentTileX = tileX + x
             const currentTileY = tileY + y
 
-            if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories)) {
+            if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories, 3, gameState.humanPlayer)) {
               isAnyTileInRange = true
               break
             }

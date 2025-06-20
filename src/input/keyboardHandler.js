@@ -128,7 +128,7 @@ export class KeyboardHandler {
       hadSelections = true
       // Clear unit selections
       if (this.units) {
-        this.units.forEach(unit => { if (unit.owner === 'player') unit.selected = false })
+        this.units.forEach(unit => { if (unit.owner === gameState.humanPlayer) unit.selected = false })
       }
       
       // Clear factory selections  
@@ -138,7 +138,7 @@ export class KeyboardHandler {
       
       // Clear building selections
       if (gameState.buildings) {
-        gameState.buildings.forEach(building => { if (building.owner === 'player') building.selected = false })
+        gameState.buildings.forEach(building => { if (building.owner === gameState.humanPlayer) building.selected = false })
       }
       
       // Clear selectedUnits array
@@ -366,7 +366,7 @@ export class KeyboardHandler {
 
     if (selectedUnits.length > 0) {
       // Only store units, not factories
-      const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory' && unit.owner === 'player')
+      const onlyUnits = selectedUnits.filter(unit => unit.type !== 'factory' && unit.owner === gameState.humanPlayer)
 
       if (onlyUnits.length > 0) {
         // Store references to the units and assign group number to each
@@ -388,7 +388,7 @@ export class KeyboardHandler {
     if (this.controlGroups[groupNum] && Array.isArray(this.controlGroups[groupNum]) && this.controlGroups[groupNum].length > 0) {
 
       // Clear current selection
-      units.forEach(u => { if (u.owner === 'player') u.selected = false })
+      units.forEach(u => { if (u.owner === gameState.humanPlayer) u.selected = false })
       const factories = gameState.factories || []
       factories.forEach(f => f.selected = false)
       selectedUnits.length = 0
@@ -399,7 +399,7 @@ export class KeyboardHandler {
         typeof unit === 'object' && // is an object
         units.includes(unit) && // is in the game units array
         unit.health > 0 && // is alive
-        unit.owner === 'player' // belongs to player (safety check)
+        unit.owner === gameState.humanPlayer // belongs to player (safety check)
       )
 
       // Update the control group to only include alive units
