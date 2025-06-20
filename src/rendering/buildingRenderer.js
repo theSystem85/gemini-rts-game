@@ -69,29 +69,8 @@ export class BuildingRenderer {
       const centerX = screenX + width / 2
       const centerY = screenY + height / 2
 
-      // For Tesla Coil, draw a special base and range indicator
+      // For Tesla Coil, draw range indicator if selected
       if (building.type === 'teslaCoil') {
-        // Draw Tesla Coil base
-        ctx.save()
-        ctx.translate(centerX, centerY)
-        // Draw coil base
-        ctx.fillStyle = '#222'
-        ctx.beginPath()
-        ctx.arc(0, 0, 14, 0, Math.PI * 2)
-        ctx.fill()
-        // Draw coil core
-        ctx.fillStyle = '#ff0'
-        ctx.beginPath()
-        ctx.arc(0, 0, 7, 0, Math.PI * 2)
-        ctx.fill()
-        // Draw blue electric ring
-        ctx.strokeStyle = '#0cf'
-        ctx.lineWidth = 3
-        ctx.beginPath()
-        ctx.arc(0, 0, 11, 0, Math.PI * 2)
-        ctx.stroke()
-        ctx.restore()
-
         // Draw range indicator if selected
         if (building.selected) {
           ctx.save()
