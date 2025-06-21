@@ -289,6 +289,7 @@ class Game {
     gameState.radarActive = false
     gameState.targetedOreTiles = {}
     gameState.refineryStatus = {}
+    gameState.defeatedPlayers = new Set() // Reset defeated players tracking
 
     // Restore preserved statistics
     gameState.wins = preservedWins
