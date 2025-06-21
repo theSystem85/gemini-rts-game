@@ -6,6 +6,13 @@ try {
   console.error('Web Audio API is not supported.')
 }
 
+/**
+ * Sound mapping for game events including battle results and player defeats
+ * Battle sounds: battleWon, battleLost - played when game ends
+ * Player defeat sounds: playerBlueDefeated, playerGreenDefeated, playerRedDefeated, playerYellowDefeated
+ * These are mapped to player colors: player1=Green, player2=Red, player3=Blue, player4=Yellow
+ **/
+
 const soundMapping = {
   unitSelection: 'unitSelection',
   movement: 'tankMove',
@@ -27,7 +34,14 @@ const soundMapping = {
   enemyUnitDestroyed: 'enemyUnitDestroyed', // New enemy destruction sound
   enemyBuildingDestroyed: 'enemyBuildingDestroyed', // New enemy building destruction sound
   teslacoil_loading: 'teslacoil_loading',
-  teslacoil_firing: 'teslacoil_firing'
+  teslacoil_firing: 'teslacoil_firing',
+  // New battle and player defeat sounds
+  battleWon: 'battleWon',
+  battleLost: 'battleLost',
+  playerBlueDefeated: 'playerBlueDefeated',
+  playerGreenDefeated: 'playerGreenDefeated',
+  playerRedDefeated: 'playerRedDefeated',
+  playerYellowDefeated: 'playerYellowDefeated'
 }
 
 const soundFiles = {
@@ -52,7 +66,14 @@ const soundFiles = {
   enemyUnitDestroyed: ['enemy_unit_destroyed.mp3'], // New enemy destruction sound
   enemyBuildingDestroyed: ['enemy_building_destroyed.mp3'], // New enemy building destruction sound
   teslacoil_loading: ['teslacoil_loading.mp3'],
-  teslacoil_firing: ['teslacoil_firing.mp3']
+  teslacoil_firing: ['teslacoil_firing.mp3'],
+  // New battle and player defeat sounds
+  battleWon: ['battleWon.mp3'],
+  battleLost: ['battleLost.mp3'],
+  playerBlueDefeated: ['playerBlueDefeated.mp3'],
+  playerGreenDefeated: ['playerGreenDefeated.mp3'],
+  playerRedDefeated: ['playerRedDefeated.mp3'],
+  playerYellowDefeated: ['playerYellowDefeated.mp3']
 }
 
 const activeAudioElements = new Map()

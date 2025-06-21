@@ -108,6 +108,21 @@ export function updateUnitCollisions(units, mapGrid) {
 }
 
 /**
+ * Gets the defeat sound for a specific player based on their color
+ * @param {string} playerId - The player ID (player1, player2, etc.)
+ * @returns {string} - The sound event name for player defeat
+ */
+function getPlayerDefeatSound(playerId) {
+  const playerColorMap = {
+    'player1': 'playerGreenDefeated',  // Green
+    'player2': 'playerRedDefeated',    // Red  
+    'player3': 'playerBlueDefeated',   // Blue
+    'player4': 'playerYellowDefeated'  // Yellow
+  }
+  return playerColorMap[playerId] || 'playerRedDefeated' // Default to red
+}
+
+/**
  * Checks for game win/loss conditions
  * @param {Array} factories - Array of factory objects
  * @param {Object} gameState - Game state object
@@ -125,19 +140,38 @@ export function checkGameEndConditions(factories, gameState) {
     gameState.gameResult = 'defeat'
     gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
     gameState.losses++
+    // Play battle lost sound and human player defeat sound
+    playSound('battleLost', 1.0)
     return true
   }
 
   // Count remaining AI players (any player that isn't the human player)
-  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  const playerCount = gameState.playerCount || 2
+  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  const aiPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
   let remainingAiPlayers = 0
+  let defeatedAiPlayers = []
   
   for (const aiPlayerId of aiPlayerIds) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
     if (aiBuildings.length > 0) {
       remainingAiPlayers++
+    } else {
+      // Check if this AI player was just defeated (not already marked as defeated)
+      if (!gameState.defeatedPlayers) gameState.defeatedPlayers = new Set()
+      if (!gameState.defeatedPlayers.has(aiPlayerId)) {
+        defeatedAiPlayers.push(aiPlayerId)
+        gameState.defeatedPlayers.add(aiPlayerId)
+      }
     }
   }
+  
+  // Play defeat sounds for newly defeated AI players
+  defeatedAiPlayers.forEach((playerId, index) => {
+    setTimeout(() => {
+      playSound(getPlayerDefeatSound(playerId), 1.0)
+    }, index * 500) // Stagger the defeat sounds by 500ms each
+  })
   
   // Check if human player has eliminated all AI players
   if (remainingAiPlayers === 0 && aiPlayerIds.length > 0) {
@@ -145,6 +179,8 @@ export function checkGameEndConditions(factories, gameState) {
     gameState.gameResult = 'victory'
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
     gameState.wins++
+    // Play battle won sound
+    playSound('battleWon', 0.8)
     return true
   }
 
