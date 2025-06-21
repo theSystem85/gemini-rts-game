@@ -1063,8 +1063,14 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
   // 1. Creating a temporary map grid with this building placed
   // 2. Trying to find paths between key points around the base
 
-  // Create a deep copy of the relevant portion of the map grid
-  const tempMapGrid = JSON.parse(JSON.stringify(mapGrid))
+  // Create a safe copy of the map grid without circular references
+  const tempMapGrid = mapGrid.map(row => 
+    row.map(tile => ({
+      type: tile.type,
+      ore: tile.ore,
+      building: tile.building ? true : false // Just track existence, not reference
+    }))
+  )
 
   // Simulate placing the building in the temp grid
   for (let cy = y; cy < y + height; cy++) {
