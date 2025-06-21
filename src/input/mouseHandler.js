@@ -318,7 +318,7 @@ export class MouseHandler {
       
       this.rightWasDragging = false
       // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
       return
     }
     
@@ -351,7 +351,7 @@ export class MouseHandler {
       
       this.rightWasDragging = false
       // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
       return
     }
 
@@ -374,7 +374,7 @@ export class MouseHandler {
     this.rightWasDragging = false
 
     // Update custom cursor visibility after unit selection changes
-    cursorManager.updateCustomCursor(e, gameState.mapGrid, factories, selectedUnits)
+    cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
   }
 
   handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -451,7 +451,7 @@ export class MouseHandler {
       
       if (enemyTargets.length > 0) {
         // Set up attack queue for selected units
-        this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands)
+        this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands, mapGrid)
       }
     } else {
       // Handle single click in AGF mode - issue normal commands
@@ -540,7 +540,7 @@ export class MouseHandler {
     return enemyTargets
   }
 
-  setupAttackQueue(selectedUnits, enemyTargets, unitCommands) {
+  setupAttackQueue(selectedUnits, enemyTargets, unitCommands, mapGrid) {
     // Store the attack targets in gameState for visual indicators temporarily
     gameState.attackGroupTargets = [...enemyTargets]
     
@@ -571,16 +571,14 @@ export class MouseHandler {
     
     // Now issue attack commands to all units at once
     if (combatUnits.length > 0 && combatUnits[0].target) {
-      unitCommands.handleAttackCommand(combatUnits, combatUnits[0].target, null, false)
+      unitCommands.handleAttackCommand(combatUnits, combatUnits[0].target, mapGrid, false)
     }
     
     // Clear the flag after ALL AGF operations are complete
     unitCommands.isAttackGroupOperation = false
     
-    // Clear attack targets after a brief delay to allow units to register them
-    setTimeout(() => {
-      gameState.attackGroupTargets = []
-    }, 50)
+    // Don't clear attack targets immediately - let them persist until user does something else
+    // (They will be cleared when user issues other commands or selects new targets)
   }
 
   handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid) {

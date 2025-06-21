@@ -26,16 +26,6 @@ export class UIRenderer {
         (gameState.attackGroupStart.x !== gameState.attackGroupEnd.x || 
          gameState.attackGroupStart.y !== gameState.attackGroupEnd.y)
     
-    // Debug logging
-    if (shouldDrawAGF) {
-      console.log('Drawing AGF box:', {
-        mode: gameState.attackGroupMode,
-        disabled: gameState.disableAGFRendering,
-        start: gameState.attackGroupStart,
-        end: gameState.attackGroupEnd
-      })
-    }
-    
     if (shouldDrawAGF) {
       const rectX = Math.min(gameState.attackGroupStart.x, gameState.attackGroupEnd.x) - scrollOffset.x
       const rectY = Math.min(gameState.attackGroupStart.y, gameState.attackGroupEnd.y) - scrollOffset.y

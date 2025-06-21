@@ -6,9 +6,23 @@ import { showNotification } from '../ui/notifications.js'
 
 export class SelectionManager {
   constructor() {
-    this.lastClickTime = 0
+    this.la    // Clear existing selection
+    units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
+    selectedUnits.length = 0
+    
+    // Clear attack group targets when selection changes
+    this.clearAttackGroupTargets()
+    
+    // Select all units of this typeckTime = 0
     this.lastClickedUnit = null
     this.doubleClickThreshold = 300 // milliseconds
+  }
+
+  // Helper method to clear attack group targets when selection changes
+  clearAttackGroupTargets() {
+    if (gameState.attackGroupTargets && gameState.attackGroupTargets.length > 0) {
+      gameState.attackGroupTargets = []
+    }
   }
 
   // Helper function to get the human player ID
@@ -77,6 +91,9 @@ export class SelectionManager {
       factories.forEach(f => f.selected = false)
       selectedUnits.length = 0
       
+      // Clear attack group targets when selection changes
+      this.clearAttackGroupTargets()
+      
       // Select all visible units of this type
       const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
       
@@ -93,6 +110,10 @@ export class SelectionManager {
       units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
       factories.forEach(f => f.selected = false) // Clear factory selections too
       selectedUnits.length = 0
+      
+      // Clear attack group targets when selection changes
+      this.clearAttackGroupTargets()
+      
       clickedUnit.selected = true
       selectedUnits.push(clickedUnit)
       playSound('unitSelection')
@@ -128,6 +149,9 @@ export class SelectionManager {
       // Clear factory selections
       const factories = gameState.factories || []
       factories.forEach(f => f.selected = false)
+      
+      // Clear attack group targets when selection changes
+      this.clearAttackGroupTargets()
 
       // Select factory
       selectedFactory.selected = true
@@ -165,6 +189,9 @@ export class SelectionManager {
       if (gameState.buildings) {
         gameState.buildings.forEach(b => { if (this.isHumanPlayerBuilding(b)) b.selected = false })
       }
+      
+      // Clear attack group targets when selection changes
+      this.clearAttackGroupTargets()
 
       // Select building
       selectedBuilding.selected = true
@@ -182,6 +209,9 @@ export class SelectionManager {
 
       // Clear current selection first
       selectedUnits.length = 0
+      
+      // Clear attack group targets when selection changes
+      this.clearAttackGroupTargets()
 
       // Clear any factory selections
       if (factories) {

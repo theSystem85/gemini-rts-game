@@ -253,17 +253,19 @@ export class UnitRenderer {
       const indicatorX = centerX
       const indicatorY = centerY - TILE_SIZE / 2 - 15 + bounceOffset
       
-      // Draw semi-transparent red triangle
+      // Draw semi-transparent red triangle (50% transparency, half size)
       ctx.save()
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'
-      ctx.strokeStyle = 'rgba(255, 0, 0, 1)'
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.35)' // Reduced from 0.7 to 0.35
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)' // Reduced from 1.0 to 0.5
       ctx.lineWidth = 1
+      
+      const halfSize = ATTACK_TARGET_INDICATOR_SIZE / 2 // Half the original size
       
       // Draw triangle pointing down
       ctx.beginPath()
-      ctx.moveTo(indicatorX, indicatorY + ATTACK_TARGET_INDICATOR_SIZE)
-      ctx.lineTo(indicatorX - ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
-      ctx.lineTo(indicatorX + ATTACK_TARGET_INDICATOR_SIZE, indicatorY - ATTACK_TARGET_INDICATOR_SIZE)
+      ctx.moveTo(indicatorX, indicatorY + halfSize)
+      ctx.lineTo(indicatorX - halfSize, indicatorY - halfSize)
+      ctx.lineTo(indicatorX + halfSize, indicatorY - halfSize)
       ctx.closePath()
       ctx.fill()
       ctx.stroke()
