@@ -101,3 +101,30 @@ export function initFactories(factories, mapGrid) {
     }
   }
 }
+
+/**
+ * Remove factory from the map grid: restore original tiles and clear building flag
+ * Similar to clearBuildingFromMapGrid but for factories
+ */
+export function clearFactoryFromMapGrid(factory, mapGrid) {
+  for (let y = factory.y; y < factory.y + factory.height; y++) {
+    for (let x = factory.x; x < factory.x + factory.width; x++) {
+      if (mapGrid[y] && mapGrid[y][x]) {
+        // Restore the original tile type if it was saved, otherwise default to 'land'
+        if (factory.originalTiles &&
+            factory.originalTiles[y - factory.y] &&
+            factory.originalTiles[y - factory.y][x - factory.x]) {
+          mapGrid[y][x].type = factory.originalTiles[y - factory.y][x - factory.x]
+        } else {
+          mapGrid[y][x].type = 'land'
+          // Make sure ore property exists when restoring tiles
+          if (mapGrid[y][x].ore === undefined) {
+            mapGrid[y][x].ore = false
+          }
+        }
+        // Clear any building reference to unblock this tile for pathfinding
+        delete mapGrid[y][x].building
+      }
+    }
+  }
+}

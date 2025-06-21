@@ -18,7 +18,9 @@ import {
   cleanupDestroyedUnits, 
   updateUnitCollisions,
   updateGameTime,
-  handleRightClickDeselect
+  handleRightClickDeselect,
+  cleanupDestroyedFactories,
+  checkGameEndConditions
 } from './game/gameStateManager.js'
 import { updateGlobalPathfinding } from './game/pathfinding.js'
 
@@ -77,6 +79,12 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // Cleanup destroyed units
     cleanupDestroyedUnits(units, gameState)
+
+    // Cleanup destroyed factories
+    cleanupDestroyedFactories(factories, mapGrid, gameState)
+
+    // Check for game end conditions after factory/building destruction
+    checkGameEndConditions(factories, gameState)
 
     // Enemy AI updates
     updateEnemyAI(units, factories, bullets, mapGrid, gameState)

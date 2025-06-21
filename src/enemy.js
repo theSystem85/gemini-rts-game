@@ -88,7 +88,12 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
 
 function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
   const aiFactory = factories.find(f => f.id === aiPlayerId)
-  if (!aiFactory) return
+  
+  // Check if AI player's construction yard still exists
+  if (!aiFactory || aiFactory.destroyed || aiFactory.health <= 0) {
+    // Construction yard is destroyed, AI can't build anything
+    return
+  }
 
   // Define the keys we'll use for this AI player's state
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`

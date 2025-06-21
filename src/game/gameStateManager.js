@@ -3,6 +3,7 @@ import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY }
 import { resolveUnitCollisions } from '../units.js'
 import { explosions } from '../logic.js'
 import { playSound } from '../sound.js'
+import { clearFactoryFromMapGrid } from '../factories.js'
 
 /**
  * Updates map scrolling with inertia
@@ -99,6 +100,49 @@ export function cleanupDestroyedUnits(units, gameState) {
 }
 
 /**
+ * Cleans up destroyed factories from the game
+ * @param {Array} factories - Array of factory objects
+ * @param {Array} mapGrid - 2D array representing the map
+ * @param {Object} gameState - Game state object
+ */
+export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
+  for (let i = factories.length - 1; i >= 0; i--) {
+    const factory = factories[i]
+    
+    if (factory.destroyed || factory.health <= 0) {
+      // Clear the factory from the map grid to unblock tiles for pathfinding
+      clearFactoryFromMapGrid(factory, mapGrid)
+      
+      // Remove the factory from the factories array
+      factories.splice(i, 1)
+      
+      // Update statistics
+      if (factory.id === gameState.humanPlayer || factory.owner === gameState.humanPlayer) {
+        gameState.playerBuildingsDestroyed++
+      } else {
+        gameState.enemyBuildingsDestroyed++
+        // Play enemy building destroyed sound when an enemy factory is destroyed
+        playSound('enemyBuildingDestroyed', 1.0)
+      }
+      
+      // Play explosion sound with reduced volume (0.5)
+      playSound('explosion', 0.5)
+      
+      // Add explosion effect at factory center
+      const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
+      const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
+      gameState.explosions.push({
+        x: explosionX,
+        y: explosionY,
+        startTime: performance.now(),
+        duration: 1000,
+        color: '#ff4444'
+      })
+    }
+  }
+}
+
+/**
  * Resolves unit collisions to prevent units from overlapping
  * @param {Array} units - Array of unit objects
  * @param {Array} mapGrid - 2D array representing the map
@@ -131,11 +175,13 @@ function getPlayerDefeatSound(playerId) {
 export function checkGameEndConditions(factories, gameState) {
   if (!gameState.buildings) return false
   
-  // Count remaining buildings for human player
+  // Count remaining buildings AND factories for human player
   const humanPlayerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
+  const humanPlayerFactories = factories.filter(f => (f.id === gameState.humanPlayer || f.owner === gameState.humanPlayer) && f.health > 0)
+  const totalHumanPlayerBuildings = humanPlayerBuildings.length + humanPlayerFactories.length
   
   // Check if human player has no buildings left
-  if (humanPlayerBuildings.length === 0) {
+  if (totalHumanPlayerBuildings === 0) {
     gameState.gameOver = true
     gameState.gameResult = 'defeat'
     gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
@@ -149,12 +195,23 @@ export function checkGameEndConditions(factories, gameState) {
   const playerCount = gameState.playerCount || 2
   const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   const aiPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
+  
+  // Only check AI players that actually exist in the game (have factories or buildings)
+  const existingAiPlayerIds = aiPlayerIds.filter(aiPlayerId => {
+    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+    const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId))
+    return aiBuildings.length > 0 || aiFactories.length > 0
+  })
+  
   let remainingAiPlayers = 0
   let defeatedAiPlayers = []
   
-  for (const aiPlayerId of aiPlayerIds) {
+  for (const aiPlayerId of existingAiPlayerIds) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
-    if (aiBuildings.length > 0) {
+    const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0)
+    const totalAiBuildings = aiBuildings.length + aiFactories.length
+    
+    if (totalAiBuildings > 0) {
       remainingAiPlayers++
     } else {
       // Check if this AI player was just defeated (not already marked as defeated)
@@ -174,7 +231,7 @@ export function checkGameEndConditions(factories, gameState) {
   })
   
   // Check if human player has eliminated all AI players
-  if (remainingAiPlayers === 0 && aiPlayerIds.length > 0) {
+  if (remainingAiPlayers === 0 && existingAiPlayerIds.length > 0) {
     gameState.gameOver = true
     gameState.gameResult = 'victory'
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
