@@ -196,6 +196,11 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
 }
 
 export function findAdjacentTile(factory, mapGrid) {
+  if (!factory || !mapGrid) {
+    console.warn('findAdjacentTile called with invalid parameters:', { factory, mapGrid: !!mapGrid })
+    return null
+  }
+  
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
       if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue

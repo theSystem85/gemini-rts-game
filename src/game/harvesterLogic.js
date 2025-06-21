@@ -239,7 +239,13 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     // No refineries available - fallback to factory (backward compatibility)
     const targetFactory = factories.find(f => f.id === unit.owner)
     
-    if (targetFactory && isAdjacentToBuilding(unit, targetFactory)) {
+    if (!targetFactory) {
+      // No factory found - unit is orphaned, stop processing
+      console.warn(`Harvester ${unit.id} cannot find factory with owner ${unit.owner}`)
+      return
+    }
+    
+    if (isAdjacentToBuilding(unit, targetFactory)) {
       // Calculate money based on ore carried
       const moneyEarned = unit.oreCarried * 1000
       
