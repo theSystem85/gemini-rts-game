@@ -6,14 +6,7 @@ import { showNotification } from '../ui/notifications.js'
 
 export class SelectionManager {
   constructor() {
-    this.la    // Clear existing selection
-    units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
-    selectedUnits.length = 0
-    
-    // Clear attack group targets when selection changes
-    this.clearAttackGroupTargets()
-    
-    // Select all units of this typeckTime = 0
+    this.lastClickTime = 0
     this.lastClickedUnit = null
     this.doubleClickThreshold = 300 // milliseconds
   }
