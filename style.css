@@ -318,7 +318,7 @@ html, body {
 .production-button .building-cost,
 .production-button .unit-cost {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: rgba(0, 0, 0, 0.8);
@@ -332,8 +332,25 @@ html, body {
   z-index: 5;
 }
 
+.production-button .building-power {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #FFD700;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
 .production-button:hover .building-cost,
-.production-button:hover .unit-cost {
+.production-button:hover .unit-cost,
+.production-button:hover .building-power {
   opacity: 1;
 }
 
