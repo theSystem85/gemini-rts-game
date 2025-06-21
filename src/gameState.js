@@ -28,6 +28,7 @@ export const gameState = {
   // Building related properties
   buildings: [],
   factories: [], // Add factories array to gameState
+  mapGrid: [], // Add mapGrid array to gameState
   powerSupply: 0,
   buildingPlacementMode: false,
   currentBuildingType: null,

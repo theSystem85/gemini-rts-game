@@ -314,10 +314,6 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
-  
-  if (combatUnitsCount > 0 && unitsWithTargets > 0) {
-    console.log(`Combat update: ${combatUnitsCount} combat units, ${unitsWithTargets} with targets`)
-  }
 }
 
 /**

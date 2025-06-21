@@ -69,6 +69,10 @@ class Game {
   setupGameWorld() {
     // Generate map
     generateMapFromSetup(document.getElementById('mapSeed').value, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    
+    // Sync mapGrid with gameState
+    gameState.mapGrid.length = 0
+    gameState.mapGrid.push(...mapGrid)
 
     // Initialize factories and units
     initFactories(factories, mapGrid)
@@ -220,6 +224,11 @@ class Game {
 
   resetGameWithNewMap(seed) {
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    
+    // Sync mapGrid with gameState
+    gameState.mapGrid.length = 0
+    gameState.mapGrid.push(...mapGrid)
+    
     factories.length = 0
     initFactories(factories, mapGrid)
     
@@ -287,6 +296,11 @@ class Game {
 
     // Reset map and units
     generateMapFromSetup(Date.now(), mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    
+    // Sync mapGrid with gameState
+    gameState.mapGrid.length = 0
+    gameState.mapGrid.push(...mapGrid)
+    
     factories.length = 0
     initFactories(factories, mapGrid)
     

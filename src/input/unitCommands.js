@@ -15,14 +15,9 @@ export class UnitCommandsHandler {
       }
     })
     
-    // If no units have attack queues anymore, clear the global attack group targets
-    const hasActiveAttackQueues = gameState.units && gameState.units.some(unit => 
-      unit.attackQueue && unit.attackQueue.length > 0
-    )
-    
-    if (!hasActiveAttackQueues) {
-      gameState.attackGroupTargets = []
-    }
+    // Only clear attack group targets when explicitly requested (not based on attack queue status)
+    // This allows the indicators to persist until user performs a different action
+    gameState.attackGroupTargets = []
   }
 
   handleMovementCommand(selectedUnits, targetX, targetY, mapGrid) {

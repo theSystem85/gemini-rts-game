@@ -468,7 +468,7 @@ function checkAttackPath(unit, target, angle, distance, gameState) {
     const checkY = unit.y + Math.sin(angle) * d
     
     // Check for obstacles in the path
-    const tile = getTileAtPosition(checkX, checkY, gameState.mapGrid)
+    const tile = getTileAtPosition(checkX, checkY, gameState.mapGrid || [])
     if (tile && (tile.type === 'rock' || tile.type === 'water')) {
       return false
     }

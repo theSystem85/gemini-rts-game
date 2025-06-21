@@ -100,6 +100,12 @@ class MinHeap {
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
 export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
+  // Validate mapGrid
+  if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0] || !Array.isArray(mapGrid[0])) {
+    console.warn('findPath: invalid mapGrid provided', { mapGrid })
+    return []
+  }
+  
   if (
     end.x < 0 ||
     end.y < 0 ||
