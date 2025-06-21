@@ -509,10 +509,16 @@ export class MouseHandler {
     const y2 = Math.max(gameState.attackGroupStart.y, gameState.attackGroupEnd.y)
 
     const enemyTargets = []
+    const humanPlayer = gameState.humanPlayer || 'player1'
     
-    // Check all enemy units and buildings
+    // Helper function to check if a target belongs to the human player
+    const isHumanPlayerTarget = (target) => {
+      return target.owner === humanPlayer || (humanPlayer === 'player1' && target.owner === 'player')
+    }
+    
+    // Check all enemy units and buildings - exclude human player units
     for (const unit of units) {
-      if (unit.owner !== 'player' && unit.health > 0) {
+      if (!isHumanPlayerTarget(unit) && unit.health > 0) {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         
@@ -522,10 +528,10 @@ export class MouseHandler {
       }
     }
     
-    // Check enemy buildings
+    // Check enemy buildings - exclude human player buildings
     if (gameState.buildings) {
       for (const building of gameState.buildings) {
-        if (building.owner !== 'player' && building.health > 0) {
+        if (!isHumanPlayerTarget(building) && building.health > 0) {
           const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
           const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
           
