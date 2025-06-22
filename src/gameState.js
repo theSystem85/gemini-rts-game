@@ -49,6 +49,9 @@ export const gameState = {
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 
+  // Tank image rendering toggle - initialize from config
+  useTankImages: true,
+
   // Cheat dialog state
   cheatDialogOpen: false,
 

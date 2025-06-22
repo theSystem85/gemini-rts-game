@@ -8,6 +8,7 @@ import { EffectsRenderer } from './effectsRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
+import { preloadTankImages } from './tankImageRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -24,7 +25,30 @@ export class Renderer {
 
   // Initialize texture loading
   preloadTextures(callback) {
-    this.textureManager.preloadAllTextures(callback)
+    // Load both tile textures and tank images in parallel
+    let texturesLoaded = false
+    let tankImagesLoaded = false
+
+    const checkAllLoaded = () => {
+      if (texturesLoaded && tankImagesLoaded) {
+        if (callback) callback()
+      }
+    }
+
+    // Load tile textures
+    this.textureManager.preloadAllTextures(() => {
+      texturesLoaded = true
+      checkAllLoaded()
+    })
+
+    // Load tank images
+    preloadTankImages((success) => {
+      if (!success) {
+        console.warn('Tank images failed to load, falling back to original rendering')
+      }
+      tankImagesLoaded = true
+      checkAllLoaded()
+    })
   }
 
   renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {

@@ -80,3 +80,176 @@ The system integrates seamlessly with existing AI strategies and combat systems:
 - Includes proper cleanup to prevent memory leaks or stuck states
 
 This ensures that enemy units will always fight back when attacked, making combat more engaging and realistic, while preserving the strategic "flee to base" behavior for severely damaged units.
+
+---
+
+## Tank Image Rendering System
+
+### Overview
+The Tank Image Rendering System provides an alternative visual representation for tanks using 3 separate image assets (wagon, turret, gun barrel) with transparency. This system allows for more realistic tank animations with proper component mounting, independent turret rotation, recoil effects, and muzzle flash positioning.
+
+### Key Features Implemented
+
+#### 1. ✅ **Configurable Mounting Points**
+- Created `src/tankImageConfig.json` with configurable mount points for turret and barrel positioning
+- Turret mount point: `(19, 32)` pixels from wagon top-left
+- Barrel mount point: `(17, 35)` pixels from turret top-left  
+- Muzzle flash offset: `(2, 64)` pixels from barrel top-left
+- Added utility function `getTankImageConfig()` for external access
+- Created development helper `src/tankConfigUtil.js` for easy debugging
+
+#### 2. ✅ **Preserved Aspect Ratios**
+- Completely rewrote rendering logic to use original image dimensions
+- Each component (wagon, turret, barrel) maintains original size relationships
+- Wagon scales to fit within tile boundaries, turret and barrel use same scale to preserve proportions
+- Only the barrel is allowed to extend beyond tile boundaries when necessary
+
+#### 3. ✅ **Smart Turret Rotation Logic**
+- **When tank has a target**: Turret rotates independently to track the target (`unit.turretDirection`)
+- **When tank has no target**: Turret follows wagon direction for unified movement
+- Wagon always rotates to match movement direction (`unit.direction`)
+
+#### 4. ✅ **Proper Direction Alignment**
+- Image assets are designed with default facing direction downward (bottom)
+- Wagon rotation now properly aligns with game movement directions:
+  - `unit.direction = 0` (right) → wagon faces right
+  - `unit.direction = π/2` (down) → wagon faces down (natural asset direction)
+  - `unit.direction = π` (left) → wagon faces left
+  - `unit.direction = 3π/2` (up) → wagon faces up
+
+#### 5. 🎯 **Additional Features Included**
+- **Coordinate system precision**: Proper world-to-screen coordinate transformations
+- **Recoil animation**: Gun barrel (not turret) moves backward when firing in correct direction
+- **Muzzle flash**: Positioned accurately using configurable offsets, follows recoil movement
+- **Performance**: Image caching and loading state management
+- **Fallback system**: Graceful degradation to original rendering if images fail
+- **T key toggle**: Runtime switching between rendering systems
+- **Help documentation**: Updated in-game help system and README
+- **Size constraint**: All components scaled to fit within 64px tile boundaries
+
+### File Structure
+```
+src/
+├── tankImageConfig.json          # Configurable mount points
+├── tankConfigUtil.js             # Development utility
+├── rendering/
+│   └── tankImageRenderer.js      # Complete image-based rendering
+├── input/
+│   └── helpSystem.js             # Updated with T key documentation
+└── README.md                     # Comprehensive documentation
+
+public/images/map/units/
+├── tank_wagon.png                # Tank chassis image
+├── turret_no_barrel.png          # Turret without barrel
+└── gun_barrel.png                # Gun barrel component
+```
+
+### User Experience
+- **T key**: Toggle tank image rendering on/off with sound feedback
+- **Visual feedback**: Notification shows current rendering mode status
+- **No performance impact**: Images load once and are cached
+- **Seamless fallback**: If images don't load, original rendering continues working
+
+### Technical Implementation
+
+#### Image Loading and Caching
+```javascript
+// Images are preloaded at game startup and cached for performance
+export function preloadTankImages(callback) {
+  // Loads tank_wagon.png, turret_no_barrel.png, gun_barrel.png
+  // Calls callback when all images are ready or on error
+}
+```
+
+#### Rendering Logic
+The system uses a layered approach:
+1. **Wagon Rendering**: Rotates with movement direction, preserves aspect ratio, fits within tile
+2. **Turret Positioning**: Uses configurable mount point on wagon
+3. **Turret Rotation**: Independent rotation when targeting, follows wagon when idle
+4. **Barrel Mounting**: Positioned on turret using configurable mount point
+5. **Recoil Effects**: Gun barrel recoils backward opposite to firing direction
+6. **Effects**: Muzzle flash positioned at barrel tip, follows recoil movement
+
+#### Configuration System
+Mount points are easily adjustable via JSON configuration:
+```json
+{
+  "tankImageConfig": {
+    "turretMountPoint": { "x": 19, "y": 32 },
+    "barrelMountPoint": { "x": 17, "y": 35 },
+    "muzzleFlashOffset": { "x": 2, "y": 64 }
+  }
+}
+```
+
+#### Integration with Game Systems
+- **Unit Renderer**: Conditionally uses image rendering when enabled and images are loaded
+- **Keyboard Handler**: T key toggle with notification and sound feedback
+- **Help System**: Updated documentation for the new toggle key
+- **Game State**: `useTankImages` flag controls rendering mode
+
+### Benefits
+
+- **Enhanced Visual Appeal**: More realistic tank representation with proper component separation
+- **Configurable Positioning**: Easy adjustment of component mounting without code changes
+- **Performance Optimized**: Image caching and efficient rendering with fallback support
+- **Preserved Gameplay**: No impact on game mechanics, purely visual enhancement
+- **User Choice**: Players can toggle between rendering systems based on preference
+- **Quality Preservation**: Original image aspect ratios maintained for authentic look
+
+### How It Works
+
+1. **Startup**: Tank images are preloaded alongside other game textures
+2. **Runtime Toggle**: T key switches between image-based and original rendering
+3. **Rendering Decision**: Each frame checks if image rendering is enabled and images are available
+4. **Component Rendering**: When active, renders wagon → turret → barrel → effects in sequence
+5. **Recoil Physics**: Gun barrel recoils backward in turret's local coordinate system (`recoilLocalX = -recoilOffset`, `recoilLocalY = 0`)
+6. **Fallback**: If images fail to load, automatically uses original rendering system
+7. **Configuration**: Mount points can be tweaked in JSON file and take effect on reload
+
+#### Recoil Direction Examples:
+- **Any turret direction**: Barrel recoils backward along the turret's local X-axis (negative X in turret's coordinate system)
+- **Turret rotated to face target**: Recoil automatically goes opposite to target direction due to coordinate system rotation
+- **Visual result**: Recoil appears to go backward from wherever the turret is visually pointing
+
+*Note: Recoil is applied in the turret's local coordinate system (-X direction) which automatically gives the correct visual direction because the entire coordinate system is rotated with the turret.*
+
+This system provides a sophisticated visual upgrade while maintaining full compatibility with existing game mechanics and ensuring robust fallback behavior.
+
+---
+
+## Recoil Debugging System
+
+### Console Commands for Adjusting Recoil Direction
+
+The recoil direction can be fine-tuned using browser console commands:
+
+#### Available Commands:
+```javascript
+// Set recoil offset in degrees (0-360)
+tankRecoilDebug.setOffset(180)    // Try 180° for opposite direction
+tankRecoilDebug.setOffset(90)     // Try 90° for perpendicular
+tankRecoilDebug.setOffset(270)    // Try 270° for other perpendicular
+
+// Get current offset
+tankRecoilDebug.getOffset()
+
+// Show test values for quick testing
+tankRecoilDebug.test()
+```
+
+#### How to Find the Correct Value:
+1. **Open Browser Console**: Press F12 → Console tab
+2. **Start with test values**: Run `tankRecoilDebug.test()` to see suggested offsets
+3. **Test different angles**: Try `tankRecoilDebug.setOffset(180)`, `tankRecoilDebug.setOffset(90)`, etc.
+4. **Fire your tank**: Watch the recoil direction after each adjustment
+5. **Fine-tune**: Adjust in smaller increments (e.g., `tankRecoilDebug.setOffset(185)`)
+6. **Save the value**: Once you find the correct offset, update `recoilRotationOffset.degrees` in `src/tankImageConfig.json`
+
+#### Expected Results:
+- **0°**: Recoil goes backward along turret's local X-axis
+- **90°**: Recoil goes perpendicular (left side of turret direction)
+- **180°**: Recoil goes forward (opposite of backward)
+- **270°**: Recoil goes perpendicular (right side of turret direction)
+
+The correct value should make the recoil go opposite to the firing direction regardless of where the target is relative to your tank.

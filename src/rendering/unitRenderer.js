@@ -1,6 +1,7 @@
 // rendering/unitRenderer.js
 import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS } from '../config.js'
 import { gameState } from '../gameState.js'
+import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -280,6 +281,29 @@ export class UnitRenderer {
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
 
+    // Check if this is a tank type and if image rendering is enabled
+    const isTank = ['tank_v1'].includes(unit.type)
+    const useImageRendering = gameState.useTankImages && isTank && areTankImagesLoaded()
+
+    if (useImageRendering) {
+      // Try to render with images
+      const imageRenderSuccess = renderTankWithImages(ctx, unit, centerX, centerY)
+      
+      if (imageRenderSuccess) {
+        // Image rendering successful, still render other components
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        this.renderHealthBar(ctx, unit, scrollOffset)
+        this.renderHarvesterProgress(ctx, unit, scrollOffset)
+        this.renderQueueNumber(ctx, unit, scrollOffset)
+        this.renderGroupNumber(ctx, unit, scrollOffset)
+        this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
+        return
+      }
+      // If image rendering failed, fall through to original rendering
+    }
+
+    // Original rendering method (for non-tanks or when image rendering is disabled/failed)
     this.renderUnitBody(ctx, unit, centerX, centerY)
     this.renderSelection(ctx, unit, centerX, centerY)
     this.renderAlertMode(ctx, unit, centerX, centerY)
@@ -288,7 +312,6 @@ export class UnitRenderer {
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)
-    this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
   }
 

@@ -1,0 +1,23 @@
+{
+  "tankImageConfig": {
+    "turretMountPoint": {
+      "x": 19,
+      "y": 32,
+      "comment": "Turret mount point on wagon (pixels from top-left)"
+    },
+    "barrelMountPoint": {
+      "x": 17,
+      "y": 35,
+      "comment": "Gun barrel mount point on turret (pixels from top-left)"
+    },
+    "muzzleFlashOffset": {
+      "x": 2,
+      "y": 64,
+      "comment": "Muzzle flash position relative to gun barrel (pixels from top-left)"
+    },
+    "recoilRotationOffset": {
+      "degrees": 90,
+      "comment": "Additional rotation offset for recoil direction in degrees (use console commands to adjust)"
+    }
+  }
+}

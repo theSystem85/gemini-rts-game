@@ -42,6 +42,7 @@ export class HelpSystem {
           <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
           <li><strong>1-9 Keys:</strong> Select units in that control group</li>
           <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
+          <li><strong>T Key:</strong> Toggle tank image rendering (3-layer tank graphics)</li>
         </ul>
         <p>Press I again to close and resume the game</p>
       `

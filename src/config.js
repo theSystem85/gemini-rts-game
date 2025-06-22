@@ -52,6 +52,9 @@ export const TILE_IMAGES = {
 // Enable/disable texture usage (for performance testing/fallback)
 export const USE_TEXTURES = true
 
+// Enable/disable tank image-based rendering (T key to toggle during gameplay)
+export const USE_TANK_IMAGES = true
+
 // Number of texture variations to generate for each tile type
 export const TEXTURE_VARIATIONS = 4
 

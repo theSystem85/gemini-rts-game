@@ -85,6 +85,10 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'g') {
         this.handleGridToggle()
       }
+      // T key to toggle tank image rendering
+      else if (e.key.toLowerCase() === 't') {
+        this.handleTankImageToggle()
+      }
     })
   }
 
@@ -485,6 +489,18 @@ export class KeyboardHandler {
   handleGridToggle() {
     // Toggle grid visibility
     gameState.gridVisible = !gameState.gridVisible
+    // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleTankImageToggle() {
+    // Toggle tank image rendering
+    gameState.useTankImages = !gameState.useTankImages
+    
+    // Show notification to user
+    const status = gameState.useTankImages ? 'ON' : 'OFF'
+    this.showNotification(`Tank image rendering: ${status}`, 2000)
+    
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }

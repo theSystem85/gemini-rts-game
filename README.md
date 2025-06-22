@@ -87,6 +87,16 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - **4.1.11** Collision and stuck prevention: Before moving to the next tile, check if it is free; if occupied, move to a random nearby free tile using algorithm A1.
 - **4.1.12** Additional bug fix: When tanks are in range of an enemy, they continue firing and can move if new orders are issued.
 
+#### Tank Image Rendering System:
+- **4.1.13** Alternative tank rendering using 3 separate image assets: wagon (chassis), turret, and gun barrel.
+- **4.1.14** Press **T key** to toggle between image-based and original rendering systems.
+- **4.1.15** Wagon rotates to match tank movement direction; turret rotates independently when targeting enemies.
+- **4.1.16** Gun barrel includes recoil animation (up to 5px upward) when firing.
+- **4.1.17** Muzzle flash renders at configurable position relative to gun barrel.
+- **4.1.18** Mount points are configurable via `src/tankImageConfig.json` for fine-tuning positioning.
+- **4.1.19** Original aspect ratios of all 3 images are preserved during rendering.
+- **4.1.20** Image-based rendering automatically falls back to original rendering if images fail to load.
+
 ### 4.2 Harvesters
 
 - **4.2.1** Harvesters are visually distinct (e.g., violet).
@@ -252,7 +262,13 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
-- [ ] Support up to 4 parties in a game. Each player starts in one corner. One party can be played by human player. The others by AI (or later via network by ohter humans -> keep the interface abstract to upport AI and other humans). Define a set of 4 Colors that can identify each party. Add a number input to the end of the sidebar to define the number of players (label: "Players") on the map. Whenever the map is newly generated it will affect the map creation but not instantly. Make sure each AI player is attacking any player on the map (there is no teams feature yet, will come later). Make sure the map creation process is influenced by the number of players (regarding the direction of streets and ore spots)
+- [ ] Change tank rendering to support tank image assets consisting of 3 images with transparency to render one tank dynamically. (1) the tank wagon (tank_wagon.png) with the mounting point 32x60y in pixels from top left to mount the turret's center. The image asset for turret is named "turret_no_barrel.png". It has a mounting point for the gun barrel at 32x,68y pixels from top left. The gun barrel rotates with the turret in sync. The turret can rotate on the wagon. When the tank fires the gun barrel moves (dampened movement) up to 5 pixels to the top (reduces y coord) to indicate a recoil. Basically use the same mechanism like before but with image assets instead. Make sure to cache the images to make the rendering of hundreds of tank performant. Also shift the muzzle flash to coords 2x, 64y based on the gun barrel image. The rotation of all 3 image assets is aligned by default within the assets (they all point south).
+  - [ ] Make sure to implement this as an alternative rendering method to the existing non image based tank rendering so it can be toggled on and off during combat by the user (use some keyboard shortcut). Make sure to put the image based rendering in at least one separate file to have the code separated from the previous tank rendering. If possible use code fragments from the previous rendering technique or at least make sure there is not too much code redundancy.
+  - [ ] (1) Make the mounting points I described configurable by some json file so I can tweek them if needed.
+  - [ ] (2) Do not change the aspect ratio of the 3 images!
+  - [ ] (3) when the wagon rotates the turret should also rotate in the same way BUT only if the turret is aiming at some thing then it will rotate independently from the wagon to keep aiming at the target.
+  - [ ] (4) The orientation of the wagon is by default in the image asset facing down (to bottom). Same for the gun barrel and the turret. Make sure that the driving direction in the game is aligned with the facing of the wagon. If tank drives from top to bottom then the wagon should face also to the bottom.
+- [x] Support up to 4 parties in a game. Each player starts in one corner. One party can be played by human player. The others by AI (or later via network by ohter humans -> keep the interface abstract to upport AI and other humans). Define a set of 4 Colors that can identify each party. Add a number input to the end of the sidebar to define the number of players (label: "Players") on the map. Whenever the map is newly generated it will affect the map creation but not instantly. Make sure each AI player is attacking any player on the map (there is no teams feature yet, will come later). Make sure the map creation process is influenced by the number of players (regarding the direction of streets and ore spots)
 - [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
 - [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
