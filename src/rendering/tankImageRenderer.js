@@ -3,11 +3,23 @@
 import { TILE_SIZE, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
 import tankImageConfigData from '../tankImageConfig.json'
 
-// Tank image asset cache
+// Tank image asset cache - organized by tank variant
 const tankImageCache = {
-  wagon: null,
-  turret: null,
-  barrel: null
+  tankV1: {
+    wagon: null,
+    turret: null,
+    barrel: null
+  },
+  tankV2: {
+    wagon: null,
+    turret: null,
+    barrel: null
+  },
+  tankV3: {
+    wagon: null,
+    turret: null,
+    barrel: null
+  }
 }
 
 // Track loading state
@@ -17,11 +29,8 @@ let tankImagesLoading = false
 // Load tank image configuration
 const tankImageConfig = tankImageConfigData.tankImageConfig
 
-// Runtime adjustable recoil offset (for debugging)
-let runtimeRecoilOffsetDegrees = tankImageConfig.recoilRotationOffset.degrees
-
 /**
- * Preload all tank image assets
+ * Preload all tank image assets for all variants
  * @param {Function} callback - Called when all images are loaded
  */
 export function preloadTankImages(callback) {
@@ -37,7 +46,7 @@ export function preloadTankImages(callback) {
 
   tankImagesLoading = true
   let loadedCount = 0
-  const totalImages = 3
+  const totalImages = 9 // 3 variants × 3 images each
 
   const checkAllLoaded = () => {
     loadedCount++
@@ -54,34 +63,65 @@ export function preloadTankImages(callback) {
     if (callback) callback(false)
   }
 
-  // Load tank wagon
-  const wagonImg = new Image()
-  wagonImg.onload = checkAllLoaded
-  wagonImg.onerror = () => handleLoadError('tank_wagon.png')
-  wagonImg.src = 'images/map/units/tank_wagon.png'
-  tankImageCache.wagon = wagonImg
+  // Load images for all tank variants
+  const variants = ['tankV1', 'tankV2', 'tankV3']
+  
+  variants.forEach(variant => {
+    // Load tank wagon
+    const wagonImg = new Image()
+    wagonImg.onload = checkAllLoaded
+    wagonImg.onerror = () => handleLoadError(`${variant}_wagon.png`)
+    wagonImg.src = `images/map/units/${variant}_wagon.png`
+    tankImageCache[variant].wagon = wagonImg
 
-  // Load turret (without barrel)
-  const turretImg = new Image()
-  turretImg.onload = checkAllLoaded
-  turretImg.onerror = () => handleLoadError('turret_no_barrel.png')
-  turretImg.src = 'images/map/units/turret_no_barrel.png'
-  tankImageCache.turret = turretImg
+    // Load turret (without barrel)
+    const turretImg = new Image()
+    turretImg.onload = checkAllLoaded
+    turretImg.onerror = () => handleLoadError(`${variant}_turret.png`)
+    turretImg.src = `images/map/units/${variant}_turret.png`
+    tankImageCache[variant].turret = turretImg
 
-  // Load gun barrel
-  const barrelImg = new Image()
-  barrelImg.onload = checkAllLoaded
-  barrelImg.onerror = () => handleLoadError('gun_barrel.png')
-  barrelImg.src = 'images/map/units/gun_barrel.png'
-  tankImageCache.barrel = barrelImg
+    // Load gun barrel
+    const barrelImg = new Image()
+    barrelImg.onload = checkAllLoaded
+    barrelImg.onerror = () => handleLoadError(`${variant}_barrel.png`)
+    barrelImg.src = `images/map/units/${variant}_barrel.png`
+    tankImageCache[variant].barrel = barrelImg
+  })
 }
 
 /**
- * Check if tank images are available for rendering
- * @returns {boolean} True if all tank images are loaded
+ * Check if tank images are available for rendering for a specific tank type
+ * @param {string} tankType - Tank type (tank_v1, tank-v2, tank-v3)
+ * @returns {boolean} True if all tank images are loaded for this type
  */
-export function areTankImagesLoaded() {
-  return tankImagesLoaded && tankImageCache.wagon && tankImageCache.turret && tankImageCache.barrel
+export function areTankImagesLoaded(tankType = 'tank_v1') {
+  const variant = getTankVariant(tankType)
+  return tankImagesLoaded && 
+         tankImageCache[variant] && 
+         tankImageCache[variant].wagon && 
+         tankImageCache[variant].turret && 
+         tankImageCache[variant].barrel
+}
+
+/**
+ * Convert tank type to variant name
+ * @param {string} tankType - Tank type (tank_v1, tank-v2, tank-v3, tank_v2, tank_v3)
+ * @returns {string} Variant name (tankV1, tankV2, tankV3)
+ */
+function getTankVariant(tankType) {
+  switch (tankType) {
+    case 'tank_v1':
+      return 'tankV1'
+    case 'tank-v2':
+    case 'tank_v2':
+      return 'tankV2'
+    case 'tank-v3':
+    case 'tank_v3':
+      return 'tankV3'
+    default:
+      return 'tankV1' // Default fallback
+  }
 }
 
 /**
@@ -92,11 +132,13 @@ export function areTankImagesLoaded() {
  * @param {number} centerY - Center Y position in screen coordinates
  */
 export function renderTankWithImages(ctx, unit, centerX, centerY) {
-  if (!areTankImagesLoaded()) {
+  if (!areTankImagesLoaded(unit.type)) {
     return false // Images not ready, caller should fall back to original rendering
   }
 
   const now = performance.now()
+  const variant = getTankVariant(unit.type)
+  const variantConfig = tankImageConfig[variant]
 
   // Save context state
   ctx.save()
@@ -118,7 +160,7 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   
   // Don't change aspect ratio - use original image dimensions scaled proportionally
   // Keep original size relationships - scale wagon to fit tile, others maintain relative size
-  const wagonImg = tankImageCache.wagon
+  const wagonImg = tankImageCache[variant].wagon
   const wagonScale = TILE_SIZE / Math.max(wagonImg.width, wagonImg.height)
   const wagonWidth = wagonImg.width * wagonScale
   const wagonHeight = wagonImg.height * wagonScale
@@ -159,8 +201,8 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   // 4. Calculate turret position using configurable mount point
   // Convert mount point from image coordinates to world coordinates
   // The mount point is where the CENTER of the turret should be positioned
-  const turretMountX = (tankImageConfig.turretMountPoint.x - wagonImg.width / 2) * wagonScale
-  const turretMountY = (tankImageConfig.turretMountPoint.y - wagonImg.height / 2) * wagonScale
+  const turretMountX = (variantConfig.turretMountPoint.x - wagonImg.width / 2) * wagonScale
+  const turretMountY = (variantConfig.turretMountPoint.y - wagonImg.height / 2) * wagonScale
   
   // Rotate mount point by wagon rotation
   const rotatedMountX = turretMountX * Math.cos(wagonRotation) - turretMountY * Math.sin(wagonRotation)
@@ -172,7 +214,7 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   ctx.rotate(turretRotation)
   
   // Don't change aspect ratio for turret - maintain original size relationship to wagon
-  const turretImg = tankImageCache.turret
+  const turretImg = tankImageCache[variant].turret
   const turretScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const turretWidth = turretImg.width * turretScale
   const turretHeight = turretImg.height * turretScale
@@ -188,17 +230,17 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
 
   // Position barrel using configurable mount point on turret
   // The mount point is relative to the turret image's top-left, but we need it relative to center
-  const barrelMountX = (tankImageConfig.barrelMountPoint.x - turretImg.width / 2) * turretScale
-  const barrelMountY = (tankImageConfig.barrelMountPoint.y - turretImg.height / 2) * turretScale
+  const barrelMountX = (variantConfig.barrelMountPoint.x - turretImg.width / 2) * turretScale
+  const barrelMountY = (variantConfig.barrelMountPoint.y - turretImg.height / 2) * turretScale
   
   // Apply recoil offset to barrel only - recoil goes backward along turret's X-axis
   // Add configurable rotation offset for debugging/tweaking
-  const recoilOffsetRadians = (runtimeRecoilOffsetDegrees * Math.PI) / 180
+  const recoilOffsetRadians = (variantConfig.recoilRotationOffset.degrees * Math.PI) / 180
   const recoilLocalX = -recoilOffset * Math.cos(recoilOffsetRadians)
   const recoilLocalY = -recoilOffset * Math.sin(recoilOffsetRadians)
   
   // Don't change aspect ratio for barrel - barrel can extend beyond tile (this is OK)
-  const barrelImg = tankImageCache.barrel
+  const barrelImg = tankImageCache[variant].barrel
   const barrelScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const barrelWidth = barrelImg.width * barrelScale
   const barrelHeight = barrelImg.height * barrelScale
@@ -223,8 +265,8 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
     
     // Position muzzle flash using configurable offset relative to barrel
     // The flash should also be affected by recoil (same local coordinate system)
-    const flashX = barrelMountX + (tankImageConfig.muzzleFlashOffset.x - barrelImg.width / 2) * barrelScale + recoilLocalX
-    const flashY = barrelMountY + (tankImageConfig.muzzleFlashOffset.y - barrelImg.height / 2) * barrelScale + recoilLocalY
+    const flashX = barrelMountX + (variantConfig.muzzleFlashOffset.x - barrelImg.width / 2) * barrelScale + recoilLocalX
+    const flashY = barrelMountY + (variantConfig.muzzleFlashOffset.y - barrelImg.height / 2) * barrelScale + recoilLocalY
     
     // Create radial gradient for muzzle flash
     const gradient = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, flashSize)
@@ -262,9 +304,21 @@ export function getTankImageCacheStats() {
     loaded: tankImagesLoaded,
     loading: tankImagesLoading,
     images: {
-      wagon: tankImageCache.wagon !== null,
-      turret: tankImageCache.turret !== null,
-      barrel: tankImageCache.barrel !== null
+      tankV1: {
+        wagon: tankImageCache.tankV1.wagon !== null,
+        turret: tankImageCache.tankV1.turret !== null,
+        barrel: tankImageCache.tankV1.barrel !== null
+      },
+      tankV2: {
+        wagon: tankImageCache.tankV2.wagon !== null,
+        turret: tankImageCache.tankV2.turret !== null,
+        barrel: tankImageCache.tankV2.barrel !== null
+      },
+      tankV3: {
+        wagon: tankImageCache.tankV3.wagon !== null,
+        turret: tankImageCache.tankV3.turret !== null,
+        barrel: tankImageCache.tankV3.barrel !== null
+      }
     }
   }
 }
@@ -273,9 +327,15 @@ export function getTankImageCacheStats() {
  * Clear the tank image cache (for testing/memory management)
  */
 export function clearTankImageCache() {
-  tankImageCache.wagon = null
-  tankImageCache.turret = null
-  tankImageCache.barrel = null
+  tankImageCache.tankV1.wagon = null
+  tankImageCache.tankV1.turret = null
+  tankImageCache.tankV1.barrel = null
+  tankImageCache.tankV2.wagon = null
+  tankImageCache.tankV2.turret = null
+  tankImageCache.tankV2.barrel = null
+  tankImageCache.tankV3.wagon = null
+  tankImageCache.tankV3.turret = null
+  tankImageCache.tankV3.barrel = null
   tankImagesLoaded = false
   tankImagesLoading = false
 }
@@ -286,34 +346,47 @@ export function clearTankImageCache() {
  */
 
 /**
- * Set recoil rotation offset in degrees
+ * Set recoil rotation offset in degrees for a specific tank variant
+ * @param {string} variant - Tank variant (tankV1, tankV2, tankV3)
  * @param {number} degrees - Offset in degrees (0-360)
  */
-export function setRecoilOffset(degrees) {
-  runtimeRecoilOffsetDegrees = degrees
-  console.log(`Recoil offset set to ${degrees} degrees`)
-  console.log('Fire your tank to see the recoil direction')
+export function setRecoilOffset(variant, degrees) {
+  if (tankImageConfig[variant]) {
+    tankImageConfig[variant].recoilRotationOffset.degrees = degrees
+    console.log(`Recoil offset for ${variant} set to ${degrees} degrees`)
+    console.log('Fire your tank to see the recoil direction')
+  } else {
+    console.error(`Invalid tank variant: ${variant}. Use tankV1, tankV2, or tankV3`)
+  }
 }
 
 /**
- * Get current recoil offset
+ * Get current recoil offset for a variant
+ * @param {string} variant - Tank variant (tankV1, tankV2, tankV3)
  * @returns {number} Current offset in degrees
  */
-export function getRecoilOffset() {
-  console.log(`Current recoil offset: ${runtimeRecoilOffsetDegrees} degrees`)
-  return runtimeRecoilOffsetDegrees
+export function getRecoilOffset(variant = 'tankV1') {
+  if (tankImageConfig[variant]) {
+    const offset = tankImageConfig[variant].recoilRotationOffset.degrees
+    console.log(`Current recoil offset for ${variant}: ${offset} degrees`)
+    return offset
+  } else {
+    console.error(`Invalid tank variant: ${variant}. Use tankV1, tankV2, or tankV3`)
+    return 0
+  }
 }
 
 /**
- * Test different recoil offsets quickly
+ * Test different recoil offsets quickly for a variant
+ * @param {string} variant - Tank variant (tankV1, tankV2, tankV3)
  * @param {number} startDegrees - Starting offset
  * @param {number} step - Step size in degrees
  */
-export function testRecoilOffsets(startDegrees = 0, step = 45) {
-  console.log('Testing recoil offsets:')
+export function testRecoilOffsets(variant = 'tankV1', startDegrees = 0, step = 45) {
+  console.log(`Testing recoil offsets for ${variant}:`)
   for (let i = 0; i < 8; i++) {
     const degrees = (startDegrees + i * step) % 360
-    console.log(`  ${i + 1}. setRecoilOffset(${degrees}) - ${degrees}°`)
+    console.log(`  ${i + 1}. setRecoilOffset('${variant}', ${degrees}) - ${degrees}°`)
   }
   console.log('Copy and paste any command above to test that offset')
 }
@@ -327,8 +400,8 @@ if (typeof window !== 'undefined') {
   }
   
   console.log('🔫 Tank Recoil Debug Functions Available:')
-  console.log('  tankRecoilDebug.setOffset(degrees) - Set recoil offset')
-  console.log('  tankRecoilDebug.getOffset() - Get current offset')
-  console.log('  tankRecoilDebug.test() - Show test values')
-  console.log('Example: tankRecoilDebug.setOffset(180)')
+  console.log('  tankRecoilDebug.setOffset(variant, degrees) - Set recoil offset for variant')
+  console.log('  tankRecoilDebug.getOffset(variant) - Get current offset for variant')
+  console.log('  tankRecoilDebug.test(variant) - Show test values for variant')
+  console.log("Example: tankRecoilDebug.setOffset('tankV1', 180)")
 }

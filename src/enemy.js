@@ -273,7 +273,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
         let spawnFactory = aiFactory // Default to main construction yard
         
         // Harvesters and other vehicle units should spawn from vehicle factories
-        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'rocketTank') {
+        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'tank-v3' || unitType === 'rocketTank') {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
           )
@@ -413,7 +413,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
         if (!newTarget) {
           // Check if we should conduct group attack before selecting targets
           const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
-            (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'rocketTank') &&
+            (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
             Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
           // Use group attack strategy

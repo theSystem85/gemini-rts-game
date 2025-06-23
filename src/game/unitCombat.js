@@ -1,5 +1,5 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST } from '../config.js'
 import { playSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath, buildOccupancyMap } from '../units.js'
@@ -136,6 +136,10 @@ const COMBAT_CONFIG = {
     ROCKET_BURST: {
         COUNT: 3,
         DELAY: 200
+    },
+    TANK_V3_BURST: {
+        COUNT: TANK_V3_BURST.COUNT,
+        DELAY: TANK_V3_BURST.DELAY
     }
 };
 
@@ -239,6 +243,38 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
             unit.burstState.lastRocketTime = now;
             
             if (unit.burstState.rocketsToFire <= 0) {
+                unit.burstState = null; // Reset burst state
+                unit.lastShotTime = now; // Set cooldown for next burst
+                return true; // Burst complete
+            }
+        }
+    }
+    
+    return false; // Burst still in progress or failed
+}
+
+/**
+ * Handle burst fire for tank V3 (2 bullets per burst)
+ */
+function handleTankV3BurstFire(unit, target, bullets, now, targetCenterX, targetCenterY, units, mapGrid) {
+    if (!unit.burstState) {
+        unit.burstState = {
+            bulletsToFire: COMBAT_CONFIG.TANK_V3_BURST.COUNT,
+            lastBulletTime: 0
+        };
+    }
+    
+    // Fire bullets with proper timing in the game loop
+    if (unit.burstState.bulletsToFire > 0 && 
+        now - unit.burstState.lastBulletTime >= COMBAT_CONFIG.TANK_V3_BURST.DELAY) {
+        
+        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'bullet', units, mapGrid, true);
+        
+        if (fired) {
+            unit.burstState.bulletsToFire--;
+            unit.burstState.lastBulletTime = now;
+            
+            if (unit.burstState.bulletsToFire <= 0) {
                 unit.burstState = null; // Reset burst state
                 unit.lastShotTime = now; // Set cooldown for next burst
                 return true; // Burst complete
@@ -485,19 +521,21 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Human player units can always attack, AI units need AI permission
     const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
     if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
-      handleTankFiring(
-        unit, 
-        unit.target, 
-        bullets, 
-        now, 
-        COMBAT_CONFIG.FIRE_RATES.STANDARD, 
-        targetCenterX, 
-        targetCenterY, 
-        'bullet', 
-        units, 
-        mapGrid, 
-        true // Enable predictive aiming for tank-v3
-      );
+      // Check if we need to start a new burst or continue existing one
+      if (!unit.burstState) {
+        // Start new burst if cooldown has passed
+        if (!unit.lastShotTime || now - unit.lastShotTime >= COMBAT_CONFIG.FIRE_RATES.STANDARD) {
+          if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
+            unit.burstState = {
+              bulletsToFire: COMBAT_CONFIG.TANK_V3_BURST.COUNT,
+              lastBulletTime: 0
+            };
+          }
+        }
+      } else {
+        // Continue existing burst
+        handleTankV3BurstFire(unit, unit.target, bullets, now, targetCenterX, targetCenterY, units, mapGrid);
+      }
     }
   }
 }

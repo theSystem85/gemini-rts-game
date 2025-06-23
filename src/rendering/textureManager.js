@@ -5,10 +5,12 @@ import { getDevicePixelRatio } from './renderingUtils.js'
 
 // Map unit types to their image paths
 const unitImageMap = {
-  tank: 'images/tank.webp',
-  tank_v1: 'images/tank.webp',
-  'tank-v2': 'images/tank_v2.jpg',
-  tank_v2: 'images/tank_v2.jpg',
+  tank: 'images/tank.png',
+  tank_v1: 'images/tank.png',
+  'tank-v2': 'images/tank_v2.png',
+  tank_v2: 'images/tank_v2.png',
+  'tank-v3': 'images/tank_v3.png',
+  tank_v3: 'images/tank_v3.png',
   rocketTank: 'images/rocket_tank.webp',
   harvester: 'images/harvester.webp',
   artilleryTank: 'images/artillery_tank.jpg'

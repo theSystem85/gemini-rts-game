@@ -103,7 +103,8 @@ export const UNIT_COSTS = {
   tank: 1000,
   rocketTank: 2000,
   harvester: 500,
-  'tank-v2': 2000
+  'tank-v2': 2000,
+  'tank-v3': 3000
 }
 
 // Unit properties
@@ -134,18 +135,18 @@ export const UNIT_PROPERTIES = {
   },
   // Tank V2 properties
   'tank-v2': {
-    health: 130,
-    maxHealth: 130,
-    speed: 0.66,
+    health: 150,
+    maxHealth: 150,
+    speed: 0.6,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT,
     alertMode: true
   },
   // Tank V3 properties
   'tank-v3': {
-    health: 169,
-    maxHealth: 169,
-    speed: 0.66,
+    health: 200,
+    maxHealth: 200,
+    speed: 0.5,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT,
     alertMode: true
@@ -158,6 +159,12 @@ export const UNIT_PROPERTIES = {
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
   }
+}
+
+// Tank V3 burst fire configuration
+export const TANK_V3_BURST = {
+  COUNT: 2,     // Number of bullets per burst
+  DELAY: 300    // Delay between bullets in milliseconds
 }
 
 // Pathfinding constants

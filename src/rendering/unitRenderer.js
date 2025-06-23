@@ -317,8 +317,8 @@ export class UnitRenderer {
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
 
     // Check if this is a tank type and if image rendering is enabled
-    const isTank = ['tank_v1'].includes(unit.type)
-    const useImageRendering = gameState.useTankImages && isTank && areTankImagesLoaded()
+    const isTank = ['tank_v1', 'tank-v2', 'tank-v3', 'tank_v2', 'tank_v3'].includes(unit.type)
+    const useImageRendering = gameState.useTankImages && isTank && areTankImagesLoaded(unit.type)
 
     if (useImageRendering) {
       // Try to render with images

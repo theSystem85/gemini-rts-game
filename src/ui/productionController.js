@@ -9,7 +9,7 @@ import { buildingData } from '../buildings.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank']
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
