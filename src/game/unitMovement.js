@@ -170,32 +170,12 @@ function updateUnitRotation(unit, now) {
   if (unit.direction === undefined) unit.direction = 0
   if (unit.turretDirection === undefined) unit.turretDirection = 0
   if (unit.rotationSpeed === undefined) unit.rotationSpeed = 0.1
+  if (unit.turretRotationSpeed === undefined) unit.turretRotationSpeed = unit.rotationSpeed
 
-  // Update turret direction for tanks with targets
-  if (unit.target && (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
-    let targetCenterX, targetCenterY
-    
-    if (unit.target.tileX !== undefined) {
-      // Target is a unit
-      targetCenterX = unit.target.x + TILE_SIZE / 2
-      targetCenterY = unit.target.y + TILE_SIZE / 2
-    } else {
-      // Target is a building
-      targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
-      targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
-    }
+  let bodyNeedsRotation = false
+  let bodyTargetDirection = unit.direction
 
-    const unitCenterX = unit.x + TILE_SIZE / 2
-    const unitCenterY = unit.y + TILE_SIZE / 2
-
-    // Calculate target turret angle
-    const turretAngle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
-
-    // Smoothly rotate the turret
-    unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.rotationSpeed)
-  }
-
-  // Update body direction for movement
+  // Update body direction for movement first
   if (unit.path && unit.path.length > 0) {
     const nextTile = unit.path[0]
     
@@ -205,19 +185,73 @@ function updateUnitRotation(unit, now) {
       const dy = targetPos.y - unit.y
 
       // Calculate target direction angle for the tank body
-      const targetDirection = Math.atan2(dy, dx)
-      unit.targetDirection = targetDirection
+      bodyTargetDirection = Math.atan2(dy, dx)
+      unit.targetDirection = bodyTargetDirection
 
       // Check if we need to rotate
-      const angleDifference = angleDiff(unit.direction, targetDirection)
+      const angleDifference = angleDiff(unit.direction, bodyTargetDirection)
 
       if (angleDifference > 0.05) { // Allow small threshold to avoid jitter
         unit.isRotating = true
-        // Smoothly rotate towards the target direction
-        unit.direction = smoothRotateTowardsAngle(unit.direction, targetDirection, unit.rotationSpeed)
+        bodyNeedsRotation = true
+        // Smoothly rotate towards the target direction using wagon rotation speed
+        unit.direction = smoothRotateTowardsAngle(unit.direction, bodyTargetDirection, unit.rotationSpeed)
       } else {
         unit.isRotating = false
+        bodyNeedsRotation = false
       }
     }
   }
+
+  // Update turret direction for tanks (after body direction is updated)
+  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+    if (unit.target) {
+      // Tank has a target - rotate turret to track target
+      let targetCenterX, targetCenterY
+      
+      if (unit.target.tileX !== undefined) {
+        // Target is a unit
+        targetCenterX = unit.target.x + TILE_SIZE / 2
+        targetCenterY = unit.target.y + TILE_SIZE / 2
+      } else {
+        // Target is a building
+        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+      }
+
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+
+      // Calculate target turret angle
+      const turretAngle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+
+      // Smoothly rotate the turret using separate turret rotation speed
+      unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.turretRotationSpeed)
+      
+      // Clear movement turret flag when actively targeting
+      unit.turretShouldFollowMovement = false
+    } else if (unit.turretShouldFollowMovement && unit.path && unit.path.length > 0) {
+      // Tank is moving and turret should follow movement direction
+      // Calculate direction to final destination (not just next tile)
+      const finalDestination = unit.moveTarget || unit.path[unit.path.length - 1]
+      const destX = finalDestination.x * TILE_SIZE + TILE_SIZE / 2
+      const destY = finalDestination.y * TILE_SIZE + TILE_SIZE / 2
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      
+      const movementDirection = Math.atan2(destY - unitCenterY, destX - unitCenterX)
+      
+      // Rotate turret towards movement direction using turret rotation speed
+      unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, movementDirection, unit.turretRotationSpeed)
+    }
+    // If no target AND turretShouldFollowMovement is false, leave turret direction unchanged (idle state)
+    
+    // Clear the movement flag when path is complete
+    if (!unit.path || unit.path.length === 0) {
+      unit.turretShouldFollowMovement = false
+    }
+  }
+
+  // Set movement restriction flag - tanks should only move when body rotation is complete
+  unit.canAccelerate = !bodyNeedsRotation
 }

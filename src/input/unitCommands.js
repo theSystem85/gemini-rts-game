@@ -93,11 +93,16 @@ export class UnitCommandsHandler {
 
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
-        // Clear any existing target when issuing a move command
+        // Clear any existing target when issuing a move command - but preserve turret direction
         unit.target = null
         unit.moveTarget = destTile // Store the final destination
         // Clear any previous target when moving
         unit.originalTarget = null
+        
+        // Flag that turret should rotate to movement direction for tanks
+        if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+          unit.turretShouldFollowMovement = true
+        }
         unit.originalPath = null
         // Clear force attack flag when issuing a move command
         unit.forcedAttack = false

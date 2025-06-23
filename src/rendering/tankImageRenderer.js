@@ -148,12 +148,11 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
 
   // 3. Determine turret rotation
   let turretRotation
-  if (unit.target && unit.turretDirection !== undefined) {
-    // Tank is targeting something - turret rotates independently to track target
-    // But we also need to account for the wagon rotation offset
+  if (unit.turretDirection !== undefined) {
+    // Use the tank's turret direction (whether targeting or following movement)
     turretRotation = unit.turretDirection - Math.PI / 2
   } else {
-    // No target - turret follows wagon direction
+    // Fallback - turret follows wagon direction (should rarely happen)
     turretRotation = wagonRotation
   }
 

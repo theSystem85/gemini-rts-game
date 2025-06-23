@@ -354,6 +354,7 @@ export function createUnit(factory, unitType, x, y) {
     targetDirection: 0,
     turretDirection: 0,
     rotationSpeed: unitProps.rotationSpeed,
+    turretRotationSpeed: unitProps.turretRotationSpeed || unitProps.rotationSpeed,
     isRotating: false
   }
 

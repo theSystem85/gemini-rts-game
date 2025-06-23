@@ -1,10 +1,45 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD } from '../config.js'
 import { playSound } from '../sound.js'
-import { hasClearShot } from '../logic.js'
+import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
+
+/**
+ * Check if the turret is properly aimed at the target
+ * @param {Object} unit - Tank unit
+ * @param {Object} target - Target to aim at
+ * @returns {boolean} True if turret is aimed within threshold
+ */
+function isTurretAimedAtTarget(unit, target) {
+  if (unit.turretDirection === undefined || !target) {
+    return false
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  let targetCenterX, targetCenterY
+  
+  if (target.tileX !== undefined) {
+    // Target is a unit
+    targetCenterX = target.x + TILE_SIZE / 2
+    targetCenterY = target.y + TILE_SIZE / 2
+  } else {
+    // Target is a building
+    targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
+    targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
+  }
+
+  // Calculate the angle to target
+  const angleToTarget = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+  
+  // Check if turret is aimed within the threshold
+  const angleDifference = Math.abs(angleDiff(unit.turretDirection, angleToTarget))
+  
+  return angleDifference <= TURRET_AIMING_THRESHOLD
+}
 
 /**
  * Enhanced targeting spread with controlled randomness for better accuracy
@@ -112,7 +147,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
-        if (unit.canFire !== false && hasClearShot(unit, target, units)) {
+        // Check if turret is properly aimed at the target before firing
+        if (unit.canFire !== false && hasClearShot(unit, target, units) && isTurretAimedAtTarget(unit, target)) {
             // Calculate aim position (with predictive aiming if enabled)
             let aimX = targetCenterX;
             let aimY = targetCenterY;

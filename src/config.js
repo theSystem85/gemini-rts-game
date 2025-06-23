@@ -68,6 +68,13 @@ export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
 export const TANK_BULLET_SPEED = 8 // Radians per frame
 
+// Separate rotation rates for tank components
+export const TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
+export const TANK_TURRET_ROT = 0.08 // Radians per frame for turret aiming (slightly faster)
+
+// Aiming precision threshold (in radians) - turret must be within this angle to fire
+export const TURRET_AIMING_THRESHOLD = 0.1 // About 5.7 degrees
+
 // Recoil and muzzle flash animation constants
 export const RECOIL_DISTANCE = 8 // pixels to move back during recoil
 export const RECOIL_DURATION = 300 // milliseconds
@@ -106,7 +113,8 @@ export const UNIT_PROPERTIES = {
     health: 100,
     maxHealth: 100,
     speed: 0.5,
-    rotationSpeed: 0.1
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT
   },
   // Harvester properties
   harvester: {
@@ -121,14 +129,16 @@ export const UNIT_PROPERTIES = {
     health: 100,
     maxHealth: 100,
     speed: 0.66,
-    rotationSpeed: 0.15
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT
   },
   // Tank V2 properties
   'tank-v2': {
     health: 130,
     maxHealth: 130,
     speed: 0.66,
-    rotationSpeed: 0.15,
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT,
     alertMode: true
   },
   // Tank V3 properties
@@ -136,7 +146,8 @@ export const UNIT_PROPERTIES = {
     health: 169,
     maxHealth: 169,
     speed: 0.66,
-    rotationSpeed: 0.15,
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT,
     alertMode: true
   },
   // Rocket tank properties
@@ -144,7 +155,8 @@ export const UNIT_PROPERTIES = {
     health: 100,
     maxHealth: 100,
     speed: 0.7,
-    rotationSpeed: 0.12
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT
   }
 }
 

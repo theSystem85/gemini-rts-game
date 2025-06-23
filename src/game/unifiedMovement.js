@@ -88,11 +88,20 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
   
   // Handle rotation before movement (tanks should rotate towards target before moving)
-  updateUnitRotation(unit);
+  // Skip unified rotation for tanks as they have their own turret/body rotation system
+  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
+    updateUnitRotation(unit);
+  }
   
   // Only apply movement if rotation is close to target (realistic tank movement)
-  const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation));
-  const canMove = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
+  // For tanks, check if they can accelerate (body rotation complete)
+  let canMove = true;
+  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+    canMove = unit.canAccelerate !== false; // Allow movement if canAccelerate is not explicitly false
+  } else {
+    const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation));
+    canMove = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
+  }
   
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 };
