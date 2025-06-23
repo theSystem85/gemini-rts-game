@@ -127,12 +127,47 @@ export class UnitRenderer {
   }
 
   renderSelection(ctx, unit, centerX, centerY) {
-    // Draw selection circle if unit is selected
+    // Draw selection corner indicators if unit is selected (like buildings)
     if (unit.selected) {
       ctx.strokeStyle = '#FF0'
       ctx.lineWidth = 2
+      
+      const cornerSize = 8 // Size of corner brackets (smaller than buildings)
+      const offset = 2 // Offset from unit edge
+      const halfTile = TILE_SIZE / 2
+      
+      // Calculate unit bounds
+      const left = centerX - halfTile - offset
+      const right = centerX + halfTile + offset
+      const top = centerY - halfTile - offset
+      const bottom = centerY + halfTile + offset
+      
+      // Top-left corner
       ctx.beginPath()
-      ctx.arc(centerX, centerY, TILE_SIZE / 3 + 3, 0, 2 * Math.PI)
+      ctx.moveTo(left, top + cornerSize)
+      ctx.lineTo(left, top)
+      ctx.lineTo(left + cornerSize, top)
+      ctx.stroke()
+      
+      // Top-right corner
+      ctx.beginPath()
+      ctx.moveTo(right - cornerSize, top)
+      ctx.lineTo(right, top)
+      ctx.lineTo(right, top + cornerSize)
+      ctx.stroke()
+      
+      // Bottom-left corner
+      ctx.beginPath()
+      ctx.moveTo(left, bottom - cornerSize)
+      ctx.lineTo(left, bottom)
+      ctx.lineTo(left + cornerSize, bottom)
+      ctx.stroke()
+      
+      // Bottom-right corner
+      ctx.beginPath()
+      ctx.moveTo(right - cornerSize, bottom)
+      ctx.lineTo(right, bottom)
+      ctx.lineTo(right, bottom - cornerSize)
       ctx.stroke()
     }
   }
