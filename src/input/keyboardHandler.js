@@ -85,6 +85,10 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'g') {
         this.handleGridToggle()
       }
+      // O key to toggle occupancy map visibility
+      else if (e.key.toLowerCase() === 'o') {
+        this.handleOccupancyMapToggle()
+      }
       // T key to toggle tank image rendering
       else if (e.key.toLowerCase() === 't') {
         this.handleTankImageToggle()
@@ -489,6 +493,18 @@ export class KeyboardHandler {
   handleGridToggle() {
     // Toggle grid visibility
     gameState.gridVisible = !gameState.gridVisible
+    // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleOccupancyMapToggle() {
+    // Toggle occupancy map visibility
+    gameState.occupancyVisible = !gameState.occupancyVisible
+    
+    // Show notification to user
+    const status = gameState.occupancyVisible ? 'ON' : 'OFF'
+    this.showNotification(`Occupancy map: ${status}`, 2000)
+    
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }

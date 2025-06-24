@@ -2,13 +2,14 @@
 import { TextureManager } from './textureManager.js'
 import { MapRenderer } from './mapRenderer.js'
 import { BuildingRenderer } from './buildingRenderer.js'
-import { UnitRenderer } from './unitRenderer.js'
 import { FactoryRenderer } from './factoryRenderer.js'
+import { UnitRenderer } from './unitRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
+import { MovementTargetRenderer } from './movementTargetRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
-import { MovementTargetRenderer } from './movementTargetRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
+import { buildOccupancyMap } from '../units.js'
 import { preloadTankImages } from './tankImageRenderer.js'
 
 export class Renderer {
@@ -71,7 +72,14 @@ export class Renderer {
     }
 
     // Render all game elements in order
-    this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState)
+
+    // Build occupancy map for visualization if needed
+    let occupancyMap = null
+    if (gameState.occupancyVisible) {
+      occupancyMap = buildOccupancyMap(units, mapGrid)
+    }
+    
+    this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
     this.buildingRenderer.render(gameCtx, buildings, scrollOffset)
     this.factoryRenderer.render(gameCtx, factories, scrollOffset)
     this.unitRenderer.render(gameCtx, units, scrollOffset)

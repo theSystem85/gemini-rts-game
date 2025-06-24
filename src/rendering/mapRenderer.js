@@ -86,7 +86,30 @@ export class MapRenderer {
     }
   }
 
-  render(ctx, mapGrid, scrollOffset, gameCanvas, gameState) {
+  renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState) {
+    // Draw occupancy map overlay only if enabled
+    if (gameState.occupancyVisible && occupancyMap) {
+      // Set up the red glow effect
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.3)' // Semi-transparent red
+      
+      // Draw occupied tiles with red glow
+      for (let y = startTileY; y < endTileY; y++) {
+        for (let x = startTileX; x < endTileX; x++) {
+          // Check bounds
+          if (y >= 0 && y < occupancyMap.length && x >= 0 && x < occupancyMap[0].length) {
+            // Only draw if tile is occupied
+            if (occupancyMap[y][x]) {
+              const tileX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+              const tileY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+              ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null) {
     // Calculate visible tile range - improved for better performance
     const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE))
     const startTileY = Math.max(0, Math.floor(scrollOffset.y / TILE_SIZE))
@@ -97,5 +120,6 @@ export class MapRenderer {
 
     this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
+    this.renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
   }
 }

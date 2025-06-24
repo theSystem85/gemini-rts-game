@@ -49,6 +49,9 @@ export const gameState = {
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 
+  // Occupancy map visibility toggle - initialize to false (occupancy map hidden by default)
+  occupancyVisible: false,
+
   // Tank image rendering toggle - initialize from config
   useTankImages: true,
 

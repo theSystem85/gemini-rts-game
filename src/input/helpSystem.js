@@ -36,6 +36,7 @@ export class HelpSystem {
           <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
           <li><strong>X Key:</strong> Make selected units dodge</li>
           <li><strong>G Key:</strong> Toggle map grid visibility</li>
+          <li><strong>O Key:</strong> Toggle occupancy map visibility (red glow on occupied tiles)</li>
           <li><strong>H Key:</strong> Focus view on your factory</li>
           <li><strong>I Key:</strong> Show this help (press again to close)</li>
           <li><strong>S Key:</strong> Toggle sell mode (sell buildings for 70% of cost)</li>
