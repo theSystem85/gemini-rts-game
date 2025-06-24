@@ -75,7 +75,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateUnitCollisions(units, mapGrid)
 
     // Ore spreading mechanism
-    updateOreSpread(gameState, mapGrid)
+    updateOreSpread(gameState, mapGrid, factories)
 
     // Cleanup destroyed units
     cleanupDestroyedUnits(units, gameState)

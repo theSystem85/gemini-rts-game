@@ -318,6 +318,26 @@ export function loadGame(key) {
       }
     })
 
+    // Auto-start the game after loading
+    gameState.gamePaused = false
+    gameState.gameStarted = true
+    
+    // Update pause button to show pause icon since game is now running
+    const pauseBtn = document.getElementById('pauseBtn')
+    if (pauseBtn) {
+      const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
+      if (playPauseIcon) {
+        playPauseIcon.textContent = '⏸'
+      }
+    }
+    
+    // Resume production after unpause
+    import('./productionQueue.js').then(module => {
+      module.productionQueue.resumeProductionAfterUnpause()
+    }).catch(err => {
+      console.warn('Could not resume production after loading:', err)
+    })
+
     showNotification('Game loaded: ' + (saveObj.label || key))
   }
 }

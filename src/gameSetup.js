@@ -67,24 +67,6 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
       mapGrid[y][x] = { type: 'land', ore: false }
     }
   }
-  // -------- Step 0: Generate Ore Fields --------
-  const oreClusterCount = 6
-  const oreClusters = []
-  for (let i = 0; i < oreClusterCount; i++) {
-    const clusterCenterX = Math.floor(rand() * MAP_TILES_X)
-    const clusterCenterY = Math.floor(rand() * MAP_TILES_Y)
-    oreClusters.push({ x: clusterCenterX, y: clusterCenterY })
-    const clusterRadius = Math.floor(rand() * 3) + 5 // radius between 5 and 7
-    for (let y = Math.max(0, clusterCenterY - clusterRadius); y < Math.min(MAP_TILES_Y, clusterCenterY + clusterRadius); y++) {
-      for (let x = Math.max(0, clusterCenterX - clusterRadius); x < Math.min(MAP_TILES_X, clusterCenterX + clusterRadius); x++) {
-        const dx = x - clusterCenterX, dy = y - clusterCenterY
-        if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.9) {
-          // Set ore as an overlay property instead of replacing tile type
-          mapGrid[y][x].ore = true
-        }
-      }
-    }
-  }
 
   // -------- Step 1: Generate Mountain Chains (Rock Clusters) --------
   const rockClusterCount = 9
@@ -166,8 +148,16 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
     })
   })
 
+  // Store ore cluster centers for connecting streets
+  const oreClusterCenters = []
+  for (let i = 0; i < 6; i++) {
+    const clusterCenterX = Math.floor(rand() * MAP_TILES_X)
+    const clusterCenterY = Math.floor(rand() * MAP_TILES_Y)
+    oreClusterCenters.push({ x: clusterCenterX, y: clusterCenterY })
+  }
+
   // Connect ore fields to all player positions
-  oreClusters.forEach(cluster => {
+  oreClusterCenters.forEach(cluster => {
     playerPositions.forEach(playerPos => {
       drawThickLine(mapGrid, playerPos, cluster, 'street', 2)
     })
@@ -198,5 +188,50 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
         }
       }
     })
+  })
+
+  // -------- Step 4: Generate Ore Fields (AFTER terrain generation) --------
+  // Generate ore clusters around the predefined centers, but only on passable terrain
+  // and avoid factory locations
+  
+  // Calculate factory positions to avoid placing ore there
+  const factoryWidth = 3 // constructionYard width from buildings.js
+  const factoryHeight = 3 // constructionYard height from buildings.js
+  const factoryPositions = []
+  
+  playerIds.forEach(playerId => {
+    const position = PLAYER_POSITIONS[playerId]
+    const factoryX = Math.floor(MAP_TILES_X * position.x) - Math.floor(factoryWidth / 2)
+    const factoryY = Math.floor(MAP_TILES_Y * position.y) - Math.floor(factoryHeight / 2)
+    factoryPositions.push({
+      x: factoryX,
+      y: factoryY,
+      width: factoryWidth,
+      height: factoryHeight
+    })
+  })
+  
+  oreClusterCenters.forEach(cluster => {
+    const clusterRadius = Math.floor(rand() * 3) + 5 // radius between 5 and 7
+    for (let y = Math.max(0, cluster.y - clusterRadius); y < Math.min(MAP_TILES_Y, cluster.y + clusterRadius); y++) {
+      for (let x = Math.max(0, cluster.x - clusterRadius); x < Math.min(MAP_TILES_X, cluster.x + clusterRadius); x++) {
+        const dx = x - cluster.x, dy = y - cluster.y
+        // Only place ore on passable terrain (land or street) and within cluster radius
+        if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.9) {
+          const tileType = mapGrid[y][x].type
+          
+          // Check if this tile is part of any factory area
+          const isInFactory = factoryPositions.some(factory => 
+            x >= factory.x && x < factory.x + factory.width &&
+            y >= factory.y && y < factory.y + factory.height
+          )
+          
+          if ((tileType === 'land' || tileType === 'street') && !isInFactory) {
+            // Set ore as an overlay property only on passable terrain away from factories
+            mapGrid[y][x].ore = true
+          }
+        }
+      }
+    }
   })
 }

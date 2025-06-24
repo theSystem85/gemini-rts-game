@@ -244,10 +244,21 @@ class Game {
     gameState.gameTime = 0
     gameState.gameOver = false
     gameState.gameStarted = true
-    gameState.gamePaused = true
+    gameState.gamePaused = false  // Auto-start the game immediately
 
+    // Update pause button to show pause icon since game is now running
     const pauseBtn = document.getElementById('pauseBtn')
-    pauseBtn.textContent = 'Start'
+    const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
+    if (playPauseIcon) {
+      playPauseIcon.textContent = '⏸'
+    }
+    
+    // Resume production after unpause since game is now running
+    import('./productionQueue.js').then(module => {
+      module.productionQueue.resumeProductionAfterUnpause()
+    }).catch(err => {
+      console.warn('Could not resume production after map shuffle:', err)
+    })
   }
 
   async resetGame() {

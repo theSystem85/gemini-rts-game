@@ -25,8 +25,9 @@ export function updateMapScrolling(gameState, mapGrid) {
  * Updates ore spreading on the map
  * @param {Object} gameState - Game state object
  * @param {Array} mapGrid - 2D array representing the map
+ * @param {Array} factories - Array of factory objects
  */
-export function updateOreSpread(gameState, mapGrid) {
+export function updateOreSpread(gameState, mapGrid, factories = []) {
   const now = performance.now()
   
   if (now - gameState.lastOreUpdate >= ORE_SPREAD_INTERVAL) {
@@ -43,8 +44,22 @@ export function updateOreSpread(gameState, mapGrid) {
           directions.forEach(dir => {
             const nx = x + dir.x, ny = y + dir.y
             if (nx >= 0 && nx < mapGrid[0].length && ny >= 0 && ny < mapGrid.length) {
-              // Only spread to land tiles that don't already have ore - prevent spreading to streets, water, or rock
-              if (mapGrid[ny][nx].type === 'land' && !mapGrid[ny][nx].ore && Math.random() < ORE_SPREAD_PROBABILITY) {
+              // Check if there's a building on this tile
+              const hasBuilding = gameState.buildings && gameState.buildings.some(building => {
+                const bx = building.x, by = building.y
+                const bw = building.width || 1, bh = building.height || 1
+                return nx >= bx && nx < bx + bw && ny >= by && ny < by + bh
+              })
+              
+              // Check if there's a factory on this tile
+              const hasFactory = factories.some(factory => {
+                return nx >= factory.x && nx < factory.x + factory.width &&
+                       ny >= factory.y && ny < factory.y + factory.height
+              })
+              
+              // Only spread to land or street tiles that don't already have ore and don't have buildings or factories
+              const tileType = mapGrid[ny][nx].type
+              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !hasBuilding && !hasFactory && Math.random() < ORE_SPREAD_PROBABILITY) {
                 mapGrid[ny][nx].ore = true
               }
             }
