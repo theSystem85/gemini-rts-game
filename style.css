@@ -535,3 +535,63 @@ html, body {
   align-items: center;
   justify-content: center;
 }
+
+/* Volume control styling */
+#volumeControl {
+  margin-top: 15px;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: #444;
+  border-radius: 3px;
+  outline: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.volume-slider:hover {
+  opacity: 1;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4f9cff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  background: #6bb6ff;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #4f9cff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  background: #6bb6ff;
+}
+
+.volume-value {
+  color: #ccc;
+  font-size: 12px;
+  min-width: 35px;
+  text-align: right;
+}
+
+#saveGamesList > li {
+  font-size: 12px;
+}

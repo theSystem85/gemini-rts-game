@@ -230,6 +230,15 @@
             <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
           </label>
         </div>
+        
+        <!-- Master Volume Control -->
+        <div id="volumeControl">
+          <label style="display: flex; align-items: center; margin: 10px 0;">
+            Volume:
+            <input type="range" class="volume-slider" id="masterVolumeSlider" min="0" max="100" value="50" style="margin-left: 10px; flex: 1;">
+            <span id="volumeValue" class="volume-value">50%</span>
+          </label>
+        </div>
       </div>
     </div>
     <canvas id="gameCanvas"></canvas>

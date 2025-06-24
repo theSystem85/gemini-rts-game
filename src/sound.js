@@ -1,10 +1,42 @@
 // sound.js
+import { MASTER_VOLUME } from './config.js'
+
 let audioContext = null
 try {
   audioContext = new (window.AudioContext || window.webkitAudioContext)()
 } catch {
   console.error('Web Audio API is not supported.')
 }
+
+// Master volume control with localStorage persistence
+const VOLUME_STORAGE_KEY = 'rts-game-master-volume'
+
+// Load volume from localStorage or use default
+function loadVolumeFromStorage() {
+  try {
+    const storedVolume = localStorage.getItem(VOLUME_STORAGE_KEY)
+    if (storedVolume !== null) {
+      const parsedVolume = parseFloat(storedVolume)
+      if (!isNaN(parsedVolume) && parsedVolume >= 0 && parsedVolume <= 1) {
+        return parsedVolume
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load volume from localStorage:', e)
+  }
+  return MASTER_VOLUME // Fall back to default
+}
+
+// Save volume to localStorage
+function saveVolumeToStorage(volume) {
+  try {
+    localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString())
+  } catch (e) {
+    console.warn('Failed to save volume to localStorage:', e)
+  }
+}
+
+let masterVolume = loadVolumeFromStorage()
 
 /**
  * Sound mapping for game events including battle results and player defeats
@@ -88,7 +120,7 @@ function playAssetSound(category, volume = 1.0) {
     if (activeAudioElements.has(soundPath)) {
       const existingAudio = activeAudioElements.get(soundPath)
       existingAudio.currentTime = 0
-      existingAudio.volume = volume // Set volume
+      existingAudio.volume = volume * masterVolume // Apply master volume
       existingAudio.play().catch(e => {
         console.error('Error replaying sound asset:', e)
       })
@@ -96,7 +128,7 @@ function playAssetSound(category, volume = 1.0) {
     }
 
     const audio = new Audio(soundPath)
-    audio.volume = volume // Set volume
+    audio.volume = volume * masterVolume // Apply master volume
     audio.addEventListener('ended', () => {
       activeAudioElements.delete(soundPath)
     })
@@ -137,7 +169,7 @@ export function playSound(eventName, volume = 1.0) {
                       eventName === 'deposit' ? 450 :
                         eventName === 'explosion' ? 200 : 500
     oscillator.type = 'sine'
-    gainNode.gain.value = volume
+    gainNode.gain.value = volume * masterVolume // Apply master volume
     oscillator.start()
     oscillator.stop(audioContext.currentTime + 0.1)
     console.log(`Fallback sound played for event: ${eventName}`)
@@ -155,6 +187,7 @@ export function initBackgroundMusic() {
   const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
   bgMusicAudio = new Audio('sound/music/' + file)
   bgMusicAudio.loop = true
+  bgMusicAudio.volume = masterVolume // Apply master volume to background music
   // Comment out or remove the auto-play so music does not start on startup.
   // bgMusicAudio.play().catch(e => {
   //   console.error("Error playing background music:", e)
@@ -171,4 +204,21 @@ export function toggleBackgroundMusic() {
       bgMusicAudio.pause()
     }
   }
+}
+
+// --- Master Volume Control Functions ---
+export function setMasterVolume(volume) {
+  masterVolume = Math.max(0, Math.min(1, volume)) // Clamp between 0 and 1
+  
+  // Save to localStorage
+  saveVolumeToStorage(masterVolume)
+  
+  // Update background music volume if it exists
+  if (bgMusicAudio) {
+    bgMusicAudio.volume = masterVolume
+  }
+}
+
+export function getMasterVolume() {
+  return masterVolume
 }

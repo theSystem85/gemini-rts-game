@@ -6,6 +6,9 @@ export const MAP_WIDTH = MAP_TILES_X * TILE_SIZE
 export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
 export const SAFE_RANGE_ENABLED = false
 
+// Sound configuration
+export const MASTER_VOLUME = 0.25  // Default to 50% volume
+
 // Targeting spread for tanks and turrets (in pixels, about 3/4 of a tile for more noticeable inaccuracy)
 export const TARGETING_SPREAD = TILE_SIZE * 0.75
 
