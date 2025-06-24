@@ -1,4 +1,6 @@
 // ui/videoOverlay.js
+import { getMasterVolume } from '../sound.js'
+
 /**
  * Video overlay system for playing milestone videos over the minimap
  * Provides synchronized audio-visual feedback for game achievements
@@ -335,7 +337,7 @@ export class VideoOverlay {
         for (const path of audioPaths) {
           try {
             this.currentAudio = new Audio(path)
-            this.currentAudio.volume = 0.7
+            this.currentAudio.volume = 0.7 * getMasterVolume() // Apply master volume to video audio
             
             // Test if audio can load
             await new Promise((resolve, reject) => {
@@ -517,6 +519,15 @@ export class VideoOverlay {
       this.overlayElement.parentNode.removeChild(this.overlayElement)
     }
   }
+
+  /**
+   * Update the volume of current audio to match master volume
+   */
+  updateAudioVolume() {
+    if (this.currentAudio) {
+      this.currentAudio.volume = 0.7 * getMasterVolume()
+    }
+  }
 }
 
 // Create global instance
@@ -545,4 +556,12 @@ export function playSyncedVideoAudio(baseFilename, options = {}) {
   }
   
   return videoOverlay.playMilestoneVideo(videoFile, audioFile, milestoneInfo)
+}
+
+/**
+ * Update video audio volume to match current master volume
+ * Can be called externally when master volume changes
+ */
+export function updateVideoAudioVolume() {
+  videoOverlay.updateAudioVolume()
 }

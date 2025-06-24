@@ -1,6 +1,15 @@
 // sound.js
 import { MASTER_VOLUME } from './config.js'
 
+// Import videoOverlay to update video audio volume
+let videoOverlay = null
+// Use dynamic import to avoid circular dependency
+import('./ui/videoOverlay.js').then(module => {
+  videoOverlay = module.videoOverlay
+}).catch(e => {
+  console.warn('Could not import videoOverlay for volume control:', e)
+})
+
 let audioContext = null
 try {
   audioContext = new (window.AudioContext || window.webkitAudioContext)()
@@ -216,6 +225,11 @@ export function setMasterVolume(volume) {
   // Update background music volume if it exists
   if (bgMusicAudio) {
     bgMusicAudio.volume = masterVolume
+  }
+  
+  // Update video audio volume if video overlay is available
+  if (videoOverlay && typeof videoOverlay.updateAudioVolume === 'function') {
+    videoOverlay.updateAudioVolume()
   }
 }
 
