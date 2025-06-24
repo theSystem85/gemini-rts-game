@@ -44,6 +44,25 @@ html, body {
   display: none;
 }
 
+/* Dark mode scrollbar styling for save games list */
+#saveGamesList::-webkit-scrollbar {
+  width: 8px;
+}
+
+#saveGamesList::-webkit-scrollbar-track {
+  background: #2c2c2c; /* Dark track that blends with sidebar background */
+  border-radius: 4px;
+}
+
+#saveGamesList::-webkit-scrollbar-thumb {
+  background: #555; /* Slightly lighter than track for visibility */
+  border-radius: 4px;
+}
+
+#saveGamesList::-webkit-scrollbar-thumb:hover {
+  background: #666; /* Lighter on hover for better interaction feedback */
+}
+
 #gameCanvas {
   position: absolute;
   top: 0;
@@ -594,4 +613,5 @@ html, body {
 
 #saveGamesList > li {
   font-size: 12px;
+  padding-right: 6px;
 }

@@ -339,10 +339,11 @@ export function updateSaveGamesList() {
     li.style.alignItems = 'center'
     li.style.padding = '2px 0'
     const label = document.createElement('span')
-    label.textContent = save.label + ' (' + new Date(save.time).toLocaleString() + ')'
+    label.innerHTML = save.label + '<br><small>' + new Date(save.time).toLocaleString() + '</small>'
     label.style.flex = '1'
     const loadBtn = document.createElement('button')
-    loadBtn.textContent = 'Load'
+    loadBtn.textContent = '▶'
+    loadBtn.title = 'Load save game'
     loadBtn.classList.add('action-button')
     loadBtn.style.marginLeft = '6px'
     loadBtn.onclick = () => { loadGame(save.key) }
