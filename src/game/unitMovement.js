@@ -85,8 +85,8 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
   const occupancyMap = buildOccupancyMap(units, mapGrid)
 
   // Update pathfinding for units with movement targets
-  if (gameState.selectedUnits && gameState.selectedUnits.length > 0) {
-    gameState.selectedUnits.forEach(unit => {
+  if (selectedUnits && selectedUnits.length > 0) {
+    selectedUnits.forEach(unit => {
       if (unit.moveTarget && (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)) {
         const targetPos = unit.moveTarget
         let adjustedTarget = targetPos

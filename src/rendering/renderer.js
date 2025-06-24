@@ -7,6 +7,7 @@ import { FactoryRenderer } from './factoryRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
+import { MovementTargetRenderer } from './movementTargetRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
 import { preloadTankImages } from './tankImageRenderer.js'
 
@@ -20,6 +21,7 @@ export class Renderer {
     this.effectsRenderer = new EffectsRenderer()
     this.uiRenderer = new UIRenderer()
     this.minimapRenderer = new MinimapRenderer()
+    this.movementTargetRenderer = new MovementTargetRenderer()
     this.harvesterHUD = new HarvesterHUD()
   }
 
@@ -74,6 +76,9 @@ export class Renderer {
     this.factoryRenderer.render(gameCtx, factories, scrollOffset)
     this.unitRenderer.render(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
+    
+    // Render movement target indicators (green triangles)
+    this.movementTargetRenderer.render(gameCtx, units, scrollOffset)
     
     // Render harvester HUD overlay (if enabled)
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)

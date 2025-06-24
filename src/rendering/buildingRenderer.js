@@ -2,6 +2,7 @@
 import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
+import { selectedUnits } from '../inputHandler.js'
 
 export class BuildingRenderer {
   renderBuilding(ctx, building, scrollOffset) {
@@ -305,11 +306,21 @@ export class BuildingRenderer {
   }
 
   renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height) {
-    // Check if this building is in the attack group targets
-    const isAttackTarget = gameState.attackGroupTargets && 
-                           gameState.attackGroupTargets.some(target => target === building)
+    // Check if this building is in the attack group targets OR if it's currently being targeted by selected units
+    const isInAttackGroupTargets = gameState.attackGroupTargets && 
+                                   gameState.attackGroupTargets.some(target => target === building)
     
-    if (isAttackTarget) {
+    // Check if any selected unit is targeting this building (for normal attacks and to show after reselection)
+    const isTargetedBySelectedUnit = selectedUnits && 
+                                     selectedUnits.some(selectedUnit => 
+                                       selectedUnit.target === building || 
+                                       (selectedUnit.attackQueue && selectedUnit.attackQueue.includes(building))
+                                     )
+    
+    // Show red indicator if: building is in AGF targets OR being targeted by a selected unit
+    const shouldShowAttackIndicator = isInAttackGroupTargets || isTargetedBySelectedUnit
+    
+    if (shouldShowAttackIndicator) {
       const now = performance.now()
       const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
       

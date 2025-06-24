@@ -1,6 +1,7 @@
 // rendering/unitRenderer.js
 import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS } from '../config.js'
 import { gameState } from '../gameState.js'
+import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 
 export class UnitRenderer {
@@ -277,11 +278,21 @@ export class UnitRenderer {
   }
 
   renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
-    // Check if this unit is in the attack group targets
-    const isAttackTarget = gameState.attackGroupTargets && 
-                           gameState.attackGroupTargets.some(target => target === unit)
+    // Check if this unit is in the attack group targets OR if it's currently being targeted by selected units
+    const isInAttackGroupTargets = gameState.attackGroupTargets && 
+                                   gameState.attackGroupTargets.some(target => target === unit)
     
-    if (isAttackTarget) {
+    // Check if any selected unit is targeting this unit (for normal attacks and to show after reselection)
+    const isTargetedBySelectedUnit = selectedUnits && 
+                                     selectedUnits.some(selectedUnit => 
+                                       (selectedUnit.target && selectedUnit.target.id === unit.id) || 
+                                       (selectedUnit.attackQueue && selectedUnit.attackQueue.some(target => target.id === unit.id))
+                                     )
+    
+    // Show red indicator if: unit is in AGF targets OR being targeted by a selected unit
+    const shouldShowAttackIndicator = isInAttackGroupTargets || isTargetedBySelectedUnit
+    
+    if (shouldShowAttackIndicator) {
       const now = performance.now()
       const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
       

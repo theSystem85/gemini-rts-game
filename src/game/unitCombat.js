@@ -90,6 +90,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
         // In firing range - stop all movement and clear path
         if (unit.path && unit.path.length > 0) {
             unit.path = []; // Clear path to stop movement when in range
+            unit.moveTarget = null; // Clear movement target when in firing range
         }
         // Force stop using unified movement system
         stopUnitMovement(unit);
@@ -106,6 +107,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
                 );
                 if (path.length > 1) {
                     unit.path = path.slice(1);
+                    unit.moveTarget = { x: targetTileX, y: targetTileY }; // Set movement target for green indicator
                     unit.lastPathTime = now;
                 }
             }
@@ -323,6 +325,9 @@ function processAttackQueue(unit, units) {
   // If current target is dead/invalid or we don't have a target, set the first target from queue
   if (!unit.target || unit.target.health <= 0) {
     unit.target = unit.attackQueue[0]
+    // Clear existing movement data when switching to new target
+    unit.path = []
+    unit.moveTarget = null
   }
   
   // If current target is destroyed and it was in our queue, remove it and advance
@@ -333,9 +338,15 @@ function processAttackQueue(unit, units) {
     // Set next target if available
     if (unit.attackQueue.length > 0) {
       unit.target = unit.attackQueue[0]
+      // Clear existing movement data when switching to new target
+      unit.path = []
+      unit.moveTarget = null
     } else {
       unit.attackQueue = null
       unit.target = null
+      // Clear movement data when no more targets
+      unit.path = []
+      unit.moveTarget = null
     }
   }
 }

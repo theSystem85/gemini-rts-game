@@ -200,6 +200,10 @@ export const ATTACK_GROUP_MIN_DRAG_DISTANCE = 10 // Minimum pixels to drag befor
 export const ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
 export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
 
+// Movement target indicator constants
+export const MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
+export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
+
 // Unit type colors (same for all players/enemies of same type)
 export const UNIT_TYPE_COLORS = {
   tank: '#0000FF',        // Blue

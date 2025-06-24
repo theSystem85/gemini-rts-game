@@ -162,11 +162,13 @@ export class UnitCommandsHandler {
       if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
         unit.path = path.slice(1)
         unit.target = target
+        unit.moveTarget = desiredTile // Store movement target for green indicator
         unit.forcedAttack = isForceAttack
       } else {
         // If already at position, just set the target
         unit.path = []
         unit.target = target
+        unit.moveTarget = null // No movement needed
         unit.forcedAttack = isForceAttack
       }
     })

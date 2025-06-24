@@ -263,6 +263,15 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
+- [x] When commanding a group of units to move to one spot make sure that every unit gets a different tile to move to assigned. Also make sure that the targetted tiles are highlighted by some green semi-transparent triangle (upside down like the one for the AGF but in green). Whenever a unit gets selected again make sure to show that indicator again on the map IF that unit is moving (also ensure the same holds for the AGF attacking indicator)
+  ✅ Red indicators for normal attacks (only when attacker is selected)
+  ✅ Green indicators for movement targets (only when unit is selected)
+  ✅ Both red and green indicators during AGF
+  ✅ Live updates as units move during attacks
+  ✅ Proper persistence after reselection
+  ✅ Proper cleanup when attacks finish or targets change
+- [ ] Show occupancy map as red glow on each tile when toggeled with "o"-key.
+- [ ] Make sure that when any input is selected keyboard shortcuts are disabled.
 - [x] Change tank rendering to support tank image assets consisting of 3 images with transparency to render one tank dynamically. (1) the tank wagon (tank_wagon.png) with the mounting point 32x60y in pixels from top left to mount the turret's center. The image asset for turret is named "turret_no_barrel.png". It has a mounting point for the gun barrel at 32x,68y pixels from top left. The gun barrel rotates with the turret in sync. The turret can rotate on the wagon. When the tank fires the gun barrel moves (dampened movement) up to 5 pixels to the top (reduces y coord) to indicate a recoil. Basically use the same mechanism like before but with image assets instead. Make sure to cache the images to make the rendering of hundreds of tank performant. Also shift the muzzle flash to coords 2x, 64y based on the gun barrel image. The rotation of all 3 image assets is aligned by default within the assets (they all point south).
   - [x] Make sure to implement this as an alternative rendering method to the existing non image based tank rendering so it can be toggled on and off during combat by the user (use some keyboard shortcut). Make sure to put the image based rendering in at least one separate file to have the code separated from the previous tank rendering. If possible use code fragments from the previous rendering technique or at least make sure there is not too much code redundancy.
   - [x] (1) Make the mounting points I described configurable by some json file so I can tweek them if needed.
