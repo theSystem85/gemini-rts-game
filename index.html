@@ -194,12 +194,15 @@
       </div>
       
       <!-- Save/Load Game Menu -->
-      <div id="saveLoadMenu" style="margin-top: 20px;">
+      <div id="saveLoadMenu">
         <h3>Save/Load Game</h3>
-        <input id="saveLabelInput" class="sidebar-input mb-5" type="text" placeholder="Save label" maxlength="32" style="width: 108px;">
-        <button id="saveGameBtn" class="action-button">Save</button>
-        <button id="refreshSavesBtn" class="action-button">⟳</button>
-        <ul id="saveGamesList" style="max-height: 120px; overflow-y: auto; margin: 8px 0 0 0; padding: 0; list-style: none;"></ul>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input id="saveLabelInput" class="sidebar-input" type="text" placeholder="Save label" maxlength="32">
+          <button id="saveGameBtn" class="action-button icon-button" title="Save Game">
+            <img src="/icons/save.svg" alt="Save" class="button-icon white-icon">
+          </button>
+        </div>
+        <ul id="saveGamesList" style="max-height: 120px; overflow-y: auto; margin: 8px 0 0 0; list-style: none;"></ul>
       </div>
       
       <!-- Stats and game speed moved to the bottom -->

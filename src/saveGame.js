@@ -372,11 +372,6 @@ export function initSaveGameSystem() {
     })
   }
 
-  const refreshSavesBtn = document.getElementById('refreshSavesBtn')
-  if (refreshSavesBtn) {
-    refreshSavesBtn.addEventListener('click', updateSaveGamesList)
-  }
-
   // Initial population of save games list
   updateSaveGamesList()
 }

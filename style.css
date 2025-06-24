@@ -30,7 +30,9 @@ html, body {
 }
 
 .sidebar-input {
-  padding: 8px 12px;
+  flex-grow: 1;
+  height: 40px;
+  padding: 0px 12px;
   background-color: #444;
   color: #eee;
   border: none;
@@ -611,7 +613,11 @@ html, body {
   text-align: right;
 }
 
+#saveGamesList {
+  padding: 0;
+  padding-right: 5px;
+}
+
 #saveGamesList > li {
   font-size: 12px;
-  padding-right: 6px;
 }
