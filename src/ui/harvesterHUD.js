@@ -1,6 +1,7 @@
 // ui/harvesterHUD.js - HUD overlay for harvester assignment visualization
 import { TILE_SIZE } from '../config.js'
 import { getRefineryQueues } from '../game/harvesterLogic.js'
+import { isInputFieldFocused } from '../utils/inputUtils.js'
 
 export class HarvesterHUD {
   constructor() {
@@ -10,7 +11,14 @@ export class HarvesterHUD {
 
   setupKeyListener() {
     document.addEventListener('keydown', (event) => {
+      // Don't handle keyboard shortcuts if an input field is focused
+      if (isInputFieldFocused()) {
+        return
+      }
+      
       if (event.key.toLowerCase() === 'i') {
+        event.preventDefault()
+        event.stopPropagation()
         this.toggle()
       }
     })

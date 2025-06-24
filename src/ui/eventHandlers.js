@@ -8,6 +8,7 @@ import { buildingRepairHandler } from '../buildingRepairHandler.js'
 import { buildingSellHandler } from '../buildingSellHandler.js'
 import { showNotification } from './notifications.js'
 import { milestoneSystem } from '../game/milestoneSystem.js'
+import { isInputFieldFocused } from '../utils/inputUtils.js'
 import {
   canPlaceBuilding,
   createBuilding,
@@ -118,7 +119,14 @@ export class EventHandlers {
 
     // Handle escape key to exit building placement mode (without canceling the building)
     document.addEventListener('keydown', (e) => {
+      // Don't handle keyboard shortcuts if an input field is focused
+      if (isInputFieldFocused()) {
+        return
+      }
+      
       if (e.key === 'Escape' && gameState.buildingPlacementMode) {
+        e.preventDefault()
+        e.stopPropagation()
         productionQueue.exitBuildingPlacementMode()
       }
     })

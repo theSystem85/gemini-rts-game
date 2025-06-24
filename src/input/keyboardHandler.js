@@ -5,6 +5,7 @@ import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
+import { isInputFieldFocused } from '../utils/inputUtils.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -31,15 +32,25 @@ export class KeyboardHandler {
     
     // Enhanced keydown event listener
     document.addEventListener('keydown', e => {
+      // Check if an input field is currently focused
+      if (isInputFieldFocused()) {
+        // Allow input field events to process normally, don't handle game shortcuts
+        return
+      }
+
       // Some keys should work even when paused
       // New: Toggle keybindings overview when I is pressed
       if (e.key.toLowerCase() === 'i') {
+        e.preventDefault()
+        e.stopPropagation()
         this.helpSystem.showControlsHelp()
         return
       }
 
       // C key for cheat console (works even when paused)
       if (e.key.toLowerCase() === 'c' && !gameState.cheatDialogOpen) {
+        e.preventDefault()
+        e.stopPropagation()
         this.cheatSystem.openDialog()
         return
       }
@@ -49,48 +60,60 @@ export class KeyboardHandler {
 
       // ESC key to cancel attack group mode
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         this.handleEscapeKey()
         return
       }
 
       // A key for alert mode
       if (e.key.toLowerCase() === 'a') {
+        e.preventDefault()
         this.handleAlertMode(selectedUnits)
       }
       // S key for sell mode or stop attacking
       else if (e.key.toLowerCase() === 's') {
+        e.preventDefault()
         this.handleSellMode()
       }
       // X key for dodge
       else if (e.key.toLowerCase() === 'x') {
+        e.preventDefault()
         this.handleDodgeCommand(selectedUnits, units, mapGrid)
       }
       // H key to focus on factory
       else if (e.key.toLowerCase() === 'h') {
+        e.preventDefault()
         this.handleFactoryFocus(mapGrid)
       }
       // Control group assignment (ctrl+number)
       else if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
         this.handleControlGroupAssignment(e.key, selectedUnits)
       }
       // Control group selection (just number keys 1-9)
       else if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
         this.handleControlGroupSelection(e.key, units, selectedUnits, mapGrid)
       }
       // F key to toggle formation mode
       else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault()
         this.handleFormationToggle(selectedUnits)
       }
       // G key to toggle grid visibility
       else if (e.key.toLowerCase() === 'g') {
+        e.preventDefault()
         this.handleGridToggle()
       }
       // O key to toggle occupancy map visibility
       else if (e.key.toLowerCase() === 'o') {
+        e.preventDefault()
         this.handleOccupancyMapToggle()
       }
       // T key to toggle tank image rendering
       else if (e.key.toLowerCase() === 't') {
+        e.preventDefault()
         this.handleTankImageToggle()
       }
     })
