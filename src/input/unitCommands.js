@@ -166,8 +166,9 @@ export class UnitCommandsHandler {
         y: Math.floor(destY / TILE_SIZE)
       }
 
-      // Find path to the target position
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, null)
+      // Find path to the target position, always respect occupancy map (including in attack mode)
+      const occupancyMap = gameState.units ? require('../units.js').buildOccupancyMap(gameState.units, mapGrid) : null
+      const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, occupancyMap)
 
       if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
         unit.path = path.slice(1)

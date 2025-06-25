@@ -265,7 +265,6 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
-- [ ] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
 - [ ] Rocks currently do not block the occupancy map.
 - [ ] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cutsmoothly to form straigt diagonal lines. Make sure they merge with the color of the background. For example if there are 2 street tiles directly diagonal to each other the two tiles that are neighbours to both of them should be diagonally half way overlapped by another (virtual rendering only) street tile to smoothen out the corners.
 - [x] When units are below 25% health they start to move with 50% of the speed of normal units.
@@ -327,6 +326,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
+- [ ] When in attack mode unit do currently not respect the occupancy map.
 - [ ] Tanks are not accelerating or decelerating anymore. Make sure they do before reaching max speed. 
 - [x] all selected units try to go to the same tile when commanded to move. That causes them to get stuck there and dodge around instead of standing still. Make sure when a group is commanded to move that all units get different nearby tiles to move to.
 - [x] Ensure that ore does not grow on occupant tiles. (Currently is is grows on and into rocks and buildings). It should only be on plain grass and street tiles that are unoccupied by buildings or anything else.

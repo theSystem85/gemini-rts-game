@@ -24,15 +24,28 @@ export function buildOccupancyMap(units, mapGrid) {
       occupancy[y][x] = false
     }
   }
+  // Mark impassable terrain and buildings as occupied
+  for (let y = 0; y < mapGrid.length; y++) {
+    for (let x = 0; x < mapGrid[0].length; x++) {
+      const tile = mapGrid[y][x]
+      if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+        occupancy[y][x] = true
+      }
+    }
+  }
+  // Mark units as occupied (center-based)
   units.forEach(unit => {
-    // Ensure unit tile indices are within mapGrid bounds.
+    const centerX = unit.x + TILE_SIZE / 2
+    const centerY = unit.y + TILE_SIZE / 2
+    const tileX = Math.floor(centerX / TILE_SIZE)
+    const tileY = Math.floor(centerY / TILE_SIZE)
     if (
-      unit.tileY >= 0 &&
-      unit.tileY < mapGrid.length &&
-      unit.tileX >= 0 &&
-      unit.tileX < mapGrid[0].length
+      tileY >= 0 &&
+      tileY < mapGrid.length &&
+      tileX >= 0 &&
+      tileX < mapGrid[0].length
     ) {
-      occupancy[unit.tileY][unit.tileX] = true
+      occupancy[tileY][tileX] = true
     }
   })
   return occupancy
