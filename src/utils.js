@@ -1,5 +1,5 @@
 // utils.js
-import { TILE_SIZE } from './config.js'
+import { TILE_SIZE, XP_MULTIPLIER } from './config.js'
 
 export function tileToPixel(tileX, tileY) {
   return { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE }
@@ -100,15 +100,14 @@ export function getExperienceRequiredForLevel(currentLevel, baseCost) {
  * @param {Object} killedUnit - The unit that was killed
  */
 export function awardExperience(unit, killedUnit) {
-  if (!unit || !killedUnit || unit.type === 'harvester') return
-  
+  if (!unit || !killedUnit || unit.type === 'harvester') {
+    return
+  }
   initializeUnitLeveling(unit)
-  
-  // Award experience equal to the cost of the killed unit
-  const experienceGained = getUnitCost(killedUnit.type)
+  // Award experience equal to the cost of the killed unit, multiplied by XP_MULTIPLIER
+  const experienceGained = Math.round(getUnitCost(killedUnit.type) * XP_MULTIPLIER)
   unit.experience += experienceGained
-  
-  // Check for level up
+  // Check for level up immediately
   checkLevelUp(unit)
 }
 
@@ -128,7 +127,6 @@ export function checkLevelUp(unit) {
     applyLevelBonuses(unit)
     
     // Play level up sound or effect here if desired
-    console.log(`Unit ${unit.id} leveled up to level ${unit.level}!`)
   }
 }
 
@@ -204,4 +202,228 @@ export function handleSelfRepair(unit, now) {
     // Update speed modifier since health changed
     updateUnitSpeedModifier(unit)
   }
+}
+
+/**
+ * Debug function to manually add experience to selected units
+ * @param {number} amount - Amount of experience to add
+ */
+export function debugAddExperience(amount = 1000) {
+  // Import selectedUnits dynamically to avoid circular imports
+  let selectedUnits = []
+  try {
+    if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
+      selectedUnits = window.debugGetSelectedUnits()
+    }
+  } catch (e) {
+    console.log('Using fallback method to access selected units')
+  }
+  
+  if (selectedUnits.length === 0) {
+    console.log('No units selected. Please select some units first.')
+    console.log('Try clicking on some tanks, then run debugAddExperience(500) again')
+    return
+  }
+  
+  selectedUnits.forEach(unit => {
+    if (unit.type !== 'harvester') {
+      initializeUnitLeveling(unit)
+      const oldExp = unit.experience
+      unit.experience += amount
+      checkLevelUp(unit)
+      console.log(`✅ Added ${amount} experience to ${unit.type} (Level ${unit.level}, Experience: ${oldExp} → ${unit.experience})`)
+      
+      // Force a progress calculation
+      const progress = getExperienceProgress(unit)
+      console.log(`📊 Experience progress: ${Math.round(progress * 100)}%`)
+    } else {
+      console.log('❌ Harvesters cannot gain experience')
+    }
+  })
+}
+
+/**
+ * Debug function to show selected unit stats
+ */
+export function debugShowUnitStats() {
+  if (typeof window !== 'undefined' && window.selectedUnits) {
+    window.selectedUnits.forEach(unit => {
+      if (unit.type !== 'harvester') {
+        initializeUnitLeveling(unit)
+        const progress = getExperienceProgress(unit)
+        const nextLevelExp = getExperienceRequiredForLevel(unit.level, unit.baseCost)
+        console.log(`=== ${unit.type} (ID: ${unit.id}) ===`)
+        console.log(`Level: ${unit.level}/3`)
+        console.log(`Experience: ${unit.experience}/${nextLevelExp || 'MAX'}`)
+        console.log(`Progress: ${Math.round(progress * 100)}%`)
+        console.log(`Range Multiplier: ${unit.rangeMultiplier || 1}x`)
+        console.log(`Armor: ${unit.armor || 1}`)
+        console.log(`Fire Rate Multiplier: ${unit.fireRateMultiplier || 1}x`)
+        console.log(`Self Repair: ${unit.selfRepair ? 'YES' : 'NO'}`)
+      } else {
+        console.log(`${unit.type} (ID: ${unit.id}) - Harvesters don't level up`)
+      }
+    })
+  }
+}
+
+/**
+ * Debug function to force show experience bars on all combat units
+ */
+export function debugForceShowExperienceBars() {
+  if (typeof window !== 'undefined' && window.gameInstance) {
+    const units = window.gameInstance.units || []
+    units.forEach(unit => {
+      if (unit.type !== 'harvester') {
+        initializeUnitLeveling(unit)
+        if (unit.experience === 0) {
+          unit.experience = 100 // Give a small amount of experience to make bar visible
+        }
+        console.log(`${unit.type}: Level ${unit.level}, Experience ${unit.experience}`)
+      }
+    })
+    console.log('🔧 Forced experience bars to show on all combat units')
+  }
+}
+
+/**
+ * Debug function to spawn enemy units for testing experience system
+ */
+export function debugSpawnEnemyUnit(unitType = 'tank') {
+  if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
+    const units = window.gameInstance.units
+    const gameState = window.gameState || {}
+    
+    // Create a simple enemy unit near the player's view
+    const enemyUnit = {
+      id: `debug_enemy_${Date.now()}`,
+      type: unitType,
+      owner: 'enemy',
+      x: 500, // Pixel position
+      y: 500,
+      tileX: Math.floor(500 / 32), // Tile position
+      tileY: Math.floor(500 / 32),
+      health: 100,
+      maxHealth: 100,
+      speed: 0.5,
+      path: [],
+      target: null,
+      selected: false,
+      direction: 0,
+      targetDirection: 0,
+      turretDirection: 0,
+      rotationSpeed: 0.15,
+      isRotating: false,
+      level: 0,
+      experience: 0,
+      baseCost: 1000
+    }
+    
+    units.push(enemyUnit)
+    console.log(`🎯 Spawned enemy ${unitType} at (500, 500) for testing`)
+    console.log(`💡 Use your tanks to destroy it and gain experience!`)
+    
+    return enemyUnit
+  }
+}
+
+/**
+ * Debug function to test experience awarding directly
+ */
+export function debugTestExperienceAwarding() {
+  if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
+    const selectedUnits = window.debugGetSelectedUnits()
+    
+    if (selectedUnits.length === 0) {
+      console.log('❌ No units selected. Please select a unit first.')
+      return
+    }
+    
+    // Create a fake killed unit
+    const fakeKilledUnit = {
+      type: 'tank',
+      owner: 'enemy',
+      health: 0,
+      maxHealth: 100
+    }
+    
+    selectedUnits.forEach(unit => {
+      if (unit.type !== 'harvester') {
+        console.log(`🧪 Testing experience awarding for ${unit.type}...`)
+        
+        // Force initialize leveling system first
+        initializeUnitLeveling(unit)
+        console.log(`📊 Before: Level ${unit.level}, Experience ${unit.experience}, BaseCost ${unit.baseCost}`)
+        
+        const oldExp = unit.experience
+        const oldLevel = unit.level
+        
+        awardExperience(unit, fakeKilledUnit)
+        
+        console.log(`📊 After: Level ${unit.level}, Experience ${unit.experience}`)
+        console.log(`✅ Change: Experience +${unit.experience - oldExp}, Level ${oldLevel} → ${unit.level}`)
+      }
+    })
+  }
+}
+
+/**
+ * Debug function to list all units in the game
+ */
+export function debugListAllUnits() {
+  if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
+    const units = window.gameInstance.units
+    console.log(`📋 Total units in game: ${units.length}`)
+    
+    const unitsByOwner = {}
+    units.forEach(unit => {
+      const owner = unit.owner || 'unknown'
+      if (!unitsByOwner[owner]) {
+        unitsByOwner[owner] = []
+      }
+      unitsByOwner[owner].push(unit.type)
+    })
+    
+    Object.keys(unitsByOwner).forEach(owner => {
+      console.log(`👥 ${owner}: ${unitsByOwner[owner].join(', ')}`)
+    })
+    
+    return units
+  }
+}
+
+/**
+ * Debug function to initialize experience system for all existing units
+ */
+export function debugInitializeAllUnits() {
+  if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
+    const units = window.gameInstance.units
+    let count = 0
+    
+    units.forEach(unit => {
+      if (unit.type !== 'harvester') {
+        const hadLeveling = !!(unit.level !== undefined && unit.experience !== undefined && unit.baseCost)
+        initializeUnitLeveling(unit)
+        
+        if (!hadLeveling) {
+          count++
+          console.log(`🔧 Initialized leveling for ${unit.type} (Owner: ${unit.owner})`)
+        }
+      }
+    })
+    
+    console.log(`✅ Initialized experience system for ${count} units`)
+    console.log(`📊 Total combat units: ${units.filter(u => u.type !== 'harvester').length}`)
+  }
+}
+
+// Make debug functions available globally for testing
+if (typeof window !== 'undefined') {
+  window.debugAddExperience = debugAddExperience
+  window.debugShowUnitStats = debugShowUnitStats
+  window.debugForceShowExperienceBars = debugForceShowExperienceBars
+  window.debugSpawnEnemyUnit = debugSpawnEnemyUnit
+  window.debugTestExperienceAwarding = debugTestExperienceAwarding
+  window.debugListAllUnits = debugListAllUnits
+  window.debugInitializeAllUnits = debugInitializeAllUnits
 }

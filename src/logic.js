@@ -7,7 +7,7 @@ import { buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
-import { updateUnitSpeedModifier } from './utils.js'
+import { updateUnitSpeedModifier, awardExperience } from './utils.js'
 
 export let explosions = [] // Global explosion effects for rocket impacts
 
@@ -60,6 +60,12 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       }
       
       unit.health -= actualDamage
+      
+      // Award experience if unit dies from explosion
+      if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
+        console.log(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
+        awardExperience(shooter, unit)
+      }
       
       // Update speed modifier based on new health level
       updateUnitSpeedModifier(unit)

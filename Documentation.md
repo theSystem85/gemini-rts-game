@@ -269,3 +269,166 @@ The tactical retreat system for tanks is designed for precise, realistic, and re
 4. **Direct, Axis-Aligned Movement:** Once correctly oriented, the tank moves in a straight line to the retreat point without any deviation or pathfinding. Movement is strictly along the tank's longitudinal axis.
 5. **Combat Readiness:** While retreating, the tank's turret remains independent and will continue to track and fire upon its designated target if it remains in range.
 6. **Arrival and Completion:** The tank stops precisely at the retreat point, and its retreat state is cleared, awaiting new orders.
+
+---
+
+## 3-Star Level System Implementation
+
+### Overview
+The 3-Star Level System is a comprehensive unit progression system that allows combat units (excluding harvesters) to gain experience through combat and level up to become more powerful. Units progress from level 0 to level 3, with each level providing meaningful bonuses to combat effectiveness.
+
+### ✅ **Core Leveling System**
+
+#### Experience Mechanics
+- **Experience Source**: Units gain experience equal to the cost of enemy units they kill
+- **Starting Level**: All combat units begin at level 0
+- **Maximum Level**: Level 3 (3 stars)
+- **Experience Requirements**:
+  - **Level 1**: 2x unit base cost (e.g., 2000 exp for a 1000-cost tank)
+  - **Level 2**: 4x unit base cost (e.g., 4000 exp for a 1000-cost tank)
+  - **Level 3**: 6x unit base cost (e.g., 6000 exp for a 1000-cost tank)
+- **Experience Reset**: Experience counter resets to 0 after each level up
+
+#### Unit Exclusions
+- **Harvesters**: Explicitly excluded from the leveling system (they don't gain levels or bonuses)
+- **Non-combat units**: Only units that participate in combat can level up
+
+### ✅ **Level Bonuses**
+
+#### Level 1: Enhanced Range
+- **Bonus**: 20% increase in firing range
+- **Effect**: Units can engage enemies from further away
+- **Implementation**: Applies to all combat range calculations via `getEffectiveFireRange()`
+
+#### Level 2: Improved Armor
+- **Bonus**: 50% armor increase
+- **Effect**: Units take significantly less damage from all sources
+- **Implementation**: Integrates with existing armor system in bullet collision detection
+
+#### Level 3: Elite Status
+- **Self-Repair**: Units automatically heal 1% of max health every 3 seconds when stationary
+- **Fire Rate Boost**: 33% increase in fire rate (faster shooting)
+- **Elite Capabilities**: Combination makes units highly effective in prolonged combat
+
+### ✅ **Visual Indicators**
+
+#### Level Stars
+- **Display**: Up to 3 bright yellow stars above the unit's health bar
+- **Position**: Centered above health bar, positioned at unit center
+- **Design**: 5-pointed stars with gold fill and orange outline
+- **Visibility**: Always visible when unit has levels > 0
+
+#### Experience Progress Bar
+- **Display**: 2px high yellow progress bar overlaying the top of the health bar
+- **Color**: Semi-transparent yellow (rgba(255, 255, 0, 0.7))
+- **Visibility**: Only shown when unit is damaged or selected (same as health bar)
+- **Progress**: Shows percentage progress toward next level (0-100%)
+- **Max Level**: Hidden when unit reaches level 3
+
+### ✅ **Universal Implementation**
+
+#### Player Units
+- **Integration**: Full leveling system via `createUnit()` function in `src/units.js`
+- **Initialization**: Automatic leveling system setup for all new combat units
+- **Persistence**: Levels and experience preserved through save/load system
+
+#### AI Units
+- **Parity**: AI units have identical leveling system to player units
+- **Implementation**: Integrated into enemy unit creation in `src/enemy.js`
+- **Fairness**: AI units level up at same rate and gain same bonuses as player units
+
+#### Experience Awarding
+- **Universal**: Both player and AI units award experience when killed
+- **Implementation**: Integrated into bullet system (`src/game/bulletSystem.js`)
+- **Validation**: Only awards experience for valid kills (different owners, non-harvesters)
+
+### ✅ **Combat Integration**
+
+#### Range Bonuses
+- **Function**: `getEffectiveFireRange(unit)` in `src/game/unitCombat.js`
+- **Application**: All combat range checks use effective range including bonuses
+- **Scope**: Applies to standard combat, alert mode scanning, and chase thresholds
+
+#### Fire Rate Bonuses
+- **Function**: `getEffectiveFireRate(unit, baseFireRate)` in `src/game/unitCombat.js`
+- **Application**: All firing systems use effective fire rate including bonuses
+- **Scope**: Affects all unit types (tanks, rocket tanks, tank variants)
+
+#### Armor Bonuses
+- **Integration**: Existing armor system in `src/game/bulletSystem.js`
+- **Calculation**: Damage reduction via division by armor multiplier
+- **Enhancement**: Level 2 bonus increases existing armor effectiveness
+
+#### Self-Repair System
+- **Function**: `handleSelfRepair(unit, now)` in `src/utils.js`
+- **Integration**: Called in main game update loop (`src/updateGame.js`)
+- **Conditions**: Only repairs when unit is stationary (not moving)
+- **Rate**: 1% of max health every 3 seconds
+
+### ✅ **Technical Implementation**
+
+#### Core Functions (`src/utils.js`)
+- `initializeUnitLeveling(unit)` - Sets up leveling properties
+- `awardExperience(unit, killedUnit)` - Awards experience for kills
+- `checkLevelUp(unit)` - Processes level advancement
+- `applyLevelBonuses(unit)` - Applies level-based bonuses
+- `getExperienceProgress(unit)` - Calculates progress percentage
+- `handleSelfRepair(unit, now)` - Manages level 3 self-repair
+
+#### Visual Rendering (`src/rendering/unitRenderer.js`)
+- `renderLevelStars(ctx, unit, scrollOffset)` - Renders level stars
+- Enhanced `renderHealthBar()` - Includes experience progress overlay
+- Integration with both image-based and fallback rendering systems
+
+#### Experience Awarding (`src/game/bulletSystem.js`)
+- Integrated into unit destruction logic
+- Validates shooter and target ownership
+- Excludes harvesters from experience system
+
+### ✅ **Testing Features**
+
+#### Debug Commands
+- `debugAddExperience(amount)` - Manually add experience to selected units
+- `debugShowUnitStats()` - Display detailed unit progression information
+- **Usage**: Available in browser console for testing and debugging
+
+#### Console Logging
+- Level up notifications with detailed bonus information
+- Experience tracking for debugging purposes
+- Bonus application confirmation
+
+### ✅ **Compatibility**
+
+#### Save/Load System
+- **Backward Compatible**: Doesn't break existing save games
+- **Forward Compatible**: Preserves levels and experience in saved games
+- **Auto-Initialization**: Missing properties are automatically initialized on load
+
+#### Existing Systems
+- **Cheat System**: Compatible with god mode and other cheats
+- **Sound System**: Extensible for level up sound effects
+- **UI System**: Integrates seamlessly with existing health bar rendering
+
+### 🎮 **How to Use**
+
+#### For Players
+1. **Engage in Combat**: Build tanks and fight enemy units
+2. **Gain Experience**: Units automatically gain experience from kills
+3. **Watch Progress**: Yellow progress bar shows advancement toward next level
+4. **Observe Bonuses**: Stars indicate level, bonuses apply automatically
+5. **Strategic Value**: Higher level units are more effective in combat
+
+#### For Developers
+1. **Testing**: Use `debugAddExperience(2000)` to quickly test leveling
+2. **Debugging**: Use `debugShowUnitStats()` to inspect unit progression
+3. **Monitoring**: Check console for level up notifications and bonus details
+
+### Benefits
+
+- **Progression System**: Adds long-term unit development and attachment
+- **Strategic Depth**: Players must balance unit preservation vs. aggressive tactics
+- **Visual Feedback**: Clear indicators of unit progression and power level
+- **Balanced Gameplay**: Meaningful but not overwhelming bonuses
+- **Universal Fairness**: AI and player units have identical progression systems
+
+This system transforms combat from simple unit expenditure to strategic unit development, encouraging players to keep experienced units alive while providing clear visual feedback on unit capabilities and progression.

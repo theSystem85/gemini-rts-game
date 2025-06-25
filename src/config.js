@@ -1,3 +1,5 @@
+// Experience system multiplier (adjusts how quickly units gain XP)
+export const XP_MULTIPLIER = 3
 // config.js
 export const TILE_SIZE = 32
 export const MAP_TILES_X = 100

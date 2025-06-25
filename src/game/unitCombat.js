@@ -110,7 +110,8 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
     
     // Combat movement logic - stop and attack if in range
     // Exception: Don't stop movement if unit is retreating
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && !unit.isRetreating) {
+    const effectiveRange = getEffectiveFireRange(unit)
+    if (distance <= effectiveRange && !unit.isRetreating) {
         // In firing range - stop all movement and clear path
         if (unit.path && unit.path.length > 0) {
             unit.path = []; // Clear path to stop movement when in range
@@ -445,8 +446,10 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Fire if in range and allowed to attack
     // Human player units can always attack, AI units need AI permission
     const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
-      handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
+    const effectiveRange = getEffectiveFireRange(unit)
+    if (distance <= effectiveRange && canAttack) {
+      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
 }
@@ -458,7 +461,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
   // Alert mode: automatically scan for targets when no target is assigned
   // Skip alert mode if unit is retreating
   if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0) && !unit.isRetreating) {
-    const ALERT_SCAN_RANGE = TANK_FIRE_RANGE * TILE_SIZE;
+    const ALERT_SCAN_RANGE = getEffectiveFireRange(unit);
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
@@ -542,8 +545,10 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Fire if in range and allowed to attack
     // Human player units can always attack, AI units need AI permission
     const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
-      handleTankFiring(unit, unit.target, bullets, now, COMBAT_CONFIG.FIRE_RATES.STANDARD, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
+    const effectiveRange = getEffectiveFireRange(unit)
+    if (distance <= effectiveRange && canAttack) {
+      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
     }
   }
 }
@@ -563,11 +568,13 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Fire if in range and allowed to attack
     // Human player units can always attack, AI units need AI permission
     const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && canAttack) {
+    const effectiveRange = getEffectiveFireRange(unit)
+    if (distance <= effectiveRange && canAttack) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed
-        if (!unit.lastShotTime || now - unit.lastShotTime >= COMBAT_CONFIG.FIRE_RATES.STANDARD) {
+        const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
+        if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
           if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
             unit.burstState = {
               bulletsToFire: COMBAT_CONFIG.TANK_V3_BURST.COUNT,
@@ -598,11 +605,13 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     // Fire rockets if in range and allowed to attack
     // Human player units can always attack, AI units need AI permission
     const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET && canAttack) {
+    const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+    if (distance <= effectiveRange && canAttack) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed
-        if (!unit.lastShotTime || now - unit.lastShotTime >= COMBAT_CONFIG.FIRE_RATES.ROCKET) {
+        const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
+        if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
           if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
             unit.burstState = {
               rocketsToFire: COMBAT_CONFIG.ROCKET_BURST.COUNT,
@@ -616,4 +625,53 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
       }
     }
   }
+}
+
+/**
+ * Get the effective fire range for a unit (including level bonuses)
+ * @param {Object} unit - The unit to get fire range for
+ * @returns {number} Effective fire range in pixels
+ */
+function getEffectiveFireRange(unit) {
+  let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+  
+  // Apply level 1 bonus: 20% range increase
+  if (unit.level >= 1) {
+    baseRange *= (unit.rangeMultiplier || 1.2)
+  }
+  
+  return baseRange
+}
+
+/**
+ * Get the effective fire rate for a unit (including level bonuses)
+ * @param {Object} unit - The unit to get fire rate for
+ * @param {number} baseFireRate - Base fire rate in milliseconds
+ * @returns {number} Effective fire rate in milliseconds
+ */
+function getEffectiveFireRate(unit, baseFireRate) {
+  let effectiveRate = baseFireRate
+  
+  // Apply level 3 bonus: 33% fire rate increase (faster firing = lower milliseconds)
+  if (unit.level >= 3) {
+    effectiveRate = baseFireRate / (unit.fireRateMultiplier || 1.33)
+  }
+  
+  return effectiveRate
+}
+
+/**
+ * Apply armor reduction to incoming damage
+ * @param {Object} unit - The unit taking damage
+ * @param {number} baseDamage - Base damage amount
+ * @returns {number} Reduced damage after armor
+ */
+function applyArmorReduction(unit, baseDamage) {
+  if (unit.armor && unit.armor > 1) {
+    // Armor reduces damage by a percentage
+    // Level 2 gives 50% armor increase
+    const armorMultiplier = unit.armor
+    return baseDamage / armorMultiplier
+  }
+  return baseDamage
 }

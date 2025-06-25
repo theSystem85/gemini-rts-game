@@ -3,6 +3,7 @@ import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE,
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
+import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
   renderUnitBody(ctx, unit, centerX, centerY) {
@@ -223,10 +224,14 @@ export class UnitRenderer {
   }
 
   renderHarvesterProgress(ctx, unit, scrollOffset) {
-    // Draw ore carried indicator for harvesters
+    // Handle both harvester progress and experience progress for combat units
+    let progress = 0
+    let barColor = '#FFD700' // Default gold
+    let shouldShowBar = false
+    
     if (unit.type === 'harvester') {
-      let progress = 0
-      let barColor = '#FFD700' // Gold for ore
+      // Harvester-specific progress logic
+      shouldShowBar = true
       
       if (unit.unloadingAtRefinery && unit.unloadStartTime) {
         // Show unloading progress (reverse direction)
@@ -240,8 +245,22 @@ export class UnitRenderer {
       } else {
         // Show current ore load
         progress = unit.oreCarried / HARVESTER_CAPPACITY
+        barColor = '#FFD700' // Gold for ore
       }
+    } else {
+      // Combat unit experience progress
+      initializeUnitLeveling(unit)
+      const expProgress = getExperienceProgress(unit)
       
+      // Show experience bar for all combat units below max level
+      if (unit.level < 3) {
+        shouldShowBar = true
+        progress = expProgress
+        barColor = '#FFFF00' // Bright yellow for experience
+      }
+    }
+    
+    if (shouldShowBar) {
       const progressBarWidth = TILE_SIZE * 0.8
       const progressBarHeight = 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
@@ -326,6 +345,50 @@ export class UnitRenderer {
     }
   }
 
+  renderLevelStars(ctx, unit, scrollOffset) {
+    // Only render stars for combat units with levels > 0
+    if (unit.type === 'harvester' || !unit.level || unit.level <= 0) {
+      return
+    }
+
+    initializeUnitLeveling(unit)
+    
+    // Position stars above the health bar
+    const starSize = 6
+    const starSpacing = 8
+    const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x - totalWidth / 2
+    const starY = unit.y - 20 - scrollOffset.y // Above health bar
+
+    ctx.fillStyle = '#FFD700' // Gold color for stars
+    ctx.strokeStyle = '#FFA500' // Orange outline
+
+    for (let i = 0; i < unit.level; i++) {
+      const starX = startX + (i * starSpacing)
+      
+      // Draw a simple 5-pointed star
+      ctx.beginPath()
+      for (let j = 0; j < 5; j++) {
+        const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2 // Start at top
+        const outerRadius = starSize / 2
+        const innerRadius = starSize / 4
+        
+        if (j === 0) {
+          ctx.moveTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
+        } else {
+          ctx.lineTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
+        }
+        
+        // Inner point
+        const innerAngle = angle + (2 * Math.PI) / 10
+        ctx.lineTo(starX + innerRadius * Math.cos(innerAngle), starY + innerRadius * Math.sin(innerAngle))
+      }
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+    }
+  }
+
   renderUnit(ctx, unit, scrollOffset) {
     if (unit.health <= 0) return
 
@@ -345,6 +408,7 @@ export class UnitRenderer {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         this.renderHealthBar(ctx, unit, scrollOffset)
+        this.renderLevelStars(ctx, unit, scrollOffset)
         this.renderHarvesterProgress(ctx, unit, scrollOffset)
         this.renderQueueNumber(ctx, unit, scrollOffset)
         this.renderGroupNumber(ctx, unit, scrollOffset)
@@ -360,6 +424,7 @@ export class UnitRenderer {
     this.renderAlertMode(ctx, unit, centerX, centerY)
     this.renderTurret(ctx, unit, centerX, centerY)
     this.renderHealthBar(ctx, unit, scrollOffset)
+    this.renderLevelStars(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)

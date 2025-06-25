@@ -680,6 +680,20 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
   // Set effectiveSpeed to match the unit's speed (no more speed advantage)
   unit.effectiveSpeed = unit.speed
   
+  // Initialize leveling system for combat units (not harvesters)
+  if (unitType !== 'harvester') {
+    unit.level = 0
+    unit.experience = 0
+    // Use the same unit costs as player units
+    const unitCosts = {
+      tank: 1000,
+      rocketTank: 2000,
+      'tank-v2': 2000,
+      'tank-v3': 3000
+    }
+    unit.baseCost = unitCosts[unitType] || 1000
+  }
+  
   // Add armor for harvesters (same as player units)
   if (unitType === 'harvester') {
     unit.armor = 3

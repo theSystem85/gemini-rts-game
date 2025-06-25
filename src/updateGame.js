@@ -4,6 +4,7 @@ import { buildOccupancyMap } from './units.js'
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import { updateBuildingsUnderRepair } from './buildings.js'
+import { handleSelfRepair } from './utils.js'
 
 // Import modular game systems
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
@@ -54,6 +55,11 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateUnitCombat(units, bullets, mapGrid, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
 
+    // Handle self-repair for level 3 units
+    units.forEach(unit => {
+      handleSelfRepair(unit, now)
+    })
+
     // Cleanup destroyed attack group targets
     cleanupAttackGroupTargets(gameState)
 
@@ -97,6 +103,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
       updateBuildingsUnderRepair(gameState, now)
     }
+
+    // Self-repair for level 3 units
+    handleSelfRepair(units, now)
 
   } catch (error) {
     console.error('Critical error in updateGame:', error)

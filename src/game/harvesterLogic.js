@@ -241,7 +241,6 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     
     if (!targetFactory) {
       // No factory found - unit is orphaned, stop processing
-      console.warn(`Harvester ${unit.id} cannot find factory with owner ${unit.owner}`)
       return
     }
     

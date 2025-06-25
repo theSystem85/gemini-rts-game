@@ -236,6 +236,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Refine the coloring of the power bar and its logic on impacting the production.
+- [ ] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
 - [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
@@ -264,6 +265,9 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
+- [ ] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
+- [ ] Rocks currently do not block the occupancy map.
+- [ ] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cutsmoothly to form straigt diagonal lines. Make sure they merge with the color of the background. For example if there are 2 street tiles directly diagonal to each other the two tiles that are neighbours to both of them should be diagonally half way overlapped by another (virtual rendering only) street tile to smoothen out the corners.
 - [x] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
 - [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.

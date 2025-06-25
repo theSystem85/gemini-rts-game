@@ -2,6 +2,7 @@
 import { TILE_SIZE, BULLET_DAMAGES } from '../config.js'
 import { triggerExplosion } from '../logic.js'
 import { playSound } from '../sound.js'
+import { awardExperience } from '../utils.js'
 import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
 import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
@@ -122,6 +123,8 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
               unit.health -= actualDamage
             }
             
+            console.log(`💥 Unit hit: ${unit.type} took ${actualDamage} damage, health: ${unit.health}/${unit.maxHealth}`)
+            
             // Update speed modifier based on new health level
             updateUnitSpeedModifier(unit)
           }
@@ -150,6 +153,10 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             playSound('explosion', 0.5)
             unit.health = 0
             
+            // Award experience to the shooter for killing ANY unit or building (except harvesters cannot receive XP)
+            if (bullet.shooter && bullet.shooter.owner !== unit.owner && bullet.shooter.type !== 'harvester') {
+              awardExperience(bullet.shooter, unit)
+            }
             // Play unit lost sound if player unit dies
             if (unit.owner === gameState.humanPlayer) {
               playSound('unitLost', 1.0)
@@ -190,6 +197,10 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           if (building.health <= 0) {
             playSound('explosion', 0.5)
             building.health = 0
+            // Award experience to the shooter for destroying ANY building (except harvesters cannot receive XP)
+            if (bullet.shooter && bullet.shooter.owner !== building.owner && bullet.shooter.type !== 'harvester') {
+              awardExperience(bullet.shooter, building)
+            }
           }
 
           // Explode at target position or bullet location

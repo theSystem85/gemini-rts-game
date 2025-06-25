@@ -1,7 +1,7 @@
 // main.js
 // Refactored main game orchestrator
 
-import { setupInputHandlers } from './inputHandler.js'
+import { setupInputHandlers, selectedUnits } from './inputHandler.js'
 import { unitCosts } from './units.js'
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
@@ -102,6 +102,22 @@ class Game {
 
     // Setup input handlers
     setupInputHandlers(units, factories, mapGrid)
+
+    // Initialize leveling for any existing units
+    units.forEach(unit => {
+      if (unit.type !== 'harvester') {
+        unit.level = unit.level || 0
+        unit.experience = unit.experience || 0
+        const unitCosts = {
+          tank: 1000,
+          rocketTank: 2000,
+          'tank-v2': 2000,
+          'tank-v3': 3000,
+          tank_v1: 1000
+        }
+        unit.baseCost = unit.baseCost || unitCosts[unit.type] || 1000
+      }
+    })
   }
 
   centerOnPlayerFactory() {
@@ -473,7 +489,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Also make it available globally for debugging
   window.gameInstance = gameInstance
+  window.gameInstance.units = units
 })
+
+// Debug helper to access selectedUnits
+window.debugGetSelectedUnits = () => selectedUnits
 
 // Export functions for backward compatibility - these are now handled by ProductionController
 export function updateVehicleButtonStates() {

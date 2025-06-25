@@ -370,6 +370,13 @@ export function createUnit(factory, unitType, x, y) {
   // Initialize unified movement system for the new unit
   initializeUnitMovement(unit)
   
+  // Initialize leveling system for combat units (not harvesters)
+  if (unit.type !== 'harvester') {
+    unit.level = 0
+    unit.experience = 0
+    unit.baseCost = unitCosts[unit.type] || unitCosts[unitType] || 1000
+  }
+  
   // Initialize speed modifier based on current health
   updateUnitSpeedModifier(unit)
 

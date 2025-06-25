@@ -57,7 +57,15 @@ export function saveGame(label) {
     oreField: u.oreField,
     path: u.path || [],
     target: u.target,
-    groupNumber: u.groupNumber
+    groupNumber: u.groupNumber,
+    // Experience/Leveling system properties
+    level: u.level || 0,
+    experience: u.experience || 0,
+    baseCost: u.baseCost,
+    rangeMultiplier: u.rangeMultiplier,
+    fireRateMultiplier: u.fireRateMultiplier,
+    armor: u.armor,
+    selfRepair: u.selfRepair
     // Add more fields if needed
   }))
 
@@ -160,6 +168,25 @@ export function loadGame(key) {
       hydrated.y = u.y
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
+      
+      // Initialize/restore experience system for combat units
+      if (hydrated.type !== 'harvester') {
+        // Ensure experience properties exist
+        hydrated.level = u.level || 0
+        hydrated.experience = u.experience || 0
+        hydrated.baseCost = u.baseCost || (function() {
+          const costs = { tank: 1000, rocketTank: 2000, 'tank-v2': 2000, 'tank-v3': 3000, tank_v1: 1000 }
+          return costs[hydrated.type] || 1000
+        })()
+        
+        // Restore level bonuses if they exist
+        if (u.rangeMultiplier) hydrated.rangeMultiplier = u.rangeMultiplier
+        if (u.fireRateMultiplier) hydrated.fireRateMultiplier = u.fireRateMultiplier
+        if (u.armor && u.armor > 1) hydrated.armor = u.armor
+        if (u.selfRepair) hydrated.selfRepair = u.selfRepair
+        
+        console.log(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
+      }
       
       // Restore harvester-specific properties and re-assign to refineries if needed
       if (hydrated.type === 'harvester') {
