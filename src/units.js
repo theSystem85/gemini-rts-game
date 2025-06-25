@@ -7,7 +7,7 @@ import {
   DIRECTIONS,
   MAX_SPAWN_SEARCH_DISTANCE
 } from './config.js'
-import { getUniqueId } from './utils.js'
+import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
@@ -369,6 +369,9 @@ export function createUnit(factory, unitType, x, y) {
 
   // Initialize unified movement system for the new unit
   initializeUnitMovement(unit)
+  
+  // Initialize speed modifier based on current health
+  updateUnitSpeedModifier(unit)
 
   // Apply god mode if it's active for this unit's owner
   if (window.cheatSystem && window.cheatSystem.isGodModeActive()) {

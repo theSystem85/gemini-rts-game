@@ -5,6 +5,7 @@ import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
+import { updateUnitSpeedModifier } from '../utils.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -316,10 +317,12 @@ function handleTankV3BurstFire(unit, target, bullets, now, targetCenterX, target
 function handleTeslaEffects(unit, now) {
     if (unit.teslaDisabledUntil && now < unit.teslaDisabledUntil) {
         unit.canFire = false;
-        unit.speedModifier = 0.2; // 70% slow
+        unit.baseSpeedModifier = 0.2; // 80% slow from Tesla
+        updateUnitSpeedModifier(unit); // Combine with health modifier
     } else if (unit.teslaDisabledUntil && now >= unit.teslaDisabledUntil) {
         unit.canFire = true;
-        unit.speedModifier = 1;
+        unit.baseSpeedModifier = 1.0; // Remove Tesla slow effect
+        updateUnitSpeedModifier(unit); // Recalculate with health modifier
         unit.teslaDisabledUntil = null;
         unit.teslaSlowUntil = null;
         unit.teslaSlowed = false;

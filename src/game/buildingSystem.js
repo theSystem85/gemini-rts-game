@@ -5,6 +5,7 @@ import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
+import { updateUnitSpeedModifier } from '../utils.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -365,10 +366,12 @@ export function updateTeslaCoilEffects(units) {
   for (const unit of units) {
     if (unit.teslaDisabledUntil && now < unit.teslaDisabledUntil) {
       unit.canFire = false
-      unit.speedModifier = 0.2 // 70% slow
+      unit.baseSpeedModifier = 0.2 // 80% slow from Tesla
+      updateUnitSpeedModifier(unit) // Combine with health modifier
     } else if (unit.teslaDisabledUntil && now >= unit.teslaDisabledUntil) {
       unit.canFire = true
-      unit.speedModifier = 1
+      unit.baseSpeedModifier = 1.0 // Remove Tesla slow effect
+      updateUnitSpeedModifier(unit) // Recalculate with health modifier
       unit.teslaDisabledUntil = null
       unit.teslaSlowUntil = null
       unit.teslaSlowed = false

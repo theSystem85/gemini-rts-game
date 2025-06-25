@@ -5,6 +5,7 @@ import { playSound } from '../sound.js'
 import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
 import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
+import { updateUnitSpeedModifier } from '../utils.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -120,6 +121,9 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             } else {
               unit.health -= actualDamage
             }
+            
+            // Update speed modifier based on new health level
+            updateUnitSpeedModifier(unit)
           }
 
           // Play critical damage sound for rear hits on tanks (with cooldown)

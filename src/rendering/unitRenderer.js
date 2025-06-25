@@ -212,8 +212,13 @@ export class UnitRenderer {
     ctx.strokeStyle = '#000'
     ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
 
-    // Use party colors for health bar fill
-    ctx.fillStyle = PARTY_COLORS[unit.owner] || PARTY_COLORS.player
+    // Use red color for critically damaged units (below 25% health when speed penalty kicks in)
+    // Otherwise use party colors for health bar fill
+    if (unitHealthRatio < 0.25) {
+      ctx.fillStyle = '#FF0000' // Red for critical health
+    } else {
+      ctx.fillStyle = PARTY_COLORS[unit.owner] || PARTY_COLORS.player
+    }
     ctx.fillRect(healthBarX, healthBarY, healthBarWidth * unitHealthRatio, healthBarHeight)
   }
 

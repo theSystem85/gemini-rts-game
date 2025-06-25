@@ -7,6 +7,7 @@ import { buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
+import { updateUnitSpeedModifier } from './utils.js'
 
 export let explosions = [] // Global explosion effects for rocket impacts
 
@@ -59,6 +60,9 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       }
       
       unit.health -= actualDamage
+      
+      // Update speed modifier based on new health level
+      updateUnitSpeedModifier(unit)
       
       // Track when units are being attacked for AI response
       if (shooter && shooter.owner !== unit.owner) {
