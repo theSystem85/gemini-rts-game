@@ -1,5 +1,5 @@
 // unitMovement.js - Handles all unit movement logic
-import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD } from '../config.js'
+import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
@@ -82,12 +82,30 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
       // Use tank range if tank, otherwise default to 6 tiles
       const ATTACK_RANGE = (unit.type && unit.type.startsWith('tank')) ? 9 * TILE_SIZE : 6 * TILE_SIZE
       if (distToTarget > ATTACK_RANGE) {
-        // Only update if not already moving to target
+        // Only update if not already moving to target and throttle attack pathfinding to 3 seconds
         const targetTileX = unit.target.tileX !== undefined ? Math.floor(unit.target.x / TILE_SIZE) : unit.target.x
         const targetTileY = unit.target.tileY !== undefined ? Math.floor(unit.target.y / TILE_SIZE) : unit.target.y
-        if (!unit.moveTarget || Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE || Math.abs(unit.moveTarget.y - targetCenterY) > TILE_SIZE) {
+        const shouldRecalculatePath = !unit.moveTarget || 
+          Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE || 
+          Math.abs(unit.moveTarget.y - targetCenterY) > TILE_SIZE
+        const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
+        
+        if (shouldRecalculatePath && pathRecalcNeeded) {
           unit.moveTarget = { x: targetCenterX, y: targetCenterY }
-          unit.path = [{ x: targetTileX, y: targetTileY }]
+          unit.lastAttackPathCalcTime = now
+          // Use proper pathfinding with occupancy map for attack movement
+          const occupancyMap = buildOccupancyMap(units, mapGrid)
+          const path = findPath(
+            { x: unit.tileX, y: unit.tileY },
+            { x: targetTileX, y: targetTileY },
+            mapGrid,
+            occupancyMap
+          )
+          if (path.length > 1) {
+            unit.path = path.slice(1)
+          } else {
+            unit.path = [{ x: targetTileX, y: targetTileY }]
+          }
         }
       } else {
         // In range, stop moving
@@ -145,10 +163,13 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
         // Compute distance to decide pathfinding strategy
         const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY)
 
-        // Use occupancy map for close range, ignore for long distance
-        const newPath = distance > PATHFINDING_THRESHOLD
-          ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
-          : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
+        // Always use occupancy map for units with targets (attack mode) or attack queues (AGF mode) to prevent moving over occupied tiles
+        // For regular movement commands, use occupancy map for close range, ignore for long distance
+        const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
+        const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
+        const newPath = useOccupancyMap
+          ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
+          : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
 
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)

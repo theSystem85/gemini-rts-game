@@ -326,8 +326,10 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] Ensure on map generation there is no ore overlapping with buildings.
 - [ ] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
-- [ ] When in attack mode unit do currently not respect the occupancy map.
+- [x] When in attack mode unit do currently not respect the occupancy map.
+- [x] Ensure for every attacking and chasing unit that the pathfinding is not updated more often than every 3s to improve performance.
 - [ ] Tanks are not accelerating or decelerating anymore. Make sure they do before reaching max speed. 
 - [x] all selected units try to go to the same tile when commanded to move. That causes them to get stuck there and dodge around instead of standing still. Make sure when a group is commanded to move that all units get different nearby tiles to move to.
 - [x] Ensure that ore does not grow on occupant tiles. (Currently is is grows on and into rocks and buildings). It should only be on plain grass and street tiles that are unoccupied by buildings or anything else.

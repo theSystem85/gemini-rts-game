@@ -1,5 +1,5 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
 import { playSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath, buildOccupancyMap } from '../units.js'
@@ -121,8 +121,8 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
         stopUnitMovement(unit);
         
     } else if (distance > chaseThreshold && !unit.isRetreating) {
-        // Only create new path if cooldown has passed
-        if (!unit.lastPathTime || now - unit.lastPathTime > 1000) {
+        // Only create new path if attack path cooldown has passed (3 seconds)
+        if (!unit.lastAttackPathCalcTime || now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL) {
             if (!unit.path || unit.path.length === 0) {
                 const path = findPath(
                     { x: unit.tileX, y: unit.tileY },
@@ -133,7 +133,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
                 if (path.length > 1) {
                     unit.path = path.slice(1);
                     unit.moveTarget = { x: targetTileX, y: targetTileY }; // Set movement target for green indicator
-                    unit.lastPathTime = now;
+                    unit.lastAttackPathCalcTime = now;
                 }
             }
         }
@@ -333,7 +333,7 @@ function handleTeslaEffects(unit, now) {
 /**
  * Process attack queue for units with multiple targets
  */
-function processAttackQueue(unit, units) {
+function processAttackQueue(unit, units, mapGrid) {
   // Don't process attack queue during retreat
   if (unit.isRetreating) {
     return
@@ -354,12 +354,49 @@ function processAttackQueue(unit, units) {
     return
   }
   
+  // Helper function to initiate pathfinding to new target
+  function setNewTargetWithPath(newTarget) {
+    const oldTarget = unit.target
+    unit.target = newTarget
+    
+    // Only recalculate path if target actually changed and not already moving to it
+    if (oldTarget !== newTarget) {
+      // Clear existing movement data when switching to new target
+      unit.path = []
+      unit.moveTarget = null
+      
+      // Immediately calculate new path with occupancy map for attack movement
+      if (mapGrid) {
+        const occupancyMap = buildOccupancyMap(units, mapGrid)
+        
+        // Calculate target position
+        let targetTileX, targetTileY
+        if (newTarget.tileX !== undefined) {
+          targetTileX = Math.floor(newTarget.x / TILE_SIZE)
+          targetTileY = Math.floor(newTarget.y / TILE_SIZE)
+        } else {
+          targetTileX = newTarget.x
+          targetTileY = newTarget.y
+        }
+        
+        // Calculate path to new target
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY },
+          { x: targetTileX, y: targetTileY },
+          mapGrid,
+          occupancyMap
+        )
+        
+        if (path.length > 1) {
+          unit.path = path.slice(1)
+        }
+      }
+    }
+  }
+  
   // If current target is dead/invalid or we don't have a target, set the first target from queue
   if (!unit.target || unit.target.health <= 0) {
-    unit.target = unit.attackQueue[0]
-    // Clear existing movement data when switching to new target
-    unit.path = []
-    unit.moveTarget = null
+    setNewTargetWithPath(unit.attackQueue[0])
   }
   
   // If current target is destroyed and it was in our queue, remove it and advance
@@ -369,10 +406,7 @@ function processAttackQueue(unit, units) {
     
     // Set next target if available
     if (unit.attackQueue.length > 0) {
-      unit.target = unit.attackQueue[0]
-      // Clear existing movement data when switching to new target
-      unit.path = []
-      unit.moveTarget = null
+      setNewTargetWithPath(unit.attackQueue[0])
     } else {
       unit.attackQueue = null
       unit.target = null
@@ -416,7 +450,7 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
     handleTeslaEffects(unit, now);
 
     // Process attack queue for units with queued targets
-    processAttackQueue(unit, units);
+    processAttackQueue(unit, units, mapGrid);
 
     // Combat logic for different unit types
     if (unit.type === 'tank' || unit.type === 'tank_v1') {

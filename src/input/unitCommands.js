@@ -1,6 +1,6 @@
 // unitCommands.js
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
-import { findPath } from '../units.js'
+import { findPath, buildOccupancyMap } from '../units.js'
 import { playSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { cancelRetreatForUnits } from '../behaviours/retreat.js'
@@ -167,7 +167,7 @@ export class UnitCommandsHandler {
       }
 
       // Find path to the target position, always respect occupancy map (including in attack mode)
-      const occupancyMap = gameState.units ? require('../units.js').buildOccupancyMap(gameState.units, mapGrid) : null
+      const occupancyMap = gameState.units ? buildOccupancyMap(gameState.units, mapGrid) : null
       const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, occupancyMap)
 
       if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {

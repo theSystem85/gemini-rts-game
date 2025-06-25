@@ -1,5 +1,5 @@
 // enemy.js
-import { TILE_SIZE, TANK_FIRE_RANGE } from './config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from './config.js'
 import { findPath, buildOccupancyMap } from './units.js'
 import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
@@ -465,11 +465,13 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           }
           unit.moveTarget = targetPos
           if (!unit.isDodging && targetPos) {
+            // Use occupancy map in attack mode to prevent moving through occupied tiles
+            const occupancyMap = buildOccupancyMap(units, mapGrid)
             const path = findPath(
               { x: unit.tileX, y: unit.tileY },
               targetPos,
               mapGrid,
-              null
+              occupancyMap
             )
             if (path.length > 1) {
               unit.path = path.slice(1)
@@ -479,8 +481,8 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
         }
       }
 
-      // Path recalculation throttled to every 2 seconds
-      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > 2000)
+      // Path recalculation throttled to every 3 seconds for attack/chase movement
+      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
       if (pathRecalcNeeded && !unit.isDodging && unit.target && (!unit.path || unit.path.length < 3)) {
         let targetPos = null
         if (unit.target.tileX !== undefined) {
@@ -488,11 +490,13 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
         } else {
           targetPos = { x: unit.target.x, y: unit.target.y }
         }
+        // Use occupancy map in attack mode to prevent moving through occupied tiles
+        const occupancyMap = buildOccupancyMap(units, mapGrid)
         const path = findPath(
           { x: unit.tileX, y: unit.tileY },
           targetPos,
           mapGrid,
-          null
+          occupancyMap
         )
         if (path.length > 1) {
           unit.path = path.slice(1)
@@ -610,11 +614,13 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
               const tileType = mapGrid[destTileY][destTileX].type
               const hasBuilding = mapGrid[destTileY][destTileX].building
               if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
+                // Use occupancy map for tactical retreat movement to avoid moving through units
+                const occupancyMap = buildOccupancyMap(units, mapGrid)
                 const newPath = findPath(
                   { x: unit.tileX, y: unit.tileY },
                   { x: destTileX, y: destTileY },
                   mapGrid,
-                  null
+                  occupancyMap
                 )
                 if (newPath.length > 1) {
                   unit.path = newPath.slice(1)
