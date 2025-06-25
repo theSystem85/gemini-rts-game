@@ -71,6 +71,16 @@ export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
 export const TANK_BULLET_SPEED = 8 // Radians per frame
 
+// Hit zone damage multipliers for tanks
+export const HIT_ZONE_DAMAGE_MULTIPLIERS = {
+  FRONT: 1.0,   // Normal damage from front
+  SIDE: 1.25,    // 30% more damage from sides
+  REAR: 1.5     // 100% more damage from behind (critical hit)
+}
+
+// Critical damage sound cooldown (30 seconds)
+export const CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
+
 // Separate rotation rates for tank components
 export const TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
 export const TANK_TURRET_ROT = 0.08 // Radians per frame for turret aiming (slightly faster)

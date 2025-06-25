@@ -11,6 +11,7 @@ import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.j
 import { updateHarvesterLogic } from './game/harvesterLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
+import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { 
   updateMapScrolling, 
   updateOreSpread, 
@@ -82,6 +83,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // Cleanup destroyed factories
     cleanupDestroyedFactories(factories, mapGrid, gameState)
+
+    // Cleanup sound cooldowns for destroyed units
+    cleanupSoundCooldowns(units)
 
     // Check for game end conditions after factory/building destruction
     checkGameEndConditions(factories, gameState)

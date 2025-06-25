@@ -5,6 +5,8 @@ import {
 import { gameState } from './gameState.js'
 import { buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
+import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
+import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
 
 export let explosions = [] // Global explosion effects for rocket impacts
 
@@ -34,7 +36,21 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
     if (distance < explosionRadius) {
       if (shooter && unit.id === shooter.id) return
       const falloff = 1 - (distance / explosionRadius)
-      const damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
+      let damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
+      
+      // Apply hit zone damage multiplier for tanks (simulate explosion hitting from all directions)
+      // For explosions, we'll create a mock bullet object at explosion center for calculation
+      if (shooter) {
+        const mockBullet = { x: x, y: y, shooter: shooter }
+        const hitZoneResult = calculateHitZoneDamageMultiplier(mockBullet, unit)
+        damage = Math.round(damage * hitZoneResult.multiplier)
+        
+        // Play critical damage sound for rear hits on tanks (with cooldown)
+        if (hitZoneResult.isRearHit && canPlayCriticalDamageSound(unit, now)) {
+          playSound('criticalDamage', 0.7)
+          recordCriticalDamageSoundPlayed(unit, now)
+        }
+      }
       
       // Check for god mode protection
       let actualDamage = damage

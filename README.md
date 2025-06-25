@@ -237,20 +237,20 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 ## Improvements
 - [ ] Refine the coloring of the power bar and its logic on impacting the production.
 - [ ] The selection indicator for units should only be visible at the conrers (like with buildings).
+- [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
+- [ ] only show health bars if units or buildings are damaged
+- [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
+- [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
 - [x] Make the box that indicates a selection around a building only 2px wide and only show it at the corners not the entire edges.
 - [x] The health bar for player's own units and buildings as well as the one for the enemies should only be visible if those units/buildings are damaged or selected.
 - [x] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
 - [x] cut out the images for the buildings to be rendered on the map so that the background tiles around are merging with the building. Make sure to use transparency for those images.
 - [x] Make sure every unit factory has its own individual assembly point that can be set by selecting the factory and then right clicking on the map. This will replace the current mechanism where the building factory is selected to define the assembly point. Whenever a factory gets selected their assembly points get visible otherwise they are hidden.
-- [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
 - [x] Make sure the tanks (and turrets) when they fire have:
   - [x] (1) a recoil animation on their gun.
   - [x] (2) a muzzle flash animation
-- [ ] only show health bars if units or buildings are damaged
-- [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [x] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
-- [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] Tanks movement speed should be 50% higher in general.
 - [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
 - [x] The tesla coil should make little damage to the target.
@@ -263,9 +263,21 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
-- [x] When units are selected and the "s" key is pressed then they stop attacking. When no units are selected then the s key triggers the sell mode on/off.
+- [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
+- [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
+- [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
+- [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
-- [ ] Make sure tanks have hit zone damage multipliers: when hit from behind the damage is 2.0. When hit from front the damage is 1.0 and from the side it is 1.3.
+- [ ] Add 3 star level system for any combat unit (all units but harvesters). Every unit starts at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
+- [ ] Add meaning to the level system so:
+  - **Level 1:** means that units will use the aim ahead feature
+  - **Level 2:** means that units will use the dodge feature
+  - **Level 3:** means that units will repair themselves when not moving by 1% every 3 seconds.
+- [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
+- [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
+- [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+- [x] When units are selected and the "s" key is pressed then they stop attacking. When no units are selected then the s key triggers the sell mode on/off.
+- [x] Make sure tanks have hit zone damage multipliers: when hit from behind the damage is 2.0. When hit from front the damage is 1.0 and from the side it is 1.3.
 - [x] When commanding a group of units to move to one spot make sure that every unit gets a different tile to move to assigned. Also make sure that the targetted tiles are highlighted by some green semi-transparent triangle (upside down like the one for the AGF but in green). Whenever a unit gets selected again make sure to show that indicator again on the map IF that unit is moving (also ensure the same holds for the AGF attacking indicator)
   ✅ Red indicators for normal attacks (only when attacker is selected)
   ✅ Green indicators for movement targets (only when unit is selected)
@@ -282,19 +294,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
   - [x] (3) when the wagon rotates the turret should also rotate in the same way BUT only if the turret is aiming at some thing then it will rotate independently from the wagon to keep aiming at the target.
   - [x] (4) The orientation of the wagon is by default in the image asset facing down (to bottom). Same for the gun barrel and the turret. Make sure that the driving direction in the game is aligned with the facing of the wagon. If tank drives from top to bottom then the wagon should face also to the bottom.
 - [x] Support up to 4 parties in a game. Each player starts in one corner. One party can be played by human player. The others by AI (or later via network by ohter humans -> keep the interface abstract to upport AI and other humans). Define a set of 4 Colors that can identify each party. Add a number input to the end of the sidebar to define the number of players (label: "Players") on the map. Whenever the map is newly generated it will affect the map creation but not instantly. Make sure each AI player is attacking any player on the map (there is no teams feature yet, will come later). Make sure the map creation process is influenced by the number of players (regarding the direction of streets and ore spots)
-- [ ] When units are below 25% health they start to move with 50% of the speed of normal units.
-- [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
-- [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
-- [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [x] Make a dedicated sound for attacking confirmation
-- [ ] Add 3 star level system for any combat unit (all units but harvesters). Every unit start at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar.
-- [ ] Add meaning to the level system so:
-  - **Level 1:** means that units will use the aim ahead feature
-  - **Level 2:** means that units will use the dodge feature
-  - **Level 3:** means that units will repair themselves when not moving by 1% every 3 seconds.
-- [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
-- [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
-- [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
 - [x] Add tank_v3 to the build menu. tank_v3 can all what tank_v2 can do but add the aim ahead feature so it takes the speed and direction of a moving target into account when fireing at it to increase the likelyhood of a direct hit. It costs 3000$ and has 30% more health than tank_v2.
 - [x] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
 - [x] Implement an attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box (displayed in red) around the enemy units to be attacked. Then all those units will be attacked one after another. All units to be attacked will then have a small semi transparent slightly bouncing red triangle above the health bar to indicate that they are being attacked. Make any unit in ADF mode will leave that mode when commanded to do sth. else (including another AGF mode).

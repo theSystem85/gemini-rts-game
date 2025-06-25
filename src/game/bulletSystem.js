@@ -3,6 +3,8 @@ import { TILE_SIZE, BULLET_DAMAGES } from '../config.js'
 import { triggerExplosion } from '../logic.js'
 import { playSound } from '../sound.js'
 import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
+import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
+import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -98,9 +100,12 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
     if (bullet.active && units && units.length > 0) {
       for (const unit of units) {
         if (unit.health > 0 && checkUnitCollision(bullet, unit)) {
-          // Apply damage with some randomization
+          // Calculate hit zone damage multiplier for tanks
+          const hitZoneResult = calculateHitZoneDamageMultiplier(bullet, unit)
+          
+          // Apply damage with some randomization and hit zone multiplier
           const damageMultiplier = 0.8 + Math.random() * 0.4
-          let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+          let actualDamage = Math.round(bullet.baseDamage * damageMultiplier * hitZoneResult.multiplier)
           
           // Check for god mode protection
           if (window.cheatSystem) {
@@ -115,6 +120,12 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             } else {
               unit.health -= actualDamage
             }
+          }
+
+          // Play critical damage sound for rear hits on tanks (with cooldown)
+          if (hitZoneResult.isRearHit && canPlayCriticalDamageSound(unit, now)) {
+            playSound('criticalDamage', 0.7)
+            recordCriticalDamageSoundPlayed(unit, now)
           }
 
           // Track when units are being attacked for AI response

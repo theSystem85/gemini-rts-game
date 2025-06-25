@@ -76,6 +76,7 @@ const soundMapping = {
   enemyBuildingDestroyed: 'enemyBuildingDestroyed', // New enemy building destruction sound
   teslacoil_loading: 'teslacoil_loading',
   teslacoil_firing: 'teslacoil_firing',
+  criticalDamage: 'criticalDamage', // Critical damage sound for rear hits
   // New battle and player defeat sounds
   battleWon: 'battleWon',
   battleLost: 'battleLost',
@@ -108,6 +109,7 @@ const soundFiles = {
   enemyBuildingDestroyed: ['enemy_building_destroyed.mp3'], // New enemy building destruction sound
   teslacoil_loading: ['teslacoil_loading.mp3'],
   teslacoil_firing: ['teslacoil_firing.mp3'],
+  criticalDamage: ['critical_damage.mp3'], // Critical damage sound for rear hits
   // New battle and player defeat sounds
   battleWon: ['battleWon.mp3'],
   battleLost: ['battleLost.mp3'],
