@@ -64,6 +64,28 @@ function applyTargetingSpread(targetX, targetY, projectileType) {
  * Common combat logic helper - handles movement and pathfinding
  */
 function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, mapGrid) {
+    // Skip movement handling if unit is retreating (retreat behavior handles movement)
+    if (unit.isRetreating) {
+        // Still calculate distance for firing decisions
+        const unitCenterX = unit.x + TILE_SIZE / 2;
+        const unitCenterY = unit.y + TILE_SIZE / 2;
+        
+        let targetCenterX, targetCenterY;
+        
+        if (target.tileX !== undefined) {
+            // Target is a unit
+            targetCenterX = target.x + TILE_SIZE / 2;
+            targetCenterY = target.y + TILE_SIZE / 2;
+        } else {
+            // Target is a building
+            targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2;
+            targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2;
+        }
+        
+        const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+        return { distance, targetCenterX, targetCenterY };
+    }
+    
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
@@ -86,7 +108,8 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
     const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
     
     // Combat movement logic - stop and attack if in range
-    if (distance <= TANK_FIRE_RANGE * TILE_SIZE) {
+    // Exception: Don't stop movement if unit is retreating
+    if (distance <= TANK_FIRE_RANGE * TILE_SIZE && !unit.isRetreating) {
         // In firing range - stop all movement and clear path
         if (unit.path && unit.path.length > 0) {
             unit.path = []; // Clear path to stop movement when in range
@@ -95,7 +118,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
         // Force stop using unified movement system
         stopUnitMovement(unit);
         
-    } else if (distance > chaseThreshold) {
+    } else if (distance > chaseThreshold && !unit.isRetreating) {
         // Only create new path if cooldown has passed
         if (!unit.lastPathTime || now - unit.lastPathTime > 1000) {
             if (!unit.path || unit.path.length === 0) {
@@ -307,6 +330,11 @@ function handleTeslaEffects(unit, now) {
  * Process attack queue for units with multiple targets
  */
 function processAttackQueue(unit, units) {
+  // Don't process attack queue during retreat
+  if (unit.isRetreating) {
+    return
+  }
+
   // Only process if unit has an attack queue
   if (!unit.attackQueue || unit.attackQueue.length === 0) {
     return
@@ -425,7 +453,8 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
  */
 function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
   // Alert mode: automatically scan for targets when no target is assigned
-  if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0)) {
+  // Skip alert mode if unit is retreating
+  if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0) && !unit.isRetreating) {
     const ALERT_SCAN_RANGE = TANK_FIRE_RANGE * TILE_SIZE;
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;

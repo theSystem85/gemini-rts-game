@@ -3,6 +3,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
 import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
 import { gameState } from '../gameState.js'
+import { cancelRetreatForUnits } from '../behaviours/retreat.js'
 
 export class UnitCommandsHandler {
   
@@ -23,6 +24,9 @@ export class UnitCommandsHandler {
   handleMovementCommand(selectedUnits, targetX, targetY, mapGrid) {
     // Clear attack group feature state when issuing movement commands
     this.clearAttackGroupState(selectedUnits)
+    
+    // Cancel retreat for all selected units when issuing movement commands
+    cancelRetreatForUnits(selectedUnits)
     
     const count = selectedUnits.length
     const cols = Math.ceil(Math.sqrt(count))
@@ -119,6 +123,9 @@ export class UnitCommandsHandler {
       this.clearAttackGroupState(selectedUnits)
     }
     
+    // Cancel retreat for all selected units when issuing attack commands
+    cancelRetreatForUnits(selectedUnits)
+    
     // Semicircle formation logic for attack
     const count = selectedUnits.length
     
@@ -133,6 +140,9 @@ export class UnitCommandsHandler {
     const formationPositions = this.calculateSemicircleFormation(selectedUnits, target, safeAttackDistance)
 
     selectedUnits.forEach((unit, index) => {
+      // Reset firing capability when issuing attack commands (in case it was disabled during retreat)
+      unit.canFire = true
+      
       const position = formationPositions[index]
       
       // Ensure position is within safe distance

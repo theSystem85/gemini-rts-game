@@ -4,6 +4,7 @@ import { gameState } from '../gameState.js'
 import { units } from '../main.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
+import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
 
 export class MouseHandler {
   constructor() {
@@ -713,8 +714,14 @@ export class MouseHandler {
       this.updateAGFCapability(selectedUnits)
     } else {
       // No unit clicked - handle as movement command if units are selected and not in special modes
-      if (selectedUnits.length > 0 && !e.shiftKey && !e.ctrlKey && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
-        this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+      if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+        if (e.shiftKey) {
+          // Shift+Click: Initiate retreat behavior for combat units
+          initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
+        } else if (!e.ctrlKey) {
+          // Normal command (not Ctrl+Click which is force attack)
+          this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+        }
       }
     }
   }

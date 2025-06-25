@@ -5,6 +5,7 @@ import { findPath, buildOccupancyMap } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
 import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
+import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
 
 /**
  * Updates unit movement, pathfinding, and formation handling
@@ -51,9 +52,48 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
       unit.dodgeEndTime = null
     }
 
+    // Handle retreat behavior
+    if (shouldExitRetreat(unit, now)) {
+      cancelRetreat(unit)
+    }
+
+    // Update retreat behavior
+    updateRetreatBehavior(unit, now, mapGrid, units)
+
     // Clear targets that are destroyed
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null
+    }
+
+    // --- ATTACK-MOVE FIX: If not retreating, and has a target, and is out of range, set moveTarget/path to target ---
+    if (!unit.isRetreating && unit.target && unit.target.health > 0) {
+      // Calculate distance to target center
+      let targetCenterX, targetCenterY
+      if (unit.target.tileX !== undefined) {
+        targetCenterX = unit.target.x + TILE_SIZE / 2
+        targetCenterY = unit.target.y + TILE_SIZE / 2
+      } else {
+        targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+        targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+      }
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      const distToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+      // Use tank range if tank, otherwise default to 6 tiles
+      const ATTACK_RANGE = (unit.type && unit.type.startsWith('tank')) ? 9 * TILE_SIZE : 6 * TILE_SIZE
+      if (distToTarget > ATTACK_RANGE) {
+        // Only update if not already moving to target
+        const targetTileX = unit.target.tileX !== undefined ? Math.floor(unit.target.x / TILE_SIZE) : unit.target.x
+        const targetTileY = unit.target.tileY !== undefined ? Math.floor(unit.target.y / TILE_SIZE) : unit.target.y
+        if (!unit.moveTarget || Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE || Math.abs(unit.moveTarget.y - targetCenterY) > TILE_SIZE) {
+          unit.moveTarget = { x: targetCenterX, y: targetCenterY }
+          unit.path = [{ x: targetTileX, y: targetTileY }]
+        }
+      } else {
+        // In range, stop moving
+        unit.moveTarget = null
+        unit.path = []
+      }
     }
 
     // Apply speed modifiers
@@ -175,33 +215,30 @@ function updateUnitRotation(unit, now) {
   let bodyNeedsRotation = false
   let bodyTargetDirection = unit.direction
 
-  // Update body direction for movement first
-  if (unit.path && unit.path.length > 0) {
+  // Determine body's target direction
+  if (unit.isRetreating && unit.targetDirection !== undefined) {
+    // For retreat, the target direction is explicitly set by the retreat behavior.
+    bodyTargetDirection = unit.targetDirection
+  } else if (unit.path && unit.path.length > 0) {
+    // For normal movement, face the next tile in the path.
     const nextTile = unit.path[0]
-    
     if (nextTile && !(nextTile.x < 0 || nextTile.x >= 100 || nextTile.y < 0 || nextTile.y >= 100)) {
       const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
       const dx = targetPos.x - unit.x
       const dy = targetPos.y - unit.y
-
-      // Calculate target direction angle for the tank body
       bodyTargetDirection = Math.atan2(dy, dx)
-      unit.targetDirection = bodyTargetDirection
-
-      // Check if we need to rotate
-      const angleDifference = angleDiff(unit.direction, bodyTargetDirection)
-
-      if (angleDifference > 0.05) { // Allow small threshold to avoid jitter
-        unit.isRotating = true
-        bodyNeedsRotation = true
-        // Smoothly rotate towards the target direction using wagon rotation speed
-        unit.direction = smoothRotateTowardsAngle(unit.direction, bodyTargetDirection, unit.rotationSpeed)
-      } else {
-        unit.isRotating = false
-        bodyNeedsRotation = false
-      }
     }
   }
+
+  // Rotate the body if needed
+  const angleDifference = angleDiff(unit.direction, bodyTargetDirection)
+  if (Math.abs(angleDifference) > 0.05) { // Small threshold to avoid jitter
+    bodyNeedsRotation = true
+    unit.direction = smoothRotateTowardsAngle(unit.direction, bodyTargetDirection, unit.rotationSpeed)
+  } else {
+    bodyNeedsRotation = false
+  }
+  unit.isRotating = bodyNeedsRotation
 
   // Update turret direction for tanks (after body direction is updated)
   if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
@@ -252,6 +289,12 @@ function updateUnitRotation(unit, now) {
     }
   }
 
-  // Set movement restriction flag - tanks should only move when body rotation is complete
-  unit.canAccelerate = !bodyNeedsRotation
+  // Set movement restriction flag
+  if (unit.isRetreating) {
+    // For retreating units, `unit.canAccelerate` is managed exclusively by `updateRetreatBehavior`.
+    // We don't touch it here, allowing the retreat logic to control movement.
+  } else {
+    // For normal movement, only accelerate if facing the right way.
+    unit.canAccelerate = !bodyNeedsRotation
+  }
 }

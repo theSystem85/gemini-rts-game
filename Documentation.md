@@ -253,3 +253,19 @@ tankRecoilDebug.test()
 - **270°**: Recoil goes perpendicular (right side of turret direction)
 
 The correct value should make the recoil go opposite to the firing direction regardless of where the target is relative to your tank.
+
+---
+
+## Tactical Retreat System (Tank Units)
+
+The tactical retreat system for tanks is designed for precise, realistic, and responsive retreat maneuvers. The process is as follows:
+
+1. **Retreat Point Established:** The clicked destination becomes the exact retreat point for each selected tank.
+2. **Optimal Path Selection:** Each tank independently determines the most efficient way to move to the retreat point—either forwards or backwards. This decision is based on whichever direction (front or back) requires less rotation to face the retreat point.
+3. **Rotation Before Movement:** The tank's body (wagon) must first rotate on the spot until it is perfectly aligned with the retreat point.
+    - If moving forwards, the front of the tank will point directly at the retreat point.
+    - If moving backwards, the rear of the tank will point directly at the retreat point.
+    - Crucially, the tank must not begin moving along its path until this rotation is complete.
+4. **Direct, Axis-Aligned Movement:** Once correctly oriented, the tank moves in a straight line to the retreat point without any deviation or pathfinding. Movement is strictly along the tank's longitudinal axis.
+5. **Combat Readiness:** While retreating, the tank's turret remains independent and will continue to track and fire upon its designated target if it remains in range.
+6. **Arrival and Completion:** The tank stops precisely at the retreat point, and its retreat state is cleared, awaiting new orders.

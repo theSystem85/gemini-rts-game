@@ -6,6 +6,7 @@ import { FactoryRenderer } from './factoryRenderer.js'
 import { UnitRenderer } from './unitRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
 import { MovementTargetRenderer } from './movementTargetRenderer.js'
+import { RetreatTargetRenderer } from './retreatTargetRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
@@ -23,6 +24,7 @@ export class Renderer {
     this.uiRenderer = new UIRenderer()
     this.minimapRenderer = new MinimapRenderer()
     this.movementTargetRenderer = new MovementTargetRenderer()
+    this.retreatTargetRenderer = new RetreatTargetRenderer()
     this.harvesterHUD = new HarvesterHUD()
   }
 
@@ -87,6 +89,9 @@ export class Renderer {
     
     // Render movement target indicators (green triangles)
     this.movementTargetRenderer.render(gameCtx, units, scrollOffset)
+    
+    // Render retreat target indicators (orange circles)
+    this.retreatTargetRenderer.renderRetreatTargets(gameCtx, units, scrollOffset)
     
     // Render harvester HUD overlay (if enabled)
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)

@@ -72,13 +72,63 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       const dirX = dx / distance;
       const dirY = dy / distance;
       
-      // Set target velocity
-      movement.targetVelocity.x = dirX * effectiveMaxSpeed;
-      movement.targetVelocity.y = dirY * effectiveMaxSpeed;
-      movement.isMoving = true;
-      
-      // Calculate target rotation based on movement direction
-      movement.targetRotation = Math.atan2(dy, dx);
+      // Handle retreat movement differently to prevent sliding while still following path
+      if (unit.isRetreating) {
+        const currentDirection = unit.direction || 0;
+        
+        if (unit.isMovingBackwards) {
+          // Moving backwards: Calculate if we need to go forward or backward along tank axis
+          // to get closer to the next waypoint
+          const forwardX = Math.cos(currentDirection);
+          const forwardY = Math.sin(currentDirection);
+          
+          // Dot product to determine if we should go forward or backward along tank axis
+          const dotProduct = (dirX * forwardX) + (dirY * forwardY);
+          
+          if (dotProduct > 0) {
+            // Path direction aligns with tank forward direction - move forward
+            movement.targetVelocity.x = forwardX * effectiveMaxSpeed;
+            movement.targetVelocity.y = forwardY * effectiveMaxSpeed;
+          } else {
+            // Path direction opposes tank forward direction - move backward
+            movement.targetVelocity.x = -forwardX * effectiveMaxSpeed;
+            movement.targetVelocity.y = -forwardY * effectiveMaxSpeed;
+          }
+          
+          movement.isMoving = true;
+          // Don't change rotation during backward movement strategy
+          movement.targetRotation = currentDirection;
+        } else {
+          // Moving forwards during retreat: normal pathfinding but along tank axis
+          const targetDirection = unit.retreatTargetDirection || Math.atan2(dy, dx);
+          const rotationDiff = Math.abs(normalizeAngle(targetDirection - currentDirection));
+          
+          if (rotationDiff < 0.1) {
+            // Oriented correctly, move forward along tank's axis towards path
+            const forwardX = Math.cos(currentDirection);
+            const forwardY = Math.sin(currentDirection);
+            
+            movement.targetVelocity.x = forwardX * effectiveMaxSpeed;
+            movement.targetVelocity.y = forwardY * effectiveMaxSpeed;
+            movement.isMoving = true;
+          } else {
+            // Still rotating, don't move yet
+            movement.targetVelocity.x = 0;
+            movement.targetVelocity.y = 0;
+            movement.isMoving = false;
+          }
+          
+          movement.targetRotation = targetDirection;
+        }
+      } else {
+        // Normal movement (not retreating)
+        movement.targetVelocity.x = dirX * effectiveMaxSpeed;
+        movement.targetVelocity.y = dirY * effectiveMaxSpeed;
+        movement.isMoving = true;
+        
+        // Calculate target rotation based on movement direction
+        movement.targetRotation = Math.atan2(dy, dx);
+      }
     }
   } else {
     // No path - decelerate to stop
@@ -95,9 +145,16 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   
   // Only apply movement if rotation is close to target (realistic tank movement)
   // For tanks, check if they can accelerate (body rotation complete)
+  // Exception: Allow retreat movement with special handling
   let canMove = true;
   if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
-    canMove = unit.canAccelerate !== false; // Allow movement if canAccelerate is not explicitly false
+    if (unit.isRetreating) {
+      // During retreat, movement is controlled by retreat behavior's canAccelerate flag
+      canMove = unit.canAccelerate !== false;
+    } else {
+      // Normal movement - require proper rotation
+      canMove = unit.canAccelerate !== false;
+    }
   } else {
     const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation));
     canMove = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
