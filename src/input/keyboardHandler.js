@@ -216,6 +216,12 @@ export class KeyboardHandler {
   }
 
   handleSellMode() {
+    // If units are selected, stop their attacks instead of toggling sell mode
+    if (this.selectedUnits && this.selectedUnits.length > 0) {
+      this.handleStopAttacking()
+      return
+    }
+
     const gameCanvas = document.getElementById('gameCanvas')
     
     // If not in sell mode, toggle it
@@ -557,6 +563,40 @@ export class KeyboardHandler {
   // Method to clean up destroyed units from cheat tracking
   cleanupDestroyedUnitFromCheat(unitId) {
     this.cheatSystem.cleanupDestroyedUnit(unitId)
+  }
+
+  handleStopAttacking() {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showNotification('No units selected to stop attacking', 2000)
+      return
+    }
+
+    let stoppedCount = 0
+    
+    // Stop attacking for all selected units
+    this.selectedUnits.forEach(unit => {
+      // Clear current attack target
+      if (unit.target) {
+        unit.target = null
+        stoppedCount++
+      }
+      
+      // Clear attack queue if it exists  
+      if (unit.attackQueue) {
+        unit.attackQueue = []
+      }
+      
+      // Clear any attack group targets
+      if (unit.attackGroupTargets) {
+        unit.attackGroupTargets = []
+      }
+    })
+
+    if (stoppedCount > 0) {
+      this.showNotification(`${stoppedCount} unit${stoppedCount > 1 ? 's' : ''} stopped attacking`, 2000)
+    } else {
+      this.showNotification('Selected units were not attacking', 2000)
+    }
   }
 
   showNotification(message, duration = 2000) {
