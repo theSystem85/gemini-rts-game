@@ -59,7 +59,7 @@ export const buildingData = {
     // Add combat properties
     fireRange: 10, // 50% more than tank range (TANK_FIRE_RANGE + 50%)
     fireCooldown: 1600, // Same as regular tank
-    damage: 20, // Same as regular tank
+    damage: 10, // Reduced by 50% (was 20)
     armor: 1,
     projectileType: 'bullet',
     projectileSpeed: 12 // 4x faster (was 3)
@@ -75,7 +75,7 @@ export const buildingData = {
     // Add combat properties
     fireRange: 10, // 50% more than tank range
     fireCooldown: 1600,
-    damage: 24, // Same as tank-v2 (20% more than V1)
+    damage: 12, // Reduced by 50% (was 24)
     armor: 1,
     projectileType: 'bullet',
     projectileSpeed: 16 // 4x faster (was 4)
@@ -91,7 +91,7 @@ export const buildingData = {
     // Add combat properties
     fireRange: 12, // Even more range
     fireCooldown: 1400, // Faster firing
-    damage: 30, // Higher damage
+    damage: 15, // Reduced by 50% (was 30)
     armor: 1.5,
     projectileType: 'bullet',
     projectileSpeed: 15,
