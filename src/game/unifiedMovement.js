@@ -6,8 +6,8 @@ import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLo
  * Unified movement configuration
  */
 const MOVEMENT_CONFIG = {
-  ACCELERATION: 0.08,      // How quickly units accelerate (slower for more visible effect)
-  DECELERATION: 0.12,      // How quickly units decelerate (faster than acceleration)
+  ACCELERATION: 0.15,      // How quickly units accelerate (increased for more visible effect)
+  DECELERATION: 0.20,      // How quickly units decelerate (faster than acceleration)
   ROTATION_SPEED: 0.12,    // How fast units rotate (radians per frame)
   MAX_SPEED: 1.8,          // Maximum movement speed (slightly slower)
   MIN_SPEED: 0.05,         // Minimum speed before stopping
@@ -143,34 +143,57 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     updateUnitRotation(unit);
   }
   
-  // Only apply movement if rotation is close to target (realistic tank movement)
-  // For tanks, check if they can accelerate (body rotation complete)
-  // Exception: Allow retreat movement with special handling
-  let canMove = true;
+  // For tanks, handle acceleration/deceleration based on rotation state
+  // For other units, allow movement when rotation is close to target
+  let canAccelerate = true;
+  let shouldDecelerate = false;
+  
   if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
     if (unit.isRetreating) {
       // During retreat, movement is controlled by retreat behavior's canAccelerate flag
-      canMove = unit.canAccelerate !== false;
+      canAccelerate = unit.canAccelerate !== false;
+      shouldDecelerate = !canAccelerate;
     } else {
-      // Normal movement - require proper rotation
-      canMove = unit.canAccelerate !== false;
+      // For normal tank movement:
+      // - If can't accelerate (rotating), start decelerating
+      // - If can accelerate (facing right direction), start accelerating
+      canAccelerate = unit.canAccelerate !== false;
+      shouldDecelerate = !canAccelerate && movement.isMoving;
     }
   } else {
     const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation));
-    canMove = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
+    canAccelerate = rotationDiff < Math.PI / 4; // Allow movement if within 45 degrees
+    shouldDecelerate = !canAccelerate && movement.isMoving;
   }
   
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 };
-  if (movement.isMoving && canMove) {
+  if (movement.isMoving && canAccelerate) {
     avoidanceForce = calculateCollisionAvoidance(unit, units);
   }
   
-  const accelRate = (movement.isMoving && canMove) ? MOVEMENT_CONFIG.ACCELERATION : MOVEMENT_CONFIG.DECELERATION;
+  // Determine acceleration rate based on whether we should accelerate or decelerate
+  let accelRate;
+  if (shouldDecelerate || !movement.isMoving) {
+    accelRate = MOVEMENT_CONFIG.DECELERATION;
+  } else if (canAccelerate && movement.isMoving) {
+    accelRate = MOVEMENT_CONFIG.ACCELERATION;
+  } else {
+    accelRate = MOVEMENT_CONFIG.DECELERATION; // Default to deceleration when unsure
+  }
   
   // Apply target velocity with avoidance force
-  const targetVelX = movement.targetVelocity.x + avoidanceForce.x;
-  const targetVelY = movement.targetVelocity.y + avoidanceForce.y;
+  let targetVelX, targetVelY;
+  
+  if (shouldDecelerate) {
+    // When decelerating (like when rotating), reduce velocity towards zero
+    targetVelX = 0;
+    targetVelY = 0;
+  } else {
+    // Normal acceleration towards target velocity
+    targetVelX = movement.targetVelocity.x + avoidanceForce.x;
+    targetVelY = movement.targetVelocity.y + avoidanceForce.y;
+  }
   
   movement.velocity.x += (targetVelX - movement.velocity.x) * accelRate;
   movement.velocity.y += (targetVelY - movement.velocity.y) * accelRate;
@@ -189,11 +212,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const prevX = unit.x;
   const prevY = unit.y;
   
-  // Update position (only if allowed to move)
-  if (canMove || !movement.isMoving) {
-    unit.x += movement.velocity.x;
-    unit.y += movement.velocity.y;
-  }
+  // Always apply velocity to position - tanks should move even when decelerating
+  unit.x += movement.velocity.x;
+  unit.y += movement.velocity.y;
   
   // Handle collisions
   if (checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
