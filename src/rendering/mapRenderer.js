@@ -30,10 +30,10 @@ export class MapRenderer {
       }
     }
 
-    // Base layers: grass, water, streets
+    // Base layers: land, water, streets
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
-        if (mapGrid[y][x].type === 'grass') drawTile(x, y, 'grass')
+        if (mapGrid[y][x].type === 'land') drawTile(x, y, 'land')
       }
     }
     for (let y = startTileY; y < endTileY; y++) {
@@ -52,7 +52,7 @@ export class MapRenderer {
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
-        if (tile.type !== 'grass') continue
+        if (tile.type !== 'land') continue
 
         const top = y > 0 ? mapGrid[y - 1][x] : null
         const left = x > 0 ? mapGrid[y][x - 1] : null
