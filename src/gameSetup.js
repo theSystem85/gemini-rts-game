@@ -37,7 +37,27 @@ function seededRandom(seed) {
   }
 }
 
-// Helper: Draw a thick line (Bresenham-like)
+// Helper: Draw a street line with original thickness (2 tiles wide)
+function drawStreetLine(grid, start, end, type) {
+  const dx = end.x - start.x, dy = end.y - start.y
+  const steps = Math.max(Math.abs(dx), Math.abs(dy))
+  const thickness = 2 // Original street thickness
+  
+  for (let j = 0; j <= steps; j++) {
+    const x = Math.floor(start.x + (dx * j) / steps)
+    const y = Math.floor(start.y + (dy * j) / steps)
+    for (let ty = -Math.floor(thickness / 2); ty <= Math.floor(thickness / 2); ty++) {
+      for (let tx = -Math.floor(thickness / 2); tx <= Math.floor(thickness / 2); tx++) {
+        const nx = x + tx, ny = y + ty
+        if (nx >= 0 && ny >= 0 && nx < grid[0].length && ny < grid.length) {
+          grid[ny][nx].type = type
+        }
+      }
+    }
+  }
+}
+
+// Helper: Draw a thick line (Bresenham-like) - for non-street features
 function drawThickLine(grid, start, end, type, thickness) {
   const dx = end.x - start.x, dy = end.y - start.y
   const steps = Math.max(Math.abs(dx), Math.abs(dy))
@@ -51,6 +71,56 @@ function drawThickLine(grid, start, end, type, thickness) {
           grid[ny][nx].type = type
         }
       }
+    }
+  }
+}
+
+// Helper: Create optimized street network using minimum spanning tree approach
+function createOptimizedStreetNetwork(mapGrid, points, type) {
+  if (points.length < 2) return
+
+  // For 2 points, simple direct connection
+  if (points.length === 2) {
+    drawStreetLine(mapGrid, points[0], points[1], type)
+    return
+  }
+
+  // For multiple points, use a hub-and-spoke with minimal cross-connections
+  // Find the most central point (closest to geometric center)
+  const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length
+  const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length
+  
+  let hubPoint = points[0]
+  let minDistanceToCenter = Math.hypot(points[0].x - centerX, points[0].y - centerY)
+  
+  points.forEach(point => {
+    const distance = Math.hypot(point.x - centerX, point.y - centerY)
+    if (distance < minDistanceToCenter) {
+      minDistanceToCenter = distance
+      hubPoint = point
+    }
+  })
+  
+  // Connect all other points to the hub
+  points.forEach(point => {
+    if (point !== hubPoint) {
+      drawStreetLine(mapGrid, hubPoint, point, type)
+    }
+  })
+  
+  // For 4+ points, add one cross-connection for redundancy
+  if (points.length >= 4) {
+    // Find the two points farthest from the hub
+    const nonHubPoints = points.filter(p => p !== hubPoint)
+    nonHubPoints.sort((a, b) => {
+      const distA = Math.hypot(a.x - hubPoint.x, a.y - hubPoint.y)
+      const distB = Math.hypot(b.x - hubPoint.x, b.y - hubPoint.y)
+      return distB - distA // Sort by distance from hub, descending
+    })
+    
+    if (nonHubPoints.length >= 2) {
+      // Connect the two farthest points for redundancy
+      drawStreetLine(mapGrid, nonHubPoints[0], nonHubPoints[1], type)
     }
   }
 }
@@ -126,10 +196,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
         }
       }
     }
-    // Ensure at least one street crosses the river (midpoint)
-    const riverMidX = Math.floor((startLake.x + endLake.x) / 2)
-    const riverMidY = Math.floor((startLake.y + endLake.y) / 2)
-    mapGrid[riverMidY][riverMidX].type = 'street'
+    // Ensure at least one street crosses the river (midpoint) - will be handled by the unified street network
   }
 
   // -------- Step 3: Generate Streets --------
@@ -156,39 +223,16 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
     oreClusterCenters.push({ x: clusterCenterX, y: clusterCenterY })
   }
 
-  // Connect ore fields to all player positions
-  oreClusterCenters.forEach(cluster => {
-    playerPositions.forEach(playerPos => {
-      drawThickLine(mapGrid, playerPos, cluster, 'street', 2)
-    })
-  })
-  
-  // Connect all players to each other with streets
-  for (let i = 0; i < playerPositions.length; i++) {
-    for (let j = i + 1; j < playerPositions.length; j++) {
-      drawThickLine(mapGrid, playerPositions[i], playerPositions[j], 'street', 2)
-    }
-  }
+  // Create unified street network connecting all important points
+  const allStreetPoints = [...playerPositions, ...oreClusterCenters]
+  createOptimizedStreetNetwork(mapGrid, allStreetPoints, 'street')
 
-  // Create additional connectivity (existing base connectivity for redundancy)
-  playerPositions.forEach((playerPos, index) => {
-    playerPositions.forEach((otherPos, otherIndex) => {
-      if (index !== otherIndex) {
-        const dxx = otherPos.x - playerPos.x
-        const dyy = otherPos.y - playerPos.y
-        const connectSteps = Math.max(Math.abs(dxx), Math.abs(dyy))
-        for (let j = 0; j <= connectSteps; j++) {
-          const x = Math.floor(playerPos.x + (dxx * j) / connectSteps)
-          const y = Math.floor(playerPos.y + (dyy * j) / connectSteps)
-          if (x >= 0 && y >= 0 && x < MAP_TILES_X && y < MAP_TILES_Y) {
-            mapGrid[y][x].type = 'street'
-            if (x + 1 < MAP_TILES_X) { mapGrid[y][x + 1].type = 'street' }
-            if (y + 1 < MAP_TILES_Y) { mapGrid[y + 1][x].type = 'street' }
-          }
-        }
-      }
-    })
-  })
+  // Ensure river crossing exists (if there are lakes)
+  if (lakeCenters.length === 2) {
+    const riverMidX = Math.floor((lakeCenters[0].x + lakeCenters[1].x) / 2)
+    const riverMidY = Math.floor((lakeCenters[0].y + lakeCenters[1].y) / 2)
+    mapGrid[riverMidY][riverMidX].type = 'street'
+  }
 
   // -------- Step 4: Generate Ore Fields (AFTER terrain generation) --------
   // Generate ore clusters around the predefined centers, but only on passable terrain

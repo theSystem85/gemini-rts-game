@@ -82,28 +82,75 @@ export function initFactories(factories, mapGrid) {
     }
   })
 
-  // Carve streets between factories for connectivity
-  // Connect all factories to each other with streets for multi-player connectivity
-  for (let i = 0; i < factories.length; i++) {
-    for (let j = i + 1; j < factories.length; j++) {
-      const factory1 = factories[i]
-      const factory2 = factories[j]
-      
-      // Create L-shaped connection between each pair of factories
-      const startX = factory1.x + Math.floor(factory1.width / 2)
-      const startY = factory1.y + Math.floor(factory1.height / 2)
-      const endX = factory2.x + Math.floor(factory2.width / 2)
-      const endY = factory2.y + Math.floor(factory2.height / 2)
-      
-      // Horizontal then vertical connection
-      for (let x = Math.min(startX, endX); x <= Math.max(startX, endX); x++) {
-        if (mapGrid[startY] && mapGrid[startY][x]) {
-          mapGrid[startY][x].type = 'street'
-        }
+  // Add minimal local connectivity between factories if needed
+  // This creates L-shaped connections with original 2-tile thickness only between adjacent factory pairs to supplement the main network
+  if (factories.length === 2) {
+    // For 2 factories, create a direct L-shaped connection
+    const factory1 = factories[0]
+    const factory2 = factories[1]
+    
+    const startX = factory1.x + Math.floor(factory1.width / 2)
+    const startY = factory1.y + Math.floor(factory1.height / 2)
+    const endX = factory2.x + Math.floor(factory2.width / 2)
+    const endY = factory2.y + Math.floor(factory2.height / 2)
+    
+    // Create L-shaped connection (horizontal then vertical) with 2-tile thickness
+    for (let x = Math.min(startX, endX); x <= Math.max(startX, endX); x++) {
+      if (mapGrid[startY] && mapGrid[startY][x]) {
+        mapGrid[startY][x].type = 'street'
       }
-      for (let y = Math.min(startY, endY); y <= Math.max(startY, endY); y++) {
-        if (mapGrid[y] && mapGrid[y][endX]) {
-          mapGrid[y][endX].type = 'street'
+      // Add thickness
+      if (mapGrid[startY + 1] && mapGrid[startY + 1][x]) {
+        mapGrid[startY + 1][x].type = 'street'
+      }
+    }
+    for (let y = Math.min(startY, endY); y <= Math.max(startY, endY); y++) {
+      if (mapGrid[y] && mapGrid[y][endX]) {
+        mapGrid[y][endX].type = 'street'
+      }
+      // Add thickness
+      if (mapGrid[y] && mapGrid[y][endX + 1]) {
+        mapGrid[y][endX + 1].type = 'street'
+      }
+    }
+  } else if (factories.length > 2) {
+    // For multiple factories, the main street network should handle most connectivity
+    // Only add a minimal connection if factories are very close to each other
+    for (let i = 0; i < factories.length; i++) {
+      for (let j = i + 1; j < factories.length; j++) {
+        const factory1 = factories[i]
+        const factory2 = factories[j]
+        
+        const centerX1 = factory1.x + Math.floor(factory1.width / 2)
+        const centerY1 = factory1.y + Math.floor(factory1.height / 2)
+        const centerX2 = factory2.x + Math.floor(factory2.width / 2)
+        const centerY2 = factory2.y + Math.floor(factory2.height / 2)
+        
+        const distance = Math.hypot(centerX1 - centerX2, centerY1 - centerY2)
+        
+        // Only connect if factories are very close (less than 15 tiles apart)
+        if (distance < 15) {
+          // Simple horizontal then vertical connection with 2-tile thickness
+          for (let x = Math.min(centerX1, centerX2); x <= Math.max(centerX1, centerX2); x++) {
+            if (mapGrid[centerY1] && mapGrid[centerY1][x]) {
+              mapGrid[centerY1][x].type = 'street'
+            }
+            // Add thickness
+            if (mapGrid[centerY1 + 1] && mapGrid[centerY1 + 1][x]) {
+              mapGrid[centerY1 + 1][x].type = 'street'
+            }
+          }
+          for (let y = Math.min(centerY1, centerY2); y <= Math.max(centerY1, centerY2); y++) {
+            if (mapGrid[y] && mapGrid[y][centerX2]) {
+              mapGrid[y][centerX2].type = 'street'
+            }
+            // Add thickness
+            if (mapGrid[y] && mapGrid[y][centerX2 + 1]) {
+              mapGrid[y][centerX2 + 1].type = 'street'
+            }
+          }
+          // Only connect the first close pair to avoid redundancy
+          break
         }
       }
     }
