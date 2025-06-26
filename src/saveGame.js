@@ -3,6 +3,7 @@ import { gameState } from './gameState.js'
 import { factories } from './main.js'
 import { units } from './main.js'
 import { mapGrid } from './main.js'
+import { cleanupOreFromBuildings } from './gameSetup.js'
 import { TILE_SIZE } from './config.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
@@ -305,6 +306,9 @@ export function loadGame(key) {
         }
       }
     })
+    
+    // Ensure no ore overlaps with buildings or factories after loading
+    cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
     // Restore targeted ore tiles for harvester system
     if (loaded.targetedOreTiles) {

@@ -9,7 +9,7 @@ import { productionQueue } from './productionQueue.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { initFactories } from './factories.js'
 import { initBackgroundMusic } from './sound.js'
-import { initializeGameAssets, generateMap as generateMapFromSetup } from './gameSetup.js'
+import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
@@ -80,6 +80,9 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
+    
+    // Ensure no ore overlaps with buildings or factories
+    cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
     // Initialize rally points as null
     factories.forEach(factory => {
@@ -239,6 +242,13 @@ class Game {
   }
 
   resetGameWithNewMap(seed) {
+    // Clear existing buildings before generating new map
+    gameState.buildings.length = 0
+    gameState.powerSupply = 0
+    gameState.buildingPlacementMode = false
+    gameState.currentBuildingType = null
+    gameState.repairMode = false
+    
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
@@ -251,6 +261,9 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
+    
+    // Ensure no ore overlaps with buildings or factories
+    cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     
     units.length = 0
     bullets.length = 0
@@ -335,6 +348,9 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
+    
+    // Ensure no ore overlaps with buildings or factories
+    cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     
     units.length = 0
     bullets.length = 0

@@ -192,7 +192,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
 
   // -------- Step 4: Generate Ore Fields (AFTER terrain generation) --------
   // Generate ore clusters around the predefined centers, but only on passable terrain
-  // and avoid factory locations
+  // and avoid factory and building locations
   
   // Calculate factory positions to avoid placing ore there
   const factoryWidth = 3 // constructionYard width from buildings.js
@@ -226,10 +226,49 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
             y >= factory.y && y < factory.y + factory.height
           )
           
-          if ((tileType === 'land' || tileType === 'street') && !isInFactory) {
-            // Set ore as an overlay property only on passable terrain away from factories
+          // Check if this tile is part of any existing building area
+          const isInBuilding = gameState.buildings && gameState.buildings.some(building => {
+            const bx = building.x, by = building.y
+            const bw = building.width || 1, bh = building.height || 1
+            return x >= bx && x < bx + bw && y >= by && y < by + bh
+          })
+          
+          if ((tileType === 'land' || tileType === 'street') && !isInFactory && !isInBuilding) {
+            // Set ore as an overlay property only on passable terrain away from factories and buildings
             mapGrid[y][x].ore = true
           }
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Remove ore from all tiles that have buildings or factories on them
+ * This ensures no ore overlaps with any structures
+ */
+export function cleanupOreFromBuildings(mapGrid, buildings = [], factories = []) {
+  // Clean ore from factory tiles
+  factories.forEach(factory => {
+    for (let y = factory.y; y < factory.y + factory.height; y++) {
+      for (let x = factory.x; x < factory.x + factory.width; x++) {
+        if (mapGrid[y] && mapGrid[y][x] && mapGrid[y][x].ore) {
+          mapGrid[y][x].ore = false
+          // Clear any cached texture variations for this tile to force re-render
+          mapGrid[y][x].textureVariation = null
+        }
+      }
+    }
+  })
+  
+  // Clean ore from building tiles
+  buildings.forEach(building => {
+    for (let y = building.y; y < building.y + building.height; y++) {
+      for (let x = building.x; x < building.x + building.width; x++) {
+        if (mapGrid[y] && mapGrid[y][x] && mapGrid[y][x].ore) {
+          mapGrid[y][x].ore = false
+          // Clear any cached texture variations for this tile to force re-render
+          mapGrid[y][x].textureVariation = null
         }
       }
     }

@@ -68,6 +68,14 @@ export function initFactories(factories, mapGrid) {
         
         // Mark tile as having a building (for collision detection) but preserve the original tile type for rendering
         mapGrid[y][x].building = factory
+        
+        // Remove any ore from tiles where factories are placed
+        if (mapGrid[y][x].ore) {
+          mapGrid[y][x].ore = false
+          // Clear any cached texture variations for this tile to force re-render
+          mapGrid[y][x].textureVariation = null
+        }
+        
         // DON'T change the tile type - keep the original background texture visible
         // mapGrid[y][x].type = 'building' // REMOVED: This was causing solid color rendering
       }

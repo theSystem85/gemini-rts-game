@@ -266,22 +266,22 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
 - [ ] Add an fps overlay in the top right corner that can be toggled on/off with "f" key. Add info to help menu.
-- [x] Rocks currently do not block the occupancy map.
 - [ ] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cutsmoothly to form straigt diagonal lines. Make sure they merge with the color of the background. For example if there are 2 street tiles directly diagonal to each other the two tiles that are neighbours to both of them should be diagonally half way overlapped by another (virtual rendering only) street tile to smoothen out the corners.
-- [x] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
 - [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
+- [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
+- [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
+- [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+- [x] When units are below 25% health they start to move with 50% of the speed of normal units.
+- [x] Rocks currently do not block the occupancy map.
 - [x] Add 3 star level system for any combat unit (all units but harvesters). Every unit starts at level 0. Whenever a unit (player or enemy ai) kills an opponent unit (not building) the unit gets in internal bounty counter increased by the cost of the killed unit. When that bounty counter is twice the value of the unit itself, the unit gets promoted to level 1. When the counter is at 4x the unit value it gets to level 2 and when the counter is at 6 times the unit value it gets to final level 3. To indicate the units level there are up to 3 yellow stars adding up from the center above the units health bar. Make sure this system works for all players (human and AI).
 - [x] Make sure there is some 2px yellow levelup progress indicator inside the health bar on top of it in the same box overlaying it so I can see the progress up to the next level when unit is in combat. When next level is reached it starts again from 0.
 - [x] Add meaning to the level system so:
   - **Level 1:** means that units will get 20% range increase.
   - **Level 2:** means that units will get 50% armor increase.
   - **Level 3:** means that units will repair themselves when not moving by 1% every 3 seconds AND will get 33% increase in fire rate.
-- [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
-- [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
-- [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
 - [x] When units are selected and the "s" key is pressed then they stop attacking. When no units are selected then the s key triggers the sell mode on/off.
 - [x] Make sure tanks have hit zone damage multipliers: when hit from behind the damage is 2.0. When hit from front the damage is 1.0 and from the side it is 1.3.
 - [x] When commanding a group of units to move to one spot make sure that every unit gets a different tile to move to assigned. Also make sure that the targetted tiles are highlighted by some green semi-transparent triangle (upside down like the one for the AGF but in green). Whenever a unit gets selected again make sure to show that indicator again on the map IF that unit is moving (also ensure the same holds for the AGF attacking indicator)
@@ -326,43 +326,43 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
+- [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
+- [ ] When selling a building the occupancy map is not updated and still blocked there.
+- [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
+- [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
+- [ ] When about 10 units get stuck the game slows down significantly.
+- [ ] When initial building factory gets destroyed there is not map background left, just black.
+- [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
+- [ ] Ensure on map generation there is no ore overlapping with buildings.
+- [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
+- [ ] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
+- [ ] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
+- [ ] Image for the concrete wall on map is incorrect.
+- [ ] Enemy units come out of factory immediately before the build indicator shows that the build is done
+- [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] Saving games does not work anymore.
 - [x] when a combat unit is selected and I hover over another of my units then the cursor should not be an attack cursor but just a normal cursor "arrow".
-- [ ] Ensure on map generation there is no ore overlapping with buildings.
 - [x] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
 - [x] When in attack mode unit do currently not respect the occupancy map.
 - [x] Ensure for every attacking and chasing unit that the pathfinding is not updated more often than every 3s to improve performance.
 - [x] Tanks are not accelerating or decelerating anymore. Make sure they do before reaching max speed. 
 - [x] all selected units try to go to the same tile when commanded to move. That causes them to get stuck there and dodge around instead of standing still. Make sure when a group is commanded to move that all units get different nearby tiles to move to.
 - [x] Ensure that ore does not grow on occupant tiles. (Currently is is grows on and into rocks and buildings). It should only be on plain grass and street tiles that are unoccupied by buildings or anything else.
-- [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
-- [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
-- [ ] When about 10 units get stuck the game slows down significantly.
-- [ ] When initial building factory gets destroyed there is not map background left, just black.
-- [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
 - [x] Enemy is still building buildings even when his base is destroyed.
 - [x] The sound for bullet impact seems to be missing.
 - [x] The rocket tank does not correctly fire at enemy buildings. the projectiles seem to go into another direction.
 - [x] The rocket tank rockets do not detonate where the rockets are impacting. Make sure the explosions happen where the rockets move to before they vanish.
-- [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] The harvesting animation is now working anymore.
 - [x] Harvesters can get stuck in the base and cannot move anymore. Make sure they can rotate on spot to solve getting stuck.
 - [x] Enemy does not loose money when building units.
 - [x] Enemy defense buildings are missing healthbar and don't take damage.
 - [x] The ore tiles do not get removed after harvesting.
-- [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
-- [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
 - [x] The initial construction yard building is not respected in the occupancy map.
 - [x] When tank_v1 is produced it leaves the factory in different (random?) colors. Tank_v1 should always be blue.
 - [x] Enemy units do not defend their harvesters when being attacked.
-- [ ] When selling a building the occupancy map is not updated and still blocked there.
 - [x] Sometimes the loading indicator of a harvester goes black again even when fully loaded and the yellow bar was visible before. Ensure the loading state is always visible.
-- [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
-- [ ] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
-- [ ] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
-- [ ] Image for the concrete wall on map is incorrect.
 - [x] There are colored bars on the edges of some buildings who's map images do not fit exactly into the tile map grid. Those bars should be removed. Make sure when the image to place on the map does not fit into the grid that the map tiles from before are still visible in the background.
-- [ ] Enemy units come out of factory immediately before the build indicator shows that the build is done
 - [x] When selling a building the occupancy map is not updated and still blocked there.
 - [x] The initial construction yard building is not respected in the occupancy map.
 - [x] When production queue is aborted the money goes back totally not gradually so you can actually earn money which is wrong!
