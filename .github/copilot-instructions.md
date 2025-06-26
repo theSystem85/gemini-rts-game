@@ -217,3 +217,7 @@ Before suggesting code changes:
 - Power system for buildings (tracked in `gameState.powerSupply`)
 
 When in doubt, examine existing similar implementations in the codebase and follow established patterns rather than inventing new approaches.
+
+## Additional Rules
+
+- Do not use `require` anywhere in the codebase. Always use ES6 `import` statements for all module imports, including dynamic or conditional imports. This applies to all files, including AI and pathfinding logic.
