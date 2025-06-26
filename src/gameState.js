@@ -49,8 +49,17 @@ export const gameState = {
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 
-  // Occupancy map visibility toggle - initialize to false (occupancy map hidden by default)
+  // Occupancy map visibility toggle
   occupancyVisible: false,
+
+  // FPS display toggle and tracking
+  fpsVisible: false,
+  fpsCounter: {
+    frameCount: 0,
+    lastTime: 0,
+    fps: 0,
+    frameTimes: []  // Store last 60 frame times for smooth averaging
+  },
 
   // Tank image rendering toggle - initialize from config
   useTankImages: true,

@@ -265,7 +265,8 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
-- [ ] Rocks currently do not block the occupancy map.
+- [ ] Add an fps overlay in the top right corner that can be toggled on/off with "f" key. Add info to help menu.
+- [x] Rocks currently do not block the occupancy map.
 - [ ] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cutsmoothly to form straigt diagonal lines. Make sure they merge with the color of the background. For example if there are 2 street tiles directly diagonal to each other the two tiles that are neighbours to both of them should be diagonally half way overlapped by another (virtual rendering only) street tile to smoothen out the corners.
 - [x] When units are below 25% health they start to move with 50% of the speed of normal units.
 - [ ] when the harvester is unloading the ore at the refinery gradually add the money to the balance of the player (or AI).
@@ -326,6 +327,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [x] Saving games does not work anymore.
+- [ ] when a combat unit is selected and I hover over another of my units then the cursor should not be an attack cursor but just a normal cursor "arrow".
 - [ ] Ensure on map generation there is no ore overlapping with buildings.
 - [ ] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
 - [x] When in attack mode unit do currently not respect the occupancy map.

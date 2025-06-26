@@ -621,3 +621,43 @@ html, body {
 #saveGamesList > li {
   font-size: 12px;
 }
+
+/* FPS Display Overlay */
+.fps-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #00ff00;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  border: 1px solid rgba(0, 255, 255, 0.8);
+  z-index: 1000;
+  pointer-events: none; /* Make it transparent to clicks */
+  display: none; /* Initially hidden */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.fps-overlay.visible {
+  display: block;
+}
+
+/* FPS color classes */
+.fps-overlay.fps-good {
+  color: #00ff00; /* Green for 60+ FPS */
+}
+
+.fps-overlay.fps-ok {
+  color: #ffff00; /* Yellow for 30-59 FPS */
+}
+
+.fps-overlay.fps-poor {
+  color: #ff8800; /* Orange for 15-29 FPS */
+}
+
+.fps-overlay.fps-bad {
+  color: #ff0000; /* Red for <15 FPS */
+}

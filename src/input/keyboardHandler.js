@@ -116,6 +116,11 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleTankImageToggle()
       }
+      // P key to toggle FPS display
+      else if (e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        this.handleFpsDisplayToggle()
+      }
     })
   }
 
@@ -545,6 +550,28 @@ export class KeyboardHandler {
     // Show notification to user
     const status = gameState.useTankImages ? 'ON' : 'OFF'
     this.showNotification(`Tank image rendering: ${status}`, 2000)
+    
+    // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleFpsDisplayToggle() {
+    // Toggle FPS display visibility
+    gameState.fpsVisible = !gameState.fpsVisible
+    
+    // Update the display immediately
+    const fpsElement = document.getElementById('fpsDisplay')
+    if (fpsElement) {
+      if (gameState.fpsVisible) {
+        fpsElement.classList.add('visible')
+      } else {
+        fpsElement.classList.remove('visible')
+      }
+    }
+    
+    // Show notification to user
+    const status = gameState.fpsVisible ? 'ON' : 'OFF'
+    this.showNotification(`FPS display: ${status}`, 2000)
     
     // Play a sound for feedback
     playSound('confirmed', 0.5)

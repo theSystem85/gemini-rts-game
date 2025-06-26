@@ -44,6 +44,7 @@ export class HelpSystem {
           <li><strong>1-9 Keys:</strong> Select units in that control group</li>
           <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
           <li><strong>T Key:</strong> Toggle tank image rendering (3-layer tank graphics)</li>
+          <li><strong>P Key:</strong> Toggle FPS display (performance monitor)</li>
         </ul>
         <p>Press I again to close and resume the game</p>
       `

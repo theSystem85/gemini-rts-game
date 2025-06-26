@@ -7,6 +7,7 @@ import { renderGame, renderMinimap } from '../rendering.js'
 import { updateBuildingsUnderRepair } from '../buildings.js'
 import { updateEnergyBar } from '../ui/energyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
+import { FPSDisplay } from '../ui/fpsDisplay.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -25,6 +26,7 @@ export class GameLoop {
     this.allAssetsLoaded = false
     this.running = false
     this.animationId = null
+    this.fpsDisplay = new FPSDisplay()
   }
 
   setAssetsLoaded(loaded) {
@@ -50,13 +52,22 @@ export class GameLoop {
       return
     }
 
+    // Get current time and canvas contexts (used throughout the function)
+    const now = timestamp || performance.now()
+    const gameCtx = this.canvasManager.getGameContext()
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
+    // Always update FPS tracking
+    this.fpsDisplay.updateFPS(now)
+
     if (!gameState.gameStarted || gameState.gamePaused) {
+      // When paused, still render FPS overlay but skip game updates
+      this.fpsDisplay.render(gameCtx, gameCanvas)
       this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
       return
     }
 
     // Calculate delta time with a maximum to avoid spiral of doom on slow frames
-    const now = timestamp || performance.now()
     if (!this.lastFrameTime) this.lastFrameTime = now
     const delta = Math.min(now - this.lastFrameTime, 33) // Cap at ~30 FPS equivalent
     this.lastFrameTime = now
@@ -86,9 +97,7 @@ export class GameLoop {
     // Update game elements
     updateGame(delta / 1000, this.mapGrid, this.factories, this.units, this.bullets, gameState)
 
-    // Render game with low energy effects if applicable
-    const gameCtx = this.canvasManager.getGameContext()
-    const gameCanvas = this.canvasManager.getGameCanvas()
+    // Get minimap contexts for rendering
     const minimapCtx = this.canvasManager.getMinimapContext()
     const minimapCanvas = this.canvasManager.getMinimapCanvas()
 
@@ -99,6 +108,9 @@ export class GameLoop {
     // Render minimap with low energy effects if applicable
     renderMinimap(minimapCtx, minimapCanvas, this.mapGrid,
       gameState.scrollOffset, gameCanvas, this.units, gameState.buildings, gameState)
+
+    // Render FPS overlay on top of everything when game is running
+    this.fpsDisplay.render(gameCtx, gameCanvas)
 
     // Update money display
     this.moneyEl.textContent = `$${Math.floor(gameState.money)}`
@@ -128,6 +140,9 @@ export class GameLoop {
     if (!this.running) {
       return
     }
+
+    // Update FPS tracking in legacy loop too
+    this.fpsDisplay.updateFPS(timestamp || performance.now())
 
     if (!this.gameInitialized) {
       // Wait for assets to be loaded before initializing and starting the game loop
@@ -171,6 +186,9 @@ export class GameLoop {
 
     renderGame(gameCtx, gameCanvas, this.mapGrid, this.factories, this.units, this.bullets, gameState.buildings, gameState.scrollOffset, gameState.selectionActive, gameState.selectionStart, gameState.selectionEnd, gameState)
     renderMinimap(minimapCtx, minimapCanvas, this.mapGrid, gameState.scrollOffset, gameCanvas, this.units, gameState.buildings, gameState)
+
+    // Render FPS overlay on top of everything in legacy loop too
+    this.fpsDisplay.render(gameCtx, gameCanvas)
 
     this.moneyEl.textContent = gameState.money
     this.gameTimeEl.textContent = Math.floor(gameState.gameTime)
