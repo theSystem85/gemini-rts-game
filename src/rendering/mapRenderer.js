@@ -9,57 +9,154 @@ export class MapRenderer {
   renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
     // Disable image smoothing to prevent antialiasing gaps between tiles
     ctx.imageSmoothingEnabled = false
-    
-    // Draw map tiles - optimized rendering
+
+    const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
+
+    const drawTile = (x, y, type) => {
+      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+
+      if (useTexture && this.textureManager.tileTextureCache[type]) {
+        const idx = this.textureManager.getTileVariation(type, x, y)
+        if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
+          ctx.drawImage(this.textureManager.tileTextureCache[type][idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        } else {
+          ctx.fillStyle = TILE_COLORS[type]
+          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        }
+      } else {
+        ctx.fillStyle = TILE_COLORS[type]
+        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+      }
+    }
+
+    // Base layers: grass, water, streets
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        if (mapGrid[y][x].type === 'grass') drawTile(x, y, 'grass')
+      }
+    }
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        if (mapGrid[y][x].type === 'water') drawTile(x, y, 'water')
+      }
+    }
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        if (mapGrid[y][x].type === 'street') drawTile(x, y, 'street')
+      }
+    }
+
+    // Smoothening Overlay Textures (SOT) above streets
+    const sotApplied = new Set()
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
-        const tileType = tile.type
-        const tileX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-        const tileY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+        if (tile.type !== 'grass') continue
 
-        // Try to use texture if available and enabled - IMPORTANT: Don't try to load here!
-        if (USE_TEXTURES && this.textureManager.allTexturesLoaded && this.textureManager.tileTextureCache[tileType]) {
-          // Get consistent variation for this tile position
-          const variationIndex = this.textureManager.getTileVariation(tileType, x, y)
+        const top = y > 0 ? mapGrid[y - 1][x] : null
+        const left = x > 0 ? mapGrid[y][x - 1] : null
+        const bottom = y < mapGrid.length - 1 ? mapGrid[y + 1][x] : null
+        const right = x < mapGrid[0].length - 1 ? mapGrid[y][x + 1] : null
 
-          // If valid variation found, draw it with slight overlap to prevent gaps
-          if (variationIndex >= 0 && variationIndex < this.textureManager.tileTextureCache[tileType].length) {
-            ctx.drawImage(this.textureManager.tileTextureCache[tileType][variationIndex], tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-          } else {
-            // Fall back to color if texture variation not available
-            ctx.fillStyle = TILE_COLORS[tileType]
-            ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-          }
-        } else {
-          // Fall back to color if texture not available or disabled - also with slight overlap
-          ctx.fillStyle = TILE_COLORS[tileType]
-          ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-        }
-
-        // Render ore overlay if present
-        if (tile.ore) {
-          if (USE_TEXTURES && this.textureManager.allTexturesLoaded && this.textureManager.tileTextureCache['ore']) {
-            // Get consistent variation for ore overlay
-            const oreVariationIndex = this.textureManager.getTileVariation('ore', x, y)
-            if (oreVariationIndex >= 0 && oreVariationIndex < this.textureManager.tileTextureCache['ore'].length) {
-              ctx.drawImage(this.textureManager.tileTextureCache['ore'][oreVariationIndex], tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-            } else {
-              // Fall back to color overlay for ore
-              ctx.fillStyle = TILE_COLORS['ore']
-              ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-            }
-          } else {
-            // Fall back to color overlay for ore
-            ctx.fillStyle = TILE_COLORS['ore']
-            ctx.fillRect(tileX, tileY, TILE_SIZE + 1, TILE_SIZE + 1)
-          }
+        if (top && left && top.type === 'street' && left.type === 'street') {
+          this.drawSOT(ctx, x, y, 'top-left', scrollOffset, useTexture, sotApplied)
+        } else if (top && right && top.type === 'street' && right.type === 'street') {
+          this.drawSOT(ctx, x, y, 'top-right', scrollOffset, useTexture, sotApplied)
+        } else if (bottom && left && bottom.type === 'street' && left.type === 'street') {
+          this.drawSOT(ctx, x, y, 'bottom-left', scrollOffset, useTexture, sotApplied)
+        } else if (bottom && right && bottom.type === 'street' && right.type === 'street') {
+          this.drawSOT(ctx, x, y, 'bottom-right', scrollOffset, useTexture, sotApplied)
         }
       }
     }
-    
+
+    // Rocks layer
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        if (mapGrid[y][x].type === 'rock') drawTile(x, y, 'rock')
+      }
+    }
+
+    // Ore overlay
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        const tile = mapGrid[y][x]
+        if (!tile.ore) continue
+        const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+        const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+        if (useTexture && this.textureManager.tileTextureCache.ore) {
+          const idx = this.textureManager.getTileVariation('ore', x, y)
+          if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
+            ctx.drawImage(this.textureManager.tileTextureCache.ore[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          } else {
+            ctx.fillStyle = TILE_COLORS.ore
+            ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          }
+        } else {
+          ctx.fillStyle = TILE_COLORS.ore
+          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        }
+      }
+    }
+
     // Re-enable image smoothing for other rendering
     ctx.imageSmoothingEnabled = true
+  }
+
+  /**
+   * Draw a Smoothening Overlay Texture (SOT) on a single tile
+   */
+  drawSOT(ctx, tileX, tileY, orientation, scrollOffset, useTexture, sotApplied) {
+    const key = `${tileX},${tileY}`
+    if (sotApplied.has(key)) return
+    sotApplied.add(key)
+
+    // Offset SOT slightly to hide gaps on left/top edges and expand a bit
+    const screenX = tileX * TILE_SIZE - scrollOffset.x - 1
+    const screenY = tileY * TILE_SIZE - scrollOffset.y - 1
+    const size = TILE_SIZE + 3
+
+    ctx.save()
+    ctx.beginPath()
+    switch (orientation) {
+      case 'top-left':
+        ctx.moveTo(screenX, screenY)
+        ctx.lineTo(screenX + size, screenY)
+        ctx.lineTo(screenX, screenY + size)
+        break
+      case 'top-right':
+        ctx.moveTo(screenX + size, screenY)
+        ctx.lineTo(screenX, screenY)
+        ctx.lineTo(screenX + size, screenY + size)
+        break
+      case 'bottom-left':
+        ctx.moveTo(screenX, screenY + size)
+        ctx.lineTo(screenX, screenY)
+        ctx.lineTo(screenX + size, screenY + size)
+        break
+      case 'bottom-right':
+        ctx.moveTo(screenX + size, screenY + size)
+        ctx.lineTo(screenX, screenY + size)
+        ctx.lineTo(screenX + size, screenY)
+        break
+    }
+    ctx.closePath()
+    ctx.clip()
+
+    if (useTexture) {
+      const idx = this.textureManager.getTileVariation('street', tileX, tileY)
+      if (idx >= 0 && idx < this.textureManager.tileTextureCache.street.length) {
+        ctx.drawImage(this.textureManager.tileTextureCache.street[idx], screenX, screenY, size, size)
+      } else {
+        ctx.fillStyle = TILE_COLORS.street
+        ctx.fill()
+      }
+    } else {
+      ctx.fillStyle = TILE_COLORS.street
+      ctx.fill()
+    }
+    ctx.restore()
   }
 
   renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState) {
