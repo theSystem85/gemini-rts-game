@@ -6,6 +6,7 @@ export class CursorManager {
   constructor() {
     this.isOverGameCanvas = false
     this.isOverEnemy = false
+    this.isOverFriendlyUnit = false
     this.isOverBlockedTerrain = false
     this.isOverRepairableBuilding = false
     this.isOverSellableBuilding = false
@@ -169,6 +170,9 @@ export class CursorManager {
         // Force attack mode - use attack cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
+      } else if (this.isOverFriendlyUnit) {
+        // Over friendly unit - use normal arrow cursor
+        gameCanvas.style.cursor = 'default'
       } else if (this.isOverEnemy) {
         // Over enemy - use attack cursor
         gameCanvas.style.cursor = 'none'
@@ -203,5 +207,9 @@ export class CursorManager {
 
   setIsOverEnemy(value) {
     this.isOverEnemy = value
+  }
+
+  setIsOverFriendlyUnit(value) {
+    this.isOverFriendlyUnit = value
   }
 }

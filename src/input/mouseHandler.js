@@ -159,10 +159,12 @@ export class MouseHandler {
   updateEnemyHover(worldX, worldY, units, factories, selectedUnits, cursorManager) {
     if (selectedUnits.length > 0) {
       let isOverEnemy = false
+      let isOverFriendlyUnit = false
 
       // Check enemy factories
       for (const factory of factories) {
-        if (factory.id !== 'player') {
+        const humanPlayer = gameState.humanPlayer || 'player1'
+        if (factory.id !== humanPlayer && !(humanPlayer === 'player1' && factory.id === 'player')) {
           const factoryPixelX = factory.x * TILE_SIZE
           const factoryPixelY = factory.y * TILE_SIZE
           if (worldX >= factoryPixelX &&
@@ -177,8 +179,10 @@ export class MouseHandler {
 
       // Check enemy buildings
       if (!isOverEnemy && gameState.buildings && gameState.buildings.length > 0) {
+        const humanPlayer = gameState.humanPlayer || 'player1'
         for (const building of gameState.buildings) {
-          if (building.owner !== 'player') {
+          // Check if building is NOT owned by human player
+          if (building.owner !== humanPlayer && !(humanPlayer === 'player1' && building.owner === 'player')) {
             const buildingX = building.x * TILE_SIZE
             const buildingY = building.y * TILE_SIZE
             const buildingWidth = building.width * TILE_SIZE
@@ -195,10 +199,27 @@ export class MouseHandler {
         }
       }
 
-      // Check enemy units
-      if (!isOverEnemy) {
+      // Check friendly units first (before enemy units)
+      if (!isOverEnemy && !isOverFriendlyUnit) {
+        const humanPlayer = gameState.humanPlayer || 'player1'
         for (const unit of units) {
-          if (unit.owner !== 'player') {
+          if (unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')) {
+            const centerX = unit.x + TILE_SIZE / 2
+            const centerY = unit.y + TILE_SIZE / 2
+            if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
+              isOverFriendlyUnit = true
+              break
+            }
+          }
+        }
+      }
+
+      // Check enemy units
+      if (!isOverEnemy && !isOverFriendlyUnit) {
+        const humanPlayer = gameState.humanPlayer || 'player1'
+        for (const unit of units) {
+          // Check if unit is NOT owned by human player
+          if (unit.owner !== humanPlayer && !(humanPlayer === 'player1' && unit.owner === 'player')) {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -210,6 +231,11 @@ export class MouseHandler {
       }
 
       cursorManager.setIsOverEnemy(isOverEnemy)
+      cursorManager.setIsOverFriendlyUnit(isOverFriendlyUnit)
+    } else {
+      // No units selected, reset hover states
+      cursorManager.setIsOverEnemy(false)
+      cursorManager.setIsOverFriendlyUnit(false)
     }
   }
 
