@@ -267,7 +267,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
 - [x] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cut smoothly to form straight diagonal lines. Smoothening Overlay Textures (SOT) use the street texture, work in all diagonal orientations, apply only on land tiles, render above streets but below rocks, ore and buildings, and expand slightly to hide single-pixel gaps.
-- [ ] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
+- [x] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
@@ -329,6 +329,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Bugs
 - [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
+- [ ] Ensure the harvesting and ore unloading sound is not played when enemy units are doing it.
 - [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
 - [ ] When selling a building the occupancy map is not updated and still blocked there.
 - [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.

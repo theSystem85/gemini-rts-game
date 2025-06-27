@@ -5,6 +5,21 @@ import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 
 export class BuildingRenderer {
+  constructor() {
+    // Cache for the wrench icon
+    this.wrenchIcon = null
+    this.loadWrenchIcon()
+  }
+
+  loadWrenchIcon() {
+    this.wrenchIcon = new Image()
+    this.wrenchIcon.src = '/cursors/repair.svg'
+    this.wrenchIcon.onerror = () => {
+      console.warn('Failed to load repair cursor icon for repair animation')
+      this.wrenchIcon = null
+    }
+  }
+
   renderBuilding(ctx, building, scrollOffset) {
     const screenX = building.x * TILE_SIZE - scrollOffset.x
     const screenY = building.y * TILE_SIZE - scrollOffset.y
@@ -27,6 +42,8 @@ export class BuildingRenderer {
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderOwnerIndicator(ctx, building, screenX, screenY)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
+    this.renderRepairAnimation(ctx, building, screenX, screenY, width, height)
+    this.renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -347,6 +364,105 @@ export class BuildingRenderer {
       
       ctx.restore()
     }
+  }
+
+  renderRepairAnimation(ctx, building, screenX, screenY, width, height) {
+    // Check if this building is currently under repair
+    const isUnderRepair = gameState.buildingsUnderRepair && 
+                          gameState.buildingsUnderRepair.some(repair => repair.building === building)
+    
+    if (!isUnderRepair || !this.wrenchIcon) {
+      return
+    }
+    
+    const now = performance.now()
+    const cycleTime = 4000 // 4 second cycle time
+    const cycleProgress = (now % cycleTime) / cycleTime
+    
+    // Create smooth in-out fading animation
+    // Alpha varies from 0.3 to 1.0 in a sine wave pattern
+    const alpha = 0.3 + 0.7 * (Math.sin(cycleProgress * Math.PI * 2) * 0.5 + 0.5)
+    
+    // Position at center of building
+    const centerX = screenX + width / 2
+    const centerY = screenY + height / 2
+    
+    // Icon size - 3x bigger than before, scale based on building size but cap it
+    const iconSize = Math.min(72, Math.min(width, height) * 1.2)
+    
+    ctx.save()
+    ctx.globalAlpha = alpha
+    
+    try {
+      // Draw the repair cursor icon in yellow
+      // Use canvas color manipulation to make it yellow
+      ctx.filter = 'hue-rotate(40deg) saturate(2) brightness(1.5)'
+      ctx.drawImage(
+        this.wrenchIcon,
+        centerX - iconSize / 2,
+        centerY - iconSize / 2,
+        iconSize,
+        iconSize
+      )
+      
+    } catch (error) {
+      // Fallback: draw a simple wrench shape if image fails
+      ctx.filter = 'none'
+      ctx.fillStyle = `rgba(255, 215, 0, ${alpha})` // Gold color
+      ctx.strokeStyle = `rgba(255, 165, 0, ${alpha})` // Orange outline
+      ctx.lineWidth = 3
+      
+      // Draw simple wrench shape - 3x bigger
+      const wrenchSize = iconSize * 0.8
+      ctx.beginPath()
+      // Handle
+      ctx.rect(centerX - wrenchSize/8, centerY - wrenchSize/2, wrenchSize/4, wrenchSize * 0.6)
+      // Head
+      ctx.rect(centerX - wrenchSize/3, centerY + wrenchSize/6, wrenchSize * 0.6, wrenchSize/4)
+      ctx.fill()
+      ctx.stroke()
+    }
+    
+    ctx.restore()
+  }
+
+  renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height) {
+    // Check if this building has a pending repair with countdown
+    const pendingRepair = gameState.buildingsAwaitingRepair && 
+                         gameState.buildingsAwaitingRepair.find(repair => repair.building === building)
+    
+    if (!pendingRepair) {
+      return
+    }
+    
+    // Use the pre-computed countdown from the awaiting repair system
+    const secondsRemaining = pendingRepair.remainingCooldown
+    
+    if (secondsRemaining <= 0) {
+      return // Countdown is over
+    }
+    
+    // Calculate progress (reverse progress bar: 100% to 0%)
+    const progress = secondsRemaining / 10 // 10 seconds total
+    
+    // Position above the health bar to avoid overlap with selection markers
+    // Health bar is at screenY - 10, so we place this at screenY - 13 (3px height)
+    const progressBarWidth = width // Same width as health bar
+    const progressBarHeight = 3 // Same height as harvester loading bars
+    const progressBarX = screenX
+    const progressBarY = screenY - 13
+    
+    ctx.save()
+    
+    // Background bar
+    ctx.fillStyle = '#333'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+    
+    // Progress fill (red color for attack cooldown)
+    ctx.fillStyle = '#ff4444'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+    
+    ctx.restore()
   }
 
   render(ctx, buildings, scrollOffset) {

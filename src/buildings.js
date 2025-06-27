@@ -1,5 +1,6 @@
 // Building configuration and management
 import { playSound } from './sound.js'
+import { showNotification } from './ui/notifications.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -518,9 +519,6 @@ export function repairBuilding(building, gameState) {
     return { success: false, message: 'Not enough money for repairs' }
   }
 
-  // Deduct cost
-  gameState.money -= repairCost
-
   // Setup gradual repair
   if (!gameState.buildingsUnderRepair) {
     gameState.buildingsUnderRepair = []
@@ -541,9 +539,26 @@ export function repairBuilding(building, gameState) {
     duration: repairDuration,
     startHealth: building.health,
     targetHealth: building.maxHealth,
-    healthToRepair: healthToRepair
+    healthToRepair: healthToRepair,
+    cost: repairCost,
+    costPaid: 0
   })
   return { success: true, message: 'Building repair started', cost: repairCost }
+}
+
+// Function to mark a building for repair pausing (deferred processing)
+export function markBuildingForRepairPause(building) {
+  // Simply mark the building - actual pausing will happen in update cycle
+  if (building) {
+    building.needsRepairPause = true
+    building.lastAttackedTime = performance.now()
+  }
+}
+
+// Function to pause active repair when a building is attacked
+export function pauseActiveRepair(building) {
+  // TEMPORARILY DISABLED - CAUSING INFINITE EXPLOSION BUG
+  return false
 }
 
 // Update buildings that are currently under repair
@@ -552,20 +567,190 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
     return
   }
 
+  // First, process any buildings marked for repair pause
+  processPendingRepairPauses(gameState, currentTime)
+
   for (let i = gameState.buildingsUnderRepair.length - 1; i >= 0; i--) {
     const repairInfo = gameState.buildingsUnderRepair[i]
     const progress = (currentTime - repairInfo.startTime) / repairInfo.duration
+
+    // Gradually deduct repair cost based on progress
+    const expectedPaid = Math.min(progress, 1) * repairInfo.cost
+    const deltaCost = expectedPaid - repairInfo.costPaid
+    if (deltaCost > 0) {
+      gameState.money -= deltaCost
+      repairInfo.costPaid += deltaCost
+    }
 
     if (progress >= 1.0) {
       // Repair is complete
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
-      // Play sound effect for completed repair
       playSound('constructionComplete')
     } else {
       // Repair in progress - update health proportionally
       const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress)
       repairInfo.building.health = newHealth
+    }
+  }
+}
+
+// Process buildings marked for repair pause (safe deferred processing)
+function processPendingRepairPauses(gameState, currentTime) {
+  if (!gameState.buildingsUnderRepair) return
+  
+  // Collect buildings that need repair pause
+  const buildingsToProcess = []
+  
+  // Check all buildings under repair for pause marks
+  gameState.buildingsUnderRepair.forEach(repairInfo => {
+    if (repairInfo.building.needsRepairPause) {
+      buildingsToProcess.push(repairInfo.building)
+    }
+  })
+  
+  // Process pause requests safely
+  buildingsToProcess.forEach(building => {
+    actuallyPauseRepair(building, gameState, currentTime)
+    delete building.needsRepairPause // Clear the mark
+  })
+}
+
+// Actually pause the repair (safe version)
+function actuallyPauseRepair(building, gameState, currentTime) {
+  if (!gameState.buildingsUnderRepair) return
+  
+  // Find the repair entry for this building
+  let repairIndex = -1
+  let activeRepair = null
+  
+  for (let i = 0; i < gameState.buildingsUnderRepair.length; i++) {
+    if (gameState.buildingsUnderRepair[i].building === building) {
+      activeRepair = gameState.buildingsUnderRepair[i]
+      repairIndex = i
+      break
+    }
+  }
+  
+  if (activeRepair && repairIndex !== -1) {
+    // Calculate remaining work
+    const healthRepaired = Math.max(0, building.health - activeRepair.startHealth)
+    const remainingHealthToRepair = Math.max(0, activeRepair.healthToRepair - healthRepaired)
+    const remainingCost = Math.max(0, activeRepair.cost - activeRepair.costPaid)
+    
+    // Remove from active repairs
+    gameState.buildingsUnderRepair.splice(repairIndex, 1)
+    
+    // Add to awaiting repairs if there's work remaining
+    if (remainingHealthToRepair > 1 && remainingCost > 1) {
+      if (!gameState.buildingsAwaitingRepair) {
+        gameState.buildingsAwaitingRepair = []
+      }
+      
+      // Check for duplicates
+      const alreadyAwaiting = gameState.buildingsAwaitingRepair.some(ar => ar.building === building)
+      if (!alreadyAwaiting) {
+        const isFactory = (building.id !== undefined && building.type === undefined)
+        
+        gameState.buildingsAwaitingRepair.push({
+          building: building,
+          repairCost: remainingCost,
+          healthToRepair: remainingHealthToRepair,
+          lastAttackedTime: building.lastAttackedTime || currentTime,
+          isFactory: isFactory,
+          factoryCost: isFactory ? 5000 : undefined
+        })
+        
+        playSound('construction_paused')
+        showNotification('Repair paused due to attack!')
+      }
+    }
+  }
+}
+
+// Update buildings that are awaiting repair (under attack cooldown)
+export function updateBuildingsAwaitingRepair(gameState, currentTime) {
+  if (!gameState.buildingsAwaitingRepair || gameState.buildingsAwaitingRepair.length === 0) {
+    return
+  }
+
+  for (let i = gameState.buildingsAwaitingRepair.length - 1; i >= 0; i--) {
+    const awaitingRepair = gameState.buildingsAwaitingRepair[i]
+    const building = awaitingRepair.building
+    
+    // Check if building was attacked more recently than when we started waiting
+    // This resets the countdown if the building gets attacked again
+    if (building.lastAttackedTime && building.lastAttackedTime > awaitingRepair.lastAttackedTime) {
+      // Building was attacked again - reset the countdown
+      awaitingRepair.lastAttackedTime = building.lastAttackedTime
+      playSound('Repair_impossible_when_under_attack', 1.0, 30)
+      showNotification('Repair countdown reset - building under attack!')
+    }
+    
+    const timeSinceLastAttack = (currentTime - awaitingRepair.lastAttackedTime) / 1000
+    
+    // Store countdown info for rendering
+    awaitingRepair.remainingCooldown = Math.max(0, 10 - timeSinceLastAttack)
+    
+    if (timeSinceLastAttack >= 10) {
+      // Cooldown complete - start the repair automatically
+      const building = awaitingRepair.building
+      
+      // Check if building is still damaged and player has money
+      if (building.health < building.maxHealth && gameState.money >= awaitingRepair.repairCost) {
+        if (awaitingRepair.isFactory) {
+          // Start factory repair
+          if (!gameState.buildingsUnderRepair) {
+            gameState.buildingsUnderRepair = []
+          }
+
+          const baseDuration = 1000
+          const buildDuration = baseDuration * (awaitingRepair.factoryCost / 500)
+          const repairDuration = buildDuration * 2.0
+
+          gameState.buildingsUnderRepair.push({
+            building: building,
+            startTime: currentTime,
+            duration: repairDuration,
+            startHealth: building.health,
+            targetHealth: building.maxHealth,
+            healthToRepair: awaitingRepair.healthToRepair,
+            cost: awaitingRepair.repairCost,
+            costPaid: 0
+          })
+
+          showNotification(`Factory repair started for $${awaitingRepair.repairCost}`)
+          playSound('construction_started')
+        } else {
+          // Start building repair manually (don't use repairBuilding as it starts immediately)
+          if (!gameState.buildingsUnderRepair) {
+            gameState.buildingsUnderRepair = []
+          }
+
+          // Repair time is 2x of build time
+          const baseDuration = 1000
+          const buildingCost = buildingData[building.type].cost
+          const buildDuration = baseDuration * (buildingCost / 500)
+          const repairDuration = buildDuration * 2.0
+
+          gameState.buildingsUnderRepair.push({
+            building: building,
+            startTime: currentTime,
+            duration: repairDuration,
+            startHealth: building.health,
+            targetHealth: building.maxHealth,
+            healthToRepair: awaitingRepair.healthToRepair,
+            cost: awaitingRepair.repairCost,
+            costPaid: 0
+          })
+
+          showNotification(`Building repair started for $${awaitingRepair.repairCost}`)
+          playSound('construction_started')
+        }
+      }
+      
+      // Remove from awaiting list
+      gameState.buildingsAwaitingRepair.splice(i, 1)
     }
   }
 }

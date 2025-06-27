@@ -77,6 +77,7 @@ const soundMapping = {
   teslacoil_loading: 'teslacoil_loading',
   teslacoil_firing: 'teslacoil_firing',
   criticalDamage: 'criticalDamage', // Critical damage sound for rear hits
+  Repair_impossible_when_under_attack: 'Repair_impossible_when_under_attack',
   // New battle and player defeat sounds
   battleWon: 'battleWon',
   battleLost: 'battleLost',
@@ -110,6 +111,7 @@ const soundFiles = {
   teslacoil_loading: ['teslacoil_loading.mp3'],
   teslacoil_firing: ['teslacoil_firing.mp3'],
   criticalDamage: ['critical_damage.mp3'], // Critical damage sound for rear hits
+  Repair_impossible_when_under_attack: ['Repair_impossible_when_under_attack.mp3'],
   // New battle and player defeat sounds
   battleWon: ['battleWon.mp3'],
   battleLost: ['battleLost.mp3'],
@@ -120,6 +122,7 @@ const soundFiles = {
 }
 
 const activeAudioElements = new Map()
+const soundThrottleTimestamps = new Map() // Track last play time for throttled sounds
 
 function playAssetSound(category, volume = 1.0) {
   const files = soundFiles[category]
@@ -155,8 +158,21 @@ function playAssetSound(category, volume = 1.0) {
   return false
 }
 
-export function playSound(eventName, volume = 1.0) {
+export function playSound(eventName, volume = 1.0, throttleSeconds = 0) {
   if (!audioContext) return
+  
+  // Check throttling if throttleSeconds > 0
+  if (throttleSeconds > 0) {
+    const now = Date.now()
+    const lastPlayTime = soundThrottleTimestamps.get(eventName)
+    if (lastPlayTime && (now - lastPlayTime) < (throttleSeconds * 1000)) {
+      // Sound is throttled, don't play
+      return
+    }
+    // Update timestamp for this sound
+    soundThrottleTimestamps.set(eventName, now)
+  }
+  
   const category = soundMapping[eventName]
   if (category) {
     const played = playAssetSound(category, volume)

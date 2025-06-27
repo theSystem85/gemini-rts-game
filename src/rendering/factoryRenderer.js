@@ -8,6 +8,18 @@ import { buildingImageMap } from '../buildingImageMap.js'
 export class FactoryRenderer {
   constructor(textureManager) {
     this.textureManager = textureManager
+    // Cache for the wrench icon
+    this.wrenchIcon = null
+    this.loadWrenchIcon()
+  }
+
+  loadWrenchIcon() {
+    this.wrenchIcon = new Image()
+    this.wrenchIcon.src = '/cursors/repair.svg'
+    this.wrenchIcon.onerror = () => {
+      console.warn('Failed to load repair cursor icon for repair animation')
+      this.wrenchIcon = null
+    }
   }
 
   renderFactoryBase(ctx, factory, screenX, screenY, width, height) {
@@ -252,6 +264,107 @@ export class FactoryRenderer {
     this.renderSelection(ctx, factory, screenX, screenY, width, height)
     this.renderCurrentlyBuilding(ctx, factory, screenX, screenY, width, height)
     this.renderBudget(ctx, factory, screenX, screenY)
+    this.renderRepairAnimation(ctx, factory, screenX, screenY, width, height)
+    this.renderPendingRepairCountdown(ctx, factory, screenX, screenY, width, height)
+  }
+
+  renderRepairAnimation(ctx, factory, screenX, screenY, width, height) {
+    // Check if this factory is currently under repair
+    const isUnderRepair = gameState.buildingsUnderRepair && 
+                          gameState.buildingsUnderRepair.some(repair => repair.building === factory)
+    
+    if (!isUnderRepair || !this.wrenchIcon) {
+      return
+    }
+    
+    const now = performance.now()
+    const cycleTime = 4000 // 4 second cycle time
+    const cycleProgress = (now % cycleTime) / cycleTime
+    
+    // Create smooth in-out fading animation
+    // Alpha varies from 0.3 to 1.0 in a sine wave pattern
+    const alpha = 0.3 + 0.7 * (Math.sin(cycleProgress * Math.PI * 2) * 0.5 + 0.5)
+    
+    // Position at center of factory
+    const centerX = screenX + width / 2
+    const centerY = screenY + height / 2
+    
+    // Icon size - 3x bigger than before, scale based on factory size but cap it
+    const iconSize = Math.min(72, Math.min(width, height) * 1.2)
+    
+    ctx.save()
+    ctx.globalAlpha = alpha
+    
+    try {
+      // Draw the repair cursor icon in yellow
+      // Use canvas color manipulation to make it yellow
+      ctx.filter = 'hue-rotate(40deg) saturate(2) brightness(1.5)'
+      ctx.drawImage(
+        this.wrenchIcon,
+        centerX - iconSize / 2,
+        centerY - iconSize / 2,
+        iconSize,
+        iconSize
+      )
+      
+    } catch (error) {
+      // Fallback: draw a simple wrench shape if image fails
+      ctx.filter = 'none'
+      ctx.fillStyle = `rgba(255, 215, 0, ${alpha})` // Gold color
+      ctx.strokeStyle = `rgba(255, 165, 0, ${alpha})` // Orange outline
+      ctx.lineWidth = 3
+      
+      // Draw simple wrench shape - 3x bigger
+      const wrenchSize = iconSize * 0.8
+      ctx.beginPath()
+      // Handle
+      ctx.rect(centerX - wrenchSize/8, centerY - wrenchSize/2, wrenchSize/4, wrenchSize * 0.6)
+      // Head
+      ctx.rect(centerX - wrenchSize/3, centerY + wrenchSize/6, wrenchSize * 0.6, wrenchSize/4)
+      ctx.fill()
+      ctx.stroke()
+    }
+    
+    ctx.restore()
+  }
+
+  renderPendingRepairCountdown(ctx, factory, screenX, screenY, width, height) {
+    // Check if this factory has a pending repair with countdown
+    const pendingRepair = gameState.buildingsAwaitingRepair && 
+                         gameState.buildingsAwaitingRepair.find(repair => repair.building === factory)
+    
+    if (!pendingRepair) {
+      return
+    }
+    
+    // Use the pre-computed countdown from the awaiting repair system
+    const secondsRemaining = pendingRepair.remainingCooldown
+    
+    if (secondsRemaining <= 0) {
+      return // Countdown is over
+    }
+    
+    // Calculate progress (reverse progress bar: 100% to 0%)
+    const progress = secondsRemaining / 10 // 10 seconds total
+    
+    // Position above the health bar to avoid overlap with selection markers
+    // Health bar is at screenY - 10, so we place this at screenY - 13 (3px height)
+    const progressBarWidth = width // Same width as health bar
+    const progressBarHeight = 3 // Same height as harvester loading bars
+    const progressBarX = screenX
+    const progressBarY = screenY - 13
+    
+    ctx.save()
+    
+    // Background bar
+    ctx.fillStyle = '#333'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+    
+    // Progress fill (red color for attack cooldown)
+    ctx.fillStyle = '#ff4444'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+    
+    ctx.restore()
   }
 
   render(ctx, factories, scrollOffset) {

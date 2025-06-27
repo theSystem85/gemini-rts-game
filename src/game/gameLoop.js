@@ -4,7 +4,7 @@
 import { gameState } from '../gameState.js'
 import { updateGame } from '../updateGame.js'
 import { renderGame, renderMinimap } from '../rendering.js'
-import { updateBuildingsUnderRepair } from '../buildings.js'
+import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from '../buildings.js'
 import { updateEnergyBar } from '../ui/energyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
@@ -82,6 +82,9 @@ export class GameLoop {
 
     // Update buildings under repair
     updateBuildingsUnderRepair(gameState, timestamp)
+    
+    // Update buildings awaiting repair (countdown for buildings under attack)
+    updateBuildingsAwaitingRepair(gameState, timestamp)
 
     // Update energy bar display
     updateEnergyBar()

@@ -27,10 +27,57 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         return
       }
 
+      // If factory is already under repair, cancel it
+      const existingRepair = gameState.buildingsUnderRepair?.find(r => r.building === playerFactory)
+      if (existingRepair) {
+        const refund = existingRepair.cost - existingRepair.costPaid
+        gameState.money += refund
+        gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existingRepair)
+        showNotification('Factory repair cancelled')
+        playSound('constructionCancelled')
+        moneyEl.textContent = gameState.money
+        return
+      }
+
       // Calculate damage percentage
       const damagePercent = 1 - (playerFactory.health / playerFactory.maxHealth)
       // Factory repair cost is based on its base cost of 5000
       const repairCost = Math.ceil(damagePercent * 5000 * 0.3)
+
+      // Check if building was attacked recently (within 10 seconds)
+      const now = performance.now()
+      const timeSinceLastAttack = playerFactory.lastAttackedTime ? (now - playerFactory.lastAttackedTime) / 1000 : Infinity
+      
+      if (timeSinceLastAttack < 10) {
+        // Building is under attack - enable repair mode but don't start repair yet
+        // Play the sound immediately
+        playSound('Repair_impossible_when_under_attack', 1.0, 30)
+        
+        // Set up delayed repair with countdown
+        if (!gameState.buildingsAwaitingRepair) {
+          gameState.buildingsAwaitingRepair = []
+        }
+        
+        // Check if this building is already waiting for repair
+        const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === playerFactory)
+        if (existingAwaitingRepair) {
+          showNotification('Factory repair already pending - waiting for attack cooldown')
+          return
+        }
+        
+        // Add to awaiting repair list
+        gameState.buildingsAwaitingRepair.push({
+          building: playerFactory,
+          repairCost: repairCost,
+          healthToRepair: healthToRepair,
+          lastAttackedTime: playerFactory.lastAttackedTime,
+          factoryCost: 5000,
+          isFactory: true
+        })
+        
+        showNotification(`Factory repair pending - waiting ${Math.ceil(10 - timeSinceLastAttack)}s for attack cooldown`)
+        return
+      }
 
       // Check if player has enough money
       if (gameState.money < repairCost) {
@@ -38,37 +85,30 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         return
       }
 
-      // Start gradual repair of the factory
-      gameState.money -= repairCost
-      moneyEl.textContent = gameState.money
-
-      // Create repair info for factory
-      if (!gameState.buildingsUnderRepair) {
-        gameState.buildingsUnderRepair = []
+      // Always use awaiting repair system, even if not under attack
+      // This ensures consistent behavior and allows for immediate start if no cooldown
+      if (!gameState.buildingsAwaitingRepair) {
+        gameState.buildingsAwaitingRepair = []
       }
-
-      const healthToRepair = playerFactory.maxHealth - playerFactory.health
-
-      // Base repair duration on factory cost (same calculation as regular buildings)
-      const baseDuration = 1000 // 1 second base duration
-      const factoryCost = 5000
-      const buildDuration = baseDuration * (factoryCost / 500)
-      const repairDuration = buildDuration * 2.0 // 2x build time (changed from 0.2 to 2.0)
-
-      gameState.buildingsUnderRepair.push({
-        building: playerFactory,
-        startTime: performance.now(),
-        duration: repairDuration,
-        startHealth: playerFactory.health,
-        targetHealth: playerFactory.maxHealth,
-        healthToRepair: healthToRepair
-      })
-
-      // Log for debugging
       
-      showNotification(`Factory repair started for $${repairCost}`)
-      playSound('construction_started')
-
+      // Check if this building is already waiting for repair
+      const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === playerFactory)
+      if (existingAwaitingRepair) {
+        showNotification('Factory repair already pending')
+        return
+      }
+      
+      // Add to awaiting repair list (will start immediately in next update if no cooldown)
+      gameState.buildingsAwaitingRepair.push({
+        building: playerFactory,
+        repairCost: repairCost,
+        healthToRepair: healthToRepair,
+        lastAttackedTime: playerFactory.lastAttackedTime || 0,
+        factoryCost: 5000,
+        isFactory: true
+      })
+      
+      showNotification('Factory repair initiated')
       return
     }
 
@@ -84,8 +124,54 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           return
         }
 
+        // If building already under repair, cancel it
+        const existing = gameState.buildingsUnderRepair?.find(r => r.building === building)
+        if (existing) {
+          const refund = existing.cost - existing.costPaid
+          gameState.money += refund
+          gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existing)
+          showNotification('Building repair cancelled')
+          playSound('constructionCancelled')
+          moneyEl.textContent = gameState.money
+          return
+        }
+
         // Calculate repair cost
         const repairCost = calculateRepairCost(building)
+
+        // Check if building was attacked recently (within 10 seconds)
+        const now = performance.now()
+        const timeSinceLastAttack = building.lastAttackedTime ? (now - building.lastAttackedTime) / 1000 : Infinity
+        
+        if (timeSinceLastAttack < 10) {
+          // Building is under attack - enable repair mode but don't start repair yet
+          // Play the sound immediately
+          playSound('Repair_impossible_when_under_attack', 1.0, 30)
+          
+          // Set up delayed repair with countdown
+          if (!gameState.buildingsAwaitingRepair) {
+            gameState.buildingsAwaitingRepair = []
+          }
+          
+          // Check if this building is already waiting for repair
+          const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === building)
+          if (existingAwaitingRepair) {
+            showNotification('Building repair already pending - waiting for attack cooldown')
+            return
+          }
+          
+          // Add to awaiting repair list
+          gameState.buildingsAwaitingRepair.push({
+            building: building,
+            repairCost: repairCost,
+            healthToRepair: building.maxHealth - building.health,
+            lastAttackedTime: building.lastAttackedTime,
+            isFactory: false
+          })
+          
+          showNotification(`Building repair pending - waiting ${Math.ceil(10 - timeSinceLastAttack)}s for attack cooldown`)
+          return
+        }
 
         // Check if player has enough money
         if (gameState.money < repairCost) {
@@ -93,17 +179,29 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           return
         }
 
-        // Perform the repair
-        const result = repairBuilding(building, gameState)
-
-        if (result.success) {
-          showNotification(`Building repair started for $${result.cost}`)
-          playSound('construction_started')
-          moneyEl.textContent = gameState.money
-        } else {
-          showNotification(result.message)
+        // Always use awaiting repair system, even if not under attack
+        // This ensures consistent behavior and allows for immediate start if no cooldown
+        if (!gameState.buildingsAwaitingRepair) {
+          gameState.buildingsAwaitingRepair = []
         }
-
+        
+        // Check if this building is already waiting for repair
+        const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === building)
+        if (existingAwaitingRepair) {
+          showNotification('Building repair already pending')
+          return
+        }
+        
+        // Add to awaiting repair list (will start immediately in next update if no cooldown)
+        gameState.buildingsAwaitingRepair.push({
+          building: building,
+          repairCost: repairCost,
+          healthToRepair: building.maxHealth - building.health,
+          lastAttackedTime: building.lastAttackedTime || 0,
+          isFactory: false
+        })
+        
+        showNotification('Building repair initiated')
         return
       }
     }

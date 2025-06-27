@@ -3,7 +3,7 @@ import { TILE_SIZE } from './config.js'
 import { buildOccupancyMap } from './units.js'
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
-import { updateBuildingsUnderRepair } from './buildings.js'
+import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
 
 // Import modular game systems
@@ -103,6 +103,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
       updateBuildingsUnderRepair(gameState, now)
     }
+    
+    // Update buildings awaiting repair (countdown for buildings under attack)
+    updateBuildingsAwaitingRepair(gameState, now)
 
     // Self-repair for level 3 units
     handleSelfRepair(units, now)
