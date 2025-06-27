@@ -43,9 +43,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
   window.cheatSystem = keyboardHandler.getCheatSystem()
 
   // Apply the initial state for the custom cursor
-  document.addEventListener('DOMContentLoaded', () => {
-    // Set up the document-level mousemove event
-    document.addEventListener('mousemove', (e) => {
+  // Set up the document-level mousemove event
+  document.addEventListener('mousemove', (e) => {
       // Update Force Attack mode status based on the self-attack key
       cursorManager.updateForceAttackMode(isForceAttackModifierActive())
 
@@ -68,23 +67,22 @@ export function setupInputHandlers(units, factories, mapGrid) {
           document.body.style.cursor = 'default'
         }
       }
-    })
+  })
 
-    // Listen for modifier key presses to toggle force attack cursor
-    document.addEventListener('keydown', (e) => {
-      if (isForceAttackModifierActive(e)) {
-        cursorManager.updateForceAttackMode(true)
-        cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
-      }
-    })
+  // Listen for modifier key presses to toggle force attack cursor
+  document.addEventListener('keydown', (e) => {
+    if (isForceAttackModifierActive(e)) {
+      cursorManager.updateForceAttackMode(true)
+      cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+    }
+  })
 
-    document.addEventListener('keyup', (e) => {
-      if (e.key && e.key.toLowerCase() === 'v') {
-        isForceAttackModifierActive(e) // update cached state
-        cursorManager.updateForceAttackMode(false)
-        cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
-      }
-    })
+  document.addEventListener('keyup', (e) => {
+    if (e.key && e.key.toLowerCase() === 'v') {
+      isForceAttackModifierActive(e) // update cached state
+      cursorManager.updateForceAttackMode(false)
+      cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+    }
   })
 }
 

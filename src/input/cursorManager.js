@@ -204,8 +204,12 @@ export class CursorManager {
     }
   }
 
-  updateForceAttackMode(ctrlKey) {
-    this.isForceAttackMode = ctrlKey
+  updateForceAttackMode(isActive) {
+    const prev = this.isForceAttackMode
+    this.isForceAttackMode = isActive
+    if (prev !== isActive) {
+      console.log(`[SAF] Self attack mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
+    }
   }
 
   // Reapply cursor appearance using the last known mouse position
