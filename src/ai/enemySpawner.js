@@ -1,0 +1,146 @@
+import { TILE_SIZE } from '../config.js'
+import { findPath } from '../units.js'
+import { getUniqueId } from '../utils.js'
+import { findClosestOre } from '../logic.js'
+import { assignHarvesterToOptimalRefinery } from '../game/harvesterLogic.js'
+import { initializeUnitMovement } from '../game/unifiedMovement.js'
+
+function findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units) {
+  const DIRECTIONS = [
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 1, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: -1, y: -1 }
+  ]
+
+  for (let distance = 1; distance <= 5; distance++) {
+    for (const dir of DIRECTIONS) {
+      const x = buildingCenterX + dir.x * distance
+      const y = buildingCenterY + dir.y * distance
+      if (isPositionValidForSpawn(x, y, mapGrid, units)) {
+        return { x, y }
+      }
+    }
+  }
+
+  for (let distance = 6; distance <= 10; distance++) {
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+        const x = buildingCenterX + dx
+        const y = buildingCenterY + dy
+        if (isPositionValidForSpawn(x, y, mapGrid, units)) {
+          return { x, y }
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function isPositionValidForSpawn(x, y, mapGrid, units) {
+  if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) {
+    return false
+  }
+  const tile = mapGrid[y][x]
+  if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+    return false
+  }
+  for (const unit of units) {
+    if (unit.tileX === x && unit.tileY === y) {
+      return false
+    }
+  }
+  return true
+}
+
+export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState, productionStartTime, aiPlayerId) {
+  const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
+  const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
+  let spawnPosition = findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units)
+  if (!spawnPosition) {
+    spawnPosition = { x: buildingCenterX, y: buildingCenterY }
+  }
+
+  const unit = {
+    id: getUniqueId(),
+    type: unitType,
+    owner: aiPlayerId,
+    tileX: spawnPosition.x,
+    tileY: spawnPosition.y,
+    x: spawnPosition.x * TILE_SIZE,
+    y: spawnPosition.y * TILE_SIZE,
+    speed: unitType === 'harvester' ? 0.45 : 0.375,
+    health: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : 100,
+    maxHealth: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : 100,
+    path: [],
+    target: null,
+    selected: false,
+    oreCarried: 0,
+    harvesting: false,
+    spawnTime: Date.now(),
+    spawnedInFactory: true,
+    holdInFactory: true,
+    factoryBuildEndTime: productionStartTime + 5000,
+    lastPathCalcTime: 0,
+    lastPositionCheckTime: 0,
+    lastTargetChangeTime: 0,
+    direction: 0,
+    targetDirection: 0,
+    turretDirection: 0,
+    rotationSpeed: 0.15,
+    isRotating: false
+  }
+  unit.effectiveSpeed = unit.speed
+
+  if (unitType !== 'harvester') {
+    unit.level = 0
+    unit.experience = 0
+    const unitCosts = {
+      tank: 1000,
+      rocketTank: 2000,
+      'tank-v2': 2000,
+      'tank-v3': 3000
+    }
+    unit.baseCost = unitCosts[unitType] || 1000
+  }
+
+  if (unitType === 'harvester') {
+    unit.armor = 3
+  }
+
+  if (unitType === 'tank-v2' || unitType === 'tank-v3') {
+    unit.alertMode = true
+  }
+
+  if (unitType === 'harvester') {
+    const aiGameState = { buildings: gameState?.buildings?.filter(b => b.owner === aiPlayerId) || [] }
+    assignHarvesterToOptimalRefinery(unit, aiGameState)
+    const targetedOreTiles = gameState?.targetedOreTiles || {}
+    const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
+    if (orePos) {
+      const tileKey = `${orePos.x},${orePos.y}`
+      if (gameState?.targetedOreTiles) {
+        gameState.targetedOreTiles[tileKey] = unit.id
+      }
+      const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, null)
+      if (newPath.length > 1) {
+        unit.path = newPath.slice(1)
+        unit.oreField = orePos
+      }
+    }
+  }
+
+  initializeUnitMovement(unit)
+
+  if (window.cheatSystem && window.cheatSystem.isGodModeActive()) {
+    window.cheatSystem.addUnitToGodMode(unit)
+  }
+
+  return unit
+}

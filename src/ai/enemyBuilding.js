@@ -1,0 +1,689 @@
+import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from '../buildings.js'
+import { gameState } from '../gameState.js'
+import { isPartOfFactory } from './enemyUtils.js'
+
+function findAdjacentTile(factory, mapGrid) {
+  for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
+    for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
+      if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue
+      if (!mapGrid[y][x].building) {
+        return { x, y }
+      }
+    }
+  }
+  return null
+}
+
+// Let's improve this function to fix issues with enemy building placement
+// Modified to improve building placement with better spacing and factory avoidance
+export function findBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+  const factory = factories.find(f => f.id === aiPlayerId)
+  if (!factory) return null
+
+  const buildingWidth = buildingData[buildingType].width
+  const buildingHeight = buildingData[buildingType].height
+
+  // Get human player factory for directional placement (to build defenses toward them)
+  const humanPlayerFactory = factories.find(f => f.id === 'player1') // Assume human is always player1
+  const factoryX = factory.x + Math.floor(factory.width / 2)
+  const factoryY = factory.y + Math.floor(factory.height / 2)
+
+  // Direction toward human player (for defensive buildings)
+  const playerDirection = { x: 0, y: 0 }
+  if (humanPlayerFactory) {
+    const playerX = humanPlayerFactory.x + Math.floor(humanPlayerFactory.width / 2)
+    const playerY = humanPlayerFactory.y + Math.floor(humanPlayerFactory.height / 2)
+    playerDirection.x = playerX - factoryX
+    playerDirection.y = playerY - factoryY
+    const mag = Math.hypot(playerDirection.x, playerDirection.y)
+    if (mag > 0) {
+      playerDirection.x /= mag
+      playerDirection.y /= mag
+    }
+  }
+
+  // Find closest ore field to prioritize defense in that direction
+  let closestOrePos = null
+  let closestOreDist = Infinity
+
+  // Search for ore fields
+  for (let y = 0; y < mapGrid.length; y++) {
+    for (let x = 0; x < mapGrid[0].length; x++) {
+      if (mapGrid[y][x].ore) {
+        const dist = Math.hypot(x - factoryX, y - factoryY)
+        if (dist < closestOreDist) {
+          closestOreDist = dist
+          closestOrePos = { x, y }
+        }
+      }
+    }
+  }
+
+  // Determine direction vector - prioritize direction toward player for defensive buildings
+  let directionVector = { x: 0, y: 0 }
+  const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
+
+  if (isDefensiveBuilding && humanPlayerFactory) {
+    // For defensive buildings, strongly prefer direction toward player
+    directionVector = playerDirection
+  } else if (closestOrePos) {
+    // For other buildings, prefer direction toward ore fields
+    directionVector.x = closestOrePos.x - factoryX
+    directionVector.y = closestOrePos.y - factoryY
+    // Normalize
+    const mag = Math.hypot(directionVector.x, directionVector.y)
+    if (mag > 0) {
+      directionVector.x /= mag
+      directionVector.y /= mag
+    }
+  } else if (humanPlayerFactory) {
+    // Fallback to player direction if no ore fields
+    directionVector = playerDirection
+  }
+
+  // Special case for walls - they can be placed closer together
+  const minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2
+
+  // Preferred placement distances - increased to ensure more space between buildings
+  const preferredDistances = [3, 4, 5, 2]
+
+  // Search for positions prioritizing direction and preferred distance
+  for (let angle = 0; angle < 360; angle += 30) {
+    // Calculate angle alignment with target direction
+    const angleRad = angle * Math.PI / 180
+    const checkVector = { x: Math.cos(angleRad), y: Math.sin(angleRad) }
+    const dotProduct = directionVector.x * checkVector.x + directionVector.y * checkVector.y
+
+    // Skip angles that don't face toward the desired direction for defensive buildings
+    if (isDefensiveBuilding && dotProduct < 0.5 && Math.random() < 0.8) continue
+
+    // Try each of our preferred distances
+    for (const distance of preferredDistances) {
+      // Calculate position at this angle and distance
+      const dx = Math.round(Math.cos(angleRad) * distance)
+      const dy = Math.round(Math.sin(angleRad) * distance)
+
+      const x = factory.x + dx
+      const y = factory.y + dy
+
+      // Skip if out of bounds
+      if (x < 0 || y < 0 ||
+          x + buildingWidth > mapGrid[0].length ||
+          y + buildingHeight > mapGrid.length) {
+        continue
+      }
+
+      // Validate position - check for factory overlaps and other issues
+      let isValid = true
+      let conflictsWithFactory = false
+
+      // First verify this position doesn't overlap with any factory
+      for (let checkY = y; checkY < y + buildingHeight && isValid; checkY++) {
+        for (let checkX = x; checkX < x + buildingWidth && isValid; checkX++) {
+          if (isPartOfFactory(checkX, checkY, factories)) {
+            conflictsWithFactory = true
+            isValid = false
+            break
+          }
+        }
+      }
+
+      if (conflictsWithFactory) continue
+
+      // Now check if each tile is valid (terrain, units, etc.)
+      for (let checkY = y; checkY < y + buildingHeight && isValid; checkY++) {
+        for (let checkX = x; checkX < x + buildingWidth && isValid; checkX++) {
+          if (!isTileValid(checkX, checkY, mapGrid, units, buildings, factories)) {
+            isValid = false
+            break
+          }
+        }
+      }
+
+      if (!isValid) continue
+
+      // Check if ANY tile of the building is within range of an existing enemy building
+      // This means we're connected to the base, but not too close
+      let isNearBase = false
+      for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
+        for (let checkX = x; checkX < x + buildingWidth && !isNearBase; checkX++) {
+          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 5, aiPlayerId)) {
+            isNearBase = true
+          }
+        }
+      }
+
+      if (!isNearBase) continue
+
+      // NEW: Check if this building would create a bottleneck by being too close to other buildings
+      const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+
+      if (!hasClearPaths) continue
+
+      // If we got here, the position is valid
+      return { x, y }
+    }
+  }
+
+  // If we couldn't find a position with our preferred approach, try the fallback
+  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories)
+}
+
+// New helper function to ensure there are clear paths around a potential building placement
+function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace) {
+  // First, check all sides of the building to ensure there's adequate space
+  let accessibleSides = 0
+
+  // Check north side
+  let northClear = true
+  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
+    const checkY = y - minSpace
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].building ||
+        mapGrid[checkY][checkX].type === 'water' ||
+        mapGrid[checkY][checkX].type === 'rock') {
+      northClear = false
+      break
+    }
+
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      northClear = false
+      break
+    }
+  }
+  if (northClear) accessibleSides++
+
+  // Check south side
+  let southClear = true
+  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
+    const checkY = y + height + (minSpace - 1)
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].building ||
+        mapGrid[checkY][checkX].type === 'water' ||
+        mapGrid[checkY][checkX].type === 'rock') {
+      southClear = false
+      break
+    }
+
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      southClear = false
+      break
+    }
+  }
+  if (southClear) accessibleSides++
+
+  // Check west side
+  let westClear = true
+  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
+    const checkX = x - minSpace
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].building ||
+        mapGrid[checkY][checkX].type === 'water' ||
+        mapGrid[checkY][checkX].type === 'rock') {
+      westClear = false
+      break
+    }
+
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      westClear = false
+      break
+    }
+  }
+  if (westClear) accessibleSides++
+
+  // Check east side
+  let eastClear = true
+  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
+    const checkX = x + width + (minSpace - 1)
+    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+
+    // Check if this tile is blocked by another building
+    if (mapGrid[checkY][checkX].building ||
+        mapGrid[checkY][checkX].type === 'water' ||
+        mapGrid[checkY][checkX].type === 'rock') {
+      eastClear = false
+      break
+    }
+
+    // Check if this tile is part of an existing factory
+    if (isPartOfFactory(checkX, checkY, factories)) {
+      eastClear = false
+      break
+    }
+  }
+  if (eastClear) accessibleSides++
+
+  // Need at least 2 accessible sides (preferably opposite sides)
+  if (accessibleSides < 2) {
+    return false
+  }
+
+  // Now, check if this placement would create a pathfinding bottleneck by:
+  // 1. Creating a temporary map grid with this building placed
+  // 2. Trying to find paths between key points around the base
+
+  // Create a safe copy of the map grid without circular references
+  const tempMapGrid = mapGrid.map(row => 
+    row.map(tile => ({
+      type: tile.type,
+      ore: tile.ore,
+      building: tile.building ? true : false // Just track existence, not reference
+    }))
+  )
+
+  // Simulate placing the building in the temp grid
+  for (let cy = y; cy < y + height; cy++) {
+    for (let cx = x; cx < x + width; cx++) {
+      if (cx >= 0 && cy >= 0 && cx < tempMapGrid[0].length && cy < tempMapGrid.length) {
+        tempMapGrid[cy][cx].type = 'building'
+      }
+    }
+  }
+
+  // Get an AI factory for path testing (use first AI player)
+  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  const aiFactory = aiPlayerIds.length > 0 
+    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
+    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
+  if (!aiFactory) return true // If no AI factory, placement should be allowed
+
+  // Find existing buildings to test paths between
+  const aiBuildings = buildings ? buildings.filter(b => b.owner === (aiPlayerIds[0] || 'enemy')) : []
+
+  if (aiBuildings.length < 1) {
+    return true // No existing buildings to test paths between
+  }
+
+  // Create test points around the AI base
+  const testPoints = []
+
+  // Add factory exit points
+  testPoints.push({
+    x: aiFactory.x + Math.floor(aiFactory.width / 2),
+    y: aiFactory.y + aiFactory.height + 1  // Below the factory
+  })
+
+  // Add points near existing buildings
+  aiBuildings.forEach(building => {
+    // Add points around the building
+    testPoints.push({ x: building.x - 1, y: building.y }) // Left
+    testPoints.push({ x: building.x + building.width, y: building.y }) // Right
+    testPoints.push({ x: building.x, y: building.y - 1 }) // Top
+    testPoints.push({ x: building.x, y: building.y + building.height }) // Bottom
+  })
+
+  // Filter out invalid test points
+  const validTestPoints = testPoints.filter(point => {
+    return point.x >= 0 && point.y >= 0 &&
+           point.x < tempMapGrid[0].length && point.y < tempMapGrid.length &&
+           tempMapGrid[point.y][point.x].type !== 'building' &&
+           tempMapGrid[point.y][point.x].type !== 'water' &&
+           tempMapGrid[point.y][point.x].type !== 'rock'
+  })
+
+  // Need at least 2 valid test points to check paths
+  if (validTestPoints.length < 2) {
+    return true
+  }
+
+  // Select a few random pairs of points to test paths between (no need to test all combinations)
+  const pathTestPairs = []
+  for (let i = 0; i < Math.min(3, validTestPoints.length - 1); i++) {
+    // Randomly select two points
+    const point1 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)]
+    let point2
+    do {
+      point2 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)]
+    } while (point1 === point2)
+
+    pathTestPairs.push({ start: point1, end: point2 })
+  }
+
+  // Test if paths exist between these points with the new building placed
+  for (const { start, end } of pathTestPairs) {
+    // Use our own simple path finder instead of importing findPath to avoid circular dependencies
+    const hasPath = checkSimplePath(start, end, tempMapGrid, 150) // Limit path length to avoid infinite loops
+
+    if (!hasPath) {
+      // If any path test fails, this building placement would create a bottleneck
+      return false
+    }
+  }
+
+  // All tests passed, this building placement maintains paths between key points
+  return true
+}
+
+// Simple pathfinding function for testing connectivity (BFS approach)
+function checkSimplePath(start, end, mapGrid, maxSteps) {
+  const queue = [{ x: start.x, y: start.y, steps: 0 }]
+  const visited = new Set()
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+
+    // Check if we reached the destination
+    if (current.x === end.x && current.y === end.y) {
+      return true
+    }
+
+    // Check if we've reached the step limit
+    if (current.steps >= maxSteps) {
+      return false
+    }
+
+    // Mark as visited
+    const key = `${current.x},${current.y}`
+    if (visited.has(key)) continue
+    visited.add(key)
+
+    // Check all 8 directions
+    const directions = [
+      { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, // Cardinals
+      { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 } // Diagonals
+    ]
+
+    for (const dir of directions) {
+      const nextX = current.x + dir.x
+      const nextY = current.y + dir.y
+
+      // Check bounds
+      if (nextX < 0 || nextY < 0 || nextX >= mapGrid[0].length || nextY >= mapGrid.length) {
+        continue
+      }
+
+      // Check if passable
+      if (mapGrid[nextY][nextX].building ||
+          mapGrid[nextY][nextX].type === 'water' ||
+          mapGrid[nextY][nextX].type === 'rock') {
+        continue
+      }
+
+      // Add to queue
+      queue.push({ x: nextX, y: nextY, steps: current.steps + 1 })
+    }
+  }
+
+  // No path found
+  return false
+}
+
+// Fallback position search with the original spiral pattern
+function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories) {
+  // Use first AI player factory, fallback to 'enemy' for legacy compatibility
+  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
+  const factory = aiPlayerIds.length > 0 
+    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
+    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
+  if (!factory) return null
+
+  const buildingWidth = buildingData[buildingType].width
+  const buildingHeight = buildingData[buildingType].height
+
+  // Special case for walls - they can be placed closer together
+  const minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2
+
+  // Get human player factory for directional placement of defensive buildings
+  const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player')
+  const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
+
+  // Preferred distances for building placement
+  const preferredDistances = [3, 4, 5, 2]
+
+  // Calculate player direction for defensive buildings
+  let playerDirection = null
+  if (playerFactory && isDefensiveBuilding) {
+    const factoryX = factory.x + Math.floor(factory.width / 2)
+    const factoryY = factory.y + Math.floor(factory.height / 2)
+    const playerX = playerFactory.x + Math.floor(playerFactory.width / 2)
+    const playerY = playerFactory.y + Math.floor(playerFactory.height / 2)
+
+    playerDirection = {
+      x: playerX - factoryX,
+      y: playerY - factoryY
+    }
+
+    // Normalize
+    const mag = Math.hypot(playerDirection.x, playerDirection.y)
+    if (mag > 0) {
+      playerDirection.x /= mag
+      playerDirection.y /= mag
+    }
+  }
+
+  // Search in a spiral pattern around the factory with preference to player direction
+  for (let distance = 1; distance <= 10; distance++) {
+    // Prioritize distances from our preferred list
+    if (preferredDistances.includes(distance)) {
+      // Prioritize building in 8 cardinal directions first
+      for (let angle = 0; angle < 360; angle += 45) {
+        // For defensive buildings, prioritize direction toward player
+        if (isDefensiveBuilding && playerDirection) {
+          // Calculate how closely this angle aligns with player direction
+          const angleRad = angle * Math.PI / 180
+          const dirVector = {
+            x: Math.cos(angleRad),
+            y: Math.sin(angleRad)
+          }
+
+          const dotProduct = playerDirection.x * dirVector.x + playerDirection.y * dirVector.y
+
+          // Skip angles that don't face toward player (negative dot product)
+          if (dotProduct < 0.3 && Math.random() < 0.7) continue
+        }
+
+        // Calculate position at this angle and distance
+        const angleRad = angle * Math.PI / 180
+        const dx = Math.round(Math.cos(angleRad) * distance)
+        const dy = Math.round(Math.sin(angleRad) * distance)
+
+        const x = factory.x + dx
+        const y = factory.y + dy
+
+        // Skip if out of bounds
+        if (x < 0 || y < 0 ||
+            x + buildingWidth > mapGrid[0].length ||
+            y + buildingHeight > mapGrid.length) {
+          continue
+        }
+
+        // First check factory overlap
+        let overlapsFactory = false
+        for (let cy = y; cy < y + buildingHeight && !overlapsFactory; cy++) {
+          for (let cx = x; cx < x + buildingWidth && !overlapsFactory; cx++) {
+            if (isPartOfFactory(cx, cy, factories)) {
+              overlapsFactory = true
+            }
+          }
+        }
+
+        if (overlapsFactory) continue
+
+        // Check if ANY tile of the building is within range of an existing building
+        let isNearBase = false
+        for (let cy = y; cy < y + buildingHeight && !isNearBase; cy++) {
+          for (let cx = x; cx < x + buildingWidth && !isNearBase; cx++) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
+              isNearBase = true
+            }
+          }
+        }
+
+        if (!isNearBase) continue
+
+        // Check if each tile is valid (terrain, units, etc.)
+        let isValid = true
+        for (let cy = y; cy < y + buildingHeight && isValid; cy++) {
+          for (let cx = x; cx < x + buildingWidth && isValid; cx++) {
+            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {
+              isValid = false
+            }
+          }
+        }
+
+        if (!isValid) continue
+
+        // Use the same path checking as in the main function
+        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+
+        if (!hasClearPaths) continue
+
+        return { x, y }
+      }
+    }
+  }
+
+  // Last resort: check the entire spiral without preferred distances
+  for (let distance = 1; distance <= 10; distance++) {
+    // Skip distances we already checked
+    if (preferredDistances.includes(distance)) continue
+
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        // Skip positions not on the perimeter
+        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+
+        const x = factory.x + dx
+        const y = factory.y + dy
+
+        // Skip if out of bounds
+        if (x < 0 || y < 0 ||
+            x + buildingWidth > mapGrid[0].length ||
+            y + buildingHeight > mapGrid.length) {
+          continue
+        }
+
+        // First verify not overlapping a factory
+        let overlapsFactory = false
+        for (let cy = y; cy < y + buildingHeight && !overlapsFactory; cy++) {
+          for (let cx = x; cx < x + buildingWidth && !overlapsFactory; cx++) {
+            if (isPartOfFactory(cx, cy, factories)) {
+              overlapsFactory = true
+            }
+          }
+        }
+
+        if (overlapsFactory) continue
+
+        // Check if near base and all tiles are valid
+        let isNearBase = false
+        let allTilesValid = true
+
+        for (let cy = y; cy < y + buildingHeight; cy++) {
+          for (let cx = x; cx < x + buildingWidth; cx++) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
+              isNearBase = true
+            }
+            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {
+              allTilesValid = false
+            }
+          }
+        }
+
+        if (!isNearBase || !allTilesValid) continue
+
+        // Final check for pathfinding
+        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+
+        if (!hasClearPaths) continue
+
+        return { x, y }
+      }
+    }
+  }
+
+  return null
+}
+
+// Handle enemy building production completion
+// eslint-disable-next-line no-unused-vars
+function completeEnemyBuilding(gameState, mapGrid) {
+  const production = gameState.enemy.currentBuildingProduction
+  if (!production) return
+
+  // Do a final check to make sure the location is still valid
+  const buildingType = production.type
+  const x = production.x
+  const y = production.y
+
+  // Validate the building placement one final time
+  if (canPlaceBuilding(buildingType, x, y, mapGrid, gameState.units, gameState.buildings, gameState.factories || [], 'enemy')) {
+    // Create and place the building
+    const newBuilding = createBuilding(buildingType, x, y)
+    newBuilding.owner = 'enemy'
+
+    // Add to game state
+    gameState.buildings.push(newBuilding)
+
+    // Update map grid
+    placeBuilding(newBuilding, mapGrid)
+
+    // Update power supply
+    updatePowerSupply(gameState.buildings, gameState)
+
+  } else {
+  }
+
+  // Reset production state
+  gameState.enemy.currentBuildingProduction = null
+}
+
+// Add function to replicate player building patterns
+// eslint-disable-next-line no-unused-vars
+function replicatePlayerBuildPattern(gameState, enemyBuildings) {
+  try {
+    // Get build patterns from localStorage if not already loaded
+    if (!gameState.playerBuildHistory) {
+      const savedHistory = localStorage.getItem('playerBuildHistory')
+      gameState.playerBuildHistory = savedHistory ? JSON.parse(savedHistory) : []
+    }
+
+    // Check if we have any patterns to learn from
+    if (!gameState.playerBuildHistory || gameState.playerBuildHistory.length === 0) {
+      return null
+    }
+
+    // Pick a random session from the last 20 (or however many we have)
+    const lastSessions = gameState.playerBuildHistory.slice(-20)
+    const randomSession = lastSessions[Math.floor(Math.random() * lastSessions.length)]
+
+    if (!randomSession || !randomSession.buildings || randomSession.buildings.length === 0) {
+      return null
+    }
+
+    // Get counts of existing enemy buildings by type
+    const buildingCounts = {}
+    enemyBuildings.forEach(building => {
+      buildingCounts[building.type] = (buildingCounts[building.type] || 0) + 1
+    })
+
+    // Find the next building type from the pattern that we haven't matched yet
+    for (let i = 0; i < randomSession.buildings.length; i++) {
+      const buildingType = randomSession.buildings[i]
+
+      // If we haven't built this type of building yet or haven't built as many as the pattern suggests
+      const currentCount = buildingCounts[buildingType] || 0
+      const patternCount = randomSession.buildings.slice(0, i + 1)
+        .filter(type => type === buildingType).length
+
+      if (currentCount < patternCount) {
+        return buildingType
+      }
+    }
+
+    // If we've replicated the entire pattern, choose the last building type
+    return randomSession.buildings[randomSession.buildings.length - 1]
+  } catch (error) {
+    console.error('Error in replicatePlayerBuildPattern:', error)
+    return null
+  }
+}
