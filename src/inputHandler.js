@@ -5,6 +5,7 @@ import { MouseHandler } from './input/mouseHandler.js'
 import { KeyboardHandler } from './input/keyboardHandler.js'
 import { SelectionManager } from './input/selectionManager.js'
 import { UnitCommandsHandler } from './input/unitCommands.js'
+import { isForceAttackModifierActive } from './utils/inputUtils.js'
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -34,7 +35,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
   // Setup input handlers
   mouseHandler.setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
   keyboardHandler.setupKeyboardEvents(units, selectedUnits, mapGrid, factories)
-  
+
   // Give keyboard handler access to mouse handler for ESC key functionality
   keyboardHandler.setMouseHandler(mouseHandler)
 
@@ -45,8 +46,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
   document.addEventListener('DOMContentLoaded', () => {
     // Set up the document-level mousemove event
     document.addEventListener('mousemove', (e) => {
-      // Update Force Attack mode status based on Ctrl key
-      cursorManager.updateForceAttackMode(e.ctrlKey)
+      // Update Force Attack mode status based on the platform modifier key
+      cursorManager.updateForceAttackMode(isForceAttackModifierActive(e))
 
       // Update custom cursor position
       cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits)
@@ -69,16 +70,16 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
     })
 
-    // Listen for Ctrl key presses to toggle force attack cursor
+    // Listen for modifier key presses to toggle force attack cursor
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Control') {
+      if (isForceAttackModifierActive(e)) {
         cursorManager.updateForceAttackMode(true)
         cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
       }
     })
 
     document.addEventListener('keyup', (e) => {
-      if (e.key === 'Control') {
+      if (['Control', 'Meta', 'Alt'].includes(e.key)) {
         cursorManager.updateForceAttackMode(false)
         cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
       }

@@ -5,6 +5,7 @@ import { units } from '../main.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
+import { isForceAttackModifierActive } from '../utils/inputUtils.js'
 
 export class MouseHandler {
   constructor() {
@@ -419,7 +420,7 @@ export class MouseHandler {
     let forceAttackHandled = false
 
     // First, handle Command Issuing in Force Attack Mode
-    if (selectedUnits.length > 0 && !this.wasDragging && e.ctrlKey) {
+    if (selectedUnits.length > 0 && !this.wasDragging && isForceAttackModifierActive(e)) {
       forceAttackHandled = this.handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid)
     }
 
@@ -740,14 +741,14 @@ export class MouseHandler {
       this.updateAGFCapability(selectedUnits)
     } else {
       // No unit clicked - handle as movement command if units are selected and not in special modes
-      if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
-        if (e.shiftKey) {
-          // Shift+Click: Initiate retreat behavior for combat units
-          initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
-        } else if (!e.ctrlKey) {
-          // Normal command (not Ctrl+Click which is force attack)
-          this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
-        }
+        if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+          if (e.shiftKey) {
+            // Shift+Click: Initiate retreat behavior for combat units
+            initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
+          } else if (!isForceAttackModifierActive(e)) {
+            // Normal command (not Ctrl+Click which is force attack)
+            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+          }
       }
     }
   }
