@@ -68,6 +68,21 @@ export function setupInputHandlers(units, factories, mapGrid) {
         }
       }
     })
+
+    // Listen for Ctrl key presses to toggle force attack cursor
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Control') {
+        cursorManager.updateForceAttackMode(true)
+        cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+      }
+    })
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Control') {
+        cursorManager.updateForceAttackMode(false)
+        cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+      }
+    })
   })
 }
 
