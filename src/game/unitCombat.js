@@ -39,25 +39,41 @@ function isTurretAimedAtTarget(unit, target) {
   // Check if turret is aimed within the threshold
   const angleDifference = Math.abs(angleDiff(unit.turretDirection, angleToTarget))
   
-  return angleDifference <= TURRET_AIMING_THRESHOLD
+  // Tank V3 has better aiming precision
+  const aimingThreshold = unit.type === 'tank-v3' ? TURRET_AIMING_THRESHOLD * 0.5 : TURRET_AIMING_THRESHOLD
+  
+  return angleDifference <= aimingThreshold
 }
 
 /**
  * Enhanced targeting spread with controlled randomness for better accuracy
  */
-function applyTargetingSpread(targetX, targetY, projectileType) {
+function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileType, unitType = null) {
     // Skip spread for rockets to maintain precision
     if (projectileType === 'rocket') {
         return { x: targetX, y: targetY };
     }
+
+    // Calculate base angle and distance from shooter to target
+    const baseAngle = Math.atan2(targetY - shooterY, targetX - shooterX);
+    const distance = Math.hypot(targetX - shooterX, targetY - shooterY);
+
+    // Different spread amounts based on unit type
+    let maxAngleOffset;
+    if (unitType === 'tank-v3') {
+        maxAngleOffset = 0.009; // about 0.5 degrees - very accurate
+    } else if (unitType === 'tank-v2') {
+        maxAngleOffset = 0.017; // about 1 degree 
+    } else {
+        maxAngleOffset = 0.035; // about 2 degrees for standard tanks
+    }
     
-    // Reduced spread for better accuracy (30% less than before)
-    const spreadRadius = 20; // Reduced from 32 to 20 pixels
-    const angle = Math.random() * 2 * Math.PI;
-    const distance = Math.random() * spreadRadius;
+    const angleOffset = (Math.random() * 2 - 1) * maxAngleOffset;
+    const finalAngle = baseAngle + angleOffset;
+
     return {
-        x: targetX + Math.cos(angle) * distance,
-        y: targetY + Math.sin(angle) * distance
+        x: shooterX + Math.cos(finalAngle) * distance,
+        y: shooterY + Math.sin(finalAngle) * distance
     };
 }
 
@@ -173,7 +189,7 @@ const COMBAT_CONFIG = {
 /**
  * Common firing logic helper - handles bullet creation
  */
-function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false) {
+function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null) {
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
@@ -181,28 +197,40 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         // Check if turret is properly aimed at the target before firing
         if (unit.canFire !== false && hasClearShot(unit, target, units) && isTurretAimedAtTarget(unit, target)) {
             // Calculate aim position (with predictive aiming if enabled)
-            let aimX = targetCenterX;
-            let aimY = targetCenterY;
+            let aimX = overrideTarget ? overrideTarget.x : targetCenterX;
+            let aimY = overrideTarget ? overrideTarget.y : targetCenterY;
 
-            if (usePredictiveAiming && target.lastKnownX !== undefined && target.lastKnownY !== undefined) {
+            if (!overrideTarget && usePredictiveAiming && target.lastKnownX !== undefined && target.lastKnownY !== undefined) {
                 const targetVelX = targetCenterX - target.lastKnownX;
                 const targetVelY = targetCenterY - target.lastKnownY;
                 const bulletSpeed = projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED;
                 const distance = Math.sqrt((targetCenterX - unitCenterX) ** 2 + (targetCenterY - unitCenterY) ** 2);
-                const timeToTarget = distance / (bulletSpeed * TILE_SIZE);
-                aimX = targetCenterX + targetVelX * timeToTarget * 8; // Reduced multiplier for better accuracy
-                aimY = targetCenterY + targetVelY * timeToTarget * 8;
+                
+                // Conservative predictive aiming with velocity damping
+                const velocityMagnitude = Math.hypot(targetVelX, targetVelY);
+                const dampingFactor = Math.min(1, 20 / (velocityMagnitude + 1)); // Reduce prediction for fast targets
+                const baseLead = Math.min(0.3, distance / (bulletSpeed * 100)); // Scale with distance
+                const leadFactor = baseLead * dampingFactor;
+                
+                aimX = targetCenterX + targetVelX * leadFactor;
+                aimY = targetCenterY + targetVelY * leadFactor;
             }
 
             // Store current position for next frame's velocity calculation (for predictive aiming)
-            if (usePredictiveAiming) {
+            if (usePredictiveAiming && !overrideTarget) {
                 target.lastKnownX = targetCenterX;
                 target.lastKnownY = targetCenterY;
             }
             
-            // Apply targeting spread
-            const spreadTarget = applyTargetingSpread(aimX, aimY, projectileType);
-            
+            let finalTarget;
+            if (overrideTarget) {
+                finalTarget = overrideTarget;
+            } else {
+                finalTarget = applyTargetingSpread(unitCenterX, unitCenterY, aimX, aimY, projectileType, unit.type);
+            }
+
+            const angle = Math.atan2(finalTarget.y - unitCenterY, finalTarget.x - unitCenterX);
+
             const bullet = {
                 id: Date.now() + Math.random(),
                 x: unitCenterX,
@@ -213,12 +241,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
                 shooter: unit,
                 homing: projectileType === 'rocket',
                 target: projectileType === 'rocket' ? target : null,
-                targetPosition: { x: spreadTarget.x, y: spreadTarget.y },
+                targetPosition: { x: finalTarget.x, y: finalTarget.y },
                 startTime: now
             };
 
             if (!bullet.homing) {
-                const angle = Math.atan2(spreadTarget.y - unitCenterY, spreadTarget.x - unitCenterX);
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
             }
@@ -263,7 +290,7 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
     if (unit.burstState.rocketsToFire > 0 && 
         now - unit.burstState.lastRocketTime >= COMBAT_CONFIG.ROCKET_BURST.DELAY) {
         
-        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'rocket', units, mapGrid);
+        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'rocket', units, mapGrid, false, null);
         
         if (fired) {
             unit.burstState.rocketsToFire--;
@@ -290,17 +317,61 @@ function handleTankV3BurstFire(unit, target, bullets, now, targetCenterX, target
             lastBulletTime: 0
         };
     }
-    
+
     // Fire bullets with proper timing in the game loop
-    if (unit.burstState.bulletsToFire > 0 && 
+    if (unit.burstState.bulletsToFire > 0 &&
         now - unit.burstState.lastBulletTime >= COMBAT_CONFIG.TANK_V3_BURST.DELAY) {
+
+        // Calculate fresh predictive aim for each shot in the burst
+        let aimX = targetCenterX;
+        let aimY = targetCenterY;
         
-        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'bullet', units, mapGrid, true);
+        // Apply predictive aiming if we have previous target position data
+        if (target.lastKnownX !== undefined && target.lastKnownY !== undefined) {
+            const unitCenterX = unit.x + TILE_SIZE / 2;
+            const unitCenterY = unit.y + TILE_SIZE / 2;
+            const targetVelX = targetCenterX - target.lastKnownX;
+            const targetVelY = targetCenterY - target.lastKnownY;
+            const bulletSpeed = TANK_BULLET_SPEED;
+            const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY);
+            
+            // Conservative predictive aiming with velocity damping
+            // Reduce prediction strength for high velocities to avoid overshooting
+            const velocityMagnitude = Math.hypot(targetVelX, targetVelY);
+            const dampingFactor = Math.min(1, 20 / (velocityMagnitude + 1)); // Reduce prediction for fast targets
+            const baseLead = Math.min(0.3, distance / (bulletSpeed * 100)); // Scale with distance
+            const leadFactor = baseLead * dampingFactor;
+            
+            aimX = targetCenterX + targetVelX * leadFactor;
+            aimY = targetCenterY + targetVelY * leadFactor;
+        }
+
+        // Update target position for next frame's velocity calculation
+        target.lastKnownX = targetCenterX;
+        target.lastKnownY = targetCenterY;
         
+        // Don't apply targeting spread here - it will be applied in handleTankFiring
+        const aimTarget = { x: aimX, y: aimY };
+
+        const fired = handleTankFiring(
+            unit,
+            target,
+            bullets,
+            now,
+            0,
+            targetCenterX,
+            targetCenterY,
+            'bullet',
+            units,
+            mapGrid,
+            false,
+            aimTarget
+        );
+
         if (fired) {
             unit.burstState.bulletsToFire--;
             unit.burstState.lastBulletTime = now;
-            
+
             if (unit.burstState.bulletsToFire <= 0) {
                 unit.burstState = null; // Reset burst state
                 unit.lastShotTime = now; // Set cooldown for next burst
@@ -483,7 +554,7 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     const effectiveRange = getEffectiveFireRange(unit)
     if (distance <= effectiveRange && canAttack) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
-      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null);
     }
   }
 }
@@ -582,7 +653,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     const effectiveRange = getEffectiveFireRange(unit)
     if (distance <= effectiveRange && canAttack) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
-      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid);
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null);
     }
   }
 }
