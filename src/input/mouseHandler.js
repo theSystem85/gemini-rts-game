@@ -746,7 +746,7 @@ export class MouseHandler {
             // Shift+Click: Initiate retreat behavior for combat units
             initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
           } else if (!isForceAttackModifierActive(e)) {
-            // Normal command (not Ctrl+Click which is force attack)
+            // Normal command (not V+Click which is self attack)
             this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
           }
       }

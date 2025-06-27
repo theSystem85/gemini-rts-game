@@ -46,8 +46,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
   document.addEventListener('DOMContentLoaded', () => {
     // Set up the document-level mousemove event
     document.addEventListener('mousemove', (e) => {
-      // Update Force Attack mode status based on the platform modifier key
-      cursorManager.updateForceAttackMode(isForceAttackModifierActive(e))
+      // Update Force Attack mode status based on the self-attack key
+      cursorManager.updateForceAttackMode(isForceAttackModifierActive())
 
       // Update custom cursor position
       cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits)
@@ -79,7 +79,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
     })
 
     document.addEventListener('keyup', (e) => {
-      if (['Control', 'Meta', 'Alt'].includes(e.key)) {
+      if (e.key && e.key.toLowerCase() === 'v') {
+        isForceAttackModifierActive(e) // update cached state
         cursorManager.updateForceAttackMode(false)
         cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
       }
