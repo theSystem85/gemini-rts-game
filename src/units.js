@@ -285,12 +285,31 @@ function getNeighbors(node, mapGrid) {
 // Spawns a unit near the specified factory.
 // Accepts an optional rallyPointTarget from the specific spawning factory.
 export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null) {
-  // Determine the center of the factory/building for spawn proximity check
-  const factoryCenterX = factory.x + Math.floor(factory.width / 2)
-  const factoryCenterY = factory.y + Math.floor(factory.height / 2)
+  // Default spawn position is the center below the factory
+  const spawnX = factory.x + Math.floor(factory.width / 2)
+  const spawnY = factory.y + factory.height
 
-  // Find an available spawn position near the factory's center
-  const spawnPosition = findAvailableSpawnPosition(factoryCenterX, factoryCenterY, mapGrid, units)
+  let spawnPosition = null
+
+  if (factory.type === 'vehicleFactory') {
+    // Attempt to free the designated spawn tile using algorithm A1
+    moveBlockingUnits(spawnX, spawnY, units, mapGrid)
+
+    // If the spot is valid after moving blockers, use it
+    if (isPositionValid(spawnX, spawnY, mapGrid, units)) {
+      spawnPosition = { x: spawnX, y: spawnY }
+    } else {
+      // Fallback: search near the designated spot
+      spawnPosition = findAvailableSpawnPosition(spawnX, spawnY, mapGrid, units)
+    }
+  } else {
+    // Determine the center of the factory/building for spawn proximity check
+    const factoryCenterX = factory.x + Math.floor(factory.width / 2)
+    const factoryCenterY = factory.y + Math.floor(factory.height / 2)
+
+    // Find an available spawn position near the factory's center
+    spawnPosition = findAvailableSpawnPosition(factoryCenterX, factoryCenterY, mapGrid, units)
+  }
 
   if (!spawnPosition) {
     console.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`)

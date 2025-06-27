@@ -1,6 +1,6 @@
 // enemy.js
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from './config.js'
-import { findPath, buildOccupancyMap } from './units.js'
+import { findPath, buildOccupancyMap, moveBlockingUnits } from './units.js'
 import { getUniqueId } from './utils.js'
 import { findClosestOre } from './logic.js'
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from './buildings.js'
@@ -637,18 +637,26 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
 // Spawns an AI unit at the specified building (factory or vehicle factory)
 // NOTE: AI units now use identical stats to player units for perfect balance
 export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameState, productionStartTime, aiPlayerId) {
-  // Use the same spawn position logic as player units
-  const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
-  const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
-  
-  // Find a clear spawn position around the building
-  
-  // Find an available spawn position near the building's center (same as player logic)
-  let spawnPosition = findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units)
-  
+  const spawnX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
+  const spawnY = spawnBuilding.y + spawnBuilding.height
+
+  let spawnPosition = null
+
+  if (spawnBuilding.type === 'vehicleFactory') {
+    moveBlockingUnits(spawnX, spawnY, units, mapGrid)
+    if (isPositionValidForSpawn(spawnX, spawnY, mapGrid, units)) {
+      spawnPosition = { x: spawnX, y: spawnY }
+    } else {
+      spawnPosition = findAvailableSpawnPosition(spawnX, spawnY, mapGrid, units)
+    }
+  } else {
+    const buildingCenterX = spawnBuilding.x + Math.floor(spawnBuilding.width / 2)
+    const buildingCenterY = spawnBuilding.y + Math.floor(spawnBuilding.height / 2)
+    spawnPosition = findAvailableSpawnPosition(buildingCenterX, buildingCenterY, mapGrid, units)
+  }
+
   if (!spawnPosition) {
-    // Fallback to center position if no adjacent position available
-    spawnPosition = { x: buildingCenterX, y: buildingCenterY }
+    spawnPosition = { x: spawnX, y: spawnY }
   }
   
   // Use the same createUnit function as player units to ensure identical stats
