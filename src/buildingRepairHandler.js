@@ -27,6 +27,18 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         return
       }
 
+      // If factory is already under repair, cancel it
+      const existingRepair = gameState.buildingsUnderRepair?.find(r => r.building === playerFactory)
+      if (existingRepair) {
+        const refund = existingRepair.cost - existingRepair.costPaid
+        gameState.money += refund
+        gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existingRepair)
+        showNotification('Factory repair cancelled')
+        playSound('constructionCancelled')
+        moneyEl.textContent = gameState.money
+        return
+      }
+
       // Calculate damage percentage
       const damagePercent = 1 - (playerFactory.health / playerFactory.maxHealth)
       // Factory repair cost is based on its base cost of 5000
@@ -38,9 +50,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         return
       }
 
-      // Start gradual repair of the factory
-      gameState.money -= repairCost
-      moneyEl.textContent = gameState.money
+      // Start gradual repair of the factory without deducting cost upfront
 
       // Create repair info for factory
       if (!gameState.buildingsUnderRepair) {
@@ -61,7 +71,9 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         duration: repairDuration,
         startHealth: playerFactory.health,
         targetHealth: playerFactory.maxHealth,
-        healthToRepair: healthToRepair
+        healthToRepair: healthToRepair,
+        cost: repairCost,
+        costPaid: 0
       })
 
       // Log for debugging
@@ -81,6 +93,18 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         // Skip if building is at full health
         if (building.health >= building.maxHealth) {
           showNotification('Building is already at full health.')
+          return
+        }
+
+        // If building already under repair, cancel it
+        const existing = gameState.buildingsUnderRepair?.find(r => r.building === building)
+        if (existing) {
+          const refund = existing.cost - existing.costPaid
+          gameState.money += refund
+          gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existing)
+          showNotification('Building repair cancelled')
+          playSound('constructionCancelled')
+          moneyEl.textContent = gameState.money
           return
         }
 
