@@ -18,25 +18,29 @@ export function isInputFieldFocused() {
 }
 
 /**
- * Track whether the self‑attack modifier key ("v") is currently held down.
- * Mouse events won't contain this information, so we persist the state when
- * key events occur and simply return it otherwise.
+ * Track whether the self‑attack modifier key (Ctrl/Cmd) is currently held down.
+ * For mouse events we rely on cached state from the most recent key event.
  */
 let forceAttackKeyActive = false
 
 /**
- * Determine if the self-attack modifier key is active. Pass any keyboard event
- * so the internal state can be updated. For non-keyboard events, simply return
- * the cached value.
+ * Determine if the self-attack modifier is active. Provide keyboard or mouse
+ * events so the internal state can update accordingly. For calls without an
+ * event, the cached state is returned.
  *
- * @param {KeyboardEvent|MouseEvent} [e] - Optional event that may update state
- * @returns {boolean} True if the "v" key is currently held
+ * @param {KeyboardEvent|MouseEvent} [e]
+ * @returns {boolean} True if Ctrl or Cmd is held
  */
 export function isForceAttackModifierActive(e) {
   if (e && (e.type === 'keydown' || e.type === 'keyup')) {
-    if (e.key && e.key.toLowerCase() === 'v') {
+    const isModifier = e.key === 'Control' || e.key === 'Meta'
+    if (isModifier) {
       forceAttackKeyActive = e.type === 'keydown'
+    } else {
+      forceAttackKeyActive = e.ctrlKey || e.metaKey
     }
+  } else if (e && typeof e.ctrlKey === 'boolean') {
+    forceAttackKeyActive = e.ctrlKey || e.metaKey
   }
   return forceAttackKeyActive
 }

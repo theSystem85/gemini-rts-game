@@ -264,7 +264,7 @@ export class MouseHandler {
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
 
     // Check if right-drag exceeds threshold
-    if (!this.rightWasDragging && Math.hypot(e.clientX - this.rightDragStart.x, e.clientY - this.rightDragStart.y) > 5) {
+    if (!this.rightWasDragging && Math.hypot(e.clientX - this.rightDragStart.x, e.clientY - this.rightDragStart.y) > 3) {
       this.rightWasDragging = true
     }
   }
@@ -278,7 +278,7 @@ export class MouseHandler {
       )
       
       // Transition to AGF mode immediately if combat units are selected and we start dragging
-      if (dragDistance > 5) { // Small threshold to avoid accidental activation
+      if (dragDistance > 3) { // Small threshold to avoid accidental activation
         // Transition from normal selection to attack group mode
         this.isAttackGroupSelecting = true
         this.isSelecting = false
@@ -305,7 +305,7 @@ export class MouseHandler {
       this.selectionEnd = { x: worldX, y: worldY }
       gameState.selectionEnd = { ...this.selectionEnd }
 
-      if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 5 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 5)) {
+      if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 3 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 3)) {
         this.wasDragging = true
       }
     }
@@ -746,7 +746,7 @@ export class MouseHandler {
             // Shift+Click: Initiate retreat behavior for combat units
             initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
           } else if (!isForceAttackModifierActive(e)) {
-            // Normal command (not V+Click which is self attack)
+            // Normal command (not Ctrl+Click which is self attack)
             this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
           }
       }

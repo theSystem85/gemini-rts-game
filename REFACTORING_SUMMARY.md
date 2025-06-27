@@ -41,7 +41,7 @@ src/input/
 **Key Methods:**
 - `setupMouseEvents()` - Initialize all mouse event listeners
 - `handleRightDragScrolling()` - Camera scroll implementation
-- `handleForceAttackCommand()` - V+click self attack
+ - `handleForceAttackCommand()` - Ctrl+click self attack
 - `handleStandardCommands()` - Normal command processing
 
 ### 3. KeyboardHandler (`src/input/keyboardHandler.js`)
