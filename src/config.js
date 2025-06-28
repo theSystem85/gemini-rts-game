@@ -109,6 +109,9 @@ export const ATTACK_PATH_CALC_INTERVAL = 3000
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export const PATHFINDING_THRESHOLD = 10
 
+// How close a unit needs to be (in tiles) to consider a move target reached
+export const MOVE_TARGET_REACHED_THRESHOLD = 1.5
+
 // Unit stuck detection and productivity check intervals (in milliseconds)
 export const STUCK_CHECK_INTERVAL = 500  // Check every 0.5 seconds for stuck units
 export const HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds

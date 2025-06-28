@@ -1,5 +1,5 @@
 // unitMovement.js - Handles all unit movement logic
-import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath, buildOccupancyMap } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
@@ -132,6 +132,17 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
 
     // Update rotation for units with turrets
     updateUnitRotation(unit, now)
+
+    // Clear moveTarget when close enough and no further path exists
+    if (unit.moveTarget && (!unit.path || unit.path.length === 0)) {
+      const distToTarget = Math.hypot(
+        unit.x / TILE_SIZE - unit.moveTarget.x,
+        unit.y / TILE_SIZE - unit.moveTarget.y
+      )
+      if (distToTarget < MOVE_TARGET_REACHED_THRESHOLD) {
+        unit.moveTarget = null
+      }
+    }
   }
 }
 
@@ -174,7 +185,7 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
           unit.lastPathCalcTime = now
-        } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < 1) {
+        } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
           // Clear moveTarget if we've reached destination
           unit.moveTarget = null
         }
