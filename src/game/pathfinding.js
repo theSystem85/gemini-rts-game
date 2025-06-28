@@ -1,5 +1,5 @@
 // Path Finding Module - Handles unit pathfinding and formation management
-import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { findPath } from '../units.js'
 
 /**
@@ -117,7 +117,7 @@ export function updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
             } else {
               unit.lastPathCalcTime = now
             }
-          } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < 1) {
+          } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
             // Clear moveTarget if we've reached destination
             unit.moveTarget = null
           }
