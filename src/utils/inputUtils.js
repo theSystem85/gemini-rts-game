@@ -18,7 +18,7 @@ export function isInputFieldFocused() {
 }
 
 /**
- * Track whether the self‑attack modifier key (Ctrl/Cmd) is currently held down.
+ * Track whether the self‑attack modifier key (Ctrl) is currently held down.
  * For mouse events we rely on cached state from the most recent key event.
  */
 let forceAttackKeyActive = false
@@ -29,18 +29,17 @@ let forceAttackKeyActive = false
  * event, the cached state is returned.
  *
  * @param {KeyboardEvent|MouseEvent} [e]
- * @returns {boolean} True if Ctrl or Cmd is held
+ * @returns {boolean} True if the Ctrl key is held
  */
 export function isForceAttackModifierActive(e) {
   if (e && (e.type === 'keydown' || e.type === 'keyup')) {
-    const isModifier = e.key === 'Control' || e.key === 'Meta'
-    if (isModifier) {
+    if (e.key === 'Control') {
       forceAttackKeyActive = e.type === 'keydown'
     } else {
-      forceAttackKeyActive = e.ctrlKey || e.metaKey
+      forceAttackKeyActive = e.ctrlKey
     }
   } else if (e && typeof e.ctrlKey === 'boolean') {
-    forceAttackKeyActive = e.ctrlKey || e.metaKey
+    forceAttackKeyActive = e.ctrlKey
   }
   return forceAttackKeyActive
 }

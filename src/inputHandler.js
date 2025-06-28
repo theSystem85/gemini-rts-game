@@ -78,7 +78,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
   })
 
   document.addEventListener('keyup', (e) => {
-    if (e.key === 'Control' || e.key === 'Meta') {
+    if (e.key === 'Control') {
       isForceAttackModifierActive(e) // update cached state
       cursorManager.updateForceAttackMode(false)
       cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)

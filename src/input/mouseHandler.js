@@ -25,6 +25,9 @@ export class MouseHandler {
     this.attackGroupWasDragging = false
     this.potentialAttackGroupStart = { x: 0, y: 0 }
     this.hasSelectedCombatUnits = false
+
+    // Track if a force attack click started while Ctrl was held
+    this.forceAttackClick = false
     
     // Add a flag to forcibly disable AGF rendering
     this.disableAGFRendering = false
@@ -47,8 +50,8 @@ export class MouseHandler {
         // Right-click: start scrolling
         this.handleRightMouseDown(e, gameCanvas)
       } else if (e.button === 0) {
-        // Left-click: start selection
-        this.handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits)
+        // Left-click: start selection or force attack
+        this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits)
       }
     })
 
@@ -107,17 +110,20 @@ export class MouseHandler {
     gameCanvas.style.cursor = 'grabbing'
   }
 
-  handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits) {
+  handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits) {
     // Track mouse down time and position
     this.mouseDownTime = performance.now()
-    
+
+    // Determine if this click should issue a force attack command
+    this.forceAttackClick = selectedUnits.length > 0 && isForceAttackModifierActive(e)
+
     // Store potential attack group start position
     this.potentialAttackGroupStart = { x: worldX, y: worldY }
-    this.hasSelectedCombatUnits = this.shouldStartAttackGroupMode(selectedUnits)
-    
-    // Always start with normal selection mode, but be ready to switch to AGF
-    this.isSelecting = true
-    gameState.selectionActive = true
+    this.hasSelectedCombatUnits = !this.forceAttackClick && this.shouldStartAttackGroupMode(selectedUnits)
+
+    // Only enable selection when not initiating a force attack
+    this.isSelecting = !this.forceAttackClick
+    gameState.selectionActive = this.isSelecting
     this.wasDragging = false
     this.selectionStart = { x: worldX, y: worldY }
     this.selectionEnd = { x: worldX, y: worldY }
@@ -420,7 +426,7 @@ export class MouseHandler {
     let forceAttackHandled = false
 
     // First, handle Command Issuing in Force Attack Mode
-    if (selectedUnits.length > 0 && !this.wasDragging && isForceAttackModifierActive(e)) {
+    if (selectedUnits.length > 0 && !this.wasDragging && (this.forceAttackClick || isForceAttackModifierActive(e))) {
       forceAttackHandled = this.handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid)
     }
 
@@ -446,6 +452,9 @@ export class MouseHandler {
     
     // Also reset potential attack group state
     this.potentialAttackGroupStart = { x: 0, y: 0 }
+
+    // Reset force attack state captured on mouse down
+    this.forceAttackClick = false
     
     // Clear any remaining AGF state if not handled above
     if (!this.isAttackGroupSelecting) {
