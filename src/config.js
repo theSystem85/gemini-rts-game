@@ -169,7 +169,7 @@ export const UNIT_PROPERTIES = {
     maxHealth: 200,
     speed: 0.5,
     rotationSpeed: TANK_WAGON_ROT,
-    turretRotationSpeed: TANK_TURRET_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT * 1.5, // 50% faster turret rotation for better tracking
     alertMode: true
   },
   // Rocket tank properties

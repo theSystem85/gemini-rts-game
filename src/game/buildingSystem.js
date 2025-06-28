@@ -255,18 +255,23 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
   }
   
   // Apply targeting spread for more realistic shooting
-  function applyTargetingSpread(targetX, targetY, projectileType) {
+  function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileType) {
     // Skip spread for rockets to maintain their precision
     if (projectileType === 'rocket') {
       return { x: targetX, y: targetY }
     }
-    
-    const spreadRadius = 32 // 1 tile worth of spread
-    const angle = Math.random() * 2 * Math.PI
-    const distance = Math.random() * spreadRadius
+
+    const baseAngle = Math.atan2(targetY - shooterY, targetX - shooterX)
+    const distance = Math.hypot(targetX - shooterX, targetY - shooterY)
+
+    // Allow up to ~2 degrees of deviation
+    const maxAngleOffset = 0.035
+    const angleOffset = (Math.random() * 2 - 1) * maxAngleOffset
+    const finalAngle = baseAngle + angleOffset
+
     return {
-      x: targetX + Math.cos(angle) * distance,
-      y: targetY + Math.sin(angle) * distance
+      x: shooterX + Math.cos(finalAngle) * distance,
+      y: shooterY + Math.sin(finalAngle) * distance
     }
   }
 
@@ -314,8 +319,10 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     let targetX, targetY
     if (building.currentTargetPosition) {
       const spreadTarget = applyTargetingSpread(
-        building.currentTargetPosition.x, 
-        building.currentTargetPosition.y, 
+        centerX,
+        centerY,
+        building.currentTargetPosition.x,
+        building.currentTargetPosition.y,
         building.projectileType
       )
       targetX = spreadTarget.x
@@ -324,7 +331,13 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
       // Fallback to current target position with spread if target exists
       const baseTargetX = target.x + TILE_SIZE / 2
       const baseTargetY = target.y + TILE_SIZE / 2
-      const spreadTarget = applyTargetingSpread(baseTargetX, baseTargetY, building.projectileType)
+      const spreadTarget = applyTargetingSpread(
+        centerX,
+        centerY,
+        baseTargetX,
+        baseTargetY,
+        building.projectileType
+      )
       targetX = spreadTarget.x
       targetY = spreadTarget.y
     } else {
