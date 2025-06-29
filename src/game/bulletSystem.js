@@ -289,7 +289,8 @@ export function fireBullet(unit, target, bullets, now) {
       baseDamage: BULLET_DAMAGES.tank_v1,
       active: true,
       shooter: unit,
-      homing: false
+      homing: false,
+      target
     }
   } else if (unit.type === 'tank-v2') {
     bullet = {
@@ -300,7 +301,8 @@ export function fireBullet(unit, target, bullets, now) {
       baseDamage: BULLET_DAMAGES.tank_v2,
       active: true,
       shooter: unit,
-      homing: false
+      homing: false,
+      target
     }
   } else if (unit.type === 'tank-v3') {
     bullet = {
@@ -311,7 +313,8 @@ export function fireBullet(unit, target, bullets, now) {
       baseDamage: BULLET_DAMAGES.tank_v3,
       active: true,
       shooter: unit,
-      homing: false
+      homing: false,
+      target
     }
   } else if (unit.type === 'rocketTank') {
     bullet = {
@@ -323,7 +326,7 @@ export function fireBullet(unit, target, bullets, now) {
       active: true,
       shooter: unit,
       homing: true,
-      target: target,
+      target,
       targetPosition: { x: targetCenterX, y: targetCenterY }
     }
   }
