@@ -518,9 +518,6 @@ export function repairBuilding(building, gameState) {
     return { success: false, message: 'Not enough money for repairs' }
   }
 
-  // Deduct cost
-  gameState.money -= repairCost
-
   // Setup gradual repair
   if (!gameState.buildingsUnderRepair) {
     gameState.buildingsUnderRepair = []
@@ -541,7 +538,9 @@ export function repairBuilding(building, gameState) {
     duration: repairDuration,
     startHealth: building.health,
     targetHealth: building.maxHealth,
-    healthToRepair: healthToRepair
+    healthToRepair: healthToRepair,
+    cost: repairCost,
+    costPaid: 0
   })
   return { success: true, message: 'Building repair started', cost: repairCost }
 }
@@ -556,11 +555,18 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
     const repairInfo = gameState.buildingsUnderRepair[i]
     const progress = (currentTime - repairInfo.startTime) / repairInfo.duration
 
+    // Gradually deduct repair cost based on progress
+    const expectedPaid = Math.min(progress, 1) * repairInfo.cost
+    const deltaCost = expectedPaid - repairInfo.costPaid
+    if (deltaCost > 0) {
+      gameState.money -= deltaCost
+      repairInfo.costPaid += deltaCost
+    }
+
     if (progress >= 1.0) {
       // Repair is complete
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
-      // Play sound effect for completed repair
       playSound('constructionComplete')
     } else {
       // Repair in progress - update health proportionally

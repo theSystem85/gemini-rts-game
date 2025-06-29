@@ -37,6 +37,7 @@ export const gameState = {
 
   // Repair mode
   repairMode: false,
+  buildingsUnderRepair: [],
 
   // Enemy AI learning
   playerBuildHistory: null,  // Will be initialized from localStorage if available
