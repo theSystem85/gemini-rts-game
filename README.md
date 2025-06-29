@@ -165,6 +165,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - **6.3.4** Clicking on an enemy unit or building orders the selected units to move into range and fire.
 - **6.3.5** The selection (bounding box drag) does not trigger movement commands by itself.
 - **6.3.6** Mouse cursor changes indicate valid move or attack targets.
+- **6.3.7** Hold the **Ctrl** key while a combat unit is selected to enable self‑attack. The cursor changes immediately, and clicking will target your own units or buildings.
 
 ### 6.4 Start/Pause and Restart Controls
 

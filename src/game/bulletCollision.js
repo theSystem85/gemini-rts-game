@@ -22,8 +22,10 @@ export function checkUnitCollision(bullet, unit) {
     }
 
     // Skip friendly units unless this is a forced attack
-    if (unit.owner === bullet.shooter?.owner && 
-        !(bullet.shooter?.forcedAttack && bullet.shooter?.target === unit)) {
+    // Use bullet.target if available because shooter.target may change
+    const forcedTarget = bullet.target || bullet.shooter?.target
+    if (unit.owner === bullet.shooter?.owner &&
+        !(bullet.shooter?.forcedAttack && forcedTarget === unit)) {
       return false;
     }
 
@@ -51,8 +53,9 @@ export function checkBuildingCollision(bullet, building) {
     if (!bullet || !building || building.health <= 0) return false;
 
     // Skip friendly buildings unless this is a forced attack
-    if (building.owner === bullet.shooter?.owner && 
-        !(bullet.shooter?.forcedAttack && bullet.shooter?.target === building)) {
+    const forcedTarget = bullet.target || bullet.shooter?.target
+    if (building.owner === bullet.shooter?.owner &&
+        !(bullet.shooter?.forcedAttack && forcedTarget === building)) {
       return false;
     }
 
@@ -83,8 +86,9 @@ export function checkFactoryCollision(bullet, factory) {
     if (!bullet || !factory || factory.destroyed) return false;
 
     // Skip friendly factories unless this is a forced attack
-    if (factory.id === bullet.shooter?.owner && 
-        !(bullet.shooter?.forcedAttack && bullet.shooter?.target === factory)) {
+    const forcedTarget = bullet.target || bullet.shooter?.target
+    if (factory.id === bullet.shooter?.owner &&
+        !(bullet.shooter?.forcedAttack && forcedTarget === factory)) {
       return false;
     }
 

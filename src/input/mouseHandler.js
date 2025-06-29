@@ -5,6 +5,7 @@ import { units } from '../main.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
+import { isForceAttackModifierActive } from '../utils/inputUtils.js'
 
 export class MouseHandler {
   constructor() {
@@ -24,6 +25,9 @@ export class MouseHandler {
     this.attackGroupWasDragging = false
     this.potentialAttackGroupStart = { x: 0, y: 0 }
     this.hasSelectedCombatUnits = false
+
+    // Track if a force attack click started while Ctrl was held
+    this.forceAttackClick = false
     
     // Add a flag to forcibly disable AGF rendering
     this.disableAGFRendering = false
@@ -46,8 +50,8 @@ export class MouseHandler {
         // Right-click: start scrolling
         this.handleRightMouseDown(e, gameCanvas)
       } else if (e.button === 0) {
-        // Left-click: start selection
-        this.handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits)
+        // Left-click: start selection or force attack
+        this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits)
       }
     })
 
@@ -106,17 +110,20 @@ export class MouseHandler {
     gameCanvas.style.cursor = 'grabbing'
   }
 
-  handleLeftMouseDown(worldX, worldY, gameCanvas, selectedUnits) {
+  handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits) {
     // Track mouse down time and position
     this.mouseDownTime = performance.now()
-    
+
+    // Determine if this click should issue a force attack command
+    this.forceAttackClick = selectedUnits.length > 0 && isForceAttackModifierActive(e)
+
     // Store potential attack group start position
     this.potentialAttackGroupStart = { x: worldX, y: worldY }
-    this.hasSelectedCombatUnits = this.shouldStartAttackGroupMode(selectedUnits)
-    
-    // Always start with normal selection mode, but be ready to switch to AGF
-    this.isSelecting = true
-    gameState.selectionActive = true
+    this.hasSelectedCombatUnits = !this.forceAttackClick && this.shouldStartAttackGroupMode(selectedUnits)
+
+    // Only enable selection when not initiating a force attack
+    this.isSelecting = !this.forceAttackClick
+    gameState.selectionActive = this.isSelecting
     this.wasDragging = false
     this.selectionStart = { x: worldX, y: worldY }
     this.selectionEnd = { x: worldX, y: worldY }
@@ -263,7 +270,7 @@ export class MouseHandler {
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
 
     // Check if right-drag exceeds threshold
-    if (!this.rightWasDragging && Math.hypot(e.clientX - this.rightDragStart.x, e.clientY - this.rightDragStart.y) > 5) {
+    if (!this.rightWasDragging && Math.hypot(e.clientX - this.rightDragStart.x, e.clientY - this.rightDragStart.y) > 3) {
       this.rightWasDragging = true
     }
   }
@@ -277,7 +284,7 @@ export class MouseHandler {
       )
       
       // Transition to AGF mode immediately if combat units are selected and we start dragging
-      if (dragDistance > 5) { // Small threshold to avoid accidental activation
+      if (dragDistance > 3) { // Small threshold to avoid accidental activation
         // Transition from normal selection to attack group mode
         this.isAttackGroupSelecting = true
         this.isSelecting = false
@@ -304,7 +311,7 @@ export class MouseHandler {
       this.selectionEnd = { x: worldX, y: worldY }
       gameState.selectionEnd = { ...this.selectionEnd }
 
-      if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 5 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 5)) {
+      if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 3 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 3)) {
         this.wasDragging = true
       }
     }
@@ -419,7 +426,7 @@ export class MouseHandler {
     let forceAttackHandled = false
 
     // First, handle Command Issuing in Force Attack Mode
-    if (selectedUnits.length > 0 && !this.wasDragging && e.ctrlKey) {
+    if (selectedUnits.length > 0 && !this.wasDragging && (this.forceAttackClick || isForceAttackModifierActive(e))) {
       forceAttackHandled = this.handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid)
     }
 
@@ -445,6 +452,9 @@ export class MouseHandler {
     
     // Also reset potential attack group state
     this.potentialAttackGroupStart = { x: 0, y: 0 }
+
+    // Reset force attack state captured on mouse down
+    this.forceAttackClick = false
     
     // Clear any remaining AGF state if not handled above
     if (!this.isAttackGroupSelecting) {
@@ -740,14 +750,14 @@ export class MouseHandler {
       this.updateAGFCapability(selectedUnits)
     } else {
       // No unit clicked - handle as movement command if units are selected and not in special modes
-      if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
-        if (e.shiftKey) {
-          // Shift+Click: Initiate retreat behavior for combat units
-          initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
-        } else if (!e.ctrlKey) {
-          // Normal command (not Ctrl+Click which is force attack)
-          this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
-        }
+        if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+          if (e.shiftKey) {
+            // Shift+Click: Initiate retreat behavior for combat units
+            initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
+          } else if (!isForceAttackModifierActive(e)) {
+            // Normal command (not Ctrl+Click which is self attack)
+            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+          }
       }
     }
   }
