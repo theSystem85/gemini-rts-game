@@ -1,6 +1,7 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
+import { updateUnitOccupancy } from '../units.js'
 
 /**
  * Unified movement configuration
@@ -211,6 +212,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   // Store previous position for collision detection
   const prevX = unit.x;
   const prevY = unit.y;
+  const prevTileX = Math.floor((prevX + TILE_SIZE / 2) / TILE_SIZE);
+  const prevTileY = Math.floor((prevY + TILE_SIZE / 2) / TILE_SIZE);
   
   // Always apply velocity to position - tanks should move even when decelerating
   unit.x += movement.velocity.x;
@@ -226,7 +229,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     trySlideMovement(unit, movement, mapGrid, occupancyMap, units);
   }
   
-  // Update tile position based on actual position
+  // Update tile position based on actual position (for compatibility with existing code)
   unit.tileX = Math.floor(unit.x / TILE_SIZE);
   unit.tileY = Math.floor(unit.y / TILE_SIZE);
   
@@ -235,6 +238,14 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1));
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE));
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE));
+
+  // Update occupancy map using center-based coordinates
+  const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE);
+  const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE);
+  
+  if ((prevTileX !== currentTileX || prevTileY !== currentTileY) && occupancyMap) {
+    updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap);
+  }
   
   // Handle stuck unit detection and recovery for all units (as requested)
   handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState, factories);

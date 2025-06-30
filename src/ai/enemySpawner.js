@@ -138,6 +138,16 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
 
   initializeUnitMovement(unit)
 
+  // Update occupancy map for the newly spawned unit
+  if (gameState.occupancyMap) {
+    const centerTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+    if (centerTileY >= 0 && centerTileY < gameState.occupancyMap.length &&
+        centerTileX >= 0 && centerTileX < gameState.occupancyMap[0].length) {
+      gameState.occupancyMap[centerTileY][centerTileX] = (gameState.occupancyMap[centerTileY][centerTileX] || 0) + 1
+    }
+  }
+
   if (window.cheatSystem && window.cheatSystem.isGodModeActive()) {
     window.cheatSystem.addUnitToGodMode(unit)
   }

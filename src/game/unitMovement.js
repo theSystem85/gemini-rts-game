@@ -1,7 +1,7 @@
 // unitMovement.js - Handles all unit movement logic
 import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { gameState } from '../gameState.js'
-import { findPath, buildOccupancyMap } from '../units.js'
+import { findPath, updateUnitOccupancy, removeUnitOccupancy } from '../units.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
 import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
@@ -32,6 +32,9 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
         window.cheatSystem.removeUnitFromTracking(unit.id)
       }
       
+      if (!unit.occupancyRemoved) {
+        removeUnitOccupancy(unit, occupancyMap)
+      }
       units.splice(i, 1)
       continue
     }
@@ -94,7 +97,6 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
           unit.moveTarget = { x: targetCenterX, y: targetCenterY }
           unit.lastAttackPathCalcTime = now
           // Use proper pathfinding with occupancy map for attack movement
-          const occupancyMap = buildOccupancyMap(units, mapGrid)
           const path = findPath(
             { x: unit.tileX, y: unit.tileY },
             { x: targetTileX, y: targetTileY },
@@ -151,7 +153,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
  */
 export function updateUnitPathfinding(units, mapGrid, gameState) {
   const now = performance.now()
-  const occupancyMap = buildOccupancyMap(units, mapGrid)
+  const occupancyMap = gameState.occupancyMap
 
   // Update pathfinding for units with movement targets
   if (selectedUnits && selectedUnits.length > 0) {

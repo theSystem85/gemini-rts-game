@@ -320,6 +320,17 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
     }
     
     units.push(enemyUnit)
+    
+    // Update occupancy map for debug spawned unit
+    if (window.gameState && window.gameState.occupancyMap) {
+      const centerTileX = Math.floor((enemyUnit.x + TILE_SIZE) / TILE_SIZE)
+      const centerTileY = Math.floor((enemyUnit.y + TILE_SIZE) / TILE_SIZE)
+      if (centerTileY >= 0 && centerTileY < window.gameState.occupancyMap.length &&
+          centerTileX >= 0 && centerTileX < window.gameState.occupancyMap[0].length) {
+        window.gameState.occupancyMap[centerTileY][centerTileX] = (window.gameState.occupancyMap[centerTileY][centerTileX] || 0) + 1
+      }
+    }
+    
     console.log(`🎯 Spawned enemy ${unitType} at (500, 500) for testing`)
     console.log(`💡 Use your tanks to destroy it and gain experience!`)
     

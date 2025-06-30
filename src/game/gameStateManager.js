@@ -1,6 +1,6 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
 import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY } from '../config.js'
-import { resolveUnitCollisions } from '../units.js'
+import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
 import { playSound } from '../sound.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
@@ -109,6 +109,9 @@ export function cleanupDestroyedUnits(units, gameState) {
         window.cheatSystem.removeUnitFromTracking(unit.id)
       }
       
+      if (!unit.occupancyRemoved) {
+        removeUnitOccupancy(unit, gameState.occupancyMap)
+      }
       units.splice(i, 1)
     }
   }

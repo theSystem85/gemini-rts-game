@@ -1,6 +1,7 @@
 // Building configuration and management
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
+import { gameState } from './gameState.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -334,7 +335,7 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
 }
 
 // Place building in the map grid
-export function placeBuilding(building, mapGrid) {
+export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupancyMap) {
   // Create an array to store original tile types
   building.originalTiles = []
 
@@ -347,6 +348,9 @@ export function placeBuilding(building, mapGrid) {
 
       // Mark tile as having a building (for collision detection) but preserve the original tile type for rendering
       mapGrid[y][x].building = building
+      if (occupancyMap && occupancyMap[y] && occupancyMap[y][x] !== undefined) {
+        occupancyMap[y][x] = (occupancyMap[y][x] || 0) + 1
+      }
       
       // Remove any ore from tiles where buildings are placed
       if (mapGrid[y][x].ore) {
@@ -362,7 +366,7 @@ export function placeBuilding(building, mapGrid) {
 }
 
 // Remove building from the map grid: restore original tiles and clear building flag
-export function clearBuildingFromMapGrid(building, mapGrid) {
+export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameState.occupancyMap) {
   for (let y = building.y; y < building.y + building.height; y++) {
     for (let x = building.x; x < building.x + building.width; x++) {
       if (mapGrid[y] && mapGrid[y][x]) {
@@ -380,6 +384,9 @@ export function clearBuildingFromMapGrid(building, mapGrid) {
         }
         // Clear any building reference to unblock this tile for pathfinding
         delete mapGrid[y][x].building
+        if (occupancyMap && occupancyMap[y] && occupancyMap[y][x] !== undefined) {
+          occupancyMap[y][x] = Math.max(0, (occupancyMap[y][x] || 0) - 1)
+        }
       }
     }
   }

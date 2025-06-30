@@ -8,6 +8,7 @@ import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { markBuildingForRepairPause } from '../buildings.js'
+import { removeUnitOccupancy } from '../units.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -153,7 +154,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           if (unit.health <= 0) {
             playSound('explosion', 0.5)
             unit.health = 0
-            
+            if (!unit.occupancyRemoved) {
+              removeUnitOccupancy(unit, gameState.occupancyMap)
+              unit.occupancyRemoved = true
+            }
+
             // Award experience to the shooter for killing ANY unit or building (except harvesters cannot receive XP)
             if (bullet.shooter && bullet.shooter.owner !== unit.owner && bullet.shooter.type !== 'harvester') {
               awardExperience(bullet.shooter, unit)

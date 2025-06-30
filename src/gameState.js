@@ -29,6 +29,7 @@ export const gameState = {
   buildings: [],
   factories: [], // Add factories array to gameState
   mapGrid: [], // Add mapGrid array to gameState
+  occupancyMap: [], // Global occupancy map updated incrementally
   powerSupply: 0,
   buildingPlacementMode: false,
   currentBuildingType: null,
