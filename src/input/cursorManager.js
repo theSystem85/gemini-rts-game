@@ -12,6 +12,7 @@ export class CursorManager {
     this.isOverSellableBuilding = false
     this.isOverOreTile = false
     this.isForceAttackMode = false
+    this.lastMouseEvent = null
   }
 
   // Function to check if a location is a blocked tile (water, rock, building)
@@ -39,6 +40,8 @@ export class CursorManager {
 
   // Function to update custom cursor position and visibility
   updateCustomCursor(e, mapGrid, factories, selectedUnits) {
+    // Store last mouse event for later refreshes
+    this.lastMouseEvent = e
     const gameCanvas = document.getElementById('gameCanvas')
     const rect = gameCanvas.getBoundingClientRect()
     const x = e.clientX
@@ -201,8 +204,19 @@ export class CursorManager {
     }
   }
 
-  updateForceAttackMode(ctrlKey) {
-    this.isForceAttackMode = ctrlKey
+  updateForceAttackMode(isActive) {
+    const prev = this.isForceAttackMode
+    this.isForceAttackMode = isActive
+    if (prev !== isActive) {
+      console.log(`[SAF] Self attack mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
+    }
+  }
+
+  // Reapply cursor appearance using the last known mouse position
+  refreshCursor(mapGrid, factories, selectedUnits) {
+    if (this.lastMouseEvent) {
+      this.updateCustomCursor(this.lastMouseEvent, mapGrid, factories, selectedUnits)
+    }
   }
 
   setIsOverEnemy(value) {
