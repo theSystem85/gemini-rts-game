@@ -27,6 +27,11 @@ export class GameLoop {
     this.running = false
     this.animationId = null
     this.fpsDisplay = new FPSDisplay()
+
+    // Track last UI update values to avoid unnecessary DOM writes
+    this.lastMoneyDisplayed = null
+    this.lastGameTimeUpdate = 0
+    this.lastEnergyUpdate = 0
   }
 
   setAssetsLoaded(loaded) {
@@ -86,8 +91,11 @@ export class GameLoop {
     // Update buildings awaiting repair (countdown for buildings under attack)
     updateBuildingsAwaitingRepair(gameState, timestamp)
 
-    // Update energy bar display
-    updateEnergyBar()
+    // Update energy bar display at most once per second
+    if (now - this.lastEnergyUpdate >= 1000) {
+      updateEnergyBar()
+      this.lastEnergyUpdate = now
+    }
 
     // Increment frame counter
     gameState.frameCount++
@@ -115,14 +123,21 @@ export class GameLoop {
     // Render FPS overlay on top of everything when game is running
     this.fpsDisplay.render(gameCtx, gameCanvas)
 
-    // Update money display
-    this.moneyEl.textContent = `$${Math.floor(gameState.money)}`
+    // Update money display only when the value changes
+    const currentMoney = Math.floor(gameState.money)
+    if (currentMoney !== this.lastMoneyDisplayed) {
+      this.moneyEl.textContent = `$${currentMoney}`
+      this.lastMoneyDisplayed = currentMoney
+    }
 
-    // Update game time display
-    const gameTimeSeconds = Math.floor(gameState.gameTime)
-    const minutes = Math.floor(gameTimeSeconds / 60)
-    const seconds = gameTimeSeconds % 60
-    this.gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+    // Update game time display at most once per second
+    if (now - this.lastGameTimeUpdate >= 1000) {
+      const gameTimeSeconds = Math.floor(gameState.gameTime)
+      const minutes = Math.floor(gameTimeSeconds / 60)
+      const seconds = gameTimeSeconds % 60
+      this.gameTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+      this.lastGameTimeUpdate = now
+    }
 
     // Use setTimeout to ensure we don't overload the browser
     if (this.units.length > 20) {
@@ -193,8 +208,17 @@ export class GameLoop {
     // Render FPS overlay on top of everything in legacy loop too
     this.fpsDisplay.render(gameCtx, gameCanvas)
 
-    this.moneyEl.textContent = gameState.money
-    this.gameTimeEl.textContent = Math.floor(gameState.gameTime)
+    // Update money and time less frequently in legacy loop
+    const legacyMoney = Math.floor(gameState.money)
+    if (legacyMoney !== this.lastMoneyDisplayed) {
+      this.moneyEl.textContent = `${legacyMoney}`
+      this.lastMoneyDisplayed = legacyMoney
+    }
+
+    if (timestamp - this.lastGameTimeUpdate >= 1000) {
+      this.gameTimeEl.textContent = Math.floor(gameState.gameTime)
+      this.lastGameTimeUpdate = timestamp
+    }
 
     if (this.running) {
       this.animationId = requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
