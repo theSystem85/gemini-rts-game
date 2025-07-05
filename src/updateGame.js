@@ -1,6 +1,6 @@
 // Main Game Update Module - Coordinates all game systems
 import { TILE_SIZE } from './config.js'
-import { buildOccupancyMap } from './units.js'
+
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from './buildings.js'
@@ -30,7 +30,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
   try {
     if (gameState.gamePaused) return
     const now = performance.now()
-    const occupancyMap = buildOccupancyMap(units, mapGrid)
+    const occupancyMap = gameState.occupancyMap
 
     // Update game time
     updateGameTime(gameState, delta)

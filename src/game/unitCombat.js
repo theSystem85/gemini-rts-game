@@ -2,7 +2,7 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
 import { playSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
-import { findPath, buildOccupancyMap } from '../units.js'
+import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
@@ -438,7 +438,7 @@ function processAttackQueue(unit, units, mapGrid) {
       
       // Immediately calculate new path with occupancy map for attack movement
       if (mapGrid) {
-        const occupancyMap = buildOccupancyMap(units, mapGrid)
+        const occupancyMap = gameState.occupancyMap
         
         // Calculate target position
         let targetTileX, targetTileY
@@ -503,7 +503,7 @@ export function cleanupAttackGroupTargets() {
  * Updates unit combat behavior including targeting and shooting
  */
 export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
-  const occupancyMap = buildOccupancyMap(units, mapGrid)
+  const occupancyMap = gameState.occupancyMap
   
   let combatUnitsCount = 0
   let unitsWithTargets = 0

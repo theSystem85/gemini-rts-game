@@ -10,7 +10,6 @@ import { RetreatTargetRenderer } from './retreatTargetRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
-import { buildOccupancyMap } from '../units.js'
 import { preloadTankImages } from './tankImageRenderer.js'
 
 export class Renderer {
@@ -78,7 +77,7 @@ export class Renderer {
     // Build occupancy map for visualization if needed
     let occupancyMap = null
     if (gameState.occupancyVisible) {
-      occupancyMap = buildOccupancyMap(units, mapGrid)
+      occupancyMap = gameState.occupancyMap
     }
     
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)

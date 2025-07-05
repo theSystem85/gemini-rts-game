@@ -2,7 +2,7 @@
 // Refactored main game orchestrator
 
 import { setupInputHandlers, selectedUnits } from './inputHandler.js'
-import { unitCosts } from './units.js'
+import { unitCosts, initializeOccupancyMap } from './units.js'
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
@@ -121,6 +121,8 @@ class Game {
         unit.baseCost = unit.baseCost || unitCosts[unit.type] || 1000
       }
     })
+
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
   }
 
   centerOnPlayerFactory() {
@@ -264,9 +266,11 @@ class Game {
     
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
-    
+
     units.length = 0
     bullets.length = 0
+
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
 
     this.centerOnPlayerFactory()
 
@@ -288,6 +292,8 @@ class Game {
     }).catch(err => {
       console.warn('Could not resume production after map shuffle:', err)
     })
+
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
   }
 
   async resetGame() {

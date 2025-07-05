@@ -353,7 +353,7 @@ export const productionQueue = {
 
     if (spawnFactory) {
       // Pass the specific factory's rally point to spawnUnit
-      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid, rallyPointTarget)
+      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid, rallyPointTarget, gameState.occupancyMap)
       if (newUnit) {
         units.push(newUnit)
         // Play random unit ready sound

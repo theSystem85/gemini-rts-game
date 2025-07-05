@@ -1,7 +1,7 @@
 // enemyStrategies.js - Enhanced enemy AI strategies
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
 import { gameState } from '../gameState.js'
-import { findPath, buildOccupancyMap } from '../units.js'
+import { findPath } from '../units.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -651,7 +651,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
     const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
     
     if (pathRecalcNeeded) {
-      const occupancyMap = buildOccupancyMap(units, mapGrid)
+      const occupancyMap = gameState.occupancyMap
       const path = findPath(
         { x: unit.tileX, y: unit.tileY },
         unit.approachPosition,
@@ -689,7 +689,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
     
     // Set path to approach position
     // Always respect the occupancy map for attack movement
-    const occupancyMap = buildOccupancyMap(units, mapGrid)
+    const occupancyMap = gameState.occupancyMap
     const path = findPath(
       { x: unit.tileX, y: unit.tileY },
       approachPos,

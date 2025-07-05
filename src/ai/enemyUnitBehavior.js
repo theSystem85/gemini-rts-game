@@ -1,5 +1,5 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
-import { findPath, buildOccupancyMap } from '../units.js'
+import { findPath } from '../units.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth } from './enemyStrategies.js'
 import { getClosestEnemyFactory, isEnemyTo } from './enemyUtils.js'
 
@@ -151,7 +151,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           unit.moveTarget = targetPos
           if (!unit.isDodging && targetPos) {
             // Use occupancy map in attack mode to prevent moving through occupied tiles
-            const occupancyMap = buildOccupancyMap(units, mapGrid)
+            const occupancyMap = gameState.occupancyMap
             const path = findPath(
               { x: unit.tileX, y: unit.tileY },
               targetPos,
@@ -176,7 +176,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           targetPos = { x: unit.target.x, y: unit.target.y }
         }
         // Use occupancy map in attack mode to prevent moving through occupied tiles
-        const occupancyMap = buildOccupancyMap(units, mapGrid)
+        const occupancyMap = gameState.occupancyMap
         const path = findPath(
           { x: unit.tileX, y: unit.tileY },
           targetPos,
@@ -300,7 +300,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
               const hasBuilding = mapGrid[destTileY][destTileX].building
               if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
                 // Use occupancy map for tactical retreat movement to avoid moving through units
-                const occupancyMap = buildOccupancyMap(units, mapGrid)
+                const occupancyMap = gameState.occupancyMap
                 const newPath = findPath(
                   { x: unit.tileX, y: unit.tileY },
                   { x: destTileX, y: destTileY },

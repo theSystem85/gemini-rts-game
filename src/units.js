@@ -9,6 +9,7 @@ import {
 } from './config.js'
 import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
+import { gameState } from './gameState.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -21,34 +22,73 @@ export function buildOccupancyMap(units, mapGrid) {
   for (let y = 0; y < mapGrid.length; y++) {
     occupancy[y] = []
     for (let x = 0; x < mapGrid[0].length; x++) {
-      occupancy[y][x] = false
-    }
-  }
-  // Mark impassable terrain and buildings as occupied
-  for (let y = 0; y < mapGrid.length; y++) {
-    for (let x = 0; x < mapGrid[0].length; x++) {
       const tile = mapGrid[y][x]
-      if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
-        occupancy[y][x] = true
-      }
+      occupancy[y][x] =
+        tile.type === 'water' || tile.type === 'rock' || tile.building ? 1 : 0
     }
   }
-  // Mark units as occupied (center-based)
   units.forEach(unit => {
-    const centerX = unit.x + TILE_SIZE / 2
-    const centerY = unit.y + TILE_SIZE / 2
-    const tileX = Math.floor(centerX / TILE_SIZE)
-    const tileY = Math.floor(centerY / TILE_SIZE)
+    const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (
       tileY >= 0 &&
       tileY < mapGrid.length &&
       tileX >= 0 &&
       tileX < mapGrid[0].length
     ) {
-      occupancy[tileY][tileX] = true
+      occupancy[tileY][tileX] += 1
     }
   })
   return occupancy
+}
+
+export function initializeOccupancyMap(units, mapGrid) {
+  return buildOccupancyMap(units, mapGrid)
+}
+
+export function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
+  if (!occupancyMap) return
+  
+  // Remove occupancy from previous position (using center coordinates)
+  if (
+    prevTileY >= 0 &&
+    prevTileY < occupancyMap.length &&
+    prevTileX >= 0 &&
+    prevTileX < occupancyMap[0].length
+  ) {
+    occupancyMap[prevTileY][prevTileX] = Math.max(
+      0,
+      (occupancyMap[prevTileY][prevTileX] || 0) - 1
+    )
+  }
+  
+  // Add occupancy to current position (using center coordinates)
+  const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  
+  if (
+    currentTileY >= 0 &&
+    currentTileY < occupancyMap.length &&
+    currentTileX >= 0 &&
+    currentTileX < occupancyMap[0].length
+  ) {
+    occupancyMap[currentTileY][currentTileX] =
+      (occupancyMap[currentTileY][currentTileX] || 0) + 1
+  }
+}
+
+export function removeUnitOccupancy(unit, occupancyMap) {
+  if (!occupancyMap) return
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileY >= 0 &&
+    tileY < occupancyMap.length &&
+    tileX >= 0 &&
+    tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = Math.max(0, (occupancyMap[tileY][tileX] || 0) - 1)
+  }
 }
 
 // A simple binary heap (min-heap) for nodes based on f value.
@@ -284,7 +324,7 @@ function getNeighbors(node, mapGrid) {
 
 // Spawns a unit near the specified factory.
 // Accepts an optional rallyPointTarget from the specific spawning factory.
-export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null) {
+export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null, occupancyMap = gameState.occupancyMap) {
   // Default spawn position is the center below the factory
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + factory.height
@@ -317,6 +357,15 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   }
 
   const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y)
+  if (occupancyMap) {
+    // Use center coordinates for occupancy map consistency
+    const centerTileX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((newUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+    if (centerTileY >= 0 && centerTileY < occupancyMap.length &&
+        centerTileX >= 0 && centerTileX < occupancyMap[0].length) {
+      occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+    }
+  }
 
   // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
   // This allows each factory to have its own individual assembly point.
@@ -499,11 +548,21 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
       const newY = targetY + dir.y * distance
 
       if (isPositionValid(newX, newY, mapGrid, units)) {
+        // Store previous tile position (using center coordinates)
+        const prevTileX = Math.floor((blockingUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const prevTileY = Math.floor((blockingUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+        
         // Move the blocking unit
         blockingUnit.tileX = newX
         blockingUnit.tileY = newY
         blockingUnit.x = newX * TILE_SIZE
         blockingUnit.y = newY * TILE_SIZE
+        
+        // Update occupancy map
+        if (gameState.occupancyMap) {
+          updateUnitOccupancy(blockingUnit, prevTileX, prevTileY, gameState.occupancyMap)
+        }
+        
         return true
       }
     }

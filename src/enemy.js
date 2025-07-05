@@ -1,10 +1,9 @@
 // enemy orchestrator
-import { buildOccupancyMap } from './units.js'
 import { updateAIPlayer } from './ai/enemyAIPlayer.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
 
 export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
-  const occupancyMap = buildOccupancyMap(units, mapGrid)
+  const occupancyMap = gameState.occupancyMap
   const now = performance.now()
   const humanPlayer = gameState.humanPlayer || 'player1'
   const playerCount = gameState.playerCount || 2

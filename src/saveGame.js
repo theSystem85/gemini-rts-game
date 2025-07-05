@@ -9,6 +9,7 @@ import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
+import { initializeOccupancyMap } from './units.js'
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -309,6 +310,8 @@ export function loadGame(key) {
     
     // Ensure no ore overlaps with buildings or factories after loading
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
 
     // Restore targeted ore tiles for harvester system
     if (loaded.targetedOreTiles) {

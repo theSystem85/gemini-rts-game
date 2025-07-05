@@ -3,7 +3,6 @@ import {
   TILE_SIZE
 } from './config.js'
 import { gameState } from './gameState.js'
-import { buildOccupancyMap } from './units.js'
 import { playSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
@@ -339,8 +338,8 @@ export function findPositionWithClearShot(unit, target, units, mapGrid) {
     { x: -1, y: -1 }  // up-left
   ]
 
-  // Create the occupancy map once instead of checking each unit repeatedly
-  const occupancyMap = buildOccupancyMap(units, mapGrid)
+  // Use the global occupancy map
+  const occupancyMap = gameState.occupancyMap
 
   // Create a temporary unit copy for testing line of sight
   const testUnit = { ...unit, path: [...(unit.path || [])] }
