@@ -240,44 +240,9 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   ) || []
 
   if (refineries.length === 0) {
-    // No refineries available - fallback to factory (backward compatibility)
-    const targetFactory = factories.find(f => f.id === unit.owner)
-    
-    if (!targetFactory) {
-      // No factory found - unit is orphaned, stop processing
-      return
-    }
-    
-    if (isAdjacentToBuilding(unit, targetFactory)) {
-      // Calculate money based on ore carried
-      const moneyEarned = unit.oreCarried * 1000
-      
-      // Unload at factory immediately
-      if (unit.owner === gameState.humanPlayer) {
-        gameState.money += moneyEarned
-        if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
-          productionQueue.tryResumeProduction()
-        }
-      } else {
-        targetFactory.budget += moneyEarned
-      }
-      unit.oreCarried = 0
-      unit.oreField = null
-      unit.findOreAfterUnload = now + 500 // Schedule ore search after 500ms
-      if (unit.owner === gameState.humanPlayer) {
-        playSound('deposit')
-      }
-    } else {
-      // Move to factory
-      const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
-      if (unloadTarget && (!unit.path || unit.path.length === 0)) {
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTarget, mapGrid, occupancyMap)
-        if (path.length > 1) {
-          unit.path = path.slice(1)
-          unit.moveTarget = unloadTarget // Set move target so the harvester actually moves
-        }
-      }
-    }
+    // No refineries available - wait until one is built
+    unit.path = []
+    unit.moveTarget = null
     return
   }
 
@@ -1051,19 +1016,9 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
     }
   }
   
-  // Fallback to factory if no refineries available or pathable
-  const targetFactory = factories.find(f => f.id === unit.owner)
-  
-  if (targetFactory) {
-    const factoryTile = findAdjacentTile(targetFactory, mapGrid)
-    if (factoryTile) {
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, factoryTile, mapGrid, occupancyMap)
-      if (path.length > 1) {
-        unit.path = path.slice(1)
-        unit.moveTarget = factoryTile // Set move target so the harvester actually moves
-      }
-    }
-  }
+  // No alternative refinery found - wait until a refinery is available again
+  unit.path = []
+  unit.moveTarget = null
 }
 
 /**
