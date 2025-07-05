@@ -2,6 +2,9 @@
 // Handle notification display system
 
 export function showNotification(message, duration = 3000) {
+  // Remove any existing notifications immediately
+  document.querySelectorAll('.notification').forEach((el) => el.remove())
+
   const notification = document.createElement('div')
   notification.className = 'notification'
   notification.textContent = message
