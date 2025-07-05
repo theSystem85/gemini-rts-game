@@ -352,16 +352,17 @@ export class UnitRenderer {
     }
 
     initializeUnitLeveling(unit)
-    
+
     // Position stars above the health bar
     const starSize = 6
     const starSpacing = 8
     const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
     const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x - totalWidth / 2
     const starY = unit.y - 20 - scrollOffset.y // Above health bar
-
+    ctx.save()
     ctx.fillStyle = '#FFD700' // Gold color for stars
     ctx.strokeStyle = '#FFA500' // Orange outline
+    ctx.lineWidth = 1
 
     for (let i = 0; i < unit.level; i++) {
       const starX = startX + (i * starSpacing)
@@ -387,6 +388,8 @@ export class UnitRenderer {
       ctx.fill()
       ctx.stroke()
     }
+
+    ctx.restore()
   }
 
   renderUnit(ctx, unit, scrollOffset) {
