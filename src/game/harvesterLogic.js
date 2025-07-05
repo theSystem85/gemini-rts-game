@@ -67,8 +67,10 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
           if (unit.oreField.x === nearbyOreTile.x && unit.oreField.y === nearbyOreTile.y) {
             unit.harvesting = true
             unit.harvestTimer = now
-            harvestedTiles.add(tileKey) // Mark tile as being harvested
+          harvestedTiles.add(tileKey) // Mark tile as being harvested
+          if (unit.owner === gameState.humanPlayer) {
             playSound('harvest')
+          }
           }
         } else {
           // Tile is being harvested by another unit, find a new ore tile
@@ -176,7 +178,9 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
           unit.harvesting = true
           unit.harvestTimer = now
           harvestedTiles.add(tileKey)
-          playSound('harvest')
+          if (unit.owner === gameState.humanPlayer) {
+            playSound('harvest')
+          }
         } else {
           // Ore field is no longer valid, find new one
           if (targetedOreTiles[tileKey] === unit.id) {
@@ -260,7 +264,9 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
       unit.oreCarried = 0
       unit.oreField = null
       unit.findOreAfterUnload = now + 500 // Schedule ore search after 500ms
-      playSound('deposit')
+      if (unit.owner === gameState.humanPlayer) {
+        playSound('deposit')
+      }
     } else {
       // Move to factory
       const unloadTarget = findAdjacentTile(targetFactory, mapGrid)
@@ -489,7 +495,9 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     unit.queuePosition = 0 // Clear queue position
     unit.targetRefinery = null // Clear target refinery
     unit.findOreAfterUnload = now + 500 // Schedule ore search after 500ms
-    playSound('deposit')
+    if (unit.owner === gameState.humanPlayer) {
+      playSound('deposit')
+    }
   }
 }
 
@@ -956,9 +964,11 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
       targetedOreTiles[tileKey] = unit.id
       unit.harvesting = true
       unit.harvestTimer = performance.now()
-      harvestedTiles.add(tileKey)
-      unit.path = [] // Clear any conflicting path
-      playSound('harvest')
+        harvestedTiles.add(tileKey)
+        unit.path = [] // Clear any conflicting path
+        if (unit.owner === gameState.humanPlayer) {
+          playSound('harvest')
+        }
       return
     }
   }
