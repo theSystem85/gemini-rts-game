@@ -11,6 +11,7 @@ export class MapRenderer {
     ctx.imageSmoothingEnabled = false
 
     const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
+    const sotApplied = new Set()
 
     const drawTile = (x, y, type) => {
       const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
@@ -30,72 +31,52 @@ export class MapRenderer {
       }
     }
 
-    // Base layers: land, water, streets
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        if (mapGrid[y][x].type === 'land') drawTile(x, y, 'land')
-      }
-    }
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        if (mapGrid[y][x].type === 'water') drawTile(x, y, 'water')
-      }
-    }
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        if (mapGrid[y][x].type === 'street') drawTile(x, y, 'street')
-      }
-    }
-
-    // Smoothening Overlay Textures (SOT) above streets
-    const sotApplied = new Set()
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        const tile = mapGrid[y][x]
-        if (tile.type !== 'land') continue
-
-        const top = y > 0 ? mapGrid[y - 1][x] : null
-        const left = x > 0 ? mapGrid[y][x - 1] : null
-        const bottom = y < mapGrid.length - 1 ? mapGrid[y + 1][x] : null
-        const right = x < mapGrid[0].length - 1 ? mapGrid[y][x + 1] : null
-
-        if (top && left && top.type === 'street' && left.type === 'street') {
-          this.drawSOT(ctx, x, y, 'top-left', scrollOffset, useTexture, sotApplied)
-        } else if (top && right && top.type === 'street' && right.type === 'street') {
-          this.drawSOT(ctx, x, y, 'top-right', scrollOffset, useTexture, sotApplied)
-        } else if (bottom && left && bottom.type === 'street' && left.type === 'street') {
-          this.drawSOT(ctx, x, y, 'bottom-left', scrollOffset, useTexture, sotApplied)
-        } else if (bottom && right && bottom.type === 'street' && right.type === 'street') {
-          this.drawSOT(ctx, x, y, 'bottom-right', scrollOffset, useTexture, sotApplied)
-        }
-      }
-    }
-
-    // Rocks layer
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        if (mapGrid[y][x].type === 'rock') drawTile(x, y, 'rock')
-      }
-    }
-
-    // Ore overlay
-    for (let y = startTileY; y < endTileY; y++) {
-      for (let x = startTileX; x < endTileX; x++) {
-        const tile = mapGrid[y][x]
-        if (!tile.ore) continue
-        const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-        const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
-        if (useTexture && this.textureManager.tileTextureCache.ore) {
-          const idx = this.textureManager.getTileVariation('ore', x, y)
-          if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
-            ctx.drawImage(this.textureManager.tileTextureCache.ore[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
-          } else {
-            ctx.fillStyle = TILE_COLORS.ore
-            ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
-          }
+    const drawOreOverlay = (x, y) => {
+      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+      if (useTexture && this.textureManager.tileTextureCache.ore) {
+        const idx = this.textureManager.getTileVariation('ore', x, y)
+        if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
+          ctx.drawImage(this.textureManager.tileTextureCache.ore[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
         } else {
           ctx.fillStyle = TILE_COLORS.ore
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        }
+      } else {
+        ctx.fillStyle = TILE_COLORS.ore
+        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+      }
+    }
+
+    // Single pass rendering: process all layers for each tile in one iteration
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        const tile = mapGrid[y][x]
+        
+        // Render base tile layer
+        drawTile(x, y, tile.type)
+        
+        // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets
+        if (tile.type === 'land') {
+          const top = y > 0 ? mapGrid[y - 1][x] : null
+          const left = x > 0 ? mapGrid[y][x - 1] : null
+          const bottom = y < mapGrid.length - 1 ? mapGrid[y + 1][x] : null
+          const right = x < mapGrid[0].length - 1 ? mapGrid[y][x + 1] : null
+
+          if (top && left && top.type === 'street' && left.type === 'street') {
+            this.drawSOT(ctx, x, y, 'top-left', scrollOffset, useTexture, sotApplied)
+          } else if (top && right && top.type === 'street' && right.type === 'street') {
+            this.drawSOT(ctx, x, y, 'top-right', scrollOffset, useTexture, sotApplied)
+          } else if (bottom && left && bottom.type === 'street' && left.type === 'street') {
+            this.drawSOT(ctx, x, y, 'bottom-left', scrollOffset, useTexture, sotApplied)
+          } else if (bottom && right && bottom.type === 'street' && right.type === 'street') {
+            this.drawSOT(ctx, x, y, 'bottom-right', scrollOffset, useTexture, sotApplied)
+          }
+        }
+        
+        // Render ore overlay if present
+        if (tile.ore) {
+          drawOreOverlay(x, y)
         }
       }
     }
