@@ -20,7 +20,7 @@ export class BuildingRenderer {
     }
   }
 
-  renderBuilding(ctx, building, scrollOffset) {
+  renderBuildingBase(ctx, building, scrollOffset) {
     const screenX = building.x * TILE_SIZE - scrollOffset.x
     const screenY = building.y * TILE_SIZE - scrollOffset.y
     const width = building.width * TILE_SIZE
@@ -39,11 +39,19 @@ export class BuildingRenderer {
 
     this.renderTurret(ctx, building, screenX, screenY, width, height)
     this.renderSelection(ctx, building, screenX, screenY, width, height)
-    this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderOwnerIndicator(ctx, building, screenX, screenY)
-    this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderRepairAnimation(ctx, building, screenX, screenY, width, height)
     this.renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height)
+  }
+
+  renderBuildingOverlays(ctx, building, scrollOffset) {
+    const screenX = building.x * TILE_SIZE - scrollOffset.x
+    const screenY = building.y * TILE_SIZE - scrollOffset.y
+    const width = building.width * TILE_SIZE
+    const height = building.height * TILE_SIZE
+
+    this.renderHealthBar(ctx, building, screenX, screenY, width)
+    this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -465,11 +473,18 @@ export class BuildingRenderer {
     ctx.restore()
   }
 
-  render(ctx, buildings, scrollOffset) {
-    // Draw buildings if they exist
+  renderBases(ctx, buildings, scrollOffset) {
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
-        this.renderBuilding(ctx, building, scrollOffset)
+        this.renderBuildingBase(ctx, building, scrollOffset)
+      })
+    }
+  }
+
+  renderOverlays(ctx, buildings, scrollOffset) {
+    if (buildings && buildings.length > 0) {
+      buildings.forEach(building => {
+        this.renderBuildingOverlays(ctx, building, scrollOffset)
       })
     }
   }

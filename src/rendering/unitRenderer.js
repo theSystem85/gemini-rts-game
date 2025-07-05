@@ -392,7 +392,7 @@ export class UnitRenderer {
     ctx.restore()
   }
 
-  renderUnit(ctx, unit, scrollOffset) {
+  renderUnitBase(ctx, unit, scrollOffset) {
     if (unit.health <= 0) return
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
@@ -410,12 +410,6 @@ export class UnitRenderer {
         // Image rendering successful, still render other components
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
-        this.renderHealthBar(ctx, unit, scrollOffset)
-        this.renderLevelStars(ctx, unit, scrollOffset)
-        this.renderHarvesterProgress(ctx, unit, scrollOffset)
-        this.renderQueueNumber(ctx, unit, scrollOffset)
-        this.renderGroupNumber(ctx, unit, scrollOffset)
-        this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
         return
       }
       // If image rendering failed, fall through to original rendering
@@ -426,6 +420,14 @@ export class UnitRenderer {
     this.renderSelection(ctx, unit, centerX, centerY)
     this.renderAlertMode(ctx, unit, centerX, centerY)
     this.renderTurret(ctx, unit, centerX, centerY)
+  }
+
+  renderUnitOverlay(ctx, unit, scrollOffset) {
+    if (unit.health <= 0) return
+
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+
     this.renderHealthBar(ctx, unit, scrollOffset)
     this.renderLevelStars(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
@@ -434,10 +436,15 @@ export class UnitRenderer {
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
   }
 
-  render(ctx, units, scrollOffset) {
-    // Draw units.
+  renderBases(ctx, units, scrollOffset) {
     units.forEach(unit => {
-      this.renderUnit(ctx, unit, scrollOffset)
+      this.renderUnitBase(ctx, unit, scrollOffset)
+    })
+  }
+
+  renderOverlays(ctx, units, scrollOffset) {
+    units.forEach(unit => {
+      this.renderUnitOverlay(ctx, unit, scrollOffset)
     })
   }
 
