@@ -574,54 +574,67 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
 // --- Collision Resolution for Idle Units ---
 // When multiple units share the same tile, naturally guide them to separate positions
 export function resolveUnitCollisions(units, mapGrid) {
-  const assignedTiles = new Set()
   const COLLISION_RADIUS = TILE_SIZE * 0.4; // Collision detection radius
   const SEPARATION_FORCE = 0.5; // Force to separate overlapping units
-  
-  // Update each unit's tile coordinates based on their current positions.
+
+  // Build a spatial grid of idle units keyed by tile coordinates
+  const grid = new Map()
+  const tileKey = (x, y) => `${x},${y}`
+
   units.forEach(u => {
     if (!u.path || u.path.length === 0) {
       u.tileX = Math.floor(u.x / TILE_SIZE)
       u.tileY = Math.floor(u.y / TILE_SIZE)
+      const key = tileKey(u.tileX, u.tileY)
+      if (!grid.has(key)) grid.set(key, [])
+      grid.get(key).push(u)
     }
   })
-  
-  // Find overlapping units and apply gentle separation forces
-  for (let i = 0; i < units.length; i++) {
-    const unit1 = units[i];
-    if (unit1.path && unit1.path.length > 0) continue; // Skip moving units
-    
-    for (let j = i + 1; j < units.length; j++) {
-      const unit2 = units[j];
-      if (unit2.path && unit2.path.length > 0) continue; // Skip moving units
-      
-      const dx = unit2.x - unit1.x;
-      const dy = unit2.y - unit1.y;
-      const distance = Math.hypot(dx, dy);
-      
-      // If units are overlapping, apply gentle separation
-      if (distance < COLLISION_RADIUS && distance > 0) {
-        const overlap = COLLISION_RADIUS - distance;
-        const separationX = (dx / distance) * overlap * SEPARATION_FORCE;
-        const separationY = (dy / distance) * overlap * SEPARATION_FORCE;
-        
-        // Apply separation force (split the movement between both units)
-        unit1.x -= separationX * 0.5;
-        unit1.y -= separationY * 0.5;
-        unit2.x += separationX * 0.5;
-        unit2.y += separationY * 0.5;
-        
-        // Ensure units stay within map bounds
-        unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE));
-        unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE));
-        unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE));
-        unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE));
-        
-        // Update tile positions
-        unit1.tileX = Math.floor(unit1.x / TILE_SIZE);
-        unit1.tileY = Math.floor(unit1.y / TILE_SIZE);
-        unit2.tileX = Math.floor(unit2.x / TILE_SIZE);
-        unit2.tileY = Math.floor(unit2.y / TILE_SIZE);
+
+  const processedPairs = new Set()
+
+  for (const [key, tileUnits] of grid.entries()) {
+    for (const unit1 of tileUnits) {
+      // Check this unit against units in neighboring tiles
+      for (let ox = -1; ox <= 1; ox++) {
+        for (let oy = -1; oy <= 1; oy++) {
+          const neighborKey = tileKey(unit1.tileX + ox, unit1.tileY + oy)
+          const neighbors = grid.get(neighborKey)
+          if (!neighbors) continue
+          for (const unit2 of neighbors) {
+            if (unit1 === unit2) continue
+            const pairKey = unit1.id < unit2.id ? `${unit1.id}-${unit2.id}` : `${unit2.id}-${unit1.id}`
+            if (processedPairs.has(pairKey)) continue
+            processedPairs.add(pairKey)
+
+            const dx = unit2.x - unit1.x
+            const dy = unit2.y - unit1.y
+            const distance = Math.hypot(dx, dy)
+
+            if (distance < COLLISION_RADIUS && distance > 0) {
+              const overlap = COLLISION_RADIUS - distance
+              const separationX = (dx / distance) * overlap * SEPARATION_FORCE
+              const separationY = (dy / distance) * overlap * SEPARATION_FORCE
+
+              unit1.x -= separationX * 0.5
+              unit1.y -= separationY * 0.5
+              unit2.x += separationX * 0.5
+              unit2.y += separationY * 0.5
+
+              // Ensure units stay within map bounds
+              unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE))
+              unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE))
+              unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE))
+              unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE))
+
+              // Update tile positions
+              unit1.tileX = Math.floor(unit1.x / TILE_SIZE)
+              unit1.tileY = Math.floor(unit1.y / TILE_SIZE)
+              unit2.tileX = Math.floor(unit2.x / TILE_SIZE)
+              unit2.tileY = Math.floor(unit2.y / TILE_SIZE)
+            }
+          }
+        }
       }
     }
   }
