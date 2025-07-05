@@ -106,7 +106,7 @@ export class GameLoop {
     }
 
     // Update game elements
-    updateGame(delta / 1000, this.mapGrid, this.factories, this.units, this.bullets, gameState)
+    updateGame(delta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
 
     // Get minimap contexts for rendering
     const minimapCtx = this.canvasManager.getMinimapContext()
