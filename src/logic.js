@@ -8,6 +8,7 @@ import { playSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
 import { updateUnitSpeedModifier, awardExperience } from './utils.js'
+import { markBuildingForRepairPause } from './buildings.js'
 
 export let explosions = [] // Global explosion effects for rocket impacts
 
@@ -104,9 +105,61 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       // Only apply damage if damage > 0 (god mode protection)
       if (damage > 0) {
         factory.health -= damage
+        
+        // Ensure health doesn't go below 0
+        factory.health = Math.max(0, factory.health)
+        
+        // Mark factory for repair pause (deferred processing)
+        markBuildingForRepairPause(factory)
+        
+        // Track when factories are being attacked for repair delay
+        // Set lastAttackedTime for ANY attack, including self-attacks
+        if (shooter) {
+          factory.lastAttackedTime = now
+        }
       }
     }
   })
+
+  // Apply damage to nearby buildings
+  if (gameState.buildings && gameState.buildings.length > 0) {
+    gameState.buildings.forEach(building => {
+      if (building.health <= 0) return
+
+      const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+      const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+      const dx = buildingCenterX - x
+      const dy = buildingCenterY - y
+      const distance = Math.hypot(dx, dy)
+
+      if (distance < explosionRadius) {
+        const falloff = 1 - (distance / explosionRadius)
+        let damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+        
+        // Check for god mode protection for player buildings
+        if (window.cheatSystem && building.owner === gameState.humanPlayer) {
+          damage = window.cheatSystem.preventDamage(building, damage)
+        }
+        
+        // Only apply damage if damage > 0 (god mode protection)
+        if (damage > 0) {
+          building.health -= damage
+          
+          // Ensure health doesn't go below 0
+          building.health = Math.max(0, building.health)
+          
+          // Mark building for repair pause (deferred processing)
+          markBuildingForRepairPause(building)
+          
+          // Track when buildings are being attacked for repair delay
+          // Set lastAttackedTime for ANY attack, including self-attacks
+          if (shooter) {
+            building.lastAttackedTime = now
+          }
+        }
+      }
+    })
+  }
 }
 
 export function isAdjacentToFactory(unit, factory) {

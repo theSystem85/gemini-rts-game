@@ -328,9 +328,9 @@ export class MouseHandler {
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
     
-    // Check selected factories first
+    // Check selected factories first (but not when in repair mode)
     const selectedFactory = factories.find(f => f.selected && f.id === gameState.humanPlayer)
-    if (selectedFactory && !this.rightWasDragging) {
+    if (selectedFactory && !this.rightWasDragging && !gameState.repairMode) {
       // Set rally point at clicked tile
       selectedFactory.rallyPoint = {
         x: Math.floor(worldX / TILE_SIZE),
@@ -356,13 +356,13 @@ export class MouseHandler {
       return
     }
     
-    // Check selected buildings that can produce units
+    // Check selected buildings that can produce units (but not when in repair mode)
     const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
       building.selected && 
       building.owner === gameState.humanPlayer && 
       (building.type === 'vehicleFactory' || building.type === 'constructionYard')
     )
-    if (selectedBuilding && !this.rightWasDragging) {
+    if (selectedBuilding && !this.rightWasDragging && !gameState.repairMode) {
       // Set rally point at clicked tile
       selectedBuilding.rallyPoint = {
         x: Math.floor(worldX / TILE_SIZE),

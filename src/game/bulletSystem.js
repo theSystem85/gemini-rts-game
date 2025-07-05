@@ -7,6 +7,7 @@ import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } fro
 import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
+import { markBuildingForRepairPause } from '../buildings.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -188,6 +189,18 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           // Only apply damage if actualDamage > 0 (god mode protection)
           if (actualDamage > 0) {
             building.health -= actualDamage
+            
+            // Ensure health doesn't go below 0
+            building.health = Math.max(0, building.health)
+            
+            // Mark building for repair pause (deferred processing)
+            markBuildingForRepairPause(building)
+            
+            // Track when buildings are being attacked for repair delay
+            // Set lastAttackedTime for ANY attack, including self-attacks
+            if (bullet.shooter) {
+              building.lastAttackedTime = now
+            }
           }
 
           // Play hit sound
@@ -228,6 +241,18 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           // Only apply damage if actualDamage > 0 (god mode protection)
           if (actualDamage > 0) {
             factory.health -= actualDamage
+            
+            // Ensure health doesn't go below 0
+            factory.health = Math.max(0, factory.health)
+            
+            // Mark factory for repair pause (deferred processing)
+            markBuildingForRepairPause(factory)
+            
+            // Track when factories are being attacked for repair delay
+            // Set lastAttackedTime for ANY attack, including self-attacks
+            if (bullet.shooter) {
+              factory.lastAttackedTime = now
+            }
           }
 
           // Play hit sound
