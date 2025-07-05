@@ -251,7 +251,7 @@ export class FactoryRenderer {
     }
   }
 
-  renderFactory(ctx, factory) {
+  renderFactoryBaseLayer(ctx, factory) {
     if (factory.destroyed) return
     const pos = tileToPixel(factory.x, factory.y)
     const screenX = pos.x - factory.scrollOffset?.x || 0
@@ -260,12 +260,21 @@ export class FactoryRenderer {
     const height = factory.height * TILE_SIZE
 
     this.renderFactoryBase(ctx, factory, screenX, screenY, width, height)
-    this.renderHealthBar(ctx, factory, screenX, screenY, width)
     this.renderSelection(ctx, factory, screenX, screenY, width, height)
     this.renderCurrentlyBuilding(ctx, factory, screenX, screenY, width, height)
     this.renderBudget(ctx, factory, screenX, screenY)
     this.renderRepairAnimation(ctx, factory, screenX, screenY, width, height)
     this.renderPendingRepairCountdown(ctx, factory, screenX, screenY, width, height)
+  }
+
+  renderFactoryOverlays(ctx, factory) {
+    if (factory.destroyed) return
+    const pos = tileToPixel(factory.x, factory.y)
+    const screenX = pos.x - factory.scrollOffset?.x || 0
+    const screenY = pos.y - factory.scrollOffset?.y || 0
+    const width = factory.width * TILE_SIZE
+
+    this.renderHealthBar(ctx, factory, screenX, screenY, width)
   }
 
   renderRepairAnimation(ctx, factory, screenX, screenY, width, height) {
@@ -367,12 +376,18 @@ export class FactoryRenderer {
     ctx.restore()
   }
 
-  render(ctx, factories, scrollOffset) {
-    // Draw factories.
+  renderBases(ctx, factories, scrollOffset) {
     factories.forEach(factory => {
-      // Store scroll offset temporarily for rendering
       factory.scrollOffset = scrollOffset
-      this.renderFactory(ctx, factory)
+      this.renderFactoryBaseLayer(ctx, factory)
+      delete factory.scrollOffset
+    })
+  }
+
+  renderOverlays(ctx, factories, scrollOffset) {
+    factories.forEach(factory => {
+      factory.scrollOffset = scrollOffset
+      this.renderFactoryOverlays(ctx, factory)
       delete factory.scrollOffset
     })
   }

@@ -82,9 +82,9 @@ export class Renderer {
     }
     
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
-    this.buildingRenderer.render(gameCtx, buildings, scrollOffset)
-    this.factoryRenderer.render(gameCtx, factories, scrollOffset)
-    this.unitRenderer.render(gameCtx, units, scrollOffset)
+    this.buildingRenderer.renderBases(gameCtx, buildings, scrollOffset)
+    this.factoryRenderer.renderBases(gameCtx, factories, scrollOffset)
+    this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
     
     // Render movement target indicators (green triangles)
@@ -95,7 +95,11 @@ export class Renderer {
     
     // Render harvester HUD overlay (if enabled)
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)
-    
+
+    this.buildingRenderer.renderOverlays(gameCtx, buildings, scrollOffset)
+    this.factoryRenderer.renderOverlays(gameCtx, factories, scrollOffset)
+    this.unitRenderer.renderOverlays(gameCtx, units, scrollOffset)
+
     this.uiRenderer.render(gameCtx, gameCanvas, gameState, selectionActive, selectionStart, selectionEnd, scrollOffset, factories, buildings, mapGrid, units)
   }
 
