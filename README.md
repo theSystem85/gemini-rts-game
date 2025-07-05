@@ -249,26 +249,26 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
-- [ ] Add some little shaking back and forth when tanks stop.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
 - [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 - [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+- [ ] Add some little shaking back and forth when tanks stop.
 
 ## Bugs
+- [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 - [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
-- [ ] Some HUD elements like the health bar and the attack pins can get rendered under the units layer. Ensure they are always on top of the units and bulidings.
-- [ ] Ensure the harvesting and ore unloading sound is not played when enemy units are doing it.
+- [ ] Some HUD elements like the health bar and the attack pins can get rendered under the units layer. Ensure they are always on top of the units and buildings.
 - [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
-- [ ] When selling a building the occupancy map is not updated and still blocked there.
 - [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
 - [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
 - [ ] When about 10 units get stuck the game slows down significantly.
-- [ ] When initial building factory gets destroyed there is not map background left, just black.
-- [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
-- [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
-- [ ] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
+- [x] When initial building factory gets destroyed there is not map background left, just black.
+- [x] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
+- [x] Unit when produced by the enemy leave the factory immediately not after the build time is done.
+- [x] When selling a building the occupancy map is not updated and still blocked there.
+- [x] Ensure the harvesting and ore unloading sound is not played when enemy units are doing it.
 
 ### Closed Issues
 
