@@ -2,6 +2,7 @@
 import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath, updateUnitOccupancy, removeUnitOccupancy } from '../units.js'
+import { getCachedPath } from './pathfinding.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
 import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
@@ -97,7 +98,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
           unit.moveTarget = { x: targetCenterX, y: targetCenterY }
           unit.lastAttackPathCalcTime = now
           // Use proper pathfinding with occupancy map for attack movement
-          const path = findPath(
+          const path = getCachedPath(
             { x: unit.tileX, y: unit.tileY },
             { x: targetTileX, y: targetTileY },
             mapGrid,

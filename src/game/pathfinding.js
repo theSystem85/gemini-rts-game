@@ -2,6 +2,22 @@
 import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { findPath } from '../units.js'
 
+// Simple in-memory cache for sharing A* paths between units
+const pathCache = new Map()
+const PATH_CACHE_TTL = PATH_CALC_INTERVAL
+
+function getCachedPath(start, end, mapGrid, occupancyMap) {
+  const key = `${start.x},${start.y}-${end.x},${end.y}-${occupancyMap ? 1 : 0}`
+  const now = performance.now()
+  const entry = pathCache.get(key)
+  if (entry && now - entry.time < PATH_CACHE_TTL) {
+    return entry.path
+  }
+  const path = findPath(start, end, mapGrid, occupancyMap)
+  pathCache.set(key, { path, time: now })
+  return path
+}
+
 /**
  * Updates unit pathfinding with formation support and throttling
  * @param {Array} units - Array of unit objects
@@ -106,8 +122,8 @@ export function updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
           const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
           const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
           const newPath = useOccupancyMap
-            ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
-            : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+            ? getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
+            : getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
 
           if (newPath.length > 1) {
             unit.path = newPath.slice(1)
@@ -161,3 +177,5 @@ export function clearFormation(units) {
     unit.groupNumber = null
   })
 }
+
+export { getCachedPath }
