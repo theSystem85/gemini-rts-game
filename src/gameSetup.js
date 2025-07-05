@@ -41,7 +41,7 @@ function seededRandom(seed) {
 function drawStreetLine(grid, start, end, type) {
   const dx = end.x - start.x, dy = end.y - start.y
   const steps = Math.max(Math.abs(dx), Math.abs(dy))
-  const thickness = 2 // Original street thickness
+  const thickness = 2 // Reduced street thickness
   
   for (let j = 0; j <= steps; j++) {
     const x = Math.floor(start.x + (dx * j) / steps)

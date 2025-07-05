@@ -76,6 +76,11 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleSellMode()
       }
+      // R key to toggle repair mode
+      else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        this.handleRepairMode()
+      }
       // X key for dodge
       else if (e.key.toLowerCase() === 'x') {
         e.preventDefault()
@@ -270,6 +275,33 @@ export class KeyboardHandler {
 
       // Show notification
       this.showNotification('Sell mode deactivated', 2000)
+    }
+  }
+
+  handleRepairMode() {
+    const gameCanvas = document.getElementById('gameCanvas')
+    const repairBtn = document.getElementById('repairBtn')
+
+    if (!gameState.repairMode) {
+      gameState.repairMode = true
+
+      // Deactivate sell mode if it's active
+      if (gameState.sellMode) {
+        gameState.sellMode = false
+        const sellBtn = document.getElementById('sellBtn')
+        if (sellBtn) sellBtn.classList.remove('active')
+        gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode')
+      }
+
+      if (repairBtn) repairBtn.classList.add('active')
+      this.showNotification('Repair mode activated. Click on a building to repair it.')
+      gameCanvas.classList.add('repair-mode')
+    } else {
+      gameState.repairMode = false
+      if (repairBtn) repairBtn.classList.remove('active')
+      gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode')
+      gameCanvas.style.cursor = 'default'
+      this.showNotification('Repair mode deactivated.')
     }
   }
 
