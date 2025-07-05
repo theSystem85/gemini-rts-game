@@ -237,10 +237,13 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Improvements
 - [ ] Refine the coloring of the power bar and its logic on impacting the production.
+- [ ] Ensure the leveling stars on a unit when not selected look like the same as when they are not selected (smaller).
+- [ ] Make sure the showNotification clears the previous one immediatly before showing a new one.
+- [ ] On pressing R Key the repair mode should be toggled unless there is no input having focus.
 - [x] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
-- [ ] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
+- [x] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [x] only show health bars if units or buildings are damaged
 - [x] The selection indicator for units should only be visible at the conrers (like with buildings).
@@ -266,13 +269,13 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add some little shaking back and forth when tanks stop.
-- [x] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cut smoothly to form straight diagonal lines. Smoothening Overlay Textures (SOT) use the street texture, work in all diagonal orientations, apply only on land tiles, render above streets but below rocks, ore and buildings, and expand slightly to hide single-pixel gaps.
-- [x] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
 - [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 - [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+- [x] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cut smoothly to form straight diagonal lines. Smoothening Overlay Textures (SOT) use the street texture, work in all diagonal orientations, apply only on land tiles, render above streets but below rocks, ore and buildings, and expand slightly to hide single-pixel gaps.
+- [x] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [x] Add an fps overlay in the top right corner that can be toggled on/off with "f" key. Add info to help menu.
 - [x] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cut smoothly to form straight diagonal lines. Smoothening Overlay Textures (SOT) use the street texture, work in all diagonal orientations, apply only on grass tiles, render above streets but below rocks, ore and buildings, and expand slightly to hide single-pixel gaps.
 - [x] When units are below 25% health they start to move with 50% of the speed of normal units.
@@ -337,13 +340,13 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] When about 10 units get stuck the game slows down significantly.
 - [ ] When initial building factory gets destroyed there is not map background left, just black.
 - [ ] Unit when produced by the enemy leave the factory immediately not after the build time is done.
-- [ ] Ensure on map generation there is no ore overlapping with buildings.
+- [x] Ensure on map generation there is no ore overlapping with buildings.
 - [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 - [ ] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
-- [ ] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
+- [x] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 - [ ] Image for the concrete wall on map is incorrect.
-- [ ] Enemy units come out of factory immediately before the build indicator shows that the build is done
-- [ ] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
+- [x] Enemy units come out of factory immediately before the build indicator shows that the build is done
+- [x] When enemy buildings get destroyed it looks like the occupancy map is not updated and the tiles are still blocked!
 - [x] Saving games does not work anymore.
 - [x] when a combat unit is selected and I hover over another of my units then the cursor should not be an attack cursor but just a normal cursor "arrow".
 - [x] The occupancy map shows that not the center of a unit is determining weather a unit is on a tile but its top left corner.
