@@ -240,11 +240,12 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [ ] Ensure the leveling stars on a unit when not selected look like the same as when they are not selected (smaller).
 - [ ] Make sure the showNotification clears the previous one immediatly before showing a new one.
 - [ ] On pressing R Key the repair mode should be toggled unless there is no input having focus.
-- [x] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
-- [x] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
+- [x] Clear previous notifications before showing a new one.
+- [x] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
+- [x] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [x] only show health bars if units or buildings are damaged
 - [x] The selection indicator for units should only be visible at the conrers (like with buildings).
 - [x] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
