@@ -1,5 +1,5 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS, WIND_DIRECTION } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
@@ -370,16 +370,58 @@ export class BuildingRenderer {
   }
 
   renderOwnerIndicator(ctx, building, screenX, screenY) {
-    // Draw owner indicator using party colors
+    // Draw a small flag instead of a filled square
     const partyColor = PARTY_COLORS[building.owner] || PARTY_COLORS.player
-    const ownerColor = partyColor.replace(')', ', 0.3)').replace('rgb', 'rgba')
-    ctx.fillStyle = ownerColor
-    ctx.fillRect(
-      screenX + 2,
-      screenY + 2,
-      8,
-      8
-    )
+
+    const width = building.width * TILE_SIZE
+    const height = building.height * TILE_SIZE
+
+    // Position the flag pole at ground level in the top left corner
+    const baseX = screenX + 2
+    const baseY = screenY + height - 2
+
+    const poleHeight = 10
+    const poleWidth = 2
+    const flagWidth = 6 // Should not exceed previous indicator width
+    const flagHeight = 4
+
+    // Draw pole
+    ctx.fillStyle = '#777' // Dark silver
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 1
+    ctx.fillRect(baseX - poleWidth / 2, baseY - poleHeight, poleWidth, poleHeight)
+    ctx.strokeRect(baseX - poleWidth / 2, baseY - poleHeight, poleWidth, poleHeight)
+
+    // Calculate waving flag polygon
+    const topX = baseX + poleWidth / 2
+    const topY = baseY - poleHeight + 1
+
+    const time = performance.now()
+    const amplitude = 1.5
+    const segments = 3
+
+    ctx.fillStyle = partyColor
+    ctx.beginPath()
+    ctx.moveTo(topX, topY)
+
+    for (let i = 1; i <= segments; i++) {
+      const t = i / segments
+      const x = topX + t * flagWidth
+      const wave = Math.sin(time / 200 + t * 3) * amplitude
+      const y = topY + WIND_DIRECTION.y * flagWidth * t + wave
+      ctx.lineTo(x, y)
+    }
+    for (let i = segments; i >= 0; i--) {
+      const t = i / segments
+      const x = topX + t * flagWidth
+      const wave = Math.sin(time / 200 + t * 3 + 0.5) * amplitude
+      const y = topY + flagHeight + WIND_DIRECTION.y * flagWidth * t + wave
+      ctx.lineTo(x, y)
+    }
+
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
   }
 
   renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height) {
