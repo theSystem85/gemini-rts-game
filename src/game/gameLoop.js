@@ -32,6 +32,9 @@ export class GameLoop {
     this.lastMoneyDisplayed = null
     this.lastGameTimeUpdate = 0
     this.lastEnergyUpdate = 0
+
+    // Set the production controller reference in milestone system
+    milestoneSystem.setProductionController(productionController)
   }
 
   setAssetsLoaded(loaded) {

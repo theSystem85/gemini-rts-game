@@ -49,17 +49,18 @@
       <div id="production">
         <div id="productionContainer">
           <div id="productionTabs">
-            <button class="tab-button active" data-tab="units">Units</button>
-            <button class="tab-button" data-tab="buildings">Buildings</button>
+            <button class="tab-button" data-tab="units">Units</button>
+            <button class="tab-button active" data-tab="buildings">Buildings</button>
           </div>
           <div id="productionTabContent">
-            <div id="unitsTabContent" class="tab-content active">
+            <div id="unitsTabContent" class="tab-content">
               <button class="production-button" data-unit-type="tank">
                 <img src="images/tank.png" onerror="this.style.display='none'">
                 <span class="unit-name">Tank V1</span>
                 <span class="unit-cost">$1000</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-unit-type="tank-v2">
                 <img src="images/tank_v2.png" onerror="this.style.display='none'">
@@ -67,6 +68,7 @@
                 <span class="unit-cost">$2000</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-unit-type="tank-v3">
                 <img src="images/tank_v3.png" onerror="this.style.display='none'">
@@ -74,6 +76,7 @@
                 <span class="unit-cost">$3000</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-unit-type="rocketTank">
                 <img src="images/rocket_tank.webp" onerror="this.style.display='none'">
@@ -81,6 +84,7 @@
                 <span class="unit-cost">$2000</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-unit-type="harvester">
                 <img src="images/harvester.webp" onerror="this.style.display='none'">
@@ -88,9 +92,10 @@
                 <span class="unit-cost">$500</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
             </div>
-            <div id="buildingsTabContent" class="tab-content">
+            <div id="buildingsTabContent" class="tab-content active">
               <button class="production-button" data-building-type="constructionYard">
                 <img src="images/construction_yard.png" onerror="this.style.display='none'">
                 <span class="building-name">Construction Yard</span>
@@ -98,6 +103,7 @@
                 <span class="building-power">+50 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="oreRefinery">
                 <img src="images/ore_refinery.jpg" onerror="this.style.display='none'">
@@ -106,6 +112,7 @@
                 <span class="building-power">-30 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="powerPlant">
                 <img src="images/power_plant.jpg" onerror="this.style.display='none'">
@@ -114,6 +121,7 @@
                 <span class="building-power">+200 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="vehicleFactory">
                 <img src="images/vehicle_factory.jpg" onerror="this.style.display='none'">
@@ -122,6 +130,7 @@
                 <span class="building-power">-50 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="radarStation">
                 <img src="images/radar_station.jpg" onerror="this.style.display='none'">
@@ -130,6 +139,7 @@
                 <span class="building-power">-50 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="turretGunV1">
                 <img src="images/turret_gun_v1.jpg" onerror="this.style.display='none'">
@@ -138,6 +148,7 @@
                 <span class="building-power">-10 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="turretGunV2">
                 <img src="images/turret_gun_v2.jpg" onerror="this.style.display='none'">
@@ -146,6 +157,7 @@
                 <span class="building-power">-15 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="turretGunV3">
                 <img src="images/turret_gun_v3.jpg" onerror="this.style.display='none'">
@@ -154,6 +166,7 @@
                 <span class="building-power">-25 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="rocketTurret">
                 <img src="images/rocket_turret.jpg" onerror="this.style.display='none'">
@@ -162,6 +175,7 @@
                 <span class="building-power">-20 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="teslaCoil">
                 <img src="images/tesla_coil.jpg" onerror="this.style.display='none'">
@@ -170,6 +184,7 @@
                 <span class="building-power">-60 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="artilleryTurret">
                 <img src="images/artillery_turret.jpg" onerror="this.style.display='none'">
@@ -178,6 +193,7 @@
                 <span class="building-power">-45 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
               <button class="production-button" data-building-type="concreteWall">
                 <img src="images/concrete_wall.jpg" onerror="this.style.display='none'">
@@ -186,6 +202,7 @@
                 <span class="building-power">0 MW</span>
                 <div class="production-progress"></div>
                 <div class="batch-counter" style="display:none">0</div>
+                <div class="new-label" style="display:none">NEW</div>
               </button>
             </div>
           </div>

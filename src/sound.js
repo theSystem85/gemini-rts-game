@@ -85,7 +85,10 @@ const soundMapping = {
   playerBlueDefeated: 'playerBlueDefeated',
   playerGreenDefeated: 'playerGreenDefeated',
   playerRedDefeated: 'playerRedDefeated',
-  playerYellowDefeated: 'playerYellowDefeated'
+  playerYellowDefeated: 'playerYellowDefeated',
+  new_units_types_available: 'new_units_types_available',
+  new_building_types_available: 'new_building_types_available',
+  new_production_options: 'new_production_options'
 }
 
 const soundFiles = {
@@ -120,7 +123,10 @@ const soundFiles = {
   playerBlueDefeated: ['playerBlueDefeated.mp3'],
   playerGreenDefeated: ['playerGreenDefeated.mp3'],
   playerRedDefeated: ['playerRedDefeated.mp3'],
-  playerYellowDefeated: ['playerYellowDefeated.mp3']
+  playerYellowDefeated: ['playerYellowDefeated.mp3'],
+  new_units_types_available: ['new_units_types_available.mp3'],
+  new_building_types_available: ['new_building_types_available.mp3'],
+  new_production_options: ['new_production_options.mp3']
 }
 
 const activeAudioElements = new Map()

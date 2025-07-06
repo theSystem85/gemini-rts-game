@@ -9,6 +9,7 @@ import { showNotification } from '../ui/notifications.js'
 export class MilestoneSystem {
   constructor() {
     this.achievedMilestones = new Set()
+    this.productionController = null
     this.milestoneConfig = {
       firstRefinery: {
         id: 'firstRefinery',
@@ -41,8 +42,105 @@ export class MilestoneSystem {
         description: 'Advanced defensive technology has been deployed',
         videoFilename: 'tesla_coil_hits_tank',
         priority: 'high'
+      },
+      radarBuilt: {
+        id: 'radarBuilt',
+        displayName: 'Radar Station Operational',
+        description: 'Advanced technologies are now available',
+        priority: 'high'
+      },
+      harvesterUnlocked: {
+        id: 'harvesterUnlocked',
+        displayName: 'Harvester Available',
+        description: 'Resource harvesting capabilities unlocked',
+        priority: 'medium'
+      },
+      rocketTankUnlocked: {
+        id: 'rocketTankUnlocked',
+        displayName: 'Rocket Tank Available',
+        description: 'Advanced rocket technology unlocked',
+        priority: 'medium'
+      },
+      tankV3Unlocked: {
+        id: 'tankV3Unlocked',
+        displayName: 'Heavy Tank Available',
+        description: 'Advanced tank production capabilities unlocked',
+        priority: 'medium'
       }
     }
+  }
+
+  /**
+   * Unlock advanced technology when radar station is built
+   */
+  unlockAdvancedTechnology() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock advanced technology')
+      return
+    }
+
+    // Define units and buildings to unlock (excluding rocket tank and tank-v3 which have special requirements)
+    const unitsToUnlock = ['tank-v2']
+    const buildingsToUnlock = ['turretGunV2', 'turretGunV3', 'rocketTurret', 'teslaCoil', 'artilleryTurret']
+
+    // Unlock multiple types with appropriate sound
+    this.productionController.unlockMultipleTypes(unitsToUnlock, buildingsToUnlock)
+  }
+
+  /**
+   * Unlock basic units when first vehicle factory is built
+   */
+  unlockBasicUnits(gameState) {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock basic units')
+      return
+    }
+
+    // Unlock basic tank
+    this.productionController.unlockUnitType('tank')
+  }
+
+  /**
+   * Unlock harvester when both vehicle factory and refinery exist
+   */
+  unlockHarvester() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock harvester')
+      return
+    }
+
+    this.productionController.unlockUnitType('harvester')
+  }
+
+  /**
+   * Unlock rocket tank when rocket turret is built
+   */
+  unlockRocketTank() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock rocket tank')
+      return
+    }
+
+    this.productionController.unlockUnitType('rocketTank')
+  }
+
+  /**
+   * Unlock tank-v3 when 2 vehicle factories exist
+   */
+  unlockTankV3() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock tank-v3')
+      return
+    }
+
+    this.productionController.unlockUnitType('tank-v3')
+  }
+
+  /**
+   * Set the production controller reference for unlocking units/buildings
+   */
+  setProductionController(productionController) {
+    this.productionController = productionController
   }
 
   /**
@@ -60,13 +158,50 @@ export class MilestoneSystem {
       }
     }
 
-    // Check for first factory
+    // Check for first factory and unlock basic units
     if (!this.achievedMilestones.has('firstFactory')) {
       const hasFactory = gameState.buildings?.some(building => 
         building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
       )
       if (hasFactory) {
         this.triggerMilestone('firstFactory')
+        this.unlockBasicUnits(gameState)
+      }
+    }
+
+    // Check for harvester unlock (requires both vehicle factory and refinery)
+    if (!this.achievedMilestones.has('harvesterUnlocked')) {
+      const hasFactory = gameState.buildings?.some(building => 
+        building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
+      )
+      const hasRefinery = gameState.buildings?.some(building => 
+        building.type === 'oreRefinery' && building.owner === gameState.humanPlayer
+      )
+      if (hasFactory && hasRefinery) {
+        this.triggerMilestone('harvesterUnlocked')
+        this.unlockHarvester()
+      }
+    }
+
+    // Check for rocket turret to unlock rocket tank
+    if (!this.achievedMilestones.has('rocketTankUnlocked')) {
+      const hasRocketTurret = gameState.buildings?.some(building => 
+        building.type === 'rocketTurret' && building.owner === gameState.humanPlayer
+      )
+      if (hasRocketTurret) {
+        this.triggerMilestone('rocketTankUnlocked')
+        this.unlockRocketTank()
+      }
+    }
+
+    // Check for 2 vehicle factories to unlock tank-v3
+    if (!this.achievedMilestones.has('tankV3Unlocked')) {
+      const vehicleFactories = gameState.buildings?.filter(building => 
+        building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
+      )
+      if (vehicleFactories && vehicleFactories.length >= 2) {
+        this.triggerMilestone('tankV3Unlocked')
+        this.unlockTankV3()
       }
     }
 
@@ -97,6 +232,17 @@ export class MilestoneSystem {
       )
       if (hasTeslaCoil) {
         this.triggerMilestone('firstTeslaCoil')
+      }
+    }
+
+    // Check for radar station to unlock advanced units and buildings
+    if (!this.achievedMilestones.has('radarBuilt')) {
+      const hasRadar = gameState.buildings?.some(building => 
+        building.type === 'radarStation' && building.owner === gameState.humanPlayer
+      )
+      if (hasRadar) {
+        this.triggerMilestone('radarBuilt')
+        this.unlockAdvancedTechnology()
       }
     }
   }

@@ -50,6 +50,11 @@ export const productionQueue = {
     // DO NOT check for money or deduct money here
 
     if (isBuilding) {
+      if (gameState.newBuildingTypes.has(type)) {
+        gameState.newBuildingTypes.delete(type)
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'none'
+      }
       this.buildingItems.push({ type, button, isBuilding })
       const currentCount = this.buildingItems.filter(item => item.button === button).length
       this.updateBatchCounter(button, currentCount)
@@ -58,6 +63,11 @@ export const productionQueue = {
         this.startNextBuildingProduction()
       }
     } else {
+      if (gameState.newUnitTypes.has(type)) {
+        gameState.newUnitTypes.delete(type)
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'none'
+      }
       this.unitItems.push({ type, button, isBuilding })
       const currentCount = this.unitItems.filter(item => item.button === button).length
       this.updateBatchCounter(button, currentCount)
