@@ -285,7 +285,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         savePlayerBuildPatterns(buildingType)
       } else {
         // Play error sound for invalid placement
-        playSound('error')
+        playSound('construction_obstructed')
       }
     } catch (error) {
       console.error('Error during building placement:', error)

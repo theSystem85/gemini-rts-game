@@ -47,51 +47,8 @@ function saveVolumeToStorage(volume) {
 
 let masterVolume = loadVolumeFromStorage()
 
-/**
- * Sound mapping for game events including battle results and player defeats
- * Battle sounds: battleWon, battleLost - played when game ends
- * Player defeat sounds: playerBlueDefeated, playerGreenDefeated, playerRedDefeated, playerYellowDefeated
- * These are mapped to player colors: player1=Green, player2=Red, player3=Blue, player4=Yellow
- **/
-
-const soundMapping = {
-  unitSelection: 'unitSelection',
-  movement: 'tankMove',
-  confirmed: 'confirmed', // Add confirmed sound mapping for harvester force unload
-  shoot: 'tankShot',
-  shoot_rocket: 'patriotMissile', // updated: rocket tank now uses patriotMissile sounds
-  shoot_heavy: 'tankShot03', // turretGunV3 uses tankShot03.mp3
-  productionStart: 'constructionStarted',
-  productionPaused: 'constructionPaused',
-  productionCancelled: 'constructionCancelled',
-  constructionComplete: 'constructionComplete',
-  buildingPlaced: 'buildingPlaced',
-  unitReady: 'unitReady',
-  bulletHit: 'bulletHit',
-  harvest: 'harvest',
-  deposit: 'deposit',
-  explosion: 'explosion',
-  unitLost: 'unitLost', // Adding unit lost sound mapping
-  attacking: 'attacking', // New attacking sound
-  enemyUnitDestroyed: 'enemyUnitDestroyed', // New enemy destruction sound
-  enemyBuildingDestroyed: 'enemyBuildingDestroyed', // New enemy building destruction sound
-  teslacoil_loading: 'teslacoil_loading',
-  teslacoil_firing: 'teslacoil_firing',
-  criticalDamage: 'criticalDamage', // Critical damage sound for rear hits
-  Repair_impossible_when_under_attack: 'Repair_impossible_when_under_attack',
-  // New battle and player defeat sounds
-  battleWon: 'battleWon',
-  battleLost: 'battleLost',
-  playerBlueDefeated: 'playerBlueDefeated',
-  playerGreenDefeated: 'playerGreenDefeated',
-  playerRedDefeated: 'playerRedDefeated',
-  playerYellowDefeated: 'playerYellowDefeated',
-  new_units_types_available: 'new_units_types_available',
-  new_building_types_available: 'new_building_types_available',
-  new_production_options: 'new_production_options'
-}
-
 const soundFiles = {
+  // Original sound categories
   explosion: ['explosion01.mp3', 'explosion02.mp3', 'explosion03.mp3', 'explosion04.mp3'],
   tankShot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'],
   tankShot03: ['tankShot03.mp3'], // Specific sound for turretGunV3
@@ -110,14 +67,13 @@ const soundFiles = {
   buildingPlaced: ['buildingPlaced.mp3'],
   harvest: ['harvest.mp3'],
   unitLost: ['unit_lost.mp3'],
-  attacking: ['attacking.mp3'], // New attacking sound
-  enemyUnitDestroyed: ['enemy_unit_destroyed.mp3'], // New enemy destruction sound
-  enemyBuildingDestroyed: ['enemy_building_destroyed.mp3'], // New enemy building destruction sound
+  attacking: ['attacking.mp3'],
+  enemyUnitDestroyed: ['enemy_unit_destroyed.mp3'],
+  enemyBuildingDestroyed: ['enemy_building_destroyed.mp3'],
   teslacoil_loading: ['teslacoil_loading.mp3'],
   teslacoil_firing: ['teslacoil_firing.mp3'],
-  criticalDamage: ['critical_damage.mp3'], // Critical damage sound for rear hits
+  criticalDamage: ['critical_damage.mp3'],
   Repair_impossible_when_under_attack: ['Repair_impossible_when_under_attack.mp3'],
-  // New battle and player defeat sounds
   battleWon: ['battleWon.mp3'],
   battleLost: ['battleLost.mp3'],
   playerBlueDefeated: ['playerBlueDefeated.mp3'],
@@ -126,14 +82,34 @@ const soundFiles = {
   playerYellowDefeated: ['playerYellowDefeated.mp3'],
   new_units_types_available: ['new_units_types_available.mp3'],
   new_building_types_available: ['new_building_types_available.mp3'],
-  new_production_options: ['new_production_options.mp3']
+  new_production_options: ['new_production_options.mp3'],
+  
+  // Game event aliases (previously in soundMapping)
+  movement: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'], // alias for tankMove
+  shoot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'], // alias for tankShot
+  shoot_rocket: ['patriotMissile01.mp3', 'patriotMissile02.mp3'], // alias for patriotMissile
+  shoot_heavy: ['tankShot03.mp3'], // alias for tankShot03
+  productionStart: ['construction_started.mp3', 'building.mp3'], // alias for constructionStarted
+  productionPaused: ['construction_paused.mp3'], // alias for constructionPaused
+  productionCancelled: ['construction_cancelled.mp3'], // alias for constructionCancelled
+  construction_obstructed: ['construction_obstructed.mp3'], // alias for constructionObstructed
+  
+  // Direct file access (for legacy compatibility)
+  yesSir01: ['yesSir01.mp3'],
+  
+  // Missing sound placeholders (will use fallback beep)
+  error: [], // No error.mp3 file exists - will use fallback
+  cancel: [], // No cancel.mp3 file exists - will use fallback
+  construction_paused: ['construction_paused.mp3'], // Direct file access
+  construction_cancelled: ['construction_cancelled.mp3'], // Direct file access
+  construction_started: ['construction_started.mp3'] // Direct file access
 }
 
 const activeAudioElements = new Map()
 const soundThrottleTimestamps = new Map() // Track last play time for throttled sounds
 
-function playAssetSound(category, volume = 1.0) {
-  const files = soundFiles[category]
+function playAssetSound(eventName, volume = 1.0) {
+  const files = soundFiles[eventName]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
     const soundPath = 'sound/' + file
@@ -163,6 +139,7 @@ function playAssetSound(category, volume = 1.0) {
     activeAudioElements.set(soundPath, audio)
     return true
   }
+  // Return false if no files available (will trigger fallback beep)
   return false
 }
 
@@ -181,11 +158,12 @@ export function playSound(eventName, volume = 1.0, throttleSeconds = 0) {
     soundThrottleTimestamps.set(eventName, now)
   }
   
-  const category = soundMapping[eventName]
-  if (category) {
-    const played = playAssetSound(category, volume)
+  // Use eventName directly with soundFiles instead of mapping
+  if (soundFiles[eventName]) {
+    const played = playAssetSound(eventName, volume)
     if (played) return
   }
+  
   // Fallback beep sound.
   try {
     const oscillator = audioContext.createOscillator()

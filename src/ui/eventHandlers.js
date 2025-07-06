@@ -246,7 +246,7 @@ export class EventHandlers {
           }
         } else {
           // Play error sound for invalid placement
-          playSound('error')
+          playSound('construction_obstructed')
         }
       } catch (error) {
         console.error('Error during building placement:', error)

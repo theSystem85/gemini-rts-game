@@ -947,9 +947,6 @@ export class MouseHandler {
 
       // Show notification
       showNotification('Action mode canceled')
-
-      // Play a cancel sound for feedback
-      playSound('cancel', 0.5)
     }
 
     // Allow the event to continue for other right-click handlers

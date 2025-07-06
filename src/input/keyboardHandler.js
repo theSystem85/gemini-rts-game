@@ -196,7 +196,6 @@ export class KeyboardHandler {
     if (modeWasCanceled) {
       const message = hadSelections ? 'Selection cleared' : 'Mode cancelled'
       this.showNotification(message, 1000)
-      playSound('cancel', 0.5)
     }
   }
 
