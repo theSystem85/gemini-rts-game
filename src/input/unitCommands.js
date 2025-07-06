@@ -4,6 +4,8 @@ import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { cancelRetreatForUnits } from '../behaviours/retreat.js'
+import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
+import { units } from '../main.js'
 
 export class UnitCommandsHandler {
   
@@ -186,6 +188,47 @@ export class UnitCommandsHandler {
 
     // Play attacking sound for user-initiated attack commands
     playSound('attacking', 1.0)
+  }
+
+  handleRefineryUnloadCommand(selectedUnits, refinery, mapGrid) {
+    // Clear attack group feature state when issuing refinery unload commands
+    this.clearAttackGroupState(selectedUnits)
+    
+    let harvestersCommanded = 0
+    
+    selectedUnits.forEach(unit => {
+      if (unit.type === 'harvester') {
+        // Force this harvester to be assigned to the clicked refinery (regardless of current ore status)
+        // This will be used when the harvester next needs to unload
+        unit.assignedRefinery = refinery // Store the actual refinery object
+        
+        // If harvester has ore, immediately force priority unload
+        if (unit.oreCarried > 0) {
+          forceHarvesterUnloadPriority(unit, refinery, units)
+          
+          // Path the harvester to the refinery immediately
+          const path = findPath({ x: unit.tileX, y: unit.tileY }, 
+                                { x: refinery.x + Math.floor(refinery.width / 2), 
+                                  y: refinery.y + Math.floor(refinery.height / 2) }, 
+                                mapGrid, null)
+          
+          if (path && path.length > 0) {
+            unit.path = path.length > 1 ? path.slice(1) : path
+            unit.target = null // Clear any combat target
+            unit.moveTarget = { x: refinery.x + Math.floor(refinery.width / 2), 
+                               y: refinery.y + Math.floor(refinery.height / 2) }
+            unit.forcedAttack = false
+          }
+        }
+        
+        harvestersCommanded++
+      }
+    })
+    
+    // Play confirmed sound if at least one harvester was commanded
+    if (harvestersCommanded > 0) {
+      playSound('confirmed', 0.8)
+    }
   }
 
   handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {

@@ -11,6 +11,7 @@ export class CursorManager {
     this.isOverRepairableBuilding = false
     this.isOverSellableBuilding = false
     this.isOverOreTile = false
+    this.isOverPlayerRefinery = false
     this.isForceAttackMode = false
     this.lastMouseEvent = null
   }
@@ -67,6 +68,26 @@ export class CursorManager {
     this.isOverBlockedTerrain = this.isOverGameCanvas &&
       mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
       this.isBlockedTerrain(tileX, tileY, mapGrid)
+
+    // Check if mouse is over a player refinery when harvesters are selected
+    this.isOverPlayerRefinery = false
+    if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
+        tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+      // Only show refinery cursor if harvesters are selected
+      const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+      if (hasSelectedHarvesters) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'oreRefinery' && 
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            this.isOverPlayerRefinery = true
+            break
+          }
+        }
+      }
+    }
 
     // Check if mouse is over an ore tile when harvesters are selected
     this.isOverOreTile = false
@@ -178,6 +199,10 @@ export class CursorManager {
         gameCanvas.style.cursor = 'default'
       } else if (this.isOverEnemy) {
         // Over enemy - use attack cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('attack-mode')
+      } else if (this.isOverPlayerRefinery) {
+        // Over player refinery with harvesters selected - use attack cursor to indicate force unload
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
       } else if (this.isOverOreTile) {

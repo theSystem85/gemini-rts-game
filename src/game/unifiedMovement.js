@@ -40,6 +40,31 @@ export function initializeUnitMovement(unit) {
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit);
   
+  // **HARVESTER MOVEMENT RESTRICTIONS** - Prevent movement during critical operations
+  if (unit.type === 'harvester') {
+    // Harvester cannot move while harvesting ore
+    if (unit.harvesting) {
+      unit.path = [] // Clear any pending movement
+      unit.moveTarget = null
+      unit.movement.velocity = { x: 0, y: 0 }
+      unit.movement.targetVelocity = { x: 0, y: 0 }
+      unit.movement.isMoving = false
+      unit.movement.currentSpeed = 0
+      return // Exit early - no movement allowed
+    }
+    
+    // Harvester cannot move while unloading at refinery
+    if (unit.unloadingAtRefinery) {
+      unit.path = [] // Clear any pending movement  
+      unit.moveTarget = null
+      unit.movement.velocity = { x: 0, y: 0 }
+      unit.movement.targetVelocity = { x: 0, y: 0 }
+      unit.movement.isMoving = false
+      unit.movement.currentSpeed = 0
+      return // Exit early - no movement allowed
+    }
+  }
+  
   const movement = unit.movement;
   const speedModifier = unit.speedModifier || 1;
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier;
