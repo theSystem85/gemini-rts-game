@@ -56,21 +56,44 @@ export class MapRenderer {
         // Render base tile layer
         drawTile(x, y, tile.type)
         
-        // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets
+        // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets or water
         if (tile.type === 'land') {
           const top = y > 0 ? mapGrid[y - 1][x] : null
           const left = x > 0 ? mapGrid[y][x - 1] : null
           const bottom = y < mapGrid.length - 1 ? mapGrid[y + 1][x] : null
           const right = x < mapGrid[0].length - 1 ? mapGrid[y][x + 1] : null
 
+          let orientation = null
+          let overlayType = null
+
           if (top && left && top.type === 'street' && left.type === 'street') {
-            this.drawSOT(ctx, x, y, 'top-left', scrollOffset, useTexture, sotApplied)
+            orientation = 'top-left'
+            overlayType = 'street'
           } else if (top && right && top.type === 'street' && right.type === 'street') {
-            this.drawSOT(ctx, x, y, 'top-right', scrollOffset, useTexture, sotApplied)
+            orientation = 'top-right'
+            overlayType = 'street'
           } else if (bottom && left && bottom.type === 'street' && left.type === 'street') {
-            this.drawSOT(ctx, x, y, 'bottom-left', scrollOffset, useTexture, sotApplied)
+            orientation = 'bottom-left'
+            overlayType = 'street'
           } else if (bottom && right && bottom.type === 'street' && right.type === 'street') {
-            this.drawSOT(ctx, x, y, 'bottom-right', scrollOffset, useTexture, sotApplied)
+            orientation = 'bottom-right'
+            overlayType = 'street'
+          } else if (top && left && top.type === 'water' && left.type === 'water') {
+            orientation = 'top-left'
+            overlayType = 'water'
+          } else if (top && right && top.type === 'water' && right.type === 'water') {
+            orientation = 'top-right'
+            overlayType = 'water'
+          } else if (bottom && left && bottom.type === 'water' && left.type === 'water') {
+            orientation = 'bottom-left'
+            overlayType = 'water'
+          } else if (bottom && right && bottom.type === 'water' && right.type === 'water') {
+            orientation = 'bottom-right'
+            overlayType = 'water'
+          }
+
+          if (orientation) {
+            this.drawSOT(ctx, x, y, orientation, scrollOffset, useTexture, sotApplied, overlayType)
           }
         }
         
@@ -88,7 +111,7 @@ export class MapRenderer {
   /**
    * Draw a Smoothening Overlay Texture (SOT) on a single tile
    */
-  drawSOT(ctx, tileX, tileY, orientation, scrollOffset, useTexture, sotApplied) {
+  drawSOT(ctx, tileX, tileY, orientation, scrollOffset, useTexture, sotApplied, type = 'street') {
     const key = `${tileX},${tileY}`
     if (sotApplied.has(key)) return
     sotApplied.add(key)
@@ -126,15 +149,15 @@ export class MapRenderer {
     ctx.clip()
 
     if (useTexture) {
-      const idx = this.textureManager.getTileVariation('street', tileX, tileY)
-      if (idx >= 0 && idx < this.textureManager.tileTextureCache.street.length) {
-        ctx.drawImage(this.textureManager.tileTextureCache.street[idx], screenX, screenY, size, size)
+      const idx = this.textureManager.getTileVariation(type, tileX, tileY)
+      if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
+        ctx.drawImage(this.textureManager.tileTextureCache[type][idx], screenX, screenY, size, size)
       } else {
-        ctx.fillStyle = TILE_COLORS.street
+        ctx.fillStyle = TILE_COLORS[type]
         ctx.fill()
       }
     } else {
-      ctx.fillStyle = TILE_COLORS.street
+      ctx.fillStyle = TILE_COLORS[type]
       ctx.fill()
     }
     ctx.restore()
