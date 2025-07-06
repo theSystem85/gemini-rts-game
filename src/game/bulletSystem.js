@@ -131,8 +131,12 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             updateUnitSpeedModifier(unit)
           }
 
-          // Play critical damage sound for rear hits on tanks (with cooldown)
-          if (hitZoneResult.isRearHit && canPlayCriticalDamageSound(unit, now)) {
+          // Play critical damage sound for rear hits on player's units only (with cooldown)
+          if (
+            hitZoneResult.isRearHit &&
+            unit.owner === gameState.humanPlayer &&
+            canPlayCriticalDamageSound(unit, now)
+          ) {
             playSound('criticalDamage', 0.7)
             recordCriticalDamageSoundPlayed(unit, now)
           }
