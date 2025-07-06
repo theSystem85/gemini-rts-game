@@ -361,6 +361,9 @@ class Game {
     units.length = 0
     bullets.length = 0
 
+    // Reinitialize occupancy map for the fresh map
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
+
     // Reset production queue and clear all pending items
     if (typeof productionQueue !== 'undefined') {
       productionQueue.unitItems.length = 0
