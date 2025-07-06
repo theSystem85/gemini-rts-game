@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANK_SHAKE_DURATION, TANK_SHAKE_AMPLITUDE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -17,8 +17,19 @@ export class UnitRenderer {
     // Save the current context state
     ctx.save()
 
+    let shakeX = 0
+    let shakeY = 0
+    const now = performance.now()
+    if (unit.shakeStartTime && now - unit.shakeStartTime < TANK_SHAKE_DURATION) {
+      const progress = (now - unit.shakeStartTime) / TANK_SHAKE_DURATION
+      const damp = 1 - progress
+      const amount = Math.sin(progress * Math.PI * 4) * TANK_SHAKE_AMPLITUDE * damp
+      shakeX = Math.cos(unit.direction) * amount
+      shakeY = Math.sin(unit.direction) * amount
+    }
+
     // Translate to center of unit and rotate
-    ctx.translate(centerX, centerY)
+    ctx.translate(centerX + shakeX, centerY + shakeY)
     ctx.rotate(unit.direction)
 
     // Draw the rectangular body centered on the unit position

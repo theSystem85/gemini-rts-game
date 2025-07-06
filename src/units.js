@@ -436,7 +436,10 @@ export function createUnit(factory, unitType, x, y) {
     turretDirection: 0,
     rotationSpeed: unitProps.rotationSpeed,
     turretRotationSpeed: unitProps.turretRotationSpeed || unitProps.rotationSpeed,
-    isRotating: false
+    isRotating: false,
+    // Movement inertia effect
+    shakeStartTime: null,
+    wasMoving: false
   }
 
   // Add unit-specific properties

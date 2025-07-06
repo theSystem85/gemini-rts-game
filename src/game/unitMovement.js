@@ -5,7 +5,7 @@ import { findPath, updateUnitOccupancy, removeUnitOccupancy } from '../units.js'
 import { getCachedPath } from './pathfinding.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
-import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
+import { updateUnitPosition, initializeUnitMovement, stopUnitMovement, isUnitMoving } from './unifiedMovement.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
 
 /**
@@ -42,6 +42,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
 
     // Initialize movement system for all units
     initializeUnitMovement(unit)
+    const wasMoving = isUnitMoving(unit)
 
     // Store previous position for collision detection
     const prevX = unit.x, prevY = unit.y
@@ -123,6 +124,12 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
 
     // Use unified movement system for natural movement
     updateUnitPosition(unit, mapGrid, occupancyMap, now, units, gameState, factories)
+
+    const isMovingNow = isUnitMoving(unit)
+    if (wasMoving !== isMovingNow) {
+      unit.shakeStartTime = now
+    }
+    unit.wasMoving = isMovingNow
 
     // Update last moved time
     if (unit.x !== prevX || unit.y !== prevY) {

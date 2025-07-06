@@ -1,6 +1,6 @@
 // rendering/tankImageRenderer.js
 // Image-based tank rendering system using 3 separate image assets
-import { TILE_SIZE, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
+import { TILE_SIZE, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_SHAKE_DURATION, TANK_SHAKE_AMPLITUDE } from '../config.js'
 import tankImageConfigData from '../tankImageConfig.json'
 
 // Tank image asset cache - organized by tank variant
@@ -140,11 +140,21 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   const variant = getTankVariant(unit.type)
   const variantConfig = tankImageConfig[variant]
 
+  let shakeX = 0
+  let shakeY = 0
+  if (unit.shakeStartTime && now - unit.shakeStartTime < TANK_SHAKE_DURATION) {
+    const progress = (now - unit.shakeStartTime) / TANK_SHAKE_DURATION
+    const damp = 1 - progress
+    const amount = Math.sin(progress * Math.PI * 4) * TANK_SHAKE_AMPLITUDE * damp
+    shakeX = Math.cos(unit.direction) * amount
+    shakeY = Math.sin(unit.direction) * amount
+  }
+
   // Save context state
   ctx.save()
 
-  // Move to tank center
-  ctx.translate(centerX, centerY)
+  // Move to tank center with shake offset
+  ctx.translate(centerX + shakeX, centerY + shakeY)
 
   // 1. Render tank wagon (chassis)
   ctx.save()
