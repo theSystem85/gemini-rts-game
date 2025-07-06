@@ -6,10 +6,13 @@ import { unitCosts, buildingCosts } from '../main.js'
 import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
 import { buildingData } from '../buildings.js'
+import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
     this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank']
+    this.unitButtons = new Map()
+    this.buildingButtons = new Map()
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
@@ -93,6 +96,16 @@ export class ProductionController {
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
+      const unitType = button.getAttribute('data-unit-type')
+      this.unitButtons.set(unitType, button)
+
+      if (!gameState.availableUnitTypes.has(unitType)) {
+        button.style.display = 'none'
+      } else if (gameState.newUnitTypes.has(unitType)) {
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'block'
+      }
+
       button.addEventListener('click', () => {
         // Prevent action if game is paused or button is disabled
         if (gameState.gamePaused || button.classList.contains('disabled')) {
@@ -136,6 +149,12 @@ export class ProductionController {
         // Re-enable button if requirements were previously unmet but now are met
         button.classList.remove('disabled')
         button.title = '' // Clear requirement tooltip
+
+        if (gameState.newUnitTypes.has(unitType)) {
+          gameState.newUnitTypes.delete(unitType)
+          const label = button.querySelector('.new-label')
+          if (label) label.style.display = 'none'
+        }
 
         // Always allow queuing
         productionQueue.addItem(unitType, button, false)
@@ -184,6 +203,16 @@ export class ProductionController {
     const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
 
     buildingButtons.forEach(button => {
+      const buildingType = button.getAttribute('data-building-type')
+      this.buildingButtons.set(buildingType, button)
+
+      if (!gameState.availableBuildingTypes.has(buildingType)) {
+        button.style.display = 'none'
+      } else if (gameState.newBuildingTypes.has(buildingType)) {
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'block'
+      }
+
       // Track double-click timing
       let lastClickTime = 0
       const DOUBLE_CLICK_THRESHOLD = 500 // 500ms for double-click
@@ -208,6 +237,11 @@ export class ProductionController {
 
           if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD) {
             // Double-click: Queue another building of the same type (stacking)
+            if (gameState.newBuildingTypes.has(buildingType)) {
+              gameState.newBuildingTypes.delete(buildingType)
+              const label = button.querySelector('.new-label')
+              if (label) label.style.display = 'none'
+            }
             productionQueue.addItem(buildingType, button, true)
             showNotification(`Queued another ${buildingData[buildingType].displayName}`)
           } else {
@@ -229,6 +263,12 @@ export class ProductionController {
         buildingCosts[buildingType] || 0 // Cost is used by productionQueue internally
 
         // Always allow queuing
+        if (gameState.newBuildingTypes.has(buildingType)) {
+          gameState.newBuildingTypes.delete(buildingType)
+          const label = button.querySelector('.new-label')
+          if (label) label.style.display = 'none'
+        }
+
         productionQueue.addItem(buildingType, button, true)
         lastClickTime = currentTime
       })
@@ -304,6 +344,83 @@ export class ProductionController {
     })
   }
 
+  unlockUnitType(type, skipSound = false) {
+    if (!gameState.availableUnitTypes.has(type)) {
+      gameState.availableUnitTypes.add(type)
+      gameState.newUnitTypes.add(type)
+      const button = this.unitButtons.get(type)
+      if (button) {
+        button.style.display = ''
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'block'
+      }
+      if (!skipSound) {
+        playSound('new_units_types_available', 1.0, 5) // Throttle for 5 seconds
+      }
+      // Update tab states when units are unlocked
+      this.updateTabStates()
+    }
+  }
+
+  unlockBuildingType(type, skipSound = false) {
+    if (!gameState.availableBuildingTypes.has(type)) {
+      gameState.availableBuildingTypes.add(type)
+      gameState.newBuildingTypes.add(type)
+      const button = this.buildingButtons.get(type)
+      if (button) {
+        button.style.display = ''
+        const label = button.querySelector('.new-label')
+        if (label) label.style.display = 'block'
+      }
+      if (!skipSound) {
+        playSound('new_building_types_available', 1.0, 5) // Throttle for 5 seconds
+      }
+      // Update tab states when buildings are unlocked
+      this.updateTabStates()
+    }
+  }
+
+  /**
+   * Unlock multiple units and buildings at once with appropriate sound
+   */
+  unlockMultipleTypes(unitTypes = [], buildingTypes = []) {
+    let unlockedUnits = 0
+    let unlockedBuildings = 0
+
+    // Unlock units (skip individual sounds)
+    unitTypes.forEach(type => {
+      if (!gameState.availableUnitTypes.has(type)) {
+        this.unlockUnitType(type, true) // Skip sound
+        unlockedUnits++
+      }
+    })
+
+    // Unlock buildings (skip individual sounds)
+    buildingTypes.forEach(type => {
+      if (!gameState.availableBuildingTypes.has(type)) {
+        this.unlockBuildingType(type, true) // Skip sound
+        unlockedBuildings++
+      }
+    })
+
+    // Play appropriate sound based on what was unlocked
+    if (unlockedUnits > 0 && unlockedBuildings > 0) {
+      // Both units and buildings unlocked
+      playSound('new_production_options', 1.0, 5)
+    } else if (unlockedUnits > 0) {
+      // Only units unlocked
+      playSound('new_units_types_available', 1.0, 5)
+    } else if (unlockedBuildings > 0) {
+      // Only buildings unlocked
+      playSound('new_building_types_available', 1.0, 5)
+    }
+
+    // Update tab states after batch unlock
+    if (unlockedUnits > 0 || unlockedBuildings > 0) {
+      this.updateTabStates()
+    }
+  }
+
   // Initialize production tabs without setting up buttons again
   initProductionTabs() {
     const tabButtons = document.querySelectorAll('.tab-button')
@@ -311,6 +428,11 @@ export class ProductionController {
 
     tabButtons.forEach(button => {
       button.addEventListener('click', () => {
+        // Don't allow clicking on disabled tabs
+        if (button.classList.contains('disabled')) {
+          return
+        }
+
         // Remove active class from all buttons and contents
         tabButtons.forEach(btn => btn.classList.remove('active'))
         tabContents.forEach(content => content.classList.remove('active'))
@@ -334,5 +456,51 @@ export class ProductionController {
         })
       })
     })
+
+    // Initial tab state update
+    this.updateTabStates()
+  }
+
+  /**
+   * Update tab states based on available production options
+   */
+  updateTabStates() {
+    const unitsTab = document.querySelector('.tab-button[data-tab="units"]')
+    const buildingsTab = document.querySelector('.tab-button[data-tab="buildings"]')
+    
+    // Check if units tab should be enabled (any unit types available)
+    const hasAvailableUnits = gameState.availableUnitTypes.size > 0
+    if (hasAvailableUnits) {
+      unitsTab.classList.remove('disabled')
+    } else {
+      unitsTab.classList.add('disabled')
+    }
+
+    // Check if buildings tab should be enabled (any building types available)
+    const hasAvailableBuildings = gameState.availableBuildingTypes.size > 0
+    if (hasAvailableBuildings) {
+      buildingsTab.classList.remove('disabled')
+    } else {
+      buildingsTab.classList.add('disabled')
+    }
+
+    // If current active tab becomes disabled, switch to the other tab
+    const activeTab = document.querySelector('.tab-button.active')
+    if (activeTab && activeTab.classList.contains('disabled')) {
+      // Find the first non-disabled tab and activate it
+      const enabledTab = document.querySelector('.tab-button:not(.disabled)')
+      if (enabledTab) {
+        activeTab.classList.remove('active')
+        enabledTab.classList.add('active')
+        
+        // Update content visibility
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'))
+        const tabName = enabledTab.getAttribute('data-tab')
+        const tabContent = document.getElementById(`${tabName}TabContent`)
+        if (tabContent) {
+          tabContent.classList.add('active')
+        }
+      }
+    }
   }
 }
