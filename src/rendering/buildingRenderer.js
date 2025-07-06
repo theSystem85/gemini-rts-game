@@ -30,8 +30,33 @@ export class BuildingRenderer {
     const img = getBuildingImage(building.type)
     
     if (img) {
-      // Image is available, draw it immediately at natural size, positioned at top-left
-      this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
+      const now = performance.now()
+      const elapsed = now - (building.constructionStartTime || 0)
+
+      if (!building.constructionFinished) {
+        // Calculate progress for construction animation
+        const heightProgress = Math.min(elapsed / 3000, 1)
+        const colorProgress = elapsed > 3000 ? Math.min((elapsed - 3000) / 2000, 1) : 0
+
+        // Mark as finished after animation completes
+        if (elapsed >= 5000) {
+          building.constructionFinished = true
+        }
+
+        this.drawBuildingUnderConstruction(
+          ctx,
+          img,
+          screenX,
+          screenY,
+          width,
+          height,
+          heightProgress,
+          colorProgress
+        )
+      } else {
+        // Image is available, draw it immediately at natural size, positioned at top-left
+        this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
+      }
     } else {
       // No image available, use fallback
       this.drawFallbackBuilding(ctx, building, screenX, screenY, width, height)
@@ -69,6 +94,33 @@ export class BuildingRenderer {
     ctx.drawImage(img, screenX, screenY, maxWidth, maxHeight)
     
     // Restore canvas state
+    ctx.restore()
+  }
+
+  drawBuildingUnderConstruction(
+    ctx,
+    img,
+    screenX,
+    screenY,
+    maxWidth,
+    maxHeight,
+    heightProgress,
+    colorProgress
+  ) {
+    ctx.save()
+
+    // Apply grayscale filter that decreases as colorProgress increases
+    const grayscale = 100 - colorProgress * 100
+    ctx.filter = `grayscale(${grayscale}%)`
+
+    // Clip the image from bottom to top according to heightProgress
+    const clipHeight = maxHeight * heightProgress
+    ctx.beginPath()
+    ctx.rect(screenX, screenY + maxHeight - clipHeight, maxWidth, clipHeight)
+    ctx.clip()
+
+    ctx.drawImage(img, screenX, screenY, maxWidth, maxHeight)
+
     ctx.restore()
   }
 
