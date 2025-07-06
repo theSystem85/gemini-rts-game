@@ -46,8 +46,12 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
         const hitZoneResult = calculateHitZoneDamageMultiplier(mockBullet, unit)
         damage = Math.round(damage * hitZoneResult.multiplier)
         
-        // Play critical damage sound for rear hits on tanks (with cooldown)
-        if (hitZoneResult.isRearHit && canPlayCriticalDamageSound(unit, now)) {
+        // Play critical damage sound only when player's units are hit from behind (with cooldown)
+        if (
+          hitZoneResult.isRearHit &&
+          unit.owner === gameState.humanPlayer &&
+          canPlayCriticalDamageSound(unit, now)
+        ) {
           playSound('criticalDamage', 0.7)
           recordCriticalDamageSoundPlayed(unit, now)
         }
