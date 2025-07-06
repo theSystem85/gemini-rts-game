@@ -54,9 +54,9 @@ export function addPowerIndicator() {
   energyBarContainer.style.margin = '0 0 10px 0'
 
   // Initialize energy stats in gameState with default values
-  gameState.totalPowerProduction = 100
+  gameState.totalPowerProduction = 50
   gameState.powerConsumption = 0
-  gameState.playerTotalPowerProduction = 100
+  gameState.playerTotalPowerProduction = 50
   gameState.playerPowerConsumption = 0
 
   // Force an immediate update
