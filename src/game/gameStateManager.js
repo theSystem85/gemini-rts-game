@@ -40,7 +40,8 @@ export function updateOreSpread(gameState, mapGrid, factories = []) {
     
     for (let y = 0; y < mapGrid.length; y++) {
       for (let x = 0; x < mapGrid[0].length; x++) {
-        if (mapGrid[y][x].ore) {
+        if (mapGrid[y][x].ore || mapGrid[y][x].seedCrystal) {
+          const spreadProb = (mapGrid[y][x].seedCrystal ? ORE_SPREAD_PROBABILITY * 2 : ORE_SPREAD_PROBABILITY)
           directions.forEach(dir => {
             const nx = x + dir.x, ny = y + dir.y
             if (nx >= 0 && nx < mapGrid[0].length && ny >= 0 && ny < mapGrid.length) {
@@ -57,9 +58,9 @@ export function updateOreSpread(gameState, mapGrid, factories = []) {
                        ny >= factory.y && ny < factory.y + factory.height
               })
               
-              // Only spread to land or street tiles that don't already have ore and don't have buildings or factories
+              // Only spread to land or street tiles that don't already have ore or seed crystals and don't have buildings or factories
               const tileType = mapGrid[ny][nx].type
-              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !hasBuilding && !hasFactory && Math.random() < ORE_SPREAD_PROBABILITY) {
+              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && Math.random() < spreadProb) {
                 mapGrid[ny][nx].ore = true
               }
             }

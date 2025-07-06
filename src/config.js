@@ -27,6 +27,7 @@ export const TILE_COLORS = {
   rock: '#808080',
   street: '#D3D3D3',
   ore: '#FFD700',
+  seedCrystal: '#FF5555',
   building: 'transparent' // Buildings should be transparent so background shows through
 }
 
@@ -51,6 +52,10 @@ export const TILE_IMAGES = {
   ore: {
     paths: ['images/map/ore01', 'images/map/ore02', 'images/map/ore03', 'images/map/ore04'],
     rotate: false // Ore should not be rotated
+  },
+  seedCrystal: {
+    paths: ['images/map/ore1_red'],
+    rotate: false // Seed crystals should not be rotated
   }
 }
 

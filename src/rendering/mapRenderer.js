@@ -48,6 +48,23 @@ export class MapRenderer {
       }
     }
 
+    const drawSeedOverlay = (x, y) => {
+      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+      if (useTexture && this.textureManager.tileTextureCache.seedCrystal) {
+        const idx = this.textureManager.getTileVariation('seedCrystal', x, y)
+        if (idx >= 0 && idx < this.textureManager.tileTextureCache.seedCrystal.length) {
+          ctx.drawImage(this.textureManager.tileTextureCache.seedCrystal[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        } else {
+          ctx.fillStyle = TILE_COLORS.seedCrystal
+          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+        }
+      } else {
+        ctx.fillStyle = TILE_COLORS.seedCrystal
+        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+      }
+    }
+
     // Single pass rendering: process all layers for each tile in one iteration
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
@@ -97,8 +114,10 @@ export class MapRenderer {
           }
         }
         
-        // Render ore overlay if present
-        if (tile.ore) {
+        // Render ore or seed overlays if present
+        if (tile.seedCrystal) {
+          drawSeedOverlay(x, y)
+        } else if (tile.ore) {
           drawOreOverlay(x, y)
         }
       }

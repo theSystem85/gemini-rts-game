@@ -134,7 +134,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
     mapGrid[y] = []
     for (let x = 0; x < MAP_TILES_X; x++) {
       // Initially all land with no ore overlay
-      mapGrid[y][x] = { type: 'land', ore: false }
+      mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false }
     }
   }
 
@@ -284,6 +284,24 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
         }
       }
     }
+
+    // Place 1-3 seed crystals in the center of the ore field
+    const seedCount = Math.floor(rand() * 3) + 1
+    const seedPositions = [{ x: cluster.x, y: cluster.y }]
+    while (seedPositions.length < seedCount) {
+      const dx = Math.floor(rand() * 3) - 1
+      const dy = Math.floor(rand() * 3) - 1
+      const pos = { x: cluster.x + dx, y: cluster.y + dy }
+      if (!seedPositions.some(p => p.x === pos.x && p.y === pos.y)) {
+        seedPositions.push(pos)
+      }
+    }
+    seedPositions.forEach(pos => {
+      if (pos.x >= 0 && pos.y >= 0 && pos.x < MAP_TILES_X && pos.y < MAP_TILES_Y) {
+        mapGrid[pos.y][pos.x].ore = true
+        mapGrid[pos.y][pos.x].seedCrystal = true
+      }
+    })
   })
 }
 
