@@ -172,7 +172,8 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
       
       if (distanceToOreField <= 0.7) { // Allow harvester to be within 0.7 tiles of the ore field
         // We're close enough to the ore field, check if we can harvest
-        if (mapGrid[unit.oreField.y][unit.oreField.x].ore && 
+        if (mapGrid[unit.oreField.y][unit.oreField.x].ore &&
+            !mapGrid[unit.oreField.y][unit.oreField.x].seedCrystal &&
             !harvestedTiles.has(tileKey)) {
           // Start harvesting
           unit.harvesting = true
@@ -1038,9 +1039,9 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
       const searchX = Math.round(unitTileX + Math.cos(angle) * radius)
       const searchY = Math.round(unitTileY + Math.sin(angle) * radius)
       
-      if (searchX >= 0 && searchY >= 0 && 
+      if (searchX >= 0 && searchY >= 0 &&
           searchX < mapGrid[0].length && searchY < mapGrid.length &&
-          mapGrid[searchY][searchX].ore) {
+          mapGrid[searchY][searchX].ore && !mapGrid[searchY][searchX].seedCrystal) {
         
         const tileKey = `${searchX},${searchY}`
         
@@ -1092,9 +1093,9 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
       const checkX = centerTileX + dx
       const checkY = centerTileY + dy
       
-      if (checkX >= 0 && checkY >= 0 && 
+      if (checkX >= 0 && checkY >= 0 &&
           checkX < mapGrid[0].length && checkY < mapGrid.length &&
-          mapGrid[checkY][checkX].ore) {
+          mapGrid[checkY][checkX].ore && !mapGrid[checkY][checkX].seedCrystal) {
         
         // Calculate distance from harvester center to tile center
         const tileCenter = {
