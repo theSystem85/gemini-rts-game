@@ -1,5 +1,5 @@
 // rendering/effectsRenderer.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, SMOKE_PARTICLE_SIZE } from '../config.js'
 import { drawTeslaCoilLightning } from './renderingUtils.js'
 
 export class EffectsRenderer {
@@ -59,6 +59,41 @@ export class EffectsRenderer {
     });
   }
 
+  renderSmoke(ctx, gameState, scrollOffset) {
+    if (gameState?.smokeParticles && gameState.smokeParticles.length > 0) {
+      gameState.smokeParticles.forEach(p => {
+        ctx.save()
+        ctx.globalAlpha = p.alpha
+        const x = p.x - scrollOffset.x
+        const y = p.y - scrollOffset.y
+        
+        // Create a more balanced gradient
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size)
+        gradient.addColorStop(0, 'rgba(70,70,70,0.7)') // Slightly lighter center
+        gradient.addColorStop(0.4, 'rgba(85,85,85,0.5)') // Mid-tone
+        gradient.addColorStop(0.8, 'rgba(100,100,100,0.3)') // Lighter edge
+        gradient.addColorStop(1, 'rgba(110,110,110,0)') // Transparent edge
+        
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(x, y, p.size, 0, Math.PI * 2)
+        ctx.fill()
+        
+        // Add a more subtle dark core
+        ctx.globalAlpha = p.alpha * 0.4 // Reduced opacity for core
+        const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, p.size * 0.25) // Smaller core
+        coreGradient.addColorStop(0, 'rgba(50,50,50,0.6)') // Lighter dark core
+        coreGradient.addColorStop(1, 'rgba(50,50,50,0)')
+        ctx.fillStyle = coreGradient
+        ctx.beginPath()
+        ctx.arc(x, y, p.size * 0.25, 0, Math.PI * 2)
+        ctx.fill()
+        
+        ctx.restore()
+      })
+    }
+  }
+
   renderExplosions(ctx, gameState, scrollOffset) {
     // Draw explosion effects.
     if (gameState?.explosions && gameState?.explosions.length > 0) {
@@ -98,6 +133,7 @@ export class EffectsRenderer {
 
   render(ctx, bullets, gameState, units, scrollOffset) {
     this.renderBullets(ctx, bullets, scrollOffset)
+    this.renderSmoke(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
   }
