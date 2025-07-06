@@ -87,6 +87,26 @@ export function updateExplosions(gameState) {
 }
 
 /**
+ * Updates smoke particle effects
+ * @param {Object} gameState - Game state object
+ */
+export function updateSmokeParticles(gameState) {
+  const now = performance.now()
+
+  for (let i = gameState.smokeParticles.length - 1; i >= 0; i--) {
+    const p = gameState.smokeParticles[i]
+    const progress = (now - p.startTime) / p.duration
+    if (progress >= 1) {
+      gameState.smokeParticles.splice(i, 1)
+    } else {
+      p.x += p.vx
+      p.y += p.vy
+      p.alpha = 1 - progress
+    }
+  }
+}
+
+/**
  * Cleans up destroyed units from the game
  * @param {Array} units - Array of unit objects
  * @param {Object} gameState - Game state object

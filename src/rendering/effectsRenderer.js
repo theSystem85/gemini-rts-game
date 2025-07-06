@@ -1,5 +1,5 @@
 // rendering/effectsRenderer.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, SMOKE_PARTICLE_SIZE } from '../config.js'
 import { drawTeslaCoilLightning } from './renderingUtils.js'
 
 export class EffectsRenderer {
@@ -59,6 +59,25 @@ export class EffectsRenderer {
     });
   }
 
+  renderSmoke(ctx, gameState, scrollOffset) {
+    if (gameState?.smokeParticles && gameState.smokeParticles.length > 0) {
+      gameState.smokeParticles.forEach(p => {
+        ctx.save()
+        ctx.globalAlpha = p.alpha
+        const x = p.x - scrollOffset.x
+        const y = p.y - scrollOffset.y
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size)
+        gradient.addColorStop(0, 'rgba(80,80,80,0.6)')
+        gradient.addColorStop(1, 'rgba(80,80,80,0)')
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(x, y, p.size, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      })
+    }
+  }
+
   renderExplosions(ctx, gameState, scrollOffset) {
     // Draw explosion effects.
     if (gameState?.explosions && gameState?.explosions.length > 0) {
@@ -98,6 +117,7 @@ export class EffectsRenderer {
 
   render(ctx, bullets, gameState, units, scrollOffset) {
     this.renderBullets(ctx, bullets, scrollOffset)
+    this.renderSmoke(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
   }

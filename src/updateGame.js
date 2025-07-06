@@ -1,5 +1,10 @@
 // Main Game Update Module - Coordinates all game systems
-import { TILE_SIZE } from './config.js'
+import {
+  TILE_SIZE,
+  SMOKE_EMIT_INTERVAL,
+  SMOKE_PARTICLE_LIFETIME,
+  SMOKE_PARTICLE_SIZE
+} from './config.js'
 
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
@@ -14,10 +19,11 @@ import { updateBullets } from './game/bulletSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { 
-  updateMapScrolling, 
-  updateOreSpread, 
-  updateExplosions, 
-  cleanupDestroyedUnits, 
+  updateMapScrolling,
+  updateOreSpread,
+  updateExplosions,
+  updateSmokeParticles,
+  cleanupDestroyedUnits,
   updateUnitCollisions,
   updateGameTime,
   handleRightClickDeselect,
@@ -60,6 +66,31 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       handleSelfRepair(unit, now)
     })
 
+    // Emit smoke for heavily damaged tanks
+    units.forEach(unit => {
+      if (
+        unit.maxHealth &&
+        unit.health / unit.maxHealth < 0.25 &&
+        unit.type.includes('tank')
+      ) {
+        if (!unit.lastSmokeTime || now - unit.lastSmokeTime > SMOKE_EMIT_INTERVAL) {
+          const offsetX = -Math.cos(unit.direction) * TILE_SIZE * 0.4
+          const offsetY = -Math.sin(unit.direction) * TILE_SIZE * 0.4
+          gameState.smokeParticles.push({
+            x: unit.x + TILE_SIZE / 2 + offsetX,
+            y: unit.y + TILE_SIZE / 2 + offsetY,
+            vx: (Math.random() - 0.5) * 0.2,
+            vy: -0.3 + (Math.random() * -0.1),
+            size: SMOKE_PARTICLE_SIZE,
+            startTime: now,
+            duration: SMOKE_PARTICLE_LIFETIME,
+            alpha: 1
+          })
+          unit.lastSmokeTime = now
+        }
+      }
+    })
+
     // Cleanup destroyed attack group targets
     cleanupAttackGroupTargets(gameState)
 
@@ -77,6 +108,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // Explosion effects
     updateExplosions(gameState)
+    updateSmokeParticles(gameState)
 
     // Unit collision resolution
     updateUnitCollisions(units, mapGrid)

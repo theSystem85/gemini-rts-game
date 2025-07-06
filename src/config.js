@@ -96,6 +96,9 @@ export const RECOIL_DURATION = 300 // milliseconds
 export const MUZZLE_FLASH_DURATION = 150 // milliseconds
 export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
 export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
+export const SMOKE_PARTICLE_LIFETIME = 1000 // milliseconds
+export const SMOKE_EMIT_INTERVAL = 150 // milliseconds between puffs
+export const SMOKE_PARTICLE_SIZE = 6 // radius of smoke particles
 
 export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 export const ORE_SPREAD_PROBABILITY = 0.06
