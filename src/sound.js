@@ -57,6 +57,7 @@ let masterVolume = loadVolumeFromStorage()
 const soundMapping = {
   unitSelection: 'unitSelection',
   movement: 'tankMove',
+  confirmed: 'confirmed', // Add confirmed sound mapping for harvester force unload
   shoot: 'tankShot',
   shoot_rocket: 'patriotMissile', // updated: rocket tank now uses patriotMissile sounds
   shoot_heavy: 'tankShot03', // turretGunV3 uses tankShot03.mp3
@@ -92,6 +93,7 @@ const soundFiles = {
   tankShot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'],
   tankShot03: ['tankShot03.mp3'], // Specific sound for turretGunV3
   tankMove: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'],
+  confirmed: ['confirmed.mp3'], // Direct mapping for confirmed sound
   constructionComplete: ['constructionComplete.mp3'],
   unitReady: ['unitReady01.mp3', 'unitReady02.mp3', 'unitReady03.mp3'],
   bulletHit: ['bulletHit01.mp3'],

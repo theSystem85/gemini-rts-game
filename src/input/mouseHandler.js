@@ -726,7 +726,32 @@ export class MouseHandler {
   }
 
   handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
-    // Check for building selection first (including vehicle factories)
+    // PRIORITY 1: Check for refinery unload command if harvesters are already selected
+    if (selectedUnits.length > 0) {
+      const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+      
+      if (hasSelectedHarvesters) {
+        // Check if clicking on a player refinery with harvesters selected
+        const tileX = Math.floor(worldX / TILE_SIZE)
+        const tileY = Math.floor(worldY / TILE_SIZE)
+        
+        if (gameState.buildings && Array.isArray(gameState.buildings)) {
+          for (const building of gameState.buildings) {
+            if (building.type === 'oreRefinery' && 
+                building.owner === gameState.humanPlayer &&
+                building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
+              // Handle forced unload at specific refinery
+              unitCommands.handleRefineryUnloadCommand(selectedUnits, building, mapGrid)
+              return // Exit early, don't process building selection
+            }
+          }
+        }
+      }
+    }
+
+    // PRIORITY 2: Check for building selection (including vehicle factories)
     let clickedBuilding = null
     if (gameState.buildings && gameState.buildings.length > 0) {
       for (const building of gameState.buildings) {
@@ -753,7 +778,7 @@ export class MouseHandler {
       return
     }
 
-    // Normal unit selection
+    // PRIORITY 3: Normal unit selection
     let clickedUnit = null
     for (const unit of units) {
       if (selectionManager.isHumanPlayerUnit(unit)) {
@@ -791,12 +816,27 @@ export class MouseHandler {
     if (selectedUnits.length > 0 && selectedUnits[0].type !== 'factory') {
       let target = null
       let oreTarget = null
+      let refineryTarget = null
 
-      // Check if clicking on an ore tile with harvesters selected
+      // Check if clicking on a player refinery with harvesters selected
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       
+      if (hasSelectedHarvesters && gameState.buildings && Array.isArray(gameState.buildings)) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'oreRefinery' && 
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            refineryTarget = building
+            break
+          }
+        }
+      }
+
+      // Check if clicking on an ore tile with harvesters selected
       if (hasSelectedHarvesters && 
           mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
           tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length &&
@@ -804,7 +844,10 @@ export class MouseHandler {
         oreTarget = { x: tileX, y: tileY }
       }
 
-      if (oreTarget) {
+      if (refineryTarget) {
+        // Handle forced unload at specific refinery
+        unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
+      } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {
         // Check for enemy targets

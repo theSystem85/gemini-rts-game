@@ -67,6 +67,15 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
           if (unit.oreField.x === nearbyOreTile.x && unit.oreField.y === nearbyOreTile.y) {
             unit.harvesting = true
             unit.harvestTimer = now
+            // Stop all movement while harvesting
+            unit.path = []
+            unit.moveTarget = null
+            if (unit.movement) {
+              unit.movement.velocity = { x: 0, y: 0 }
+              unit.movement.targetVelocity = { x: 0, y: 0 }
+              unit.movement.isMoving = false
+              unit.movement.currentSpeed = 0
+            }
           harvestedTiles.add(tileKey) // Mark tile as being harvested
           if (unit.owner === gameState.humanPlayer) {
             playSound('harvest')
@@ -92,7 +101,6 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     if (unit.harvesting) {
       // Guard against missing oreField to avoid null errors
       if (!unit.oreField) {
-        console.warn(`Harvesting state but oreField is null for unit ${unit.id}`)
         unit.harvesting = false
         return // skip to next unit
       }
@@ -177,6 +185,15 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
           // Start harvesting
           unit.harvesting = true
           unit.harvestTimer = now
+          // Stop all movement while harvesting
+          unit.path = []
+          unit.moveTarget = null
+          if (unit.movement) {
+            unit.movement.velocity = { x: 0, y: 0 }
+            unit.movement.targetVelocity = { x: 0, y: 0 }
+            unit.movement.isMoving = false
+            unit.movement.currentSpeed = 0
+          }
           harvestedTiles.add(tileKey)
           if (unit.owner === gameState.humanPlayer) {
             playSound('harvest')
@@ -250,8 +267,23 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   let targetRefinery = null
   let targetUnloadTile = null
   
-  // Check if current target refinery is still valid
-  if (unit.targetRefinery) {
+  // Priority 1: Check if harvester has a manual assignment from force unload command
+  if (unit.assignedRefinery) {
+    const assignedRefinery = refineries.find(r => 
+      r === unit.assignedRefinery || 
+      (r.id || `refinery_${r.x}_${r.y}`) === (unit.assignedRefinery.id || `refinery_${unit.assignedRefinery.x}_${unit.assignedRefinery.y}`)
+    )
+    if (assignedRefinery) {
+      targetRefinery = assignedRefinery
+      targetUnloadTile = findAdjacentTile(targetRefinery, mapGrid)
+    } else {
+      // Assigned refinery no longer exists, clear the assignment
+      unit.assignedRefinery = null
+    }
+  }
+  
+  // Priority 2: Check if current target refinery is still valid (only if no manual assignment)
+  if (!targetRefinery && unit.targetRefinery) {
     const currentRefinery = refineries.find(r => (r.id || `refinery_${r.x}_${r.y}`) === unit.targetRefinery)
     if (currentRefinery) {
       // Keep using current refinery - NO REASSIGNMENT
@@ -318,12 +350,15 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
       if (unit.targetRefinery) {
         removeFromRefineryQueue(unit.targetRefinery, unit.id)
       }
-      
+
       // Add to new queue
       addToRefineryQueue(refineryId, unit.id)
       unit.targetRefinery = refineryId
     }
-    
+
+    // Reorder queue so the closest harvesters are served first
+    rescheduleRefineryQueue(refineryId, targetRefinery, units)
+
     // Get current queue position (this should be stable now)
     const queuePosition = getQueuePosition(refineryId, unit.id)
     unit.queuePosition = queuePosition // Store for rendering
@@ -374,7 +409,15 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
         unit.unloadingAtRefinery = true
         unit.unloadStartTime = now
         unit.unloadRefinery = refineryId
+        // Stop all movement while unloading
         unit.path = [] // Clear path while unloading
+        unit.moveTarget = null
+        if (unit.movement) {
+          unit.movement.velocity = { x: 0, y: 0 }
+          unit.movement.targetVelocity = { x: 0, y: 0 }
+          unit.movement.isMoving = false
+          unit.movement.currentSpeed = 0
+        }
 
         // Remove from queue since now unloading
         removeFromRefineryQueue(refineryId, unit.id)
@@ -459,6 +502,8 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     unit.oreField = null // Clear any ore field reference
     unit.queuePosition = 0 // Clear queue position
     unit.targetRefinery = null // Clear target refinery
+    unit.forcedUnload = false // Clear forced unload flag
+    unit.forcedUnloadRefinery = null // Clear forced unload refinery
     unit.findOreAfterUnload = now + 500 // Schedule ore search after 500ms
     if (unit.owner === gameState.humanPlayer) {
       playSound('deposit')
@@ -593,6 +638,69 @@ function getQueuePosition(refineryId, harvesterId) {
 function getNextInQueue(refineryId) {
   const queue = getRefineryQueue(refineryId)
   return queue.length > 0 ? queue[0] : null
+}
+
+/**
+ * Forces a harvester to unload with highest priority at a specific refinery
+ * This reschedules the refinery queue to put this harvester first
+ */
+export function forceHarvesterUnloadPriority(harvester, targetRefinery, units) {
+  const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`
+  
+  // Remove harvester from any current queue
+  if (harvester.targetRefinery && harvester.targetRefinery !== refineryId) {
+    removeFromRefineryQueue(harvester.targetRefinery, harvester.id)
+  }
+  
+  // Set the harvester's target refinery
+  harvester.targetRefinery = refineryId
+  harvester.assignedRefinery = refineryId
+  
+  // Get current queue
+  const queue = getRefineryQueue(refineryId)
+  
+  // Remove harvester from current position in queue if already there
+  removeFromRefineryQueue(refineryId, harvester.id)
+  
+  // Add harvester at the front of the queue (highest priority)
+  queue.unshift(harvester.id)
+  
+  // Mark this as a forced unload for priority handling
+  harvester.forcedUnload = true
+  harvester.forcedUnloadRefinery = refineryId
+  
+  // Reschedule the entire queue to ensure proper ordering
+  rescheduleRefineryQueue(refineryId, targetRefinery, units)
+  
+  // Move the forced harvester back to front after rescheduling
+  removeFromRefineryQueue(refineryId, harvester.id)
+  queue.unshift(harvester.id)
+}
+
+/**
+ * Reorders the refinery queue so the closest harvesters are first
+ */
+function rescheduleRefineryQueue(refineryId, refinery, units) {
+  const centerX = (refinery.x + refinery.width / 2) * TILE_SIZE
+  const centerY = (refinery.y + refinery.height / 2) * TILE_SIZE
+
+  const sorted = units
+    .filter(u => u.type === 'harvester' && u.targetRefinery === refineryId && u.health > 0 && !u.unloadingAtRefinery)
+    .sort((a, b) => {
+      // Forced unload harvesters get highest priority
+      if (a.forcedUnload && !b.forcedUnload) return -1
+      if (!a.forcedUnload && b.forcedUnload) return 1
+      
+      const aUnload = isAtRefineryUnloadingPosition(a, refinery)
+      const bUnload = isAtRefineryUnloadingPosition(b, refinery)
+      if (aUnload && !bUnload) return -1
+      if (!aUnload && bUnload) return 1
+      const distA = Math.hypot(a.x - centerX, a.y - centerY)
+      const distB = Math.hypot(b.x - centerX, b.y - centerY)
+      return distA - distB
+    })
+
+  refineryQueues[refineryId] = sorted.map(h => h.id)
 }
 
 /**
@@ -803,30 +911,39 @@ export function assignHarvesterToOptimalRefinery(harvester, gameState) {
 
 /**
  * Check if harvester is at a valid unloading position for the refinery
- * Allows unloading from any of the 3 tiles directly below the refinery
+ * Allows unloading from any directly adjacent tile to the refinery
  */
 function isAtRefineryUnloadingPosition(harvester, refinery) {
   const harvesterTileX = Math.floor(harvester.x / TILE_SIZE)
   const harvesterTileY = Math.floor(harvester.y / TILE_SIZE)
   
-  // Check if harvester is at any of the 3 tiles directly below the refinery
-  const refineryBottomY = refinery.y + refinery.height
-  
-  if (harvesterTileY === refineryBottomY) {
-    // Check if harvester is within the refinery's width (3 tiles wide)
-    return harvesterTileX >= refinery.x && harvesterTileX < refinery.x + refinery.width
+  // Check if harvester is adjacent to any tile of the refinery
+  // This includes all sides: top, bottom, left, right and corners
+  for (let y = refinery.y - 1; y <= refinery.y + refinery.height; y++) {
+    for (let x = refinery.x - 1; x <= refinery.x + refinery.width; x++) {
+      // Skip tiles that are inside the refinery
+      if (x >= refinery.x && x < refinery.x + refinery.width && 
+          y >= refinery.y && y < refinery.y + refinery.height) {
+        continue
+      }
+      
+      // Check if harvester is at this adjacent position
+      if (harvesterTileX === x && harvesterTileY === y) {
+        return true
+      }
+    }
   }
   
   return false
 }
 
 /**
- * Find the preferred unloading tile (directly below refinery)
+ * Find the preferred unloading tile (any adjacent tile, preferring directly below refinery)
  */
 function findPreferredUnloadTile(refinery, mapGrid) {
   const bottomY = refinery.y + refinery.height
   
-  // Check tiles directly below the refinery (preferred unloading spots)
+  // First priority: Check tiles directly below the refinery (preferred unloading spots)
   for (let x = refinery.x; x < refinery.x + refinery.width; x++) {
     if (bottomY < mapGrid.length && 
         x < mapGrid[0].length && 
@@ -837,7 +954,32 @@ function findPreferredUnloadTile(refinery, mapGrid) {
     }
   }
   
-  // Fallback to any adjacent tile
+  // Second priority: Check all other adjacent tiles
+  for (let y = refinery.y - 1; y <= refinery.y + refinery.height; y++) {
+    for (let x = refinery.x - 1; x <= refinery.x + refinery.width; x++) {
+      // Skip tiles that are inside the refinery
+      if (x >= refinery.x && x < refinery.x + refinery.width && 
+          y >= refinery.y && y < refinery.y + refinery.height) {
+        continue
+      }
+      
+      // Skip tiles we already checked (directly below)
+      if (y === bottomY && x >= refinery.x && x < refinery.x + refinery.width) {
+        continue
+      }
+      
+      // Check if this adjacent tile is valid
+      if (x >= 0 && x < mapGrid[0].length && 
+          y >= 0 && y < mapGrid.length &&
+          !mapGrid[y][x].building &&
+          mapGrid[y][x].type !== 'water' && 
+          mapGrid[y][x].type !== 'rock') {
+        return { x, y }
+      }
+    }
+  }
+  
+  // Fallback to the generic adjacent tile finder
   return findAdjacentTile(refinery, mapGrid)
 }
 
@@ -929,8 +1071,16 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
       targetedOreTiles[tileKey] = unit.id
       unit.harvesting = true
       unit.harvestTimer = performance.now()
+      // Stop all movement while harvesting
+      unit.path = [] // Clear any conflicting path
+      unit.moveTarget = null
+      if (unit.movement) {
+        unit.movement.velocity = { x: 0, y: 0 }
+        unit.movement.targetVelocity = { x: 0, y: 0 }
+        unit.movement.isMoving = false
+        unit.movement.currentSpeed = 0
+      }
         harvestedTiles.add(tileKey)
-        unit.path = [] // Clear any conflicting path
         if (unit.owner === gameState.humanPlayer) {
           playSound('harvest')
         }
