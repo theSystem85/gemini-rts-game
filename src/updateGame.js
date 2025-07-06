@@ -1,14 +1,15 @@
 // Main Game Update Module - Coordinates all game systems
 import {
   TILE_SIZE,
-  SMOKE_EMIT_INTERVAL,
-  SMOKE_PARTICLE_LIFETIME,
-  SMOKE_PARTICLE_SIZE
+  SMOKE_EMIT_INTERVAL
 } from './config.js'
+
+import { emitSmokeParticles } from './utils/smokeUtils.js'
+import { getBuildingImage } from './buildingImageMap.js'
 
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
-import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from './buildings.js'
+import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
 
 // Import modular game systems
@@ -76,26 +77,76 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
         if (!unit.lastSmokeTime || now - unit.lastSmokeTime > SMOKE_EMIT_INTERVAL) {
           const offsetX = -Math.cos(unit.direction) * TILE_SIZE * 0.4
           const offsetY = -Math.sin(unit.direction) * TILE_SIZE * 0.4
-          
-          // Emit fewer particles for more balanced effect
-          const particleCount = 1 + Math.floor(Math.random() * 2) // 1-2 particles per emission
-          for (let i = 0; i < particleCount; i++) {
-            const spread = 4 // Reduced pixel spread for particles
-            gameState.smokeParticles.push({
-              x: unit.x + TILE_SIZE / 2 + offsetX + (Math.random() - 0.5) * spread,
-              y: unit.y + TILE_SIZE / 2 + offsetY + (Math.random() - 0.5) * spread,
-              vx: (Math.random() - 0.5) * 0.2, // Reduced horizontal movement
-              vy: -0.3 + (Math.random() * -0.1), // Reduced upward movement
-              size: SMOKE_PARTICLE_SIZE + Math.random() * 2, // Smaller variable size
-              startTime: now,
-              duration: SMOKE_PARTICLE_LIFETIME + Math.random() * 300, // Less variable duration
-              alpha: 0.7 + Math.random() * 0.2 // Slightly lower initial alpha
-            })
-          }
-          unit.lastSmokeTime = now
-        }
+
+          const particleCount = 1 + Math.floor(Math.random() * 2)
+          emitSmokeParticles(
+            gameState,
+            unit.x + TILE_SIZE / 2 + offsetX,
+            unit.y + TILE_SIZE / 2 + offsetY,
+            now,
+            particleCount
+          )
+        unit.lastSmokeTime = now
       }
+    }
     })
+
+    // Emit smoke for buildings with smoke spots
+    if (gameState.buildings && gameState.buildings.length > 0) {
+      gameState.buildings.forEach(building => {
+        const buildingConfig = buildingData[building.type]
+        if (
+          buildingConfig && 
+          buildingConfig.smokeSpots && 
+          buildingConfig.smokeSpots.length > 0
+        ) {
+          // Initialize smoke emission tracking for each spot if not exists
+          if (!building.smokeEmissionTrackers) {
+            building.smokeEmissionTrackers = buildingConfig.smokeSpots.map(() => ({
+              lastEmissionTime: 0,
+              emissionStage: 0 // Track which emission in the sequence we're on
+            }))
+          }
+          
+          // Get the actual building image to determine real dimensions
+          const buildingImage = getBuildingImage(building.type)
+          if (!buildingImage) {
+            return // Skip if image not loaded yet
+          }
+          
+          // Calculate dynamic scaling factors based on actual image vs rendered size
+          const renderedWidth = building.width * TILE_SIZE
+          const renderedHeight = building.height * TILE_SIZE
+          const actualImageWidth = buildingImage.naturalWidth || buildingImage.width
+          const actualImageHeight = buildingImage.naturalHeight || buildingImage.height
+          
+          // Calculate individual scaling factors for X and Y (important for non-square images)
+          const scaleX = renderedWidth / actualImageWidth
+          const scaleY = renderedHeight / actualImageHeight
+          
+          // Emit smoke from each smoke spot with proper coordinate scaling and timing
+          buildingConfig.smokeSpots.forEach((smokeSpot, spotIndex) => {
+            const tracker = building.smokeEmissionTrackers[spotIndex]
+            const timeSinceLastEmission = now - tracker.lastEmissionTime
+            
+            // Emit every 200ms for steady, overlapping smoke streams
+            if (timeSinceLastEmission > 200) {
+              const scaledX = smokeSpot.x * scaleX
+              const scaledY = smokeSpot.y * scaleY
+              // Use precise coordinates without additional offset now that scaling is accurate
+              const smokeX = building.x * TILE_SIZE + scaledX
+              const smokeY = building.y * TILE_SIZE + scaledY
+              
+              // Emit 3 particles for denser, overlapping effect
+              emitSmokeParticles(gameState, smokeX, smokeY, now, 3)
+              
+              tracker.lastEmissionTime = now
+              tracker.emissionStage = (tracker.emissionStage + 1) % 4 // Cycle through stages
+            }
+          })
+        }
+      })
+    }
 
     // Cleanup destroyed attack group targets
     cleanupAttackGroupTargets(gameState)
