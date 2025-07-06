@@ -173,7 +173,10 @@ export function createBuilding(type, x, y) {
     maxHealth: data.health,
     power: data.power,
     isBuilding: true,
-    owner: 'neutral' // Default owner, should be set explicitly when added to gameState
+    owner: 'neutral', // Default owner, should be set explicitly when added to gameState
+    // Timestamp for construction animation
+    constructionStartTime: performance.now(),
+    constructionFinished: false
   }
 
   // Initialize rally point for unit-producing buildings
