@@ -42,9 +42,32 @@ export class ProductionController {
     })
   }
 
-  // Placeholder function to prevent errors - implement later if needed
+  // Update enabled/disabled state of building production buttons
   updateBuildingButtonStates() {
-    // Add logic here if buildings have prerequisites (e.g., Construction Yard for others)
+    const hasRadar = gameState.buildings.some(
+      b => b.type === 'radarStation' && b.owner === gameState.humanPlayer && b.health > 0
+    )
+
+    const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
+
+    buildingButtons.forEach(button => {
+      const type = button.getAttribute('data-building-type')
+      let disable = false
+      let requirementText = ''
+
+      if (buildingData[type]?.requiresRadar && !hasRadar) {
+        disable = true
+        requirementText = 'Requires Radar Station'
+      }
+
+      if (disable) {
+        button.classList.add('disabled')
+        button.title = requirementText
+      } else {
+        button.classList.remove('disabled')
+        button.title = ''
+      }
+    })
   }
 
   // Combined production button setup function that handles both unit and building buttons
@@ -168,6 +191,14 @@ export class ProductionController {
       button.addEventListener('click', () => {
         const buildingType = button.getAttribute('data-building-type')
         const currentTime = performance.now()
+
+        // Prevent action if game is paused or button is disabled
+        if (gameState.gamePaused || button.classList.contains('disabled')) {
+          if (button.classList.contains('disabled')) {
+            showNotification('Cannot construct building: ' + (button.title || 'Prerequisite missing.'))
+          }
+          return
+        }
 
         // Handle ready-for-placement buildings
         if (button.classList.contains('ready-for-placement')) {

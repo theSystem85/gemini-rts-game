@@ -109,6 +109,7 @@ export const buildingData = {
     image: 'rocket_turret.webp',
     displayName: 'Rocket Turret',
     health: 200,
+    requiresRadar: true,
     // Add combat properties
     fireRange: 16,
     fireCooldown: 6000, // 3 seconds between shots
@@ -128,6 +129,7 @@ export const buildingData = {
     image: 'tesla_coil.webp',
     displayName: 'Tesla Coil',
     health: 250,
+    requiresRadar: true,
     fireRange: 20, // in tiles
     fireCooldown: 8000, // ms
     damage: 5, // Tesla coil does not deal direct damage
