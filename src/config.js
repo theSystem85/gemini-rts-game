@@ -96,6 +96,13 @@ export const RECOIL_DURATION = 300 // milliseconds
 export const MUZZLE_FLASH_DURATION = 150 // milliseconds
 export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
 export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
+export const SMOKE_PARTICLE_LIFETIME = 1500 // milliseconds (reduced from 2000)
+export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
+export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
+
+// Wind effects for smoke particles
+export const WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
+export const WIND_STRENGTH = 0.008 // How much wind affects particle movement
 
 export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 export const ORE_SPREAD_PROBABILITY = 0.06

@@ -87,6 +87,52 @@ export function updateExplosions(gameState) {
 }
 
 /**
+ * Updates smoke particle effects
+ * @param {Object} gameState - Game state object
+ */
+import { WIND_DIRECTION, WIND_STRENGTH } from '../config.js'
+
+/**
+ * Updates smoke particle effects
+ * @param {Object} gameState - Game state object
+ */
+export function updateSmokeParticles(gameState) {
+  const now = performance.now()
+
+  for (let i = gameState.smokeParticles.length - 1; i >= 0; i--) {
+    const p = gameState.smokeParticles[i]
+    const progress = (now - p.startTime) / p.duration
+    if (progress >= 1) {
+      gameState.smokeParticles.splice(i, 1)
+    } else {
+      // Update position with wind effect
+      p.x += p.vx + WIND_DIRECTION.x * WIND_STRENGTH
+      p.y += p.vy + WIND_DIRECTION.y * WIND_STRENGTH
+      
+      // Gradually slow down vertical movement (simulate air resistance)
+      p.vy *= 0.997
+      
+      // Apply wind drift more gradually over time
+      p.vx += WIND_DIRECTION.x * WIND_STRENGTH * 0.5
+      p.vy += WIND_DIRECTION.y * WIND_STRENGTH * 0.5
+      
+      // Add slight turbulence for realism (reduced)
+      p.vx += (Math.random() - 0.5) * 0.003
+      p.vy += (Math.random() - 0.5) * 0.003
+      
+      // Fade out alpha and expand size over time (reduced expansion)
+      p.alpha = (1 - progress) * p.alpha
+      
+      // Smoke expands as it rises (reduced expansion rate)
+      if (!p.originalSize) {
+        p.originalSize = p.size
+      }
+      p.size = p.originalSize * (1 + progress * 0.3) // Reduced expansion to 30%
+    }
+  }
+}
+
+/**
  * Cleans up destroyed units from the game
  * @param {Array} units - Array of unit objects
  * @param {Object} gameState - Game state object
