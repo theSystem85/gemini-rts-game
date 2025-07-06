@@ -214,17 +214,10 @@ export function checkGameEndConditions(factories, gameState) {
   const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   const aiPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
   
-  // Only check AI players that actually exist in the game (have factories or buildings)
-  const existingAiPlayerIds = aiPlayerIds.filter(aiPlayerId => {
-    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
-    const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId))
-    return aiBuildings.length > 0 || aiFactories.length > 0
-  })
-  
   let remainingAiPlayers = 0
   let defeatedAiPlayers = []
-  
-  for (const aiPlayerId of existingAiPlayerIds) {
+
+  for (const aiPlayerId of aiPlayerIds) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
     const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0)
     const totalAiBuildings = aiBuildings.length + aiFactories.length
@@ -247,9 +240,9 @@ export function checkGameEndConditions(factories, gameState) {
       playSound(getPlayerDefeatSound(playerId), 1.0)
     }, index * 500) // Stagger the defeat sounds by 500ms each
   })
-  
+
   // Check if human player has eliminated all AI players
-  if (remainingAiPlayers === 0 && existingAiPlayerIds.length > 0) {
+  if (remainingAiPlayers === 0 && aiPlayerIds.length > 0) {
     gameState.gameOver = true
     gameState.gameResult = 'victory'
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
