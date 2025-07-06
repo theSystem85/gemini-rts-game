@@ -238,41 +238,47 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 ### Open Issues
 
 ## Improvements
-- [ ] Refine the coloring of the power bar and its logic on impacting the production.
+- [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
+- [ ] Enemy AI should automatically build next what is the current production bottleneck regarding money supply. Highest prio is energy. When energy is too low it will build a power plant. When there is too little money it will build harvesters but only if there is less than 4 havesters per refinery otherwiese it will build a refinery but only if the money has reached 0 before. So whenevery the money supply reached 0 the highest prio is to build another refinery (given the power supply is sufficient). When money supply is sufficient focus on building a good base defence with at least 2 turrets and one tesla coil and one rocket launcher. If that is given focus on producing as many combat units as possible. When the money raises faster than tanks can be build then build more vehicle factories to speed up the production.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
-- [ ] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
 - [ ] **Refactor:** move all constants into config.
-- [x] **Refactor:** updateGame.js is too big and needs to be modularized.
-- [ ] **Refactor:** enemy.js is too big and needs to be modularized.
-- [x] **Refactor:** Rendering.js is too big and needs to be modularized.
-- [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
+- [x] Make a little flag animation for buildings instead of the colored square in the HUD currently used to indicate the party a buildings belongs to. Replace it with a flag that has a pole and a rectangular flag in the color of the party. The flag is always on the ground in the top left corner. Make sure there is some flattering in the wind animation of the flag and that is has a black border and a dark silver pole. Ensure the wind direction is the same as for the smoke wind direction animation! The size of the flag should not be wider as the current HUD rectangle.
+- [x] Add some some animations for the cooling towers of the refinery and the power plant. Make sure to analyse the map image assets to determine the center fore the each somke animation. Make sure to add some wind effect for the direction of the smoke animation. Reuse when possible the somke animations from the tank when it is damaged or use utility functions for both.
+
+- [ ] Introduce drag and drop build mode:
+  - [ ] When user drags an image from the sidebar onto the map immediately when the cursor is above the map while dragging ensure the placement overlay for the specific building is shown. When the user releases the left mouse button to finish the dragging then the blueprint mode (aka BPM) gets active. That means that on the map there will be a blue overlay being shown with the name of the building inside as text.
+  - [ ] as soon as the construction of that building is finished the building will be automatically placed where the blueprint was set. No need for extra placement by clicking the build button again.
+  - [ ] Make shure this feature does NOT interfere with the normal build workflow that should still be possible like before.
+  - [ ] When construction gets aborted (normal workflow by rightclick on sidebar's build button) make sure to remove the blueprint from the map again.
+  - [ ] Make sure to only place the finished building on the map when the occupancy map allows it (the blueprint should not block the tiles itself!) especially when the construction is finished and the final building gets placed automatically. Besides that the blueprint cannot be set when any map tile is occupied (same logic as normal placement logic => reuse that logic!).
+- [ ] Add a sound for when party A attacks party B for the first time.
+- [ ] Ensure for each party P there is an internal statistic that tracks for each other party how much economical damage was made by adding the cost of the units and buildings destroyed by that specific party. Make sure there is a shortkey that toggles the display of that statistics during gameplay. Each enemy AI focusses on attacking the party that caused the most amount of economical harm to them so far.
+- [ ] Add AI policy scripts: Make sure to come up with a sophisticated modular extensible unit AI policy architecture that can be used for humand and AI players' units. Create and integreate some JSON policy script to manage the AI's combat behaviour including priorities and another one to manage the AI's base build und unit production behaviour. Add the following initial scripts for this behaviour:
+  - [ ] when player attacks -> defend or retreat into base if the unit under attack is too weak (havesters or combat units that are outnumbered) to regroup in the protection of the base defence. When attack was defended strike back.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Use arial sound for moving tanks and combat sounds so that these get the loudest when they are in the center of the screen and get quieter when the screen center moves away from the location of the sound.
 - [ ] Add guard mode for units that means if active (indicated by a green circle around the unit) the unit will not move from its location but attack any incoming enemy unit without following it. When guard mode is active and the unit is selected and the player clicks on a friendly unit the guarding unit will follow that unit and attack any incoming enemy in range without following the enemy but only following the unit to guard. Guard mode can be activated when a unit is selected and the g key is pressed.
 - [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 - [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
-- [ ] Add some little shaking back and forth when tanks stop.
 
 ## Bugs
-- [ ] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
-- [ ] Make sure always the clothest harvester to the refinery get unloaded first. Also make sure the harvesters do not move away from the refinery when they want to unload.
-- [ ] Some HUD elements like the health bar and the attack pins can get rendered under the units layer. Ensure they are always on top of the units and buildings.
-- [ ] When power below 0 make sure the production speed of buildings and units is only at 33%.
+- [ ] Enemy units seem to aim at my units but they do not attack (means fire) at my units when in range. Also they do not fire at my buildings when the attack my base.
 - [ ] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low.
-- [ ] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
-- [ ] When about 10 units get stuck the game slows down significantly.
-- [x] When initial building factory gets destroyed there is not map background left, just black.
-- [x] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
-- [x] Unit when produced by the enemy leave the factory immediately not after the build time is done.
-- [x] When selling a building the occupancy map is not updated and still blocked there.
-- [x] Ensure the harvesting and ore unloading sound is not played when enemy units are doing it.
+- [ ] (still an issue?) When about 10 units get stuck the game slows down significantly.
 
 ### Closed Issues
 
 ## Improvements
+- [x] Refine the coloring of the power bar and its logic on impacting the production.
+- [x] Add all favicons and shortcut icons.
+- [x] **Refactor:** remove the soundMapping and use soundFiles directly instead.
+- [x] Use the same corner smoothing algorithm that is used for streets also for water tiles.
+- [x] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
+- [x] Ensure tesla and rocket turret coil can only be build after radar.
+- [x] When entering the save game's name the user can save by pressing enter.
 - [x] Ensure the leveling stars on a unit when not selected look like the same as when they are not selected (smaller).
 - [x] Make sure the showNotification clears the previous one immediatly before showing a new one.
 - [x] On pressing R Key the repair mode should be toggled unless there is no input having focus.
@@ -295,8 +301,16 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
 - [x] The tesla coil should make little damage to the target.
 - [x] Tank projectiles make too much damage.
+- [x] **Refactor:** updateGame.js is too big and needs to be modularized.
+- [x] **Refactor:** enemy.js is too big and needs to be modularized.
+- [x] **Refactor:** Rendering.js is too big and needs to be modularized.
+- [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Features
+- [x] When a new building is placed on the map create a construction animation by slowly letting an uncolored image of the building's image asset fade in from bottom to top for 3s (this means the height of the building is clipped and increases over the timespan of 3s from 0% to 100%) and then letting the full color of it fade in for another 2s.
+- [x] Completely hide build options in the sidebar for units and buildings until they are unlocked. When they get unlocked play sound "new_building_types_available" or "new_units_types_available" and show a yellow "new" label in the top right corner of the production tile until the first production of that kind was triggered.
+- [x] Add some smoke animation on the back of tanks when they are below 25% health.
+- [x] Introduce a new seed crystal that cannot be harvested and has 2x the spreading rate but only spreads normal blue crystals. Use the ore1_red.webp image asset for it. Make sure during map generation those seed crysals (1-3 of them) are always in the center of an ore filed.
 - [x] Add corner smoothening rendering algorithm to the map renderer where the corners of streets get cut smoothly to form straight diagonal lines. Smoothening Overlay Textures (SOT) use the street texture, work in all diagonal orientations, apply only on land tiles, render above streets but below rocks, ore and buildings, and expand slightly to hide single-pixel gaps.
 - [x] Make sure the money for the repair will not be removed on click when repair mode gets applied but gradually. Also make sure that the repairing of a building can be stopped again when clicked again while repair mode is active and unfinished on that building.
 - [x] Add an fps overlay in the top right corner that can be toggled on/off with "f" key. Add info to help menu.
@@ -354,6 +368,19 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [x] Ensure the "critical_damage" sound is only played when the players units are hit from behind. Currently it is also played for enemy AI units.
+- [x] Ensure the harvesters can only progress harvesting while they rest on an ore tile. Currently they can move on it and drive away immediately while havesting on the go which is not correct.
+- [x] Make sure always the clothest harvester to the refinery get unloaded first and reschedule the queue accordingly. Also make sure the harvesters do not move away from the refinery when they want to unload.
+- [x] Ensure the Restart Game button does also update the occupancy map when a new map is generated.
+- [x] Ensure when power is below 0 make that the production speed of buildings and units is calculated as follows: normal speed * (energy production capacity / energy consumption).
+- [x] The main factory somehow does not count into the list of a players building so that when all other buildings are destroyed the game is already over. That mean that if you build a wall in the very beginning of the game and sell it, then you lost the game.
+- [x] Some HUD elements like the health bar and the attack pins can get rendered under the units layer. Ensure they are always on top of the units and buildings.
+- [x] When initial building factory gets destroyed there is not map background left, just black.
+- [x] The initial power level shows 100 but in fact it is just 0. Make sure it actually is 100.
+- [x] Unit when produced by the enemy leave the factory immediately not after the build time is done.
+- [x] When selling a building the occupancy map is not updated and still blocked there.
+- [x] Ensure the harvesting and ore unloading sound is not played when enemy units are doing it.
+- [x] When refinery is destroyed the harvesters can still got to building factory to unload ore but they should only do it at the refinery.
 - [x] Ensure on map generation there is no ore overlapping with buildings.
 - [x] Repairing a building takes no time. Make sure it takes 50% of the time it took to build it to restore 100% of the healthbar. also make sure the cursor turns into a wrench svg icon (path cursors/wrench.svg) when repair mode is on and mouse hovers over a building that can be repaired.
 - [x] Enemy units come out of factory immediately before the build indicator shows that the build is done
