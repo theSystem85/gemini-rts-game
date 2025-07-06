@@ -417,12 +417,27 @@ export function updateSaveGamesList() {
 // Add initialization function to set up event listeners
 export function initSaveGameSystem() {
   const saveGameBtn = document.getElementById('saveGameBtn')
+  const saveLabelInput = document.getElementById('saveLabelInput')
+
+  // Helper to perform the save action
+  const performSave = () => {
+    const label = document.getElementById('saveLabelInput').value.trim()
+    saveGame(label)
+    updateSaveGamesList()
+    showNotification('Game saved as: ' + (label || 'Unnamed'))
+  }
+
   if (saveGameBtn) {
-    saveGameBtn.addEventListener('click', () => {
-      const label = document.getElementById('saveLabelInput').value.trim()
-      saveGame(label)
-      updateSaveGamesList()
-      showNotification('Game saved as: ' + (label || 'Unnamed'))
+    saveGameBtn.addEventListener('click', performSave)
+  }
+
+  // Allow saving by pressing Enter in the input field
+  if (saveLabelInput) {
+    saveLabelInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        performSave()
+      }
     })
   }
 
