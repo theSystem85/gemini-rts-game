@@ -409,6 +409,22 @@ export function updatePowerSupply(buildings, gameState) {
   // Track if player has a radar station
   let playerHasRadarStation = false
 
+  // Add main factory power supply (+50) for each player if their factory is alive
+  if (gameState.factories) {
+    gameState.factories.forEach(factory => {
+      if (factory.health > 0) {
+        const factoryPower = buildingData.constructionYard.power // Use the building data value (+50)
+        if (factory.owner === gameState.humanPlayer) {
+          playerTotalPower += factoryPower
+          playerTotalProduction += factoryPower
+        } else if (factory.owner !== gameState.humanPlayer) {
+          enemyTotalPower += factoryPower
+          enemyTotalProduction += factoryPower
+        }
+      }
+    })
+  }
+
   buildings.forEach(building => {
     // Skip buildings with no owner
     if (!building.owner) return
@@ -460,13 +476,14 @@ export function updatePowerSupply(buildings, gameState) {
 
   // Calculate production speed penalty when power is negative
   if (playerTotalPower < 0) {
-    // Calculate build speed modifier using the formula:
-    // When power is -100, speed is 1/2
-    // When power is -200, speed is 1/3
-    // And so on
-    const negativePower = Math.abs(playerTotalPower)
-    // Speed penalty formula: 1 / (1 + (negativePower / 100))
-    gameState.playerBuildSpeedModifier = 1 / (1 + (negativePower / 100))
+    // New formula: scale production by (production capacity / consumption)
+    if (playerTotalConsumption > 0) {
+      gameState.playerBuildSpeedModifier =
+        playerTotalProduction / playerTotalConsumption
+    } else {
+      // Shouldn't happen when power is negative, but guard against divide by zero
+      gameState.playerBuildSpeedModifier = 0
+    }
 
     // Enable low energy mode
     gameState.lowEnergyMode = true
@@ -484,8 +501,12 @@ export function updatePowerSupply(buildings, gameState) {
 
   // Calculate enemy speed penalty when power is negative
   if (enemyTotalPower < 0) {
-    const negativePower = Math.abs(enemyTotalPower)
-    gameState.enemyBuildSpeedModifier = 1 / (1 + (negativePower / 100))
+    if (enemyTotalConsumption > 0) {
+      gameState.enemyBuildSpeedModifier =
+        enemyTotalProduction / enemyTotalConsumption
+    } else {
+      gameState.enemyBuildSpeedModifier = 0
+    }
   } else {
     gameState.enemyBuildSpeedModifier = 1.0
   }
