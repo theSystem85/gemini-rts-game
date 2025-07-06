@@ -10,6 +10,31 @@ export function getUniqueId() {
 }
 
 /**
+ * Calculate distance between two points using Math.hypot for performance
+ * @param {number} x1 - First point x coordinate
+ * @param {number} y1 - First point y coordinate
+ * @param {number} x2 - Second point x coordinate
+ * @param {number} y2 - Second point y coordinate
+ * @returns {number} Distance between the points
+ */
+export function calculateDistance(x1, y1, x2, y2) {
+  return Math.hypot(x2 - x1, y2 - y1)
+}
+
+/**
+ * Check if two points are within a given range
+ * @param {number} x1 - First point x coordinate
+ * @param {number} y1 - First point y coordinate
+ * @param {number} x2 - Second point x coordinate
+ * @param {number} y2 - Second point y coordinate
+ * @param {number} range - Maximum distance to be considered "within range"
+ * @returns {boolean} True if points are within range
+ */
+export function isWithinRange(x1, y1, x2, y2, range) {
+  return calculateDistance(x1, y1, x2, y2) <= range
+}
+
+/**
  * Calculate speed modifier based on unit health
  * Units below 25% health move at 50% speed
  * @param {Object} unit - The unit to calculate speed modifier for

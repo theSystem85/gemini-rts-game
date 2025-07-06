@@ -78,12 +78,13 @@ function evaluatePlayerDefenses(target, gameState) {
  * Counts allied combat units within formation range
  */
 function countNearbyAllies(unit, units) {
+  const maxDistanceSquared = (AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE) ** 2
   return units.filter(u => 
-    u.owner === 'enemy' && 
+    u.owner === unit.owner && // Same owner (works for all AI players)
     u !== unit &&
     u.health > 0 &&
     (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
-    Math.hypot(u.x - unit.x, u.y - unit.y) < AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE
+    ((u.x - unit.x) ** 2 + (u.y - unit.y) ** 2) < maxDistanceSquared // Use squared distance to avoid sqrt
   ).length
 }
 
@@ -100,25 +101,50 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
   }
   
   // Allow individual combat if unit is under attack
-  if (unit.isBeingAttacked || unit.lastDamageTime && Date.now() - unit.lastDamageTime < 5000) {
+  if (unit.isBeingAttacked || (unit.lastDamageTime && Date.now() - unit.lastDamageTime < 5000)) {
     return true
   }
   
+  // Quick distance check - allow attack if within firing range (simplified calculation)
+  const dx = target.x - unit.x
+  const dy = target.y - unit.y
+  const distanceSquared = dx * dx + dy * dy
+  const fireRangeSquared = (TANK_FIRE_RANGE * TILE_SIZE * 1.5) ** 2
+  
+  // Allow attack if within firing range (using squared distance to avoid sqrt)
+  if (distanceSquared <= fireRangeSquared) {
+    return true
+  }
+  
+  // For distant targets, use simplified group logic
   const nearbyAllies = countNearbyAllies(unit, units)
   const totalGroupSize = nearbyAllies + 1 // Include the unit itself
   
-  // Check if we have minimum group size
-  if (totalGroupSize < AI_CONFIG.GROUP_ATTACK_MIN_SIZE) {
-    return false
+  // Simplified defense evaluation - just check for nearby enemy buildings
+  let defenseStrength = 0
+  if (gameState.buildings) {
+    const nearbyDefenses = gameState.buildings.filter(b => 
+      b.owner === gameState.humanPlayer &&
+      (b.type.includes('turret') || b.type === 'teslaCoil') &&
+      Math.abs(b.x * TILE_SIZE - unit.x) < 8 * TILE_SIZE &&
+      Math.abs(b.y * TILE_SIZE - unit.y) < 8 * TILE_SIZE
+    )
+    defenseStrength = nearbyDefenses.length
   }
   
-  // Evaluate player defenses at target location
-  const defenseStrength = evaluatePlayerDefenses(target, gameState)
+  // More permissive group requirements:
+  // - Allow solo attacks if defenses are light (0-1 defensive buildings)
+  // - Allow attacks with just 2 units for moderate defenses (2 defensive buildings)
+  // - Require 3+ units only for heavy defenses (3+ defensive buildings)
+  if (defenseStrength <= 1) {
+    return true // Solo attacks allowed for lightly defended targets
+  } else if (defenseStrength <= 2 && totalGroupSize >= 2) {
+    return true // 2+ units for moderately defended targets
+  } else if (totalGroupSize >= AI_CONFIG.GROUP_ATTACK_MIN_SIZE) {
+    return true // 3+ units for heavily defended targets
+  }
   
-  // Require larger groups for heavily defended targets
-  const requiredGroupSize = Math.max(AI_CONFIG.GROUP_ATTACK_MIN_SIZE, Math.ceil(defenseStrength / 2))
-  
-  return totalGroupSize >= requiredGroupSize
+  return false
 }
 
 /**
@@ -137,7 +163,7 @@ export function shouldRetreatLowHealth(unit) {
 function findNearestEnemyBase(unit, gameState) {
   if (!gameState.buildings) return null
   
-  const enemyBuildings = gameState.buildings.filter(b => b.owner === 'enemy')
+  const enemyBuildings = gameState.buildings.filter(b => b.owner === unit.owner)
   let nearestBase = null
   let nearestDistance = Infinity
   
@@ -243,7 +269,7 @@ export function handleHarvesterRetreat(harvester, gameState, mapGrid) {
   if (!nearestBase) return false
   
   // Find position near defensive buildings
-  const retreatTarget = findDefensivePosition(nearestBase, gameState, mapGrid)
+  const retreatTarget = findDefensivePosition(nearestBase, gameState, mapGrid, harvester.owner)
   
   if (retreatTarget) {
     const path = findPath(
@@ -270,12 +296,12 @@ export function handleHarvesterRetreat(harvester, gameState, mapGrid) {
 /**
  * Finds a defensive position near base buildings
  */
-function findDefensivePosition(baseBuilding, gameState, mapGrid) {
+function findDefensivePosition(baseBuilding, gameState, mapGrid, unitOwner) {
   if (!gameState.buildings) return null
   
   // Look for defensive buildings near the base
   const defensiveBuildings = gameState.buildings.filter(b => 
-    b.owner === 'enemy' && 
+    b.owner === unitOwner && 
     (b.type.includes('turret') || b.type === 'teslaCoil') &&
     Math.hypot(
       (b.x + b.width / 2) - (baseBuilding.x + baseBuilding.width / 2),
@@ -533,7 +559,7 @@ export function assignAttackDirection(unit, units, gameState) {
   
   // Get nearby combat units for direction assignment
   const nearbyUnits = units.filter(u => 
-    u.owner === 'enemy' && 
+    u.owner === unit.owner && // Same owner (works for all AI players)
     u !== unit &&
     u.health > 0 &&
     (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&

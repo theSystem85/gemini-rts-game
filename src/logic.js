@@ -1,13 +1,15 @@
 // logic.js
 import {
-  TILE_SIZE
+  TILE_SIZE,
+  TARGETING_SPREAD
 } from './config.js'
 import { gameState } from './gameState.js'
 import { playSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
-import { updateUnitSpeedModifier, awardExperience } from './utils.js'
+import { updateUnitSpeedModifier, awardExperience, calculateDistance } from './utils.js'
 import { markBuildingForRepairPause } from './buildings.js'
+import { aiEventSystem } from './ai/aiEventSystem.js'
 
 export let explosions = [] // Global explosion effects for rocket impacts
 
@@ -81,7 +83,13 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
         // Mark as being attacked if it's an AI unit
         if (unit.owner !== gameState.humanPlayer) {
           unit.isBeingAttacked = true
+          
+          // Enhanced debug logging for AI units being attacked
+          console.log(`🚨 ATTACK DETECTED: AI unit ${unit.id || 'unknown'} (${unit.type}) attacked by ${shooter.id || 'unknown'} (${shooter.type})`)
         }
+        
+        // Emit AI event for damage taken (for event-driven AI responses)
+        aiEventSystem.emit('unit_damaged', { unit, attacker: shooter })
       }
     }
   })
@@ -394,6 +402,41 @@ export function findPositionWithClearShot(unit, target, units, mapGrid) {
   return false
 }
 
+/**
+ * Determines if a unit can attack a target.
+ * This is the authoritative function for all combat checks.
+ * @param {object} attacker The unit initiating the attack.
+ * @param {object} target The unit or building being targeted.
+ * @returns {boolean} True if the attacker can fire at the target.
+ */
+export function canUnitAttackTarget(attacker, target) {
+  if (!attacker || !target || attacker.health <= 0 || target.health <= 0) {
+    return false
+  }
+
+  // 1. Check Firing Cooldown
+  const now = performance.now()
+  const fireRate = attacker.fireRate || 1000
+  if (attacker.lastShotTime && (now - attacker.lastShotTime < fireRate)) {
+    return false // Weapon is on cooldown
+  }
+
+  // 2. Check Firing Range
+  const rangeInPixels = (attacker.range || 3) * TILE_SIZE
+  const distance = calculateDistance(attacker.x, attacker.y, target.x, target.y)
+
+  if (distance > rangeInPixels) {
+    return false // Target is out of range
+  }
+
+  // 3. Check Line of Sight (if necessary in the future)
+  // if (!hasClearShot(attacker, target, gameState.units)) {
+  //   return false;
+  // }
+
+  return true // All checks passed, unit can fire
+}
+
 // Helper function to calculate the smallest difference between two angles
 export function angleDiff(angle1, angle2) {
   const diff = Math.abs((angle1 - angle2 + Math.PI) % (2 * Math.PI) - Math.PI)
@@ -436,4 +479,68 @@ export function normalizeAngle(angle) {
     angle -= twoPi
   }
   return angle
+}
+
+/**
+ * Creates and adds a bullet to the game state.
+ * This is the authoritative function for creating any bullet.
+ * @param {object} shooter - The unit or building firing the bullet.
+ * @param {object} target - The intended target.
+ * @param {object} gameState - The global game state.
+ */
+export function createBullet(shooter, target, gameState) {
+  if (!shooter || !target) {
+    console.warn('createBullet called with invalid shooter or target')
+    return
+  }
+
+  const now = performance.now()
+  const bulletSpeed = shooter.bulletSpeed || 5
+  const targetingSpread = shooter.type?.includes('turret') ? TILE_SIZE * 0.25 : TARGETING_SPREAD
+
+  // Aim with spread
+  const targetX = target.x + (Math.random() - 0.5) * targetingSpread
+  const targetY = target.y + (Math.random() - 0.5) * targetingSpread
+
+  // Calculate velocity
+  const dx = targetX - shooter.x
+  const dy = targetY - shooter.y
+  const distance = Math.hypot(dx, dy)
+  const vx = distance > 0 ? (dx / distance) * bulletSpeed : 0
+  const vy = distance > 0 ? (dy / distance) * bulletSpeed : 0
+
+  const bullet = {
+    id: `bullet_${now}_${Math.random()}`,
+    x: shooter.x,
+    y: shooter.y,
+    vx,
+    vy,
+    targetX,
+    targetY,
+    speed: bulletSpeed,
+    baseDamage: shooter.damage,
+    damage: shooter.damage, // for compatibility
+    shooter,
+    target,
+    active: true,
+    startTime: now,
+    homing: false,
+  }
+
+  gameState.bullets.push(bullet)
+  shooter.lastShotTime = now
+}
+
+
+/**
+ * Handles a unit attacking a target.
+ * @param {object} unit - The attacking unit.
+ * @param {object} target - The target unit or building.
+ * @param {object} gameState - The global game state.
+ */
+export function handleUnitAttack(unit, target, gameState) {
+  if (canUnitAttackTarget(unit, target)) {
+    createBullet(unit, target, gameState)
+    // Play sound or other effects here if needed
+  }
 }

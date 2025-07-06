@@ -237,7 +237,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   units.forEach(unit => {
     if (unit.owner !== aiPlayerId) return
 
-    updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles)
+    updateAIUnit(unit, units, gameState, mapGrid, bullets, now, aiPlayerId, targetedOreTiles)
   })
 }
 

@@ -1,321 +1,377 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
-import { findPath } from '../units.js'
-import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth } from './enemyStrategies.js'
-import { getClosestEnemyFactory, isEnemyTo } from './enemyUtils.js'
+// enemyUnitBehavior.js
+// Lightweight frame-based AI unit behavior system
+// Heavy operations moved to scheduler system for performance
 
-const ENABLE_DODGING = false
-const lastPositionCheckTimeDelay = 3000
-const dodgeTimeDelay = 3000
-const useSafeAttackDistance = false
+import { TILE_SIZE, TARGETING_SPREAD } from '../config.js'
+import { calculateDistance, isWithinRange } from '../utils.js'
+import { gameState } from '../gameState.js'
+import { canUnitAttackTarget, createBullet } from '../logic.js'
+import { applyDefensivePolicy, updateDefensiveState, canDefendAgainstTarget } from './defensivePolicy.js'
+import { debugAIState } from './aiDebug.js'
 
-function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles) {
-  // Reset being attacked flag if enough time has passed since last damage
-  if (unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime > 5000)) {
-    unit.isBeingAttacked = false
-    unit.lastAttacker = null
+/**
+ * Main AI unit update function - now lightweight and frame-based
+ * Heavy operations like pathfinding and targeting are handled by the scheduler
+ */
+export function updateAIUnit(unit, units, gameState, mapGrid, bullets, now, aiPlayerId, targetedOreTiles) {
+  // Quick validation checks only
+  if (!unit || unit.health <= 0 || unit.owner === gameState.humanPlayer) {
+    return
   }
 
-  // Clear invalid attacker references
-  if (unit.lastAttacker && (unit.lastAttacker.health <= 0 || unit.lastAttacker.destroyed)) {
-    unit.lastAttacker = null
-    if (!unit.lastDamageTime || (now - unit.lastDamageTime > 3000)) {
-      unit.isBeingAttacked = false
-    }
-  }
-
-  // Apply new AI strategies first
-    applyEnemyStrategies(unit, units, gameState, mapGrid, now)
+  // Debug function call and bullets parameter
+  if (Math.random() < 0.01) {
+    console.log(`🔧 UPDATE AI UNIT: ${unit.id} (${unit.type}) - Bullets param:`, {
+      bulletsExists: !!bullets,
+      bulletsIsArray: Array.isArray(bullets),
+      bulletsLength: bullets?.length
+    })
+    console.log(`🔧 UNIT STATE: isBeingAttacked=${unit.isBeingAttacked}, hasTarget=${!!unit.target}, hasLastAttacker=${!!unit.lastAttacker}`)
     
-    // Skip further processing if unit is retreating
-    if (unit.isRetreating) return
-
-    // Combat unit behavior
-    if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
-      // Target selection throttled to every 2 seconds
-      const canChangeTarget = !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 2000)
-      if (canChangeTarget) {
-        let newTarget = null
-
-        // Check if unit should retreat due to low health (flee to base mode)
-        const shouldFlee = shouldRetreatLowHealth(unit)
-        
-        // Highest priority: Retaliate against attacker when being attacked (unless fleeing)
-        if (!shouldFlee && unit.isBeingAttacked && unit.lastAttacker && 
-            unit.lastAttacker.health > 0 && isEnemyTo(unit.lastAttacker, aiPlayerId)) {
-          
-          let validTarget = false
-          let attackerDist = Infinity
-          
-          // Handle unit attackers
-          if (unit.lastAttacker.tileX !== undefined) {
-            attackerDist = Math.hypot(
-              (unit.lastAttacker.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), 
-              (unit.lastAttacker.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
-            )
-            if (attackerDist < 15 * TILE_SIZE) { // Within reasonable retaliation range
-              validTarget = true
-            }
-          }
-          // Handle building attackers (like Tesla coils, turrets)
-          else if (unit.lastAttacker.x !== undefined && unit.lastAttacker.y !== undefined) {
-            const buildingCenterX = (unit.lastAttacker.x + (unit.lastAttacker.width || 1) / 2) * TILE_SIZE
-            const buildingCenterY = (unit.lastAttacker.y + (unit.lastAttacker.height || 1) / 2) * TILE_SIZE
-            attackerDist = Math.hypot(
-              buildingCenterX - (unit.x + TILE_SIZE / 2), 
-              buildingCenterY - (unit.y + TILE_SIZE / 2)
-            )
-            if (attackerDist < 20 * TILE_SIZE) { // Longer range for buildings
-              validTarget = true
-            }
-          }
-          
-          if (validTarget) {
-            newTarget = unit.lastAttacker
-          }
-        }
-
-        // Second priority: Defend harvesters under attack (if not retaliating)
-        if (!newTarget) {
-          const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
-          let harvesterUnderAttack = null
-          for (const harvester of aiHarvesters) {
-            const threateningEnemies = units.filter(u =>
-              isEnemyTo(u, aiPlayerId) &&
-              Math.hypot(u.x - harvester.x, u.y - harvester.y) < 5 * TILE_SIZE
-            )
-            if (threateningEnemies.length > 0) {
-              harvesterUnderAttack = threateningEnemies[0] // Target closest threat to harvester
-              break
-            }
-          }
-
-          if (harvesterUnderAttack) {
-            newTarget = harvesterUnderAttack
-          }
-        }
-
-        // Third priority: Group attack strategy (if not retaliating or defending harvesters)
-        if (!newTarget) {
-          // Check if we should conduct group attack before selecting targets
-          const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
-            (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
-            Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
-
-          // Use group attack strategy
-          if (nearbyAllies.length >= 2) {
-            // Find appropriate target for group attack - target closest enemy
-            let closestEnemy = null
-            let closestDist = Infinity
-            units.forEach(u => {
-              if (isEnemyTo(u, aiPlayerId)) {
-                const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                if (d < closestDist) {
-                  closestDist = d
-                  closestEnemy = u
-                }
-              }
-            })
-            
-            // Only attack if group is large enough for the target's defenses
-            const potentialTarget = (closestEnemy && closestDist < 12 * TILE_SIZE) ? closestEnemy : getClosestEnemyFactory(unit, gameState.factories || [], aiPlayerId)
-            if (shouldConductGroupAttack(unit, units, gameState, potentialTarget)) {
-              newTarget = potentialTarget
-            }
-          } else {
-            // Not enough allies nearby, avoid attacking alone unless absolutely necessary
-            let closestPlayer = null
-            let closestDist = Infinity
-            units.forEach(u => {
-              if (u.owner === gameState.humanPlayer) {
-                const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                if (d < closestDist) {
-                  closestDist = d
-                  closestPlayer = u
-                }
-              }
-            })
-            // Only engage if very close or no other choice
-            newTarget = (closestPlayer && closestDist < 6 * TILE_SIZE) ? closestPlayer : null
-          }
-        }
-
-        if (unit.target !== newTarget) {
-          unit.target = newTarget
-          unit.lastTargetChangeTime = now
-          let targetPos = null
-          if (unit.target && unit.target.tileX !== undefined) {
-            targetPos = { x: unit.target.tileX, y: unit.target.tileY }
-          } else if (unit.target) {
-            targetPos = { x: unit.target.x, y: unit.target.y }
-          }
-          unit.moveTarget = targetPos
-          if (!unit.isDodging && targetPos) {
-            // Use occupancy map in attack mode to prevent moving through occupied tiles
-            const occupancyMap = gameState.occupancyMap
-            const path = findPath(
-              { x: unit.tileX, y: unit.tileY },
-              targetPos,
-              mapGrid,
-              occupancyMap
-            )
-            if (path.length > 1) {
-              unit.path = path.slice(1)
-              unit.lastPathCalcTime = now
-            }
-          }
-        }
-      }
-
-      // Path recalculation throttled to every 3 seconds for attack/chase movement
-      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
-      if (pathRecalcNeeded && !unit.isDodging && unit.target && (!unit.path || unit.path.length < 3)) {
-        let targetPos = null
-        if (unit.target.tileX !== undefined) {
-          targetPos = { x: unit.target.tileX, y: unit.target.tileY }
-        } else {
-          targetPos = { x: unit.target.x, y: unit.target.y }
-        }
-        // Use occupancy map in attack mode to prevent moving through occupied tiles
-        const occupancyMap = gameState.occupancyMap
-        const path = findPath(
-          { x: unit.tileX, y: unit.tileY },
-          targetPos,
-          mapGrid,
-          occupancyMap
-        )
-        if (path.length > 1) {
-          unit.path = path.slice(1)
-          unit.lastPathCalcTime = now
-        }
-      }
-
-      // --- Dodge Logic: toggled by ENABLE_DODGING ---
-      if (ENABLE_DODGING) {
-        let underFire = false
-        bullets.forEach(bullet => {
-          if (bullet.shooter && isEnemyTo(bullet.shooter, aiPlayerId)) {
-            const d = Math.hypot(bullet.x - (unit.x + TILE_SIZE / 2), bullet.y - (unit.y + TILE_SIZE / 2))
-            if (d < 2 * TILE_SIZE) {
-              underFire = true
-            }
-          }
-        })
-
-        if (underFire) {
-          if (!unit.lastDodgeTime || now - unit.lastDodgeTime > dodgeTimeDelay) {
-            unit.lastDodgeTime = now
-            const dodgeDir = { x: 0, y: 0 }
-            bullets.forEach(bullet => {
-              if (bullet.shooter && isEnemyTo(bullet.shooter, aiPlayerId)) {
-                const dx = (unit.x + TILE_SIZE / 2) - bullet.x
-                const dy = (unit.y + TILE_SIZE / 2) - bullet.y
-                const mag = Math.hypot(dx, dy)
-                if (mag > 0) {
-                  dodgeDir.x += dx / mag
-                  dodgeDir.y += dy / mag
-                }
-              }
-            })
-            const mag = Math.hypot(dodgeDir.x, dodgeDir.y)
-            if (mag > 0) {
-              dodgeDir.x /= mag
-              dodgeDir.y /= mag
-              const dodgeDistance = 1 + Math.floor(Math.random() * 2)
-              const destTileX = Math.floor(unit.tileX + Math.round(dodgeDir.x * dodgeDistance))
-              const destTileY = Math.floor(unit.tileY + Math.round(dodgeDir.y * dodgeDistance))
-              if (destTileX >= 0 && destTileX < mapGrid[0].length &&
-                  destTileY >= 0 && destTileY < mapGrid.length) {
-                const tileType = mapGrid[destTileY][destTileX].type
-                const hasBuilding = mapGrid[destTileY][destTileX].building
-                if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
-                  if (!unit.originalPath) {
-                    unit.originalPath = unit.path ? [...unit.path] : []
-                    unit.originalTarget = unit.target
-                    unit.dodgeEndTime = now + dodgeTimeDelay
-                  }
-                  const newPath = findPath(
-                    { x: unit.tileX, y: unit.tileY },
-                    { x: destTileX, y: destTileY },
-                    mapGrid,
-                    occupancyMap
-                  )
-                  if (newPath.length > 1) {
-                    unit.isDodging = true
-                    unit.path = newPath.slice(1)
-                    unit.lastPathCalcTime = now
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Resume original path after dodging
-      if (unit.isDodging && unit.originalPath) {
-        if (unit.path.length === 0 || now > unit.dodgeEndTime) {
-          unit.path = unit.originalPath
-          unit.target = unit.originalTarget
-          unit.originalPath = null
-          unit.originalTarget = null
-          unit.isDodging = false
-          unit.dodgeEndTime = null
-          unit.lastPathCalcTime = now
-        }
-      }
+    // Additional debug for damage tracking
+    if (unit.lastDamageTime) {
+      const timeSinceDamage = now - unit.lastDamageTime
+      console.log(`🔧 DAMAGE STATE: lastDamageTime=${timeSinceDamage.toFixed(0)}ms ago, health=${unit.health}/${unit.maxHealth}`)
     }
-    // NOTE: Harvester behavior is now handled by the unified harvesterLogic.js module
-    // AI harvesters use the same logic as player harvesters for consistent behavior
-  
-  // Maintain safe attack distance for combat units
-  if (useSafeAttackDistance) {
-    if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
-      const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > lastPositionCheckTimeDelay)
-      if (positionCheckNeeded) {
-        unit.lastPositionCheckTime = now
-        const unitCenterX = unit.x + TILE_SIZE / 2
-        const unitCenterY = unit.y + TILE_SIZE / 2
-        let targetCenterX, targetCenterY
-        if (unit.target.tileX !== undefined) {
-            targetCenterX = unit.target.x + TILE_SIZE / 2
-            targetCenterY = unit.target.y + TILE_SIZE / 2
-          } else {
-            targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
-            targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+  }
+
+  // CRITICAL: Immediate self-defense check - this should happen FIRST
+  if (unit.isBeingAttacked && unit.lastAttacker && unit.lastAttacker.health > 0) {
+    const distanceToAttacker = calculateDistance(unit.x, unit.y, unit.lastAttacker.x, unit.lastAttacker.y)
+    const maxRange = 10 * TILE_SIZE // Extended range for immediate response
+    
+    if (distanceToAttacker <= maxRange) {
+      unit.target = unit.lastAttacker
+      unit.targetType = 'defensive'
+      
+      // Force immediate combat response
+      if (Math.random() < 0.02) { // Reduce logging spam
+        console.log(`🛡️ DEFENSIVE: Unit ${unit.id || 'NO_ID'} (${unit.type}) immediately targeting attacker ${unit.lastAttacker.id || 'NO_ID'} at distance ${distanceToAttacker.toFixed(1)}`)
+      }
+    } else {
+      // Attacker is too far - look for closer enemies to fight instead of just retreating
+      if (Math.random() < 0.05) { // Reduce logging spam
+        console.log(`🛡️ DEFENSIVE OUT OF RANGE: Unit ${unit.id || 'NO_ID'} - attacker at distance ${distanceToAttacker.toFixed(1)} > max range ${maxRange}, searching for closer targets`)
+      }
+      
+      // Find closer enemies to fight while retreating
+      const nearbyEnemies = units.filter(u => 
+        u.health > 0 && 
+        u.owner === gameState.humanPlayer &&
+        calculateDistance(unit.x, unit.y, u.x, u.y) <= 5 * TILE_SIZE
+      )
+      
+      if (nearbyEnemies.length > 0) {
+        let closestEnemy = null
+        let closestDistance = Infinity
+        
+        for (const enemy of nearbyEnemies) {
+          const distance = calculateDistance(unit.x, unit.y, enemy.x, enemy.y)
+          if (distance < closestDistance) {
+            closestDistance = distance
+            closestEnemy = enemy
           }
-          const dx = targetCenterX - unitCenterX
-          const dy = targetCenterY - unitCenterY
-          const currentDist = Math.hypot(dx, dy)
-          const explosionSafetyBuffer = TILE_SIZE * 0.5
-          const safeAttackDistance = Math.max(
-            TANK_FIRE_RANGE * TILE_SIZE,
-            TILE_SIZE * 2 + explosionSafetyBuffer
-          )
-          if (currentDist < safeAttackDistance && !unit.isDodging) {
-            const destTileX = Math.floor(unit.tileX - Math.round((dx / currentDist) * 2))
-            const destTileY = Math.floor(unit.tileY - Math.round((dy / currentDist) * 2))
-            if (destTileX >= 0 && destTileX < mapGrid[0].length &&
-                destTileY >= 0 && destTileY < mapGrid.length) {
-              const tileType = mapGrid[destTileY][destTileX].type
-              const hasBuilding = mapGrid[destTileY][destTileX].building
-              if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
-                // Use occupancy map for tactical retreat movement to avoid moving through units
-                const occupancyMap = gameState.occupancyMap
-                const newPath = findPath(
-                  { x: unit.tileX, y: unit.tileY },
-                  { x: destTileX, y: destTileY },
-                  mapGrid,
-                  occupancyMap
-                )
-                if (newPath.length > 1) {
-                  unit.path = newPath.slice(1)
-                  unit.lastPathCalcTime = now
-                }
-              }
-            }
+        }
+        
+        if (closestEnemy) {
+          unit.target = closestEnemy
+          unit.targetType = 'defensive'
+          if (Math.random() < 0.1) {
+            console.log(`🎯 CLOSER TARGET: Unit ${unit.id} targeting closer enemy ${closestEnemy.id} at distance ${closestDistance.toFixed(1)} while original attacker is too far`)
           }
         }
       }
     }
   }
-export { updateAIUnit }
+
+  // Update defensive state (handles attack memory and defensive mode cleanup)
+  updateDefensiveState(unit, now)
+
+  // Apply defensive policy - this takes priority over strategic targets
+  const defensiveTarget = applyDefensivePolicy(unit, units, gameState, now)
+  if (defensiveTarget && canDefendAgainstTarget(unit, defensiveTarget)) {
+    // Override current target with defensive target
+    unit.target = defensiveTarget
+    unit.targetType = 'defensive'
+    
+    // Debug logging for defensive behavior
+    if (unit.id && Math.random() < 0.01) { // Log occasionally to avoid spam
+      console.log(`Unit ${unit.id} entering defensive mode, targeting`, defensiveTarget.id || 'unknown target')
+    }
+  }
+
+  // If unit is being attacked but has no target, try to find one immediately
+  if (unit.isBeingAttacked && !unit.target && unit.lastAttacker && unit.lastAttacker.health > 0) {
+    const distanceToAttacker = calculateDistance(unit.x, unit.y, unit.lastAttacker.x, unit.lastAttacker.y)
+    const range = (unit.range || 3) * TILE_SIZE
+    
+    if (distanceToAttacker <= range) {
+      unit.target = unit.lastAttacker
+      unit.targetType = 'defensive'
+      
+      // Debug logging
+      if (unit.id && Math.random() < 0.01) {
+        console.log(`Unit ${unit.id} immediately targeting attacker ${unit.lastAttacker.id || 'unknown'} at distance ${distanceToAttacker.toFixed(1)}`)
+      }
+    }
+  }
+
+  // Lightweight position and movement validation
+  if (unit.isMoving && unit.path && unit.path.length > 0) {
+    validateMovement(unit)
+  }
+
+  // Basic combat validation (actual targeting handled by scheduler)
+  if (unit.target && unit.target.health <= 0) {
+    unit.target = null
+    unit.targetLastKnownPosition = null
+    unit.targetType = null
+  }
+
+  // IMPORTANT: Check if current target is too far away and should be abandoned
+  if (unit.target && unit.targetType !== 'defensive') {
+    const targetX = unit.target.x * (unit.target.width ? TILE_SIZE : 1) // Buildings use tile coords
+    const targetY = unit.target.y * (unit.target.height ? TILE_SIZE : 1)
+    const distanceToTarget = calculateDistance(unit.x, unit.y, targetX, targetY)
+    const maxEngagementRange = 12 * TILE_SIZE // Max distance to engage a target
+    
+    if (distanceToTarget > maxEngagementRange) {
+      console.log(`📏 TARGET TOO FAR: Unit ${unit.id} abandoning target at distance ${distanceToTarget.toFixed(1)} > max ${maxEngagementRange}`)
+      unit.target = null
+      unit.targetType = null
+    }
+  }
+
+  // If unit still has no target, find the nearest enemy immediately (emergency targeting)
+  if (!unit.target && unit.type !== 'harvester') {
+    const nearbyEnemies = units.filter(u => 
+      u.health > 0 && 
+      u.owner === gameState.humanPlayer &&
+      calculateDistance(unit.x, unit.y, u.x, u.y) <= 8 * TILE_SIZE
+    )
+    
+    if (nearbyEnemies.length > 0) {
+      // Find closest enemy
+      let closestEnemy = null
+      let closestDistance = Infinity
+      
+      for (const enemy of nearbyEnemies) {
+        const distance = calculateDistance(unit.x, unit.y, enemy.x, enemy.y)
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestEnemy = enemy
+        }
+      }
+      
+      if (closestEnemy) {
+        unit.target = closestEnemy
+        unit.targetType = 'emergency'
+        
+        if (Math.random() < 0.1) { // Debug log
+          console.log(`🎯 EMERGENCY: Unit ${unit.id} (${unit.type}) targeting nearest enemy ${closestEnemy.id} at distance ${closestDistance.toFixed(1)}`)
+        }
+      }
+    }
+  }
+
+  // CRITICAL: If unit has been damaged recently (last 5 seconds) but no attacker is set,
+  // assume it's under attack and find nearest enemy as defensive target
+  if (!unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 5000) && unit.type !== 'harvester') {
+    console.log(`🩸 DAMAGE DETECTED: Unit ${unit.id} (${unit.type}) was damaged recently, searching for nearby enemies`)
+    
+    const nearbyEnemies = units.filter(u => 
+      u.health > 0 && 
+      u.owner === gameState.humanPlayer &&
+      calculateDistance(unit.x, unit.y, u.x, u.y) <= 6 * TILE_SIZE
+    )
+    
+    // Also check for nearby enemy buildings (turrets, etc.)
+    const nearbyBuildings = gameState.buildings.filter(b => 
+      b.health > 0 && 
+      b.owner === gameState.humanPlayer &&
+      calculateDistance(unit.x, unit.y, b.x * TILE_SIZE, b.y * TILE_SIZE) <= 6 * TILE_SIZE
+    )
+    
+    const allNearbyTargets = [...nearbyEnemies, ...nearbyBuildings]
+    
+    if (allNearbyTargets.length > 0) {
+      let closestTarget = null
+      let closestDistance = Infinity
+      
+      for (const target of allNearbyTargets) {
+        const targetX = target.x * (target.width ? TILE_SIZE : 1) // Buildings use tile coords
+        const targetY = target.y * (target.height ? TILE_SIZE : 1)
+        const distance = calculateDistance(unit.x, unit.y, targetX, targetY)
+        
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestTarget = target
+        }
+      }
+      
+      if (closestTarget) {
+        unit.target = closestTarget
+        unit.targetType = 'defensive'
+        unit.isBeingAttacked = true // Force defensive mode
+        console.log(`🛡️ DAMAGE RESPONSE: Unit ${unit.id} targeting ${closestTarget.type || 'unit'} at distance ${closestDistance.toFixed(1)}`)
+      }
+    }
+  }
+
+  handleImmediateCombat(unit, gameState, now)
+
+  // Handle harvester-specific logic
+  if (unit.type === 'harvester') {
+    handleHarvesterBehavior(unit, gameState, targetedOreTiles)
+  }
+}
+
+/**
+ * Validate unit movement and handle stuck units
+ */
+function validateMovement(unit) {
+  const now = performance.now()
+  
+  // Check if unit is stuck (hasn't moved in a while)
+  if (!unit.lastPositionCheck) {
+    unit.lastPositionCheck = now
+    unit.lastKnownPosition = { x: unit.x, y: unit.y }
+    return
+  }
+
+  // Check every 2 seconds
+  if (now - unit.lastPositionCheck > 2000) {
+    const distanceMoved = calculateDistance(
+      unit.x, unit.y,
+      unit.lastKnownPosition.x, unit.lastKnownPosition.y
+    )
+
+    // If unit hasn't moved much, clear its path
+    if (distanceMoved < 0.5) {
+      unit.path = []
+      unit.isMoving = false
+    }
+
+    unit.lastPositionCheck = now
+    unit.lastKnownPosition = { x: unit.x, y: unit.y }
+  }
+}
+
+/**
+ * Handle immediate combat needs without expensive calculations
+ */
+function handleImmediateCombat(unit, gameState, now) {
+  if (!unit.target) {
+    // Debug: Log when units don't have targets
+    if (unit.isBeingAttacked && Math.random() < 0.1) {
+      console.log(`⚠️ NO TARGET: Unit ${unit.id} (${unit.type}) is being attacked but has no target`)
+    }
+    return
+  }
+
+  // If target is in range and unit can attack, according to the new centralized logic
+  if (canUnitAttackTarget(unit, unit.target)) {
+    // --- DEBUG --- Call AI State Snapshot before firing
+    if (Math.random() < 0.1) { // Log 10% of the time to avoid spam
+      debugAIState(unit, 'Before Firing')
+    }
+    // -------------
+    
+    // Debug logging for shooting
+    console.log(`🔥 FIRING: Unit ${unit.id || 'NO_ID'} (${unit.type}) firing at target ${unit.target.id || 'NO_ID'}`)
+    
+    // Use the centralized bullet creation function
+    createBullet(unit, unit.target, gameState)
+
+  } else {
+    // Debug why unit isn't firing
+    if (unit.target && Math.random() < 0.02) {
+      // We don't need to duplicate the checks here, but we can log for clarity
+      console.log(`🚫 NOT FIRING: Unit ${unit.id || 'NO_ID'} - canUnitAttackTarget returned false.`)
+    }
+  }
+}
+
+/**
+ * Handle harvester-specific behavior
+ */
+function handleHarvesterBehavior(unit, gameState, targetedOreTiles) {
+  // Basic harvester logic - detailed logic handled by scheduler
+  if (unit.carriedOre >= (unit.oreCapacity || 100)) {
+    // Find nearest refinery (this could be cached by scheduler)
+    const refinery = gameState.buildings.find(b => 
+      b.type === 'ore_refinery' && 
+      b.owner === unit.owner && 
+      b.health > 0
+    )
+
+    if (refinery && !unit.target) {
+      unit.target = refinery
+      unit.targetType = 'refinery'
+    }
+  }
+}
+
+/**
+ * Select target for unit (called by scheduler, not every frame)
+ * This is the heavy operation that was moved out of the main loop
+ */
+export function selectTargetForUnit(unit, units, gameState) {
+  if (!unit || unit.health <= 0 || unit.owner === gameState.humanPlayer) {
+    return null
+  }
+
+  // Skip if unit is harvester heading to refinery
+  if (unit.type === 'harvester' && unit.targetType === 'refinery') {
+    return unit.target
+  }
+
+  const enemyUnits = units.filter(u => 
+    u.health > 0 && 
+    u.owner === gameState.humanPlayer
+  )
+
+  const enemyBuildings = gameState.buildings.filter(b => 
+    b.health > 0 && 
+    b.owner === gameState.humanPlayer
+  )
+
+  const allTargets = [...enemyUnits, ...enemyBuildings]
+  if (allTargets.length === 0) return null
+
+  // Find closest target within a reasonable range
+  const maxSearchRange = 15 * TILE_SIZE
+  let closestTarget = null
+  let closestDistance = Infinity
+
+  for (const target of allTargets) {
+    const distance = calculateDistance(unit.x, unit.y, target.x, target.y)
+    
+    if (distance <= maxSearchRange && distance < closestDistance) {
+      closestDistance = distance
+      closestTarget = target
+    }
+  }
+
+  return closestTarget
+}
+
+/**
+ * Check if unit should be allowed to attack (permission system)
+ */
+export function shouldUnitAttack(unit, target) {
+  if (!unit || !target || unit.health <= 0 || target.health <= 0) {
+    return false
+  }
+
+  // Check if target is enemy
+  if (target.owner === unit.owner) {
+    return false
+  }
+
+  // Check range
+  const distance = calculateDistance(unit.x, unit.y, target.x, target.y)
+  const range = (unit.range || 3) * TILE_SIZE
+
+  return distance <= range
+}
