@@ -371,6 +371,8 @@ export class ProductionController {
       if (!skipSound) {
         playSound('new_units_types_available', 1.0, 5) // Throttle for 5 seconds
       }
+      // Update button states to ensure unlocked units are not disabled
+      this.updateVehicleButtonStates()
       // Update tab states when units are unlocked
       this.updateTabStates()
     }
@@ -389,6 +391,8 @@ export class ProductionController {
       if (!skipSound) {
         playSound('new_building_types_available', 1.0, 5) // Throttle for 5 seconds
       }
+      // Update button states to ensure unlocked buildings are not disabled
+      this.updateBuildingButtonStates()
       // Update tab states when buildings are unlocked
       this.updateTabStates()
     }
@@ -401,21 +405,43 @@ export class ProductionController {
     let unlockedUnits = 0
     let unlockedBuildings = 0
 
-    // Unlock units (skip individual sounds)
+    // Unlock units (skip individual sounds and button state updates)
     unitTypes.forEach(type => {
       if (!gameState.availableUnitTypes.has(type)) {
-        this.unlockUnitType(type, true) // Skip sound
+        gameState.availableUnitTypes.add(type)
+        gameState.newUnitTypes.add(type)
+        const button = this.unitButtons.get(type)
+        if (button) {
+          button.style.display = ''
+          const label = button.querySelector('.new-label')
+          if (label) label.style.display = 'block'
+        }
         unlockedUnits++
       }
     })
 
-    // Unlock buildings (skip individual sounds)
+    // Unlock buildings (skip individual sounds and button state updates)
     buildingTypes.forEach(type => {
       if (!gameState.availableBuildingTypes.has(type)) {
-        this.unlockBuildingType(type, true) // Skip sound
+        gameState.availableBuildingTypes.add(type)
+        gameState.newBuildingTypes.add(type)
+        const button = this.buildingButtons.get(type)
+        if (button) {
+          button.style.display = ''
+          const label = button.querySelector('.new-label')
+          if (label) label.style.display = 'block'
+        }
         unlockedBuildings++
       }
     })
+
+    // Update button states once for all unlocked items
+    if (unlockedUnits > 0) {
+      this.updateVehicleButtonStates()
+    }
+    if (unlockedBuildings > 0) {
+      this.updateBuildingButtonStates()
+    }
 
     // Play appropriate sound based on what was unlocked
     if (unlockedUnits > 0 && unlockedBuildings > 0) {
