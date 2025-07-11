@@ -313,6 +313,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       // Check map terrain
       if (mapGrid[y][x].type === 'water' ||
           mapGrid[y][x].type === 'rock' ||
+          mapGrid[y][x].seedCrystal ||
           mapGrid[y][x].building) {
         return false
       }
@@ -344,6 +345,7 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
   // Invalid terrain
   if (mapGrid[tileY][tileX].type === 'water' ||
       mapGrid[tileY][tileX].type === 'rock' ||
+      mapGrid[tileY][tileX].seedCrystal ||
       mapGrid[tileY][tileX].building) {
     return false
   }

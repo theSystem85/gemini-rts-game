@@ -48,7 +48,7 @@ function isPositionValidForSpawn(x, y, mapGrid, units) {
     return false
   }
   const tile = mapGrid[y][x]
-  if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+  if (tile.type === 'water' || tile.type === 'rock' || tile.building || tile.seedCrystal) {
     return false
   }
   for (const unit of units) {

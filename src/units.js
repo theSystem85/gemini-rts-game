@@ -24,7 +24,7 @@ export function buildOccupancyMap(units, mapGrid) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       const tile = mapGrid[y][x]
       occupancy[y][x] =
-        tile.type === 'water' || tile.type === 'rock' || tile.building ? 1 : 0
+        tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building ? 1 : 0
     }
   }
   units.forEach(unit => {
@@ -173,17 +173,21 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   }
   // Begin destination adjustment if not passable
   let adjustedEnd = { ...end }
-  const destType = mapGrid[adjustedEnd.y][adjustedEnd.x].type
-  const destHasBuilding = mapGrid[adjustedEnd.y][adjustedEnd.x].building
-  if (destType === 'water' || destType === 'rock' || destHasBuilding) {
+  const destTile = mapGrid[adjustedEnd.y][adjustedEnd.x]
+  const destType = destTile.type
+  const destHasBuilding = destTile.building
+  const destSeedCrystal = destTile.seedCrystal
+  if (destType === 'water' || destType === 'rock' || destHasBuilding || destSeedCrystal) {
     let found = false
     for (const dir of DIRECTIONS) {
       const newX = adjustedEnd.x + dir.x
       const newY = adjustedEnd.y + dir.y
       if (newX >= 0 && newY >= 0 && newX < mapGrid[0].length && newY < mapGrid.length) {
-        const newType = mapGrid[newY][newX].type
-        const newHasBuilding = mapGrid[newY][newX].building
-        if (newType !== 'water' && newType !== 'rock' && !newHasBuilding) {
+        const newTile = mapGrid[newY][newX]
+        const newType = newTile.type
+        const newHasBuilding = newTile.building
+        const newSeedCrystal = newTile.seedCrystal
+        if (newType !== 'water' && newType !== 'rock' && !newHasBuilding && !newSeedCrystal) {
           adjustedEnd = { x: newX, y: newY }
           found = true
           break
@@ -312,9 +316,11 @@ function getNeighbors(node, mapGrid) {
     const x = node.x + dir.x
     const y = node.y + dir.y
     if (y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length) {
-      const tileType = mapGrid[y][x].type
-      const hasBuilding = mapGrid[y][x].building
-      if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
+      const tile = mapGrid[y][x]
+      const tileType = tile.type
+      const hasBuilding = tile.building
+      const hasSeedCrystal = tile.seedCrystal
+      if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding && !hasSeedCrystal) {
         neighbors.push({ x, y })
       }
     }
@@ -518,7 +524,14 @@ function isPositionValid(x, y, mapGrid, units) {
 
   // Check if tile is passable (not a building, rock, etc.)
   // Note: Tiles with ore overlay (mapGrid[y][x].ore = true) are still passable based on their underlying type
-  if (mapGrid[y][x].type !== 'land' && mapGrid[y][x].type !== 'street') {
+  if (
+    mapGrid[y][x].type !== 'land' &&
+    mapGrid[y][x].type !== 'street'
+  ) {
+    return false
+  }
+
+  if (mapGrid[y][x].seedCrystal) {
     return false
   }
 
