@@ -145,6 +145,46 @@ export class EventHandlers {
       this.handleBuildingPlacementOverlay(e)
     })
 
+    // Drag and drop placement
+    gameCanvas.addEventListener('dragover', (e) => {
+      if (gameState.draggedBuildingType) {
+        e.preventDefault()
+        gameState.buildingPlacementMode = true
+        gameState.currentBuildingType = gameState.draggedBuildingType
+        this.handleBuildingPlacementOverlay(e)
+      }
+    })
+
+    gameCanvas.addEventListener('dragleave', () => {
+      if (gameState.draggedBuildingType) {
+        gameState.buildingPlacementMode = false
+      }
+    })
+
+    gameCanvas.addEventListener('drop', (e) => {
+      if (gameState.draggedBuildingType) {
+        e.preventDefault()
+        const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+        const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+        const tileX = Math.floor(mouseX / TILE_SIZE)
+        const tileY = Math.floor(mouseY / TILE_SIZE)
+        const type = gameState.draggedBuildingType
+        const button = gameState.draggedBuildingButton
+        if (canPlaceBuilding(type, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
+          const blueprint = { type, x: tileX, y: tileY }
+          gameState.blueprints.push(blueprint)
+          productionQueue.addItem(type, button, true, blueprint)
+          showNotification(`Blueprint placed for ${buildingData[type].displayName}`)
+        } else {
+          showNotification('Invalid blueprint location')
+        }
+        gameState.buildingPlacementMode = false
+        gameState.currentBuildingType = null
+        gameState.draggedBuildingType = null
+        gameState.draggedBuildingButton = null
+      }
+    })
+
     // Add building repair handling to the canvas click event
     gameCanvas.addEventListener('click', (e) =>
       buildingRepairHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)

@@ -36,6 +36,9 @@ export const gameState = {
   currentBuildingType: null,
   cursorX: 0,
   cursorY: 0,
+  draggedBuildingType: null,
+  draggedBuildingButton: null,
+  blueprints: [],
 
   // Repair mode
   repairMode: false,
