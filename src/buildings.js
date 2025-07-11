@@ -12,7 +12,11 @@ export const buildingData = {
     power: 200,
     image: 'power_plant.webp',
     displayName: 'Power Plant',
-    health: 200
+    health: 200,
+    smokeSpots: [
+      { x: 80, y: 20 },
+      { x: 130, y: 40 }
+    ]
   },
   oreRefinery: {
     width: 3,
@@ -21,7 +25,11 @@ export const buildingData = {
     power: -30,
     image: 'ore_refinery.webp',
     displayName: 'Ore Refinery',
-    health: 200
+    health: 200,
+    smokeSpots: [
+      { x: 55, y: 35 },
+      { x: 78, y: 12 }
+    ]
   },
   vehicleFactory: {
     width: 3,
@@ -30,7 +38,8 @@ export const buildingData = {
     power: -50,
     image: 'vehicle_factory.webp',
     displayName: 'Vehicle Factory',
-    health: 300
+    health: 300,
+    smokeSpots: []
   },
   constructionYard: {
     width: 3,
@@ -39,7 +48,8 @@ export const buildingData = {
     power: 50,
     image: 'construction_yard.webp',
     displayName: 'Construction Yard',
-    health: 350
+    health: 350,
+    smokeSpots: []
   },
   radarStation: {
     width: 2,
@@ -48,7 +58,8 @@ export const buildingData = {
     power: -50,
     image: 'radar_station.webp',
     displayName: 'Radar Station',
-    health: 200
+    health: 200,
+    smokeSpots: []
   },
   turretGunV1: {
     width: 1,
@@ -58,6 +69,7 @@ export const buildingData = {
     image: 'turret_gun_v1.webp',
     displayName: 'Turret Gun V1',
     health: 300,
+    smokeSpots: [],
     // Add combat properties
     fireRange: 10, // 50% more than tank range (TANK_FIRE_RANGE + 50%)
     fireCooldown: 1600, // Same as regular tank
@@ -74,6 +86,7 @@ export const buildingData = {
     image: 'turret_gun_v2.webp',
     displayName: 'Turret Gun V2',
     health: 300,
+    smokeSpots: [],
     // Add combat properties
     fireRange: 10, // 50% more than tank range
     fireCooldown: 1600,
@@ -90,6 +103,7 @@ export const buildingData = {
     image: 'turret_gun_v3.webp',
     displayName: 'Turret Gun V3',
     health: 300,
+    smokeSpots: [],
     // Add combat properties
     fireRange: 12, // Even more range
     fireCooldown: 1400, // Faster firing
@@ -110,6 +124,7 @@ export const buildingData = {
     displayName: 'Rocket Turret',
     health: 200,
     requiresRadar: true,
+    smokeSpots: [],
     // Add combat properties
     fireRange: 16,
     fireCooldown: 6000, // 3 seconds between shots
@@ -130,6 +145,7 @@ export const buildingData = {
     displayName: 'Tesla Coil',
     health: 250,
     requiresRadar: true,
+    smokeSpots: [],
     fireRange: 20, // in tiles
     fireCooldown: 8000, // ms
     damage: 5, // Tesla coil does not deal direct damage
@@ -145,7 +161,8 @@ export const buildingData = {
     power: -45,
     image: 'artillery_turret.webp',
     displayName: 'Artillery Turret',
-    health: 300
+    health: 300,
+    smokeSpots: []
   },
   concreteWall: {
     width: 1,
@@ -154,7 +171,8 @@ export const buildingData = {
     power: 0,
     image: 'concrete_wall.webp',
     displayName: 'Concrete Wall',
-    health: 200
+    health: 200,
+    smokeSpots: []
   }
 }
 

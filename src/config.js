@@ -101,7 +101,7 @@ export const RECOIL_DURATION = 300 // milliseconds
 export const MUZZLE_FLASH_DURATION = 150 // milliseconds
 export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
 export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
-export const SMOKE_PARTICLE_LIFETIME = 1500 // milliseconds (reduced from 2000)
+export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
 export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
 export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
 
@@ -117,6 +117,9 @@ export const PATH_CALC_INTERVAL = 2000
 
 // Attack/chase pathfinding interval - throttled to prevent excessive recalculation (in milliseconds)
 export const ATTACK_PATH_CALC_INTERVAL = 3000
+
+// Smoke emission for buildings
+export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export const PATHFINDING_THRESHOLD = 10
