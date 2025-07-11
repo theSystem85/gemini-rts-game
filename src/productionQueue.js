@@ -3,7 +3,7 @@ import { findClosestOre } from './logic.js'
 import { buildingCosts, factories, units, mapGrid } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
-import { buildingData } from './buildings.js'
+import { buildingData, createBuilding, placeBuilding, canPlaceBuilding, updatePowerSupply } from './buildings.js'
 import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
@@ -38,7 +38,13 @@ export const productionQueue = {
     }
   },
 
-  addItem: function(type, button, isBuilding = false) {
+  removeBlueprint: function(item) {
+    if (item && item.blueprint) {
+      gameState.blueprints = gameState.blueprints.filter(bp => bp !== item.blueprint)
+    }
+  },
+
+  addItem: function(type, button, isBuilding = false, blueprint = null) {
     // Only block queuing if game is paused
     if (gameState.gamePaused) {
       button.classList.add('error')
@@ -55,7 +61,7 @@ export const productionQueue = {
         const label = button.querySelector('.new-label')
         if (label) label.style.display = 'none'
       }
-      this.buildingItems.push({ type, button, isBuilding })
+      this.buildingItems.push({ type, button, isBuilding, blueprint })
       const currentCount = this.buildingItems.filter(item => item.button === button).length
       this.updateBatchCounter(button, currentCount)
 
@@ -225,7 +231,8 @@ export const productionQueue = {
       progress: 0,
       startTime: performance.now(),
       duration: duration,
-      isBuilding: item.isBuilding
+      isBuilding: item.isBuilding,
+      blueprint: item.blueprint || null
     }
 
     // Mark button as active
@@ -427,28 +434,37 @@ export const productionQueue = {
     // Update batch counter (subtract 1 for the completed building)
     this.updateBatchCounter(this.currentBuilding.button, this.buildingItems.filter(item => item.button === this.currentBuilding.button).length)
 
-    // Building completion - DO NOT automatically enter placement mode
-    // Add the completed building to the array for placement when user clicks the button
-    this.completedBuildings.push({
-      type: this.currentBuilding.type,
-      button: this.currentBuilding.button
-    })
+    const blueprint = this.currentBuilding.blueprint
+    if (blueprint) {
+      if (canPlaceBuilding(this.currentBuilding.type, blueprint.x, blueprint.y, mapGrid, units, gameState.buildings, factories, gameState.humanPlayer)) {
+        const newBuilding = createBuilding(this.currentBuilding.type, blueprint.x, blueprint.y)
+        newBuilding.owner = gameState.humanPlayer
+        if (!gameState.buildings) gameState.buildings = []
+        gameState.buildings.push(newBuilding)
+        placeBuilding(newBuilding, mapGrid)
+        updatePowerSupply(gameState.buildings, gameState)
+        playSound('buildingPlaced')
+        showNotification(`${buildingData[this.currentBuilding.type].displayName} constructed`)
+      } else {
+        this.completedBuildings.push({ type: this.currentBuilding.type, button: this.currentBuilding.button })
+        this.currentBuilding.button.classList.add('ready-for-placement')
+        this.updateReadyBuildingCounter(this.currentBuilding.button)
+        showNotification(`${buildingData[this.currentBuilding.type].displayName} ready! Click build button to place.`)
+      }
+      this.removeBlueprint(this.currentBuilding)
+    } else {
+      this.completedBuildings.push({ type: this.currentBuilding.type, button: this.currentBuilding.button })
+      this.currentBuilding.button.classList.add('ready-for-placement')
+      this.updateReadyBuildingCounter(this.currentBuilding.button)
+      showNotification(`${buildingData[this.currentBuilding.type].displayName} ready! Click build button to place.`)
+    }
 
-    // Show notification to click build button for placement
-    showNotification(`${buildingData[this.currentBuilding.type].displayName} ready! Click build button to place.`)
-
-    // Remove active state but keep button marked for placement
     this.currentBuilding.button.classList.remove('active')
-    this.currentBuilding.button.classList.add('ready-for-placement')
 
-    // Clear the progress bar since construction is complete
     const progressBar = this.currentBuilding.button.querySelector('.production-progress')
     if (progressBar) {
       progressBar.style.width = '0%'
     }
-
-    // Update ready building counter
-    this.updateReadyBuildingCounter(this.currentBuilding.button)
 
     playSound('constructionComplete')
 
@@ -535,8 +551,9 @@ export const productionQueue = {
     // Return money for the current production (refund only paid amount)
     gameState.money += this.buildingPaid || 0
 
-    // Remove item from queue
+    // Remove item from queue and blueprint
     this.buildingItems.shift()
+    this.removeBlueprint(this.currentBuilding)
 
     // Count remaining items of this type
     const remainingCount = this.buildingItems.filter(item => item.button === button).length

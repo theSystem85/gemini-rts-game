@@ -92,6 +92,23 @@ export class UIRenderer {
     ctx.strokeRect(flagX, flagY, TILE_SIZE, TILE_SIZE)
   }
 
+  renderBlueprints(ctx, blueprints, scrollOffset) {
+    blueprints.forEach(bp => {
+      const info = buildingData[bp.type]
+      if (!info) return
+      const x = bp.x * TILE_SIZE - scrollOffset.x
+      const y = bp.y * TILE_SIZE - scrollOffset.y
+      ctx.fillStyle = 'rgba(0, 0, 255, 0.3)'
+      ctx.fillRect(x, y, info.width * TILE_SIZE, info.height * TILE_SIZE)
+      ctx.strokeStyle = '#0000FF'
+      ctx.strokeRect(x, y, info.width * TILE_SIZE, info.height * TILE_SIZE)
+      ctx.fillStyle = '#FFFFFF'
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText(info.displayName, x + (info.width * TILE_SIZE) / 2, y + (info.height * TILE_SIZE) / 2)
+    })
+  }
+
   renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units) {
     // Draw building placement overlay if in placement mode
     if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
@@ -261,6 +278,7 @@ export class UIRenderer {
 
     this.renderSelectionRectangle(ctx, selectionActive, selectionStart, selectionEnd, scrollOffset)
     this.renderRallyPoints(ctx, factories, scrollOffset)
+    this.renderBlueprints(ctx, gameState.blueprints || [], scrollOffset)
     this.renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units)
   }
 }

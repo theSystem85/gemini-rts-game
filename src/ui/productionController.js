@@ -217,6 +217,20 @@ export class ProductionController {
       let lastClickTime = 0
       const DOUBLE_CLICK_THRESHOLD = 500 // 500ms for double-click
 
+      // Drag and drop support
+      button.setAttribute('draggable', 'true')
+      button.addEventListener('dragstart', () => {
+        if (gameState.gamePaused || button.classList.contains('disabled')) return
+        gameState.draggedBuildingType = buildingType
+        gameState.draggedBuildingButton = button
+      })
+      button.addEventListener('dragend', () => {
+        gameState.draggedBuildingType = null
+        gameState.draggedBuildingButton = null
+        gameState.buildingPlacementMode = false
+        gameState.currentBuildingType = null
+      })
+
       button.addEventListener('click', () => {
         const buildingType = button.getAttribute('data-building-type')
         const currentTime = performance.now()
