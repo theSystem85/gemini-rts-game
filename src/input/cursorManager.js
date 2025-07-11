@@ -34,9 +34,11 @@ export class CursorManager {
     }
 
     // Check if the tile type is impassable
-    const tileType = mapGrid[tileY][tileX].type
-    const hasBuilding = mapGrid[tileY][tileX].building
-    return tileType === 'water' || tileType === 'rock' || hasBuilding
+    const tile = mapGrid[tileY][tileX]
+    const tileType = tile.type
+    const hasBuilding = tile.building
+    const hasSeedCrystal = tile.seedCrystal
+    return tileType === 'water' || tileType === 'rock' || hasBuilding || hasSeedCrystal
   }
 
   // Function to update custom cursor position and visibility

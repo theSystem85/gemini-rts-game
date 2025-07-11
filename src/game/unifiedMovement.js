@@ -751,7 +751,7 @@ function isValidDodgePosition(x, y, mapGrid, units) {
   
   // Check terrain
   const tile = mapGrid[y][x];
-  if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
     return false;
   }
   

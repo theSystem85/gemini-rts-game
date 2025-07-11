@@ -44,6 +44,7 @@ export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
       retreatTileY < 0 || retreatTileY >= mapGrid.length ||
       mapGrid[retreatTileY][retreatTileX].type === 'water' ||
       mapGrid[retreatTileY][retreatTileX].type === 'rock' ||
+      mapGrid[retreatTileY][retreatTileX].seedCrystal ||
       mapGrid[retreatTileY][retreatTileX].building) {
     return // Invalid retreat position
   }
@@ -468,7 +469,7 @@ function checkRetreatPathBlocked(unit, mapGrid, units) {
     
     // Check terrain obstacles
     const tile = mapGrid[currentY][currentX]
-    if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
       return true // Terrain blocked
     }
     

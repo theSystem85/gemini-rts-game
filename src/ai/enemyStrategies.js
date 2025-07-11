@@ -469,7 +469,7 @@ function checkAttackPath(unit, target, angle, distance, gameState) {
     
     // Check for obstacles in the path
     const tile = getTileAtPosition(checkX, checkY, gameState.mapGrid || [])
-    if (tile && (tile.type === 'rock' || tile.type === 'water')) {
+    if (tile && (tile.type === 'rock' || tile.type === 'water' || tile.seedCrystal)) {
       return false
     }
   }

@@ -407,7 +407,7 @@ export class KeyboardHandler {
     
     // Check tile type and buildings
     const tile = mapGrid[y][x]
-    if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
+    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
       return false
     }
     

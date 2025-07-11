@@ -183,7 +183,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     // Check if this tile is blocked by another building
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock') {
+        mapGrid[checkY][checkX].type === 'rock' ||
+        mapGrid[checkY][checkX].seedCrystal) {
       northClear = false
       break
     }
@@ -205,7 +206,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     // Check if this tile is blocked by another building
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock') {
+        mapGrid[checkY][checkX].type === 'rock' ||
+        mapGrid[checkY][checkX].seedCrystal) {
       southClear = false
       break
     }
@@ -227,7 +229,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     // Check if this tile is blocked by another building
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock') {
+        mapGrid[checkY][checkX].type === 'rock' ||
+        mapGrid[checkY][checkX].seedCrystal) {
       westClear = false
       break
     }
@@ -249,7 +252,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     // Check if this tile is blocked by another building
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock') {
+        mapGrid[checkY][checkX].type === 'rock' ||
+        mapGrid[checkY][checkX].seedCrystal) {
       eastClear = false
       break
     }
@@ -404,7 +408,8 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
       // Check if passable
       if (mapGrid[nextY][nextX].building ||
           mapGrid[nextY][nextX].type === 'water' ||
-          mapGrid[nextY][nextX].type === 'rock') {
+          mapGrid[nextY][nextX].type === 'rock' ||
+          mapGrid[nextY][nextX].seedCrystal) {
         continue
       }
 
