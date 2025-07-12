@@ -247,11 +247,11 @@ export function loadGame(key) {
         }
       }
       
-      // Restore rally point for unit-producing buildings
-      if (building.rallyPoint) {
+      // Restore rally point for vehicle factories only
+      if (building.rallyPoint && building.type === 'vehicleFactory') {
         // Rally point is already in the building data from save
-      } else if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
-        // Initialize rally point as null for unit-producing buildings
+      } else if (building.type === 'vehicleFactory') {
+        // Initialize rally point as null for vehicle factories
         building.rallyPoint = null
       }
       

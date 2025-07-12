@@ -133,7 +133,7 @@ export class SelectionManager {
         selectedFactory.selected = true
         selectedUnits.push(selectedFactory)
       }
-      playSound('unitSelection')
+      // No sound for building selection
     } else {
       // Normal click: Clear existing selection and select factory
       units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
@@ -149,7 +149,7 @@ export class SelectionManager {
       // Select factory
       selectedFactory.selected = true
       selectedUnits.push(selectedFactory)
-      playSound('unitSelection')
+      // No sound for building selection
     }
   }
 
@@ -168,7 +168,7 @@ export class SelectionManager {
         selectedBuilding.selected = true
         selectedUnits.push(selectedBuilding)
       }
-      playSound('unitSelection')
+      // No sound for building selection
     } else {
       // Normal click: Clear existing selection and select building
       units.forEach(u => { if (this.isHumanPlayerUnit(u)) u.selected = false })
@@ -189,7 +189,7 @@ export class SelectionManager {
       // Select building
       selectedBuilding.selected = true
       selectedUnits.push(selectedBuilding)
-      playSound('unitSelection')
+      // No sound for building selection
     }
   }
 

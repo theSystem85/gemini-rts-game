@@ -1,5 +1,5 @@
 // factories.js
-import { buildingData } from './buildings.js'
+import { buildingData, createBuilding } from './buildings.js'
 import { MAP_TILES_X, MAP_TILES_Y, PLAYER_POSITIONS } from './config.js'
 import { gameState } from './gameState.js'
 
@@ -20,21 +20,16 @@ export function initFactories(factories, mapGrid) {
     const factoryX = Math.floor(MAP_TILES_X * position.x) - Math.floor(factoryWidth / 2)
     const factoryY = Math.floor(MAP_TILES_Y * position.y) - Math.floor(factoryHeight / 2)
 
-    // Create factory object
-    const factory = {
-      id: playerId,
-      owner: playerId,
-      x: factoryX,
-      y: factoryY,
-      width: factoryWidth,
-      height: factoryHeight,
-      health: 1000,
-      maxHealth: 1000,
-      productionCountdown: 0,
-      budget: 10000,
-      // Keep legacy compatibility
-      isHuman: playerId === gameState.humanPlayer
-    }
+    // Create factory as a regular construction yard building
+    const factory = createBuilding('constructionYard', factoryX, factoryY)
+    factory.id = playerId
+    factory.owner = playerId
+    factory.constructionFinished = true
+    factory.constructionStartTime = performance.now() - 5000
+    factory.productionCountdown = 0
+    factory.budget = 10000
+    // Keep legacy compatibility
+    factory.isHuman = playerId === gameState.humanPlayer
 
     factories.push(factory)
   })

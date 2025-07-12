@@ -80,6 +80,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
+    // Treat initial factories as standard buildings
+    gameState.buildings.push(...factories)
     
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
@@ -90,9 +92,9 @@ class Game {
       factory.selected = false
     })
 
-    // Also initialize rally points for vehicle factories and other unit-producing buildings
+    // Also initialize rally points for vehicle factories only
     gameState.buildings.forEach(building => {
-      if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
+      if (building.type === 'vehicleFactory') {
         building.rallyPoint = null
       }
     })
@@ -263,7 +265,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
-    
+    gameState.buildings.push(...factories)
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
@@ -354,7 +357,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
-    
+    gameState.buildings.push(...factories)
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     

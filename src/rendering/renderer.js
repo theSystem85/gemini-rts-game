@@ -2,7 +2,6 @@
 import { TextureManager } from './textureManager.js'
 import { MapRenderer } from './mapRenderer.js'
 import { BuildingRenderer } from './buildingRenderer.js'
-import { FactoryRenderer } from './factoryRenderer.js'
 import { UnitRenderer } from './unitRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
 import { MovementTargetRenderer } from './movementTargetRenderer.js'
@@ -18,7 +17,6 @@ export class Renderer {
     this.mapRenderer = new MapRenderer(this.textureManager)
     this.buildingRenderer = new BuildingRenderer()
     this.unitRenderer = new UnitRenderer()
-    this.factoryRenderer = new FactoryRenderer(this.textureManager)
     this.effectsRenderer = new EffectsRenderer()
     this.uiRenderer = new UIRenderer()
     this.minimapRenderer = new MinimapRenderer()
@@ -82,7 +80,8 @@ export class Renderer {
     
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
     this.buildingRenderer.renderBases(gameCtx, buildings, scrollOffset)
-    this.factoryRenderer.renderBases(gameCtx, factories, scrollOffset)
+    // Render initial construction yards using the same renderer
+    this.buildingRenderer.renderBases(gameCtx, factories, scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
     
@@ -96,7 +95,7 @@ export class Renderer {
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)
 
     this.buildingRenderer.renderOverlays(gameCtx, buildings, scrollOffset)
-    this.factoryRenderer.renderOverlays(gameCtx, factories, scrollOffset)
+    this.buildingRenderer.renderOverlays(gameCtx, factories, scrollOffset)
     this.unitRenderer.renderOverlays(gameCtx, units, scrollOffset)
 
     this.uiRenderer.render(gameCtx, gameCanvas, gameState, selectionActive, selectionStart, selectionEnd, scrollOffset, factories, buildings, mapGrid, units)

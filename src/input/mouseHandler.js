@@ -357,10 +357,11 @@ export class MouseHandler {
     }
     
     // Check selected buildings that can produce units (but not when in repair mode)
+    // Only vehicle factory should have rally points, not construction yard
     const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
       building.selected && 
       building.owner === gameState.humanPlayer && 
-      (building.type === 'vehicleFactory' || building.type === 'constructionYard')
+      building.type === 'vehicleFactory'
     )
     if (selectedBuilding && !this.rightWasDragging && !gameState.repairMode) {
       // Set rally point at clicked tile
