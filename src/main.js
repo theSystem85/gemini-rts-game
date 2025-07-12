@@ -524,6 +524,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // Debug helper to access selectedUnits
 window.debugGetSelectedUnits = () => selectedUnits
 
+// Debug helper to test narrated sound stacking
+import { testNarratedSounds, playSound } from './sound.js'
+window.testNarratedSounds = testNarratedSounds
+window.debugPlaySound = playSound
+
 // Export functions for backward compatibility - these are now handled by ProductionController
 export function updateVehicleButtonStates() {
   // This function is now handled by ProductionController

@@ -169,7 +169,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             }
             // Play unit lost sound if player unit dies
             if (unit.owner === gameState.humanPlayer) {
-              playSound('unitLost', 1.0)
+              playSound('unitLost', 1.0, 0, true)
             }
           }
 

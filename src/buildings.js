@@ -639,7 +639,7 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
       // Repair is complete
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
-      playSound('constructionComplete')
+      playSound('constructionComplete', 1.0, 0, true)
     } else {
       // Repair in progress - update health proportionally
       const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress)
@@ -714,7 +714,7 @@ function actuallyPauseRepair(building, gameState, currentTime) {
           factoryCost: isFactory ? 5000 : undefined
         })
         
-        playSound('construction_paused')
+        playSound('construction_paused', 1.0, 0, true)
         showNotification('Repair paused due to attack!')
       }
     }
@@ -736,7 +736,7 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
     if (building.lastAttackedTime && building.lastAttackedTime > awaitingRepair.lastAttackedTime) {
       // Building was attacked again - reset the countdown
       awaitingRepair.lastAttackedTime = building.lastAttackedTime
-      playSound('Repair_impossible_when_under_attack', 1.0, 30)
+      playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
       showNotification('Repair countdown reset - building under attack!')
     }
     
@@ -773,7 +773,7 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
           })
 
           showNotification(`Factory repair started for $${awaitingRepair.repairCost}`)
-          playSound('construction_started')
+          playSound('construction_started', 1.0, 0, true)
         } else {
           // Start building repair manually (don't use repairBuilding as it starts immediately)
           if (!gameState.buildingsUnderRepair) {
@@ -798,7 +798,7 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
           })
 
           showNotification(`Building repair started for $${awaitingRepair.repairCost}`)
-          playSound('construction_started')
+          playSound('construction_started', 1.0, 0, true)
         }
       }
       

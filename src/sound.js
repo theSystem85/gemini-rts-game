@@ -111,87 +111,140 @@ const soundFiles = {
 const activeAudioElements = new Map()
 const soundThrottleTimestamps = new Map() // Track last play time for throttled sounds
 
-function playAssetSound(eventName, volume = 1.0) {
+// Queue for narrated (stackable) sounds
+const narratedSoundQueue = []
+let isNarratedPlaying = false
+const MAX_NARRATED_STACK = 3
+
+function playAssetSound(eventName, volume = 1.0, onEnded) {
   const files = soundFiles[eventName]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
     const soundPath = 'sound/' + file
 
-    // Check if this sound is already playing
-    if (activeAudioElements.has(soundPath)) {
-      const existingAudio = activeAudioElements.get(soundPath)
-      existingAudio.currentTime = 0
-      existingAudio.volume = volume * masterVolume // Apply master volume
-      existingAudio.play().catch(e => {
-        console.error('Error replaying sound asset:', e)
-      })
-      return true
-    }
-
+    // Create new audio instance every time to allow multiple instances
     const audio = new Audio(soundPath)
     audio.volume = volume * masterVolume // Apply master volume
-    audio.addEventListener('ended', () => {
-      activeAudioElements.delete(soundPath)
-    })
+    
+    // Track this audio instance
+    const audioId = soundPath + '_' + Date.now() + '_' + Math.random()
+    
+    const cleanup = () => {
+      activeAudioElements.delete(audioId)
+      if (onEnded) onEnded()
+    }
+    
+    audio.addEventListener('ended', cleanup, { once: true })
+    audio.addEventListener('error', (e) => {
+      console.error('Error loading sound asset:', soundPath, e)
+      cleanup()
+    }, { once: true })
 
     audio.play().catch(e => {
-      console.error('Error playing sound asset:', e)
-      activeAudioElements.delete(soundPath)
+      console.error('Error playing sound asset:', soundPath, e)
+      cleanup()
     })
 
-    activeAudioElements.set(soundPath, audio)
+    activeAudioElements.set(audioId, audio)
     return true
   }
   // Return false if no files available (will trigger fallback beep)
   return false
 }
 
-export function playSound(eventName, volume = 1.0, throttleSeconds = 0) {
-  if (!audioContext) return
-  
+function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
+  if (!audioContext) { 
+    if (onEnded) setTimeout(onEnded, 0)
+    return 
+  }
+
   // Check throttling if throttleSeconds > 0
   if (throttleSeconds > 0) {
     const now = Date.now()
     const lastPlayTime = soundThrottleTimestamps.get(eventName)
     if (lastPlayTime && (now - lastPlayTime) < (throttleSeconds * 1000)) {
       // Sound is throttled, don't play
+      if (onEnded) setTimeout(onEnded, 0)
       return
     }
     // Update timestamp for this sound
     soundThrottleTimestamps.set(eventName, now)
   }
-  
+
   // Use eventName directly with soundFiles instead of mapping
   if (soundFiles[eventName]) {
-    const played = playAssetSound(eventName, volume)
+    const played = playAssetSound(eventName, volume, onEnded)
     if (played) return
   }
-  
+
   // Fallback beep sound.
   try {
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
     oscillator.connect(gainNode)
     gainNode.connect(audioContext.destination)
-    oscillator.frequency.value =
-      eventName === 'unitSelection' ? 600 :
-        eventName === 'movement' ? 400 :
-          eventName === 'shoot' ? 800 :
-            eventName === 'shoot_rocket' ? 100 :
-              eventName === 'productionStart' ? 500 :
-                eventName === 'constructionComplete' ? 700 :
-                  eventName === 'bulletHit' ? 900 :
-                    eventName === 'harvest' ? 350 :
-                      eventName === 'deposit' ? 450 :
-                        eventName === 'explosion' ? 200 : 500
+    oscillator.frequency.value = 500
     oscillator.type = 'sine'
     gainNode.gain.value = volume * masterVolume // Apply master volume
+    
+    // Use a more reliable callback mechanism for the fallback beep
+    const duration = 0.3 // Slightly longer beep for better audio feedback
     oscillator.start()
-    oscillator.stop(audioContext.currentTime + 0.1)
-    console.log(`Fallback sound played for event: ${eventName}`)
+    oscillator.stop(audioContext.currentTime + duration)
+    
+    // Ensure callback is only called once
+    if (onEnded) {
+      let callbackCalled = false
+      const callOnce = () => {
+        if (!callbackCalled) {
+          callbackCalled = true
+          onEnded()
+        }
+      }
+      oscillator.addEventListener('ended', callOnce, { once: true })
+      // Also set a timeout as backup
+      setTimeout(callOnce, duration * 1000 + 50) // Add 50ms buffer
+    }
   } catch (e) {
     console.error('AudioContext error:', e)
+    if (onEnded) setTimeout(onEnded, 0)
   }
+}
+
+function playNextNarrated() {
+  if (narratedSoundQueue.length === 0) {
+    isNarratedPlaying = false
+    return
+  }
+  isNarratedPlaying = true
+  const { eventName, volume, throttleSeconds } = narratedSoundQueue.shift()
+  playImmediate(eventName, volume, throttleSeconds, () => {
+    playNextNarrated()
+  })
+}
+
+export function playSound(eventName, volume = 1.0, throttleSeconds = 0, stackable = false) {
+  if (stackable) {
+    if (narratedSoundQueue.length + (isNarratedPlaying ? 1 : 0) >= MAX_NARRATED_STACK) {
+      return
+    }
+    narratedSoundQueue.push({ eventName, volume, throttleSeconds })
+    if (!isNarratedPlaying) {
+      playNextNarrated()
+    }
+    return
+  }
+
+  playImmediate(eventName, volume, throttleSeconds)
+}
+
+// Test function for narrated sound stacking (can be called from browser console)
+export function testNarratedSounds() {
+  console.log('Testing narrated sound stacking...')
+  playSound('construction_started', 1.0, 0, true)
+  playSound('constructionComplete', 1.0, 0, true)
+  playSound('unitReady01', 1.0, 0, true)
+  console.log('Queued 3 narrated sounds. They should play one after another.')
 }
 
 // --- Background Music Functionality ---
