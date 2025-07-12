@@ -80,6 +80,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
+    // Treat initial factories as standard buildings
+    gameState.buildings.push(...factories)
     
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
@@ -263,7 +265,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
-    
+    gameState.buildings.push(...factories)
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
@@ -354,7 +357,8 @@ class Game {
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
-    
+    gameState.buildings.push(...factories)
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     
