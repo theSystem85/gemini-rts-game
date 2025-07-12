@@ -17,16 +17,37 @@ let pathfindingWarningShown = false
 export const unitCosts = UNIT_COSTS
 
 // Build an occupancy map indicating which tiles are occupied by a unit.
-export function buildOccupancyMap(units, mapGrid) {
+export function buildOccupancyMap(units, mapGrid, textureManager = null) {
   const occupancy = []
+  let impassableGrassCount = 0
+  
   for (let y = 0; y < mapGrid.length; y++) {
     occupancy[y] = []
     for (let x = 0; x < mapGrid[0].length; x++) {
       const tile = mapGrid[y][x]
+      
+      // Check if this is an impassable grass tile
+      let isImpassableGrass = false
+      if (tile.type === 'land' && textureManager && textureManager.isLandTileImpassable) {
+        isImpassableGrass = textureManager.isLandTileImpassable(x, y)
+        if (isImpassableGrass) {
+          impassableGrassCount++
+        }
+      }
+      
       occupancy[y][x] =
-        tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building ? 1 : 0
+        tile.type === 'water' || 
+        tile.type === 'rock' || 
+        tile.seedCrystal || 
+        tile.building || 
+        isImpassableGrass ? 1 : 0
     }
   }
+  
+  if (impassableGrassCount > 0) {
+    console.log(`Occupancy map built: ${impassableGrassCount} impassable grass tiles found`)
+  }
+  
   units.forEach(unit => {
     const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
@@ -42,8 +63,17 @@ export function buildOccupancyMap(units, mapGrid) {
   return occupancy
 }
 
-export function initializeOccupancyMap(units, mapGrid) {
-  return buildOccupancyMap(units, mapGrid)
+export function initializeOccupancyMap(units, mapGrid, textureManager = null) {
+  return buildOccupancyMap(units, mapGrid, textureManager)
+}
+
+// Function to rebuild occupancy map after textures are loaded
+export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) {
+  if (textureManager && textureManager.allTexturesLoaded) {
+    console.log('Rebuilding occupancy map with loaded textures...')
+    return buildOccupancyMap(units, mapGrid, textureManager)
+  }
+  return null
 }
 
 export function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {

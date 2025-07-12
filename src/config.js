@@ -31,31 +31,26 @@ export const TILE_COLORS = {
   building: 'transparent' // Buildings should be transparent so background shows through
 }
 
-// Image paths for tile types, with variations to select from randomly and rotation setting
+// Image paths for tile types
 export const TILE_IMAGES = {
   land: {
-    paths: ['images/map/grass01'],
-    rotate: true // Land can be rotated for variety
+    // Use programmatic discovery for grass tiles
+    useGrassTileDiscovery: true
   },
   water: {
-    paths: ['images/map/water01'],
-    rotate: true // Water can be rotated for variety
+    paths: ['images/map/water01']
   },
   rock: {
-    paths: ['images/map/rock_on_grass01', 'images/map/rock01', 'images/map/rock02', 'images/map/rock03', 'images/map/rock04', 'images/map/rock05'],
-    rotate: false // Rocks should not be rotated to maintain their natural shape
+    paths: ['images/map/rock_on_grass01', 'images/map/rock01', 'images/map/rock02', 'images/map/rock03', 'images/map/rock04', 'images/map/rock05']
   },
   street: {
-    paths: ['images/map/street01'],
-    rotate: false // Streets shouldn't be rotated as they have directional features
+    paths: ['images/map/street01']
   },
   ore: {
-    paths: ['images/map/ore01', 'images/map/ore02', 'images/map/ore03', 'images/map/ore04'],
-    rotate: false // Ore should not be rotated
+    paths: ['images/map/ore01', 'images/map/ore02', 'images/map/ore03', 'images/map/ore04']
   },
   seedCrystal: {
-    paths: ['images/map/ore1_red'],
-    rotate: false // Seed crystals should not be rotated
+    paths: ['images/map/ore1_red']
   }
 }
 
@@ -65,8 +60,10 @@ export const USE_TEXTURES = true
 // Enable/disable tank image-based rendering (T key to toggle during gameplay)
 export const USE_TANK_IMAGES = true
 
-// Number of texture variations to generate for each tile type
-export const TEXTURE_VARIATIONS = 4
+// Grass tile ratio configuration (higher numbers = rarer)
+// 1 out of X tiles will be decorative/impassable
+export const GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
+export const GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
 export const INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
 

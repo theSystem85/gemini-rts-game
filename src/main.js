@@ -2,7 +2,7 @@
 // Refactored main game orchestrator
 
 import { setupInputHandlers, selectedUnits } from './inputHandler.js'
-import { unitCosts, initializeOccupancyMap } from './units.js'
+import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } from './units.js'
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
@@ -13,6 +13,7 @@ import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFr
 import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
+import { getTextureManager, preloadTileTextures } from './rendering.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -61,6 +62,17 @@ class Game {
     return new Promise((resolve) => {
       initializeGameAssets(() => {
         allAssetsLoaded = true
+        
+        // Load textures and rebuild occupancy map once they're loaded
+        preloadTileTextures(() => {
+          console.log('Textures loaded, rebuilding occupancy map...')
+          const newOccupancyMap = rebuildOccupancyMapWithTextures(units, mapGrid, getTextureManager())
+          if (newOccupancyMap) {
+            gameState.occupancyMap = newOccupancyMap
+            console.log('Occupancy map updated with impassable grass tiles')
+          }
+        })
+        
         resolve()
       })
     })
@@ -124,7 +136,7 @@ class Game {
       }
     })
 
-    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
   }
 
   centerOnPlayerFactory() {
@@ -273,7 +285,7 @@ class Game {
     units.length = 0
     bullets.length = 0
 
-    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
 
     this.centerOnPlayerFactory()
 
@@ -296,7 +308,7 @@ class Game {
       console.warn('Could not resume production after map shuffle:', err)
     })
 
-    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
   }
 
   async resetGame() {
@@ -366,7 +378,7 @@ class Game {
     bullets.length = 0
 
     // Reinitialize occupancy map for the fresh map
-    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid)
+    gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
 
     // Reset production queue and clear all pending items
     if (typeof productionQueue !== 'undefined') {

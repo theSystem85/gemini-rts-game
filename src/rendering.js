@@ -17,11 +17,7 @@ export function preloadTileTextures(callback) {
   gameRenderer.preloadTextures(callback)
 }
 
-// Export compatibility functions for existing code
-export function getOrLoadImage(baseName, extensions, callback) {
-  return gameRenderer.getOrLoadImage(baseName, extensions, callback)
-}
-
-export function getAllTexturesLoaded() {
-  return gameRenderer.allTexturesLoaded
+// Export the textureManager for accessing texture-related functions
+export function getTextureManager() {
+  return gameRenderer.textureManager
 }

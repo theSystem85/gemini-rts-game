@@ -16,7 +16,8 @@ export const buildingImageMap = {
   rocketTurret: 'images/map/buildings/rocket_gun.webp',
   teslaCoil: 'images/map/buildings/teslacoil.webp',
   constructionYard: 'images/map/buildings/construction_yard.webp',
-  concreteWall: 'images/map/buildings/turret01.webp' // Using turret01 as a fallback
+  concreteWall: 'images/map/buildings/turret01.webp', // Using turret01 as a fallback
+  artilleryTurret: 'images/map/buildings/artillery_turret.webp'
 }
 
 // Track loading state
