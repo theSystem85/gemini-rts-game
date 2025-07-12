@@ -3,7 +3,7 @@ import { findClosestOre } from './logic.js'
 import { buildingCosts, factories, units, mapGrid } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
-import { buildingData, createBuilding, placeBuilding, canPlaceBuilding, updatePowerSupply } from './buildings.js'
+import { buildingData, createBuilding, placeBuilding, canPlaceBuilding, updatePowerSupply, isNearExistingBuilding } from './buildings.js'
 import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
@@ -201,6 +201,21 @@ export const productionQueue = {
     }
 
     const item = this.buildingItems[0]
+
+    if (
+      item.blueprint &&
+      !isNearExistingBuilding(
+        item.blueprint.x,
+        item.blueprint.y,
+        gameState.buildings,
+        factories,
+        2,
+        gameState.humanPlayer
+      )
+    ) {
+      return
+    }
+
     const cost = buildingCosts[item.type] || 0
 
     // Reset paid tracker for this production

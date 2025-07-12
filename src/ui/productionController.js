@@ -337,12 +337,14 @@ export class ProductionController {
           if (stackedCount > 0) {
             // If there are stacked buildings, cancel the last one from the queue
             for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-              if (productionQueue.buildingItems[i].button === button) {
+              const queued = productionQueue.buildingItems[i]
+              if (queued.button === button) {
                 // Return money for the cancelled production
-                gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0
+                gameState.money += buildingCosts[queued.type] || 0
                 productionQueue.tryResumeProduction()
                 // Remove from queue
                 productionQueue.buildingItems.splice(i, 1)
+                productionQueue.removeBlueprint(queued)
 
                 // Update batch counter
                 const remainingCount = productionQueue.buildingItems.filter(
@@ -375,12 +377,14 @@ export class ProductionController {
         } else {
           // Find the last queued item of this type
           for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-            if (productionQueue.buildingItems[i].button === button) {
+            const queued = productionQueue.buildingItems[i]
+            if (queued.button === button) {
               // Return money for the cancelled production
-              gameState.money += buildingCosts[productionQueue.buildingItems[i].type] || 0
+              gameState.money += buildingCosts[queued.type] || 0
               productionQueue.tryResumeProduction()
               // Remove from queue
               productionQueue.buildingItems.splice(i, 1)
+              productionQueue.removeBlueprint(queued)
 
               // Update batch counter
               const remainingCount = productionQueue.buildingItems.filter(

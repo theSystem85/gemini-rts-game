@@ -14,7 +14,8 @@ import {
   createBuilding,
   placeBuilding,
   updatePowerSupply,
-  buildingData
+  buildingData,
+  isTileValid
 } from '../buildings.js'
 import { playSound } from '../sound.js'
 import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
