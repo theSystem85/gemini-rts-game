@@ -130,7 +130,7 @@ export class UIRenderer {
             const currentTileX = tileX + x
             const currentTileY = tileY + y
 
-            if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories, 3, gameState.humanPlayer)) {
+            if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories, 2, gameState.humanPlayer)) {
               isAnyTileInRange = true
               break
             }
@@ -173,6 +173,50 @@ export class UIRenderer {
           tileY * TILE_SIZE - 10 - scrollOffset.y
         )
       }
+    }
+  }
+
+  computeChainPositions(startX, startY, endX, endY, info) {
+    const dx = endX - startX
+    const dy = endY - startY
+    const horizontal = Math.abs(dx) >= Math.abs(dy)
+    const stepX = horizontal ? (dx >= 0 ? info.width : -info.width) : 0
+    const stepY = horizontal ? 0 : (dy >= 0 ? info.height : -info.height)
+    const count = horizontal
+      ? Math.floor(Math.abs(dx) / info.width)
+      : Math.floor(Math.abs(dy) / info.height)
+    const positions = []
+    for (let i = 1; i <= count; i++) {
+      positions.push({ x: startX + stepX * i, y: startY + stepY * i })
+    }
+    return positions
+  }
+
+  renderChainPlacement(ctx, gameState, scrollOffset, mapGrid, units) {
+    if (gameState.chainBuildMode && gameState.chainBuildingType) {
+      const info = buildingData[gameState.chainBuildingType]
+      const startX = gameState.chainStartX
+      const startY = gameState.chainStartY
+      const endX = Math.floor(gameState.cursorX / TILE_SIZE)
+      const endY = Math.floor(gameState.cursorY / TILE_SIZE)
+      const positions = this.computeChainPositions(startX, startY, endX, endY, info)
+
+      positions.forEach(pos => {
+        for (let y = 0; y < info.height; y++) {
+          for (let x = 0; x < info.width; x++) {
+            const tx = pos.x + x
+            const ty = pos.y + y
+            const screenX = tx * TILE_SIZE - scrollOffset.x
+            const screenY = ty * TILE_SIZE - scrollOffset.y
+            const isValid = isTileValid(tx, ty, mapGrid, units, [], [])
+            ctx.fillStyle = isValid ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)'
+            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 1
+            ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+          }
+        }
+      })
     }
   }
 
@@ -281,5 +325,6 @@ export class UIRenderer {
     this.renderRallyPoints(ctx, factories, scrollOffset)
     this.renderBlueprints(ctx, gameState.blueprints || [], scrollOffset)
     this.renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units)
+    this.renderChainPlacement(ctx, gameState, scrollOffset, mapGrid, units)
   }
 }
