@@ -3,6 +3,7 @@ import { gameState } from '../gameState.js'
 import { units } from '../main.js'
 import { showNotification } from '../ui/notifications.js'
 import { playSound } from '../sound.js'
+import { productionQueue } from '../productionQueue.js'
 
 export class CheatSystem {
   constructor() {
@@ -379,6 +380,9 @@ export class CheatSystem {
 
     showNotification(`💰 Added $${amount.toLocaleString()} (Total: $${gameState.money.toLocaleString()})`, 3000)
     playSound('deposit', 0.8)
+    if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+      productionQueue.tryResumeProduction()
+    }
   }
 
   setMoney(amount) {
@@ -387,6 +391,9 @@ export class CheatSystem {
 
     showNotification(`💰 Money set to $${amount.toLocaleString()}`, 3000)
     playSound('deposit', 0.8)
+    if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+      productionQueue.tryResumeProduction()
+    }
   }
 
   showStatus() {
