@@ -92,9 +92,9 @@ class Game {
       factory.selected = false
     })
 
-    // Also initialize rally points for vehicle factories and other unit-producing buildings
+    // Also initialize rally points for vehicle factories only
     gameState.buildings.forEach(building => {
-      if (building.type === 'vehicleFactory' || building.type === 'constructionYard') {
+      if (building.type === 'vehicleFactory') {
         building.rallyPoint = null
       }
     })

@@ -197,8 +197,8 @@ export function createBuilding(type, x, y) {
     constructionFinished: false
   }
 
-  // Initialize rally point for unit-producing buildings
-  if (type === 'vehicleFactory' || type === 'constructionYard') {
+  // Initialize rally point for vehicle factories only
+  if (type === 'vehicleFactory') {
     building.rallyPoint = null
   }
 

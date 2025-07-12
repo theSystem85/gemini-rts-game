@@ -53,12 +53,13 @@ export class UIRenderer {
     })
     
     // Check selected buildings that can produce units
+    // Only vehicle factory should show rally points, not construction yard
     if (gameState.buildings) {
       gameState.buildings.forEach(building => {
         if (building.rallyPoint && 
             building.owner === gameState.humanPlayer && 
             building.selected && 
-            (building.type === 'vehicleFactory' || building.type === 'constructionYard')) {
+            building.type === 'vehicleFactory') {
           this.drawRallyPointFlag(ctx, building.rallyPoint, scrollOffset)
         }
       })
