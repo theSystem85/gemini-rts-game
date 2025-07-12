@@ -202,18 +202,30 @@ export const productionQueue = {
 
     const item = this.buildingItems[0]
 
-    if (
-      item.blueprint &&
-      !isNearExistingBuilding(
-        item.blueprint.x,
-        item.blueprint.y,
-        gameState.buildings,
-        factories,
-        2,
-        gameState.humanPlayer
-      )
-    ) {
-      return
+    if (item.blueprint) {
+      const info = buildingData[item.type]
+      let nearBase = false
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          if (
+            isNearExistingBuilding(
+              item.blueprint.x + x,
+              item.blueprint.y + y,
+              gameState.buildings,
+              factories,
+              2,
+              gameState.humanPlayer
+            )
+          ) {
+            nearBase = true
+            break
+          }
+        }
+        if (nearBase) break
+      }
+      if (!nearBase) {
+        return
+      }
     }
 
     const cost = buildingCosts[item.type] || 0
