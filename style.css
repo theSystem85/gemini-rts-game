@@ -6,6 +6,16 @@ html, body {
   overflow: hidden;
 }
 
+/* Disable default drag ghost images for production buttons */
+.production-button img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
 .mb-5 {
   margin-bottom: 5px;
 }

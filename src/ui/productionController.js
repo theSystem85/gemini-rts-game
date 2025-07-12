@@ -219,10 +219,47 @@ export class ProductionController {
 
       // Drag and drop support
       button.setAttribute('draggable', 'true')
-      button.addEventListener('dragstart', () => {
-        if (gameState.gamePaused || button.classList.contains('disabled')) return
+      
+      // Disable dragging on the image inside the button to prevent it from interfering
+      const img = button.querySelector('img')
+      if (img) {
+        img.setAttribute('draggable', 'false')
+        // Also prevent default drag behavior on the image
+        img.addEventListener('dragstart', (e) => {
+          e.preventDefault()
+          return false
+        })
+      }
+      
+      button.addEventListener('dragstart', (e) => {
+        if (gameState.gamePaused || button.classList.contains('disabled')) {
+          e.preventDefault()
+          return false
+        }
         gameState.draggedBuildingType = buildingType
         gameState.draggedBuildingButton = button
+        
+        // Method 1: Try using a transparent 1x1 pixel div
+        const dragImage = document.createElement('div')
+        dragImage.style.width = '1px'
+        dragImage.style.height = '1px'
+        dragImage.style.backgroundColor = 'transparent'
+        dragImage.style.position = 'absolute'
+        dragImage.style.top = '-1000px'
+        document.body.appendChild(dragImage)
+        
+        try {
+          e.dataTransfer.setDragImage(dragImage, 0, 0)
+        } catch (err) {
+          console.warn('Could not set custom drag image:', err)
+        }
+        
+        // Clean up the temporary element after a brief delay
+        setTimeout(() => {
+          if (dragImage.parentNode) {
+            document.body.removeChild(dragImage)
+          }
+        }, 10)
       })
       button.addEventListener('dragend', () => {
         gameState.draggedBuildingType = null
