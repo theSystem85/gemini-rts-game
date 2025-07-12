@@ -36,7 +36,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           gameState.money += refund
           gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existing)
           showNotification('Building repair cancelled')
-          playSound('constructionCancelled')
+          playSound('constructionCancelled', 1.0, 0, true)
           moneyEl.textContent = gameState.money
           return
         }
@@ -51,7 +51,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         if (timeSinceLastAttack < 10) {
           // Building is under attack - enable repair mode but don't start repair yet
           // Play the sound immediately
-          playSound('Repair_impossible_when_under_attack', 1.0, 30)
+          playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
           
           // Set up delayed repair with countdown
           if (!gameState.buildingsAwaitingRepair) {
@@ -190,7 +190,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         savePlayerBuildPatterns(buildingType)
       } else {
         // Play error sound for invalid placement
-        playSound('construction_obstructed')
+        playSound('construction_obstructed', 1.0, 0, true)
       }
     } catch (error) {
       console.error('Error during building placement:', error)

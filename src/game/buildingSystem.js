@@ -31,7 +31,7 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
         } else if (building.owner !== gameState.humanPlayer) {
           gameState.enemyBuildingsDestroyed++
           // Play enemy building destroyed sound when an enemy building is killed
-          playSound('enemyBuildingDestroyed', 1.0)
+          playSound('enemyBuildingDestroyed', 1.0, 0, true)
         }
 
         // Remove building from selected units if it was selected

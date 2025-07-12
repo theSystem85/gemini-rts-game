@@ -148,7 +148,7 @@ export function cleanupDestroyedUnits(units, gameState) {
       } else {
         gameState.enemyUnitsDestroyed++
         // Play enemy unit destroyed sound when an enemy unit is killed
-        playSound('enemyUnitDestroyed', 1.0)
+        playSound('enemyUnitDestroyed', 1.0, 0, true)
       }
       
       // Remove unit from cheat system tracking if it exists
@@ -187,7 +187,7 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
       } else {
         gameState.enemyBuildingsDestroyed++
         // Play enemy building destroyed sound when an enemy factory is destroyed
-        playSound('enemyBuildingDestroyed', 1.0)
+        playSound('enemyBuildingDestroyed', 1.0, 0, true)
       }
       
       // Play explosion sound with reduced volume (0.5)
@@ -252,7 +252,7 @@ export function checkGameEndConditions(factories, gameState) {
     gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
     gameState.losses++
     // Play battle lost sound and human player defeat sound
-    playSound('battleLost', 1.0)
+    playSound('battleLost', 1.0, 0, true)
     return true
   }
 
@@ -284,7 +284,7 @@ export function checkGameEndConditions(factories, gameState) {
   // Play defeat sounds for newly defeated AI players
   defeatedAiPlayers.forEach((playerId, index) => {
     setTimeout(() => {
-      playSound(getPlayerDefeatSound(playerId), 1.0)
+      playSound(getPlayerDefeatSound(playerId), 1.0, 0, true)
     }, index * 500) // Stagger the defeat sounds by 500ms each
   })
 
@@ -295,7 +295,7 @@ export function checkGameEndConditions(factories, gameState) {
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
     gameState.wins++
     // Play battle won sound
-    playSound('battleWon', 0.8)
+    playSound('battleWon', 0.8, 0, true)
     return true
   }
 

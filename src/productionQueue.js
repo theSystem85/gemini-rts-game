@@ -164,7 +164,7 @@ export const productionQueue = {
 
     // Mark button as active
     item.button.classList.add('active')
-    playSound('productionStart')
+    playSound('productionStart', 1.0, 0, true)
 
     // Show notification about production speed if multiple factories exist
     if (vehicleUnitTypes.includes(item.type) && vehicleMultiplier > 1) {
@@ -264,7 +264,7 @@ export const productionQueue = {
 
     // Mark button as active
     item.button.classList.add('active')
-    playSound('productionStart')
+    playSound('productionStart', 1.0, 0, true)
 
     // Show notification about construction speed if we have construction yards
     if (constructionMultiplier > 1) {
@@ -403,7 +403,7 @@ export const productionQueue = {
         // Play random unit ready sound
         const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
         const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
-        playSound(randomSound, 1.0)
+        playSound(randomSound, 1.0, 0, true)
 
         // If the produced unit is a harvester, automatically send it to harvest
         if (newUnit.type === 'harvester') {
@@ -493,7 +493,7 @@ export const productionQueue = {
       progressBar.style.width = '0%'
     }
 
-    playSound('constructionComplete')
+    playSound('constructionComplete', 1.0, 0, true)
 
     this.currentBuilding = null
 
@@ -509,10 +509,10 @@ export const productionQueue = {
     this.pausedUnit = !this.pausedUnit
     if (this.pausedUnit) {
       this.currentUnit.button.classList.add('paused')
-      playSound('productionPaused')
+      playSound('productionPaused', 1.0, 0, true)
     } else {
       this.currentUnit.button.classList.remove('paused')
-      playSound('productionStart')
+      playSound('productionStart', 1.0, 0, true)
     }
   },
 
@@ -522,10 +522,10 @@ export const productionQueue = {
     this.pausedBuilding = !this.pausedBuilding
     if (this.pausedBuilding) {
       this.currentBuilding.button.classList.add('paused')
-      playSound('productionPaused')
+      playSound('productionPaused', 1.0, 0, true)
     } else {
       this.currentBuilding.button.classList.remove('paused')
-      playSound('productionStart')
+      playSound('productionStart', 1.0, 0, true)
     }
   },
 
@@ -536,7 +536,7 @@ export const productionQueue = {
     const type = this.currentUnit.type
 
     // Play cancel sound before cancelling
-    playSound('productionCancelled')
+    playSound('productionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
     gameState.money += this.unitPaid || 0
@@ -573,7 +573,7 @@ export const productionQueue = {
     const type = this.currentBuilding.type
 
     // Play cancel sound before cancelling
-    playSound('productionCancelled')
+    playSound('productionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
     gameState.money += this.buildingPaid || 0
@@ -618,7 +618,7 @@ export const productionQueue = {
     const type = completedBuilding.type
 
     // Play cancel sound
-    playSound('productionCancelled')
+    playSound('productionCancelled', 1.0, 0, true)
 
     // Return money for the building
     gameState.money += buildingCosts[type] || 0
@@ -734,7 +734,7 @@ export const productionQueue = {
     const completedBuilding = this.completedBuildings[completedBuildingIndex]
 
     // Play cancel sound
-    playSound('productionCancelled')
+    playSound('productionCancelled', 1.0, 0, true)
 
     // Return money for the building
     gameState.money += buildingCosts[buildingType] || 0

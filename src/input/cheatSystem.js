@@ -345,7 +345,7 @@ export class CheatSystem {
     })
 
     showNotification('🛡️ God mode ENABLED - All player units are now invincible!', 4000)
-    playSound('constructionComplete', 0.7)
+    playSound('constructionComplete', 0.7, 0, true)
   }
 
   disableGodMode() {

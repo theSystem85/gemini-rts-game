@@ -412,7 +412,7 @@ export class ProductionController {
         if (label) label.style.display = 'block'
       }
       if (!skipSound) {
-        playSound('new_units_types_available', 1.0, 5) // Throttle for 5 seconds
+        playSound('new_units_types_available', 1.0, 5, true) // Throttle for 5 seconds
       }
       // Update button states to ensure unlocked units are not disabled
       this.updateVehicleButtonStates()
@@ -432,7 +432,7 @@ export class ProductionController {
         if (label) label.style.display = 'block'
       }
       if (!skipSound) {
-        playSound('new_building_types_available', 1.0, 5) // Throttle for 5 seconds
+        playSound('new_building_types_available', 1.0, 5, true) // Throttle for 5 seconds
       }
       // Update button states to ensure unlocked buildings are not disabled
       this.updateBuildingButtonStates()
@@ -489,13 +489,13 @@ export class ProductionController {
     // Play appropriate sound based on what was unlocked
     if (unlockedUnits > 0 && unlockedBuildings > 0) {
       // Both units and buildings unlocked
-      playSound('new_production_options', 1.0, 5)
+      playSound('new_production_options', 1.0, 5, true)
     } else if (unlockedUnits > 0) {
       // Only units unlocked
-      playSound('new_units_types_available', 1.0, 5)
+      playSound('new_units_types_available', 1.0, 5, true)
     } else if (unlockedBuildings > 0) {
       // Only buildings unlocked
-      playSound('new_building_types_available', 1.0, 5)
+      playSound('new_building_types_available', 1.0, 5, true)
     }
 
     // Update tab states after batch unlock
