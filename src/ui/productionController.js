@@ -238,6 +238,7 @@ export class ProductionController {
         }
         gameState.draggedBuildingType = buildingType
         gameState.draggedBuildingButton = button
+        gameState.chainBuildPrimed = gameState.shiftKeyDown
         
         // Method 1: Try using a transparent 1x1 pixel div
         const dragImage = document.createElement('div')
@@ -264,6 +265,7 @@ export class ProductionController {
       button.addEventListener('dragend', () => {
         gameState.draggedBuildingType = null
         gameState.draggedBuildingButton = null
+        gameState.chainBuildPrimed = false
         gameState.buildingPlacementMode = false
         gameState.currentBuildingType = null
       })

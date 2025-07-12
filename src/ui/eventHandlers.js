@@ -137,12 +137,20 @@ export class EventHandlers {
 
     // Add building placement handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
-      this.handleBuildingPlacement(e)
+      if (gameState.chainBuildMode) {
+        this.handleChainBuildingPlacement(e)
+      } else {
+        this.handleBuildingPlacement(e)
+      }
     })
 
     // Add mousemove event to show building placement overlay
     gameCanvas.addEventListener('mousemove', (e) => {
-      this.handleBuildingPlacementOverlay(e)
+      if (gameState.chainBuildMode) {
+        this.handleChainBuildingOverlay(e)
+      } else {
+        this.handleBuildingPlacementOverlay(e)
+      }
     })
 
     // Drag and drop placement
@@ -175,6 +183,15 @@ export class EventHandlers {
           gameState.blueprints.push(blueprint)
           productionQueue.addItem(type, button, true, blueprint)
           showNotification(`Blueprint placed for ${buildingData[type].displayName}`)
+
+          if (gameState.chainBuildPrimed && gameState.shiftKeyDown) {
+            gameState.chainBuildMode = true
+            gameState.chainStartX = tileX
+            gameState.chainStartY = tileY
+            gameState.chainBuildingType = type
+            gameState.chainBuildingButton = button
+            gameState.chainBuildPrimed = false
+          }
         } else {
           showNotification('Invalid blueprint location')
         }
@@ -309,6 +326,104 @@ export class EventHandlers {
 
       // Force a redraw to show the overlay - this will be handled by the game loop
       // No need to manually trigger rendering here as the game loop handles it
+    }
+  }
+
+  computeChainPositions(startX, startY, endX, endY, info) {
+    const dx = endX - startX
+    const dy = endY - startY
+    const horizontal = Math.abs(dx) >= Math.abs(dy)
+    const stepX = horizontal ? (dx >= 0 ? info.width : -info.width) : 0
+    const stepY = horizontal ? 0 : (dy >= 0 ? info.height : -info.height)
+    const count = horizontal
+      ? Math.floor(Math.abs(dx) / info.width)
+      : Math.floor(Math.abs(dy) / info.height)
+    const positions = []
+    for (let i = 1; i <= count; i++) {
+      positions.push({ x: startX + stepX * i, y: startY + stepY * i })
+    }
+    return positions
+  }
+
+  handleChainBuildingPlacement(e) {
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
+    if (!gameState.chainBuildMode || !gameState.chainBuildingType) return
+
+    const mouseX =
+      e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+    const mouseY =
+      e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+
+    const tileX = Math.floor(mouseX / TILE_SIZE)
+    const tileY = Math.floor(mouseY / TILE_SIZE)
+
+    const info = buildingData[gameState.chainBuildingType]
+    const positions = this.computeChainPositions(
+      gameState.chainStartX,
+      gameState.chainStartY,
+      tileX,
+      tileY,
+      info
+    )
+
+    const occ = new Set()
+    gameState.blueprints.forEach(bp => {
+      const bi = buildingData[bp.type]
+      for (let y = 0; y < bi.height; y++) {
+        for (let x = 0; x < bi.width; x++) {
+          occ.add(`${bp.x + x},${bp.y + y}`)
+        }
+      }
+    })
+
+    const validPositions = []
+    for (const pos of positions) {
+      let valid = true
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          const tx = pos.x + x
+          const ty = pos.y + y
+          if (!isTileValid(tx, ty, this.mapGrid, this.units, [], []) || occ.has(`${tx},${ty}`)) {
+            valid = false
+            break
+          }
+        }
+        if (!valid) break
+      }
+      if (!valid) break
+      validPositions.push(pos)
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          occ.add(`${pos.x + x},${pos.y + y}`)
+        }
+      }
+    }
+
+    validPositions.forEach(p => {
+      const bp = { type: gameState.chainBuildingType, x: p.x, y: p.y }
+      gameState.blueprints.push(bp)
+      productionQueue.addItem(gameState.chainBuildingType, gameState.chainBuildingButton, true, bp)
+    })
+
+    if (validPositions.length > 0) {
+      const last = validPositions[validPositions.length - 1]
+      gameState.chainStartX = last.x
+      gameState.chainStartY = last.y
+    }
+  }
+
+  handleChainBuildingOverlay(e) {
+    const gameCanvas = this.canvasManager.getGameCanvas()
+
+    if (gameState.chainBuildMode && gameState.chainBuildingType) {
+      const mouseX =
+        e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+      const mouseY =
+        e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+
+      gameState.cursorX = mouseX
+      gameState.cursorY = mouseY
     }
   }
 

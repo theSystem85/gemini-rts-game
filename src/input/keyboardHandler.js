@@ -30,8 +30,13 @@ export class KeyboardHandler {
     this.mapGrid = mapGrid
     this.factories = factories
     
-    // Enhanced keydown event listener
+    // Track Shift key state globally
     document.addEventListener('keydown', e => {
+      if (e.key === 'Shift') {
+        gameState.shiftKeyDown = true
+      }
+
+      // Enhanced keydown event listener
       // Check if an input field is currently focused
       if (isInputFieldFocused()) {
         // Allow input field events to process normally, don't handle game shortcuts
@@ -125,6 +130,17 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'p') {
         e.preventDefault()
         this.handleFpsDisplayToggle()
+      }
+    })
+
+    document.addEventListener('keyup', e => {
+      if (e.key === 'Shift') {
+        gameState.shiftKeyDown = false
+        // Exit chain build mode when shift released
+        if (gameState.chainBuildMode) {
+          gameState.chainBuildMode = false
+          gameState.chainBuildPrimed = false
+        }
       }
     })
   }

@@ -39,6 +39,14 @@ export const gameState = {
   draggedBuildingType: null,
   draggedBuildingButton: null,
   blueprints: [],
+  // Chain build mode state
+  chainBuildPrimed: false,
+  chainBuildMode: false,
+  chainStartX: 0,
+  chainStartY: 0,
+  chainBuildingType: null,
+  chainBuildingButton: null,
+  shiftKeyDown: false,
 
   // Repair mode
   repairMode: false,
