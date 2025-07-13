@@ -3,7 +3,7 @@
 
 import { gameState } from '../gameState.js'
 import { productionQueue } from '../productionQueue.js'
-import { initBackgroundMusic, toggleBackgroundMusic, bgMusicAudio, setMasterVolume, getMasterVolume } from '../sound.js'
+import { toggleBackgroundMusic, bgMusicAudio, setMasterVolume, getMasterVolume } from '../sound.js'
 import { buildingRepairHandler } from '../buildingRepairHandler.js'
 import { buildingSellHandler } from '../buildingSellHandler.js'
 import { showNotification } from './notifications.js'
@@ -98,11 +98,9 @@ export class EventHandlers {
     })
 
     // Background music initialization and control
-    document.addEventListener('click', initBackgroundMusic, { once: true })
-
     if (musicControlButton) {
-      musicControlButton.addEventListener('click', () => {
-        toggleBackgroundMusic()
+      musicControlButton.addEventListener('click', async () => {
+        await toggleBackgroundMusic()
 
         // Toggle music icon
         const musicIcon = musicControlButton.querySelector('.music-icon')
