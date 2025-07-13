@@ -71,7 +71,6 @@ export class SelectionManager {
       })
       
       playSound('unitSelection')
-      playSound('yesSir01')
       showNotification(`Added ${visibleUnitsOfType.length} ${clickedUnit.type}(s) to selection`)
     } else if (isDoubleClick) {
       // Double click: Select all visible units of this type
@@ -96,7 +95,6 @@ export class SelectionManager {
       })
       
       playSound('unitSelection')
-      playSound('yesSir01')
       showNotification(`Selected ${visibleUnitsOfType.length} ${clickedUnit.type}(s)`)
     } else {
       // Normal single click: Select only this unit
@@ -110,7 +108,6 @@ export class SelectionManager {
       clickedUnit.selected = true
       selectedUnits.push(clickedUnit)
       playSound('unitSelection')
-      playSound('yesSir01') // play sound on unit selection
     }
 
     // Update double-click tracking
@@ -214,6 +211,7 @@ export class SelectionManager {
       }
 
       // Find units within selection rectangle
+      let anySelected = false
       for (const unit of units) {
         if (this.isHumanPlayerUnit(unit) && unit.health > 0) {  // Ensure unit is alive
           const centerX = unit.x + TILE_SIZE / 2
@@ -222,11 +220,15 @@ export class SelectionManager {
           if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
             unit.selected = true
             selectedUnits.push(unit)
-            playSound('unitSelection')
+            anySelected = true
           } else {
             unit.selected = false
           }
         }
+      }
+
+      if (anySelected) {
+        playSound('unitSelection')
       }
 
       // Clear building selections but don't select buildings during drag selection

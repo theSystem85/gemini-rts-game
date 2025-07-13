@@ -530,7 +530,7 @@ export class KeyboardHandler {
           ))
 
           // Play a sound for feedback on focus action
-          playSound('confirmed', 0.7)
+          playSound('confirmed')
         }
 
         // Update the last key press time and key
@@ -539,7 +539,6 @@ export class KeyboardHandler {
 
         // Play selection sounds
         playSound('unitSelection')
-        playSound('yesSir01')
       }
     }
   }
