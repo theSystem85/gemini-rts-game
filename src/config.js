@@ -54,6 +54,10 @@ export const TILE_IMAGES = {
   }
 }
 
+// Sprite sheet and mapping for map tiles
+export const TILE_SPRITE_SHEET = 'images/map/map_sprites.webp'
+export const TILE_SPRITE_MAP = 'images/map/map_sprites.json'
+
 // Enable/disable texture usage (for performance testing/fallback)
 export const USE_TEXTURES = true
 
