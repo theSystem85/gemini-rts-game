@@ -8,7 +8,6 @@ import { buildingData } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 import { initFactories } from './factories.js'
-import { initBackgroundMusic } from './sound.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
@@ -214,8 +213,7 @@ class Game {
     // Set game state
     gameState.gameStarted = true
 
-    // Initialize background music
-    document.addEventListener('click', initBackgroundMusic, { once: true })
+    // Background music is loaded on demand via the music control button
   }
 
   setupSpeedControl() {

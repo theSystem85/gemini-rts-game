@@ -251,19 +251,33 @@ export function testNarratedSounds() {
 const backgroundMusicFiles = ['music01.mp3'] // add more files as needed
 export let bgMusicAudio = null
 
-export function initBackgroundMusic() {
+export async function initBackgroundMusic() {
+  if (bgMusicAudio) return
   if (!backgroundMusicFiles || backgroundMusicFiles.length === 0) return
+
   const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
   bgMusicAudio = new Audio('sound/music/' + file)
   bgMusicAudio.loop = true
   bgMusicAudio.volume = masterVolume // Apply master volume to background music
-  // Comment out or remove the auto-play so music does not start on startup.
-  // bgMusicAudio.play().catch(e => {
-  //   console.error("Error playing background music:", e)
-  // })
+
+  return new Promise(resolve => {
+    const cleanup = () => {
+      bgMusicAudio.removeEventListener('canplaythrough', cleanup)
+      bgMusicAudio.removeEventListener('error', cleanup)
+      resolve()
+    }
+
+    bgMusicAudio.addEventListener('canplaythrough', cleanup, { once: true })
+    bgMusicAudio.addEventListener('error', cleanup, { once: true })
+    bgMusicAudio.load()
+  })
 }
 
-export function toggleBackgroundMusic() {
+export async function toggleBackgroundMusic() {
+  if (!bgMusicAudio) {
+    await initBackgroundMusic()
+  }
+
   if (bgMusicAudio) {
     if (bgMusicAudio.paused) {
       bgMusicAudio.play().catch(e => {
