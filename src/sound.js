@@ -111,19 +111,40 @@ const soundFiles = {
 const activeAudioElements = new Map()
 const soundThrottleTimestamps = new Map() // Track last play time for throttled sounds
 
+// Cache to store object URLs for already loaded sound files so they are only
+// fetched from the server once
+const soundUrlCache = new Map()
+
+async function getCachedSoundUrl(soundPath) {
+  if (!soundUrlCache.has(soundPath)) {
+    const urlPromise = fetch(soundPath)
+      .then(r => r.blob())
+      .then(blob => URL.createObjectURL(blob))
+      .catch(e => {
+        console.error('Error fetching sound:', soundPath, e)
+        return soundPath // Fallback to direct path on failure
+      })
+    soundUrlCache.set(soundPath, urlPromise)
+  }
+  return soundUrlCache.get(soundPath)
+}
+
 // Queue for narrated (stackable) sounds
 const narratedSoundQueue = []
 let isNarratedPlaying = false
 const MAX_NARRATED_STACK = 3
 
-function playAssetSound(eventName, volume = 1.0, onEnded) {
+async function playAssetSound(eventName, volume = 1.0, onEnded) {
   const files = soundFiles[eventName]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
     const soundPath = 'sound/' + file
 
+    // Get cached object URL to avoid re-downloading the asset
+    const url = await getCachedSoundUrl(soundPath)
+
     // Create new audio instance every time to allow multiple instances
-    const audio = new Audio(soundPath)
+    const audio = new Audio(url)
     audio.volume = volume * masterVolume // Apply master volume
     
     // Track this audio instance
@@ -152,7 +173,7 @@ function playAssetSound(eventName, volume = 1.0, onEnded) {
   return false
 }
 
-function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
+async function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
   if (!audioContext) { 
     if (onEnded) setTimeout(onEnded, 0)
     return 
@@ -173,7 +194,7 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
 
   // Use eventName directly with soundFiles instead of mapping
   if (soundFiles[eventName]) {
-    const played = playAssetSound(eventName, volume, onEnded)
+    const played = await playAssetSound(eventName, volume, onEnded)
     if (played) return
   }
 
@@ -211,15 +232,15 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
   }
 }
 
-function playNextNarrated() {
+async function playNextNarrated() {
   if (narratedSoundQueue.length === 0) {
     isNarratedPlaying = false
     return
   }
   isNarratedPlaying = true
   const { eventName, volume, throttleSeconds } = narratedSoundQueue.shift()
-  playImmediate(eventName, volume, throttleSeconds, () => {
-    playNextNarrated()
+  await playImmediate(eventName, volume, throttleSeconds, () => {
+    playNextNarrated().catch(e => console.error(e))
   })
 }
 
@@ -230,12 +251,12 @@ export function playSound(eventName, volume = 1.0, throttleSeconds = 0, stackabl
     }
     narratedSoundQueue.push({ eventName, volume, throttleSeconds })
     if (!isNarratedPlaying) {
-      playNextNarrated()
+      playNextNarrated().catch(e => console.error(e))
     }
     return
   }
 
-  playImmediate(eventName, volume, throttleSeconds)
+  playImmediate(eventName, volume, throttleSeconds).catch(e => console.error(e))
 }
 
 // Test function for narrated sound stacking (can be called from browser console)
