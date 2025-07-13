@@ -5,19 +5,21 @@
 const buildingImageCache = {}
 
 // Map building types to their image paths
+import { loadSpriteSheet, getSprite, isSpriteSheetLoaded } from './spriteSheet.js'
+
 export const buildingImageMap = {
-  powerPlant: 'images/map/buildings/power_plant.webp',
-  oreRefinery: 'images/map/buildings/refinery.webp',
-  vehicleFactory: 'images/map/buildings/vehicle_factory.webp',
-  radarStation: 'images/map/buildings/radar_station.webp',
-  turretGunV1: 'images/map/buildings/turret01.webp',
-  turretGunV2: 'images/map/buildings/turret02.webp',
-  turretGunV3: 'images/map/buildings/turret02.webp', // Using turret02 as fallback
-  rocketTurret: 'images/map/buildings/rocket_gun.webp',
-  teslaCoil: 'images/map/buildings/teslacoil.webp',
-  constructionYard: 'images/map/buildings/construction_yard.webp',
-  concreteWall: 'images/map/buildings/turret01.webp', // Using turret01 as a fallback
-  artilleryTurret: 'images/map/buildings/artillery_turret.webp'
+  powerPlant: 'images/map/buildings/power_plant',
+  oreRefinery: 'images/map/buildings/refinery',
+  vehicleFactory: 'images/map/buildings/vehicle_factory',
+  radarStation: 'images/map/buildings/radar_station',
+  turretGunV1: 'images/map/buildings/turret01',
+  turretGunV2: 'images/map/buildings/turret02',
+  turretGunV3: 'images/map/buildings/turret02',
+  rocketTurret: 'images/map/buildings/rocket_gun',
+  teslaCoil: 'images/map/buildings/teslacoil',
+  constructionYard: 'images/map/buildings/construction_yard',
+  concreteWall: 'images/map/buildings/turret01',
+  artilleryTurret: 'images/map/buildings/artillery_turret'
 }
 
 // Track loading state
@@ -42,24 +44,27 @@ export function getBuildingImage(buildingType, callback) {
     if (callback) callback(null)
     return null
   }
-
-  // Load the source image
-  const img = new Image()
-  img.onload = () => {
-    // Store the original image in the cache
-    buildingImageCache[buildingType] = img
-
-    // Return the original image
-    if (callback) callback(img)
+  const load = async () => {
+    if (!isSpriteSheetLoaded()) {
+      await loadSpriteSheet()
+    }
+    const sprite = getSprite(imagePath)
+    if (!sprite) {
+      console.warn(`Sprite not found for building ${buildingType}`)
+      if (callback) callback(null)
+      return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = sprite.width
+    canvas.height = sprite.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(sprite.img, sprite.x, sprite.y, sprite.width, sprite.height, 0, 0, sprite.width, sprite.height)
+    buildingImageCache[buildingType] = canvas
+    if (callback) callback(canvas)
   }
 
-  img.onerror = () => {
-    console.error(`Failed to load building image: ${imagePath}`)
-    if (callback) callback(null)
-  }
-
-  img.src = imagePath
-  return null // Return null for async loading
+  load()
+  return null
 }
 
 // Preload all building images

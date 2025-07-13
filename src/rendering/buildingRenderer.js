@@ -5,7 +5,8 @@ import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 
 export class BuildingRenderer {
-  constructor() {
+  constructor(textureManager) {
+    this.textureManager = textureManager
     // Cache for the wrench icon
     this.wrenchIcon = null
     this.loadWrenchIcon()

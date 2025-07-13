@@ -1,7 +1,6 @@
 // rendering/textureManager.js
 import { TILE_SIZE, TILE_IMAGES, GRASS_DECORATIVE_RATIO, GRASS_IMPASSABLE_RATIO } from '../config.js'
-import { buildingImageMap } from '../buildingImageMap.js'
-import { getDevicePixelRatio } from './renderingUtils.js'
+import { loadSpriteSheet, getSprite, isSpriteSheetLoaded, getSpriteSheetImage } from '../spriteSheet.js'
 import { discoverGrassTiles } from '../utils/grassTileDiscovery.js'
 
 // Map unit types to their image paths
@@ -25,6 +24,7 @@ export class TextureManager {
     this.tileVariationMap = {}
     this.allTexturesLoaded = false
     this.loadingStarted = false
+    this.spriteSheet = null
   }
 
   // Helper function to load images once
@@ -55,10 +55,6 @@ export class TextureManager {
         }
         delete this.loadingImages[baseName]
         console.warn(`Failed to load image: ${baseName}. Tried extensions: ${extensions.join(', ')}`)
-        // Show which image maps contain this asset for debugging
-        if (buildingImageMap && Object.values(buildingImageMap).includes(baseName)) {
-          console.info('Note: This image is referenced in buildingImageMap')
-        }
         if (unitImageMap && Object.values(unitImageMap).includes(baseName)) {
           console.info('Note: This image is referenced in unitImageMap')
         }
@@ -97,238 +93,61 @@ export class TextureManager {
   async preloadAllTextures(callback) {
     if (this.loadingStarted) return
     this.loadingStarted = true
-    
-    console.log('🎨 Starting texture preloading...')
-    console.log(`📊 Texture types to load: ${Object.keys(TILE_IMAGES).join(', ')}`)
-    
-    // First, handle grass tile discovery for land tiles
+    console.log('🎨 Starting texture preloading (sprite sheet)...')
+
+    await loadSpriteSheet()
+    this.spriteSheet = getSpriteSheetImage()
+
+    // Handle grass tile discovery
     let grassTileData = null
     const landTileInfo = TILE_IMAGES.land
     if (landTileInfo && landTileInfo.useGrassTileDiscovery) {
       try {
         grassTileData = await discoverGrassTiles()
-        console.log('✅ Successfully loaded grass tiles from JSON configuration')
       } catch (error) {
-        console.error('❌ CRITICAL: Failed to discover grass tiles from JSON. This will result in no land textures:', error)
-        console.error('❌ Please ensure grass_tiles.json exists and is accessible')
-        // Continue without grass tiles - will use color fallback
+        console.error('Failed to discover grass tiles from JSON:', error)
         grassTileData = null
       }
     }
-    
-    // Count total textures to load
-    let totalTextures = 0
-    let loadedTextures = 0
 
-    for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
-      if (tileType === 'land' && grassTileData) {
-        // Use discovered grass tiles
-        totalTextures += grassTileData.passablePaths.length + grassTileData.decorativePaths.length + grassTileData.impassablePaths.length
-      } else if (tileInfo.passablePaths && tileInfo.impassablePaths) {
-        // Handle legacy hardcoded grass tiles structure
-        totalTextures += tileInfo.passablePaths.length + tileInfo.impassablePaths.length
-      }
-      // Also handle legacy structure with single paths array
-      if (tileInfo.paths) {
-        totalTextures += tileInfo.paths.length
-      }
-    }
-
-    if (totalTextures === 0) {
-      this.allTexturesLoaded = true
-      if (callback) callback()
-      return
-    }
-
-    // For each tile type
     for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
       this.tileTextureCache[tileType] = []
-      
-      // Store grass tile metadata for later use in variation selection
+
       if (tileType === 'land' && grassTileData) {
         this.grassTileMetadata = {
           passableCount: grassTileData.passablePaths.length,
           decorativeCount: grassTileData.decorativePaths.length,
           impassableCount: grassTileData.impassablePaths.length
         }
-        
-        // Log the distribution for debugging
-        console.log(`Grass tile distribution:`)
-        console.log(`- Passable: ${this.grassTileMetadata.passableCount} tiles (indices 0-${this.grassTileMetadata.passableCount-1})`)
-        console.log(`- Decorative: ${this.grassTileMetadata.decorativeCount} tiles (indices ${this.grassTileMetadata.passableCount}-${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount-1})`)
-        console.log(`- Impassable: ${this.grassTileMetadata.impassableCount} tiles (indices ${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount}-${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount + this.grassTileMetadata.impassableCount-1})`)
-        console.log(`- Total expected in cache: ${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount + this.grassTileMetadata.impassableCount}`)
-        console.log(`- Decorative ratio: 1 in ${GRASS_DECORATIVE_RATIO} tiles`)
-        console.log(`- Impassable ratio: 1 in ${GRASS_IMPASSABLE_RATIO} tiles`)
-        console.log(`- Note: Impassable has priority over decorative when both ratios match`)
-      }
 
-      // Handle legacy structure with single paths array first
-      if (tileInfo.paths) {
-        console.log(`🎨 Loading ${tileInfo.paths.length} textures for ${tileType}: ${tileInfo.paths.join(', ')}`)
-        for (const imagePath of tileInfo.paths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            console.log(`📦 Loaded texture ${loadedTextures}/${totalTextures} for ${tileType}: ${imagePath}`)
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              
-              // Debug: Log cache sizes for each tile type
-              console.log('📊 Tile texture cache sizes:')
-              for (const cacheType of Object.keys(this.tileTextureCache)) {
-                const count = this.tileTextureCache[cacheType] ? this.tileTextureCache[cacheType].length : 0
-                console.log(`   ${cacheType}: ${count} textures`)
-              }
-              
-              if (callback) callback()
-            }
-          })
+        for (const p of [
+          ...grassTileData.passablePaths,
+          ...grassTileData.decorativePaths,
+          ...grassTileData.impassablePaths
+        ]) {
+          this.loadSingleTexture(p, tileType)
         }
-      }
-
-      // Handle discovered grass tiles for land
-      if (tileType === 'land' && grassTileData) {
-        // Load passable grass tiles
-        for (const imagePath of grassTileData.passablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              console.log(`✅ All ${totalTextures} textures loaded successfully!`)
-              
-              // Debug: Log cache sizes for each tile type
-              console.log('📊 Tile texture cache sizes:')
-              for (const tileType of Object.keys(this.tileTextureCache)) {
-                const count = this.tileTextureCache[tileType] ? this.tileTextureCache[tileType].length : 0
-                console.log(`   ${tileType}: ${count} textures`)
-              }
-              
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load decorative grass tiles
-        for (const imagePath of grassTileData.decorativePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load impassable grass tiles
-        for (const imagePath of grassTileData.impassablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
+      } else if (tileInfo.paths) {
+        for (const p of tileInfo.paths) {
+          this.loadSingleTexture(p, tileType)
         }
       } else if (tileInfo.passablePaths && tileInfo.impassablePaths) {
-        // Handle legacy hardcoded grass tiles structure
-        // Load passable grass tiles
-        for (const imagePath of tileInfo.passablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load impassable grass tiles
-        for (const imagePath of tileInfo.impassablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
+        for (const p of [...tileInfo.passablePaths, ...tileInfo.impassablePaths]) {
+          this.loadSingleTexture(p, tileType)
         }
       }
     }
+
+    this.allTexturesLoaded = true
+    if (callback) callback()
   }
 
   // Helper method to load a single texture
-  loadSingleTexture(imagePath, tileType, onComplete) {
-    // Determine appropriate extensions based on tile type and path
-    let extensions = ['jpg', 'webp', 'png'] // Default order
-    
-    // For ore and seed crystal files, try webp first since they're primarily webp
-    if (imagePath.includes('ore') || tileType === 'ore' || tileType === 'seedCrystal') {
-      extensions = ['webp', 'jpg', 'png']
+  loadSingleTexture(imagePath, tileType) {
+    const sprite = getSprite(imagePath)
+    if (sprite) {
+      this.tileTextureCache[tileType].push(sprite)
     }
-    // For grass tiles, try png first since they're png files
-    else if (imagePath.includes('grass_tiles') || tileType === 'land') {
-      extensions = ['png', 'jpg', 'webp']
-    }
-    
-    this.getOrLoadImage(imagePath, extensions, (img) => {
-      if (img) {
-        const pixelRatio = getDevicePixelRatio()
-
-        // Create a canvas for the texture at the correct size, accounting for pixel ratio
-        const baseCanvas = document.createElement('canvas')
-        baseCanvas.width = TILE_SIZE * pixelRatio
-        baseCanvas.height = TILE_SIZE * pixelRatio
-
-        // Set display size (CSS) to maintain aspect
-        baseCanvas.style.width = `${TILE_SIZE}px`
-        baseCanvas.style.height = `${TILE_SIZE}px`
-
-        const baseCtx = baseCanvas.getContext('2d')
-
-        // Apply high-quality image rendering
-        baseCtx.imageSmoothingEnabled = true
-        baseCtx.imageSmoothingQuality = 'high'
-
-        // Apply pixel ratio scaling
-        baseCtx.scale(pixelRatio, pixelRatio)
-
-        // Use a two-step scaling process for better quality
-        // First draw to an intermediate canvas at 2x size for better downscaling
-        const tempCanvas = document.createElement('canvas')
-        const tempSize = TILE_SIZE * 2
-        tempCanvas.width = tempSize
-        tempCanvas.height = tempSize
-
-        const tempCtx = tempCanvas.getContext('2d')
-        tempCtx.imageSmoothingEnabled = true
-        tempCtx.imageSmoothingQuality = 'high'
-
-        // Draw original image to the intermediate canvas, maintaining aspect ratio
-        const aspectRatio = img.width / img.height
-        let drawWidth, drawHeight
-
-        if (aspectRatio > 1) {
-          // Image is wider than tall
-          drawWidth = tempSize
-          drawHeight = tempSize / aspectRatio
-        } else {
-          // Image is taller than wide
-          drawWidth = tempSize * aspectRatio
-          drawHeight = tempSize
-        }
-
-        // Center the image in the canvas
-        tempCtx.drawImage(img, (tempSize - drawWidth) / 2, (tempSize - drawHeight) / 2, drawWidth, drawHeight)
-
-        // Draw from the intermediate canvas to the final canvas
-        baseCtx.drawImage(tempCanvas, 0, 0, TILE_SIZE, TILE_SIZE)
-
-        // Add the single texture to the cache (no variations)
-        this.tileTextureCache[tileType].push(baseCanvas)
-      }
-
-      onComplete()
-    })
   }
 
   // Get a consistent tile variation based on position

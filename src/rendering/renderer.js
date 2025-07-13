@@ -15,7 +15,7 @@ export class Renderer {
   constructor() {
     this.textureManager = new TextureManager()
     this.mapRenderer = new MapRenderer(this.textureManager)
-    this.buildingRenderer = new BuildingRenderer()
+    this.buildingRenderer = new BuildingRenderer(this.textureManager)
     this.unitRenderer = new UnitRenderer()
     this.effectsRenderer = new EffectsRenderer()
     this.uiRenderer = new UIRenderer()
