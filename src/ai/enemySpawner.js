@@ -90,6 +90,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     lastPathCalcTime: 0,
     lastPositionCheckTime: 0,
     lastTargetChangeTime: 0,
+    lastDecisionTime: 0,
     direction: 0,
     targetDirection: 0,
     turretDirection: 0,

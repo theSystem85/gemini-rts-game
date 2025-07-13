@@ -118,6 +118,9 @@ export const PATH_CALC_INTERVAL = 2000
 // Attack/chase pathfinding interval - throttled to prevent excessive recalculation (in milliseconds)
 export const ATTACK_PATH_CALC_INTERVAL = 3000
 
+// General AI decision interval for heavy logic like target selection (in milliseconds)
+export const AI_DECISION_INTERVAL = 200
+
 // Smoke emission for buildings
 export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 
