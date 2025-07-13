@@ -136,6 +136,22 @@ export function loadGame(key) {
     const loaded = JSON.parse(saveObj.state)
     Object.assign(gameState, loaded.gameState)
     
+    // Ensure smokeParticles is properly initialized and clean up any invalid particles
+    if (!Array.isArray(gameState.smokeParticles)) {
+      gameState.smokeParticles = []
+    } else {
+      // Clean up any invalid smoke particles from saved data
+      gameState.smokeParticles = gameState.smokeParticles.filter(p => 
+        p && typeof p === 'object' && 
+        typeof p.x === 'number' && 
+        typeof p.y === 'number' && 
+        typeof p.size === 'number' && 
+        p.size > 0 &&
+        typeof p.startTime === 'number' &&
+        typeof p.duration === 'number'
+      )
+    }
+    
     // Restore AI player budgets
     if (loaded.aiFactoryBudgets) {
       Object.entries(loaded.aiFactoryBudgets).forEach(([playerId, budget]) => {

@@ -62,13 +62,21 @@ export class EffectsRenderer {
   renderSmoke(ctx, gameState, scrollOffset) {
     if (gameState?.smokeParticles && gameState.smokeParticles.length > 0) {
       gameState.smokeParticles.forEach(p => {
+        // Safety check: ensure particle size is valid and positive
+        if (!p.size || p.size <= 0) {
+          return // Skip invalid particles
+        }
+        
         ctx.save()
         ctx.globalAlpha = p.alpha
         const x = p.x - scrollOffset.x
         const y = p.y - scrollOffset.y
         
+        // Ensure size is positive for gradient creation
+        const safeSize = Math.max(0.1, p.size)
+        
         // Create a more balanced gradient
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size)
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, safeSize)
         gradient.addColorStop(0, 'rgba(70,70,70,0.7)') // Slightly lighter center
         gradient.addColorStop(0.4, 'rgba(85,85,85,0.5)') // Mid-tone
         gradient.addColorStop(0.8, 'rgba(100,100,100,0.3)') // Lighter edge
@@ -76,17 +84,18 @@ export class EffectsRenderer {
         
         ctx.fillStyle = gradient
         ctx.beginPath()
-        ctx.arc(x, y, p.size, 0, Math.PI * 2)
+        ctx.arc(x, y, safeSize, 0, Math.PI * 2)
         ctx.fill()
         
         // Add a more subtle dark core
         ctx.globalAlpha = p.alpha * 0.4 // Reduced opacity for core
-        const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, p.size * 0.25) // Smaller core
+        const coreSize = Math.max(0.1, safeSize * 0.25) // Ensure core size is also positive
+        const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize)
         coreGradient.addColorStop(0, 'rgba(50,50,50,0.6)') // Lighter dark core
         coreGradient.addColorStop(1, 'rgba(50,50,50,0)')
         ctx.fillStyle = coreGradient
         ctx.beginPath()
-        ctx.arc(x, y, p.size * 0.25, 0, Math.PI * 2)
+        ctx.arc(x, y, coreSize, 0, Math.PI * 2)
         ctx.fill()
         
         ctx.restore()

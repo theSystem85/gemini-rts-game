@@ -6,15 +6,43 @@ import { findPath } from '../units.js'
 const pathCache = new Map()
 const PATH_CACHE_TTL = PATH_CALC_INTERVAL
 
+/**
+ * Retrieve a cached path or reuse a path to the same end coordinate
+ * from another unit if available. If a cached path doesn't exist,
+ * calculate a new one and store it.
+ */
 function getCachedPath(start, end, mapGrid, occupancyMap) {
-  const key = `${start.x},${start.y}-${end.x},${end.y}-${occupancyMap ? 1 : 0}`
+  const endKey = `${end.x},${end.y}-${occupancyMap ? 1 : 0}`
   const now = performance.now()
-  const entry = pathCache.get(key)
-  if (entry && now - entry.time < PATH_CACHE_TTL) {
-    return entry.path
+  let entries = pathCache.get(endKey)
+
+  // Remove stale entries
+  if (entries) {
+    entries = entries.filter(e => now - e.time < PATH_CACHE_TTL)
+    if (entries.length > 0) {
+      pathCache.set(endKey, entries)
+    } else {
+      pathCache.delete(endKey)
+    }
   }
+
+  if (entries) {
+    for (const entry of entries) {
+      const idx = entry.path.findIndex(p => p.x === start.x && p.y === start.y)
+      if (idx !== -1) {
+        return entry.path.slice(idx)
+      }
+    }
+  }
+
   const path = findPath(start, end, mapGrid, occupancyMap)
-  pathCache.set(key, { path, time: now })
+  if (path && path.length > 0) {
+    if (!entries) {
+      entries = []
+      pathCache.set(endKey, entries)
+    }
+    entries.push({ path, time: now })
+  }
   return path
 }
 
