@@ -33,6 +33,7 @@ export class UnitCommandsHandler {
     const count = selectedUnits.length
     const cols = Math.ceil(Math.sqrt(count))
 
+    let anyMoved = false
     selectedUnits.forEach((unit, index) => {
       let formationOffset = { x: 0, y: 0 }
 
@@ -112,10 +113,13 @@ export class UnitCommandsHandler {
         unit.originalPath = null
         // Clear force attack flag when issuing a move command
         unit.forcedAttack = false
-        playSound('movement', 0.5)
+        anyMoved = true
+        }
 
-      }
     })
+    if (anyMoved) {
+      playSound('movement', 0.5)
+    }
   }
 
   handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false) {
@@ -234,11 +238,12 @@ export class UnitCommandsHandler {
   handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {
     // Clear attack group feature state when issuing harvester commands
     this.clearAttackGroupState(selectedUnits)
-    
+
+    let anyAssigned = false
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
         const path = findPath({ x: unit.tileX, y: unit.tileY }, oreTarget, mapGrid, null)
-        
+
         if (path && path.length > 0) {
           unit.path = path.length > 1 ? path.slice(1) : path
           // Set the harvester's manual ore target
@@ -247,10 +252,14 @@ export class UnitCommandsHandler {
           unit.target = null // Clear any combat target
           unit.moveTarget = oreTarget
           unit.forcedAttack = false
-          playSound('movement', 0.5)
+          anyAssigned = true
         }
       }
     })
+
+    if (anyAssigned) {
+      playSound('movement', 0.5)
+    }
   }
 
   /**
