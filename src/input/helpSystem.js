@@ -39,7 +39,7 @@ export class HelpSystem {
           <li><strong>O Key:</strong> Toggle occupancy map visibility (red glow on occupied tiles)</li>
           <li><strong>H Key:</strong> Focus view on your factory</li>
           <li><strong>I Key:</strong> Show this help (press again to close)</li>
-          <li><strong>S Key:</strong> Stop attacking (when units selected) / Toggle sell mode (when no units selected)</li>
+          <li><strong>S Key:</strong> Stop selected units (cancel attack & movement, units slow to stop) / Toggle sell mode when none selected</li>
           <li><strong>R Key:</strong> Toggle repair mode</li>
           <li><strong>CTRL + 1-9:</strong> Assign selected units to control group</li>
           <li><strong>1-9 Keys:</strong> Select units in that control group</li>
