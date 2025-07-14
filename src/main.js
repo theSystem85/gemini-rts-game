@@ -535,9 +535,18 @@ document.addEventListener('DOMContentLoaded', () => {
 window.debugGetSelectedUnits = () => selectedUnits
 
 // Debug helper to test narrated sound stacking
-import { testNarratedSounds, playSound } from './sound.js'
+import { testNarratedSounds, playSound, preloadSounds, getSoundCacheStatus, clearSoundCache } from './sound.js'
 window.testNarratedSounds = testNarratedSounds
 window.debugPlaySound = playSound
+window.getSoundCacheStatus = getSoundCacheStatus
+window.clearSoundCache = clearSoundCache
+
+// Preload all sound files for optimal performance (async)
+preloadSounds().then(() => {
+  console.log('Sound preloading completed')
+}).catch(e => {
+  console.error('Sound preloading failed:', e)
+})
 
 // Export functions for backward compatibility - these are now handled by ProductionController
 export function updateVehicleButtonStates() {
