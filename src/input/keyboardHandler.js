@@ -638,6 +638,20 @@ export class KeyboardHandler {
     this.cheatSystem.cleanupDestroyedUnit(unitId)
   }
 
+  // Rebuild control groups from units after loading a save game
+  rebuildControlGroupsFromUnits(units) {
+    this.controlGroups = {}
+    if (!Array.isArray(units)) return
+    units.forEach(unit => {
+      if (unit && unit.groupNumber) {
+        if (!this.controlGroups[unit.groupNumber]) {
+          this.controlGroups[unit.groupNumber] = []
+        }
+        this.controlGroups[unit.groupNumber].push(unit)
+      }
+    })
+  }
+
   handleStopAttacking() {
     if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showNotification('No units selected to stop attacking', 2000)

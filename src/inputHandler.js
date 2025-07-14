@@ -91,3 +91,8 @@ export function setupInputHandlers(units, factories, mapGrid) {
 export function cleanupDestroyedSelectedUnits() {
   selectionManager.cleanupDestroyedSelectedUnits(selectedUnits)
 }
+
+// Expose keyboard handler instance for modules that need to interact with it
+export function getKeyboardHandler() {
+  return keyboardHandler
+}
