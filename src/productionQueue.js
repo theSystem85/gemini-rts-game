@@ -742,6 +742,15 @@ export const productionQueue = {
     // Remove the completed building from the array
     this.completedBuildings.splice(completedBuildingIndex, 1)
 
+    // If this building was in placement mode, exit placement mode
+    if (
+      gameState.buildingPlacementMode &&
+      gameState.currentBuildingType === buildingType
+    ) {
+      gameState.buildingPlacementMode = false
+      gameState.currentBuildingType = null
+    }
+
     // Remove ready-for-placement class only if there are no more completed buildings of this type
     const hasMoreOfThisType = this.completedBuildings.some(building => building.button === button)
     if (!hasMoreOfThisType) {
