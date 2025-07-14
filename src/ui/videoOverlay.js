@@ -12,7 +12,9 @@ export class VideoOverlay {
     this.currentAudio = null
     this.overlayElement = null
     this.videoQueue = []
-    this.createOverlayElement()
+    if (typeof document !== 'undefined') {
+      this.createOverlayElement()
+    }
   }
 
   /**
@@ -527,7 +529,9 @@ export class VideoOverlay {
 }
 
 // Create global instance
-export const videoOverlay = new VideoOverlay()
+export const videoOverlay = typeof document !== 'undefined'
+  ? new VideoOverlay()
+  : null
 
 /**
  * Convenience function for playing milestone videos by base filename
@@ -559,5 +563,7 @@ export function playSyncedVideoAudio(baseFilename, options = {}) {
  * Can be called externally when master volume changes
  */
 export function updateVideoAudioVolume() {
-  videoOverlay.updateAudioVolume()
+  if (videoOverlay) {
+    videoOverlay.updateAudioVolume()
+  }
 }

@@ -387,6 +387,11 @@ function getNeighbors(node, mapGrid) {
 
 // Bresenham-like line algorithm to get all tiles on a line
 function getLineTiles(start, end) {
+  if (!Number.isFinite(start.x) || !Number.isFinite(start.y) ||
+      !Number.isFinite(end.x) || !Number.isFinite(end.y)) {
+    return []
+  }
+
   const tiles = [{ x: start.x, y: start.y }]
   let x = start.x
   let y = start.y
@@ -414,6 +419,7 @@ function getLineTiles(start, end) {
 // Check if direct line between tiles is clear of obstacles/units
 function isDirectPathClear(start, end, mapGrid, occupancyMap) {
   const tiles = getLineTiles(start, end)
+  if (tiles.length === 0) return false
   for (let i = 1; i < tiles.length; i++) {
     const { x, y } = tiles[i]
     if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) {
