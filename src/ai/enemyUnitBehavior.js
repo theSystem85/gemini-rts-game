@@ -1,4 +1,4 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, AI_DECISION_INTERVAL } from '../config.js'
 import { findPath } from '../units.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth } from './enemyStrategies.js'
 import { getClosestEnemyFactory, isEnemyTo } from './enemyUtils.js'
@@ -31,10 +31,12 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
 
     // Combat unit behavior
     if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
-      // Target selection throttled to every 2 seconds
+      const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
+      // Target selection throttled using a separate timer
       const canChangeTarget = !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 2000)
-      if (canChangeTarget) {
-        let newTarget = null
+      if (allowDecision) {
+        if (canChangeTarget) {
+          let newTarget = null
 
         // Check if unit should retreat due to low health (flee to base mode)
         const shouldFlee = shouldRetreatLowHealth(unit)
@@ -188,6 +190,9 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           unit.lastPathCalcTime = now
         }
       }
+
+      unit.lastDecisionTime = now
+    }
 
       // --- Dodge Logic: toggled by ENABLE_DODGING ---
       if (ENABLE_DODGING) {
