@@ -13,6 +13,7 @@ import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
 import { getTextureManager, preloadTileTextures } from './rendering.js'
+import { milestoneSystem } from './game/milestoneSystem.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -300,11 +301,7 @@ class Game {
     }
     
     // Resume production after unpause since game is now running
-    import('./productionQueue.js').then(module => {
-      module.productionQueue.resumeProductionAfterUnpause()
-    }).catch(err => {
-      console.warn('Could not resume production after map shuffle:', err)
-    })
+    productionQueue.resumeProductionAfterUnpause()
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
   }
@@ -393,9 +390,8 @@ class Game {
 
     // Reset milestone system
     try {
-      const milestoneModule = await import('./game/milestoneSystem.js')
-      if (milestoneModule.milestoneSystem) {
-        milestoneModule.milestoneSystem.reset()
+      if (milestoneSystem) {
+        milestoneSystem.reset()
       }
     } catch (err) {
       console.warn('Could not reset milestone system:', err)

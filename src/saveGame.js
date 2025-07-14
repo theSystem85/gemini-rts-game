@@ -11,6 +11,9 @@ import { showNotification } from './ui/notifications.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { initializeOccupancyMap } from './units.js'
 import { getTextureManager } from './rendering.js'
+import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
+import { productionQueue } from './productionQueue.js'
+import { getCurrentGame } from './main.js'
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -328,30 +331,24 @@ export function loadGame(key) {
     }
 
     // Re-assign harvesters to refineries after all buildings are loaded
-    import('./game/harvesterLogic.js').then(harvesterModule => {
-      units.forEach(unit => {
-        if (unit.type === 'harvester' && unit.needsRefineryAssignment) {
-          // Filter buildings by owner for assignment
-          const ownerGameState = {
-            buildings: gameState.buildings.filter(b => b.owner === unit.owner)
-          }
-          harvesterModule.assignHarvesterToOptimalRefinery(unit, ownerGameState)
-          delete unit.needsRefineryAssignment
+    units.forEach(unit => {
+      if (unit.type === 'harvester' && unit.needsRefineryAssignment) {
+        // Filter buildings by owner for assignment
+        const ownerGameState = {
+          buildings: gameState.buildings.filter(b => b.owner === unit.owner)
         }
-      })
-    }).catch(err => {
-      console.warn('Could not re-assign harvesters to refineries after loading:', err)
+        assignHarvesterToOptimalRefinery(unit, ownerGameState)
+        delete unit.needsRefineryAssignment
+      }
     })
 
     // Import these functions as needed after loading
-    import('./main.js').then(module => {
-      // Update build menu states after loading using ProductionController
-      const gameInstance = module.getCurrentGame()
-      if (gameInstance && gameInstance.productionController) {
-        gameInstance.productionController.updateVehicleButtonStates()
-        gameInstance.productionController.updateBuildingButtonStates()
-      }
-    })
+    // Update build menu states after loading using ProductionController
+    const gameInstance = getCurrentGame()
+    if (gameInstance && gameInstance.productionController) {
+      gameInstance.productionController.updateVehicleButtonStates()
+      gameInstance.productionController.updateBuildingButtonStates()
+    }
 
     // Auto-start the game after loading
     gameState.gamePaused = false
@@ -367,11 +364,7 @@ export function loadGame(key) {
     }
     
     // Resume production after unpause
-    import('./productionQueue.js').then(module => {
-      module.productionQueue.resumeProductionAfterUnpause()
-    }).catch(err => {
-      console.warn('Could not resume production after loading:', err)
-    })
+    productionQueue.resumeProductionAfterUnpause()
 
     showNotification('Game loaded: ' + (saveObj.label || key))
   }

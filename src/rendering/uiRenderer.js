@@ -2,6 +2,8 @@
 import { TILE_SIZE } from '../config.js'
 import { buildingData, isTileValid, isNearExistingBuilding } from '../buildings.js'
 import { gameState } from '../gameState.js'
+import { showNotification } from '../ui/notifications.js'
+import { getCurrentGame } from '../main.js'
 
 export class UIRenderer {
   constructor() {
@@ -275,18 +277,12 @@ export class UIRenderer {
             // Reset the game instead of reloading the page
             (async () => {
               try {
-                const module = await import('../main.js')
-                const gameInstance = module.getCurrentGame()
+                const gameInstance = getCurrentGame()
                 
                 if (gameInstance && typeof gameInstance.resetGame === 'function') {
                   await gameInstance.resetGame()
-                  // Import and show notification
-                  try {
-                    const notifModule = await import('../ui/notifications.js')
-                    notifModule.showNotification('Game restarted while preserving win/loss statistics')
-                  } catch (err) {
-                    console.warn('Could not show notification:', err)
-                  }
+                  // Show notification
+                  showNotification('Game restarted while preserving win/loss statistics')
                 } else {
                   console.warn('Game instance not found or resetGame method missing, falling back to page reload')
                   window.location.reload()

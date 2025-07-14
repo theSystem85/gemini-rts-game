@@ -9,6 +9,7 @@ import { buildingSellHandler } from '../buildingSellHandler.js'
 import { showNotification } from './notifications.js'
 import { milestoneSystem } from '../game/milestoneSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
+import { getCurrentGame } from '../main.js'
 import {
   canPlaceBuilding,
   createBuilding,
@@ -70,13 +71,8 @@ export class EventHandlers {
         let gameInstance = this.gameInstance
         
         if (!gameInstance) {
-          // Fallback 1: Get the current game instance via dynamic import
-          try {
-            const module = await import('../main.js')
-            gameInstance = module.getCurrentGame()
-          } catch (importErr) {
-            console.warn('Import failed:', importErr)
-          }
+          // Fallback 1: Get the current game instance via static import
+          gameInstance = getCurrentGame()
         }
         
         if (!gameInstance) {

@@ -1,7 +1,7 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
-import { updateUnitOccupancy } from '../units.js'
+import { updateUnitOccupancy, findPath } from '../units.js'
 
 /**
  * Unified movement configuration
@@ -723,7 +723,6 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
     unit.dodgeEndTime = performance.now() + 3000; // 3 second dodge timeout
     
     // Create path to dodge position using pathfinding
-    const { findPath } = await import('../units.js');
     const dodgePath = findPath(
       { x: currentTileX, y: currentTileY },
       dodgePos,

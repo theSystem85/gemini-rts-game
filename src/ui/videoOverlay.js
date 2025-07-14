@@ -299,10 +299,8 @@ export class VideoOverlay {
 
       // Try multiple video paths
       const videoPaths = [
-        `public/video/${videoFile}`,
         `video/${videoFile}`,
         `/video/${videoFile}`,
-        `./public/video/${videoFile}`,
         `./video/${videoFile}`
       ]
 
@@ -326,10 +324,8 @@ export class VideoOverlay {
       // Load and play audio with error handling
       if (audioFile) {
         const audioPaths = [
-          `public/video/${audioFile}`,
           `video/${audioFile}`,
           `/video/${audioFile}`,
-          `./public/video/${audioFile}`,
           `./video/${audioFile}`
         ]
 
