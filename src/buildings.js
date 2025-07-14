@@ -363,7 +363,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
 }
 
 // Check individual tile validity for coloring the placement overlay
-export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factories) {
+export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factories, buildingType = null) {
   // Out of bounds
   if (tileX < 0 || tileY < 0 ||
       tileX >= mapGrid[0].length ||
@@ -372,11 +372,14 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
   }
 
   // Invalid terrain
+  const isFactoryOrRefinery =
+    buildingType === 'vehicleFactory' || buildingType === 'oreRefinery'
+
   if (mapGrid[tileY][tileX].type === 'water' ||
       mapGrid[tileY][tileX].type === 'rock' ||
       mapGrid[tileY][tileX].seedCrystal ||
       mapGrid[tileY][tileX].building ||
-      mapGrid[tileY][tileX].noBuild) {
+      (!isFactoryOrRefinery && mapGrid[tileY][tileX].noBuild)) {
     return false
   }
 

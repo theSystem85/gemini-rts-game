@@ -1,6 +1,6 @@
 // rendering/uiRenderer.js
 import { TILE_SIZE } from '../config.js'
-import { buildingData, isTileValid, isNearExistingBuilding } from '../buildings.js'
+import { buildingData, isTileValid, canPlaceBuilding } from '../buildings.js'
 import { gameState } from '../gameState.js'
 import { showNotification } from '../ui/notifications.js'
 import { getCurrentGame } from '../main.js'
@@ -125,20 +125,16 @@ export class UIRenderer {
         const tileX = Math.floor(mouseX / TILE_SIZE)
         const tileY = Math.floor(mouseY / TILE_SIZE)
 
-        // Check if any tile is in range of existing building
-        let isAnyTileInRange = false
-        for (let y = 0; y < buildingInfo.height; y++) {
-          for (let x = 0; x < buildingInfo.width; x++) {
-            const currentTileX = tileX + x
-            const currentTileY = tileY + y
-
-            if (isNearExistingBuilding(currentTileX, currentTileY, buildings, factories, 2, gameState.humanPlayer)) {
-              isAnyTileInRange = true
-              break
-            }
-          }
-          if (isAnyTileInRange) break
-        }
+        const isPlacementAllowed = canPlaceBuilding(
+          gameState.currentBuildingType,
+          tileX,
+          tileY,
+          mapGrid,
+          units,
+          buildings,
+          factories,
+          gameState.humanPlayer
+        )
 
         // Draw placement grid
         for (let y = 0; y < buildingInfo.height; y++) {
@@ -151,11 +147,18 @@ export class UIRenderer {
             const screenY = currentTileY * TILE_SIZE - scrollOffset.y
 
             // Check if valid placement for this tile (terrain/units check only)
-            const isValid = isTileValid(currentTileX, currentTileY, mapGrid, units, buildings, factories)
+            const isValid = isTileValid(
+              currentTileX,
+              currentTileY,
+              mapGrid,
+              units,
+              buildings,
+              factories,
+              gameState.currentBuildingType
+            )
 
-            // Determine final color: Red if not valid or not in range, Green if both valid and in range
-            const validColor = isAnyTileInRange ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)'
-            ctx.fillStyle = isValid ? validColor : 'rgba(255, 0, 0, 0.5)'
+            // Determine final color
+            ctx.fillStyle = isValid && isPlacementAllowed ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)'
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
 
             // Draw tile outline
@@ -210,7 +213,15 @@ export class UIRenderer {
             const ty = pos.y + y
             const screenX = tx * TILE_SIZE - scrollOffset.x
             const screenY = ty * TILE_SIZE - scrollOffset.y
-            const isValid = isTileValid(tx, ty, mapGrid, units, [], [])
+            const isValid = isTileValid(
+              tx,
+              ty,
+              mapGrid,
+              units,
+              [],
+              [],
+              gameState.chainBuildingType
+            )
             ctx.fillStyle = isValid ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)'
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
             ctx.strokeStyle = '#fff'

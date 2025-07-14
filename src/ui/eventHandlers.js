@@ -379,7 +379,7 @@ export class EventHandlers {
         for (let x = 0; x < info.width; x++) {
           const tx = pos.x + x
           const ty = pos.y + y
-          if (!isTileValid(tx, ty, this.mapGrid, this.units, [], []) || occ.has(`${tx},${ty}`)) {
+          if (!isTileValid(tx, ty, this.mapGrid, this.units, [], [], gameState.chainBuildingType) || occ.has(`${tx},${ty}`)) {
             valid = false
             break
           }
