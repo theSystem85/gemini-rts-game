@@ -445,6 +445,7 @@ export const productionQueue = {
     // Reset and start next production
     this.currentUnit.button.classList.remove('active', 'paused')
     this.currentUnit = null
+    this.pausedUnit = false  // Clear pause state when unit completes
 
     // Start next if available
     if (this.unitItems.length > 0) {
@@ -496,6 +497,7 @@ export const productionQueue = {
     playSound('constructionComplete', 1.0, 0, true)
 
     this.currentBuilding = null
+    this.pausedBuilding = false  // Clear pause state when building completes
 
     // Start next building production if available
     if (this.buildingItems.length > 0) {
@@ -724,6 +726,11 @@ export const productionQueue = {
 
   // Method to cancel a specific ready building (called from right-click)
   cancelReadyBuilding: function(buildingType, button) {
+    // Clear any lingering pause states that might interfere with cancellation
+    if (this.currentBuilding === null) {
+      this.pausedBuilding = false
+    }
+    
     // Find the completed building for this button
     const completedBuildingIndex = this.completedBuildings.findIndex(
       building => building.type === buildingType && building.button === button
