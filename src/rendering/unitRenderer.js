@@ -252,8 +252,8 @@ export class UnitRenderer {
       initializeUnitLeveling(unit)
       const expProgress = getExperienceProgress(unit)
       
-      // Show experience bar for all combat units below max level
-      if (unit.level < 3) {
+      // Only show experience bar for selected combat units below max level
+      if (unit.level < 3 && unit.selected) {
         shouldShowBar = true
         progress = expProgress
         barColor = '#FFFF00' // Bright yellow for experience
