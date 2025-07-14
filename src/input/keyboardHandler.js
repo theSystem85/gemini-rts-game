@@ -6,6 +6,7 @@ import { playSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
+import { toggleUnitLogging } from '../utils/logger.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -130,6 +131,11 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'p') {
         e.preventDefault()
         this.handleFpsDisplayToggle()
+      }
+      // L key to toggle logging for selected units
+      else if (e.key.toLowerCase() === 'l') {
+        e.preventDefault()
+        this.handleLoggingToggle(selectedUnits)
       }
     })
 
@@ -620,6 +626,18 @@ export class KeyboardHandler {
     this.showNotification(`FPS display: ${status}`, 2000)
     
     // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleLoggingToggle(selectedUnits) {
+    if (!selectedUnits || selectedUnits.length === 0) return
+
+    selectedUnits.forEach(unit => {
+      toggleUnitLogging(unit)
+    })
+
+    const status = selectedUnits[0].loggingEnabled ? 'ON' : 'OFF'
+    this.showNotification(`Unit logging: ${status}`, 2000)
     playSound('confirmed', 0.5)
   }
 
