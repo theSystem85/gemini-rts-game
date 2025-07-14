@@ -2,11 +2,16 @@
 import { MASTER_VOLUME } from './config.js'
 import { videoOverlay } from './ui/videoOverlay.js'
 
+const hasDOM = typeof window !== 'undefined' && typeof document !== 'undefined'
 let audioContext = null
-try {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)()
-} catch {
-  console.error('Web Audio API is not supported.')
+if (hasDOM && (window.AudioContext || window.webkitAudioContext)) {
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  } catch {
+    console.error('Web Audio API is not supported.')
+  }
+} else {
+  console.warn('Audio features disabled in this environment')
 }
 
 // Master volume control with localStorage persistence
@@ -14,6 +19,9 @@ const VOLUME_STORAGE_KEY = 'rts-game-master-volume'
 
 // Load volume from localStorage or use default
 function loadVolumeFromStorage() {
+  if (!hasDOM || typeof localStorage === 'undefined') {
+    return MASTER_VOLUME
+  }
   try {
     const storedVolume = localStorage.getItem(VOLUME_STORAGE_KEY)
     if (storedVolume !== null) {
@@ -30,6 +38,7 @@ function loadVolumeFromStorage() {
 
 // Save volume to localStorage
 function saveVolumeToStorage(volume) {
+  if (!hasDOM || typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString())
   } catch (e) {
@@ -186,6 +195,7 @@ function playAudioBuffer(audioBuffer, volume = 1.0, onEnded) {
 
 // Fallback function for legacy Audio elements (background music)
 function getCachedAudioElement(soundPath) {
+  if (!hasDOM) return null
   let element = soundElementCache.get(soundPath)
   if (!element) {
     element = new Audio(soundPath)
@@ -224,6 +234,7 @@ const soundElementCache = new Map()
 
 // Preload all sound files to ensure they're cached
 async function preloadAllSounds() {
+  if (!hasDOM || !audioContext) return
   const allSoundFiles = new Set()
   
   // Collect all unique sound files from soundFiles object
@@ -404,6 +415,7 @@ let backgroundMusicInitialized = false
 let backgroundMusicLoading = false
 
 export async function initBackgroundMusic() {
+  if (!hasDOM) return
   if (bgMusicAudio && backgroundMusicInitialized) return
   if (backgroundMusicLoading) {
     // Already loading, wait for it to complete
@@ -425,6 +437,7 @@ export async function initBackgroundMusic() {
     let element = soundElementCache.get(musicPath)
     if (!element) {
       // Create and load the audio element only once
+      if (!hasDOM) throw new Error('Audio element not supported')
       element = new Audio(musicPath)
       element.preload = 'auto'
       element.loop = true
@@ -468,6 +481,7 @@ export async function initBackgroundMusic() {
 }
 
 export async function toggleBackgroundMusic() {
+  if (!hasDOM) return
   // Initialize music on first toggle (loads from server once)
   if (!backgroundMusicInitialized && !backgroundMusicLoading) {
     await initBackgroundMusic()
@@ -490,6 +504,7 @@ export async function toggleBackgroundMusic() {
 
 // --- Master Volume Control Functions ---
 export function setMasterVolume(volume) {
+  if (!hasDOM) return
   masterVolume = Math.max(0, Math.min(1, volume)) // Clamp between 0 and 1
   
   // Save to localStorage
@@ -512,11 +527,13 @@ export function getMasterVolume() {
 
 // Preload all sound files during game initialization
 export async function preloadSounds() {
+  if (!hasDOM || !audioContext) return
   await preloadAllSounds()
 }
 
 // Get cache status for debugging
 export function getSoundCacheStatus() {
+  if (!hasDOM) return {}
   const bufferCacheSize = audioBufferCache.size
   const elementCacheSize = soundElementCache.size
   const loadingCount = loadingPromises.size
@@ -545,6 +562,7 @@ export function getSoundCacheStatus() {
 
 // Clear cache (for testing/debugging)
 export function clearSoundCache() {
+  if (!hasDOM) return
   console.log(`Clearing sound cache (${audioBufferCache.size} buffers, ${soundElementCache.size} elements)...`)
   audioBufferCache.clear()
   soundElementCache.clear()
