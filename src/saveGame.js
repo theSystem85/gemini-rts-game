@@ -342,12 +342,10 @@ export function loadGame(key) {
       }
     })
 
-    // Import these functions as needed after loading
-    // Update build menu states after loading using ProductionController
+    // Sync tech tree with player's existing buildings to enable correct build options
     const gameInstance = getCurrentGame()
     if (gameInstance && gameInstance.productionController) {
-      gameInstance.productionController.updateVehicleButtonStates()
-      gameInstance.productionController.updateBuildingButtonStates()
+      gameInstance.productionController.syncTechTreeWithBuildings()
     }
 
     // Auto-start the game after loading

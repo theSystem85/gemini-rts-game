@@ -686,6 +686,70 @@ export class ProductionController {
     }
   }
 
+  // Force-unlock a unit type without triggering sounds or "new" labels
+  forceUnlockUnitType(type) {
+    if (!gameState.availableUnitTypes.has(type)) {
+      gameState.availableUnitTypes.add(type)
+    }
+    gameState.newUnitTypes.delete(type)
+    const button = this.unitButtons.get(type)
+    if (button) {
+      button.style.display = ''
+      const label = button.querySelector('.new-label')
+      if (label) label.style.display = 'none'
+    }
+  }
+
+  // Force-unlock a building type without triggering sounds or "new" labels
+  forceUnlockBuildingType(type) {
+    if (!gameState.availableBuildingTypes.has(type)) {
+      gameState.availableBuildingTypes.add(type)
+    }
+    gameState.newBuildingTypes.delete(type)
+    const button = this.buildingButtons.get(type)
+    if (button) {
+      button.style.display = ''
+      const label = button.querySelector('.new-label')
+      if (label) label.style.display = 'none'
+    }
+  }
+
+  // Sync tech tree unlocks based on existing player buildings
+  syncTechTreeWithBuildings() {
+    const buildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer)
+    const hasFactory = buildings.some(b => b.type === 'vehicleFactory')
+    const hasRefinery = buildings.some(b => b.type === 'oreRefinery')
+    const hasRocketTurret = buildings.some(b => b.type === 'rocketTurret')
+    const hasRadar = buildings.some(b => b.type === 'radarStation')
+    const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
+
+    if (hasFactory) {
+      this.forceUnlockUnitType('tank')
+    }
+
+    if (hasFactory && hasRefinery) {
+      this.forceUnlockUnitType('harvester')
+    }
+
+    if (factoryCount >= 2) {
+      this.forceUnlockUnitType('tank-v3')
+    }
+
+    if (hasRocketTurret) {
+      this.forceUnlockUnitType('rocketTank')
+    }
+
+    if (hasRadar) {
+      this.forceUnlockUnitType('tank-v2')
+      ;['turretGunV2', 'turretGunV3', 'rocketTurret', 'teslaCoil', 'artilleryTurret']
+        .forEach(t => this.forceUnlockBuildingType(t))
+    }
+
+    this.updateVehicleButtonStates()
+    this.updateBuildingButtonStates()
+    this.updateTabStates()
+  }
+
   // Initialize production tabs without setting up buttons again
   initProductionTabs() {
     const tabButtons = document.querySelectorAll('.tab-button')
