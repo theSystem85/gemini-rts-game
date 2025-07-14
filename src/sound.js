@@ -102,51 +102,207 @@ const soundFiles = {
   
   // Missing sound placeholders (will use fallback beep)
   error: [], // No error.mp3 file exists - will use fallback
-  cancel: [], // No cancel.mp3 file exists - will use fallback
-  construction_paused: ['construction_paused.mp3'], // Direct file access
-  construction_cancelled: ['construction_cancelled.mp3'], // Direct file access
-  construction_started: ['construction_started.mp3'] // Direct file access
+  cancel: [] // No cancel.mp3 file exists - will use fallback
 }
 
 const activeAudioElements = new Map()
 const soundThrottleTimestamps = new Map() // Track last play time for throttled sounds
+
+// Background music files
+const backgroundMusicFiles = ['music01.mp3'] // add more files as needed
+
+// Cache audio buffers using Web Audio API for true zero-network caching
+const audioBufferCache = new Map()
+const loadingPromises = new Map() // Track files currently being loaded
+
+async function getCachedAudioBuffer(soundPath) {
+  // Check if already cached
+  let buffer = audioBufferCache.get(soundPath)
+  if (buffer) {
+    return buffer
+  }
+
+  // Check if currently loading
+  let loadPromise = loadingPromises.get(soundPath)
+  if (loadPromise) {
+    return await loadPromise
+  }
+
+  // Start loading
+  loadPromise = loadAudioBuffer(soundPath)
+  loadingPromises.set(soundPath, loadPromise)
+
+  try {
+    buffer = await loadPromise
+    audioBufferCache.set(soundPath, buffer)
+    loadingPromises.delete(soundPath)
+    return buffer
+  } catch (error) {
+    loadingPromises.delete(soundPath)
+    throw error
+  }
+}
+
+async function loadAudioBuffer(soundPath) {
+  if (!audioContext) {
+    throw new Error('AudioContext not available')
+  }
+
+  try {
+    const response = await fetch(soundPath)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch audio: ${response.status}`)
+    }
+    
+    const arrayBuffer = await response.arrayBuffer()
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+    return audioBuffer
+  } catch (error) {
+    console.error(`Error loading audio buffer for ${soundPath}:`, error)
+    throw error
+  }
+}
+
+function playAudioBuffer(audioBuffer, volume = 1.0, onEnded) {
+  if (!audioContext || !audioBuffer) {
+    if (onEnded) setTimeout(onEnded, 0)
+    return
+  }
+
+  try {
+    const source = audioContext.createBufferSource()
+    const gainNode = audioContext.createGain()
+    
+    source.buffer = audioBuffer
+    source.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    gainNode.gain.value = volume * masterVolume
+
+    // Handle ended event
+    if (onEnded) {
+      source.addEventListener('ended', onEnded, { once: true })
+    }
+
+    source.start()
+    return source
+  } catch (error) {
+    console.error('Error playing audio buffer:', error)
+    if (onEnded) setTimeout(onEnded, 0)
+    return null
+  }
+}
+
+// Fallback function for legacy Audio elements (background music)
+function getCachedAudioElement(soundPath) {
+  let element = soundElementCache.get(soundPath)
+  if (!element) {
+    element = new Audio(soundPath)
+    element.preload = 'auto'
+    
+    // Ensure the audio is fully loaded before caching
+    const loadPromise = new Promise((resolve, reject) => {
+      const onLoad = () => {
+        element.removeEventListener('canplaythrough', onLoad)
+        element.removeEventListener('error', onError)
+        resolve(element)
+      }
+      const onError = (e) => {
+        element.removeEventListener('canplaythrough', onLoad)
+        element.removeEventListener('error', onError)
+        // Don't cache failed loads
+        soundElementCache.delete(soundPath)
+        reject(e)
+      }
+      
+      element.addEventListener('canplaythrough', onLoad, { once: true })
+      element.addEventListener('error', onError, { once: true })
+    })
+    
+    loadingPromises.set(soundPath + '_element', loadPromise)
+    element.load()
+    soundElementCache.set(soundPath, element)
+  }
+  
+  // Clone so multiple sounds can play simultaneously while sharing cached data
+  return element.cloneNode(true)
+}
+
+// Keep legacy element cache for background music
+const soundElementCache = new Map()
+
+// Preload all sound files to ensure they're cached
+async function preloadAllSounds() {
+  const allSoundFiles = new Set()
+  
+  // Collect all unique sound files from soundFiles object
+  Object.values(soundFiles).forEach(fileArray => {
+    fileArray.forEach(filename => {
+      if (filename) { // Skip empty entries
+        allSoundFiles.add('sound/' + filename)
+      }
+    })
+  })
+  
+  // DON'T preload background music files - they will be loaded on demand
+  // backgroundMusicFiles.forEach(filename => {
+  //   allSoundFiles.add('sound/music/' + filename)
+  // })
+  
+  console.log(`Preloading ${allSoundFiles.size} unique sound files into audio buffer cache...`)
+  console.log(`Background music (${backgroundMusicFiles.length} files) will be loaded on demand`)
+  
+  const loadPromises = []
+  
+  allSoundFiles.forEach(soundPath => {
+    // Use Web Audio API buffer cache for sound effects only
+    loadPromises.push(
+      getCachedAudioBuffer(soundPath).catch(e => {
+        console.warn(`Failed to preload sound buffer: ${soundPath}`, e)
+      })
+    )
+  })
+  
+  // Wait for all sound effects to preload
+  try {
+    await Promise.allSettled(loadPromises)
+    console.log(`Sound effects preloaded into buffer cache! ${audioBufferCache.size} buffers cached.`)
+  } catch (error) {
+    console.error('Error during sound preloading:', error)
+  }
+}
 
 // Queue for narrated (stackable) sounds
 const narratedSoundQueue = []
 let isNarratedPlaying = false
 const MAX_NARRATED_STACK = 3
 
-function playAssetSound(eventName, volume = 1.0, onEnded) {
+async function playAssetSound(eventName, volume = 1.0, onEnded) {
   const files = soundFiles[eventName]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
     const soundPath = 'sound/' + file
 
-    // Create new audio instance every time to allow multiple instances
-    const audio = new Audio(soundPath)
-    audio.volume = volume * masterVolume // Apply master volume
-    
-    // Track this audio instance
-    const audioId = soundPath + '_' + Date.now() + '_' + Math.random()
-    
-    const cleanup = () => {
-      activeAudioElements.delete(audioId)
+    try {
+      // Use Web Audio API buffer for zero-network cached playback
+      const audioBuffer = await getCachedAudioBuffer(soundPath)
+      
+      // Track this audio instance
+      const audioId = soundPath + '_' + Date.now() + '_' + Math.random()
+      
+      const cleanup = () => {
+        activeAudioElements.delete(audioId)
+        if (onEnded) onEnded()
+      }
+      
+      const source = playAudioBuffer(audioBuffer, volume, cleanup)
+      if (source) {
+        activeAudioElements.set(audioId, source)
+        return true
+      }
+    } catch (error) {
+      console.error('Error playing cached audio buffer:', soundPath, error)
       if (onEnded) onEnded()
     }
-    
-    audio.addEventListener('ended', cleanup, { once: true })
-    audio.addEventListener('error', (e) => {
-      console.error('Error loading sound asset:', soundPath, e)
-      cleanup()
-    }, { once: true })
-
-    audio.play().catch(e => {
-      console.error('Error playing sound asset:', soundPath, e)
-      cleanup()
-    })
-
-    activeAudioElements.set(audioId, audio)
-    return true
   }
   // Return false if no files available (will trigger fallback beep)
   return false
@@ -173,8 +329,11 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
 
   // Use eventName directly with soundFiles instead of mapping
   if (soundFiles[eventName]) {
-    const played = playAssetSound(eventName, volume, onEnded)
-    if (played) return
+    playAssetSound(eventName, volume, onEnded).catch(e => {
+      console.error('Error in playAssetSound:', e)
+      if (onEnded) onEnded()
+    })
+    return
   }
 
   // Fallback beep sound.
@@ -248,43 +407,91 @@ export function testNarratedSounds() {
 }
 
 // --- Background Music Functionality ---
-const backgroundMusicFiles = ['music01.mp3'] // add more files as needed
 export let bgMusicAudio = null
+let backgroundMusicInitialized = false
+let backgroundMusicLoading = false
 
 export async function initBackgroundMusic() {
-  if (bgMusicAudio) return
+  if (bgMusicAudio && backgroundMusicInitialized) return
+  if (backgroundMusicLoading) {
+    // Already loading, wait for it to complete
+    while (backgroundMusicLoading) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    return
+  }
   if (!backgroundMusicFiles || backgroundMusicFiles.length === 0) return
 
+  backgroundMusicLoading = true
+  console.log('Loading background music on demand...')
+  
   const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
-  bgMusicAudio = new Audio('sound/music/' + file)
-  bgMusicAudio.loop = true
-  bgMusicAudio.volume = masterVolume // Apply master volume to background music
-
-  return new Promise(resolve => {
-    const cleanup = () => {
-      bgMusicAudio.removeEventListener('canplaythrough', cleanup)
-      bgMusicAudio.removeEventListener('error', cleanup)
-      resolve()
+  const musicPath = 'sound/music/' + file
+  
+  try {
+    // Check if already cached from a previous session
+    let element = soundElementCache.get(musicPath)
+    if (!element) {
+      // Create and load the audio element only once
+      element = new Audio(musicPath)
+      element.preload = 'auto'
+      element.loop = true
+      element.volume = masterVolume
+      
+      // Wait for it to be ready before caching
+      await new Promise((resolve, reject) => {
+        const onLoad = () => {
+          element.removeEventListener('canplaythrough', onLoad)
+          element.removeEventListener('error', onError)
+          resolve()
+        }
+        const onError = (e) => {
+          element.removeEventListener('canplaythrough', onLoad)
+          element.removeEventListener('error', onError)
+          reject(e)
+        }
+        
+        element.addEventListener('canplaythrough', onLoad, { once: true })
+        element.addEventListener('error', onError, { once: true })
+        element.load() // Only load once here
+      })
+      
+      // Cache the loaded element
+      soundElementCache.set(musicPath, element)
+      console.log('Background music loaded and cached successfully')
+    } else {
+      console.log('Background music retrieved from cache')
     }
-
-    bgMusicAudio.addEventListener('canplaythrough', cleanup, { once: true })
-    bgMusicAudio.addEventListener('error', cleanup, { once: true })
-    bgMusicAudio.load()
-  })
+    
+    // Use the cached element directly (no cloning for background music)
+    bgMusicAudio = element
+    bgMusicAudio.volume = masterVolume // Ensure volume is correct
+    
+  } catch (e) {
+    console.error('Error loading background music:', e)
+  } finally {
+    backgroundMusicLoading = false
+    backgroundMusicInitialized = true
+  }
 }
 
 export async function toggleBackgroundMusic() {
-  if (!bgMusicAudio) {
+  // Initialize music on first toggle (loads from server once)
+  if (!backgroundMusicInitialized && !backgroundMusicLoading) {
     await initBackgroundMusic()
   }
 
   if (bgMusicAudio) {
     if (bgMusicAudio.paused) {
-      bgMusicAudio.play().catch(e => {
+      try {
+        await bgMusicAudio.play()
+        console.log('Background music resumed from cache')
+      } catch (e) {
         console.error('Error resuming background music:', e)
-      })
+      }
     } else {
       bgMusicAudio.pause()
+      console.log('Background music paused')
     }
   }
 }
@@ -309,4 +516,55 @@ export function setMasterVolume(volume) {
 
 export function getMasterVolume() {
   return masterVolume
+}
+
+// Preload all sound files during game initialization
+export async function preloadSounds() {
+  await preloadAllSounds()
+}
+
+// Get cache status for debugging
+export function getSoundCacheStatus() {
+  const bufferCacheSize = audioBufferCache.size
+  const elementCacheSize = soundElementCache.size
+  const loadingCount = loadingPromises.size
+  const cachedBuffers = Array.from(audioBufferCache.keys())
+  const cachedElements = Array.from(soundElementCache.keys())
+  
+  console.log(`Sound cache status:`)
+  console.log(`- Audio buffers cached: ${bufferCacheSize} (sound effects)`)
+  console.log(`- Audio elements cached: ${elementCacheSize} (background music)`)
+  console.log(`- Background music initialized: ${backgroundMusicInitialized}`)
+  console.log(`- Background music loading: ${backgroundMusicLoading}`)
+  console.log(`- Currently loading: ${loadingCount}`)
+  console.log(`- Buffer cache contents:`, cachedBuffers)
+  console.log(`- Element cache contents:`, cachedElements)
+  
+  return { 
+    bufferCacheSize, 
+    elementCacheSize, 
+    loadingCount, 
+    cachedBuffers, 
+    cachedElements,
+    backgroundMusicInitialized,
+    backgroundMusicLoading
+  }
+}
+
+// Clear cache (for testing/debugging)
+export function clearSoundCache() {
+  console.log(`Clearing sound cache (${audioBufferCache.size} buffers, ${soundElementCache.size} elements)...`)
+  audioBufferCache.clear()
+  soundElementCache.clear()
+  loadingPromises.clear()
+  
+  // Reset background music state
+  backgroundMusicInitialized = false
+  backgroundMusicLoading = false
+  if (bgMusicAudio) {
+    bgMusicAudio.pause()
+    bgMusicAudio = null
+  }
+  
+  console.log('Sound cache cleared, background music reset')
 }
