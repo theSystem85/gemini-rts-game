@@ -314,7 +314,8 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       if (mapGrid[y][x].type === 'water' ||
           mapGrid[y][x].type === 'rock' ||
           mapGrid[y][x].seedCrystal ||
-          mapGrid[y][x].building) {
+          mapGrid[y][x].building ||
+          mapGrid[y][x].noBuild) {
         return false
       }
 
@@ -346,7 +347,8 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
   if (mapGrid[tileY][tileX].type === 'water' ||
       mapGrid[tileY][tileX].type === 'rock' ||
       mapGrid[tileY][tileX].seedCrystal ||
-      mapGrid[tileY][tileX].building) {
+      mapGrid[tileY][tileX].building ||
+      mapGrid[tileY][tileX].noBuild) {
     return false
   }
 
@@ -388,6 +390,34 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
       // mapGrid[y][x].type = 'building' // REMOVED: This was causing solid color rendering
     }
   }
+
+  // Reserve tiles around certain buildings for pathing but keep them passable
+  const addNoBuild = (x, y) => {
+    if (!mapGrid[y] || !mapGrid[y][x]) return
+    mapGrid[y][x].noBuild = (mapGrid[y][x].noBuild || 0) + 1
+  }
+
+  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery') {
+    const belowY = building.y + building.height
+    if (belowY < mapGrid.length) {
+      for (let x = building.x; x < building.x + building.width; x++) {
+        addNoBuild(x, belowY)
+      }
+    }
+  }
+
+  if (building.type === 'oreRefinery') {
+    for (let y = building.y - 1; y <= building.y + building.height; y++) {
+      for (let x = building.x - 1; x <= building.x + building.width; x++) {
+        if (y >= 0 && x >= 0 && y < mapGrid.length && x < mapGrid[0].length) {
+          if (x < building.x || x >= building.x + building.width ||
+              y < building.y || y >= building.y + building.height) {
+            addNoBuild(x, y)
+          }
+        }
+      }
+    }
+  }
 }
 
 // Remove building from the map grid: restore original tiles and clear building flag
@@ -411,6 +441,37 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
         delete mapGrid[y][x].building
         if (occupancyMap && occupancyMap[y] && occupancyMap[y][x] !== undefined) {
           occupancyMap[y][x] = Math.max(0, (occupancyMap[y][x] || 0) - 1)
+        }
+      }
+    }
+  }
+
+  const removeNoBuild = (x, y) => {
+    if (mapGrid[y] && mapGrid[y][x] && mapGrid[y][x].noBuild) {
+      mapGrid[y][x].noBuild--
+      if (mapGrid[y][x].noBuild <= 0) {
+        delete mapGrid[y][x].noBuild
+      }
+    }
+  }
+
+  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery') {
+    const belowY = building.y + building.height
+    if (belowY < mapGrid.length) {
+      for (let x = building.x; x < building.x + building.width; x++) {
+        removeNoBuild(x, belowY)
+      }
+    }
+  }
+
+  if (building.type === 'oreRefinery') {
+    for (let y = building.y - 1; y <= building.y + building.height; y++) {
+      for (let x = building.x - 1; x <= building.x + building.width; x++) {
+        if (y >= 0 && x >= 0 && y < mapGrid.length && x < mapGrid[0].length) {
+          if (x < building.x || x >= building.x + building.width ||
+              y < building.y || y >= building.y + building.height) {
+            removeNoBuild(x, y)
+          }
         }
       }
     }

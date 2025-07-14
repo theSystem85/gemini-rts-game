@@ -184,7 +184,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal) {
+        mapGrid[checkY][checkX].seedCrystal ||
+        mapGrid[checkY][checkX].noBuild) {
       northClear = false
       break
     }
@@ -207,7 +208,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal) {
+        mapGrid[checkY][checkX].seedCrystal ||
+        mapGrid[checkY][checkX].noBuild) {
       southClear = false
       break
     }
@@ -230,7 +232,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal) {
+        mapGrid[checkY][checkX].seedCrystal ||
+        mapGrid[checkY][checkX].noBuild) {
       westClear = false
       break
     }
@@ -253,7 +256,8 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     if (mapGrid[checkY][checkX].building ||
         mapGrid[checkY][checkX].type === 'water' ||
         mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal) {
+        mapGrid[checkY][checkX].seedCrystal ||
+        mapGrid[checkY][checkX].noBuild) {
       eastClear = false
       break
     }
@@ -409,7 +413,8 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
       if (mapGrid[nextY][nextX].building ||
           mapGrid[nextY][nextX].type === 'water' ||
           mapGrid[nextY][nextX].type === 'rock' ||
-          mapGrid[nextY][nextX].seedCrystal) {
+          mapGrid[nextY][nextX].seedCrystal ||
+          mapGrid[nextY][nextX].noBuild) {
         continue
       }
 

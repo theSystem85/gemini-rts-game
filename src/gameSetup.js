@@ -134,7 +134,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
     mapGrid[y] = []
     for (let x = 0; x < MAP_TILES_X; x++) {
       // Initially all land with no ore overlay
-      mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false }
+      mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
     }
   }
 
