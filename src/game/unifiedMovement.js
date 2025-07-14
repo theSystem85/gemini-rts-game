@@ -416,6 +416,22 @@ export function stopUnitMovement(unit) {
 }
 
 /**
+ * Cancel a unit's current movement path but allow natural deceleration
+ */
+export function cancelUnitMovement(unit) {
+  initializeUnitMovement(unit);
+
+  if (unit.path) {
+    unit.path = [];
+  }
+
+  unit.movement.targetVelocity.x = 0;
+  unit.movement.targetVelocity.y = 0;
+  unit.movement.isMoving = false;
+  unit.moveTarget = null;
+}
+
+/**
  * Check if a unit is currently moving
  */
 export function isUnitMoving(unit) {

@@ -7,7 +7,7 @@ import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { toggleUnitLogging } from '../utils/logger.js'
-import { stopUnitMovement } from '../game/unifiedMovement.js'
+import { cancelUnitMovement } from '../game/unifiedMovement.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -695,11 +695,8 @@ export class KeyboardHandler {
         unit.originalTarget = null
       }
 
-      // Stop ongoing movement
-      stopUnitMovement(unit)
-      if (unit.moveTarget) {
-        unit.moveTarget = null
-      }
+      // Stop ongoing movement but allow natural deceleration
+      cancelUnitMovement(unit)
 
       // Clear attack queue if it exists
       if (unit.attackQueue) {
