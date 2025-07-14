@@ -1,5 +1,5 @@
 // rendering/textureManager.js
-import { TILE_SIZE, TILE_IMAGES, GRASS_DECORATIVE_RATIO, GRASS_IMPASSABLE_RATIO } from '../config.js'
+import { TILE_SIZE, TILE_IMAGES, GRASS_DECORATIVE_RATIO, GRASS_IMPASSABLE_RATIO, TILE_SPRITE_SHEET, TILE_SPRITE_MAP } from '../config.js'
 import { buildingImageMap } from '../buildingImageMap.js'
 import { getDevicePixelRatio } from './renderingUtils.js'
 import { discoverGrassTiles } from '../utils/grassTileDiscovery.js'
@@ -23,6 +23,8 @@ export class TextureManager {
     this.loadingImages = {}
     this.tileTextureCache = {}
     this.tileVariationMap = {}
+    this.spriteImage = null
+    this.spriteMap = {}
     this.allTexturesLoaded = false
     this.loadingStarted = false
   }
@@ -97,163 +99,63 @@ export class TextureManager {
   async preloadAllTextures(callback) {
     if (this.loadingStarted) return
     this.loadingStarted = true
-    
-    console.log('🎨 Starting texture preloading...')
-    console.log(`📊 Texture types to load: ${Object.keys(TILE_IMAGES).join(', ')}`)
-    
-    // First, handle grass tile discovery for land tiles
+
+    const mappingRes = await fetch(TILE_SPRITE_MAP)
+    const spriteMap = await mappingRes.json()
+    this.spriteMap = spriteMap
+
+    const spriteImg = await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = TILE_SPRITE_SHEET
+    })
+    this.spriteImage = spriteImg
+
+    // Discover grass tiles configuration
     let grassTileData = null
-    const landTileInfo = TILE_IMAGES.land
-    if (landTileInfo && landTileInfo.useGrassTileDiscovery) {
+    const landInfo = TILE_IMAGES.land
+    if (landInfo && landInfo.useGrassTileDiscovery) {
       try {
         grassTileData = await discoverGrassTiles()
-        console.log('✅ Successfully loaded grass tiles from JSON configuration')
-      } catch (error) {
-        console.error('❌ CRITICAL: Failed to discover grass tiles from JSON. This will result in no land textures:', error)
-        console.error('❌ Please ensure grass_tiles.json exists and is accessible')
-        // Continue without grass tiles - will use color fallback
-        grassTileData = null
-      }
-    }
-    
-    // Count total textures to load
-    let totalTextures = 0
-    let loadedTextures = 0
-
-    for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
-      if (tileType === 'land' && grassTileData) {
-        // Use discovered grass tiles
-        totalTextures += grassTileData.passablePaths.length + grassTileData.decorativePaths.length + grassTileData.impassablePaths.length
-      } else if (tileInfo.passablePaths && tileInfo.impassablePaths) {
-        // Handle legacy hardcoded grass tiles structure
-        totalTextures += tileInfo.passablePaths.length + tileInfo.impassablePaths.length
-      }
-      // Also handle legacy structure with single paths array
-      if (tileInfo.paths) {
-        totalTextures += tileInfo.paths.length
+      } catch (err) {
+        console.error('Failed to load grass tiles configuration:', err)
       }
     }
 
-    if (totalTextures === 0) {
-      this.allTexturesLoaded = true
-      if (callback) callback()
-      return
-    }
-
-    // For each tile type
-    for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
+    for (const [tileType] of Object.entries(TILE_IMAGES)) {
       this.tileTextureCache[tileType] = []
-      
-      // Store grass tile metadata for later use in variation selection
-      if (tileType === 'land' && grassTileData) {
-        this.grassTileMetadata = {
-          passableCount: grassTileData.passablePaths.length,
-          decorativeCount: grassTileData.decorativePaths.length,
-          impassableCount: grassTileData.impassablePaths.length
-        }
-        
-        // Log the distribution for debugging
-        console.log(`Grass tile distribution:`)
-        console.log(`- Passable: ${this.grassTileMetadata.passableCount} tiles (indices 0-${this.grassTileMetadata.passableCount-1})`)
-        console.log(`- Decorative: ${this.grassTileMetadata.decorativeCount} tiles (indices ${this.grassTileMetadata.passableCount}-${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount-1})`)
-        console.log(`- Impassable: ${this.grassTileMetadata.impassableCount} tiles (indices ${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount}-${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount + this.grassTileMetadata.impassableCount-1})`)
-        console.log(`- Total expected in cache: ${this.grassTileMetadata.passableCount + this.grassTileMetadata.decorativeCount + this.grassTileMetadata.impassableCount}`)
-        console.log(`- Decorative ratio: 1 in ${GRASS_DECORATIVE_RATIO} tiles`)
-        console.log(`- Impassable ratio: 1 in ${GRASS_IMPASSABLE_RATIO} tiles`)
-        console.log(`- Note: Impassable has priority over decorative when both ratios match`)
-      }
+    }
 
-      // Handle legacy structure with single paths array first
-      if (tileInfo.paths) {
-        console.log(`🎨 Loading ${tileInfo.paths.length} textures for ${tileType}: ${tileInfo.paths.join(', ')}`)
-        for (const imagePath of tileInfo.paths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            console.log(`📦 Loaded texture ${loadedTextures}/${totalTextures} for ${tileType}: ${imagePath}`)
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              
-              // Debug: Log cache sizes for each tile type
-              console.log('📊 Tile texture cache sizes:')
-              for (const cacheType of Object.keys(this.tileTextureCache)) {
-                const count = this.tileTextureCache[cacheType] ? this.tileTextureCache[cacheType].length : 0
-                console.log(`   ${cacheType}: ${count} textures`)
-              }
-              
-              if (callback) callback()
-            }
-          })
-        }
-      }
-
-      // Handle discovered grass tiles for land
-      if (tileType === 'land' && grassTileData) {
-        // Load passable grass tiles
-        for (const imagePath of grassTileData.passablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              console.log(`✅ All ${totalTextures} textures loaded successfully!`)
-              
-              // Debug: Log cache sizes for each tile type
-              console.log('📊 Tile texture cache sizes:')
-              for (const tileType of Object.keys(this.tileTextureCache)) {
-                const count = this.tileTextureCache[tileType] ? this.tileTextureCache[tileType].length : 0
-                console.log(`   ${tileType}: ${count} textures`)
-              }
-              
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load decorative grass tiles
-        for (const imagePath of grassTileData.decorativePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load impassable grass tiles
-        for (const imagePath of grassTileData.impassablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
-      } else if (tileInfo.passablePaths && tileInfo.impassablePaths) {
-        // Handle legacy hardcoded grass tiles structure
-        // Load passable grass tiles
-        for (const imagePath of tileInfo.passablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
-        
-        // Load impassable grass tiles
-        for (const imagePath of tileInfo.impassablePaths) {
-          this.loadSingleTexture(imagePath, tileType, () => {
-            loadedTextures++
-            if (loadedTextures === totalTextures) {
-              this.allTexturesLoaded = true
-              if (callback) callback()
-            }
-          })
-        }
+    if (grassTileData) {
+      this.grassTileMetadata = {
+        passableCount: grassTileData.passablePaths.length,
+        decorativeCount: grassTileData.decorativePaths.length,
+        impassableCount: grassTileData.impassablePaths.length
       }
     }
+
+    const addFromPath = (p, type) => {
+      const key = p.replace(/^images\/map\//, '')
+      const info = this.spriteMap[key]
+      if (info) {
+        this.tileTextureCache[type].push({ key, ...info })
+      }
+    }
+
+    for (const [tileType, tileInfo] of Object.entries(TILE_IMAGES)) {
+      if (tileType === 'land' && grassTileData) {
+        grassTileData.passablePaths.forEach(p => addFromPath(p, tileType))
+        grassTileData.decorativePaths.forEach(p => addFromPath(p, tileType))
+        grassTileData.impassablePaths.forEach(p => addFromPath(p, tileType))
+      }
+      if (tileInfo.paths) tileInfo.paths.forEach(p => addFromPath(p, tileType))
+      if (tileInfo.passablePaths) tileInfo.passablePaths.forEach(p => addFromPath(p, tileType))
+      if (tileInfo.impassablePaths) tileInfo.impassablePaths.forEach(p => addFromPath(p, tileType))
+    }
+
+    this.allTexturesLoaded = true
+    if (callback) callback()
   }
 
   // Helper method to load a single texture

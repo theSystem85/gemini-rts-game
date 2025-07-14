@@ -20,7 +20,18 @@ export class MapRenderer {
       if (useTexture && this.textureManager.tileTextureCache[type]) {
         const idx = this.textureManager.getTileVariation(type, x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
-          ctx.drawImage(this.textureManager.tileTextureCache[type][idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          const info = this.textureManager.tileTextureCache[type][idx]
+          ctx.drawImage(
+            this.textureManager.spriteImage,
+            info.x,
+            info.y,
+            info.width,
+            info.height,
+            screenX,
+            screenY,
+            TILE_SIZE + 1,
+            TILE_SIZE + 1
+          )
         } else {
           ctx.fillStyle = TILE_COLORS[type]
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -37,7 +48,18 @@ export class MapRenderer {
       if (useTexture && this.textureManager.tileTextureCache.ore) {
         const idx = this.textureManager.getTileVariation('ore', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
-          ctx.drawImage(this.textureManager.tileTextureCache.ore[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          const info = this.textureManager.tileTextureCache.ore[idx]
+          ctx.drawImage(
+            this.textureManager.spriteImage,
+            info.x,
+            info.y,
+            info.width,
+            info.height,
+            screenX,
+            screenY,
+            TILE_SIZE + 1,
+            TILE_SIZE + 1
+          )
         } else {
           ctx.fillStyle = TILE_COLORS.ore
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -54,7 +76,18 @@ export class MapRenderer {
       if (useTexture && this.textureManager.tileTextureCache.seedCrystal) {
         const idx = this.textureManager.getTileVariation('seedCrystal', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.seedCrystal.length) {
-          ctx.drawImage(this.textureManager.tileTextureCache.seedCrystal[idx], screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          const info = this.textureManager.tileTextureCache.seedCrystal[idx]
+          ctx.drawImage(
+            this.textureManager.spriteImage,
+            info.x,
+            info.y,
+            info.width,
+            info.height,
+            screenX,
+            screenY,
+            TILE_SIZE + 1,
+            TILE_SIZE + 1
+          )
         } else {
           ctx.fillStyle = TILE_COLORS.seedCrystal
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -170,7 +203,18 @@ export class MapRenderer {
     if (useTexture) {
       const idx = this.textureManager.getTileVariation(type, tileX, tileY)
       if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
-        ctx.drawImage(this.textureManager.tileTextureCache[type][idx], screenX, screenY, size, size)
+        const info = this.textureManager.tileTextureCache[type][idx]
+        ctx.drawImage(
+          this.textureManager.spriteImage,
+          info.x,
+          info.y,
+          info.width,
+          info.height,
+          screenX,
+          screenY,
+          size,
+          size
+        )
       } else {
         ctx.fillStyle = TILE_COLORS[type]
         ctx.fill()
