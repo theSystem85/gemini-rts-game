@@ -283,6 +283,8 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   const width = buildingData[type].width
   const height = buildingData[type].height
 
+  const isFactoryOrRefinery = type === 'vehicleFactory' || type === 'oreRefinery'
+
   // Check map boundaries
   if (tileX < 0 || tileY < 0 ||
       tileX + width > mapGrid[0].length ||
@@ -315,7 +317,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
           mapGrid[y][x].type === 'rock' ||
           mapGrid[y][x].seedCrystal ||
           mapGrid[y][x].building ||
-          mapGrid[y][x].noBuild) {
+          (!isFactoryOrRefinery && mapGrid[y][x].noBuild)) {
         return false
       }
 
@@ -327,6 +329,32 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
 
       if (unitsAtTile.length > 0) {
         return false
+      }
+    }
+  }
+
+  // Additional protection area checks for factories and refineries
+  if (isFactoryOrRefinery) {
+    // Space directly below must be free of buildings
+    const belowY = tileY + height
+    if (belowY < mapGrid.length) {
+      for (let x = tileX; x < tileX + width; x++) {
+        if (mapGrid[belowY][x].building) {
+          return false
+        }
+      }
+    }
+
+    if (type === 'oreRefinery') {
+      // 1 tile border around refinery must be free of buildings
+      for (let y = tileY - 1; y <= tileY + height; y++) {
+        for (let x = tileX - 1; x <= tileX + width; x++) {
+          if (y < 0 || x < 0 || y >= mapGrid.length || x >= mapGrid[0].length) continue
+          if (x >= tileX && x < tileX + width && y >= tileY && y < tileY + height) continue
+          if (mapGrid[y][x].building) {
+            return false
+          }
+        }
       }
     }
   }
