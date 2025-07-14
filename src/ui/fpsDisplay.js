@@ -8,12 +8,25 @@ export class FPSDisplay {
     this.fps = 0
     this.frameTimes = []
     this.maxFrameTimes = 60 // Store last 60 frame times for smooth averaging
-    
+
+    // Frame time tracking
+    this.lastFrameTimestamp = performance.now()
+    this.frameTimeSamples = []
+    this.lastFrameTimeUpdate = performance.now()
+    this.avgFrameTime = 0
+    this.minFrameTime = 0
+    this.maxFrameTime = 0
+
     // Get the DOM element
     this.fpsElement = document.getElementById('fpsDisplay')
     if (!this.fpsElement) {
       console.error('FPS display element not found!')
     }
+
+    this.fpsValueEl = document.getElementById('fpsValue')
+    this.frameTimeEl = document.getElementById('frameTimeValue')
+    this.frameTimeMinEl = document.getElementById('frameTimeMin')
+    this.frameTimeMaxEl = document.getElementById('frameTimeMax')
   }
 
   updateFPS(currentTime) {
@@ -21,7 +34,12 @@ export class FPSDisplay {
     
     // Add current frame time to array
     this.frameTimes.push(currentTime)
-    
+
+    // Track frame time for display
+    const frameTime = currentTime - this.lastFrameTimestamp
+    this.lastFrameTimestamp = currentTime
+    this.frameTimeSamples.push(frameTime)
+
     // Keep only the last 60 frame times
     if (this.frameTimes.length > this.maxFrameTimes) {
       this.frameTimes.shift()
@@ -45,15 +63,50 @@ export class FPSDisplay {
       // Update the DOM element
       this.updateDisplay()
     }
+
+    // Update frame time display every second
+    if (currentTime - this.lastFrameTimeUpdate >= 1000) {
+      const len = this.frameTimeSamples.length
+      if (len > 0) {
+        const sum = this.frameTimeSamples.reduce((a, b) => a + b, 0)
+        this.avgFrameTime = sum / len
+        this.minFrameTime = Math.min(...this.frameTimeSamples)
+        this.maxFrameTime = Math.max(...this.frameTimeSamples)
+
+        // Update gameState for consistency
+        gameState.fpsCounter.avgFrameTime = this.avgFrameTime
+        gameState.fpsCounter.minFrameTime = this.minFrameTime
+        gameState.fpsCounter.maxFrameTime = this.maxFrameTime
+      }
+
+      this.frameTimeSamples = []
+      this.lastFrameTimeUpdate = currentTime
+      this.updateDisplay()
+    }
   }
 
   updateDisplay() {
     if (!this.fpsElement) return
 
     if (gameState.fpsVisible) {
-      this.fpsElement.textContent = `FPS: ${this.fps}`
+      if (this.fpsValueEl) {
+        this.fpsValueEl.textContent = `FPS: ${this.fps}`
+      } else {
+        this.fpsElement.textContent = `FPS: ${this.fps}`
+      }
+
+      if (this.frameTimeEl) {
+        this.frameTimeEl.textContent = `Frame: ${this.avgFrameTime.toFixed(1)} ms`
+      }
+      if (this.frameTimeMinEl) {
+        this.frameTimeMinEl.textContent = `Min: ${this.minFrameTime.toFixed(1)} ms`
+      }
+      if (this.frameTimeMaxEl) {
+        this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
+      }
+
       this.fpsElement.classList.add('visible')
-      
+
       // Remove old color classes
       this.fpsElement.classList.remove('fps-good', 'fps-ok', 'fps-poor', 'fps-bad')
       

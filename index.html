@@ -282,7 +282,12 @@
     <canvas id="gameCanvas"></canvas>
     
     <!-- FPS Display Overlay -->
-    <div id="fpsDisplay" class="fps-overlay">FPS: --</div>
+    <div id="fpsDisplay" class="fps-overlay">
+      <div id="fpsValue">FPS: --</div>
+      <div id="frameTimeValue">Frame: -- ms</div>
+      <div id="frameTimeMin">Min: -- ms</div>
+      <div id="frameTimeMax">Max: -- ms</div>
+    </div>
     
     <script src="/src/main.js" type="module"></script>
     <script>

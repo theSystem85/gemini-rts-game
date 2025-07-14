@@ -72,7 +72,10 @@ export const gameState = {
     frameCount: 0,
     lastTime: 0,
     fps: 0,
-    frameTimes: []  // Store last 60 frame times for smooth averaging
+    frameTimes: [],  // Store last 60 frame times for smooth averaging
+    avgFrameTime: 0,
+    minFrameTime: 0,
+    maxFrameTime: 0
   },
 
   // Tank image rendering toggle - initialize from config
