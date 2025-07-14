@@ -280,7 +280,9 @@ export function checkGameEndConditions(factories, gameState) {
       remainingAiPlayers++
     } else {
       // Check if this AI player was just defeated (not already marked as defeated)
-      if (!gameState.defeatedPlayers) gameState.defeatedPlayers = new Set()
+      if (!(gameState.defeatedPlayers instanceof Set)) {
+        gameState.defeatedPlayers = new Set(gameState.defeatedPlayers || [])
+      }
       if (!gameState.defeatedPlayers.has(aiPlayerId)) {
         defeatedAiPlayers.push(aiPlayerId)
         gameState.defeatedPlayers.add(aiPlayerId)

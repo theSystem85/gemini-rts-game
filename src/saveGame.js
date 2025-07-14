@@ -111,7 +111,46 @@ export function saveGame(label) {
 
   // Save everything in a single object
   const saveData = {
-    gameState: { ...gameState },
+    // Only save specific gameState properties to avoid circular references and reduce size
+    gameState: {
+      money: gameState.money,
+      gameTime: gameState.gameTime,
+      frameCount: gameState.frameCount,
+      wins: gameState.wins,
+      losses: gameState.losses,
+      gameStarted: gameState.gameStarted,
+      gamePaused: gameState.gamePaused,
+      gameOver: gameState.gameOver,
+      gameOverMessage: gameState.gameOverMessage,
+      gameResult: gameState.gameResult,
+      playerUnitsDestroyed: gameState.playerUnitsDestroyed,
+      enemyUnitsDestroyed: gameState.enemyUnitsDestroyed,
+      playerBuildingsDestroyed: gameState.playerBuildingsDestroyed,
+      enemyBuildingsDestroyed: gameState.enemyBuildingsDestroyed,
+      totalMoneyEarned: gameState.totalMoneyEarned,
+      scrollOffset: gameState.scrollOffset,
+      speedMultiplier: gameState.speedMultiplier,
+      powerSupply: gameState.powerSupply,
+      playerBuildHistory: gameState.playerBuildHistory,
+      currentSessionId: gameState.currentSessionId,
+      enemyLastBuildingTime: gameState.enemyLastBuildingTime,
+      radarActive: gameState.radarActive,
+      gridVisible: gameState.gridVisible,
+      occupancyVisible: gameState.occupancyVisible,
+      fpsVisible: gameState.fpsVisible,
+      useTankImages: gameState.useTankImages,
+      nextVehicleFactoryIndex: gameState.nextVehicleFactoryIndex,
+      refineryStatus: gameState.refineryStatus,
+      playerCount: gameState.playerCount,
+      humanPlayer: gameState.humanPlayer,
+      availableUnitTypes: Array.from(gameState.availableUnitTypes || []),
+      availableBuildingTypes: Array.from(gameState.availableBuildingTypes || []),
+      newUnitTypes: Array.from(gameState.newUnitTypes || []),
+      newBuildingTypes: Array.from(gameState.newBuildingTypes || []),
+      defeatedPlayers: gameState.defeatedPlayers instanceof Set ? 
+        Array.from(gameState.defeatedPlayers) : 
+        (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : [])
+    },
     aiFactoryBudgets, // Save AI player budgets
     units: allUnits,
     buildings: allBuildings,
@@ -135,6 +174,27 @@ export function loadGame(key) {
   if (saveObj && saveObj.state) {
     const loaded = JSON.parse(saveObj.state)
     Object.assign(gameState, loaded.gameState)
+
+    // Rehydrate Set from saved array
+    if (Array.isArray(loaded.gameState.defeatedPlayers)) {
+      gameState.defeatedPlayers = new Set(loaded.gameState.defeatedPlayers)
+    } else if (!(gameState.defeatedPlayers instanceof Set)) {
+      gameState.defeatedPlayers = new Set()
+    }
+
+    // Rehydrate other Set properties
+    if (Array.isArray(loaded.gameState.availableUnitTypes)) {
+      gameState.availableUnitTypes = new Set(loaded.gameState.availableUnitTypes)
+    }
+    if (Array.isArray(loaded.gameState.availableBuildingTypes)) {
+      gameState.availableBuildingTypes = new Set(loaded.gameState.availableBuildingTypes)
+    }
+    if (Array.isArray(loaded.gameState.newUnitTypes)) {
+      gameState.newUnitTypes = new Set(loaded.gameState.newUnitTypes)
+    }
+    if (Array.isArray(loaded.gameState.newBuildingTypes)) {
+      gameState.newBuildingTypes = new Set(loaded.gameState.newBuildingTypes)
+    }
     
     // Ensure smokeParticles is properly initialized and clean up any invalid particles
     if (!Array.isArray(gameState.smokeParticles)) {
