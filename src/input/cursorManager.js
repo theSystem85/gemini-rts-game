@@ -38,7 +38,19 @@ export class CursorManager {
     const tileType = tile.type
     const hasBuilding = tile.building
     const hasSeedCrystal = tile.seedCrystal
-    return tileType === 'water' || tileType === 'rock' || hasBuilding || hasSeedCrystal
+    const occupancyMap = gameState.occupancyMap
+    const occupied =
+      occupancyMap &&
+      occupancyMap[tileY] &&
+      occupancyMap[tileY][tileX]
+
+    return (
+      tileType === 'water' ||
+      tileType === 'rock' ||
+      hasBuilding ||
+      hasSeedCrystal ||
+      occupied
+    )
   }
 
   // Function to update custom cursor position and visibility
@@ -79,7 +91,7 @@ export class CursorManager {
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
-          if (building.type === 'oreRefinery' && 
+          if (building.type === 'oreRefinery' &&
               building.owner === gameState.humanPlayer &&
               building.health > 0 &&
               tileX >= building.x && tileX < building.x + building.width &&
