@@ -189,10 +189,33 @@ export class CursorManager {
 
     // Default cursor behavior for regular movement/attack
     if (selectedUnits.length > 0) {
+      const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
+      const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
+
       // Clear all cursor classes first
       gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
 
-      if (this.isForceAttackMode) {
+      if (!hasNonBuildingSelected) {
+        // Only buildings are selected
+        const singleBuilding = selectedBuildings.length === 1 ? selectedBuildings[0] : null
+        const isVehicleFactory = singleBuilding && singleBuilding.type === 'vehicleFactory'
+
+        if (isVehicleFactory) {
+          // Vehicle factory uses move cursor for rally point placement
+          if (this.isOverBlockedTerrain) {
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('move-blocked-mode')
+          } else if (!gameState.isRightDragging) {
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('move-mode')
+          } else {
+            gameCanvas.style.cursor = 'grabbing'
+          }
+        } else {
+          // Other buildings: always show default cursor
+          gameCanvas.style.cursor = 'default'
+        }
+      } else if (this.isForceAttackMode) {
         // Force attack mode - use attack cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
