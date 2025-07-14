@@ -11,11 +11,14 @@ export class CheatSystem {
     this.godModeEnabled = false
     this.originalHealthValues = new Map()
     this.godModeUnits = new Set()
-    this.setupStyles()
+    if (typeof document !== 'undefined') {
+      this.setupStyles()
+    }
   }
 
   setupStyles() {
     // Inject CSS styles for the cheat dialog
+    if (typeof document === 'undefined') return
     if (!document.getElementById('cheat-dialog-styles')) {
       const style = document.createElement('style')
       style.id = 'cheat-dialog-styles'
@@ -155,6 +158,7 @@ export class CheatSystem {
   }
 
   openDialog() {
+    if (typeof document === 'undefined') return
     if (this.isDialogOpen) return
 
     this.isDialogOpen = true
@@ -210,6 +214,7 @@ export class CheatSystem {
   }
 
   setupDialogEventListeners(overlay, input) {
+    if (typeof document === 'undefined') return
     const submitBtn = document.getElementById('cheat-submit')
     const closeBtn = document.getElementById('cheat-close')
 
@@ -251,6 +256,7 @@ export class CheatSystem {
   }
 
   closeDialog() {
+    if (typeof document === 'undefined') return
     if (!this.isDialogOpen) return
 
     const overlay = document.getElementById('cheat-dialog-overlay')

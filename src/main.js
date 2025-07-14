@@ -39,6 +39,8 @@ class Game {
   constructor() {
     this.canvasManager = new CanvasManager()
     this.productionController = new ProductionController()
+    this.aiWorker = new Worker(new URL('./aiWorker.js', import.meta.url), { type: 'module' })
+    this.aiWorker.onmessage = (e) => this.handleAIWorkerMessage(e)
 
     gameInstance = this
     this.initializeGame()
@@ -304,6 +306,7 @@ class Game {
     productionQueue.resumeProductionAfterUnpause()
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    this.sendStateToAIWorker()
   }
 
   async resetGame() {
@@ -409,6 +412,7 @@ class Game {
     // Start new game loop with a small delay to ensure cleanup is complete
     setTimeout(() => {
       this.startGameLoop()
+      this.startAIWorker()
       console.log('Game reset complete!')
     }, 100)
   }
@@ -485,6 +489,46 @@ class Game {
 
     this.gameLoop.setAssetsLoaded(allAssetsLoaded)
     this.gameLoop.start()
+
+    this.startAIWorker()
+  }
+
+  startAIWorker() {
+    if (!this.aiWorker) return
+    const state = {
+      units: structuredClone(units),
+      factories: structuredClone(factories),
+      bullets: structuredClone(bullets),
+      mapGrid: gameState.mapGrid,
+      gameState: structuredClone(gameState)
+    }
+    this.aiWorker.postMessage({ type: 'init', state })
+  }
+
+  sendStateToAIWorker() {
+    if (!this.aiWorker) return
+    const state = {
+      units: structuredClone(units),
+      factories: structuredClone(factories),
+      bullets: structuredClone(bullets),
+      mapGrid: gameState.mapGrid,
+      gameState: structuredClone(gameState)
+    }
+    this.aiWorker.postMessage({ type: 'state', state })
+  }
+
+  handleAIWorkerMessage(e) {
+    if (e.data.type === 'update' && e.data.state) {
+      const { units: newUnits, factories: newFactories, bullets: newBullets, gameState: newGameState } = e.data.state
+      units.length = 0
+      units.push(...newUnits)
+      factories.length = 0
+      factories.push(...newFactories)
+      bullets.length = 0
+      bullets.push(...newBullets)
+      Object.assign(gameState, newGameState)
+      this.sendStateToAIWorker()
+    }
   }
 }
 
