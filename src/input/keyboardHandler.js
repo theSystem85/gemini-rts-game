@@ -7,6 +7,7 @@ import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { toggleUnitLogging } from '../utils/logger.js'
+import { stopUnitMovement } from '../game/unifiedMovement.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -677,7 +678,7 @@ export class KeyboardHandler {
     }
 
     let stoppedCount = 0
-    
+
     // Stop attacking for all selected units
     this.selectedUnits.forEach(unit => {
       // Clear current attack target
@@ -685,8 +686,22 @@ export class KeyboardHandler {
         unit.target = null
         stoppedCount++
       }
-      
-      // Clear attack queue if it exists  
+
+      // End any dodge behaviour
+      if (unit.isDodging) {
+        unit.isDodging = false
+        unit.dodgeEndTime = null
+        unit.originalPath = null
+        unit.originalTarget = null
+      }
+
+      // Stop ongoing movement
+      stopUnitMovement(unit)
+      if (unit.moveTarget) {
+        unit.moveTarget = null
+      }
+
+      // Clear attack queue if it exists
       if (unit.attackQueue) {
         unit.attackQueue = []
       }
