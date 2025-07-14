@@ -169,24 +169,6 @@ export class MinimapRenderer {
       minimapCtx.fillText('Video Error', minimapWidth / 2, minimapHeight / 2)
     }
 
-    // Add a border to indicate video mode
-    minimapCtx.strokeStyle = '#00ff00'
-    minimapCtx.lineWidth = 2
-    minimapCtx.strokeRect(1, 1, minimapWidth - 2, minimapHeight - 2)
-
-    // Add video progress indicator
-    const progress = videoOverlay.getVideoProgress()
-    if (progress >= 0) {
-      const progressBarHeight = 3
-      const progressBarY = minimapHeight - progressBarHeight - 2
-      
-      // Progress background
-      minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-      minimapCtx.fillRect(2, progressBarY, minimapWidth - 4, progressBarHeight)
-      
-      // Progress bar
-      minimapCtx.fillStyle = '#00ff00'
-      minimapCtx.fillRect(2, progressBarY, (minimapWidth - 4) * progress, progressBarHeight)
-    }
+    // Draw the video without additional borders or progress bars
   }
 }
