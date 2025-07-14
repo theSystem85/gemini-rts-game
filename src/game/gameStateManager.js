@@ -102,6 +102,13 @@ export function updateSmokeParticles(gameState) {
 
   for (let i = gameState.smokeParticles.length - 1; i >= 0; i--) {
     const p = gameState.smokeParticles[i]
+    
+    // Safety check: remove particles with invalid properties
+    if (!p || typeof p.startTime !== 'number' || typeof p.duration !== 'number' || !p.size || p.size <= 0) {
+      gameState.smokeParticles.splice(i, 1)
+      continue
+    }
+    
     const progress = (now - p.startTime) / p.duration
     if (progress >= 1) {
       gameState.smokeParticles.splice(i, 1)
@@ -125,8 +132,8 @@ export function updateSmokeParticles(gameState) {
       p.alpha = (1 - progress) * p.alpha
       
       // Smoke expands as it rises (reduced expansion rate)
-      if (!p.originalSize) {
-        p.originalSize = p.size
+      if (!p.originalSize || p.originalSize <= 0) {
+        p.originalSize = Math.max(0.1, p.size || 8) // Fallback to a minimum safe size
       }
       p.size = p.originalSize * (1 + progress * 0.3) // Reduced expansion to 30%
     }

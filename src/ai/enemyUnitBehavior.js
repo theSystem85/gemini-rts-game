@@ -1,5 +1,5 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, AI_DECISION_INTERVAL } from '../config.js'
-import { findPath } from '../units.js'
+import { getCachedPath } from '../game/pathfinding.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth } from './enemyStrategies.js'
 import { getClosestEnemyFactory, isEnemyTo } from './enemyUtils.js'
 
@@ -154,7 +154,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           if (!unit.isDodging && targetPos) {
             // Use occupancy map in attack mode to prevent moving through occupied tiles
             const occupancyMap = gameState.occupancyMap
-            const path = findPath(
+            const path = getCachedPath(
               { x: unit.tileX, y: unit.tileY },
               targetPos,
               mapGrid,
@@ -179,7 +179,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
         }
         // Use occupancy map in attack mode to prevent moving through occupied tiles
         const occupancyMap = gameState.occupancyMap
-        const path = findPath(
+        const path = getCachedPath(
           { x: unit.tileX, y: unit.tileY },
           targetPos,
           mapGrid,
@@ -238,7 +238,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
                     unit.originalTarget = unit.target
                     unit.dodgeEndTime = now + dodgeTimeDelay
                   }
-                  const newPath = findPath(
+                  const newPath = getCachedPath(
                     { x: unit.tileX, y: unit.tileY },
                     { x: destTileX, y: destTileY },
                     mapGrid,
@@ -306,7 +306,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
               if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding) {
                 // Use occupancy map for tactical retreat movement to avoid moving through units
                 const occupancyMap = gameState.occupancyMap
-                const newPath = findPath(
+                const newPath = getCachedPath(
                   { x: unit.tileX, y: unit.tileY },
                   { x: destTileX, y: destTileY },
                   mapGrid,
