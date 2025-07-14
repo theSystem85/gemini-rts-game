@@ -133,7 +133,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       // Now check if each tile is valid (terrain, units, etc.)
       for (let checkY = y; checkY < y + buildingHeight && isValid; checkY++) {
         for (let checkX = x; checkX < x + buildingWidth && isValid; checkX++) {
-          if (!isTileValid(checkX, checkY, mapGrid, units, buildings, factories)) {
+          if (!isTileValid(checkX, checkY, mapGrid, units, buildings, factories, buildingType)) {
             isValid = false
             break
           }
@@ -534,7 +534,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         let isValid = true
         for (let cy = y; cy < y + buildingHeight && isValid; cy++) {
           for (let cx = x; cx < x + buildingWidth && isValid; cx++) {
-            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {
+            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {
               isValid = false
             }
           }
@@ -593,7 +593,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
             if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
               isNearBase = true
             }
-            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories)) {
+            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {
               allTilesValid = false
             }
           }

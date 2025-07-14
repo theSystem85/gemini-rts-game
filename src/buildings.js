@@ -283,6 +283,8 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   const width = buildingData[type].width
   const height = buildingData[type].height
 
+  const isFactoryOrRefinery = type === 'vehicleFactory' || type === 'oreRefinery'
+
   // Check map boundaries
   if (tileX < 0 || tileY < 0 ||
       tileX + width > mapGrid[0].length ||
@@ -315,7 +317,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
           mapGrid[y][x].type === 'rock' ||
           mapGrid[y][x].seedCrystal ||
           mapGrid[y][x].building ||
-          mapGrid[y][x].noBuild) {
+          (!isFactoryOrRefinery && mapGrid[y][x].noBuild)) {
         return false
       }
 
@@ -331,11 +333,37 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
     }
   }
 
+  // Additional protection area checks for factories and refineries
+  if (isFactoryOrRefinery) {
+    // Space directly below must be free of buildings
+    const belowY = tileY + height
+    if (belowY < mapGrid.length) {
+      for (let x = tileX; x < tileX + width; x++) {
+        if (mapGrid[belowY][x].building) {
+          return false
+        }
+      }
+    }
+
+    if (type === 'oreRefinery') {
+      // 1 tile border around refinery must be free of buildings
+      for (let y = tileY - 1; y <= tileY + height; y++) {
+        for (let x = tileX - 1; x <= tileX + width; x++) {
+          if (y < 0 || x < 0 || y >= mapGrid.length || x >= mapGrid[0].length) continue
+          if (x >= tileX && x < tileX + width && y >= tileY && y < tileY + height) continue
+          if (mapGrid[y][x].building) {
+            return false
+          }
+        }
+      }
+    }
+  }
+
   return true
 }
 
 // Check individual tile validity for coloring the placement overlay
-export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factories) {
+export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factories, buildingType = null) {
   // Out of bounds
   if (tileX < 0 || tileY < 0 ||
       tileX >= mapGrid[0].length ||
@@ -344,11 +372,14 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
   }
 
   // Invalid terrain
+  const isFactoryOrRefinery =
+    buildingType === 'vehicleFactory' || buildingType === 'oreRefinery'
+
   if (mapGrid[tileY][tileX].type === 'water' ||
       mapGrid[tileY][tileX].type === 'rock' ||
       mapGrid[tileY][tileX].seedCrystal ||
       mapGrid[tileY][tileX].building ||
-      mapGrid[tileY][tileX].noBuild) {
+      (!isFactoryOrRefinery && mapGrid[tileY][tileX].noBuild)) {
     return false
   }
 
