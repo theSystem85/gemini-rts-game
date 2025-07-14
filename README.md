@@ -96,6 +96,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - **4.1.18** Mount points are configurable via `src/tankImageConfig.json` for fine-tuning positioning.
 - **4.1.19** Original aspect ratios of all 3 images are preserved during rendering.
 - **4.1.20** Image-based rendering automatically falls back to original rendering if images fail to load.
+- **4.1.21** Press **L key** while units are selected to toggle status logging for those units.
 
 ### 4.2 Harvesters
 

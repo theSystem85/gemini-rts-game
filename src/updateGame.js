@@ -32,6 +32,7 @@ import {
   checkGameEndConditions
 } from './game/gameStateManager.js'
 import { updateGlobalPathfinding } from './game/pathfinding.js'
+import { logUnitStatus } from './utils/logger.js'
 
 export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
@@ -198,6 +199,13 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // Self-repair for level 3 units
     handleSelfRepair(units, now)
+
+    // Log status changes for units with logging enabled
+    units.forEach(unit => {
+      if (unit.loggingEnabled) {
+        logUnitStatus(unit)
+      }
+    })
 
   } catch (error) {
     console.error('Critical error in updateGame:', error)

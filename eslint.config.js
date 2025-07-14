@@ -18,6 +18,7 @@ export default [
         URLSearchParams: 'readonly',
         Image: 'readonly',
         Audio: 'readonly',
+        Blob: 'readonly',
         performance: 'readonly',
         setTimeout: 'readonly',
         setInterval: 'readonly',
