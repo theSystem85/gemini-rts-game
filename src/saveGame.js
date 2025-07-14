@@ -14,6 +14,7 @@ import { getTextureManager } from './rendering.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { productionQueue } from './productionQueue.js'
 import { getCurrentGame } from './main.js'
+import { getKeyboardHandler } from './inputHandler.js'
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -287,6 +288,13 @@ export function loadGame(key) {
       
       units.push(hydrated)
     })
+
+    // Rebuild control groups based on restored units
+    const kbHandler = getKeyboardHandler()
+    if (kbHandler && typeof kbHandler.rebuildControlGroupsFromUnits === 'function') {
+      kbHandler.rebuildControlGroupsFromUnits(units)
+    }
+
     gameState.buildings.length = 0
     loaded.buildings.forEach(b => {
       // Rehydrate defensive buildings (turrets) so they work after loading
