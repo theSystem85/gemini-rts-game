@@ -35,9 +35,6 @@ export class VideoOverlay {
           </div>
           <button class="skip-video-btn">Skip</button>
         </div>
-        <div class="video-progress">
-          <div class="progress-bar"></div>
-        </div>
       </div>
     `
 
@@ -65,9 +62,7 @@ export class VideoOverlay {
         height: 160px;
         z-index: -1;
         background: rgba(0, 0, 0, 0.95);
-        border: 2px solid #00ff00;
         border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0, 255, 0, 0.3);
         transition: none;
         overflow: hidden;
         pointer-events: none;
@@ -147,22 +142,9 @@ export class VideoOverlay {
         background: rgba(255, 0, 0, 1);
       }
 
-      .video-progress {
-        height: 3px;
-        background: rgba(255, 255, 255, 0.2);
-        position: relative;
-      }
 
-      .progress-bar {
-        height: 100%;
-        background: #00ff00;
-        width: 0%;
-        transition: width 0.1s linear;
-        box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
-      }
 
       .video-overlay.priority-high {
-        border-color: #ff6600;
         box-shadow: 0 4px 20px rgba(255, 102, 0, 0.5);
       }
 
@@ -172,7 +154,6 @@ export class VideoOverlay {
       }
 
       .video-overlay.priority-medium {
-        border-color: #ffff00;
         box-shadow: 0 4px 20px rgba(255, 255, 0, 0.3);
       }
 
@@ -190,18 +171,8 @@ export class VideoOverlay {
   setupEventListeners() {
     const skipBtn = this.overlayElement.querySelector('.skip-video-btn')
     const video = this.overlayElement.querySelector('.milestone-video')
-    const progressBar = this.overlayElement.querySelector('.progress-bar')
-
     skipBtn.addEventListener('click', () => {
       this.stopCurrentVideo()
-    })
-
-    // Update progress bar during video playback
-    video.addEventListener('timeupdate', () => {
-      if (video.duration) {
-        const progress = (video.currentTime / video.duration) * 100
-        progressBar.style.width = `${progress}%`
-      }
     })
 
     // Handle video end
@@ -252,7 +223,6 @@ export class VideoOverlay {
       const video = this.overlayElement.querySelector('.milestone-video')
       const titleElement = this.overlayElement.querySelector('.milestone-title')
       const descriptionElement = this.overlayElement.querySelector('.milestone-description')
-      const progressBar = this.overlayElement.querySelector('.progress-bar')
 
       // Set milestone info
       titleElement.textContent = milestoneInfo.title || 'Milestone Achieved'
@@ -374,9 +344,6 @@ export class VideoOverlay {
       this.isPlaying = true
       this.currentVideo = video
 
-      // Reset progress
-      progressBar.style.width = '0%'
-
       // Start video playback with error handling
       try {
         await video.play()
@@ -455,11 +422,6 @@ export class VideoOverlay {
       }
     }
 
-    // Reset progress bar
-    const progressBar = this.overlayElement.querySelector('.progress-bar')
-    if (progressBar) {
-      progressBar.style.width = '0%'
-    }
 
     // Play next video in queue with improved error handling
     if (this.videoQueue.length > 0) {
