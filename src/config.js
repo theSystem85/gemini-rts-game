@@ -138,6 +138,10 @@ export const STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
 export const STUCK_HANDLING_COOLDOWN = 1250  // Cooldown between stuck handling attempts
 export const DODGE_ATTEMPT_COOLDOWN = 500  // Cooldown between dodge attempts
 
+// Street movement and pathfinding modifiers
+export const STREET_SPEED_MULTIPLIER = 1.5  // Units move 50% faster on streets
+export const STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
+
 // Unit costs
 export const UNIT_COSTS = {
   tank: 1000,
