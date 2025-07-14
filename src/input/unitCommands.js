@@ -8,7 +8,7 @@ import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
 import { units } from '../main.js'
 
 export class UnitCommandsHandler {
-  
+
   // Helper function to clear attack group feature state for units
   clearAttackGroupState(units) {
     units.forEach(unit => {
@@ -17,7 +17,7 @@ export class UnitCommandsHandler {
         unit.attackQueue = null
       }
     })
-    
+
     // Only clear attack group targets when explicitly requested (not based on attack queue status)
     // This allows the indicators to persist until user performs a different action
     gameState.attackGroupTargets = []
@@ -26,12 +26,11 @@ export class UnitCommandsHandler {
   handleMovementCommand(selectedUnits, targetX, targetY, mapGrid) {
     // Clear attack group feature state when issuing movement commands
     this.clearAttackGroupState(selectedUnits)
-    
+
     // Cancel retreat for all selected units when issuing movement commands
     cancelRetreatForUnits(selectedUnits)
-    
+
     const count = selectedUnits.length
-    const cols = Math.ceil(Math.sqrt(count))
 
     let anyMoved = false
     selectedUnits.forEach((unit, index) => {
@@ -96,7 +95,12 @@ export class UnitCommandsHandler {
       }
 
       // Fixed: correctly pass unit.tileX and unit.tileY as source coordinates
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, destTile, mapGrid, null)
+      const path = findPath(
+        { x: unit.tileX, y: unit.tileY },
+        destTile,
+        mapGrid,
+        gameState.occupancyMap
+      )
 
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
@@ -105,7 +109,7 @@ export class UnitCommandsHandler {
         unit.moveTarget = destTile // Store the final destination
         // Clear any previous target when moving
         unit.originalTarget = null
-        
+
         // Flag that turret should rotate to movement direction for tanks
         if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
           unit.turretShouldFollowMovement = true
@@ -114,7 +118,7 @@ export class UnitCommandsHandler {
         // Clear force attack flag when issuing a move command
         unit.forcedAttack = false
         anyMoved = true
-        }
+      }
 
     })
     if (anyMoved) {
@@ -128,13 +132,11 @@ export class UnitCommandsHandler {
     if (!this.isAttackGroupOperation) {
       this.clearAttackGroupState(selectedUnits)
     }
-    
+
     // Cancel retreat for all selected units when issuing attack commands
     cancelRetreatForUnits(selectedUnits)
-    
+
     // Semicircle formation logic for attack
-    const count = selectedUnits.length
-    
     // Calculate safe attack distance with explosion buffer
     const explosionSafetyBuffer = TILE_SIZE * 0.5
     const safeAttackDistance = Math.max(
@@ -148,9 +150,9 @@ export class UnitCommandsHandler {
     selectedUnits.forEach((unit, index) => {
       // Reset firing capability when issuing attack commands (in case it was disabled during retreat)
       unit.canFire = true
-      
+
       const position = formationPositions[index]
-      
+
       // Ensure position is within safe distance
       const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
       const targetCenter = this.getTargetPoint(target, unitCenter)
@@ -197,38 +199,43 @@ export class UnitCommandsHandler {
   handleRefineryUnloadCommand(selectedUnits, refinery, mapGrid) {
     // Clear attack group feature state when issuing refinery unload commands
     this.clearAttackGroupState(selectedUnits)
-    
+
     let harvestersCommanded = 0
-    
+
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
         // Force this harvester to be assigned to the clicked refinery (regardless of current ore status)
         // This will be used when the harvester next needs to unload
         unit.assignedRefinery = refinery // Store the actual refinery object
-        
+
         // If harvester has ore, immediately force priority unload
         if (unit.oreCarried > 0) {
           forceHarvesterUnloadPriority(unit, refinery, units)
-          
+
           // Path the harvester to the refinery immediately
-          const path = findPath({ x: unit.tileX, y: unit.tileY }, 
-                                { x: refinery.x + Math.floor(refinery.width / 2), 
-                                  y: refinery.y + Math.floor(refinery.height / 2) }, 
-                                mapGrid, null)
-          
+          const path = findPath(
+            { x: unit.tileX, y: unit.tileY },
+            {
+              x: refinery.x + Math.floor(refinery.width / 2),
+              y: refinery.y + Math.floor(refinery.height / 2)
+            },
+            mapGrid,
+            gameState.occupancyMap
+          )
+
           if (path && path.length > 0) {
             unit.path = path.length > 1 ? path.slice(1) : path
             unit.target = null // Clear any combat target
-            unit.moveTarget = { x: refinery.x + Math.floor(refinery.width / 2), 
-                               y: refinery.y + Math.floor(refinery.height / 2) }
+            unit.moveTarget = { x: refinery.x + Math.floor(refinery.width / 2),
+              y: refinery.y + Math.floor(refinery.height / 2) }
             unit.forcedAttack = false
           }
         }
-        
+
         harvestersCommanded++
       }
     })
-    
+
     // Play confirmed sound if at least one harvester was commanded
     if (harvestersCommanded > 0) {
       playSound('confirmed', 0.8)
@@ -242,7 +249,12 @@ export class UnitCommandsHandler {
     let anyAssigned = false
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, oreTarget, mapGrid, null)
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY },
+          oreTarget,
+          mapGrid,
+          gameState.occupancyMap
+        )
 
         if (path && path.length > 0) {
           unit.path = path.length > 1 ? path.slice(1) : path
@@ -268,10 +280,10 @@ export class UnitCommandsHandler {
   calculateSemicircleFormation(units, target, safeAttackDistance) {
     const positions = []
     const unitCount = units.length
-    
+
     // Get target center point
     const targetCenter = this.getTargetPoint(target, { x: 0, y: 0 })
-    
+
     if (unitCount === 1) {
       // Single unit - position directly in front
       const angle = 0 // Face the target directly
@@ -283,7 +295,7 @@ export class UnitCommandsHandler {
       const arcSpan = Math.PI // 180 degrees
       const angleStep = arcSpan / Math.max(1, unitCount - 1)
       const startAngle = -arcSpan / 2 // Start from left side
-      
+
       for (let i = 0; i < unitCount; i++) {
         const angle = startAngle + (i * angleStep)
         const x = targetCenter.x - Math.cos(angle) * safeAttackDistance
@@ -291,7 +303,7 @@ export class UnitCommandsHandler {
         positions.push({ x, y })
       }
     }
-    
+
     return positions
   }
 
