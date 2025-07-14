@@ -181,6 +181,41 @@ class MinHeap {
   }
 }
 
+// Locate the nearest passable and unoccupied tile to the given coordinates.
+// Searches in expanding squares up to a limited radius.
+function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
+  for (let distance = 0; distance <= maxDistance; distance++) {
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        // Only check perimeter of the square for this distance
+        if (Math.abs(dx) !== distance && Math.abs(dy) !== distance) continue
+
+        const checkX = x + dx
+        const checkY = y + dy
+
+        if (
+          checkX >= 0 &&
+          checkY >= 0 &&
+          checkX < mapGrid[0].length &&
+          checkY < mapGrid.length
+        ) {
+          const tile = mapGrid[checkY][checkX]
+          const passable =
+            tile.type !== 'water' &&
+            tile.type !== 'rock' &&
+            !tile.building &&
+            !tile.seedCrystal
+          const occupied = occupancyMap && occupancyMap[checkY][checkX]
+          if (passable && !occupied) {
+            return { x: checkX, y: checkY }
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
 export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
@@ -202,47 +237,46 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
     }
     return []
   }
-  // Begin destination adjustment if not passable
+  // Begin destination adjustment if blocked or occupied
   let adjustedEnd = { ...end }
   const destTile = mapGrid[adjustedEnd.y][adjustedEnd.x]
   const destType = destTile.type
   const destHasBuilding = destTile.building
   const destSeedCrystal = destTile.seedCrystal
-  if (destType === 'water' || destType === 'rock' || destHasBuilding || destSeedCrystal) {
-    let found = false
-    for (const dir of DIRECTIONS) {
-      const newX = adjustedEnd.x + dir.x
-      const newY = adjustedEnd.y + dir.y
-      if (newX >= 0 && newY >= 0 && newX < mapGrid[0].length && newY < mapGrid.length) {
-        const newTile = mapGrid[newY][newX]
-        const newType = newTile.type
-        const newHasBuilding = newTile.building
-        const newSeedCrystal = newTile.seedCrystal
-        if (newType !== 'water' && newType !== 'rock' && !newHasBuilding && !newSeedCrystal) {
-          adjustedEnd = { x: newX, y: newY }
-          found = true
-          break
-        }
-      }
-    }
-    if (!found) {
+  const destOccupied = occupancyMap && occupancyMap[adjustedEnd.y][adjustedEnd.x]
+  if (
+    destType === 'water' ||
+    destType === 'rock' ||
+    destHasBuilding ||
+    destSeedCrystal ||
+    destOccupied
+  ) {
+    const alt = findNearestFreeTile(adjustedEnd.x, adjustedEnd.y, mapGrid, occupancyMap)
+    if (alt) {
+      adjustedEnd = alt
+    } else {
       // Only show the warning once and include detailed information to help diagnose
       if (!pathfindingWarningShown) {
         console.warn('findPath: destination tile not passable and no adjacent free tile found', {
           start,
           end,
           destinationType: destType,
+          occupied: destOccupied,
           surroundingTiles: DIRECTIONS.map(dir => {
             const x = adjustedEnd.x + dir.x
             const y = adjustedEnd.y + dir.y
             if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
               return {
-                x, y,
+                x,
+                y,
                 type: mapGrid[y][x].type,
-                building: mapGrid[y][x].building ? {
-                  type: mapGrid[y][x].building.type,
-                  owner: mapGrid[y][x].building.owner
-                } : null
+                building: mapGrid[y][x].building
+                  ? {
+                      type: mapGrid[y][x].building.type,
+                      owner: mapGrid[y][x].building.owner
+                    }
+                  : null,
+                occupied: occupancyMap && occupancyMap[y][x]
               }
             }
             return { x, y, outOfBounds: true }
