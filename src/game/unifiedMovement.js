@@ -92,10 +92,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       unit.tileX = nextTile.x;
       unit.tileY = nextTile.y;
       
-      // If no more waypoints, start deceleration
+      // If no more waypoints, stop immediately
       if (unit.path.length === 0) {
         movement.targetVelocity.x = 0;
         movement.targetVelocity.y = 0;
+        movement.velocity.x = 0;
+        movement.velocity.y = 0;
         movement.isMoving = false;
       }
     } else {
@@ -328,7 +330,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
   }
   
   // Check map obstacles
-  if (mapGrid[tileY][tileX] === 1) {
+  const tile = mapGrid[tileY][tileX];
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
     return true;
   }
   
