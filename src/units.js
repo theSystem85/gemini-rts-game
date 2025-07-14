@@ -355,11 +355,13 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
 
   const aStarCost = calculatePathCost(finalPath, mapGrid)
 
+  let chosenPath = finalPath
+
   if (directPath && (finalPath.length === 0 || directCost <= aStarCost)) {
-    return directPath
+    chosenPath = directPath
   }
 
-  return finalPath
+  return smoothPath(chosenPath, mapGrid, occupancyMap)
 }
 
 function getNeighbors(node, mapGrid) {
@@ -441,6 +443,28 @@ function calculatePathCost(path, mapGrid) {
     cost += base * terrain
   }
   return cost
+}
+
+// Reduce a tile path into straight-line segments for smoother movement
+function smoothPath(path, mapGrid, occupancyMap) {
+  if (!path || path.length <= 2) return path
+
+  const smoothed = [path[0]]
+  let currentIndex = 0
+
+  while (currentIndex < path.length - 1) {
+    let nextIndex = path.length - 1
+    for (let i = path.length - 1; i > currentIndex; i--) {
+      if (isDirectPathClear(path[currentIndex], path[i], mapGrid, occupancyMap)) {
+        nextIndex = i
+        break
+      }
+    }
+    smoothed.push(path[nextIndex])
+    currentIndex = nextIndex
+  }
+
+  return smoothed
 }
 
 // Spawns a unit near the specified factory.
