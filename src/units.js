@@ -268,6 +268,8 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   startNode.f = startNode.g + startNode.h
   openHeap.push(startNode)
 
+  let finalPath = []
+
   // Removed any maximum iteration check to ensure players' units can always move.
   let nodesExplored = 0
   while (openHeap.size() > 0) {
@@ -282,7 +284,8 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
         path.push({ x: curr.x, y: curr.y })
         curr = curr.parent
       }
-      return path.reverse()
+      finalPath = path.reverse()
+      break
     }
 
     closedSet.add(currentKey)
@@ -336,11 +339,29 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
         path.push({ x: curr.x, y: curr.y })
         curr = curr.parent
       }
-      return path.reverse()
+      finalPath = path.reverse()
+      break
     }
   }
-  // If no path is found, return an empty array.
-  return []
+  // If no path was found, finalPath will be empty
+
+  // If direct line is available, compare costs
+  let directPath = null
+  let directCost = Infinity
+  if (isDirectPathClear(start, adjustedEnd, mapGrid, occupancyMap)) {
+    directPath = getLineTiles(start, adjustedEnd)
+    directCost = calculatePathCost(directPath, mapGrid)
+  }
+
+  const aStarCost = calculatePathCost(finalPath, mapGrid)
+
+  let chosenPath = finalPath
+
+  if (directPath && (finalPath.length === 0 || directCost <= aStarCost)) {
+    chosenPath = directPath
+  }
+
+  return smoothPath(chosenPath, mapGrid, occupancyMap)
 }
 
 function getNeighbors(node, mapGrid) {
@@ -360,6 +381,90 @@ function getNeighbors(node, mapGrid) {
     }
   }
   return neighbors
+}
+
+// --- Path Utilities ---------------------------------------------------------
+
+// Bresenham-like line algorithm to get all tiles on a line
+function getLineTiles(start, end) {
+  const tiles = [{ x: start.x, y: start.y }]
+  let x = start.x
+  let y = start.y
+  const dx = Math.abs(end.x - start.x)
+  const dy = Math.abs(end.y - start.y)
+  const sx = start.x < end.x ? 1 : -1
+  const sy = start.y < end.y ? 1 : -1
+  let err = dx - dy
+
+  while (!(x === end.x && y === end.y)) {
+    const e2 = 2 * err
+    if (e2 > -dy) {
+      err -= dy
+      x += sx
+    }
+    if (e2 < dx) {
+      err += dx
+      y += sy
+    }
+    tiles.push({ x, y })
+  }
+  return tiles
+}
+
+// Check if direct line between tiles is clear of obstacles/units
+function isDirectPathClear(start, end, mapGrid, occupancyMap) {
+  const tiles = getLineTiles(start, end)
+  for (let i = 1; i < tiles.length; i++) {
+    const { x, y } = tiles[i]
+    if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) {
+      return false
+    }
+    const tile = mapGrid[y][x]
+    if (tile.type === 'water' || tile.type === 'rock' || tile.building || tile.seedCrystal) {
+      return false
+    }
+    if (occupancyMap && occupancyMap[y][x]) {
+      return false
+    }
+  }
+  return true
+}
+
+// Calculate travel cost for a path array using same costs as A*
+function calculatePathCost(path, mapGrid) {
+  if (!path || path.length < 2) return 0
+  let cost = 0
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i - 1]
+    const curr = path[i]
+    const base = Math.hypot(curr.x - prev.x, curr.y - prev.y)
+    const tileType = mapGrid[curr.y][curr.x].type
+    const terrain = tileType === 'street' ? STREET_PATH_COST : 1
+    cost += base * terrain
+  }
+  return cost
+}
+
+// Reduce a tile path into straight-line segments for smoother movement
+function smoothPath(path, mapGrid, occupancyMap) {
+  if (!path || path.length <= 2) return path
+
+  const smoothed = [path[0]]
+  let currentIndex = 0
+
+  while (currentIndex < path.length - 1) {
+    let nextIndex = path.length - 1
+    for (let i = path.length - 1; i > currentIndex; i--) {
+      if (isDirectPathClear(path[currentIndex], path[i], mapGrid, occupancyMap)) {
+        nextIndex = i
+        break
+      }
+    }
+    smoothed.push(path[nextIndex])
+    currentIndex = nextIndex
+  }
+
+  return smoothed
 }
 
 // Spawns a unit near the specified factory.
