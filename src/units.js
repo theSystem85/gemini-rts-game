@@ -5,7 +5,8 @@ import {
   UNIT_PROPERTIES,
   PATHFINDING_LIMIT,
   DIRECTIONS,
-  MAX_SPAWN_SEARCH_DISTANCE
+  MAX_SPAWN_SEARCH_DISTANCE,
+  STREET_PATH_COST
 } from './config.js'
 import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
@@ -292,7 +293,10 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
       // Skip if occupancyMap is provided and the tile is occupied.
       if (occupancyMap && occupancyMap[neighbor.y][neighbor.x]) continue
 
-      const gScore = currentNode.g + Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
+      const baseCost = Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
+      const tileType = mapGrid[neighbor.y][neighbor.x].type
+      const terrainCost = tileType === 'street' ? STREET_PATH_COST : 1
+      const gScore = currentNode.g + baseCost * terrainCost
       let foundInHeap = false
       for (const node of openHeap.content) {
         if (node.x === neighbor.x && node.y === neighbor.y) {

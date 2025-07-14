@@ -1,5 +1,5 @@
 // unifiedMovement.js - Unified movement system for all ground units
-import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN } from '../config.js'
+import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
 
@@ -67,7 +67,11 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   
   const movement = unit.movement;
   const speedModifier = unit.speedModifier || 1;
-  const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier;
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE);
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE);
+  const onStreet = mapGrid[tileY] && mapGrid[tileY][tileX] && mapGrid[tileY][tileX].type === 'street';
+  const terrainMultiplier = onStreet ? STREET_SPEED_MULTIPLIER : 1;
+  const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier;
   
   // Handle path following
   if (unit.path && unit.path.length > 0) {
