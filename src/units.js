@@ -421,16 +421,26 @@ function getNeighbors(node, mapGrid) {
 
 // Bresenham-like line algorithm to get all tiles on a line
 function getLineTiles(start, end) {
-  const tiles = [{ x: start.x, y: start.y }]
-  let x = start.x
-  let y = start.y
-  const dx = Math.abs(end.x - start.x)
-  const dy = Math.abs(end.y - start.y)
-  const sx = start.x < end.x ? 1 : -1
-  const sy = start.y < end.y ? 1 : -1
+  // Round coordinates to avoid infinite loops if any non-integer values slip
+  // through. Non-integer coordinates can cause the loop termination check to
+  // never succeed which eventually triggers a RangeError when pushing to the
+  // array. By normalising here we make the algorithm robust against such input
+  // while still returning the expected discrete tile path.
+  const startX = Math.round(start.x)
+  const startY = Math.round(start.y)
+  const endX = Math.round(end.x)
+  const endY = Math.round(end.y)
+
+  const tiles = [{ x: startX, y: startY }]
+  let x = startX
+  let y = startY
+  const dx = Math.abs(endX - startX)
+  const dy = Math.abs(endY - startY)
+  const sx = startX < endX ? 1 : -1
+  const sy = startY < endY ? 1 : -1
   let err = dx - dy
 
-  while (!(x === end.x && y === end.y)) {
+  while (!(x === endX && y === endY)) {
     const e2 = 2 * err
     if (e2 > -dy) {
       err -= dy
