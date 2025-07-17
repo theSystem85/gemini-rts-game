@@ -10,7 +10,7 @@ const MOVEMENT_CONFIG = {
   ACCELERATION: 0.15,      // How quickly units accelerate (increased for more visible effect)
   DECELERATION: 0.20,      // How quickly units decelerate (faster than acceleration)
   ROTATION_SPEED: 0.12,    // How fast units rotate (radians per frame)
-  MAX_SPEED: 1.8,          // Maximum movement speed (slightly slower)
+  MAX_SPEED: 0.9,          // Maximum movement speed (50% slower: 1.8 * 0.5 = 0.9)
   MIN_SPEED: 0.05,         // Minimum speed before stopping
   COLLISION_BUFFER: 8,     // Buffer distance for collision avoidance
   MIN_UNIT_DISTANCE: 24,   // Minimum distance between unit centers (increased from implicit 16)

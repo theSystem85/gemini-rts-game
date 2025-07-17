@@ -157,7 +157,7 @@ export const UNIT_PROPERTIES = {
   base: {
     health: 100,
     maxHealth: 100,
-    speed: 0.5,
+    speed: 0.25,  // 50% slower: 0.5 * 0.5 = 0.25
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
   },
@@ -165,7 +165,7 @@ export const UNIT_PROPERTIES = {
   harvester: {
     health: 150,
     maxHealth: 150,
-    speed: 0.8,
+    speed: 0.4,  // 50% slower: 0.8 * 0.5 = 0.4
     rotationSpeed: 0.2,
     armor: 3
   },
@@ -173,7 +173,7 @@ export const UNIT_PROPERTIES = {
   tank_v1: {
     health: 100,
     maxHealth: 100,
-    speed: 0.66,
+    speed: 0.33,  // 50% slower: 0.66 * 0.5 = 0.33
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
   },
@@ -181,7 +181,7 @@ export const UNIT_PROPERTIES = {
   'tank-v2': {
     health: 150,
     maxHealth: 150,
-    speed: 0.6,
+    speed: 0.3,  // 50% slower: 0.6 * 0.5 = 0.3
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT,
     alertMode: true
@@ -190,7 +190,7 @@ export const UNIT_PROPERTIES = {
   'tank-v3': {
     health: 200,
     maxHealth: 200,
-    speed: 0.5,
+    speed: 0.25,  // 50% slower: 0.5 * 0.5 = 0.25
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT * 1.5, // 50% faster turret rotation for better tracking
     alertMode: true
@@ -199,7 +199,7 @@ export const UNIT_PROPERTIES = {
   rocketTank: {
     health: 100,
     maxHealth: 100,
-    speed: 0.7,
+    speed: 0.35,  // 50% slower: 0.7 * 0.5 = 0.35
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
   }
