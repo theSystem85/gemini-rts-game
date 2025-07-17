@@ -185,7 +185,8 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
         aiFactory.buildStartTime = now
         aiFactory.buildDuration = 5000
         aiFactory.buildingPosition = position // Store position for completion
-        gameState[lastBuildingTimeKey] = now        } else {
+        gameState[lastBuildingTimeKey] = now
+      } else {
           console.log(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
           // Try a simpler placement algorithm as fallback
           const simplePosition = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
@@ -363,7 +364,6 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
       }
       }
     }
-  }
 
   // --- Update AI Units ---
   units.forEach(unit => {
