@@ -120,7 +120,7 @@ export const PATH_CALC_INTERVAL = 2000
 export const ATTACK_PATH_CALC_INTERVAL = 3000
 
 // General AI decision interval for heavy logic like target selection (in milliseconds)
-export const AI_DECISION_INTERVAL = 200
+export const AI_DECISION_INTERVAL = 5000  // Reduced from 200ms to 5s to prevent wiggling
 
 // Smoke emission for buildings
 export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs

@@ -38,7 +38,54 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)
     const canChangeTarget = justGotAttacked || !unit.lastTargetChangeTime || (now - unit.lastTargetChangeTime >= 5000)
 
+    // Base defense: Check if our base is under attack and we should defend it
+    const shouldDefendBase = checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId)
+    if (shouldDefendBase && (!unit.target || !justGotAttacked)) {
+      const baseDefenseTarget = findBaseDefenseTarget(unit, units, gameState, aiPlayerId)
+      if (baseDefenseTarget) {
+        unit.target = baseDefenseTarget
+        unit.lastTargetChangeTime = now
+        unit.defendingBase = true
+        
+        // Store target position for movement tracking
+        unit.lastTargetPosition = {
+          x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
+          y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
+        }
+        
+        // Immediate path calculation for base defense
+        let targetPos = null
+        if (unit.target.tileX !== undefined) {
+          targetPos = { x: unit.target.tileX, y: unit.target.tileY }
+        } else {
+          targetPos = { x: unit.target.x, y: unit.target.y }
+        }
+        
+        if (targetPos && !unit.isDodging) {
+          const occupancyMap = gameState.occupancyMap
+          const path = getCachedPath(
+            { x: unit.tileX, y: unit.tileY },
+            targetPos,
+            mapGrid,
+            occupancyMap
+          )
+          if (path.length > 1) {
+            unit.path = path.slice(1)
+            unit.lastPathCalcTime = now
+          }
+        }
+        
+        unit.lastDecisionTime = now
+        return // Skip other target selection when defending base
+      }
+    }
+
     if (allowDecision) {
+      // Clear defending base flag if no longer needed
+      if (unit.defendingBase && !checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId)) {
+        unit.defendingBase = false
+      }
+      
       if (canChangeTarget) {
         let newTarget = null
 
@@ -64,7 +111,12 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
           // Keep current target if it's within reasonable range (unless being attacked by someone else)
           const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)
-          if (targetDistance < 25 * TILE_SIZE && !justGotAttacked) {
+          // Increased range and added condition to prevent frequent target switching
+          const isInCombatRange = targetDistance < 30 * TILE_SIZE // Increased from 25 to 30
+          const targetStillValid = unit.target.health > 0
+          const hasRecentPath = unit.path && unit.path.length > 0
+          
+          if (targetStillValid && isInCombatRange && !justGotAttacked && (hasRecentPath || targetDistance < 15 * TILE_SIZE)) {
             keepCurrentTarget = true
             newTarget = unit.target // Keep the current target
           }
@@ -265,6 +317,15 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
             targetPos = { x: unit.target.x, y: unit.target.y }
           }
           unit.moveTarget = targetPos
+          
+          // Store target position for movement tracking
+          if (unit.target) {
+            unit.lastTargetPosition = {
+              x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
+              y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
+            }
+          }
+          
           if (!unit.isDodging && targetPos) {
             // Use occupancy map in attack mode to prevent moving through occupied tiles
             const occupancyMap = gameState.occupancyMap
@@ -298,14 +359,28 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
       }
 
       // Path recalculation throttled to every 3 seconds for attack/chase movement
+      // But avoid recalculating if unit is moving along a good path and target hasn't moved much
       const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
-      if (pathRecalcNeeded && !unit.isDodging && unit.target && (!unit.path || unit.path.length < 3)) {
+      const hasValidPath = unit.path && unit.path.length >= 3
+      const targetHasMoved = unit.target && unit.lastTargetPosition && (
+        Math.abs(unit.target.x - unit.lastTargetPosition.x) > 2 * TILE_SIZE ||
+        Math.abs(unit.target.y - unit.lastTargetPosition.y) > 2 * TILE_SIZE
+      )
+      
+      if (pathRecalcNeeded && !unit.isDodging && unit.target && (!hasValidPath || targetHasMoved)) {
         let targetPos = null
         if (unit.target.tileX !== undefined) {
           targetPos = { x: unit.target.tileX, y: unit.target.tileY }
         } else {
           targetPos = { x: unit.target.x, y: unit.target.y }
         }
+        
+        // Store target position for movement tracking
+        unit.lastTargetPosition = {
+          x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
+          y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
+        }
+        
         // Use occupancy map in attack mode to prevent moving through occupied tiles
         const occupancyMap = gameState.occupancyMap
         const path = getCachedPath(
@@ -452,4 +527,98 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     }
   }
 }
+
+/**
+ * Checks if the AI base is under attack and units should defend it
+ */
+function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
+  const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
+  if (aiBuildings.length === 0) return false
+  
+  // Check if any player units are near our base
+  const playerUnitsNearBase = units.filter(u => {
+    if (u.owner !== gameState.humanPlayer || u.health <= 0) return false
+    
+    return aiBuildings.some(building => {
+      const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+      const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+      const distance = Math.hypot(
+        (u.x + TILE_SIZE / 2) - buildingCenterX,
+        (u.y + TILE_SIZE / 2) - buildingCenterY
+      )
+      return distance < 12 * TILE_SIZE // Within 12 tiles of our base
+    })
+  })
+  
+  // Check if we're already sending enough defenders
+  const currentDefenders = units.filter(u => 
+    u.owner === aiPlayerId && 
+    u.health > 0 &&
+    u.defendingBase &&
+    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank')
+  )
+  
+  // Need defense if player units near base and we don't have enough defenders
+  const needsDefense = playerUnitsNearBase.length > 0 && currentDefenders.length < Math.min(playerUnitsNearBase.length * 2, 6)
+  
+  // Only nearby units should defend (within reasonable distance)
+  if (needsDefense) {
+    const distanceToBase = Math.min(...aiBuildings.map(building => {
+      const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+      const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+      return Math.hypot(
+        (unit.x + TILE_SIZE / 2) - buildingCenterX,
+        (unit.y + TILE_SIZE / 2) - buildingCenterY
+      )
+    }))
+    
+    return distanceToBase < 20 * TILE_SIZE // Only units within 20 tiles should defend
+  }
+  
+  return false
+}
+
+/**
+ * Finds the best target for base defense
+ */
+function findBaseDefenseTarget(unit, units, gameState, aiPlayerId) {
+  const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
+  if (aiBuildings.length === 0) return null
+  
+  // Find player units threatening our base
+  const threats = units.filter(u => {
+    if (u.owner !== gameState.humanPlayer || u.health <= 0) return false
+    
+    return aiBuildings.some(building => {
+      const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
+      const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
+      const distance = Math.hypot(
+        (u.x + TILE_SIZE / 2) - buildingCenterX,
+        (u.y + TILE_SIZE / 2) - buildingCenterY
+      )
+      return distance < 12 * TILE_SIZE
+    })
+  })
+  
+  if (threats.length === 0) return null
+  
+  // Find closest threat to our unit
+  let closestThreat = null
+  let closestDistance = Infinity
+  
+  threats.forEach(threat => {
+    const distance = Math.hypot(
+      (threat.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
+      (threat.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+    )
+    
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestThreat = threat
+    }
+  })
+  
+  return closestThreat
+}
+
 export { updateAIUnit }
