@@ -245,6 +245,7 @@ function getPlayerDefeatSound(playerId) {
  * @returns {boolean} - True if game should end
  */
 export function checkGameEndConditions(factories, gameState) {
+  if (gameState.gameOver) return true
   if (!gameState.buildings) return false
   
   // Count remaining buildings AND factories for human player
