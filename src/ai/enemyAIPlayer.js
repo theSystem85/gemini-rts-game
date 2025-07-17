@@ -97,9 +97,9 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   // Debug logging (enable temporarily to debug building issues)
   const DEBUG_AI_BUILDING = false  // Disable debugging
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
-  // Don't build if currently building something or already producing a unit
-  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 && 
-      gameState.buildings && !aiFactory.currentlyBuilding && !aiFactory.currentlyProducingUnit) {
+  // Building construction runs independently from unit production
+  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 &&
+      gameState.buildings && !aiFactory.currentlyBuilding) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
@@ -338,8 +338,8 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'vehicleFactory').length > 0 &&
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'oreRefinery').length > 0) {
     
-    // Don't produce units if currently building something or already producing a unit
-    if (aiFactory && !aiFactory.currentlyBuilding && !aiFactory.currentlyProducingUnit && 
+    // Don't produce units if already producing a unit
+    if (aiFactory && !aiFactory.currentlyProducingUnit &&
         now - (gameState[lastProductionKey] || 0) >= 8000) {
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
