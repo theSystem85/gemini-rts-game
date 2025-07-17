@@ -96,48 +96,126 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
           }
         }
 
-        // Third priority: Group attack strategy (if not retaliating or defending harvesters)
+        // Third priority: Target player harvesters (key economic targets)
+        if (!newTarget) {
+          const playerHarvesters = units.filter(u => 
+            u.owner === gameState.humanPlayer && 
+            u.type === 'harvester' &&
+            u.health > 0
+          )
+          
+          if (playerHarvesters.length > 0) {
+            // Find closest player harvester
+            let closestHarvester = null
+            let closestDist = Infinity
+            
+            playerHarvesters.forEach(harvester => {
+              const distance = Math.hypot(
+                (harvester.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
+                (harvester.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+              )
+              if (distance < closestDist) {
+                closestDist = distance
+                closestHarvester = harvester
+              }
+            })
+            
+            // Target harvester if within reasonable range
+            if (closestHarvester && closestDist < 20 * TILE_SIZE) {
+              newTarget = closestHarvester
+            }
+          }
+        }
+
+        // Fourth priority: Group attack strategy (target player base and units)
         if (!newTarget) {
           // Check if we should conduct group attack before selecting targets
           const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
             (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
             Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
-          // Use group attack strategy
-          if (nearbyAllies.length >= 2) {
-            // Find appropriate target for group attack - target closest enemy
-            let closestEnemy = null
-            let closestDist = Infinity
+          // Use group attack strategy with priority targeting
+          if (nearbyAllies.length >= 1) { // Reduced from 2 to make AI more aggressive
+            // Priority 1: Target closest player combat unit
+            let closestPlayerUnit = null
+            let closestPlayerDist = Infinity
+            
             units.forEach(u => {
-              if (isEnemyTo(u, aiPlayerId)) {
+              if (u.owner === gameState.humanPlayer && u.health > 0) {
                 const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                if (d < closestDist) {
-                  closestDist = d
-                  closestEnemy = u
+                if (d < closestPlayerDist) {
+                  closestPlayerDist = d
+                  closestPlayerUnit = u
                 }
               }
             })
             
-            // Only attack if group is large enough for the target's defenses
-            const potentialTarget = (closestEnemy && closestDist < 12 * TILE_SIZE) ? closestEnemy : getClosestEnemyFactory(unit, gameState.factories || [], aiPlayerId)
-            if (shouldConductGroupAttack(unit, units, gameState, potentialTarget)) {
-              newTarget = potentialTarget
-            }
-          } else {
-            // Not enough allies nearby, avoid attacking alone unless absolutely necessary
-            let closestPlayer = null
-            let closestDist = Infinity
-            units.forEach(u => {
-              if (u.owner === gameState.humanPlayer) {
-                const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                if (d < closestDist) {
-                  closestDist = d
-                  closestPlayer = u
+            // Priority 2: If no player units nearby, target player buildings (base attack)
+            if (!closestPlayerUnit || closestPlayerDist > 15 * TILE_SIZE) {
+              const playerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
+              if (playerBuildings.length > 0) {
+                // Prioritize important buildings: construction yard > vehicle factory > ore refinery > others
+                const priorityOrder = ['constructionYard', 'vehicleFactory', 'oreRefinery', 'powerPlant', 'radarStation']
+                let targetBuilding = null
+                
+                for (const buildingType of priorityOrder) {
+                  const building = playerBuildings.find(b => b.type === buildingType)
+                  if (building) {
+                    targetBuilding = building
+                    break
+                  }
+                }
+                
+                // If no priority buildings, target any building
+                if (!targetBuilding) {
+                  targetBuilding = playerBuildings[0]
+                }
+                
+                if (targetBuilding) {
+                  newTarget = targetBuilding
                 }
               }
-            })
-            // Only engage if very close or no other choice
-            newTarget = (closestPlayer && closestDist < 6 * TILE_SIZE) ? closestPlayer : null
+            } else {
+              newTarget = closestPlayerUnit
+            }
+            
+            // Only attack if group is large enough for heavily defended targets
+            if (newTarget && shouldConductGroupAttack(unit, units, gameState, newTarget)) {
+              // Keep the target
+            } else if (nearbyAllies.length >= 2) {
+              // With 3+ units, attack anyway
+              // Keep the target
+            } else {
+              // Single unit or pair - only attack if very close or harvester
+              if (newTarget && (newTarget.type === 'harvester' || 
+                  Math.hypot((newTarget.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), 
+                            (newTarget.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)) < 8 * TILE_SIZE)) {
+                // Keep the target
+              } else {
+                newTarget = null
+              }
+            }
+          } else {
+            // Solo unit behavior - be more cautious, focus on harvesters and weak targets
+            const soloTargets = units.filter(u => 
+              u.owner === gameState.humanPlayer && 
+              u.health > 0 &&
+              (u.type === 'harvester' || u.health <= 50) // Target harvesters or damaged units
+            )
+            
+            if (soloTargets.length > 0) {
+              let closestTarget = null
+              let closestDist = Infinity
+              soloTargets.forEach(target => {
+                const d = Math.hypot((target.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (target.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
+                if (d < closestDist) {
+                  closestDist = d
+                  closestTarget = target
+                }
+              })
+              // Only engage if very close
+              newTarget = (closestTarget && closestDist < 6 * TILE_SIZE) ? closestTarget : null
+            }
           }
         }
 

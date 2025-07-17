@@ -2,18 +2,6 @@ import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearEx
 import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 
-function findAdjacentTile(factory, mapGrid) {
-  for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
-    for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
-      if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue
-      if (!mapGrid[y][x].building) {
-        return { x, y }
-      }
-    }
-  }
-  return null
-}
-
 // Let's improve this function to fix issues with enemy building placement
 // Modified to improve building placement with better spacing and factory avoidance
 export function findBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
@@ -24,7 +12,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   const buildingHeight = buildingData[buildingType].height
 
   // Get human player factory for directional placement (to build defenses toward them)
-  const humanPlayerFactory = factories.find(f => f.id === 'player1') // Assume human is always player1
+  const humanPlayerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player1') // Use gameState.humanPlayer
   const factoryX = factory.x + Math.floor(factory.width / 2)
   const factoryY = factory.y + Math.floor(factory.height / 2)
 
@@ -82,10 +70,24 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   }
 
   // Special case for walls - they can be placed closer together
-  const minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2
+  // Special spacing requirements for different building types
+  let minSpaceBetweenBuildings = 2 // Default spacing
+  
+  if (buildingType === 'concreteWall') {
+    minSpaceBetweenBuildings = 1 // Walls can be closer
+  } else if (buildingType === 'oreRefinery') {
+    minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
+  } else if (buildingType === 'vehicleFactory') {
+    minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
+  } else if (buildingType.startsWith('turretGun') || buildingType === 'rocketTurret' || buildingType === 'teslaCoil') {
+    minSpaceBetweenBuildings = 2 // Defense buildings standard spacing
+  }
 
   // Preferred placement distances - increased to ensure more space between buildings
-  const preferredDistances = [3, 4, 5, 2]
+  // For refineries and factories, use larger distances
+  const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') 
+    ? [4, 5, 6, 3] 
+    : [3, 4, 5, 2]
 
   // Search for positions prioritizing direction and preferred distance
   for (let angle = 0; angle < 360; angle += 30) {
@@ -144,10 +146,13 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
       // Check if ANY tile of the building is within range of an existing enemy building
       // This means we're connected to the base, but not too close
+      // Use different connection ranges for different building types
+      const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 6 : 5
+      
       let isNearBase = false
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
         for (let checkX = x; checkX < x + buildingWidth && !isNearBase; checkX++) {
-          if (isNearExistingBuilding(checkX, checkY, buildings, factories, 5, aiPlayerId)) {
+          if (isNearExistingBuilding(checkX, checkY, buildings, factories, connectionRange, aiPlayerId)) {
             isNearBase = true
           }
         }
@@ -156,7 +161,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       if (!isNearBase) continue
 
       // NEW: Check if this building would create a bottleneck by being too close to other buildings
-      const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+      const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
       if (!hasClearPaths) continue
 
@@ -166,11 +171,11 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   }
 
   // If we couldn't find a position with our preferred approach, try the fallback
-  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories)
+  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId)
 }
 
 // New helper function to ensure there are clear paths around a potential building placement
-function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace) {
+function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace, aiPlayerId) {
   // First, check all sides of the building to ensure there's adequate space
   let accessibleSides = 0
 
@@ -297,15 +302,12 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
     }
   }
 
-  // Get an AI factory for path testing (use first AI player)
-  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
-  const aiFactory = aiPlayerIds.length > 0 
-    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
-    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
+  // Get an AI factory for path testing
+  const aiFactory = factories.find(f => f.id === aiPlayerId || f.owner === aiPlayerId)
   if (!aiFactory) return true // If no AI factory, placement should be allowed
 
   // Find existing buildings to test paths between
-  const aiBuildings = buildings ? buildings.filter(b => b.owner === (aiPlayerIds[0] || 'enemy')) : []
+  const aiBuildings = buildings ? buildings.filter(b => b.owner === aiPlayerId) : []
 
   if (aiBuildings.length < 1) {
     return true // No existing buildings to test paths between
@@ -428,26 +430,32 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
 }
 
 // Fallback position search with the original spiral pattern
-function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories) {
-  // Use first AI player factory, fallback to 'enemy' for legacy compatibility
-  const aiPlayerIds = Object.keys(gameState.aiPlayerStates || {})
-  const factory = aiPlayerIds.length > 0 
-    ? factories.find(f => f.owner === aiPlayerIds[0] || f.id === aiPlayerIds[0])
-    : factories.find(f => f.owner === 'enemy' || f.id === 'enemy') // fallback
+function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+  // Find AI player factory using the aiPlayerId from context
+  const factory = factories.find(f => f.id === aiPlayerId)
   if (!factory) return null
 
   const buildingWidth = buildingData[buildingType].width
   const buildingHeight = buildingData[buildingType].height
 
-  // Special case for walls - they can be placed closer together
-  const minSpaceBetweenBuildings = buildingType === 'concreteWall' ? 1 : 2
+  // Special spacing requirements for different building types
+  let minSpaceBetweenBuildings = 2 // Default spacing
+  let preferredDistances = [3, 4, 5, 2] // Default distances
+  
+  if (buildingType === 'concreteWall') {
+    minSpaceBetweenBuildings = 1 // Walls can be closer
+    preferredDistances = [2, 3, 4, 1]
+  } else if (buildingType === 'oreRefinery') {
+    minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
+    preferredDistances = [4, 5, 6, 3] // Place them further away
+  } else if (buildingType === 'vehicleFactory') {
+    minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
+    preferredDistances = [4, 5, 6, 3]
+  }
 
   // Get human player factory for directional placement of defensive buildings
-  const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player')
+  const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player1')
   const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
-
-  // Preferred distances for building placement
-  const preferredDistances = [3, 4, 5, 2]
 
   // Calculate player direction for defensive buildings
   let playerDirection = null

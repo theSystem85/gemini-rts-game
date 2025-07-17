@@ -104,11 +104,27 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
     return true
   }
   
+  // Always allow attacking player harvesters (high priority economic targets)
+  if (target.type === 'harvester' && target.owner === gameState.humanPlayer) {
+    return true
+  }
+  
+  // Allow attacking damaged player units
+  if (target.health && target.maxHealth && target.health <= target.maxHealth * 0.5) {
+    return true
+  }
+  
   const nearbyAllies = countNearbyAllies(unit, units)
   const totalGroupSize = nearbyAllies + 1 // Include the unit itself
   
-  // Check if we have minimum group size
+  // Check if we have minimum group size for heavily defended targets
   if (totalGroupSize < AI_CONFIG.GROUP_ATTACK_MIN_SIZE) {
+    // Allow solo attacks on weak or economic targets
+    if (target.type === 'harvester' || 
+        (target.health && target.maxHealth && target.health <= target.maxHealth * 0.3) ||
+        target.type === 'oreRefinery') {
+      return true
+    }
     return false
   }
   
@@ -231,7 +247,10 @@ export function shouldHarvesterSeekProtection(harvester, units) {
     Math.hypot(u.x - harvester.x, u.y - harvester.y) < AI_CONFIG.HARVESTER_DEFENSE_RANGE * TILE_SIZE
   )
   
-  return nearbyThreats.length > 0
+  // Also check if harvester has been recently damaged
+  const recentlyDamaged = harvester.lastDamageTime && (performance.now() - harvester.lastDamageTime < 10000)
+  
+  return nearbyThreats.length > 0 || recentlyDamaged
 }
 
 /**

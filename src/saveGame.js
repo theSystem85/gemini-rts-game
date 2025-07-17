@@ -63,7 +63,9 @@ export function saveGame(label) {
     assignedRefinery: u.assignedRefinery,
     oreField: u.oreField,
     path: u.path || [],
-    target: u.target,
+    // Save target as ID only to avoid circular references
+    targetId: u.target?.id || null,
+    targetType: u.target ? (u.target.type || 'unknown') : null,
     groupNumber: u.groupNumber,
     // Experience/Leveling system properties
     level: u.level || 0,
@@ -73,6 +75,7 @@ export function saveGame(label) {
     fireRateMultiplier: u.fireRateMultiplier,
     armor: u.armor,
     selfRepair: u.selfRepair
+    // Note: lastAttacker is excluded to prevent circular references
     // Add more fields if needed
   }))
 
@@ -287,6 +290,23 @@ export function loadGame(key) {
       }
       
       units.push(hydrated)
+    })
+
+    // Restore target references after all units and buildings are loaded
+    units.forEach(unit => {
+      if (unit.targetId) {
+        // Find target by ID in units or buildings
+        let target = units.find(u => u.id === unit.targetId)
+        if (!target) {
+          target = gameState.buildings.find(b => b.id === unit.targetId)
+        }
+        if (target) {
+          unit.target = target
+        }
+        // Clean up temporary properties
+        delete unit.targetId
+        delete unit.targetType
+      }
     })
 
     // Rebuild control groups based on restored units

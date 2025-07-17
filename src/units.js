@@ -219,6 +219,16 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
 export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
+  // Validate input coordinates
+  if (!start || !end || 
+      typeof start.x !== 'number' || typeof start.y !== 'number' ||
+      typeof end.x !== 'number' || typeof end.y !== 'number' ||
+      !isFinite(start.x) || !isFinite(start.y) ||
+      !isFinite(end.x) || !isFinite(end.y)) {
+    console.warn('findPath: invalid coordinates provided', { start, end })
+    return []
+  }
+
   // Validate mapGrid
   if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0] || !Array.isArray(mapGrid[0])) {
     console.warn('findPath: invalid mapGrid provided', { mapGrid })
@@ -226,13 +236,13 @@ export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLi
   }
   
   if (
-    end.x < 0 ||
-    end.y < 0 ||
-    end.x >= mapGrid[0].length ||
-    end.y >= mapGrid.length
+    start.x < 0 || start.y < 0 ||
+    start.x >= mapGrid[0].length || start.y >= mapGrid.length ||
+    end.x < 0 || end.y < 0 ||
+    end.x >= mapGrid[0].length || end.y >= mapGrid.length
   ) {
     if (!pathfindingWarningShown) {
-      console.warn('findPath: destination tile out of bounds', { start, end })
+      console.warn('findPath: start or destination tile out of bounds', { start, end })
       pathfindingWarningShown = true
     }
     return []
@@ -421,6 +431,16 @@ function getNeighbors(node, mapGrid) {
 
 // Bresenham-like line algorithm to get all tiles on a line
 function getLineTiles(start, end) {
+  // Validate input coordinates
+  if (!start || !end || 
+      typeof start.x !== 'number' || typeof start.y !== 'number' ||
+      typeof end.x !== 'number' || typeof end.y !== 'number' ||
+      !isFinite(start.x) || !isFinite(start.y) ||
+      !isFinite(end.x) || !isFinite(end.y)) {
+    console.warn('Invalid coordinates passed to getLineTiles:', { start, end })
+    return []
+  }
+
   const tiles = [{ x: start.x, y: start.y }]
   let x = start.x
   let y = start.y
@@ -430,7 +450,12 @@ function getLineTiles(start, end) {
   const sy = start.y < end.y ? 1 : -1
   let err = dx - dy
 
-  while (!(x === end.x && y === end.y)) {
+  // Prevent infinite loops for very large distances
+  let iterations = 0
+  const maxIterations = Math.max(dx, dy) + 1
+  
+  while (!(x === end.x && y === end.y) && iterations < maxIterations) {
+    iterations++
     const e2 = 2 * err
     if (e2 > -dy) {
       err -= dy
@@ -440,7 +465,14 @@ function getLineTiles(start, end) {
       err += dx
       y += sy
     }
-    tiles.push({ x, y })
+    
+    // Validate coordinates before pushing
+    if (isFinite(x) && isFinite(y)) {
+      tiles.push({ x, y })
+    } else {
+      console.warn('Invalid coordinates generated in getLineTiles:', { x, y, start, end })
+      break
+    }
   }
   return tiles
 }
