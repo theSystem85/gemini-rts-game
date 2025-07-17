@@ -225,7 +225,8 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targeted
             if (mag > 0) {
               dodgeDir.x /= mag
               dodgeDir.y /= mag
-              const dodgeDistance = 1 + Math.floor(Math.random() * 2)
+              // Only move a single tile when dodging
+              const dodgeDistance = 1
               const destTileX = Math.floor(unit.tileX + Math.round(dodgeDir.x * dodgeDistance))
               const destTileY = Math.floor(unit.tileY + Math.round(dodgeDir.y * dodgeDistance))
               if (destTileX >= 0 && destTileX < mapGrid[0].length &&

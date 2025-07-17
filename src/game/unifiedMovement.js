@@ -84,17 +84,20 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distance = Math.hypot(dx, dy);
     
     // Check if we've reached the current waypoint
-    if (distance < TILE_SIZE / 3) {
+    // Consider the waypoint reached slightly earlier to avoid stuck detection
+    if (distance < TILE_SIZE / 2) {
       unit.path.shift(); // Remove reached waypoint
       
       // Update tile position
       unit.tileX = nextTile.x;
       unit.tileY = nextTile.y;
       
-      // If no more waypoints, start deceleration
+      // If no more waypoints, stop immediately
       if (unit.path.length === 0) {
         movement.targetVelocity.x = 0;
         movement.targetVelocity.y = 0;
+        movement.velocity.x = 0;
+        movement.velocity.y = 0;
         movement.isMoving = false;
       }
     } else {
@@ -327,7 +330,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
   }
   
   // Check map obstacles
-  if (mapGrid[tileY][tileX] === 1) {
+  const tile = mapGrid[tileY][tileX];
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
     return true;
   }
   
@@ -675,8 +679,8 @@ function tryRandomStuckMovement(unit, mapGrid, occupancyMap, units) {
   const turnDirection = Math.random() < 0.5 ? -Math.PI/2 : Math.PI/2; // -90 or +90 degrees
   const newDirection = currentDirection + turnDirection;
   
-  // Randomly choose 1 or 2 tiles forward
-  const forwardDistance = Math.random() < 0.5 ? 1 : 2;
+  // Move only a single tile to avoid excessive drifting
+  const forwardDistance = 1;
   
   // Calculate target position
   const targetX = Math.round(currentTileX + Math.cos(newDirection) * forwardDistance);
@@ -710,11 +714,11 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
   const currentTileX = Math.floor(unit.x / TILE_SIZE);
   const currentTileY = Math.floor(unit.y / TILE_SIZE);
   
-  // Look for free tiles in a wider pattern around the harvester
+  // Look for free tiles one tile away only
   const dodgePositions = [];
-  
-  // Check in expanding circles for better dodge positions
-  for (let radius = 1; radius <= 3; radius++) {
+
+  // Check just the immediate surrounding tiles
+  for (let radius = 1; radius <= 1; radius++) {
     for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
       const dodgeX = Math.round(currentTileX + Math.cos(angle) * radius);
       const dodgeY = Math.round(currentTileY + Math.sin(angle) * radius);
