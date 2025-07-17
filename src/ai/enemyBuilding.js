@@ -5,6 +5,26 @@ import { isPartOfFactory } from './enemyUtils.js'
 // Let's improve this function to fix issues with enemy building placement
 // Modified to improve building placement with better spacing and factory avoidance
 export function findBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+  // Validate inputs
+  if (!buildingType) {
+    console.error('findBuildingPosition called with undefined/null buildingType', {
+      buildingType,
+      aiPlayerId,
+      mapGridExists: !!mapGrid,
+      factoriesCount: factories?.length || 0
+    })
+    return null
+  }
+
+  if (!buildingData[buildingType]) {
+    console.error(`findBuildingPosition called with unknown buildingType: ${buildingType}`, {
+      buildingType,
+      aiPlayerId,
+      availableTypes: Object.keys(buildingData)
+    })
+    return null
+  }
+
   const factory = factories.find(f => f.id === aiPlayerId)
   if (!factory) return null
 
@@ -431,6 +451,17 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
 
 // Fallback position search with the original spiral pattern
 function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+  // Validate inputs
+  if (!buildingType) {
+    console.warn('fallbackBuildingPosition called with undefined buildingType')
+    return null
+  }
+
+  if (!buildingData[buildingType]) {
+    console.warn(`fallbackBuildingPosition called with unknown buildingType: ${buildingType}`)
+    return null
+  }
+
   // Find AI player factory using the aiPlayerId from context
   const factory = factories.find(f => f.id === aiPlayerId)
   if (!factory) return null

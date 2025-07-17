@@ -591,12 +591,12 @@ export class BuildingRenderer {
       // For enemy vehicle factories, we need to check if they're producing something
       // We can use the factory system to track this
       factory = gameState.factories?.find(f => f.id === building.owner)
-      if (factory && factory.currentlyBuilding && 
-          ['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank'].includes(factory.currentlyBuilding)) {
+      if (factory && factory.currentlyProducingUnit && 
+          ['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank'].includes(factory.currentlyProducingUnit)) {
         isFactory = true
-        currentlyBuilding = factory.currentlyBuilding
-        buildStartTime = factory.buildStartTime
-        buildDuration = factory.buildDuration
+        currentlyBuilding = factory.currentlyProducingUnit
+        buildStartTime = factory.unitBuildStartTime
+        buildDuration = factory.unitBuildDuration
       }
     }
     
