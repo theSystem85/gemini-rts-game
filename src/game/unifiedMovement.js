@@ -524,12 +524,139 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
         stuck.isRotating = false;
       } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
         // Only consider stuck if harvester has a path but isn't moving and isn't doing valid actions
+        // More lenient for AI harvesters to prevent wiggling
+        const isAIHarvester = unit.owner === 'enemy'
+        const movementThreshold = isAIHarvester ? TILE_SIZE / 8 : TILE_SIZE / 4  // 4px for AI, 8px for others
+        const stuckTimeThreshold = isAIHarvester ? stuckThreshold * 2 : stuckThreshold  // 2x longer for AI harvesters
+        
+        if (distanceMoved < movementThreshold) {
+          stuck.stuckTime += now - stuck.lastMovementCheck;
+          
+          if (stuck.stuckTime > stuckTimeThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
+            
+            stuck.lastStuckHandling = now; // Set cooldown
+            
+            // For AI harvesters, be less aggressive with stuck recovery
+            if (isAIHarvester) {
+              // Try clearing ore field first, then path - minimal intervention
+              if (unit.oreField) {
+                clearStuckHarvesterOreField(unit)
+                unit.path = [] // Clear path to force new ore finding
+                stuck.stuckTime = 0
+                stuck.rotationAttempts = 0
+                stuck.dodgeAttempts = 0
+                return
+              } else {
+                // Just clear path for AI harvesters
+                unit.path = [];
+                stuck.stuckTime = 0;
+                stuck.rotationAttempts = 0;
+                stuck.dodgeAttempts = 0;
+                stuck.isRotating = false;
+                return;
+              }
+            }
+            
+            // Non-AI harvesters get the full stuck recovery treatment
+            // Try the new random movement pattern first (90 degrees left/right + 1-2 tiles forward)
+            if (tryRandomStuckMovement(unit, mapGrid, occupancyMap, units)) {
+              stuck.stuckTime = 0;
+              stuck.rotationAttempts = 0;
+              stuck.dodgeAttempts = 0;
+              return;
+            }
+            
+            // Enhanced recovery strategies for harvesters as fallback
+            if (gameState && factories) {
+              handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories)
+              stuck.stuckTime = 0 // Reset stuck time after handling
+              stuck.rotationAttempts = 0
+              stuck.dodgeAttempts = 0
+              return
+            }
+            
+            // Fallback to original logic if parameters not available
+            // Clear ore field assignment if harvester is stuck trying to reach it
+            if (unit.oreField && stuck.stuckTime > stuckThreshold) {
+              clearStuckHarvesterOreField(unit)
+              unit.path = [] // Clear path to force new ore finding
+              stuck.stuckTime = 0 // Reset stuck time after clearing ore field
+            }
+            
+            // Try dodge movement first for harvesters
+            if (stuck.dodgeAttempts < 3 && now - stuck.lastDodgeTime > DODGE_ATTEMPT_COOLDOWN) {
+              if (tryDodgeMovement(unit, mapGrid, occupancyMap, units)) {
+                stuck.dodgeAttempts++;
+                stuck.lastDodgeTime = now;
+                stuck.stuckTime = 0; // Reset stuck time after successful dodge
+                return;
+              }
+            }
+            
+            // If dodge failed, try rotation
+            if (stuck.rotationAttempts < 4) {
+              stuck.isRotating = true;
+              stuck.rotationAttempts++;
+              
+              // For harvesters, try rotating towards a nearby free space
+              const freeDirection = findFreeDirection(unit, mapGrid, occupancyMap, units);
+              if (freeDirection !== null) {
+                rotateUnitInPlace(unit, freeDirection);
+              } else {
+                rotateUnitInPlace(unit);
+              }
+            } else {
+              // Last resort: clear path and force new pathfinding
+              unit.path = [];
+              stuck.stuckTime = 0;
+              stuck.rotationAttempts = 0;
+              stuck.dodgeAttempts = 0;
+              stuck.isRotating = false;
+            }
+          }
+        } else {
+          // Harvester moved enough, reset stuck detection
+          stuck.stuckTime = 0;
+          stuck.rotationAttempts = 0;
+          stuck.dodgeAttempts = 0;
+          stuck.isRotating = false;
+        }
+      } else {
+        // Unit is moving normally or has no path, reset stuck detection
+        stuck.stuckTime = 0;
+        stuck.rotationAttempts = 0;
+        stuck.dodgeAttempts = 0;
+        stuck.isRotating = false;
+      }
+    } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
+      // All other unit types (tanks, etc.) - new unified stuck detection logic
+      // More lenient stuck detection for AI combat units to prevent wiggling
+      const isAICombatUnit = unit.owner === 'enemy' && 
+        (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')
+      
+      // Use more lenient thresholds for AI combat units
+      const movementThreshold = isAICombatUnit ? TILE_SIZE / 8 : TILE_SIZE / 4  // 4px for AI, 8px for others
+      const stuckTimeThreshold = isAICombatUnit ? stuckThreshold * 3 : stuckThreshold  // 3x longer for AI units
+      
+      if (distanceMoved < movementThreshold) {
         stuck.stuckTime += now - stuck.lastMovementCheck;
         
-        if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
+        if (stuck.stuckTime > stuckTimeThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
           
           stuck.lastStuckHandling = now; // Set cooldown
           
+          // For AI combat units, be less aggressive with stuck recovery
+          if (isAICombatUnit) {
+            // Only clear path for AI units - no random movements or rotations that cause wiggling
+            unit.path = [];
+            stuck.stuckTime = 0;
+            stuck.rotationAttempts = 0;
+            stuck.dodgeAttempts = 0;
+            stuck.isRotating = false;
+            return;
+          }
+          
+          // Non-AI units get the full stuck recovery treatment
           // Try the new random movement pattern first (90 degrees left/right + 1-2 tiles forward)
           if (tryRandomStuckMovement(unit, mapGrid, occupancyMap, units)) {
             stuck.stuckTime = 0;
@@ -538,39 +665,11 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
             return;
           }
           
-          // Enhanced recovery strategies for harvesters as fallback
-          if (gameState && factories) {
-            handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories)
-            stuck.stuckTime = 0 // Reset stuck time after handling
-            stuck.rotationAttempts = 0
-            stuck.dodgeAttempts = 0
-            return
-          }
-          
-          // Fallback to original logic if parameters not available
-          // Clear ore field assignment if harvester is stuck trying to reach it
-          if (unit.oreField && stuck.stuckTime > stuckThreshold) {
-            clearStuckHarvesterOreField(unit)
-            unit.path = [] // Clear path to force new ore finding
-            stuck.stuckTime = 0 // Reset stuck time after clearing ore field
-          }
-          
-          // Try dodge movement first for harvesters
-          if (stuck.dodgeAttempts < 3 && now - stuck.lastDodgeTime > DODGE_ATTEMPT_COOLDOWN) {
-            if (tryDodgeMovement(unit, mapGrid, occupancyMap, units)) {
-              stuck.dodgeAttempts++;
-              stuck.lastDodgeTime = now;
-              stuck.stuckTime = 0; // Reset stuck time after successful dodge
-              return;
-            }
-          }
-          
-          // If dodge failed, try rotation
-          if (stuck.rotationAttempts < 4) {
+          // Fallback to rotation if random movement fails
+          if (stuck.rotationAttempts < 3) {
             stuck.isRotating = true;
             stuck.rotationAttempts++;
             
-            // For harvesters, try rotating towards a nearby free space
             const freeDirection = findFreeDirection(unit, mapGrid, occupancyMap, units);
             if (freeDirection !== null) {
               rotateUnitInPlace(unit, freeDirection);
@@ -587,47 +686,11 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
           }
         }
       } else {
-        // Unit is moving normally or has no path, reset stuck detection
+        // Unit moved enough, reset stuck detection
         stuck.stuckTime = 0;
         stuck.rotationAttempts = 0;
         stuck.dodgeAttempts = 0;
         stuck.isRotating = false;
-      }
-    } else if (distanceMoved < TILE_SIZE / 4 && unit.path && unit.path.length > 0) {
-      // All other unit types (tanks, etc.) - new unified stuck detection logic
-      stuck.stuckTime += now - stuck.lastMovementCheck;
-      
-      if (stuck.stuckTime > stuckThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
-        
-        stuck.lastStuckHandling = now; // Set cooldown
-        
-        // Try the new random movement pattern first (90 degrees left/right + 1-2 tiles forward)
-        if (tryRandomStuckMovement(unit, mapGrid, occupancyMap, units)) {
-          stuck.stuckTime = 0;
-          stuck.rotationAttempts = 0;
-          stuck.dodgeAttempts = 0;
-          return;
-        }
-        
-        // Fallback to rotation if random movement fails
-        if (stuck.rotationAttempts < 3) {
-          stuck.isRotating = true;
-          stuck.rotationAttempts++;
-          
-          const freeDirection = findFreeDirection(unit, mapGrid, occupancyMap, units);
-          if (freeDirection !== null) {
-            rotateUnitInPlace(unit, freeDirection);
-          } else {
-            rotateUnitInPlace(unit);
-          }
-        } else {
-          // Last resort: clear path and force new pathfinding
-          unit.path = [];
-          stuck.stuckTime = 0;
-          stuck.rotationAttempts = 0;
-          stuck.dodgeAttempts = 0;
-          stuck.isRotating = false;
-        }
       }
     } else {
       // Unit is moving normally, reset stuck detection

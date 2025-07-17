@@ -23,8 +23,14 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     }
   }
 
-  // Apply new AI strategies first
-  applyEnemyStrategies(unit, units, gameState, mapGrid, now)
+  // Apply new AI strategies first - but only when allowed to make decisions to prevent wiggling
+  const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
+  const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)
+  
+  // Apply strategies on decision intervals OR when just got attacked (immediate response)
+  if (allowDecision || justGotAttacked) {
+    applyEnemyStrategies(unit, units, gameState, mapGrid, now)
+  }
 
   // Skip further processing if unit is retreating
   if (unit.isRetreating) return

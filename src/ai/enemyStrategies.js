@@ -408,7 +408,7 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
     
     // Apply multi-directional attack coordination if allowed to attack
     if (shouldAttack) {
-      handleMultiDirectionalAttack(unit, units, gameState, mapGrid)
+      handleMultiDirectionalAttack(unit, units, gameState, mapGrid, now)
     }
   }
   
@@ -641,7 +641,7 @@ export function calculateApproachPosition(unit, target, direction, gameState, ma
 /**
  * Coordinates multi-directional attack for combat units
  */
-export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
+export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, now) {
   // Only apply to combat units that aren't already retreating
   if (unit.isRetreating || !unit.allowedToAttack) return false
   
@@ -665,9 +665,8 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
     
     // Continue moving to approach position
     // Always respect the occupancy map for attack movement
-    // Throttle attack pathfinding to 3 seconds to reduce computational load
-    const now = performance.now()
-    const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
+    // Throttle attack pathfinding to 5 seconds to prevent wiggling (matches AI_DECISION_INTERVAL)
+    const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > 5000) // Changed from ATTACK_PATH_CALC_INTERVAL to 5000
     
     if (pathRecalcNeeded) {
       const occupancyMap = gameState.occupancyMap
@@ -684,6 +683,9 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
         return true
       }
     }
+    
+    // Return true to indicate we're still working on the approach (prevents normal targeting)
+    return true
   }
   
   // Find target for attack
@@ -698,6 +700,12 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
   
   if (distanceToTarget <= 8) return false // Close enough for direct engagement
   
+  // Only assign new attack directions every 5 seconds to prevent wiggling
+  const lastDirectionAssignment = unit.lastDirectionAssignment || 0
+  if (now - lastDirectionAssignment < 5000) {
+    return false // Skip direction assignment if too recent
+  }
+  
   // Assign attack direction and approach position
   const direction = assignAttackDirection(unit, units, gameState)
   const approachPos = calculateApproachPosition(unit, target, direction, gameState, mapGrid)
@@ -705,6 +713,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid) {
   if (approachPos) {
     unit.approachPosition = approachPos
     unit.approachDirection = direction.name
+    unit.lastDirectionAssignment = now // Track when we last assigned a direction
     
     // Set path to approach position
     // Always respect the occupancy map for attack movement
