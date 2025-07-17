@@ -227,6 +227,18 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
     aiFactory.buildingPosition = null
   }
 
+  // Complete unit production when timer finishes
+  if (aiFactory && aiFactory.unitProduction && now - aiFactory.unitProduction.startTime >= aiFactory.unitProduction.duration) {
+    const { spawnFactory, unitType, startTime } = aiFactory.unitProduction
+    if (spawnFactory && !spawnFactory.destroyed && spawnFactory.health > 0) {
+      const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, startTime, aiPlayerId)
+      if (newUnit) {
+        units.push(newUnit)
+      }
+    }
+    aiFactory.unitProduction = null
+  }
+
   // --- AI Unit Production ---
   // Only allow unit production after all required buildings are present
   if (gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'powerPlant').length > 0 &&
@@ -330,25 +342,25 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
           }
         }
         
-        const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now, aiPlayerId)
-        if (newUnit) {
-          units.push(newUnit)
-          // Deduct the cost from AI factory budget just like player money is deducted
-          aiFactory.budget -= cost
-          aiFactory.currentlyBuilding = unitType
-          aiFactory.buildStartTime = now
-          aiFactory.buildDuration = 5000
-          gameState[lastProductionKey] = now
-          
-          // Reset attack directions periodically to ensure varied attack patterns
-          // This happens roughly every 4-5 unit productions (40-50 seconds)
-          if (Math.random() < 0.25) {
-            resetAttackDirections()
-          }
-        } else {
-          console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
-          gameState[lastProductionKey] = now
+        // Start production but delay actual spawn until build timer completes
+        aiFactory.budget -= cost
+        aiFactory.unitProduction = {
+          unitType,
+          spawnFactory,
+          startTime: now,
+          duration: 5000
         }
+        gameState[lastProductionKey] = now
+
+        // Reset attack directions periodically to ensure varied attack patterns
+        // This happens roughly every 4-5 unit productions (40-50 seconds)
+        if (Math.random() < 0.25) {
+          resetAttackDirections()
+        }
+      } else {
+        console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
+        gameState[lastProductionKey] = now
+      }
       }
     }
   }
