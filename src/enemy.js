@@ -10,6 +10,7 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   const aiPlayers = allPlayers.filter(p => p !== humanPlayer)
   const targetedOreTiles = gameState.targetedOreTiles || {}
+  
   aiPlayers.forEach(aiPlayerId => {
     updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles)
   })

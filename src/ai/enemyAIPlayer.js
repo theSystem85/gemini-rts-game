@@ -19,9 +19,9 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
     minDistance = 1 // Walls can be closer
   }
 
-  // Simple spiral search around the factory with appropriate spacing
-  for (let radius = minDistance; radius <= 12; radius++) {
-    for (let angle = 0; angle < 360; angle += 45) {
+  // Extended spiral search around the factory with appropriate spacing
+  for (let radius = minDistance; radius <= 20; radius++) { // Increased from 12 to 20
+    for (let angle = 0; angle < 360; angle += 30) { // Reduced step from 45 to 30 for more positions
       const x = factory.x + Math.round(Math.cos(angle * Math.PI / 180) * radius)
       const y = factory.y + Math.round(Math.sin(angle * Math.PI / 180) * radius)
 
@@ -30,7 +30,7 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
         continue
       }
 
-      // Check if all tiles are valid and have enough clearance
+      // Check if all tiles are valid with minimal clearance requirements
       let valid = true
 
       // For refineries and vehicle factories, check extra clearance around the building
@@ -49,8 +49,8 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
               valid = false // Out of bounds
             }
           }
-          // Check clearance area for obstacles (but allow land/street)
-          else if (clearanceNeeded > 0) {
+          // Check clearance area for obstacles (but allow land/street) - relaxed for smaller buildings
+          else if (clearanceNeeded > 0 && (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory')) {
             if (by >= 0 && by < mapGrid.length && bx >= 0 && bx < mapGrid[0].length) {
               const tile = mapGrid[by][bx]
               if (tile.type === 'water' || tile.type === 'rock' || tile.building) {
@@ -84,7 +84,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   const lastProductionKey = `${aiPlayerId}LastProductionTime`
   
   // Debug logging (enable temporarily to debug building issues)
-  const DEBUG_AI_BUILDING = false  // --- AI Building Construction ---
+  const DEBUG_AI_BUILDING = false  // Disable debugging
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
   if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 && gameState.buildings) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
@@ -231,11 +231,36 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
           console.log(`AI ${aiPlayerId} successfully placed ${buildingType} at (${position.x}, ${position.y})`)
         }
       } else {
-        // Position became invalid, refund the cost
-        aiFactory.budget += buildingData[buildingType]?.cost || 0
-
+        // Position became invalid, try to find an alternative position immediately
         if (DEBUG_AI_BUILDING) {
-          console.log(`AI ${aiPlayerId} position became invalid for ${buildingType}, refunded cost`)
+          console.log(`AI ${aiPlayerId} original position became invalid for ${buildingType}, searching for alternative`)
+        }
+        
+        // Try the advanced algorithm first
+        let alternativePosition = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories, aiPlayerId)
+        
+        // If that fails, try the simple algorithm
+        if (!alternativePosition) {
+          alternativePosition = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
+        }
+        
+        if (alternativePosition) {
+          // Found an alternative position, place the building there
+          const newBuilding = createBuilding(buildingType, alternativePosition.x, alternativePosition.y)
+          newBuilding.owner = aiPlayerId
+          gameState.buildings.push(newBuilding)
+          placeBuilding(newBuilding, mapGrid)
+          
+          if (DEBUG_AI_BUILDING) {
+            console.log(`AI ${aiPlayerId} placed ${buildingType} at alternative position (${alternativePosition.x}, ${alternativePosition.y})`)
+          }
+        } else {
+          // No alternative position found, refund the cost as last resort
+          aiFactory.budget += buildingData[buildingType]?.cost || 0
+          
+          if (DEBUG_AI_BUILDING) {
+            console.log(`AI ${aiPlayerId} could not find any valid position for ${buildingType}, refunded cost`)
+          }
         }
       }
     }
