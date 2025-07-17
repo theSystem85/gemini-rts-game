@@ -312,6 +312,14 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   // Complete unit production when timer finishes
   if (aiFactory && aiFactory.currentlyProducingUnit && now - aiFactory.unitBuildStartTime > aiFactory.unitBuildDuration) {
     const unitType = aiFactory.currentlyProducingUnit
+    const spawnFactory = aiFactory.unitSpawnBuilding || aiFactory
+    const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, aiFactory.unitBuildStartTime, aiPlayerId)
+
+    if (newUnit) {
+      units.push(newUnit)
+    } else {
+      console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
+    }
 
     if (DEBUG_AI_BUILDING) {
       console.log(`AI ${aiPlayerId} completed production of ${unitType}`)
@@ -321,6 +329,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
     aiFactory.currentlyProducingUnit = null
     aiFactory.unitBuildStartTime = null
     aiFactory.unitBuildDuration = null
+    aiFactory.unitSpawnBuilding = null
   }
 
   // --- AI Unit Production ---
@@ -427,28 +436,22 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
           }
         }
 
-        const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now, aiPlayerId)
-        if (newUnit) {
-          units.push(newUnit)
-          // Deduct the cost from AI factory budget just like player money is deducted
-          aiFactory.budget -= cost
-          aiFactory.currentlyProducingUnit = unitType
-          aiFactory.unitBuildStartTime = now
-          aiFactory.unitBuildDuration = 5000
-          gameState[lastProductionKey] = now
+        // Record production details and delay spawning until build time completes
+        aiFactory.budget -= cost
+        aiFactory.currentlyProducingUnit = unitType
+        aiFactory.unitBuildStartTime = now
+        aiFactory.unitBuildDuration = 5000
+        aiFactory.unitSpawnBuilding = spawnFactory
+        gameState[lastProductionKey] = now
 
-          if (DEBUG_AI_BUILDING) {
-            console.log(`AI ${aiPlayerId} started producing ${unitType} for $${cost}`)
-          }
+        if (DEBUG_AI_BUILDING) {
+          console.log(`AI ${aiPlayerId} started producing ${unitType} for $${cost}`)
+        }
 
-          // Reset attack directions periodically to ensure varied attack patterns
-          // This happens roughly every 4-5 unit productions (40-50 seconds)
-          if (Math.random() < 0.25) {
-            resetAttackDirections()
-          }
-        } else {
-          console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
-          gameState[lastProductionKey] = now
+        // Reset attack directions periodically to ensure varied attack patterns
+        // This happens roughly every 4-5 unit productions (40-50 seconds)
+        if (Math.random() < 0.25) {
+          resetAttackDirections()
         }
       }
     }
