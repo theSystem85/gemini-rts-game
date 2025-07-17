@@ -293,6 +293,11 @@ class Game {
     gameState.gameStarted = true
     gameState.gamePaused = false  // Auto-start the game immediately
 
+    // Reset AI for new map
+    if (this.gameLoop) {
+      this.gameLoop.resetAI()
+    }
+
     // Update pause button to show pause icon since game is now running
     const pauseBtn = document.getElementById('pauseBtn')
     const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
@@ -395,6 +400,11 @@ class Game {
       }
     } catch (err) {
       console.warn('Could not reset milestone system:', err)
+    }
+
+    // Reset AI for new game
+    if (this.gameLoop) {
+      this.gameLoop.resetAI()
     }
 
     // Reset UI elements
@@ -537,12 +547,157 @@ window.debugPlaySound = playSound
 window.getSoundCacheStatus = getSoundCacheStatus
 window.clearSoundCache = clearSoundCache
 
+// Debug helpers for AI performance monitoring
+window.debugAI = {
+  getPerformance: () => {
+    if (window.gameInstance?.gameLoop?.aiManager) {
+      return window.gameInstance.gameLoop.aiManager.getPerformanceData()
+    }
+    return null
+  },
+  getInitializationState: () => {
+    if (window.gameInstance?.gameLoop?.aiManager) {
+      const manager = window.gameInstance.gameLoop.aiManager
+      return {
+        isInitialized: manager.isInitialized,
+        computeWorkerReady: manager.computeWorkerReady,
+        hasTimingWorker: !!manager.timingWorker,
+        hasComputeWorker: !!manager.computeWorker,
+        pendingStart: manager.pendingStart,
+        aiLoopActive: manager.aiLoopActive,
+        processingMode: manager.processingMode,
+        currentInterval: manager.getCurrentInterval()
+      }
+    }
+    return null
+  },
+  getWorkerStatus: () => {
+    const manager = window.gameInstance?.gameLoop?.aiManager
+    if (!manager) return null
+    
+    return {
+      timingWorker: {
+        exists: !!manager.timingWorker,
+        ready: manager.isInitialized
+      },
+      computeWorker: {
+        exists: !!manager.computeWorker,
+        ready: manager.computeWorkerReady
+      },
+      processingMode: manager.processingMode,
+      fallbackActive: !!manager.fallbackIntervalId
+    }
+  },
+  testWorkerCommunication: () => {
+    const manager = window.gameInstance?.gameLoop?.aiManager
+    if (!manager) {
+      console.log('❌ AI Manager not available')
+      return
+    }
+    
+    console.log('🔧 Testing AI Worker Communication...')
+    
+    // Test timing worker
+    if (manager.timingWorker) {
+      manager.timingWorker.postMessage({
+        type: 'PERFORMANCE_QUERY',
+        data: { test: true }
+      })
+      console.log('✅ Timing worker test message sent')
+    } else {
+      console.log('❌ Timing worker not available')
+    }
+    
+    // Test computation worker
+    if (manager.computeWorker) {
+      manager.computeWorker.postMessage({
+        type: 'GET_PROCESSING_STATS',
+        data: { test: true }
+      })
+      console.log('✅ Computation worker test message sent')
+    } else {
+      console.log('❌ Computation worker not available')
+    }
+  },
+  toggleDebug: () => {
+    if (window.gameInstance?.gameLoop?.aiManager) {
+      const currentDebug = window.gameInstance.gameLoop.aiManager.debugMode
+      window.gameInstance.gameLoop.aiManager.setDebugMode(!currentDebug)
+      console.log('AI Debug mode:', !currentDebug ? 'enabled' : 'disabled')
+    }
+  },
+  showDisplay: () => {
+    if (window.gameInstance?.gameLoop?.aiPerformanceDisplay) {
+      window.gameInstance.gameLoop.aiPerformanceDisplay.setVisible(true)
+      console.log('AI Performance display enabled')
+    }
+  },
+  hideDisplay: () => {
+    if (window.gameInstance?.gameLoop?.aiPerformanceDisplay) {
+      window.gameInstance.gameLoop.aiPerformanceDisplay.setVisible(false)
+      console.log('AI Performance display disabled')
+    }
+  },
+  isAIActive: () => {
+    if (window.gameInstance?.gameLoop?.aiManager) {
+      return window.gameInstance.gameLoop.aiManager.isAILoopActive()
+    }
+    return false
+  },
+  getCurrentInterval: () => {
+    if (window.gameInstance?.gameLoop?.aiManager) {
+      return window.gameInstance.gameLoop.aiManager.getCurrentInterval()
+    }
+    return null
+  },
+  forceWorkerMode: () => {
+    const manager = window.gameInstance?.gameLoop?.aiManager
+    if (manager && manager.computeWorker && manager.timingWorker) {
+      manager.processingMode = 'worker'
+      console.log('🔧 Forced AI processing mode to: worker')
+    } else {
+      console.log('❌ Cannot force worker mode - workers not available')
+    }
+  },
+  forceChunkedMode: () => {
+    const manager = window.gameInstance?.gameLoop?.aiManager
+    if (manager) {
+      manager.processingMode = 'chunked'
+      console.log('🔧 Forced AI processing mode to: chunked')
+    }
+  },
+  getProcessingStats: () => {
+    const manager = window.gameInstance?.gameLoop?.aiManager
+    if (manager) {
+      manager.requestPerformanceData()
+      return manager.getPerformanceData()
+    }
+    return null
+  }
+}
+
 // Preload all sound files for optimal performance (async)
 preloadSounds().then(() => {
   console.log('Sound preloading completed')
 }).catch(e => {
   console.error('Sound preloading failed:', e)
 })
+
+// Load AI validation script in development mode
+if (import.meta.env.DEV) {
+  import('./debug/aiValidation.js').then(() => {
+    console.log('🤖 AI Validation script loaded (development mode)')
+  }).catch(e => {
+    console.warn('AI Validation script failed to load:', e)
+  })
+  
+  // Load worker test script
+  import('./debug/workerTest.js').then(() => {
+    console.log('🔧 Worker test script loaded (development mode)')
+  }).catch(e => {
+    console.warn('Worker test script failed to load:', e)
+  })
+}
 
 // Export functions for backward compatibility - these are now handled by ProductionController
 export function updateVehicleButtonStates() {

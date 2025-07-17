@@ -247,6 +247,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## Features
 - [ ] Add a sound for when party A attacks party B for the first time.
+- [ ] Build front lines BFL feature: when a group of units is selected and the user holds shift key then he can start to draw a destination overlay (green tile overlay with 50% opacity) on the map with the mouse while holding left mouse button down. The user can draw as long as the amount of drawn overlay tiles is smaller than the amount of selected units. When releasing the mousebutton the draw mode gets stopped but the user can continue to another draw as long as the is still holding shift key. He can also make single clicks on tiles to draw tile by tile as long as he holds the shift key. When shift key is released the selected units will then move to occupy the green tile overlays on the map. If there are more green overlay tiles drawn than units the units will spread along those tiles evenly an leave those in bewteen out. As soon as the shift key is released the BFL mode is canceled (if no tiles have been assigned) or executed. In both cases the overlay then disappears.
 - [ ] Ensure for each party P there is an internal statistic that tracks for each other party how much economical damage was made by adding the cost of the units and buildings destroyed by that specific party. Make sure there is a shortkey that toggles the display of that statistics during gameplay. Each enemy AI focusses on attacking the party that caused the most amount of economical harm to them so far.
 - [ ] Add AI policy scripts: Make sure to come up with a sophisticated modular extensible unit AI policy architecture that can be used for humand and AI players' units. Create and integreate some JSON policy script to manage the AI's combat behaviour including priorities and another one to manage the AI's base build und unit production behaviour. Add the following initial scripts for this behaviour:
   - [ ] when player attacks -> defend or retreat into base if the unit under attack is too weak (havesters or combat units that are outnumbered) to regroup in the protection of the base defence. When attack was defended strike back.
@@ -279,7 +280,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
 - [x] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
 - [x] only show health bars if units or buildings are damaged
-- [x] The selection indicator for units should only be visible at the conrers (like with buildings).
+- [x] The selection indicator for units should only be visible at the conrners (like with buildings).
 - [x] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
 - [x] Make the box that indicates a selection around a building only 2px wide and only show it at the corners not the entire edges.
 - [x] The health bar for player's own units and buildings as well as the one for the enemies should only be visible if those units/buildings are damaged or selected.
@@ -437,3 +438,45 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 - [x] Console warning: "findPath: destination tile not passable (units.js:101)"
 - [x] When I click on some build button twice there is a 3 shown in the batch count.
 - [x] Units when attacking should keep being close enough to target in order to be in range of attack but not too close so they get also hit by their own bullets impact.
+
+## AI Performance Architecture
+
+This game implements a sophisticated AI performance system that separates AI workload from the rendering loop to maintain 60fps performance:
+
+### Key Features
+- **Asynchronous AI Processing**: AI runs in parallel with rendering to prevent frame drops
+- **Dynamic Throttling**: AI interval automatically adjusts based on processing performance (300ms base, scales up if needed)
+- **Performance Monitoring**: Real-time metrics for AI processing times and intervals
+- **Graceful Degradation**: Automatic fallback if web worker fails
+
+### Controls
+- **J Key**: Toggle AI performance display
+- **P Key**: Toggle FPS display  
+- **I Key**: Show help/controls
+
+### Console Commands
+```javascript
+// Monitor AI performance
+debugAI.getPerformance()
+
+// Toggle AI debug mode
+debugAI.toggleDebug()
+
+// Show/hide AI display
+debugAI.showDisplay()
+debugAI.hideDisplay()
+
+// Check AI status
+debugAI.isAIActive()
+debugAI.getCurrentInterval()
+
+// Run validation tests
+aiValidator.runAllTests()
+```
+
+### Performance Benefits
+- **Before**: AI could cause 50-200ms frame drops
+- **After**: Rendering maintains 60fps while AI runs independently
+- **Monitoring**: Real-time performance metrics and historical graphs
+
+See `AI_REFACTORING_DOCS.md` for detailed technical documentation.

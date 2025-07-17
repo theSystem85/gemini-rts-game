@@ -17,6 +17,10 @@ export class FPSDisplay {
     this.minFrameTime = 0
     this.maxFrameTime = 0
 
+    // DOM update throttling - only update every 500ms
+    this.lastDOMUpdate = performance.now()
+    this.DOM_UPDATE_INTERVAL = 500 // 500ms interval for DOM updates
+
     // Get the DOM element
     this.fpsElement = document.getElementById('fpsDisplay')
     if (!this.fpsElement) {
@@ -45,7 +49,7 @@ export class FPSDisplay {
       this.frameTimes.shift()
     }
 
-    // Calculate FPS every 10 frames for better performance
+    // Calculate FPS every 10 frames for better performance (but don't update DOM yet)
     if (this.frameCount % 10 === 0 && this.frameTimes.length >= 2) {
       const timeDiff = this.frameTimes[this.frameTimes.length - 1] - this.frameTimes[0]
       const frameCount = this.frameTimes.length - 1
@@ -59,12 +63,9 @@ export class FPSDisplay {
       gameState.fpsCounter.frameCount = this.frameCount
       gameState.fpsCounter.lastTime = currentTime
       gameState.fpsCounter.frameTimes = [...this.frameTimes]
-      
-      // Update the DOM element
-      this.updateDisplay()
     }
 
-    // Update frame time display every second
+    // Update frame time stats every second (but don't update DOM yet)
     if (currentTime - this.lastFrameTimeUpdate >= 1000) {
       const len = this.frameTimeSamples.length
       if (len > 0) {
@@ -81,7 +82,12 @@ export class FPSDisplay {
 
       this.frameTimeSamples = []
       this.lastFrameTimeUpdate = currentTime
+    }
+
+    // Only update DOM every 500ms to reduce DOM manipulation overhead
+    if (currentTime - this.lastDOMUpdate >= this.DOM_UPDATE_INTERVAL) {
       this.updateDisplay()
+      this.lastDOMUpdate = currentTime
     }
   }
 
@@ -131,9 +137,14 @@ export class FPSDisplay {
     }
   }
 
-  // Legacy render method for compatibility (now just updates display)
+  // Legacy render method for compatibility (now respects DOM throttling)
   render(ctx, canvas) {
-    this.updateDisplay()
+    const currentTime = performance.now()
+    // Only update DOM if enough time has passed since last update
+    if (currentTime - this.lastDOMUpdate >= this.DOM_UPDATE_INTERVAL) {
+      this.updateDisplay()
+      this.lastDOMUpdate = currentTime
+    }
   }
 
   toggleVisibility() {

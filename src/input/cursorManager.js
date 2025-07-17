@@ -14,6 +14,12 @@ export class CursorManager {
     this.isOverPlayerRefinery = false
     this.isForceAttackMode = false
     this.lastMouseEvent = null
+    
+    // DOM update throttling - only update cursor styles every 500ms
+    this.lastDOMUpdate = 0
+    this.DOM_UPDATE_INTERVAL = 500 // 500ms interval for DOM updates
+    this.pendingCursorState = null
+    this.pendingClassState = null
   }
 
   // Function to check if a location is a blocked tile (water, rock, building)
@@ -151,25 +157,17 @@ export class CursorManager {
 
     // If not over the game canvas, just use default cursor
     if (!this.isOverGameCanvas) {
-      gameCanvas.style.cursor = 'default'
-      // Remove all cursor classes
-      gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode')
+      this.updateCursorDOM('default', [], ['repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode'])
       return
     }
-
-    // Apply CSS classes for cursor styles (will work with external SVG files)
-    // Clear all cursor classes first
-    gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode')
 
     // REPAIR MODE TAKES PRIORITY
     if (gameState.repairMode) {
       // Use CSS class for cursors and hide system cursor
-      gameCanvas.style.cursor = 'none'
-
       if (this.isOverRepairableBuilding) {
-        gameCanvas.classList.add('repair-mode')
+        this.updateCursorDOM('none', ['repair-mode'], ['repair-blocked-mode', 'sell-mode', 'sell-blocked-mode'])
       } else {
-        gameCanvas.classList.add('repair-blocked-mode')
+        this.updateCursorDOM('none', ['repair-blocked-mode'], ['repair-mode', 'sell-mode', 'sell-blocked-mode'])
       }
       return // Exit early to prevent other cursors from showing
     }
@@ -177,12 +175,10 @@ export class CursorManager {
     // SELL MODE TAKES SECOND PRIORITY
     if (gameState.sellMode) {
       // Use CSS class for cursors and hide system cursor
-      gameCanvas.style.cursor = 'none'
-
       if (this.isOverSellableBuilding) {
-        gameCanvas.classList.add('sell-mode')
+        this.updateCursorDOM('none', ['sell-mode'], ['sell-blocked-mode', 'repair-mode', 'repair-blocked-mode'])
       } else {
-        gameCanvas.classList.add('sell-blocked-mode')
+        this.updateCursorDOM('none', ['sell-blocked-mode'], ['sell-mode', 'repair-mode', 'repair-blocked-mode'])
       }
       return // Exit early to prevent other cursors from showing
     }
@@ -192,8 +188,7 @@ export class CursorManager {
       const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
 
-      // Clear all cursor classes first
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+      const allCursorClasses = ['move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode']
 
       if (!hasNonBuildingSelected) {
         // Only buildings are selected
@@ -203,54 +198,45 @@ export class CursorManager {
         if (isVehicleFactory) {
           // Vehicle factory uses move cursor for rally point placement
           if (this.isOverBlockedTerrain) {
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-blocked-mode')
+            this.updateCursorDOM('none', ['move-blocked-mode'], allCursorClasses.filter(c => c !== 'move-blocked-mode'))
           } else if (!gameState.isRightDragging) {
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-mode')
+            this.updateCursorDOM('none', ['move-mode'], allCursorClasses.filter(c => c !== 'move-mode'))
           } else {
-            gameCanvas.style.cursor = 'grabbing'
+            this.updateCursorDOM('grabbing', [], allCursorClasses)
           }
         } else {
           // Other buildings: always show default cursor
-          gameCanvas.style.cursor = 'default'
+          this.updateCursorDOM('default', [], allCursorClasses)
         }
       } else if (this.isForceAttackMode) {
         // Force attack mode - use attack cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        this.updateCursorDOM('none', ['attack-mode'], allCursorClasses.filter(c => c !== 'attack-mode'))
       } else if (this.isOverFriendlyUnit) {
         // Over friendly unit - use normal arrow cursor
-        gameCanvas.style.cursor = 'default'
+        this.updateCursorDOM('default', [], allCursorClasses)
       } else if (this.isOverEnemy) {
         // Over enemy - use attack cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        this.updateCursorDOM('none', ['attack-mode'], allCursorClasses.filter(c => c !== 'attack-mode'))
       } else if (this.isOverPlayerRefinery) {
         // Over player refinery with harvesters selected - use attack cursor to indicate force unload
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        this.updateCursorDOM('none', ['attack-mode'], allCursorClasses.filter(c => c !== 'attack-mode'))
       } else if (this.isOverOreTile) {
         // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        this.updateCursorDOM('none', ['attack-mode'], allCursorClasses.filter(c => c !== 'attack-mode'))
       } else if (this.isOverBlockedTerrain) {
         // Over blocked terrain - use move-blocked cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-blocked-mode')
+        this.updateCursorDOM('none', ['move-blocked-mode'], allCursorClasses.filter(c => c !== 'move-blocked-mode'))
       } else if (!gameState.isRightDragging) {
         // Normal move cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-mode')
+        this.updateCursorDOM('none', ['move-mode'], allCursorClasses.filter(c => c !== 'move-mode'))
       } else {
         // Right-drag scrolling
-        gameCanvas.style.cursor = 'grabbing'
-        gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+        this.updateCursorDOM('grabbing', [], allCursorClasses)
       }
     } else {
       // No units selected - use default cursor
-      gameCanvas.style.cursor = 'default'
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+      const allCursorClasses = ['move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode']
+      this.updateCursorDOM('default', [], allCursorClasses)
     }
   }
 
@@ -266,6 +252,17 @@ export class CursorManager {
   refreshCursor(mapGrid, factories, selectedUnits) {
     if (this.lastMouseEvent) {
       this.updateCustomCursor(this.lastMouseEvent, mapGrid, factories, selectedUnits)
+      // Force apply any pending cursor changes during refresh
+      this.applyCursorChanges()
+    }
+  }
+
+  // Public method to force cursor updates (for important state changes)
+  forceCursorUpdate(mapGrid, factories, selectedUnits) {
+    if (this.lastMouseEvent) {
+      this.updateCustomCursor(this.lastMouseEvent, mapGrid, factories, selectedUnits)
+      this.applyCursorChanges()
+      this.lastDOMUpdate = performance.now()
     }
   }
 
@@ -275,5 +272,74 @@ export class CursorManager {
 
   setIsOverFriendlyUnit(value) {
     this.isOverFriendlyUnit = value
+  }
+
+  // Throttled DOM cursor update - only actually updates DOM every 500ms
+  updateCursorDOM(cursor, classesToAdd = [], classesToRemove = []) {
+    const now = performance.now()
+    
+    // Store the pending state
+    this.pendingCursorState = cursor
+    this.pendingClassState = { add: classesToAdd, remove: classesToRemove }
+    
+    // Only update DOM if enough time has passed
+    if (now - this.lastDOMUpdate >= this.DOM_UPDATE_INTERVAL) {
+      this.applyCursorChanges()
+      this.lastDOMUpdate = now
+    }
+  }
+
+  // Actually apply cursor changes to DOM
+  applyCursorChanges() {
+    if (!this.pendingCursorState && !this.pendingClassState) return
+    
+    const gameCanvas = document.getElementById('gameCanvas')
+    if (!gameCanvas) return
+    
+    // Apply cursor style
+    if (this.pendingCursorState !== null) {
+      gameCanvas.style.cursor = this.pendingCursorState
+    }
+    
+    // Apply class changes
+    if (this.pendingClassState) {
+      if (this.pendingClassState.remove.length > 0) {
+        gameCanvas.classList.remove(...this.pendingClassState.remove)
+      }
+      if (this.pendingClassState.add.length > 0) {
+        gameCanvas.classList.add(...this.pendingClassState.add)
+      }
+    }
+    
+    // Clear pending state
+    this.pendingCursorState = null
+    this.pendingClassState = null
+  }
+
+  // Force immediate cursor update (for critical state changes)
+  forceUpdateCursorDOM(cursor, classesToAdd = [], classesToRemove = []) {
+    const gameCanvas = document.getElementById('gameCanvas')
+    if (!gameCanvas) return
+    
+    gameCanvas.style.cursor = cursor
+    if (classesToRemove.length > 0) {
+      gameCanvas.classList.remove(...classesToRemove)
+    }
+    if (classesToAdd.length > 0) {
+      gameCanvas.classList.add(...classesToAdd)
+    }
+    
+    this.lastDOMUpdate = performance.now()
+  }
+
+  // Called from game loop to ensure pending cursor changes are applied
+  update() {
+    const now = performance.now()
+    if (this.pendingCursorState !== null || this.pendingClassState !== null) {
+      if (now - this.lastDOMUpdate >= this.DOM_UPDATE_INTERVAL) {
+        this.applyCursorChanges()
+        this.lastDOMUpdate = now
+      }
+    }
   }
 }

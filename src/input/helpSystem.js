@@ -46,6 +46,7 @@ export class HelpSystem {
           <li><strong>F Key:</strong> Toggle formation mode for selected units</li>
           <li><strong>T Key:</strong> Toggle tank image rendering (3-layer tank graphics)</li>
           <li><strong>P Key:</strong> Toggle FPS display (performance monitor)</li>
+          <li><strong>J Key:</strong> Toggle AI performance display (AI timing metrics)</li>
         </ul>
         <p>Press I again to close and resume the game</p>
       `

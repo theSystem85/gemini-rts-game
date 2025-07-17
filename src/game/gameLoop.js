@@ -8,6 +8,8 @@ import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from '../bu
 import { updateEnergyBar } from '../ui/energyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
+import { AIManager } from '../ai/aiManager.js'
+import { AIPerformanceDisplay } from '../ui/aiPerformanceDisplay.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -27,11 +29,18 @@ export class GameLoop {
     this.running = false
     this.animationId = null
     this.fpsDisplay = new FPSDisplay()
+    this.aiPerformanceDisplay = new AIPerformanceDisplay()
 
     // Track last UI update values to avoid unnecessary DOM writes
     this.lastMoneyDisplayed = null
     this.lastGameTimeUpdate = 0
     this.lastEnergyUpdate = 0
+
+    // Initialize AI Manager for asynchronous AI processing
+    this.aiManager = new AIManager()
+    
+    // Set up global references for AI Manager
+    this.setupGlobalReferences()
 
     // Set the production controller reference in milestone system
     milestoneSystem.setProductionController(productionController)
@@ -41,9 +50,66 @@ export class GameLoop {
     this.allAssetsLoaded = loaded
   }
 
+  /**
+   * Set up global references for AI Manager to access game data
+   */
+  setupGlobalReferences() {
+    // Create a game instance reference that AI Manager can access
+    if (!window.gameInstance) {
+      window.gameInstance = {}
+    }
+    
+    // Provide references to game data for AI Manager
+    window.gameInstance.gameState = gameState
+    window.gameInstance.units = this.units
+    window.gameInstance.factories = this.factories
+    window.gameInstance.bullets = this.bullets
+    window.gameInstance.mapGrid = this.mapGrid
+  }
+
+  /**
+   * Start the AI processing loop
+   */
+  startAI() {
+    if (this.aiManager) {
+      this.aiManager.startAILoop()
+      console.log('AI processing started (asynchronous)')
+    }
+  }
+
+  /**
+   * Stop the AI processing loop
+   */
+  stopAI() {
+    if (this.aiManager) {
+      this.aiManager.stopAILoop()
+      console.log('AI processing stopped')
+    }
+  }
+
+  /**
+   * Reset AI for new game
+   */
+  resetAI() {
+    if (this.aiManager) {
+      this.aiManager.resetAI()
+      console.log('AI reset for new game')
+    }
+  }
+
+  /**
+   * Get AI performance data
+   */
+  getAIPerformance() {
+    return this.aiManager ? this.aiManager.getPerformanceData() : {}
+  }
+
   start() {
     this.running = true
     this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+    
+    // Start AI processing once the game loop starts
+    this.startAI()
   }
 
   stop() {
@@ -51,6 +117,15 @@ export class GameLoop {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId)
       this.animationId = null
+    }
+    
+    // Stop AI processing when game loop stops
+    this.stopAI()
+    
+    // Terminate AI manager if needed
+    if (this.aiManager) {
+      this.aiManager.terminate()
+      this.aiManager = null
     }
   }
 
@@ -125,6 +200,12 @@ export class GameLoop {
 
     // Render FPS overlay on top of everything when game is running
     this.fpsDisplay.render(gameCtx, gameCanvas)
+
+    // Render AI performance display if enabled
+    if (this.aiManager) {
+      const aiPerformanceData = this.aiManager.getPerformanceData()
+      this.aiPerformanceDisplay.render(gameCtx, gameCanvas, aiPerformanceData)
+    }
 
     // Update money display only when the value changes
     const currentMoney = Math.floor(gameState.money)

@@ -7,7 +7,6 @@ import {
 import { emitSmokeParticles } from './utils/smokeUtils.js'
 import { getBuildingImage } from './buildingImageMap.js'
 
-import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
@@ -185,8 +184,8 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     // Check for game end conditions after factory/building destruction
     checkGameEndConditions(factories, gameState)
 
-    // Enemy AI updates
-    updateEnemyAI(units, factories, bullets, mapGrid, gameState)
+    // NOTE: AI updates are now handled asynchronously by AIManager
+    // The AI processing has been moved to a separate loop to prevent blocking the render loop
 
     // Update buildings under repair
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {

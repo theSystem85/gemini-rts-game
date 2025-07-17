@@ -131,6 +131,11 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleFpsDisplayToggle()
       }
+      // J key to toggle AI performance display
+      else if (e.key.toLowerCase() === 'j') {
+        e.preventDefault()
+        this.handleAIPerformanceToggle()
+      }
     })
 
     document.addEventListener('keyup', e => {
@@ -269,9 +274,13 @@ export class KeyboardHandler {
         sellBtn.classList.add('active')
         gameState.sellMode = true
 
-        // Use CSS class for sell cursor - this ensures consistent usage of sell.svg
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('sell-mode')
+        // Force immediate cursor update for mode change (critical UI state)
+        const gameCanvas = document.getElementById('gameCanvas')
+        if (gameCanvas) {
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode')
+          gameCanvas.classList.add('sell-mode')
+        }
 
         // Show notification
         this.showNotification('Sell mode activated - Click on a building to sell it for 70% of build price', 3000)
@@ -621,6 +630,25 @@ export class KeyboardHandler {
     
     // Play a sound for feedback
     playSound('confirmed', 0.5)
+  }
+
+  handleAIPerformanceToggle() {
+    // Toggle AI performance display visibility
+    if (window.gameInstance && window.gameInstance.gameLoop && window.gameInstance.gameLoop.aiPerformanceDisplay) {
+      window.gameInstance.gameLoop.aiPerformanceDisplay.toggle()
+      const status = window.gameInstance.gameLoop.aiPerformanceDisplay.visible ? 'ON' : 'OFF'
+      this.showNotification(`AI Performance display: ${status}`, 2000)
+      
+      // Also enable debug mode for AI manager when display is on
+      if (window.gameInstance.gameLoop.aiManager) {
+        window.gameInstance.gameLoop.aiManager.setDebugMode(window.gameInstance.gameLoop.aiPerformanceDisplay.visible)
+      }
+      
+      // Play a sound for feedback
+      playSound('confirmed', 0.5)
+    } else {
+      this.showNotification('AI Performance display not available', 2000)
+    }
   }
 
   // Add method to access cheat system for damage prevention
