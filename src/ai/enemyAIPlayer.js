@@ -7,10 +7,10 @@ import { findBuildingPosition } from './enemyBuilding.js'
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   const factory = factories.find(f => f.id === aiPlayerId)
   if (!factory) return null
-  
+
   const buildingWidth = buildingData[buildingType].width
   const buildingHeight = buildingData[buildingType].height
-  
+
   // Use appropriate spacing based on building type
   let minDistance = 2
   if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
@@ -18,24 +18,24 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   } else if (buildingType === 'concreteWall') {
     minDistance = 1 // Walls can be closer
   }
-  
+
   // Simple spiral search around the factory with appropriate spacing
   for (let radius = minDistance; radius <= 12; radius++) {
     for (let angle = 0; angle < 360; angle += 45) {
       const x = factory.x + Math.round(Math.cos(angle * Math.PI / 180) * radius)
       const y = factory.y + Math.round(Math.sin(angle * Math.PI / 180) * radius)
-      
+
       // Check bounds
       if (x < 0 || y < 0 || x + buildingWidth >= mapGrid[0].length || y + buildingHeight >= mapGrid.length) {
         continue
       }
-      
+
       // Check if all tiles are valid and have enough clearance
       let valid = true
-      
+
       // For refineries and vehicle factories, check extra clearance around the building
       const clearanceNeeded = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 1 : 0
-      
+
       for (let by = y - clearanceNeeded; by < y + buildingHeight + clearanceNeeded && valid; by++) {
         for (let bx = x - clearanceNeeded; bx < x + buildingWidth + clearanceNeeded && valid; bx++) {
           // Only check the core building area for basic validity
@@ -60,13 +60,13 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
           }
         }
       }
-      
+
       if (valid) {
         return { x, y }
       }
     }
   }
-  
+
   return null
 }
 
@@ -82,10 +82,11 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   // Define the keys we'll use for this AI player's state
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`
   const lastProductionKey = `${aiPlayerId}LastProductionTime`
-
-  // --- AI Building Construction ---
+  
+  // Debug logging (enable temporarily to debug building issues)
+  const DEBUG_AI_BUILDING = false  // --- AI Building Construction ---
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
-  if (now - (gameState[lastBuildingTimeKey] || 0) >= 8000 && aiFactory && aiFactory.budget > 1000 && gameState.buildings) {
+  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 && gameState.buildings) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
@@ -96,7 +97,6 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
 
     // Debug logging (enable temporarily to debug building issues)
-    const DEBUG_AI_BUILDING = false
     if (DEBUG_AI_BUILDING) {
       console.log(`AI ${aiPlayerId} building check: Power=${powerPlants.length}, VF=${vehicleFactories.length}, Refinery=${oreRefineries.length}, Budget=${aiFactory.budget}`)
     }
@@ -104,17 +104,18 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
     let buildingType = null
     let cost = 0
 
-    // Phase 1: Essential infrastructure
+    // Phase 1: Essential infrastructure - prioritize refinery for economic growth
     if (powerPlants.length === 0) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
+    } else if (oreRefineries.length === 0) {
+      // Build refinery BEFORE vehicle factory to establish economy quickly
+      buildingType = 'oreRefinery'
+      cost = buildingData.oreRefinery.cost
     } else if (vehicleFactories.length === 0) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
-    } else if (oreRefineries.length === 0) {
-      buildingType = 'oreRefinery'
-      cost = buildingData.oreRefinery.cost
-    
+
     // Phase 2: Basic defense
     } else if (turrets.length < 3) {
       if (aiFactory.budget >= 4000) {
@@ -130,31 +131,31 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
         buildingType = 'turretGunV1'
         cost = 1000
       }
-    
+
     // Phase 3: Radar for advanced units and tesla coils
     } else if (radarStations.length === 0 && aiFactory.budget >= buildingData.radarStation.cost) {
       buildingType = 'radarStation'
       cost = buildingData.radarStation.cost
-    
+
     // Phase 4: Advanced defense (Tesla Coils require radar)
     } else if (teslaCoils.length < 2 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
       buildingType = 'teslaCoil'
       cost = buildingData.teslaCoil.cost
-    
+
     // Phase 5: Expansion - more production buildings
     } else if (vehicleFactories.length < 2 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
-    
+
     // Phase 6: More refineries based on harvester count
     } else {
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const maxHarvestersForRefineries = aiRefineries.length * 3 // 1:3 ratio for better efficiency
-      
+
       if (aiHarvesters.length >= maxHarvestersForRefineries && aiFactory.budget >= buildingData.oreRefinery.cost) {
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
-      
+
       // Phase 7: More advanced defense
       } else if (turrets.length < 6 && aiFactory.budget >= 3000) {
         if (aiFactory.budget >= 5000 && teslaCoils.length < 3 && radarStations.length > 0) {
@@ -167,7 +168,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
           buildingType = 'turretGunV3'
           cost = 3000
         }
-      
+
       // Phase 8: Power plants for high energy consumption
       } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
         buildingType = 'powerPlant'
@@ -185,22 +186,27 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
         aiFactory.buildStartTime = now
         aiFactory.buildDuration = 5000
         aiFactory.buildingPosition = position // Store position for completion
-        gameState[lastBuildingTimeKey] = now        } else {
-          console.log(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
-          // Try a simpler placement algorithm as fallback
-          const simplePosition = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
-          if (simplePosition) {
-            aiFactory.budget -= cost
-            aiFactory.currentlyBuilding = buildingType
-            aiFactory.buildStartTime = now
-            aiFactory.buildDuration = 5000
-            aiFactory.buildingPosition = simplePosition
-            gameState[lastBuildingTimeKey] = now
-          } else {
-            console.log(`AI ${aiPlayerId} failed to find any position for ${buildingType}`)
-            gameState[lastBuildingTimeKey] = now
-          }
+        gameState[lastBuildingTimeKey] = now
+
+        if (DEBUG_AI_BUILDING) {
+          console.log(`AI ${aiPlayerId} started building ${buildingType} at position (${position.x}, ${position.y}) for $${cost}`)
         }
+      } else {
+        console.log(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
+        // Try a simpler placement algorithm as fallback
+        const simplePosition = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
+        if (simplePosition) {
+          aiFactory.budget -= cost
+          aiFactory.currentlyBuilding = buildingType
+          aiFactory.buildStartTime = now
+          aiFactory.buildDuration = 5000
+          aiFactory.buildingPosition = simplePosition
+          gameState[lastBuildingTimeKey] = now
+        } else {
+          console.log(`AI ${aiPlayerId} failed to find any position for ${buildingType}`)
+          gameState[lastBuildingTimeKey] = now
+        }
+      }
     }
   }
 
@@ -208,7 +214,11 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   if (aiFactory && aiFactory.currentlyBuilding && now - aiFactory.buildStartTime > aiFactory.buildDuration) {
     const buildingType = aiFactory.currentlyBuilding
     const position = aiFactory.buildingPosition
-    
+
+    if (DEBUG_AI_BUILDING) {
+      console.log(`AI ${aiPlayerId} completing construction of ${buildingType}`)
+    }
+
     if (position) {
       // Double-check position is still valid before placing
       if (canPlaceBuilding(buildingType, position.x, position.y, mapGrid, units, gameState.buildings, factories, aiPlayerId)) {
@@ -216,12 +226,20 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
         newBuilding.owner = aiPlayerId
         gameState.buildings.push(newBuilding)
         placeBuilding(newBuilding, mapGrid)
+
+        if (DEBUG_AI_BUILDING) {
+          console.log(`AI ${aiPlayerId} successfully placed ${buildingType} at (${position.x}, ${position.y})`)
+        }
       } else {
         // Position became invalid, refund the cost
         aiFactory.budget += buildingData[buildingType]?.cost || 0
+
+        if (DEBUG_AI_BUILDING) {
+          console.log(`AI ${aiPlayerId} position became invalid for ${buildingType}, refunded cost`)
+        }
       }
     }
-    
+
     // Clear construction state
     aiFactory.currentlyBuilding = null
     aiFactory.buildingPosition = null
@@ -234,26 +252,24 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'oreRefinery').length > 0) {
     if (now - (gameState[lastProductionKey] || 0) >= 8000 && aiFactory) {
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
-      const aiCombatUnits = units.filter(u => u.owner === aiPlayerId && 
-        (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank'))
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       
       let unitType = 'tank_v1'
       let cost = 1000
-      
+
       // Enhanced production rules:
       // 1. Build up to 6 harvesters first as priority
       // 2. Then build diverse combat units
       // 3. Focus on advanced units when budget is high
       // 4. Maintain harvester count but prioritize combat
-      
+
       const MAX_HARVESTERS = Math.min(6 + aiRefineries.length * 2, 12) // Scale with refineries, cap at 12
       const HIGH_BUDGET_THRESHOLD = 12000
       const VERY_HIGH_BUDGET_THRESHOLD = 20000
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
-      
+
       if (aiHarvesters.length < MAX_HARVESTERS) {
         // Priority: Build up harvesters first, but only if we need more relative to our refineries
         unitType = 'harvester'
@@ -261,7 +277,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
       } else {
         // We have enough harvesters, now focus on diverse combat units
         const rand = Math.random()
-        
+
         if (isVeryHighBudget) {
           // Very high budget: Focus on elite units
           if (rand < 0.1) {
@@ -309,13 +325,13 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
       if (aiFactory.budget >= cost) {
         // Find appropriate spawn factory for this unit type
         let spawnFactory = aiFactory // Default to main construction yard
-        
+
         // Harvesters and other vehicle units should spawn from vehicle factories
         if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'tank-v3' || unitType === 'rocketTank') {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
           )
-          
+
           if (aiVehicleFactories.length > 0) {
             // Use round-robin to select the next vehicle factory
             const factoryIndexKey = `next${aiPlayerId}VehicleFactoryIndex`
@@ -329,7 +345,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
             return
           }
         }
-        
+
         const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, now, aiPlayerId)
         if (newUnit) {
           units.push(newUnit)
@@ -339,7 +355,11 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
           aiFactory.buildStartTime = now
           aiFactory.buildDuration = 5000
           gameState[lastProductionKey] = now
-          
+
+          if (DEBUG_AI_BUILDING) {
+            console.log(`AI ${aiPlayerId} started producing ${unitType} for $${cost}`)
+          }
+
           // Reset attack directions periodically to ensure varied attack patterns
           // This happens roughly every 4-5 unit productions (40-50 seconds)
           if (Math.random() < 0.25) {
@@ -357,7 +377,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   units.forEach(unit => {
     if (unit.owner !== aiPlayerId) return
 
-    updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles)
+    updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles, bullets)
   })
 }
 

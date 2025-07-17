@@ -77,6 +77,7 @@ export class BuildingRenderer {
 
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
+    this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -563,6 +564,108 @@ export class BuildingRenderer {
     // Progress fill (red color for attack cooldown)
     ctx.fillStyle = '#ff4444'
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+    
+    ctx.restore()
+  }
+
+  renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height) {
+    // Check if this is a factory (construction yard or vehicle factory) that's currently building something
+    let factory = null
+    let isFactory = false
+    let currentlyBuilding = null
+    let buildStartTime = null
+    let buildDuration = null
+    
+    // Check if it's a construction yard factory
+    if (building.type === 'constructionYard' && building.id && gameState.factories) {
+      factory = gameState.factories.find(f => f.id === building.owner)
+      if (factory && factory.currentlyBuilding) {
+        isFactory = true
+        currentlyBuilding = factory.currentlyBuilding
+        buildStartTime = factory.buildStartTime
+        buildDuration = factory.buildDuration
+      }
+    }
+    // Check if it's a vehicle factory building (AI can use these for unit production)
+    else if (building.type === 'vehicleFactory' && building.owner && building.owner !== gameState.humanPlayer) {
+      // For enemy vehicle factories, we need to check if they're producing something
+      // We can use the factory system to track this
+      factory = gameState.factories?.find(f => f.id === building.owner)
+      if (factory && factory.currentlyBuilding && 
+          ['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank'].includes(factory.currentlyBuilding)) {
+        isFactory = true
+        currentlyBuilding = factory.currentlyBuilding
+        buildStartTime = factory.buildStartTime
+        buildDuration = factory.buildDuration
+      }
+    }
+    
+    if (!isFactory || !currentlyBuilding) {
+      return
+    }
+    
+    const now = performance.now()
+    const elapsed = now - (buildStartTime || 0)
+    const progress = Math.min(elapsed / (buildDuration || 5000), 1)
+    
+    if (progress <= 0 || progress >= 1) {
+      return // No progress to show
+    }
+    
+    // Position the progress bar below the health bar to avoid overlap
+    // Health bar is at screenY - 10, so we place this at screenY - 16 (6px gap + 3px height)
+    const progressBarWidth = width
+    const progressBarHeight = 3
+    const progressBarX = screenX
+    const progressBarY = screenY - 16
+    
+    ctx.save()
+    
+    // Background bar
+    ctx.fillStyle = '#333'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+    
+    // Progress fill (blue color for production)
+    ctx.fillStyle = '#4CAF50' // Green for building production
+    if (['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank'].includes(currentlyBuilding)) {
+      ctx.fillStyle = '#2196F3' // Blue for unit production
+    }
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+    
+    // Border
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 1
+    ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+    
+    // Show what's being built (text above the progress bar)
+    if (building.owner !== gameState.humanPlayer) { // Only show for enemy factories
+      ctx.fillStyle = '#FFF'
+      ctx.font = '10px Arial'
+      ctx.textAlign = 'center'
+      ctx.strokeStyle = '#000'
+      ctx.lineWidth = 2
+      
+      // Create more readable building names
+      let displayName = currentlyBuilding
+      if (currentlyBuilding === 'tank_v1') displayName = 'Tank'
+      else if (currentlyBuilding === 'tank-v2') displayName = 'Tank V2'
+      else if (currentlyBuilding === 'tank-v3') displayName = 'Tank V3'
+      else if (currentlyBuilding === 'rocketTank') displayName = 'Rocket Tank'
+      else if (currentlyBuilding === 'oreRefinery') displayName = 'Refinery'
+      else if (currentlyBuilding === 'vehicleFactory') displayName = 'Vehicle Factory'
+      else if (currentlyBuilding === 'powerPlant') displayName = 'Power Plant'
+      else if (currentlyBuilding === 'turretGunV1') displayName = 'Turret'
+      else if (currentlyBuilding === 'turretGunV2') displayName = 'Turret V2'
+      else if (currentlyBuilding === 'turretGunV3') displayName = 'Turret V3'
+      else if (currentlyBuilding === 'rocketTurret') displayName = 'Rocket Turret'
+      else if (currentlyBuilding === 'radarStation') displayName = 'Radar'
+      else if (currentlyBuilding === 'teslaCoil') displayName = 'Tesla Coil'
+      else if (currentlyBuilding === 'harvester') displayName = 'Harvester'
+      
+      // Add black outline for better readability
+      ctx.strokeText(displayName, screenX + width / 2, screenY - 18)
+      ctx.fillText(displayName, screenX + width / 2, screenY - 18)
+    }
     
     ctx.restore()
   }
