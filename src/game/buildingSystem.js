@@ -56,12 +56,14 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
         // Update power supply after building is destroyed
         updatePowerSupply(gameState.buildings, gameState)
 
+        // Calculate building center for explosion effects
+        const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
+        const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
+
         // Play explosion sound with reduced volume (0.5)
         playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.5)
 
         // Add explosion effect
-        const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
-        const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
         triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now)
 
         // Check for game end conditions after a building is destroyed
