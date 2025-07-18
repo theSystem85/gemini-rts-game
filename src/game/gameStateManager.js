@@ -187,6 +187,9 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
       
       // Remove the factory from the factories array
       factories.splice(i, 1)
+
+      // Trigger UI refresh for production buttons
+      if (gameState) gameState.pendingButtonUpdate = true
       
       // Update statistics
       if (factory.id === gameState.humanPlayer || factory.owner === gameState.humanPlayer) {

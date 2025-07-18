@@ -174,18 +174,23 @@ export const productionQueue = {
 
   // Count player's construction yards for build speed bonus
   getConstructionYardMultiplier: function() {
-    // Default multiplier is 1x speed
+    // Return 0 if there are no buildings at all
     if (!gameState.buildings || gameState.buildings.length === 0) {
-      return 1
+      return 0
     }
 
-    // Count construction yards owned by player
+    // Count active construction yards owned by the player
     const constructionYards = gameState.buildings.filter(
-      building => building.type === 'constructionYard' && building.owner === gameState.humanPlayer
+      building =>
+        building.type === 'constructionYard' &&
+        building.owner === gameState.humanPlayer &&
+        building.health > 0
     )
 
-    // Each construction yard speeds up building by 1x (returns # of yards + 1)
-    // First yard = 2x speed, second = 3x speed, etc.
+    // If none exist, the player cannot construct buildings
+    if (constructionYards.length === 0) return 0
+
+    // Each additional yard speeds up construction by 1x
     return constructionYards.length + 1
   },
 
@@ -201,6 +206,15 @@ export const productionQueue = {
     }
 
     const item = this.buildingItems[0]
+
+    const yardMultiplier = this.getConstructionYardMultiplier()
+    if (yardMultiplier === 0) {
+      // No construction yard left - cancel this item and notify player
+      this.buildingItems.shift()
+      this.updateBatchCounter(item.button, this.buildingItems.filter(i => i.button === item.button).length)
+      showNotification('Cannot construct building: Construction Yard required.')
+      return
+    }
 
     if (item.blueprint) {
       const info = buildingData[item.type]
@@ -238,7 +252,7 @@ export const productionQueue = {
     let duration = baseDuration * (cost / 500)
 
     // Apply construction yard speedup
-    const constructionMultiplier = this.getConstructionYardMultiplier()
+    const constructionMultiplier = yardMultiplier
     duration = duration / constructionMultiplier
 
     // Apply energy slowdown using the new power penalty formula

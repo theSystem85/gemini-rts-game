@@ -111,6 +111,13 @@ export class GameLoop {
     // Update game elements
     updateGame(delta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
 
+    // Refresh production buttons if a building was destroyed
+    if (gameState.pendingButtonUpdate) {
+      this.productionController.updateVehicleButtonStates()
+      this.productionController.updateBuildingButtonStates()
+      gameState.pendingButtonUpdate = false
+    }
+
     // Get minimap contexts for rendering
     const minimapCtx = this.canvasManager.getMinimapContext()
     const minimapCanvas = this.canvasManager.getMinimapCanvas()
@@ -197,6 +204,12 @@ export class GameLoop {
       if (!gameState.gamePaused) {
         updateGame(deltaTime, gameState, this.units, this.factories, this.bullets, this.mapGrid, this.productionQueue, this.moneyEl, this.gameTimeEl)
         updateBuildingsUnderRepair(gameState, performance.now())
+
+        if (gameState.pendingButtonUpdate) {
+          this.productionController.updateVehicleButtonStates()
+          this.productionController.updateBuildingButtonStates()
+          gameState.pendingButtonUpdate = false
+        }
       }
     }
 

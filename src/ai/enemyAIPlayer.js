@@ -82,11 +82,12 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
 }
 
 function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
-  const aiFactory = factories.find(f => f.id === aiPlayerId)
-  
-  // Check if AI player's construction yard still exists
-  if (!aiFactory || aiFactory.destroyed || aiFactory.health <= 0) {
-    // Construction yard is destroyed, AI can't build anything
+  const aiFactory = factories.find(
+    f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0
+  )
+
+  // If no active construction yard remains this AI cannot build
+  if (!aiFactory) {
     return
   }
 

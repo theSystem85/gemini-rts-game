@@ -50,6 +50,9 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
         // Remove the building from the buildings array
         gameState.buildings.splice(i, 1)
 
+        // Trigger UI refresh for production buttons
+        gameState.pendingButtonUpdate = true
+
         // Update power supply after building is destroyed
         updatePowerSupply(gameState.buildings, gameState)
 

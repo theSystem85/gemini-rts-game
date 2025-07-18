@@ -18,8 +18,12 @@ export class ProductionController {
 
   // Function to update the enabled/disabled state of vehicle production buttons
   updateVehicleButtonStates() {
-    const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
-    const hasRefinery = gameState.buildings.some(b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer)
+    const hasVehicleFactory = gameState.buildings.some(
+      b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer && b.health > 0
+    )
+    const hasRefinery = gameState.buildings.some(
+      b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
@@ -49,7 +53,17 @@ export class ProductionController {
   // Update enabled/disabled state of building production buttons
   updateBuildingButtonStates() {
     const hasRadar = gameState.buildings.some(
-      b => b.type === 'radarStation' && b.owner === gameState.humanPlayer && b.health > 0
+      b =>
+        b.type === 'radarStation' &&
+        b.owner === gameState.humanPlayer &&
+        b.health > 0
+    )
+
+    const hasConstructionYard = gameState.buildings.some(
+      b =>
+        b.type === 'constructionYard' &&
+        b.owner === gameState.humanPlayer &&
+        b.health > 0
     )
 
     const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
@@ -57,16 +71,21 @@ export class ProductionController {
     buildingButtons.forEach(button => {
       const type = button.getAttribute('data-building-type')
       let disable = false
-      let requirementText = ''
+      const req = []
+
+      if (!hasConstructionYard) {
+        disable = true
+        req.push('Construction Yard')
+      }
 
       if (buildingData[type]?.requiresRadar && !hasRadar) {
         disable = true
-        requirementText = 'Requires Radar Station'
+        req.push('Radar Station')
       }
 
       if (disable) {
         button.classList.add('disabled')
-        button.title = requirementText
+        button.title = 'Requires ' + req.join(' & ')
       } else {
         button.classList.remove('disabled')
         button.title = ''
