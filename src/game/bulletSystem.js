@@ -9,6 +9,7 @@ import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './s
 import { updateUnitSpeedModifier } from '../utils.js'
 import { markBuildingForRepairPause } from '../buildings.js'
 import { removeUnitOccupancy } from '../units.js'
+import { handleAttackNotification } from './attackNotifications.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -149,6 +150,9 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             if (unit.owner === 'enemy') {
               unit.isBeingAttacked = true
             }
+            
+            // Handle attack notifications for player units/buildings
+            handleAttackNotification(unit, bullet.shooter, now)
           }
 
           // Play hit sound
@@ -209,6 +213,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             // Set lastAttackedTime for ANY attack, including self-attacks
             if (bullet.shooter) {
               building.lastAttackedTime = now
+              
+              // Handle attack notifications for player buildings
+              if (bullet.shooter.owner !== building.owner) {
+                handleAttackNotification(building, bullet.shooter, now)
+              }
             }
           }
 
@@ -261,6 +270,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
             // Set lastAttackedTime for ANY attack, including self-attacks
             if (bullet.shooter) {
               factory.lastAttackedTime = now
+              
+              // Handle attack notifications for player factories
+              if (bullet.shooter.owner !== factory.owner) {
+                handleAttackNotification(factory, bullet.shooter, now)
+              }
             }
           }
 

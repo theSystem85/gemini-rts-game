@@ -8,6 +8,7 @@ import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { toggleUnitLogging } from '../utils/logger.js'
 import { cancelUnitMovement } from '../game/unifiedMovement.js'
+import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -39,6 +40,7 @@ export class KeyboardHandler {
       }
       if (e.key === 'Alt') {
         gameState.altKeyDown = true
+        resetWaypointTracking() // Reset tracking when Alt is pressed
       }
 
       // Enhanced keydown event listener
@@ -154,6 +156,7 @@ export class KeyboardHandler {
       }
       if (e.key === 'Alt') {
         gameState.altKeyDown = false
+        handleAltKeyRelease() // Check if waypoints were added and play sound
       }
     })
   }

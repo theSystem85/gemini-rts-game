@@ -2,6 +2,8 @@
 import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
+import { playPositionalSound } from '../sound.js'
+import { gameState } from '../gameState.js'
 
 /**
  * Unified movement configuration
@@ -86,6 +88,15 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     // Check if we've reached the current waypoint
     if (distance < TILE_SIZE / 3) {
       unit.path.shift(); // Remove reached waypoint
+      
+      // Play waypoint sound for player units when they reach a new waypoint (but not the final destination)
+      // ONLY when using Path Planning Feature (PPF) - i.e., when unit has a command queue
+      const humanPlayer = gameState.humanPlayer || 'player1'
+      const isPlayerUnit = unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')
+      const isUsingPathPlanning = unit.commandQueue && unit.commandQueue.length > 0
+      if (isPlayerUnit && unit.path.length > 0 && isUsingPathPlanning) { // Only play if there are more waypoints ahead AND using PPF
+        playPositionalSound('movingAlongThePath', unit.x, unit.y, 0.6, 2) // 2 second throttle to avoid spam
+      }
       
       // Update tile position
       unit.tileX = nextTile.x;

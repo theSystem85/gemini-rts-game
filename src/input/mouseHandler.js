@@ -6,6 +6,7 @@ import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
+import { markWaypointsAdded } from '../game/waypointSounds.js'
 
 export class MouseHandler {
   constructor() {
@@ -506,6 +507,7 @@ export class MouseHandler {
             if (!unit.commandQueue) unit.commandQueue = []
             unit.commandQueue.push({ type: 'agf', targets: enemyTargets })
           })
+          markWaypointsAdded() // Mark that waypoints were added during Alt press
         } else {
           this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands, mapGrid)
         }
@@ -852,6 +854,7 @@ export class MouseHandler {
               if (!unit.commandQueue) unit.commandQueue = []
               unit.commandQueue.push({ type: 'retreat', x: worldX, y: worldY })
             })
+            markWaypointsAdded() // Mark that waypoints were added during Shift press
           } else if (e.altKey) {
             // Queue planned action using Alt/Option
             this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, true)
@@ -909,6 +912,7 @@ export class MouseHandler {
               if (!unit.commandQueue) unit.commandQueue = []
               unit.commandQueue.push({ type: 'attack', target })
             })
+            markWaypointsAdded() // Mark that waypoints were added during Alt press
           } else {
             unitCommands.handleAttackCommand(selectedUnits, target, mapGrid, false)
           }
@@ -918,6 +922,7 @@ export class MouseHandler {
               if (!unit.commandQueue) unit.commandQueue = []
               unit.commandQueue.push({ type: 'move', x: worldX, y: worldY })
             })
+            markWaypointsAdded() // Mark that waypoints were added during Alt press
           } else {
             unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid)
           }

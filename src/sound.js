@@ -80,6 +80,12 @@ const soundFiles = {
   new_building_types_available: ['new_building_types_available.mp3'],
   new_production_options: ['new_production_options.mp3'],
   
+  // New waypoint and attack notification sounds
+  movingAlongThePath: ['movingAlongThePath.mp3'],
+  ourBaseIsUnderAttack: ['ourBaseIsUnderAttack.mp3'],
+  ourHarvestersAreUnderAttack: ['ourHarvestersAreUnderAttack.mp3'],
+  chainOfCommandsReceived: ['chainOfCommandsReceived.mp3'],
+  
   // Game event aliases (previously in soundMapping)
   movement: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'], // alias for tankMove
   shoot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'], // alias for tankShot
