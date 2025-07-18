@@ -108,5 +108,8 @@ export const gameState = {
   availableUnitTypes: new Set([]),
   availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'radarStation', 'turretGunV1', 'concreteWall']),
   newUnitTypes: new Set(),
-  newBuildingTypes: new Set()
+  newBuildingTypes: new Set(),
+
+  // Flag to refresh production buttons after building destruction
+  pendingButtonUpdate: false
 }
