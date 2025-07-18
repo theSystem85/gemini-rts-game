@@ -23,12 +23,19 @@ export class UnitCommandsHandler {
     gameState.attackGroupTargets = []
   }
 
-  handleMovementCommand(selectedUnits, targetX, targetY, mapGrid) {
+  handleMovementCommand(selectedUnits, targetX, targetY, mapGrid, skipQueueClear = false) {
     // Clear attack group feature state when issuing movement commands
     this.clearAttackGroupState(selectedUnits)
 
     // Cancel retreat for all selected units when issuing movement commands
     cancelRetreatForUnits(selectedUnits)
+
+    if (!skipQueueClear) {
+          selectedUnits.forEach(unit => {
+        unit.commandQueue = []
+        unit.currentCommand = null
+      })
+    }
 
     const count = selectedUnits.length
 
@@ -130,7 +137,7 @@ export class UnitCommandsHandler {
     }
   }
 
-  handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false) {
+  handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false, skipQueueClear = false) {
     // Clear attack group feature state when issuing single target attack commands
     // Only clear if this is not part of an attack group operation (when isForceAttack is not from AGF)
     if (!this.isAttackGroupOperation) {
@@ -140,6 +147,13 @@ export class UnitCommandsHandler {
     // Cancel retreat for all selected units when issuing attack commands
     cancelRetreatForUnits(selectedUnits)
     selectedUnits.forEach(u => { u.guardTarget = null; u.guardMode = false })
+
+    if (!skipQueueClear) {
+      selectedUnits.forEach(unit => {
+        unit.commandQueue = []
+        unit.currentCommand = null
+      })
+    }
 
     // Semicircle formation logic for attack
     // Calculate safe attack distance with explosion buffer
@@ -202,6 +216,7 @@ export class UnitCommandsHandler {
   }
 
   handleRefineryUnloadCommand(selectedUnits, refinery, mapGrid) {
+    selectedUnits.forEach(u => { u.commandQueue = []; u.currentCommand = null })
     // Clear attack group feature state when issuing refinery unload commands
     this.clearAttackGroupState(selectedUnits)
 
@@ -250,6 +265,7 @@ export class UnitCommandsHandler {
   }
 
   handleHarvesterCommand(selectedUnits, oreTarget, mapGrid) {
+    selectedUnits.forEach(u => { u.commandQueue = []; u.currentCommand = null })
     // Clear attack group feature state when issuing harvester commands
     this.clearAttackGroupState(selectedUnits)
 

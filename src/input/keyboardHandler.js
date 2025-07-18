@@ -32,10 +32,13 @@ export class KeyboardHandler {
     this.mapGrid = mapGrid
     this.factories = factories
     
-    // Track Shift key state globally
+    // Track Shift and Alt/Option key states globally
     document.addEventListener('keydown', e => {
       if (e.key === 'Shift') {
         gameState.shiftKeyDown = true
+      }
+      if (e.key === 'Alt') {
+        gameState.altKeyDown = true
       }
 
       // Enhanced keydown event listener
@@ -148,6 +151,9 @@ export class KeyboardHandler {
           gameState.chainBuildMode = false
           gameState.chainBuildPrimed = false
         }
+      }
+      if (e.key === 'Alt') {
+        gameState.altKeyDown = false
       }
     })
   }

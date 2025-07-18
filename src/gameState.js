@@ -47,6 +47,8 @@ export const gameState = {
   chainBuildingType: null,
   chainBuildingButton: null,
   shiftKeyDown: false,
+  // Track option/alt key state for path planning
+  altKeyDown: false,
 
   // Repair mode
   repairMode: false,

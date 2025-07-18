@@ -500,11 +500,19 @@ export class MouseHandler {
       
       if (enemyTargets.length > 0) {
         // Set up attack queue for selected units
-        this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands, mapGrid)
+        if (gameState.altKeyDown) {
+          // Queue AGF action if Alt/Option pressed
+          selectedUnits.forEach(unit => {
+            if (!unit.commandQueue) unit.commandQueue = []
+            unit.commandQueue.push({ type: 'agf', targets: enemyTargets })
+          })
+        } else {
+          this.setupAttackQueue(selectedUnits, enemyTargets, unitCommands, mapGrid)
+        }
       }
     } else {
       // Handle single click in AGF mode - issue normal commands
-      this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+      this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, gameState.altKeyDown)
     }
     
     // Immediately clear the visual elements to stop red box rendering
@@ -839,17 +847,23 @@ export class MouseHandler {
       // No unit clicked - handle as movement command if units are selected and not in special modes
         if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
           if (e.shiftKey) {
-            // Shift+Click: Initiate retreat behavior for combat units
-            initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
+            // Queue retreat action instead of immediate execute
+            selectedUnits.forEach(unit => {
+              if (!unit.commandQueue) unit.commandQueue = []
+              unit.commandQueue.push({ type: 'retreat', x: worldX, y: worldY })
+            })
+          } else if (e.altKey) {
+            // Queue planned action using Alt/Option
+            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, true)
           } else if (!isForceAttackModifierActive(e)) {
             // Normal command (not Ctrl+Click which is self attack)
-            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid)
+            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, false)
           }
       }
     }
   }
 
-  handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid) {
+  handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, altPressed = false) {
     // Skip command issuing for factory selection
     if (selectedUnits.length > 0 && selectedUnits[0].type !== 'factory') {
       let target = null
@@ -883,19 +897,30 @@ export class MouseHandler {
       }
 
       if (refineryTarget) {
-        // Handle forced unload at specific refinery
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {
-        // Check for enemy targets
         target = this.findEnemyTarget(worldX, worldY)
-        
+
         if (target) {
-          unitCommands.handleAttackCommand(selectedUnits, target, mapGrid, false)
+          if (altPressed) {
+            selectedUnits.forEach(unit => {
+              if (!unit.commandQueue) unit.commandQueue = []
+              unit.commandQueue.push({ type: 'attack', target })
+            })
+          } else {
+            unitCommands.handleAttackCommand(selectedUnits, target, mapGrid, false)
+          }
         } else {
-          // No target: move to clicked location
-          unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid)
+          if (altPressed) {
+            selectedUnits.forEach(unit => {
+              if (!unit.commandQueue) unit.commandQueue = []
+              unit.commandQueue.push({ type: 'move', x: worldX, y: worldY })
+            })
+          } else {
+            unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid)
+          }
         }
       }
     }

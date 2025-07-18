@@ -105,3 +105,8 @@ export function cleanupDestroyedSelectedUnits() {
 export function getKeyboardHandler() {
   return keyboardHandler
 }
+
+// Provide access to unit command handler for other systems
+export function getUnitCommandsHandler() {
+  return unitCommands
+}
