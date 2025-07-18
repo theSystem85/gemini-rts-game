@@ -1,7 +1,7 @@
 // unitCommands.js
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
 import { findPath } from '../units.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
@@ -122,7 +122,9 @@ export class UnitCommandsHandler {
 
     })
     if (anyMoved) {
-      playSound('movement', 0.5)
+      const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
+      const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
+      playPositionalSound('movement', avgX, avgY, 0.5)
     }
   }
 
@@ -270,7 +272,9 @@ export class UnitCommandsHandler {
     })
 
     if (anyAssigned) {
-      playSound('movement', 0.5)
+      const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
+      const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
+      playPositionalSound('movement', avgX, avgY, 0.5)
     }
   }
 

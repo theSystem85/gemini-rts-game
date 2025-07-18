@@ -2,7 +2,7 @@
 import { gameState } from '../gameState.js'
 import { TILE_SIZE } from '../config.js'
 import { findPath } from '../units.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
@@ -415,7 +415,9 @@ export class KeyboardHandler {
         ? 'Unit dodging!' 
         : `${dodgeSuccessCount} units dodging!`
       this.showNotification(message, 1500)
-      playSound('movement', 0.3) // Play a subtle movement sound
+      const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
+      const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
+      playPositionalSound('movement', avgX, avgY, 0.3)
     } else {
       this.showNotification('Unable to dodge - no clear path available', 2000)
     }
