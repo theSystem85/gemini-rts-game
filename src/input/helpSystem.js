@@ -32,6 +32,8 @@ export class HelpSystem {
           <li><strong>Shift + Double Click:</strong> Add all visible units of same type to selection</li>
           <li><strong>Left Click + Drag:</strong> Select multiple units</li>
           <li><strong>Right Click:</strong> Move units / Attack enemy</li>
+          <li><strong>Shift + Right Click:</strong> Retreat selected combat units</li>
+          <li><strong>Alt + Command:</strong> Queue orders (Path Planning)</li>
           <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
           <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
           <li><strong>X Key:</strong> Make selected units dodge</li>

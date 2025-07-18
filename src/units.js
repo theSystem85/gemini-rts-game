@@ -651,7 +651,10 @@ export function createUnit(factory, unitType, x, y) {
     loggingEnabled: false,
     lastLoggedStatus: null,
     guardMode: false,
-    guardTarget: null
+    guardTarget: null,
+    // Command queue for path planning feature
+    commandQueue: [],
+    currentCommand: null
   }
 
   // Add unit-specific properties

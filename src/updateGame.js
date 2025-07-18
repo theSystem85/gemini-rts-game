@@ -8,7 +8,7 @@ import { emitSmokeParticles } from './utils/smokeUtils.js'
 import { getBuildingImage } from './buildingImageMap.js'
 
 import { updateEnemyAI } from './enemy.js'
-import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
+import { cleanupDestroyedSelectedUnits, getUnitCommandsHandler } from './inputHandler.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
 import { updateGuardBehavior } from './behaviours/guard.js'
@@ -20,6 +20,7 @@ import { updateHarvesterLogic } from './game/harvesterLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
+import { processCommandQueues } from './game/commandQueue.js'
 import { 
   updateMapScrolling,
   updateOreSpread,
@@ -57,6 +58,10 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
 
     // Map scrolling with inertia
     updateMapScrolling(gameState, mapGrid)
+
+    // Process queued unit commands before running unit systems
+    const unitCommands = getUnitCommandsHandler()
+    processCommandQueues(units, mapGrid, unitCommands)
 
     // Unit system updates
     units.forEach(unit => {
