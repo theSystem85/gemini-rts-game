@@ -191,14 +191,16 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
       // Trigger UI refresh for production buttons
       if (gameState) gameState.pendingButtonUpdate = true
       
+      // Calculate explosion position for both sound and visual effects
+      const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
+      const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
+      
       // Update statistics
       if (factory.id === gameState.humanPlayer || factory.owner === gameState.humanPlayer) {
         gameState.playerBuildingsDestroyed++
       } else {
         gameState.enemyBuildingsDestroyed++
         // Play enemy building destroyed sound when an enemy factory is destroyed
-        const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
-        const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
         playSound('enemyBuildingDestroyed', 1.0, 0, true)
       }
       
