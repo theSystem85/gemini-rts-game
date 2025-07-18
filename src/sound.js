@@ -1,6 +1,7 @@
 // sound.js
 import { MASTER_VOLUME } from './config.js'
 import { videoOverlay } from './ui/videoOverlay.js'
+import { gameState } from './gameState.js'
 
 let audioContext = null
 try {
@@ -155,7 +156,8 @@ async function loadAudioBuffer(soundPath) {
   }
 }
 
-function playAudioBuffer(audioBuffer, volume = 1.0, onEnded) {
+function playAudioBuffer(audioBuffer, volume = 1.0, onEnded, options = {}) {
+  const { pan = 0 } = options
   if (!audioContext || !audioBuffer) {
     if (onEnded) setTimeout(onEnded, 0)
     return
@@ -164,9 +166,17 @@ function playAudioBuffer(audioBuffer, volume = 1.0, onEnded) {
   try {
     const source = audioContext.createBufferSource()
     const gainNode = audioContext.createGain()
-    
+    let panner = null
+
     source.buffer = audioBuffer
-    source.connect(gainNode)
+    if (typeof audioContext.createStereoPanner === 'function') {
+      panner = audioContext.createStereoPanner()
+      panner.pan.value = pan
+      source.connect(panner)
+      panner.connect(gainNode)
+    } else {
+      source.connect(gainNode)
+    }
     gainNode.connect(audioContext.destination)
     gainNode.gain.value = volume * masterVolume
 
@@ -222,6 +232,22 @@ function getCachedAudioElement(soundPath) {
 // Keep legacy element cache for background music
 const soundElementCache = new Map()
 
+function calculatePositionalAudio(x, y) {
+  const canvas = document.getElementById('gameCanvas')
+  if (!canvas) {
+    return { pan: 0, volumeFactor: 1 }
+  }
+  const centerX = gameState.scrollOffset.x + canvas.width / 2
+  const centerY = gameState.scrollOffset.y + canvas.height / 2
+  const dx = x - centerX
+  const dy = y - centerY
+  const distance = Math.hypot(dx, dy)
+  const maxDistance = Math.max(canvas.width, canvas.height) * 0.75
+  const volumeFactor = Math.max(0, 1 - distance / maxDistance)
+  const pan = Math.max(-1, Math.min(1, dx / maxDistance))
+  return { pan, volumeFactor }
+}
+
 // Preload all sound files to ensure they're cached
 async function preloadAllSounds() {
   const allSoundFiles = new Set()
@@ -268,7 +294,7 @@ const narratedSoundQueue = []
 let isNarratedPlaying = false
 const MAX_NARRATED_STACK = 3
 
-async function playAssetSound(eventName, volume = 1.0, onEnded) {
+async function playAssetSound(eventName, volume = 1.0, onEnded, options = {}) {
   const files = soundFiles[eventName]
   if (files && files.length > 0) {
     const file = files[Math.floor(Math.random() * files.length)]
@@ -286,7 +312,7 @@ async function playAssetSound(eventName, volume = 1.0, onEnded) {
         if (onEnded) onEnded()
       }
       
-      const source = playAudioBuffer(audioBuffer, volume, cleanup)
+      const source = playAudioBuffer(audioBuffer, volume, cleanup, options)
       if (source) {
         activeAudioElements.set(audioId, source)
         return true
@@ -300,7 +326,7 @@ async function playAssetSound(eventName, volume = 1.0, onEnded) {
   return false
 }
 
-function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
+function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, options = {}) {
   if (!audioContext) { 
     if (onEnded) setTimeout(onEnded, 0)
     return 
@@ -321,7 +347,7 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded) {
 
   // Use eventName directly with soundFiles instead of mapping
   if (soundFiles[eventName]) {
-    playAssetSound(eventName, volume, onEnded).catch(e => {
+    playAssetSound(eventName, volume, onEnded, options).catch(e => {
       console.error('Error in playAssetSound:', e)
       if (onEnded) onEnded()
     })
@@ -368,25 +394,33 @@ function playNextNarrated() {
     return
   }
   isNarratedPlaying = true
-  const { eventName, volume, throttleSeconds } = narratedSoundQueue.shift()
+  const { eventName, volume, throttleSeconds, options } = narratedSoundQueue.shift()
   playImmediate(eventName, volume, throttleSeconds, () => {
     playNextNarrated()
-  })
+  }, options)
 }
 
-export function playSound(eventName, volume = 1.0, throttleSeconds = 0, stackable = false) {
+export function playSound(eventName, volume = 1.0, throttleSeconds = 0, stackable = false, options = {}) {
   if (stackable) {
     if (narratedSoundQueue.length + (isNarratedPlaying ? 1 : 0) >= MAX_NARRATED_STACK) {
       return
     }
-    narratedSoundQueue.push({ eventName, volume, throttleSeconds })
+    narratedSoundQueue.push({ eventName, volume, throttleSeconds, options })
     if (!isNarratedPlaying) {
       playNextNarrated()
     }
     return
   }
 
-  playImmediate(eventName, volume, throttleSeconds)
+  playImmediate(eventName, volume, throttleSeconds, undefined, options)
+}
+
+export function playPositionalSound(eventName, x, y, volume = 1.0, throttleSeconds = 0, stackable = false) {
+  const { pan, volumeFactor } = calculatePositionalAudio(x, y)
+  const finalVolume = volume * volumeFactor
+  if (finalVolume <= 0) return
+  const options = { pan }
+  playSound(eventName, finalVolume, throttleSeconds, stackable, options)
 }
 
 // Test function for narrated sound stacking (can be called from browser console)

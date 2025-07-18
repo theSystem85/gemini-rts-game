@@ -3,7 +3,7 @@ import {
   TILE_SIZE
 } from './config.js'
 import { gameState } from './gameState.js'
-import { playSound } from './sound.js'
+import { playSound, playPositionalSound } from './sound.js'
 import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
 import { updateUnitSpeedModifier, awardExperience } from './utils.js'
@@ -25,7 +25,7 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
     duration: 500,
     maxRadius: explosionRadius
   })
-  playSound('explosion', 0.5) // Set explosion sound volume to 0.5
+  playPositionalSound('explosion', x, y, 0.5)
 
   // Apply damage to nearby units
   units.forEach(unit => {

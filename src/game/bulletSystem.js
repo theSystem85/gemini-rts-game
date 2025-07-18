@@ -1,7 +1,7 @@
 // Bullet System Module - Handles all bullet/projectile updates and collision detection
 import { TILE_SIZE, BULLET_DAMAGES } from '../config.js'
 import { triggerExplosion } from '../logic.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { awardExperience } from '../utils.js'
 import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
 import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
@@ -152,11 +152,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Play hit sound
-          playSound('bulletHit', 0.5)
+          playPositionalSound('bulletHit', bullet.x, bullet.y, 0.5)
 
           // Handle unit destruction
           if (unit.health <= 0) {
-            playSound('explosion', 0.5)
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.5)
             unit.health = 0
             if (!unit.occupancyRemoved) {
               removeUnitOccupancy(unit, gameState.occupancyMap)
@@ -213,11 +213,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Play hit sound
-          playSound('bulletHit', 0.5)
+          playPositionalSound('bulletHit', bullet.x, bullet.y, 0.5)
 
           // Handle building destruction
           if (building.health <= 0) {
-            playSound('explosion', 0.5)
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.5)
             building.health = 0
             // Award experience to the shooter for destroying ANY building (except harvesters cannot receive XP)
             if (bullet.shooter && bullet.shooter.owner !== building.owner && bullet.shooter.type !== 'harvester') {
@@ -265,11 +265,11 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
           }
 
           // Play hit sound
-          playSound('bulletHit', 0.5)
+          playPositionalSound('bulletHit', bullet.x, bullet.y, 0.5)
 
           // Handle factory destruction
           if (factory.health <= 0) {
-            playSound('explosion', 0.7)
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
             factory.health = 0
             factory.destroyed = true
           }
@@ -380,7 +380,7 @@ export function fireBullet(unit, target, bullets, now) {
     }
 
     bullets.push(bullet)
-    playSound('shoot', 0.5)
+    playPositionalSound('shoot', bullet.x, bullet.y, 0.5)
     unit.lastShotTime = now
   }
 }

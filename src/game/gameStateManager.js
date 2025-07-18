@@ -2,7 +2,7 @@
 import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 
 /**
@@ -194,15 +194,15 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
       } else {
         gameState.enemyBuildingsDestroyed++
         // Play enemy building destroyed sound when an enemy factory is destroyed
+        const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
+        const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
         playSound('enemyBuildingDestroyed', 1.0, 0, true)
       }
       
       // Play explosion sound with reduced volume (0.5)
-      playSound('explosion', 0.5)
+      playPositionalSound('explosion', explosionX, explosionY, 0.5)
       
       // Add explosion effect at factory center
-      const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
-      const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
       gameState.explosions.push({
         x: explosionX,
         y: explosionY,

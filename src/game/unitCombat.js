@@ -1,6 +1,6 @@
 // unitCombat.js - Handles all unit combat and targeting logic
 import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
@@ -251,7 +251,9 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
             }
 
             bullets.push(bullet);
-            playSound(projectileType === 'rocket' ? 'shoot_rocket' : 'shoot', projectileType === 'rocket' ? 0.3 : 0.5);
+            const soundName = projectileType === 'rocket' ? 'shoot_rocket' : 'shoot'
+            const vol = projectileType === 'rocket' ? 0.3 : 0.5
+            playPositionalSound(soundName, bullet.x, bullet.y, vol)
             unit.lastShotTime = now;
             
             // Trigger recoil and muzzle flash animations

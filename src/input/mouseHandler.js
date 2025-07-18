@@ -2,7 +2,7 @@
 import { TILE_SIZE, ATTACK_GROUP_MIN_DRAG_DISTANCE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { units } from '../main.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { isForceAttackModifierActive } from '../utils/inputUtils.js'
@@ -336,7 +336,7 @@ export class MouseHandler {
         x: Math.floor(worldX / TILE_SIZE),
         y: Math.floor(worldY / TILE_SIZE)
       }
-      playSound('movement', 0.5)
+      playPositionalSound('movement', worldX, worldY, 0.5)
       
       // Deselect the factory after setting rally point
       selectedFactory.selected = false
@@ -369,7 +369,7 @@ export class MouseHandler {
         x: Math.floor(worldX / TILE_SIZE),
         y: Math.floor(worldY / TILE_SIZE)
       }
-      playSound('movement', 0.5)
+      playPositionalSound('movement', worldX, worldY, 0.5)
       
       // Deselect the building after setting rally point
       selectedBuilding.selected = false

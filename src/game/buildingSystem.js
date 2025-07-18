@@ -1,6 +1,6 @@
 // Building System Module - Handles building updates, defensive buildings, and Tesla coils
 import { TILE_SIZE } from '../config.js'
-import { playSound } from '../sound.js'
+import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
@@ -31,6 +31,8 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
         } else if (building.owner !== gameState.humanPlayer) {
           gameState.enemyBuildingsDestroyed++
           // Play enemy building destroyed sound when an enemy building is killed
+          const centerX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
+          const centerY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
           playSound('enemyBuildingDestroyed', 1.0, 0, true)
         }
 
@@ -52,7 +54,7 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
         updatePowerSupply(gameState.buildings, gameState)
 
         // Play explosion sound with reduced volume (0.5)
-        playSound('explosion', 0.5)
+        playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.5)
 
         // Add explosion effect
         const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
@@ -310,7 +312,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     }
 
     // Play rocket sound
-    playSound('shoot_rocket', 0.5)
+    playPositionalSound('shoot_rocket', centerX, centerY, 0.5)
   } else {
     // Standard bullet - calculate trajectory and store target position with spread
     projectile.homing = false
@@ -355,9 +357,9 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
 
     // Play appropriate sound based on turret type
     if (building.type === 'turretGunV3') {
-      playSound('shoot_heavy', 0.5)
+      playPositionalSound('shoot_heavy', centerX, centerY, 0.5)
     } else {
-      playSound('shoot')
+      playPositionalSound('shoot', centerX, centerY)
     }
   }
 
