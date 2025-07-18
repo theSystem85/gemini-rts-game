@@ -11,6 +11,7 @@ import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits } from './inputHandler.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
+import { updateGuardBehavior } from './behaviours/guard.js'
 
 // Import modular game systems
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
@@ -58,6 +59,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateMapScrolling(gameState, mapGrid)
 
     // Unit system updates
+    units.forEach(unit => {
+      updateGuardBehavior(unit, mapGrid, occupancyMap, now)
+    })
     updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories)
     updateSpawnExit(units, factories, mapGrid, occupancyMap)
     updateUnitCombat(units, bullets, mapGrid, gameState, now)

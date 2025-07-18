@@ -5,7 +5,7 @@ import { units } from '../main.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
-import { isForceAttackModifierActive } from '../utils/inputUtils.js'
+import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
 
 export class MouseHandler {
   constructor() {
@@ -28,6 +28,9 @@ export class MouseHandler {
 
     // Track if a force attack click started while Ctrl was held
     this.forceAttackClick = false
+
+    // Track if a guard click started while Meta was held
+    this.guardClick = false
     
     // Add a flag to forcibly disable AGF rendering
     this.disableAGFRendering = false
@@ -116,13 +119,15 @@ export class MouseHandler {
 
     // Determine if this click should issue a force attack command
     this.forceAttackClick = selectedUnits.length > 0 && isForceAttackModifierActive(e)
+    // Determine if this click should issue a guard command
+    this.guardClick = selectedUnits.length > 0 && isGuardModifierActive(e)
 
     // Store potential attack group start position
     this.potentialAttackGroupStart = { x: worldX, y: worldY }
-    this.hasSelectedCombatUnits = !this.forceAttackClick && this.shouldStartAttackGroupMode(selectedUnits)
+    this.hasSelectedCombatUnits = !this.forceAttackClick && !this.guardClick && this.shouldStartAttackGroupMode(selectedUnits)
 
-    // Only enable selection when not initiating a force attack
-    this.isSelecting = !this.forceAttackClick
+    // Only enable selection when not initiating a special command
+    this.isSelecting = !this.forceAttackClick && !this.guardClick
     gameState.selectionActive = this.isSelecting
     this.wasDragging = false
     this.selectionStart = { x: worldX, y: worldY }
@@ -425,14 +430,19 @@ export class MouseHandler {
 
     // Variable to store if we've handled the Force Attack command
     let forceAttackHandled = false
+    let guardHandled = false
 
     // First, handle Command Issuing in Force Attack Mode
     if (selectedUnits.length > 0 && !this.wasDragging && (this.forceAttackClick || isForceAttackModifierActive(e))) {
       forceAttackHandled = this.handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid, selectionManager)
     }
 
+    if (selectedUnits.length > 0 && !this.wasDragging && (this.guardClick || isGuardModifierActive(e))) {
+      guardHandled = this.handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid)
+    }
+
     // If we handled Force Attack, skip normal selection/command processing
-    if (!forceAttackHandled) {
+    if (!forceAttackHandled && !guardHandled) {
       // Normal selection and command handling - always check for unit selection first
       if (this.wasDragging) {
         selectionManager.handleBoundingBoxSelection(units, factories, selectedUnits, this.selectionStart, this.selectionEnd)
@@ -456,6 +466,7 @@ export class MouseHandler {
 
     // Reset force attack state captured on mouse down
     this.forceAttackClick = false
+    this.guardClick = false
     
     // Clear any remaining AGF state if not handled above
     if (!this.isAttackGroupSelecting) {
@@ -693,6 +704,32 @@ export class MouseHandler {
         unitCommands.handleAttackCommand(selectedUnits, forceAttackTarget, mapGrid, true)
         return true // Mark that we've handled this click
       }
+    }
+    return false
+  }
+
+  handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid) {
+    let guardTarget = null
+    for (const unit of units) {
+      if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
+        const centerX = unit.x + TILE_SIZE / 2
+        const centerY = unit.y + TILE_SIZE / 2
+        if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
+          guardTarget = unit
+          break
+        }
+      }
+    }
+
+    if (guardTarget) {
+      selectedUnits.forEach(u => {
+        u.guardTarget = guardTarget
+        u.guardMode = true
+        u.target = null
+        u.moveTarget = null
+      })
+      playSound('confirmed', 0.5)
+      return true
     }
     return false
   }

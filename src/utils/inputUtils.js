@@ -22,6 +22,7 @@ export function isInputFieldFocused() {
  * For mouse events we rely on cached state from the most recent key event.
  */
 let forceAttackKeyActive = false
+let guardKeyActive = false
 
 /**
  * Determine if the self-attack modifier is active. Provide keyboard or mouse
@@ -42,4 +43,17 @@ export function isForceAttackModifierActive(e) {
     forceAttackKeyActive = e.ctrlKey
   }
   return forceAttackKeyActive
+}
+
+export function isGuardModifierActive(e) {
+  if (e && (e.type === 'keydown' || e.type === 'keyup')) {
+    if (e.key === 'Meta') {
+      guardKeyActive = e.type === 'keydown'
+    } else {
+      guardKeyActive = e.metaKey
+    }
+  } else if (e && typeof e.metaKey === 'boolean') {
+    guardKeyActive = e.metaKey
+  }
+  return guardKeyActive
 }

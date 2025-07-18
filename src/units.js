@@ -649,7 +649,9 @@ export function createUnit(factory, unitType, x, y) {
     turretRotationSpeed: unitProps.turretRotationSpeed || unitProps.rotationSpeed,
     isRotating: false,
     loggingEnabled: false,
-    lastLoggedStatus: null
+    lastLoggedStatus: null,
+    guardMode: false,
+    guardTarget: null
   }
 
   // Add unit-specific properties
