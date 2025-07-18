@@ -6,6 +6,7 @@ import { UnitRenderer } from './unitRenderer.js'
 import { EffectsRenderer } from './effectsRenderer.js'
 import { MovementTargetRenderer } from './movementTargetRenderer.js'
 import { RetreatTargetRenderer } from './retreatTargetRenderer.js'
+import { GuardRenderer } from './guardRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
@@ -22,6 +23,7 @@ export class Renderer {
     this.minimapRenderer = new MinimapRenderer()
     this.movementTargetRenderer = new MovementTargetRenderer()
     this.retreatTargetRenderer = new RetreatTargetRenderer()
+    this.guardRenderer = new GuardRenderer()
     this.harvesterHUD = new HarvesterHUD()
   }
 
@@ -90,6 +92,9 @@ export class Renderer {
     
     // Render retreat target indicators (orange circles)
     this.retreatTargetRenderer.renderRetreatTargets(gameCtx, units, scrollOffset)
+
+    // Render guard mode indicators
+    this.guardRenderer.render(gameCtx, units, scrollOffset)
     
     // Render harvester HUD overlay (if enabled)
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)

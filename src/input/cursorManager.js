@@ -13,6 +13,7 @@ export class CursorManager {
     this.isOverOreTile = false
     this.isOverPlayerRefinery = false
     this.isForceAttackMode = false
+    this.isGuardMode = false
     this.lastMouseEvent = null
   }
 
@@ -227,6 +228,10 @@ export class CursorManager {
           // Other buildings: always show default cursor
           gameCanvas.style.cursor = 'default'
         }
+      } else if (this.isGuardMode) {
+        // Guard mode - show guard cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('guard-mode')
       } else if (this.isForceAttackMode) {
         // Force attack mode - use attack cursor
         gameCanvas.style.cursor = 'none'
@@ -271,6 +276,14 @@ export class CursorManager {
     this.isForceAttackMode = isActive
     if (prev !== isActive) {
       console.log(`[SAF] Self attack mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
+    }
+  }
+
+  updateGuardMode(isActive) {
+    const prev = this.isGuardMode
+    this.isGuardMode = isActive
+    if (prev !== isActive) {
+      console.log(`[GMF] Guard mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
     }
   }
 

@@ -34,6 +34,8 @@ export class UnitCommandsHandler {
 
     let anyMoved = false
     selectedUnits.forEach((unit, index) => {
+      unit.guardTarget = null
+      unit.guardMode = false
       let formationOffset = { x: 0, y: 0 }
 
       const colsCount = Math.ceil(Math.sqrt(count))
@@ -137,6 +139,7 @@ export class UnitCommandsHandler {
 
     // Cancel retreat for all selected units when issuing attack commands
     cancelRetreatForUnits(selectedUnits)
+    selectedUnits.forEach(u => { u.guardTarget = null; u.guardMode = false })
 
     // Semicircle formation logic for attack
     // Calculate safe attack distance with explosion buffer
@@ -206,6 +209,8 @@ export class UnitCommandsHandler {
 
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
+        unit.guardTarget = null
+        unit.guardMode = false
         // Force this harvester to be assigned to the clicked refinery (regardless of current ore status)
         // This will be used when the harvester next needs to unload
         unit.assignedRefinery = refinery // Store the actual refinery object
@@ -251,6 +256,8 @@ export class UnitCommandsHandler {
     let anyAssigned = false
     selectedUnits.forEach(unit => {
       if (unit.type === 'harvester') {
+        unit.guardTarget = null
+        unit.guardMode = false
         const path = findPath(
           { x: unit.tileX, y: unit.tileY },
           oreTarget,

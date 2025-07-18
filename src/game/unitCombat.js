@@ -490,6 +490,57 @@ function processAttackQueue(unit, units, mapGrid) {
   }
 }
 
+function updateGuardTargeting(unit, units) {
+  if (!unit.guardTarget || unit.isRetreating) return
+
+  const range = getEffectiveFireRange(unit)
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  if (unit.target && unit.target.health > 0) {
+    const targetCenterX = unit.target.tileX !== undefined ? unit.target.x + TILE_SIZE / 2 : unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+    const targetCenterY = unit.target.tileY !== undefined ? unit.target.y + TILE_SIZE / 2 : unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+    const dist = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+    if (dist > range) {
+      unit.target = null
+    } else {
+      return
+    }
+  }
+
+  let closest = null
+  let closestDist = Infinity
+  units.forEach(p => {
+    if (p.owner !== unit.owner && p.health > 0) {
+      const cx = p.x + TILE_SIZE / 2
+      const cy = p.y + TILE_SIZE / 2
+      const d = Math.hypot(cx - unitCenterX, cy - unitCenterY)
+      if (d <= range && d < closestDist) {
+        closestDist = d
+        closest = p
+      }
+    }
+  })
+
+  if (gameState.buildings) {
+    gameState.buildings.forEach(b => {
+      if (b.owner !== unit.owner && b.health > 0) {
+        const bx = b.x * TILE_SIZE + (b.width * TILE_SIZE) / 2
+        const by = b.y * TILE_SIZE + (b.height * TILE_SIZE) / 2
+        const d = Math.hypot(bx - unitCenterX, by - unitCenterY)
+        if (d <= range && d < closestDist) {
+          closestDist = d
+          closest = b
+        }
+      }
+    })
+  }
+
+  if (closest) {
+    unit.target = closest
+  }
+}
+
 /**
  * Clean up attack group targets that have been destroyed
  */
@@ -524,6 +575,8 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
 
     // Process attack queue for units with queued targets
     processAttackQueue(unit, units, mapGrid);
+
+    updateGuardTargeting(unit, units);
 
     // Combat logic for different unit types
     if (unit.type === 'tank' || unit.type === 'tank_v1') {

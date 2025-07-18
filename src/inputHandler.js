@@ -5,7 +5,7 @@ import { MouseHandler } from './input/mouseHandler.js'
 import { KeyboardHandler } from './input/keyboardHandler.js'
 import { SelectionManager } from './input/selectionManager.js'
 import { UnitCommandsHandler } from './input/unitCommands.js'
-import { isForceAttackModifierActive } from './utils/inputUtils.js'
+import { isForceAttackModifierActive, isGuardModifierActive } from './utils/inputUtils.js'
 
 export const selectedUnits = []
 export let selectionActive = false
@@ -69,10 +69,14 @@ export function setupInputHandlers(units, factories, mapGrid) {
       }
   })
 
-  // Listen for modifier key presses to toggle force attack cursor
+  // Listen for modifier key presses to toggle force attack or guard cursor
   document.addEventListener('keydown', (e) => {
     if (isForceAttackModifierActive(e)) {
       cursorManager.updateForceAttackMode(true)
+      cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+    }
+    if (isGuardModifierActive(e) && selectedUnits.length > 0) {
+      cursorManager.updateGuardMode(true)
       cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
     }
   })
@@ -81,6 +85,11 @@ export function setupInputHandlers(units, factories, mapGrid) {
     if (e.key === 'Control') {
       isForceAttackModifierActive(e) // update cached state
       cursorManager.updateForceAttackMode(false)
+      cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+    }
+    if (e.key === 'Meta') {
+      isGuardModifierActive(e)
+      cursorManager.updateGuardMode(false)
       cursorManager.refreshCursor(gameState.mapGrid || [], gameState.factories || [], selectedUnits)
     }
   })
