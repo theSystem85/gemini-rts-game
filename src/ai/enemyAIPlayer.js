@@ -3,6 +3,7 @@ import { spawnEnemyUnit } from './enemySpawner.js'
 import { resetAttackDirections } from './enemyStrategies.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
+import { gameState } from '../gameState.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   // Validate inputs
@@ -261,7 +262,7 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
 
     if (position) {
       // Double-check position is still valid before placing
-      if (canPlaceBuilding(buildingType, position.x, position.y, mapGrid, units, gameState.buildings, factories, aiPlayerId)) {
+      if (canPlaceBuilding(buildingType, position.x, position.y, gameState.mapGrid || mapGrid, units, gameState.buildings, factories, aiPlayerId)) {
         const newBuilding = createBuilding(buildingType, position.x, position.y)
         newBuilding.owner = aiPlayerId
         gameState.buildings.push(newBuilding)

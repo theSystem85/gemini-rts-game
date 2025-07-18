@@ -173,7 +173,7 @@ export class EventHandlers {
         const tileY = Math.floor(mouseY / TILE_SIZE)
         const type = gameState.draggedBuildingType
         const button = gameState.draggedBuildingButton
-        if (canPlaceBuilding(type, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
+        if (canPlaceBuilding(type, tileX, tileY, gameState.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
           const blueprint = { type, x: tileX, y: tileY }
           gameState.blueprints.push(blueprint)
           productionQueue.addItem(type, button, true, blueprint)
@@ -199,7 +199,7 @@ export class EventHandlers {
 
     // Add building repair handling to the canvas click event
     gameCanvas.addEventListener('click', (e) =>
-      buildingRepairHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)
+      buildingRepairHandler(e, gameState, gameCanvas, gameState.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)
     )
 
     // Add building sell handling to the canvas click event
@@ -229,7 +229,7 @@ export class EventHandlers {
 
       try {
         // Check if placement is valid - pass buildings and factories arrays
-        if (canPlaceBuilding(buildingType, tileX, tileY, this.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
+        if (canPlaceBuilding(buildingType, tileX, tileY, gameState.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
           // Create and place the building
           const newBuilding = createBuilding(buildingType, tileX, tileY)
 

@@ -129,7 +129,7 @@ export class UIRenderer {
           gameState.currentBuildingType,
           tileX,
           tileY,
-          mapGrid,
+          gameState.mapGrid || mapGrid,
           units,
           buildings,
           factories,

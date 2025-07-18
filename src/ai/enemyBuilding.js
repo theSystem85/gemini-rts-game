@@ -665,7 +665,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
   const y = production.y
 
   // Validate the building placement one final time
-  if (canPlaceBuilding(buildingType, x, y, mapGrid, gameState.units, gameState.buildings, gameState.factories || [], 'enemy')) {
+  if (canPlaceBuilding(buildingType, x, y, gameState.mapGrid || mapGrid, gameState.units, gameState.buildings, gameState.factories || [], 'enemy')) {
     // Create and place the building
     const newBuilding = createBuilding(buildingType, x, y)
     newBuilding.owner = 'enemy'

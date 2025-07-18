@@ -280,6 +280,12 @@ export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDi
 export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factories, owner = 'player') {
   if (!buildingData[type]) return false
 
+  // Validate mapGrid parameter
+  if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0]) {
+    console.warn('canPlaceBuilding: Invalid mapGrid provided', { mapGrid, type, tileX, tileY })
+    return false
+  }
+
   const width = buildingData[type].width
   const height = buildingData[type].height
 

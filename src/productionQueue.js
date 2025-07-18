@@ -1,6 +1,6 @@
 import { spawnUnit, findPath } from './units.js'
 import { findClosestOre } from './logic.js'
-import { buildingCosts, factories, units, mapGrid } from './main.js'
+import { buildingCosts, factories, units } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { buildingData, createBuilding, placeBuilding, canPlaceBuilding, updatePowerSupply, isNearExistingBuilding } from './buildings.js'
@@ -411,7 +411,7 @@ export const productionQueue = {
 
     if (spawnFactory) {
       // Pass the specific factory's rally point to spawnUnit
-      const newUnit = spawnUnit(spawnFactory, unitType, units, mapGrid, rallyPointTarget, gameState.occupancyMap)
+      const newUnit = spawnUnit(spawnFactory, unitType, units, gameState.mapGrid, rallyPointTarget, gameState.occupancyMap)
       if (newUnit) {
         units.push(newUnit)
         // Play random unit ready sound
@@ -428,7 +428,7 @@ export const productionQueue = {
           const targetedOreTiles = gameState?.targetedOreTiles || {}
 
           // Find closest ore, considering assigned refinery if applicable
-          const orePos = findClosestOre(newUnit, mapGrid, targetedOreTiles, newUnit.assignedRefinery)
+          const orePos = findClosestOre(newUnit, gameState.mapGrid, targetedOreTiles, newUnit.assignedRefinery)
           if (orePos) {
             // Register this ore tile as targeted by this unit
             const tileKey = `${orePos.x},${orePos.y}`
@@ -436,7 +436,7 @@ export const productionQueue = {
               gameState.targetedOreTiles[tileKey] = newUnit.id
             }
 
-            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, mapGrid, null)
+            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, gameState.mapGrid, null)
             if (newPath.length > 1) {
               newUnit.path = newPath.slice(1)
               newUnit.oreField = orePos // Set initial ore field target
@@ -478,12 +478,12 @@ export const productionQueue = {
 
     const blueprint = this.currentBuilding.blueprint
     if (blueprint) {
-      if (canPlaceBuilding(this.currentBuilding.type, blueprint.x, blueprint.y, mapGrid, units, gameState.buildings, factories, gameState.humanPlayer)) {
+      if (canPlaceBuilding(this.currentBuilding.type, blueprint.x, blueprint.y, gameState.mapGrid, units, gameState.buildings, factories, gameState.humanPlayer)) {
         const newBuilding = createBuilding(this.currentBuilding.type, blueprint.x, blueprint.y)
         newBuilding.owner = gameState.humanPlayer
         if (!gameState.buildings) gameState.buildings = []
         gameState.buildings.push(newBuilding)
-        placeBuilding(newBuilding, mapGrid)
+        placeBuilding(newBuilding, gameState.mapGrid)
         updatePowerSupply(gameState.buildings, gameState)
         playSound('buildingPlaced')
         showNotification(`${buildingData[this.currentBuilding.type].displayName} constructed`)
