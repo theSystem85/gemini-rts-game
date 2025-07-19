@@ -10,7 +10,7 @@ export class EffectsRenderer {
       const y = bullet.y - scrollOffset.y;
       
       // Different rendering for different projectile types
-      if (bullet.homing) {
+      if (bullet.homing || bullet.ballistic) {
         // Rockets - larger, yellow/orange
         ctx.fillStyle = '#FFD700'; // Gold color for rockets
         ctx.beginPath();

@@ -33,9 +33,35 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       continue
     }
 
-    // Initialize start time if not set (for non-homing projectiles)
+    // Initialize start time if not set
     if (!bullet.startTime) {
       bullet.startTime = now
+    }
+
+    // Ballistic projectile handling
+    if (bullet.ballistic) {
+      const progress = ((now - bullet.startTime) * bullet.effectiveSpeed) / bullet.distance
+      if (progress >= 1) {
+        triggerExplosion(
+          bullet.targetX,
+          bullet.targetY,
+          bullet.baseDamage,
+          units,
+          factories,
+          bullet.shooter,
+          now,
+          mapGrid
+        )
+        bullets.splice(i, 1)
+        continue
+      }
+
+      const baseX = bullet.startX + bullet.dx * progress
+      const baseY = bullet.startY + bullet.dy * progress
+      const arcOffset = -4 * bullet.arcHeight * progress * (1 - progress)
+      bullet.x = baseX
+      bullet.y = baseY + arcOffset
+      continue
     }
 
     // Handle homing projectiles
@@ -351,16 +377,32 @@ export function fireBullet(unit, target, bullets, now) {
       target
     }
   } else if (unit.type === 'rocketTank') {
+    const dx = targetCenterX - unitCenterX
+    const dy = targetCenterY - unitCenterY
+    const distance = Math.hypot(dx, dy)
+    const speed = 6
+    const flightDuration = distance / speed
+
     bullet = {
       id: Date.now() + Math.random(),
       x: unitCenterX,
       y: unitCenterY,
-      speed: 20,
+      speed,
       baseDamage: BULLET_DAMAGES.rocketTank,
       active: true,
       shooter: unit,
-      homing: true,
+      homing: false,
       target,
+      ballistic: true,
+      startX: unitCenterX,
+      startY: unitCenterY,
+      targetX: targetCenterX,
+      targetY: targetCenterY,
+      dx,
+      dy,
+      distance,
+      flightDuration,
+      arcHeight: Math.max(50, distance * 0.3),
       targetPosition: { x: targetCenterX, y: targetCenterY }
     }
   }
@@ -372,8 +414,8 @@ export function fireBullet(unit, target, bullets, now) {
     // Set start time for all bullets
     bullet.startTime = now
     
-    // Calculate bullet direction for non-homing projectiles
-    if (!bullet.homing) {
+    // Calculate bullet direction for non-homing non-ballistic projectiles
+    if (!bullet.homing && !bullet.ballistic) {
       const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
       bullet.vx = bullet.speed * Math.cos(angle)
       bullet.vy = bullet.speed * Math.sin(angle)
