@@ -3,6 +3,7 @@ import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE,
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
+import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -38,9 +39,11 @@ export class UnitRenderer {
   }
 
   renderTurret(ctx, unit, centerX, centerY) {
-    // Harvesters have a mining bar instead of a turret
+    // Harvesters use image rendering. Show mining bar only if image not loaded
     if (unit.type === 'harvester') {
-      this.renderHarvesterMiningBar(ctx, unit, centerX, centerY)
+      if (!isHarvesterImageLoaded()) {
+        this.renderHarvesterMiningBar(ctx, unit, centerX, centerY)
+      }
       return
     }
 
@@ -400,9 +403,18 @@ export class UnitRenderer {
 
     // Check if this is a tank type and if image rendering is enabled
     const isTank = ['tank_v1', 'tank-v2', 'tank-v3', 'tank_v2', 'tank_v3'].includes(unit.type)
-    const useImageRendering = gameState.useTankImages && isTank && areTankImagesLoaded(unit.type)
+    const useTankImage = gameState.useTankImages && isTank && areTankImagesLoaded(unit.type)
 
-    if (useImageRendering) {
+    if (unit.type === 'harvester' && isHarvesterImageLoaded()) {
+      const ok = renderHarvesterWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (useTankImage) {
       // Try to render with images
       const imageRenderSuccess = renderTankWithImages(ctx, unit, centerX, centerY)
       
