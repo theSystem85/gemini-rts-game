@@ -357,7 +357,8 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
       const scale = TILE_SIZE / 64 // images are 64px base size
       const localX = (pt.x - 32) * scale
       const localY = (pt.y - 32) * scale
-      const rot = (building.turretDirection || 0) + Math.PI / 2
+      const rotationOffset = cfg.rotationOffset !== undefined ? cfg.rotationOffset : Math.PI / 2
+      const rot = (building.turretDirection || 0) + rotationOffset
       const cos = Math.cos(rot)
       const sin = Math.sin(rot)
       const offsetX = localX * cos - localY * sin

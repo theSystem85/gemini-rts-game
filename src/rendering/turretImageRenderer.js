@@ -134,7 +134,8 @@ export function renderTurretWithImages(ctx, building, screenX, screenY, width, h
   
   // Rotate based on turret direction
   // Building turret direction needs +π/2 adjustment for correct image orientation
-  const turretRotation = (building.turretDirection || 0) + Math.PI / 2
+  const rotationOffset = config.rotationOffset !== undefined ? config.rotationOffset : Math.PI / 2
+  const turretRotation = (building.turretDirection || 0) + rotationOffset
   ctx.rotate(turretRotation)
 
   const topImg = images.top

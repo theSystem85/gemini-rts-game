@@ -76,7 +76,7 @@ export const buildingData = {
   turretGunV1: {
     width: 1,
     height: 1,
-    cost: 1000,
+    cost: 1200,
     power: -10,
     image: 'turret_gun_v1.webp',
     displayName: 'Turret Gun V1',
@@ -94,7 +94,7 @@ export const buildingData = {
     width: 1,
     height: 1,
     cost: 2000,
-    power: -15,
+    power: -20,
     image: 'turret_gun_v2.webp',
     displayName: 'Turret Gun V2',
     health: 300,
@@ -105,13 +105,16 @@ export const buildingData = {
     damage: 12, // Reduced by 50% (was 24)
     armor: 1,
     projectileType: 'bullet',
-    projectileSpeed: 16 // 4x faster (was 4)
+    projectileSpeed: 16, // 4x faster (was 4)
+    burstFire: true,
+    burstCount: 2,
+    burstDelay: 150 // ms between burst shots
   },
   turretGunV3: {
     width: 1,
     height: 1,
     cost: 3000,
-    power: -25,
+    power: -30,
     image: 'turret_gun_v3.webp',
     displayName: 'Turret Gun V3',
     health: 300,
