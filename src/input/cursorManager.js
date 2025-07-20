@@ -267,9 +267,9 @@ export class CursorManager {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerRefinery) {
-        // Over player refinery with harvesters selected - use attack cursor to indicate force unload
+        // Over player refinery with harvesters selected - show move into cursor
         gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverOreTile) {
         // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
         gameCanvas.style.cursor = 'none'
