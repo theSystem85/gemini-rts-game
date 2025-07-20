@@ -42,6 +42,22 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
 
     // Ballistic projectile handling: rocket goes straight up then switches to homing
     let skipStandardMotion = false
+    if (bullet.parabolic) {
+      const t = (now - bullet.startTime) / bullet.flightDuration
+      if (t >= 1) {
+        triggerExplosion(bullet.targetPosition.x, bullet.targetPosition.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+        bullets.splice(i,1)
+        continue
+      } else {
+        bullet.x = bullet.startX + bullet.dx * t
+        bullet.y = bullet.startY + bullet.dy * t - bullet.arcHeight * Math.sin(Math.PI * t)
+        bullet.trail = bullet.trail || []
+        bullet.trail.push({x: bullet.x, y: bullet.y, time: now})
+        bullet.trail = bullet.trail.filter(p => now - p.time < 300)
+        skipStandardMotion = true
+      }
+    }
+
     if (bullet.ballistic) {
       const progress = (now - bullet.startTime) / bullet.ballisticDuration
 
@@ -75,7 +91,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
     if (bullet.homing) {
       if (now - bullet.startTime > 5000) { // Max flight time for homing missiles
         // Explode at the bullet's current position upon timeout
-        triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+        triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
         bullets.splice(i, 1)
         continue
       }
@@ -123,7 +139,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         // Explode at the bullet's current position or original target if non-homing and close
         const explosionX = !bullet.homing && bullet.targetPosition ? bullet.targetPosition.x : bullet.x
         const explosionY = !bullet.homing && bullet.targetPosition ? bullet.targetPosition.y : bullet.y
-        triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+        triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
         bullets.splice(i, 1)
         continue
       }
@@ -222,7 +238,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
 
           // If bullet has a target position, explode there; otherwise explode at hit location
           // ALWAYS explode at the bullet's current position for accurate impact
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
           bullets.splice(i, 1)
           continue
         }
@@ -279,7 +295,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
 
           // Explode at target position or bullet location
           // ALWAYS explode at the bullet's current position for accurate impact
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
           bullets.splice(i, 1)
           break
         }
@@ -333,7 +349,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
 
           // Explode at target position or bullet location
           // ALWAYS explode at the bullet's current position for accurate impact
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid)
+          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
           bullets.splice(i, 1)
           break
         }

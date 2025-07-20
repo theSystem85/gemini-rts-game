@@ -16,6 +16,10 @@ export class CursorManager {
     this.isForceAttackMode = false
     this.isGuardMode = false
     this.lastMouseEvent = null
+    this.isOverEnemyInRange = false
+    this.isOverEnemyOutOfRange = false
+    this.isInArtilleryRange = false
+    this.isOutOfArtilleryRange = false
   }
 
   // Function to check if a location is a blocked tile (water, rock, building)
@@ -244,17 +248,86 @@ export class CursorManager {
             gameCanvas.style.cursor = 'grabbing'
           }
         } else {
-          // Other buildings: always show default cursor
-          gameCanvas.style.cursor = 'default'
+          // Other buildings: check if artillery turret is selected for range-based cursor
+          const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
+          
+          // Also check gameState.buildings for selected artillery turrets (alternative selection method)
+          let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
+          if (!artilleryTurretSelected && gameState.buildings) {
+            artilleryTurretSelected = gameState.buildings.some(b => 
+              b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
+            )
+          }
+          
+          // Also check selectedUnits directly for artillery turrets (without building filter)
+          if (!artilleryTurretSelected) {
+            artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
+          }
+          
+          if (artilleryTurretSelected) {
+            // Artillery turret selected - show range-based cursor
+            if (this.isOverEnemyInRange) {
+              // Enemy within range - show attack cursor
+              gameCanvas.style.cursor = 'none'
+              gameCanvas.classList.add('attack-mode')
+            } else if (this.isOverEnemyOutOfRange) {
+              // Enemy out of range - show blocked attack cursor
+              gameCanvas.style.cursor = 'none'
+              gameCanvas.classList.add('attack-blocked-mode')
+            } else if (this.isOverEnemy) {
+              // Over enemy but range logic didn't trigger - fallback to attack cursor for now
+              gameCanvas.style.cursor = 'none'
+              gameCanvas.classList.add('attack-mode')
+            } else {
+              gameCanvas.style.cursor = 'default'
+            }
+          } else {
+            // Other buildings: always show default cursor
+            gameCanvas.style.cursor = 'default'
+          }
         }
       } else if (this.isGuardMode) {
         // Guard mode - show guard cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('guard-mode')
       } else if (this.isForceAttackMode) {
-        // Force attack mode - use attack cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        // Force attack mode - check if artillery turret is selected for range-based cursor
+        const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
+        const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
+        
+        // Also check gameState.buildings for selected artillery turrets (alternative selection method)
+        let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
+        if (!artilleryTurretSelected && gameState.buildings) {
+          artilleryTurretSelected = gameState.buildings.some(b => 
+            b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
+          )
+        }
+        
+        // Also check selectedUnits directly for artillery turrets (without building filter)
+        if (!artilleryTurretSelected) {
+          artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
+        }
+        
+        if (artilleryTurretSelected) {
+          // Artillery turret selected in force attack mode - use range-based cursor
+          if (this.isInArtilleryRange) {
+            // Within artillery range - show attack cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          } else if (this.isOutOfArtilleryRange) {
+            // Out of artillery range - show blocked attack cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-blocked-mode')
+          } else {
+            // Default force attack cursor when range not calculated
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          }
+        } else {
+          // Regular force attack mode - use standard attack cursor
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('attack-mode')
+        }
       } else if (this.isOverFriendlyUnit) {
         // Over friendly unit - use normal arrow cursor
         gameCanvas.style.cursor = 'default'
@@ -283,9 +356,83 @@ export class CursorManager {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-mode')
       } else {
-        // Right-drag scrolling
-        gameCanvas.style.cursor = 'grabbing'
-        gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode')
+        // Check if artillery turret is selected and handle special cursor logic
+        const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
+        const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
+        
+        // Also check gameState.buildings for selected artillery turrets (alternative selection method)
+        let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
+        if (!artilleryTurretSelected && gameState.buildings) {
+          artilleryTurretSelected = gameState.buildings.some(b => 
+            b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
+          )
+        }
+        
+        // Also check selectedUnits directly for artillery turrets (without building filter)
+        if (!artilleryTurretSelected) {
+          artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
+        }
+        
+        if (artilleryTurretSelected) {
+          // Artillery turret is selected - apply range-based cursor logic
+          if (this.isOverEnemyInRange) {
+            // Enemy within range - show attack cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          } else if (this.isOverEnemyOutOfRange) {
+            // Enemy out of range - show blocked attack cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-blocked-mode')
+          } else if (this.isOverEnemy) {
+            // Over enemy but range logic didn't trigger - fallback to attack cursor for now
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          } else if (this.isOverPlayerRefinery) {
+            // Over player refinery with harvesters selected - use attack cursor to indicate force unload
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          } else if (this.isOverOreTile) {
+            // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('attack-mode')
+          } else if (this.isOverBlockedTerrain) {
+            // Over blocked terrain - use move-blocked cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('move-blocked-mode')
+          } else if (!gameState.isRightDragging) {
+            // Normal move cursor
+            gameCanvas.style.cursor = 'none'
+            gameCanvas.classList.add('move-mode')
+          } else {
+            // Right-drag scrolling
+            gameCanvas.style.cursor = 'grabbing'
+            gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+          }
+        } else if (this.isOverEnemy) {
+          // Over enemy - use attack cursor (normal units logic)
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('attack-mode')
+        } else if (this.isOverPlayerRefinery) {
+          // Over player refinery with harvesters selected - use attack cursor to indicate force unload
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('attack-mode')
+        } else if (this.isOverOreTile) {
+          // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('attack-mode')
+        } else if (this.isOverBlockedTerrain) {
+          // Over blocked terrain - use move-blocked cursor
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('move-blocked-mode')
+        } else if (!gameState.isRightDragging) {
+          // Normal move cursor
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('move-mode')
+        } else {
+          // Right-drag scrolling
+          gameCanvas.style.cursor = 'grabbing'
+          gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+        }
       }
     } else {
       // No units selected - use default cursor
@@ -297,9 +444,6 @@ export class CursorManager {
   updateForceAttackMode(isActive) {
     const prev = this.isForceAttackMode
     this.isForceAttackMode = isActive
-    if (prev !== isActive) {
-      console.log(`[SAF] Self attack mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
-    }
   }
 
   updateGuardMode(isActive) {
@@ -323,5 +467,21 @@ export class CursorManager {
 
   setIsOverFriendlyUnit(value) {
     this.isOverFriendlyUnit = value
+  }
+
+  setIsOverEnemyInRange(value) {
+    this.isOverEnemyInRange = value
+  }
+
+  setIsOverEnemyOutOfRange(value) {
+    this.isOverEnemyOutOfRange = value
+  }
+
+  setIsInArtilleryRange(value) {
+    this.isInArtilleryRange = value
+  }
+
+  setIsOutOfArtilleryRange(value) {
+    this.isOutOfArtilleryRange = value
   }
 }

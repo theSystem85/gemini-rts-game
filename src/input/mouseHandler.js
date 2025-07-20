@@ -245,10 +245,70 @@ export class MouseHandler {
 
       cursorManager.setIsOverEnemy(isOverEnemy)
       cursorManager.setIsOverFriendlyUnit(isOverFriendlyUnit)
+      
+      // Update artillery turret range detection for cursor changes
+      let enemyInRange = false
+      let enemyOutOfRange = false
+      
+      // Check if any selected unit is an artillery turret (for both enemy targeting and force attack mode)
+      const selectedArtilleryTurrets = selectedUnits.filter(unit => 
+        unit.type === 'artilleryTurret'  // Remove isBuilding check as it might be missing
+      )
+      
+      // Also check gameState.buildings for selected artillery turrets (alternative selection method)
+      let additionalArtilleryTurrets = []
+      if (gameState.buildings) {
+        additionalArtilleryTurrets = gameState.buildings.filter(b => 
+          b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
+        )
+      }
+      
+      const allArtilleryTurrets = [...selectedArtilleryTurrets, ...additionalArtilleryTurrets]
+      
+      // Calculate range for artillery turrets when they are selected (both for enemy targeting and force attack)
+      if (allArtilleryTurrets.length > 0) {
+        for (const turret of allArtilleryTurrets) {
+          const turretCenterX = (turret.x + turret.width / 2) * TILE_SIZE
+          const turretCenterY = (turret.y + turret.height / 2) * TILE_SIZE
+          const distance = Math.hypot(worldX - turretCenterX, worldY - turretCenterY)
+          const maxRange = turret.fireRange * TILE_SIZE
+          
+          if (distance <= maxRange) {
+            enemyInRange = true
+          } else {
+            enemyOutOfRange = true
+          }
+        }
+        
+        // If some turrets can reach and some can't, prioritize in-range
+        if (enemyInRange && enemyOutOfRange) {
+          enemyInRange = true
+          enemyOutOfRange = false
+        } else if (!enemyInRange && enemyOutOfRange) {
+          enemyInRange = false
+          enemyOutOfRange = true
+        }
+      }
+      
+      cursorManager.setIsOverEnemyInRange(isOverEnemy && enemyInRange)
+      cursorManager.setIsOverEnemyOutOfRange(isOverEnemy && enemyOutOfRange)
+      
+      // For force attack mode with artillery turrets, set range flags regardless of enemy presence
+      if (allArtilleryTurrets.length > 0) {
+        cursorManager.setIsInArtilleryRange(enemyInRange)
+        cursorManager.setIsOutOfArtilleryRange(enemyOutOfRange)
+      } else {
+        cursorManager.setIsInArtilleryRange(false)
+        cursorManager.setIsOutOfArtilleryRange(false)
+      }
     } else {
       // No units selected, reset hover states
       cursorManager.setIsOverEnemy(false)
       cursorManager.setIsOverFriendlyUnit(false)
+      cursorManager.setIsOverEnemyInRange(false)
+      cursorManager.setIsOverEnemyOutOfRange(false)
+      cursorManager.setIsInArtilleryRange(false)
+      cursorManager.setIsOutOfArtilleryRange(false)
     }
   }
 
@@ -652,7 +712,7 @@ export class MouseHandler {
   }
 
   handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid, selectionManager) {
-    // Only process Force Attack if units are selected, not factories
+    // Only process Force Attack if units or defensive buildings are selected, not factories
     if (selectedUnits[0].type !== 'factory') {
       let forceAttackTarget = null
 
@@ -711,13 +771,21 @@ export class MouseHandler {
 
       // If we found a target (friendly unit/building or ground), issue the Force Attack command
       if (forceAttackTarget) {
-        // Set the forcedAttack flag on all selected units
-        selectedUnits.forEach(unit => {
-          unit.forcedAttack = true
-        })
-        
-        unitCommands.handleAttackCommand(selectedUnits, forceAttackTarget, mapGrid, true)
-        return true // Mark that we've handled this click
+        const first = selectedUnits[0]
+        if (first.isBuilding) {
+          selectedUnits.forEach(b => {
+            b.forcedAttackTarget = forceAttackTarget
+            b.forcedAttack = true
+            b.holdFire = false
+          })
+          return true
+        } else {
+          selectedUnits.forEach(unit => {
+            unit.forcedAttack = true
+          })
+          unitCommands.handleAttackCommand(selectedUnits, forceAttackTarget, mapGrid, true)
+          return true
+        }
       }
     }
     return false
