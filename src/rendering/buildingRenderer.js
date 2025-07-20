@@ -81,8 +81,36 @@ export class BuildingRenderer {
           colorProgress
         )
       } else {
-        // Image is available, draw it immediately at natural size, positioned at top-left
-        this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
+        if (building.type === 'artilleryTurret') {
+          const centerX = screenX + width / 2
+          const centerY = screenY + height / 2
+          ctx.save()
+          ctx.translate(centerX, centerY)
+          ctx.rotate((building.turretDirection || 0) + Math.PI * 3 / 4)
+          ctx.drawImage(img, -width / 2, -height / 2, width, height)
+          // Big muzzle flash when firing
+          if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+            const progress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+            const alpha = 1 - progress
+            const size = 24 * (1 - progress * 0.5)
+            const fx = 7 - width / 2
+            const fy = 13 - height / 2
+            ctx.save()
+            ctx.globalAlpha = alpha
+            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, size)
+            grad.addColorStop(0, '#FFF')
+            grad.addColorStop(0.3, '#FF0')
+            grad.addColorStop(1, 'rgba(255,165,0,0)')
+            ctx.fillStyle = grad
+            ctx.beginPath()
+            ctx.arc(fx, fy, size, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.restore()
+          }
+          ctx.restore()
+        } else {
+          this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
+        }
       }
     } else {
       // No image available, use fallback
@@ -173,7 +201,7 @@ export class BuildingRenderer {
 
   renderTurret(ctx, building, screenX, screenY, width, height) {
     // Draw turret for defensive buildings
-    if (building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') {
+    if (building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil' || building.type === 'artilleryTurret') {
       const centerX = screenX + width / 2
       const centerY = screenY + height / 2
 
@@ -183,6 +211,20 @@ export class BuildingRenderer {
         if (building.selected) {
           ctx.save()
           ctx.strokeStyle = 'rgba(255, 255, 0, 0.25)'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
+      
+      // For Artillery Turret, draw range indicator if selected (similar to Tesla Coil but red)
+      if (building.type === 'artilleryTurret') {
+        // Draw range indicator if selected
+        if (building.selected) {
+          ctx.save()
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.25)'
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2)
@@ -335,8 +377,8 @@ export class BuildingRenderer {
         }
       }
 
-      // Draw range indicator if selected (for non-tesla coil buildings)
-      if (building.selected && building.type !== 'teslaCoil') {
+      // Draw range indicator if selected (for non-tesla coil and non-artillery buildings)
+      if (building.selected && building.type !== 'teslaCoil' && building.type !== 'artilleryTurret') {
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'
         ctx.beginPath()
         ctx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2)

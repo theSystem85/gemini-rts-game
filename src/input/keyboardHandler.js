@@ -707,8 +707,15 @@ export class KeyboardHandler {
 
     let stoppedCount = 0
 
-    // Stop attacking for all selected units
+    // Stop attacking for all selected units or buildings
     this.selectedUnits.forEach(unit => {
+      if (unit.isBuilding) {
+        unit.forcedAttackTarget = null
+        unit.forcedAttack = false
+        unit.holdFire = true
+        stoppedCount++
+        return
+      }
       // Clear current attack target
       if (unit.target) {
         unit.target = null
