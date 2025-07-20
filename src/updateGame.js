@@ -17,6 +17,7 @@ import { updateGuardBehavior } from './behaviours/guard.js'
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
 import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.js'
 import { updateHarvesterLogic } from './game/harvesterLogic.js'
+import { updateWorkshopLogic } from './game/workshopLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
@@ -71,6 +72,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     updateSpawnExit(units, factories, mapGrid, occupancyMap)
     updateUnitCombat(units, bullets, mapGrid, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
+    updateWorkshopLogic(units, gameState.buildings, mapGrid, delta)
 
     // Handle self-repair for level 3 units
     units.forEach(unit => {

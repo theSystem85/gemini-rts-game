@@ -899,8 +899,22 @@ export class MouseHandler {
         oreTarget = { x: tileX, y: tileY }
       }
 
+      let workshopTarget = null
+      if (gameState.buildings && Array.isArray(gameState.buildings)) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            workshopTarget = building
+            break
+          }
+        }
+      }
+
       if (refineryTarget) {
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
+      } else if (workshopTarget) {
+        unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

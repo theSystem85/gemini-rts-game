@@ -301,6 +301,22 @@ export class UnitCommandsHandler {
     }
   }
 
+  handleRepairWorkshopCommand(selectedUnits, workshop, mapGrid) {
+    selectedUnits.forEach(u => { u.commandQueue = []; u.currentCommand = null })
+    this.clearAttackGroupState(selectedUnits)
+
+    selectedUnits.forEach(unit => {
+      unit.guardTarget = null
+      unit.guardMode = false
+      if (!workshop.repairQueue) workshop.repairQueue = []
+      if (!workshop.repairQueue.includes(unit)) {
+        workshop.repairQueue.push(unit)
+        unit.targetWorkshop = workshop
+      }
+    })
+    playSound('movement', 0.5)
+  }
+
   /**
    * Calculate semicircle attack formation positions around a target
    */

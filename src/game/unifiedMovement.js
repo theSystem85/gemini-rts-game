@@ -57,7 +57,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     
     // Harvester cannot move while unloading at refinery
     if (unit.unloadingAtRefinery) {
-      unit.path = [] // Clear any pending movement  
+      unit.path = [] // Clear any pending movement
       unit.moveTarget = null
       unit.movement.velocity = { x: 0, y: 0 }
       unit.movement.targetVelocity = { x: 0, y: 0 }
@@ -65,6 +65,17 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       unit.movement.currentSpeed = 0
       return // Exit early - no movement allowed
     }
+  }
+
+  // Units undergoing repair should not move
+  if (unit.repairingAtWorkshop) {
+    unit.path = []
+    unit.moveTarget = null
+    unit.movement.velocity = { x: 0, y: 0 }
+    unit.movement.targetVelocity = { x: 0, y: 0 }
+    unit.movement.isMoving = false
+    unit.movement.currentSpeed = 0
+    return
   }
   
   const movement = unit.movement;

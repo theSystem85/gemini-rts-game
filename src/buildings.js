@@ -42,6 +42,17 @@ export const buildingData = {
     health: 300,
     smokeSpots: []
   },
+  vehicleWorkshop: {
+    width: 3,
+    height: 3,
+    cost: 3000,
+    power: -20,
+    image: 'vehicle_workshop.webp',
+    displayName: 'Vehicle Workshop',
+    health: 300,
+    armor: 3,
+    smokeSpots: []
+  },
   constructionYard: {
     width: 3,
     height: 3,
@@ -198,8 +209,8 @@ export function createBuilding(type, x, y) {
     constructionFinished: false
   }
 
-  // Initialize rally point for vehicle factories only
-  if (type === 'vehicleFactory') {
+  // Initialize rally point for vehicle factories and workshops
+  if (type === 'vehicleFactory' || type === 'vehicleWorkshop') {
     building.rallyPoint = null
   }
 
