@@ -65,6 +65,16 @@ export class MinimapRenderer {
           TILE_SIZE * scaleX,
           TILE_SIZE * scaleY
         )
+        // Overlay ore tiles with semi-transparent orange
+        if (mapGrid[y][x].ore) {
+          minimapCtx.fillStyle = 'rgba(255,165,0,0.5)'
+          minimapCtx.fillRect(
+            x * TILE_SIZE * scaleX,
+            y * TILE_SIZE * scaleY,
+            TILE_SIZE * scaleX,
+            TILE_SIZE * scaleY
+          )
+        }
       }
     }
 
