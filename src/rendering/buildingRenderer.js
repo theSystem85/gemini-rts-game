@@ -12,6 +12,27 @@ export class BuildingRenderer {
     this.loadWrenchIcon()
   }
 
+  getConcreteWallImageKey(building, mapGrid) {
+    const x = building.x
+    const y = building.y
+
+    const left = x > 0 && mapGrid[y][x - 1].building && mapGrid[y][x - 1].building.type === 'concreteWall'
+    const right = x < mapGrid[0].length - 1 && mapGrid[y][x + 1].building && mapGrid[y][x + 1].building.type === 'concreteWall'
+    const up = y > 0 && mapGrid[y - 1][x].building && mapGrid[y - 1][x].building.type === 'concreteWall'
+    const down = y < mapGrid.length - 1 && mapGrid[y + 1][x].building && mapGrid[y + 1][x].building.type === 'concreteWall'
+
+    const horizontal = left || right
+    const vertical = up || down
+
+    if ((horizontal && vertical) || (!left && !right && !up && !down)) {
+      return 'concreteWallCross'
+    } else if (horizontal) {
+      return 'concreteWallHorizontal'
+    } else {
+      return 'concreteWallVertical'
+    }
+  }
+
   loadWrenchIcon() {
     this.wrenchIcon = new Image()
     this.wrenchIcon.src = '/cursors/repair.svg'
@@ -21,14 +42,19 @@ export class BuildingRenderer {
     }
   }
 
-  renderBuildingBase(ctx, building, scrollOffset) {
+  renderBuildingBase(ctx, building, mapGrid, scrollOffset) {
     const screenX = building.x * TILE_SIZE - scrollOffset.x
     const screenY = building.y * TILE_SIZE - scrollOffset.y
     const width = building.width * TILE_SIZE
     const height = building.height * TILE_SIZE
 
+    let imageKey = building.type
+    if (building.type === 'concreteWall') {
+      imageKey = this.getConcreteWallImageKey(building, mapGrid)
+    }
+
     // Try to get the building image synchronously first
-    const img = getBuildingImage(building.type)
+    const img = getBuildingImage(imageKey)
     
     if (img) {
       const now = performance.now()
@@ -682,10 +708,10 @@ export class BuildingRenderer {
     ctx.restore()
   }
 
-  renderBases(ctx, buildings, scrollOffset) {
+  renderBases(ctx, buildings, mapGrid, scrollOffset) {
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
-        this.renderBuildingBase(ctx, building, scrollOffset)
+        this.renderBuildingBase(ctx, building, mapGrid, scrollOffset)
       })
     }
   }

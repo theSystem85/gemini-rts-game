@@ -16,7 +16,11 @@ export const buildingImageMap = {
   rocketTurret: 'images/map/buildings/rocket_gun.webp',
   teslaCoil: 'images/map/buildings/teslacoil.webp',
   constructionYard: 'images/map/buildings/construction_yard.webp',
-  concreteWall: 'images/map/buildings/concrete_wall_cross.webp', // Using turret01 as a fallback
+  concreteWallCross: 'images/map/buildings/concrete_wall_cross.webp',
+  concreteWallHorizontal: 'images/map/buildings/concrete_wall_horizontal.webp',
+  concreteWallVertical: 'images/map/buildings/concrete_wall_vertical.webp',
+  // Default wall entry kept for backward compatibility
+  concreteWall: 'images/map/buildings/concrete_wall_cross.webp',
   artilleryTurret: 'images/map/buildings/artillery_turret.webp'
 }
 
