@@ -6,7 +6,7 @@ import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } fr
 import { gameState } from './gameState.js'
 import { buildingData } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
-import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from './config.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
@@ -190,6 +190,9 @@ class Game {
     // Setup map shuffle
     this.setupMapShuffle()
 
+    // Setup map settings
+    this.setupMapSettings()
+
     // Setup production tabs and buttons
     this.productionController.initProductionTabs()
     this.productionController.setupAllProductionButtons()
@@ -253,6 +256,23 @@ class Game {
       const seedInput = document.getElementById('mapSeed')
       const seed = seedInput.value || '1'
       this.resetGameWithNewMap(seed)
+    })
+  }
+
+  setupMapSettings() {
+    const settingsBtn = document.getElementById('mapSettingsBtn')
+    const settingsMenu = document.getElementById('mapSettingsMenu')
+    const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+
+    if (!settingsBtn || !settingsMenu || !oreCheckbox) return
+
+    oreCheckbox.checked = ORE_SPREAD_ENABLED
+    settingsBtn.addEventListener('click', () => {
+      settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
+    })
+
+    oreCheckbox.addEventListener('change', (e) => {
+      setOreSpreadEnabled(e.target.checked)
     })
   }
 

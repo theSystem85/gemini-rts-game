@@ -1,5 +1,5 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
-import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY } from '../config.js'
+import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
 import { playSound, playPositionalSound } from '../sound.js'
@@ -29,6 +29,10 @@ export function updateMapScrolling(gameState, mapGrid) {
  */
 export function updateOreSpread(gameState, mapGrid, factories = []) {
   const now = performance.now()
+
+  if (!ORE_SPREAD_ENABLED) {
+    return
+  }
   
   if (now - gameState.lastOreUpdate >= ORE_SPREAD_INTERVAL) {
     const directions = [

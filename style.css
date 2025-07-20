@@ -203,7 +203,7 @@ html, body {
   filter: brightness(0) invert(1); /* Makes the SVG white */
 }
 
-.play-pause-icon, .restart-icon, .music-icon {
+.play-pause-icon, .restart-icon, .music-icon, .settings-icon {
   font-weight: bold;
   font-size: 20px;
 }
@@ -697,4 +697,11 @@ html, body {
 
 .fps-overlay.fps-bad {
   color: #ff0000; /* Red for <15 FPS */
+}
+
+/* Map Settings Menu */
+#mapSettingsMenu {
+  background-color: #333;
+  color: #fff;
+  padding: 10px;
 }
