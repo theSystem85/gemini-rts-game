@@ -65,7 +65,7 @@ export function initializeUnitLeveling(unit) {
  * @param {string} unitType - The type of unit
  * @returns {number} The cost of the unit
  */
-function getUnitCost(unitType) {
+export function getUnitCost(unitType) {
   // Import UNIT_COSTS dynamically to avoid circular imports
   const costs = {
     tank: 1000,

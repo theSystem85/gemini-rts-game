@@ -42,6 +42,17 @@ export const buildingData = {
     health: 300,
     smokeSpots: []
   },
+  vehicleWorkshop: {
+    width: 3,
+    height: 3,
+    cost: 3000,
+    power: -20,
+    image: 'vehicle_workshop.webp',
+    displayName: 'Vehicle Workshop',
+    health: 300,
+    armor: 3,
+    smokeSpots: []
+  },
   constructionYard: {
     width: 3,
     height: 3,
@@ -198,8 +209,8 @@ export function createBuilding(type, x, y) {
     constructionFinished: false
   }
 
-  // Initialize rally point for vehicle factories only
-  if (type === 'vehicleFactory') {
+  // Initialize rally point for vehicle factories and workshops
+  if (type === 'vehicleFactory' || type === 'vehicleWorkshop') {
     building.rallyPoint = null
   }
 
@@ -338,7 +349,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   const width = buildingData[type].width
   const height = buildingData[type].height
 
-  const isFactoryOrRefinery = type === 'vehicleFactory' || type === 'oreRefinery'
+  const isFactoryOrRefinery = type === 'vehicleFactory' || type === 'oreRefinery' || type === 'vehicleWorkshop'
 
   // Check map boundaries
   if (tileX < 0 || tileY < 0 ||
@@ -400,6 +411,18 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
       }
     }
 
+    // For vehicle workshop, also check the waiting area (2 tiles below)
+    if (type === 'vehicleWorkshop') {
+      const waitingY = tileY + height + 1
+      if (waitingY < mapGrid.length) {
+        for (let x = tileX; x < tileX + width; x++) {
+          if (mapGrid[waitingY][x].building) {
+            return false
+          }
+        }
+      }
+    }
+
     if (type === 'oreRefinery') {
       // 1 tile border around refinery must be free of buildings
       for (let y = tileY - 1; y <= tileY + height; y++) {
@@ -428,7 +451,7 @@ export function isTileValid(tileX, tileY, mapGrid, _units, _buildings, _factorie
 
   // Invalid terrain
   const isFactoryOrRefinery =
-    buildingType === 'vehicleFactory' || buildingType === 'oreRefinery'
+    buildingType === 'vehicleFactory' || buildingType === 'oreRefinery' || buildingType === 'vehicleWorkshop'
 
   if (mapGrid[tileY][tileX].type === 'water' ||
       mapGrid[tileY][tileX].type === 'rock' ||
@@ -483,11 +506,21 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
     mapGrid[y][x].noBuild = (mapGrid[y][x].noBuild || 0) + 1
   }
 
-  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery') {
+  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery' || building.type === 'vehicleWorkshop') {
     const belowY = building.y + building.height
     if (belowY < mapGrid.length) {
       for (let x = building.x; x < building.x + building.width; x++) {
         addNoBuild(x, belowY)
+      }
+    }
+    
+    // For vehicle workshop, also reserve an additional row for waiting area
+    if (building.type === 'vehicleWorkshop') {
+      const waitingY = building.y + building.height + 1
+      if (waitingY < mapGrid.length) {
+        for (let x = building.x; x < building.x + building.width; x++) {
+          addNoBuild(x, waitingY)
+        }
       }
     }
   }
@@ -541,11 +574,21 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
     }
   }
 
-  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery') {
+  if (building.type === 'vehicleFactory' || building.type === 'oreRefinery' || building.type === 'vehicleWorkshop') {
     const belowY = building.y + building.height
     if (belowY < mapGrid.length) {
       for (let x = building.x; x < building.x + building.width; x++) {
         removeNoBuild(x, belowY)
+      }
+    }
+    
+    // For vehicle workshop, also clean up the waiting area
+    if (building.type === 'vehicleWorkshop') {
+      const waitingY = building.y + building.height + 1
+      if (waitingY < mapGrid.length) {
+        for (let x = building.x; x < building.x + building.width; x++) {
+          removeNoBuild(x, waitingY)
+        }
       }
     }
   }

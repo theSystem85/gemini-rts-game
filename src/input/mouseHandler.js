@@ -363,11 +363,11 @@ export class MouseHandler {
     }
     
     // Check selected buildings that can produce units (but not when in repair mode)
-    // Only vehicle factory should have rally points, not construction yard
+    // Vehicle factory and vehicle workshop should have rally points, not construction yard
     const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
       building.selected && 
       building.owner === gameState.humanPlayer && 
-      building.type === 'vehicleFactory'
+      (building.type === 'vehicleFactory' || building.type === 'vehicleWorkshop')
     )
     if (selectedBuilding && !this.rightWasDragging && !gameState.repairMode) {
       // Set rally point at clicked tile
@@ -387,7 +387,12 @@ export class MouseHandler {
       this.updateAGFCapability(selectedUnits)
       
       // Show notification
-      const buildingName = selectedBuilding.type === 'vehicleFactory' ? 'Vehicle Factory' : 'Factory'
+      let buildingName = 'Factory'
+      if (selectedBuilding.type === 'vehicleFactory') {
+        buildingName = 'Vehicle Factory'
+      } else if (selectedBuilding.type === 'vehicleWorkshop') {
+        buildingName = 'Vehicle Workshop'
+      }
       showNotification(`Rally point set for ${buildingName}`, 1500)
       
       this.rightWasDragging = false
@@ -797,6 +802,24 @@ export class MouseHandler {
           }
         }
       }
+
+      // Check for vehicle workshop repair command if any units are selected
+      const tileX = Math.floor(worldX / TILE_SIZE)
+      const tileY = Math.floor(worldY / TILE_SIZE)
+      
+      if (gameState.buildings && Array.isArray(gameState.buildings)) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'vehicleWorkshop' && 
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            // Handle repair workshop command - don't select the building
+            unitCommands.handleRepairWorkshopCommand(selectedUnits, building, mapGrid)
+            return // Exit early, don't process building selection
+          }
+        }
+      }
     }
 
     // PRIORITY 2: Check for building selection (including vehicle factories)
@@ -899,8 +922,22 @@ export class MouseHandler {
         oreTarget = { x: tileX, y: tileY }
       }
 
+      let workshopTarget = null
+      if (gameState.buildings && Array.isArray(gameState.buildings)) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            workshopTarget = building
+            break
+          }
+        }
+      }
+
       if (refineryTarget) {
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
+      } else if (workshopTarget) {
+        unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

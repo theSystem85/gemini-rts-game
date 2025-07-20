@@ -26,6 +26,11 @@
   cursor: url('/cursors/move.svg') 16 16, auto !important;
 }
 
+/* Move into cursor for repair workshop */
+.move-into-mode {
+  cursor: url('/cursors/moveInto.svg') 16 16, auto !important;
+}
+
 /* Move-blocked cursor */
 .move-blocked-mode {
   cursor: url('/cursors/move_blocked.svg') 16 16, auto !important;
@@ -58,6 +63,9 @@
 #gameCanvas.move-mode:not(.move-blocked-mode) {
   cursor: url('/cursors/move.svg') 16 16, auto !important;
 }
+#gameCanvas.move-into-mode {
+  cursor: url('/cursors/moveInto.svg') 16 16, auto !important;
+}
 
 #gameCanvas.move-blocked-mode {
   cursor: url('/cursors/move_blocked.svg') 16 16, auto !important;
@@ -81,6 +89,7 @@
 .sell-mode.active,
 .sell-blocked-mode.active,
 .move-mode.active,
+.move-into-mode.active,
 .move-blocked-mode.active,
 .attack-mode.active,
 .attack-blocked-mode.active,

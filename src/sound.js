@@ -52,6 +52,7 @@ const soundFiles = {
   unitReady01: ['unitReady01.mp3'],
   unitReady02: ['unitReady02.mp3'], 
   unitReady03: ['unitReady03.mp3'],
+  unit_is_being_repaired: ['unit_is_being_repaired.mp3'],
   bulletHit: ['bulletHit01.mp3'],
   deposit: ['deposit.mp3'],
   unitSelection: ['yesSir01.mp3'],

@@ -10,6 +10,7 @@ export class CursorManager {
     this.isOverBlockedTerrain = false
     this.isOverRepairableBuilding = false
     this.isOverSellableBuilding = false
+    this.isOverPlayerWorkshop = false
     this.isOverOreTile = false
     this.isOverPlayerRefinery = false
     this.isForceAttackMode = false
@@ -115,6 +116,23 @@ export class CursorManager {
       }
     }
 
+    // Check if mouse is over player vehicle workshop when damaged units selected
+    this.isOverPlayerWorkshop = false
+    if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
+        tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+      const hasDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      if (hasDamagedUnits) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            this.isOverPlayerWorkshop = true
+            break
+          }
+        }
+      }
+    }
+
     // Check if mouse is over a repairable building (when in repair mode)
     this.isOverRepairableBuilding = false
     if (gameState.repairMode && this.isOverGameCanvas) {
@@ -207,7 +225,7 @@ export class CursorManager {
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
 
       // Clear all cursor classes first
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
 
       if (!hasNonBuildingSelected) {
         // Only buildings are selected
@@ -244,6 +262,10 @@ export class CursorManager {
         // Over enemy - use attack cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
+      } else if (this.isOverPlayerWorkshop) {
+        // Over vehicle workshop with damaged units selected - special move cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerRefinery) {
         // Over player refinery with harvesters selected - use attack cursor to indicate force unload
         gameCanvas.style.cursor = 'none'
@@ -263,12 +285,12 @@ export class CursorManager {
       } else {
         // Right-drag scrolling
         gameCanvas.style.cursor = 'grabbing'
-        gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+        gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode')
       }
     } else {
       // No units selected - use default cursor
       gameCanvas.style.cursor = 'default'
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
     }
   }
 

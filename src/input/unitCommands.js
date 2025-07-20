@@ -301,6 +301,40 @@ export class UnitCommandsHandler {
     }
   }
 
+  handleRepairWorkshopCommand(selectedUnits, workshop, mapGrid) {
+    selectedUnits.forEach(u => { u.commandQueue = []; u.currentCommand = null })
+    this.clearAttackGroupState(selectedUnits)
+
+    selectedUnits.forEach((unit, index) => {
+      unit.guardTarget = null
+      unit.guardMode = false
+      if (!workshop.repairQueue) workshop.repairQueue = []
+      if (!workshop.repairQueue.includes(unit)) {
+        workshop.repairQueue.push(unit)
+        unit.targetWorkshop = workshop
+      }
+      
+      // Assign waiting positions in a line near the workshop
+      // Position units in a line 2 tiles below the workshop for better queuing
+      const waitingY = workshop.y + workshop.height + 1
+      const waitingX = workshop.x + (index % workshop.width)
+      const targetTile = { x: waitingX, y: waitingY }
+      
+      const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+      if (path && path.length > 0) {
+        unit.path = path.length > 1 ? path.slice(1) : path
+        unit.moveTarget = targetTile
+      } else {
+        unit.x = targetTile.x * TILE_SIZE
+        unit.y = targetTile.y * TILE_SIZE
+        unit.tileX = targetTile.x
+        unit.tileY = targetTile.y
+        unit.moveTarget = null
+      }
+    })
+    playSound('movement', 0.5)
+  }
+
   /**
    * Calculate semicircle attack formation positions around a target
    */
