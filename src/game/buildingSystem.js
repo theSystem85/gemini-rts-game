@@ -141,8 +141,12 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         }
       }
 
-      // Update turret rotation for gun turrets (continuous tracking)
-      if (building.type.startsWith('turretGun') || building.type === 'artilleryTurret') {
+      // Update turret rotation for gun turrets and rocket turrets (continuous tracking)
+      if (
+        building.type.startsWith('turretGun') ||
+        building.type === 'artilleryTurret' ||
+        building.type === 'rocketTurret'
+      ) {
         const targetObj = closestEnemy || building.forcedAttackTarget
         if (targetObj) {
           // Calculate target angle
