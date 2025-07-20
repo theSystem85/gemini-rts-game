@@ -11,7 +11,7 @@ Successfully implemented rotating turret system with separate base and top image
 - Both images maintain original aspect ratios and proportions
 
 ### 2. ✅ **Smooth Turret Rotation**
-- Uses same rotation speed as tanks (`TANK_TURRET_ROT = 0.08` radians per frame)
+- Uses same rotation speed as tanks (`TANK_TURRET_ROT = 0.024` radians per frame)
 - Smooth rotation using `smoothRotateTowardsAngle()` function from tank system
 - **Continuous tracking**: Turret rotates every frame when enemies are in range
 - **Smart firing**: Only fires when properly aligned with target (±5.7° tolerance)
@@ -93,7 +93,7 @@ Successfully implemented rotating turret system with separate base and top image
 - Turret rotation uses same mechanics as tank turrets
 - Images are preloaded at game startup for performance
 - No recoil effect implemented (as requested)
-- Rate of turn (ROT) matches tank turret speed
+- Rate of turn (ROT) reduced to 30% of the original tank turret speed
 - Flash animation duration and style match existing effects
 - Rotation direction corrected with +π/2 offset for proper image orientation
 
