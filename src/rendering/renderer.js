@@ -83,9 +83,9 @@ export class Renderer {
     }
     
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
-    this.buildingRenderer.renderBases(gameCtx, buildings, scrollOffset)
+    this.buildingRenderer.renderBases(gameCtx, buildings, mapGrid, scrollOffset)
     // Render initial construction yards using the same renderer
-    this.buildingRenderer.renderBases(gameCtx, factories, scrollOffset)
+    this.buildingRenderer.renderBases(gameCtx, factories, mapGrid, scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
     
