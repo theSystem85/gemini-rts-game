@@ -10,21 +10,42 @@ export class EffectsRenderer {
       const y = bullet.y - scrollOffset.y;
       
       // Different rendering for different projectile types
-      if (bullet.homing) {
-        // Rockets - larger, yellow/orange
-        ctx.fillStyle = '#FFD700'; // Gold color for rockets
+      if (bullet.homing || bullet.ballistic) {
+        // Rockets - small body with flame
+        let angle = 0;
+        if (bullet.vx !== undefined && bullet.vy !== undefined) {
+          angle = Math.atan2(bullet.vy, bullet.vx);
+        } else if (bullet.dx !== undefined && bullet.dy !== undefined) {
+          angle = Math.atan2(bullet.dy, bullet.dx);
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+
+        // Rocket body
+        ctx.fillStyle = '#CCCCCC';
+        ctx.fillRect(-4, -1.5, 6, 3);
+
+        // Rocket nose
+        ctx.fillStyle = '#888888';
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.moveTo(2, -1.5);
+        ctx.lineTo(4, 0);
+        ctx.lineTo(2, 1.5);
+        ctx.closePath();
         ctx.fill();
-        
-        // Add glow effect for rockets
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = '#FF4500';
+
+        // Flame
         ctx.fillStyle = '#FF4500';
         ctx.beginPath();
-        ctx.arc(x, y, 2, 0, 2 * Math.PI);
+        ctx.moveTo(-4, -1);
+        ctx.lineTo(-4 - 4, 0);
+        ctx.lineTo(-4, 1);
+        ctx.closePath();
         ctx.fill();
-        ctx.shadowBlur = 0;
+
+        ctx.restore();
       } else {
         // Tank bullets - smaller, copper-colored, bullet-shaped
         const bulletLength = 6;
