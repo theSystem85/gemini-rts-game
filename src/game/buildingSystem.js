@@ -7,6 +7,7 @@ import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
+import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -246,7 +247,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
           // Continue burst fire sequence
           if (now - building.lastBurstTime >= building.burstDelay) {
             if (building.currentTargetPosition && closestEnemy) {
-              fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets)
+              fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
               building.currentBurst--
               building.lastBurstTime = now
               
@@ -287,7 +288,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
                 }
 
                 // Fire projectile
-                fireTurretProjectile(building, firingTarget, centerX, centerY, now, bullets)
+                fireTurretProjectile(building, firingTarget, centerX, centerY, now, bullets, gameState)
                 
                 // Handle burst fire for turret gun v3 and rocket turret
                 if (building.burstFire) {
@@ -315,7 +316,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
  * @param {number} now - Current timestamp
  * @param {Array} bullets - Array to add the bullet to
  */
-function fireTurretProjectile(building, target, centerX, centerY, now, bullets) {
+function fireTurretProjectile(building, target, centerX, centerY, now, bullets, gameState) {
   // Bail early if target is missing and we need it
   if (!target && !building.currentTargetPosition) {
     return;
@@ -342,11 +343,40 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
     }
   }
 
+  // Determine bullet spawn position
+  let spawnX = centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75)
+  let spawnY = centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75)
+
+  // Use image-based spawn points if available
+  if (gameState.useTurretImages && turretImagesAvailable(building.type)) {
+    const cfg = getTurretImageConfig(building.type)
+    const points = cfg && (cfg.muzzleFlashOffsets || (cfg.muzzleFlashOffset ? [cfg.muzzleFlashOffset] : null))
+    if (points && points.length > 0) {
+      const idx = building.nextSpawnIndex || 0
+      const pt = points[idx % points.length]
+      const scale = TILE_SIZE / 64 // images are 64px base size
+      const localX = (pt.x - 32) * scale
+      const localY = (pt.y - 32) * scale
+      const rotationOffset = cfg.rotationOffset !== undefined ? cfg.rotationOffset : Math.PI / 2
+      const rot = (building.turretDirection || 0) + rotationOffset
+      const cos = Math.cos(rot)
+      const sin = Math.sin(rot)
+      const offsetX = localX * cos - localY * sin
+      const offsetY = localX * sin + localY * cos
+      spawnX = centerX + offsetX
+      spawnY = centerY + offsetY
+      building.muzzleFlashIndex = idx
+      building.nextSpawnIndex = (idx + 1) % points.length
+    }
+  } else {
+    building.muzzleFlashIndex = 0
+  }
+
   // Create a bullet object with all required properties
   const projectile = {
     id: Date.now() + Math.random(),
-    x: centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
-    y: centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75), // Offset from building center
+    x: spawnX,
+    y: spawnY,
     speed: building.projectileSpeed,
     baseDamage: building.damage,
     active: true,

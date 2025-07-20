@@ -12,8 +12,8 @@ export const buildingImageMap = {
   vehicleWorkshop: 'images/map/buildings/vehicle_workshop.webp',
   radarStation: 'images/map/buildings/radar_station.webp',
   turretGunV1: 'images/map/buildings/turret01_base.webp', // Use base image as fallback when turret images are disabled
-  turretGunV2: 'images/map/buildings/turret02.webp',
-  turretGunV3: 'images/map/buildings/turret02.webp', // Using turret02 as fallback
+  turretGunV2: 'images/map/buildings/turret02_base.webp',
+  turretGunV3: 'images/map/buildings/turret03_base.webp',
   rocketTurret: 'images/map/buildings/rocket_gun.webp',
   teslaCoil: 'images/map/buildings/teslacoil.webp',
   constructionYard: 'images/map/buildings/construction_yard.webp',

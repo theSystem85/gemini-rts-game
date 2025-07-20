@@ -2,10 +2,29 @@
   "turretGunV1": {
     "base": "turret01_base.webp",
     "top": "turret01_top.webp",
-    "muzzleFlashOffset": {
-      "x": 31,
-      "y": 0
-    },
+    "rotationOffset": 1.5708,
+    "muzzleFlashOffsets": [
+      { "x": 31, "y": 0 }
+    ],
     "comment": "Muzzle flash spawns at (31x0y) coords relative to the top left of the turret01_top.webp image"
+  },
+  "turretGunV2": {
+    "base": "turret02_base.webp",
+    "top": "turret02_top.webp",
+    "rotationOffset": -1.5708,
+    "muzzleFlashOffsets": [
+      { "x": 20, "y": 60 },
+      { "x": 42, "y": 60 }
+    ]
+  },
+  "turretGunV3": {
+    "base": "turret03_base.webp",
+    "top": "turret03_top.webp",
+    "rotationOffset": -1.5708,
+    "muzzleFlashOffsets": [
+      { "x": 20, "y": 60 },
+      { "x": 42, "y": 60 },
+      { "x": 31, "y": 62 }
+    ]
   }
 }

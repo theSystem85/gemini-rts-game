@@ -11,7 +11,7 @@ let turretImagesPreloaded = false
 /**
  * Get turret image configuration for a specific turret type
  * @param {string} turretType - The type of turret (e.g., 'turretGunV1')
- * @returns {Object} Configuration object with base, top, and muzzleFlashOffset
+ * @returns {Object} Configuration object with base, top, and muzzle flash offsets
  */
 export function getTurretImageConfig(turretType) {
   return turretImageConfig[turretType] || null
@@ -134,7 +134,8 @@ export function renderTurretWithImages(ctx, building, screenX, screenY, width, h
   
   // Rotate based on turret direction
   // Building turret direction needs +π/2 adjustment for correct image orientation
-  const turretRotation = (building.turretDirection || 0) + Math.PI / 2
+  const rotationOffset = config.rotationOffset !== undefined ? config.rotationOffset : Math.PI / 2
+  const turretRotation = (building.turretDirection || 0) + rotationOffset
   ctx.rotate(turretRotation)
 
   const topImg = images.top
@@ -159,10 +160,15 @@ export function renderTurretWithImages(ctx, building, screenX, screenY, width, h
     ctx.save()
     ctx.globalAlpha = flashAlpha
 
+    // Support single or multiple muzzle flash offsets
+    const offsets = config.muzzleFlashOffsets || (config.muzzleFlashOffset ? [config.muzzleFlashOffset] : [])
+    const index = building.muzzleFlashIndex || 0
+    const offset = offsets[index] || offsets[0]
+
     // Position flash at the configured offset from top-left of turret top image
     // Convert from image coordinates to centered coordinates
-    const flashX = (config.muzzleFlashOffset.x - topImg.width / 2) * topScale
-    const flashY = (config.muzzleFlashOffset.y - topImg.height / 2) * topScale
+    const flashX = (offset.x - topImg.width / 2) * topScale
+    const flashY = (offset.y - topImg.height / 2) * topScale
 
     // Create radial gradient for muzzle flash
     const gradient = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, flashSize)
