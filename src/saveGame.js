@@ -320,6 +320,8 @@ export function loadGame(key) {
     loaded.buildings.forEach(b => {
       // Rehydrate defensive buildings (turrets) so they work after loading
       const building = { ...b }
+      // Ensure we restore building flag so selection works correctly
+      building.isBuilding = true
       
       // Ensure all buildings have maxHealth restored for proper health bar rendering
       const data = buildingData[building.type]
@@ -328,8 +330,8 @@ export function loadGame(key) {
         building.maxHealth = data.health
       }
       
-      // Defensive turrets: turretGunV1/V2/V3, rocketTurret, teslaCoil
-      if (building.type && (building.type.startsWith('turretGun') || building.type === 'rocketTurret' || building.type === 'teslaCoil')) {
+      // Defensive turrets: turretGunV1/V2/V3, rocketTurret, teslaCoil, artilleryTurret
+      if (building.type && (building.type.startsWith('turretGun') || building.type === 'rocketTurret' || building.type === 'teslaCoil' || building.type === 'artilleryTurret')) {
         // Get config from buildingData
         const data = buildingData[building.type]
         // Set all runtime properties if missing
@@ -353,6 +355,10 @@ export function loadGame(key) {
         // Tesla coil specific properties
         if (data.isTeslaCoil) {
           building.isTeslaCoil = true
+        }
+        // Artillery turret identifier
+        if (building.type === 'artilleryTurret') {
+          building.isArtillery = true
         }
       }
       

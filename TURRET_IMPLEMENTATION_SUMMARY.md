@@ -96,6 +96,7 @@ Successfully implemented rotating turret system with separate base and top image
 - Rate of turn (ROT) reduced to 30% of the original tank turret speed
 - Flash animation duration and style match existing effects
 - Rotation direction corrected with +π/2 offset for proper image orientation
+- Loading a save game correctly restores artillery turret behavior
 
 ## Testing
 - Server running on http://localhost:5175/
