@@ -10,6 +10,7 @@ import { updateUnitSpeedModifier } from '../utils.js'
 import { markBuildingForRepairPause } from '../buildings.js'
 import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
+import { emitSmokeParticles } from '../utils/smokeUtils.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -34,10 +35,41 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       continue
     }
 
-    // Initialize start time if not set (for non-homing projectiles)
+    // Initialize start time if not set
     if (!bullet.startTime) {
       bullet.startTime = now
     }
+
+    // Ballistic projectile handling: rocket goes straight up then switches to homing
+    let skipStandardMotion = false
+    if (bullet.ballistic) {
+      const progress = (now - bullet.startTime) / bullet.ballisticDuration
+
+      if (progress >= 1) {
+        // Switch to homing phase from the peak position
+        bullet.ballistic = false
+        bullet.homing = true
+        bullet.startTime = now
+        bullet.x = bullet.startX
+        bullet.y = bullet.startY - bullet.arcHeight
+      } else {
+        // Vertical ascent
+        const eased = Math.sin((progress * Math.PI) / 2)
+        bullet.x = bullet.startX
+        bullet.y = bullet.startY - bullet.arcHeight * eased
+
+        // Smoke trail during ascent
+        if (!bullet.lastTrail || now - bullet.lastTrail > 60) {
+          emitSmokeParticles(gameState, bullet.x, bullet.y, now, 1)
+          bullet.lastTrail = now
+        }
+        bullet.trail = bullet.trail || []
+        bullet.trail.push({ x: bullet.x, y: bullet.y, time: now })
+        skipStandardMotion = true
+      }
+    }
+
+    if (!skipStandardMotion) {
 
     // Handle homing projectiles
     if (bullet.homing) {
@@ -100,6 +132,17 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
     // Update bullet position
     bullet.x += bullet.vx || 0
     bullet.y += bullet.vy || 0
+
+    // Persist smoke trail for rockets
+    if (bullet.homing || bullet.ballistic) {
+      if (!bullet.lastTrail || now - bullet.lastTrail > 60) {
+        emitSmokeParticles(gameState, bullet.x, bullet.y, now, 1)
+        bullet.lastTrail = now
+      }
+      bullet.trail = bullet.trail || []
+      bullet.trail.push({ x: bullet.x, y: bullet.y, time: now })
+      bullet.trail = bullet.trail.filter(p => now - p.time < 300)
+    }
 
     // Check for unit collisions
     if (bullet.active && units && units.length > 0) {
@@ -302,6 +345,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         bullet.y < -100 || bullet.y > (mapGrid.length * TILE_SIZE) + 100)) {
       bullets.splice(i, 1)
     }
+    }
   }
 }
 
@@ -365,16 +409,33 @@ export function fireBullet(unit, target, bullets, now) {
       target
     }
   } else if (unit.type === 'rocketTank') {
+    const dx = targetCenterX - unitCenterX
+    const dy = targetCenterY - unitCenterY
+    const distance = Math.hypot(dx, dy)
+    const speed = 6
+    const flightDuration = distance / speed
+
     bullet = {
       id: Date.now() + Math.random(),
       x: unitCenterX,
       y: unitCenterY,
-      speed: 20,
+      speed,
       baseDamage: BULLET_DAMAGES.rocketTank,
       active: true,
       shooter: unit,
-      homing: true,
+      homing: false,
       target,
+      ballistic: true,
+      startX: unitCenterX,
+      startY: unitCenterY,
+      targetX: targetCenterX,
+      targetY: targetCenterY,
+      dx,
+      dy,
+      distance,
+      flightDuration,
+      ballisticDuration: flightDuration / 2,
+      arcHeight: Math.max(50, distance * 0.3),
       targetPosition: { x: targetCenterX, y: targetCenterY }
     }
   }
@@ -386,8 +447,8 @@ export function fireBullet(unit, target, bullets, now) {
     // Set start time for all bullets
     bullet.startTime = now
     
-    // Calculate bullet direction for non-homing projectiles
-    if (!bullet.homing) {
+    // Calculate bullet direction for non-homing non-ballistic projectiles
+    if (!bullet.homing && !bullet.ballistic) {
       const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
       bullet.vx = bullet.speed * Math.cos(angle)
       bullet.vy = bullet.speed * Math.sin(angle)
