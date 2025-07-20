@@ -38,6 +38,9 @@ export const gameState = {
   cursorY: 0,
   draggedBuildingType: null,
   draggedBuildingButton: null,
+  // Drag and drop rally point for units
+  draggedUnitType: null,
+  draggedUnitButton: null,
   blueprints: [],
   // Chain build mode state
   chainBuildPrimed: false,

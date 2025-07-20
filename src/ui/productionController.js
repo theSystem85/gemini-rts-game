@@ -304,6 +304,52 @@ export class ProductionController {
           }
         }
       }, { passive: false })
+
+      // Drag and drop rally point placement
+      button.setAttribute('draggable', 'true')
+
+      const img = button.querySelector('img')
+      if (img) {
+        img.setAttribute('draggable', 'false')
+        img.addEventListener('dragstart', e => {
+          e.preventDefault()
+          return false
+        })
+      }
+
+      button.addEventListener('dragstart', (e) => {
+        if (gameState.gamePaused || button.classList.contains('disabled')) {
+          e.preventDefault()
+          return false
+        }
+        gameState.draggedUnitType = unitType
+        gameState.draggedUnitButton = button
+
+        const dragImage = document.createElement('div')
+        dragImage.style.width = '1px'
+        dragImage.style.height = '1px'
+        dragImage.style.backgroundColor = 'transparent'
+        dragImage.style.position = 'absolute'
+        dragImage.style.top = '-1000px'
+        document.body.appendChild(dragImage)
+
+        try {
+          e.dataTransfer.setDragImage(dragImage, 0, 0)
+        } catch (err) {
+          console.warn('Could not set custom drag image:', err)
+        }
+
+        setTimeout(() => {
+          if (dragImage.parentNode) {
+            document.body.removeChild(dragImage)
+          }
+        }, 10)
+      })
+
+      button.addEventListener('dragend', () => {
+        gameState.draggedUnitType = null
+        gameState.draggedUnitButton = null
+      })
     })
   }
 

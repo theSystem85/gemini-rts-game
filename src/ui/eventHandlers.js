@@ -155,6 +155,8 @@ export class EventHandlers {
         gameState.buildingPlacementMode = true
         gameState.currentBuildingType = gameState.draggedBuildingType
         this.handleBuildingPlacementOverlay(e)
+      } else if (gameState.draggedUnitType) {
+        e.preventDefault()
       }
     })
 
@@ -194,6 +196,16 @@ export class EventHandlers {
         gameState.currentBuildingType = null
         gameState.draggedBuildingType = null
         gameState.draggedBuildingButton = null
+      } else if (gameState.draggedUnitType) {
+        e.preventDefault()
+        const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
+        const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
+        const tileX = Math.floor(mouseX / TILE_SIZE)
+        const tileY = Math.floor(mouseY / TILE_SIZE)
+        productionQueue.addItem(gameState.draggedUnitType, gameState.draggedUnitButton, false, null, { x: tileX, y: tileY })
+        showNotification(`Queued ${gameState.draggedUnitType} with rally point`)
+        gameState.draggedUnitType = null
+        gameState.draggedUnitButton = null
       }
     })
 
