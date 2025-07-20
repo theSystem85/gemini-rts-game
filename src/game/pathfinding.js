@@ -1,6 +1,7 @@
 // Path Finding Module - Handles unit pathfinding and formation management
 import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { findPath } from '../units.js'
+import { logPerformance } from '../performanceUtils.js'
 
 // Simple in-memory cache for sharing A* paths between units
 const pathCache = new Map()
@@ -53,7 +54,8 @@ function getCachedPath(start, end, mapGrid, occupancyMap) {
  * @param {Object} occupancyMap - Map of occupied tiles
  * @param {Object} gameState - Game state object
  */
-export function updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
+export const updateGlobalPathfinding = logPerformance(_updateGlobalPathfinding, false);
+function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
   const now = performance.now()
   
   if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
