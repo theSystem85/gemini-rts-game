@@ -315,16 +315,24 @@ function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameStat
   if (aiFactory && aiFactory.currentlyProducingUnit && now - aiFactory.unitBuildStartTime > aiFactory.unitBuildDuration) {
     const unitType = aiFactory.currentlyProducingUnit
     const spawnFactory = aiFactory.unitSpawnBuilding || aiFactory
-    const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, aiFactory.unitBuildStartTime, aiPlayerId)
 
-    if (newUnit) {
-      units.push(newUnit)
+    // If the spawn factory was destroyed before production completed, cancel the spawn
+    if (!spawnFactory || spawnFactory.health <= 0 || !gameState.buildings.includes(spawnFactory)) {
+      if (DEBUG_AI_BUILDING) {
+        console.log(`AI ${aiPlayerId} lost factory during ${unitType} production - cancelling`)
+      }
     } else {
-      console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
-    }
+      const newUnit = spawnEnemyUnit(spawnFactory, unitType, units, mapGrid, gameState, aiFactory.unitBuildStartTime, aiPlayerId)
 
-    if (DEBUG_AI_BUILDING) {
-      console.log(`AI ${aiPlayerId} completed production of ${unitType}`)
+      if (newUnit) {
+        units.push(newUnit)
+      } else {
+        console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
+      }
+
+      if (DEBUG_AI_BUILDING) {
+        console.log(`AI ${aiPlayerId} completed production of ${unitType}`)
+      }
     }
 
     // Clear unit production state
