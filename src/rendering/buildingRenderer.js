@@ -64,7 +64,9 @@ export class BuildingRenderer {
 
     this.renderTurret(ctx, building, screenX, screenY, width, height)
     this.renderSelection(ctx, building, screenX, screenY, width, height)
-    this.renderOwnerIndicator(ctx, building, screenX, screenY)
+    if (building.type !== 'concreteWall') {
+      this.renderOwnerIndicator(ctx, building, screenX, screenY)
+    }
     this.renderRepairAnimation(ctx, building, screenX, screenY, width, height)
     this.renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height)
   }

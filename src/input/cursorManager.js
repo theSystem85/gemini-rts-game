@@ -136,7 +136,8 @@ export class CursorManager {
               tileX >= building.x && tileX < (building.x + building.width) &&
               tileY >= building.y && tileY < (building.y + building.height)) {
             // Building is repairable if it's not at full health
-            this.isOverRepairableBuilding = building.health < building.maxHealth
+            // Concrete walls cannot be repaired
+            this.isOverRepairableBuilding = (building.health < building.maxHealth) && building.type !== 'concreteWall'
             break
           }
         }
