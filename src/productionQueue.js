@@ -44,7 +44,7 @@ export const productionQueue = {
     }
   },
 
-  addItem: function(type, button, isBuilding = false, blueprint = null) {
+  addItem: function(type, button, isBuilding = false, blueprint = null, rallyPoint = null) {
     // Only block queuing if game is paused
     if (gameState.gamePaused) {
       button.classList.add('error')
@@ -74,7 +74,7 @@ export const productionQueue = {
         const label = button.querySelector('.new-label')
         if (label) label.style.display = 'none'
       }
-      this.unitItems.push({ type, button, isBuilding })
+      this.unitItems.push({ type, button, isBuilding, rallyPoint })
       const currentCount = this.unitItems.filter(item => item.button === button).length
       this.updateBatchCounter(button, currentCount)
 
@@ -159,7 +159,8 @@ export const productionQueue = {
       progress: 0,
       startTime: performance.now(),
       duration: duration,
-      isBuilding: item.isBuilding // Should always be false here
+      isBuilding: item.isBuilding, // Should always be false here
+      rallyPoint: item.rallyPoint || null
     }
 
     // Mark button as active
@@ -375,7 +376,7 @@ export const productionQueue = {
 
     const unitType = this.currentUnit.type
     let spawnFactory = null
-    let rallyPointTarget = null // Will be set to the specific factory's rally point
+    let rallyPointTarget = this.currentUnit.rallyPoint || null // Rally point from drag&drop
 
     // All vehicle units (including harvesters) should spawn from vehicle factories
     if (vehicleUnitTypes.includes(unitType)) {
@@ -390,8 +391,10 @@ export const productionQueue = {
         spawnFactory = vehicleFactories[gameState.nextVehicleFactoryIndex % vehicleFactories.length]
         gameState.nextVehicleFactoryIndex++
         
-        // Use this specific factory's rally point
-        rallyPointTarget = spawnFactory.rallyPoint
+        // Use this specific factory's rally point if no custom one was set
+        if (!rallyPointTarget) {
+          rallyPointTarget = spawnFactory.rallyPoint
+        }
       } else {
         // This case should ideally not happen due to button disabling logic
         console.error(`Cannot spawn ${unitType}: No Vehicle Factory found.`)
@@ -406,7 +409,9 @@ export const productionQueue = {
       // For any other non-vehicle units (currently none), use main factory
       const playerFactory = factories.find(f => f.id === gameState.humanPlayer)
       spawnFactory = playerFactory
-      rallyPointTarget = playerFactory?.rallyPoint
+      if (!rallyPointTarget) {
+        rallyPointTarget = playerFactory?.rallyPoint
+      }
     }
 
     if (spawnFactory) {
@@ -419,8 +424,8 @@ export const productionQueue = {
         const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
         playSound(randomSound, 1.0, 0, true)
 
-        // If the produced unit is a harvester, automatically send it to harvest
-        if (newUnit.type === 'harvester') {
+        // If the produced unit is a harvester and no custom rally point was set, automatically send it to harvest
+        if (newUnit.type === 'harvester' && !rallyPointTarget) {
           // Assign harvester to optimal refinery for even distribution
           assignHarvesterToOptimalRefinery(newUnit, gameState)
           
