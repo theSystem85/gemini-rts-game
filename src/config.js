@@ -91,7 +91,9 @@ export const CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
 
 // Separate rotation rates for tank components
 export const TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
-export const TANK_TURRET_ROT = 0.08 // Radians per frame for turret aiming (slightly faster)
+// Reduced turret rotation speed to make artillery tracking more deliberate
+// 70% slower than before (was 0.08)
+export const TANK_TURRET_ROT = 0.024 // Radians per frame for turret aiming
 
 // Aiming precision threshold (in radians) - turret must be within this angle to fire
 export const TURRET_AIMING_THRESHOLD = 0.1 // About 5.7 degrees
