@@ -11,6 +11,21 @@ export class EffectsRenderer {
       
       // Different rendering for different projectile types
       if (bullet.homing || bullet.ballistic) {
+        if (bullet.trail && bullet.trail.length > 1) {
+          ctx.save()
+          for (let i = 1; i < bullet.trail.length; i++) {
+            const p1 = bullet.trail[i - 1]
+            const p2 = bullet.trail[i]
+            const alpha = i / bullet.trail.length
+            ctx.strokeStyle = `rgba(200,200,200,${alpha * 0.4})`
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(p1.x - scrollOffset.x, p1.y - scrollOffset.y)
+            ctx.lineTo(p2.x - scrollOffset.x, p2.y - scrollOffset.y)
+            ctx.stroke()
+          }
+          ctx.restore()
+        }
         // Rockets - small body with flame
         let angle = 0;
         if (bullet.vx !== undefined && bullet.vy !== undefined) {
@@ -36,12 +51,13 @@ export class EffectsRenderer {
         ctx.closePath();
         ctx.fill();
 
-        // Flame
+        // Flame with slight flicker
+        const flicker = Math.sin(performance.now() / 100 + bullet.id) * 0.5;
         ctx.fillStyle = '#FF4500';
         ctx.beginPath();
-        ctx.moveTo(-4, -1);
-        ctx.lineTo(-4 - 4, 0);
-        ctx.lineTo(-4, 1);
+        ctx.moveTo(-4, -1 + flicker);
+        ctx.lineTo(-8 - flicker * 2, 0);
+        ctx.lineTo(-4, 1 - flicker);
         ctx.closePath();
         ctx.fill();
 

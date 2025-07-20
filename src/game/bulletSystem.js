@@ -39,7 +39,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       bullet.startTime = now
     }
 
-    // Ballistic projectile handling (arc first then guided)
+    // Ballistic projectile handling (vertical launch then guided)
     let skipStandardMotion = false
     if (bullet.ballistic) {
       const progress = (now - bullet.startTime) / bullet.ballisticDuration
@@ -50,15 +50,23 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         bullet.homing = true
         bullet.startTime = now
       } else {
-        const halfProgress = progress * 0.5
-        const baseX = bullet.startX + bullet.dx * halfProgress
-        const baseY = bullet.startY + bullet.dy * halfProgress
-        const arcOffset = -4 * bullet.arcHeight * progress * (1 - progress)
-        bullet.x = baseX
-        bullet.y = baseY + arcOffset
+        const ASCENT_PORTION = 0.3
+        if (progress < ASCENT_PORTION) {
+          const ascendProg = progress / ASCENT_PORTION
+          bullet.x = bullet.startX
+          bullet.y = bullet.startY - bullet.arcHeight * ascendProg
+        } else {
+          const t = (progress - ASCENT_PORTION) / (1 - ASCENT_PORTION)
+          const baseX = bullet.startX + bullet.dx * t * 0.5
+          const baseY = (bullet.startY - bullet.arcHeight) +
+            (bullet.dy + bullet.arcHeight) * t * 0.5
+          bullet.x = baseX
+          bullet.y = baseY
+        }
+
         // Emit smoke trail occasionally
         if (!bullet.lastTrail || now - bullet.lastTrail > 80) {
-          emitSmokeParticles(gameState, bullet.x, bullet.y, now, 1)
+          emitSmokeParticles(gameState, bullet.x, bullet.y, now, 2)
           bullet.lastTrail = now
         }
         skipStandardMotion = true
@@ -97,9 +105,15 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         const dy = targetCenterY_pixels - bullet.y
         const distance = Math.hypot(dx, dy)
 
-        if (distance > 5) { // Only adjust if not too close
+        if (distance > 5) {
           bullet.vx = (dx / distance) * bullet.effectiveSpeed
           bullet.vy = (dy / distance) * bullet.effectiveSpeed
+        }
+
+        // Continue smoke trail while homing
+        if (!bullet.lastTrail || now - bullet.lastTrail > 80) {
+          emitSmokeParticles(gameState, bullet.x, bullet.y, now, 2)
+          bullet.lastTrail = now
         }
         // If distance <= 5, velocity is not updated by this homing logic step.
         // The bullet continues with its current velocity. Collision detection should handle impact.
@@ -128,6 +142,13 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
     // Update bullet position
     bullet.x += bullet.vx || 0
     bullet.y += bullet.vy || 0
+
+    if (bullet.trail) {
+      bullet.trail.push({ x: bullet.x, y: bullet.y, time: now })
+      if (bullet.trail.length > 10) {
+        bullet.trail.shift()
+      }
+    }
 
     // Check for unit collisions
     if (bullet.active && units && units.length > 0) {
@@ -408,7 +429,8 @@ export function fireBullet(unit, target, bullets, now) {
       flightDuration,
       ballisticDuration: flightDuration / 2,
       arcHeight: Math.max(50, distance * 0.3),
-      targetPosition: { x: targetCenterX, y: targetCenterY }
+      targetPosition: { x: targetCenterX, y: targetCenterY },
+      trail: []
     }
   }
 

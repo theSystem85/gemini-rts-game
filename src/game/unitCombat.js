@@ -189,7 +189,7 @@ const COMBAT_CONFIG = {
 /**
  * Common firing logic helper - handles bullet creation
  */
-function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null) {
+function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null, rocketTubeIndex = 0) {
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
@@ -249,12 +249,27 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
             };
 
             if (isRocketTankRocket) {
-                const dx = finalTarget.x - unitCenterX;
-                const dy = finalTarget.y - unitCenterY;
+                const tubeSpacing = 6;
+                const tubeLength = TILE_SIZE * 0.4;
+                const sideOffset = (rocketTubeIndex - 1) * tubeSpacing;
+                const offsetX = Math.cos(unit.direction) * tubeLength +
+                    Math.cos(unit.direction + Math.PI / 2) * sideOffset;
+                const offsetY = Math.sin(unit.direction) * tubeLength +
+                    Math.sin(unit.direction + Math.PI / 2) * sideOffset;
+
+                const startX = unitCenterX + offsetX;
+                const startY = unitCenterY + offsetY;
+
+                const dx = finalTarget.x - startX;
+                const dy = finalTarget.y - startY;
                 const distance = Math.hypot(dx, dy);
+
+                bullet.x = startX;
+                bullet.y = startY;
                 bullet.ballistic = true;
-                bullet.startX = unitCenterX;
-                bullet.startY = unitCenterY;
+                bullet.startX = startX;
+                bullet.startY = startY;
+                bullet.trail = [];
                 bullet.targetX = finalTarget.x;
                 bullet.targetY = finalTarget.y;
                 bullet.dx = dx;
@@ -310,7 +325,8 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
     if (unit.burstState.rocketsToFire > 0 && 
         now - unit.burstState.lastRocketTime >= COMBAT_CONFIG.ROCKET_BURST.DELAY) {
         
-        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'rocket', units, mapGrid, false, null);
+        const tubeIndex = COMBAT_CONFIG.ROCKET_BURST.COUNT - unit.burstState.rocketsToFire;
+        const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'rocket', units, mapGrid, false, null, tubeIndex);
         
         if (fired) {
             unit.burstState.rocketsToFire--;
