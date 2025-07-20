@@ -657,6 +657,9 @@ export function calculateRepairCost(building) {
 
 // Repair a building to full health
 export function repairBuilding(building, gameState) {
+  if (building.type === 'concreteWall') {
+    return { success: false, message: 'Concrete walls cannot be repaired' }
+  }
   // Only repair if building is damaged
   if (building.health >= building.maxHealth) {
     return { success: false, message: 'Building already at full health' }
@@ -828,6 +831,11 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
   for (let i = gameState.buildingsAwaitingRepair.length - 1; i >= 0; i--) {
     const awaitingRepair = gameState.buildingsAwaitingRepair[i]
     const building = awaitingRepair.building
+
+    if (building.type === 'concreteWall') {
+      gameState.buildingsAwaitingRepair.splice(i, 1)
+      continue
+    }
     
     // Check if building was attacked more recently than when we started waiting
     // This resets the countdown if the building gets attacked again

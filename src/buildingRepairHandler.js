@@ -23,6 +23,12 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
             tileX >= building.x && tileX < (building.x + building.width) &&
             tileY >= building.y && tileY < (building.y + building.height)) {
 
+        // Walls cannot be repaired
+        if (building.type === 'concreteWall') {
+          showNotification('Concrete walls cannot be repaired.')
+          return
+        }
+
         // Skip if building is at full health
         if (building.health >= building.maxHealth) {
           showNotification('Building is already at full health.')
