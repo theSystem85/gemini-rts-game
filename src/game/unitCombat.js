@@ -195,7 +195,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
         // Check if turret is properly aimed at the target before firing
-        if (unit.canFire !== false && hasClearShot(unit, target, units) && isTurretAimedAtTarget(unit, target)) {
+        const clearShot = unit.type === 'rocketTank' || hasClearShot(unit, target, units);
+        if (unit.canFire !== false && clearShot && isTurretAimedAtTarget(unit, target)) {
             // Calculate aim position (with predictive aiming if enabled)
             let aimX = overrideTarget ? overrideTarget.x : targetCenterX;
             let aimY = overrideTarget ? overrideTarget.y : targetCenterY;
@@ -794,7 +795,7 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
         // Start new burst if cooldown has passed
         const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
         if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-          if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
+          if (unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
             unit.burstState = {
               rocketsToFire: COMBAT_CONFIG.ROCKET_BURST.COUNT,
               lastRocketTime: 0
