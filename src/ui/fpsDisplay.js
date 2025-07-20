@@ -16,6 +16,7 @@ export class FPSDisplay {
     this.avgFrameTime = 0
     this.minFrameTime = 0
     this.maxFrameTime = 0
+    this.lastDomUpdate = performance.now()
 
     // Get the DOM element
     this.fpsElement = document.getElementById('fpsDisplay')
@@ -31,7 +32,7 @@ export class FPSDisplay {
 
   updateFPS(currentTime) {
     this.frameCount++
-    
+
     // Add current frame time to array
     this.frameTimes.push(currentTime)
 
@@ -49,19 +50,21 @@ export class FPSDisplay {
     if (this.frameCount % 10 === 0 && this.frameTimes.length >= 2) {
       const timeDiff = this.frameTimes[this.frameTimes.length - 1] - this.frameTimes[0]
       const frameCount = this.frameTimes.length - 1
-      
+
       if (timeDiff > 0) {
         this.fps = Math.round((frameCount * 1000) / timeDiff)
       }
-      
+
       // Update gameState for consistency
       gameState.fpsCounter.fps = this.fps
       gameState.fpsCounter.frameCount = this.frameCount
       gameState.fpsCounter.lastTime = currentTime
       gameState.fpsCounter.frameTimes = [...this.frameTimes]
-      
-      // Update the DOM element
-      this.updateDisplay()
+
+      // Throttle DOM updates to once per second
+      if (currentTime - this.lastDomUpdate >= 1000) {
+        this.updateDisplay(currentTime)
+      }
     }
 
     // Update frame time display every second
@@ -81,11 +84,17 @@ export class FPSDisplay {
 
       this.frameTimeSamples = []
       this.lastFrameTimeUpdate = currentTime
-      this.updateDisplay()
+      if (currentTime - this.lastDomUpdate >= 1000) {
+        this.updateDisplay(currentTime)
+      }
     }
   }
 
-  updateDisplay() {
+  updateDisplay(currentTime = performance.now()) {
+    if (currentTime - this.lastDomUpdate < 1000) {
+      return
+    }
+    this.lastDomUpdate = currentTime
     if (!this.fpsElement) return
 
     if (gameState.fpsVisible) {
@@ -109,7 +118,7 @@ export class FPSDisplay {
 
       // Remove old color classes
       this.fpsElement.classList.remove('fps-good', 'fps-ok', 'fps-poor', 'fps-bad')
-      
+
       // Add appropriate color class based on FPS
       const colorClass = this.getFPSColorClass(this.fps)
       this.fpsElement.classList.add(colorClass)
@@ -132,7 +141,7 @@ export class FPSDisplay {
   }
 
   // Legacy render method for compatibility (now just updates display)
-  render(ctx, canvas) {
+  render(_ctx, _canvas) {
     this.updateDisplay()
   }
 
