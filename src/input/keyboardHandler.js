@@ -710,8 +710,10 @@ export class KeyboardHandler {
     // Stop attacking for all selected units
     this.selectedUnits.forEach(unit => {
       // Clear current attack target
-      if (unit.target) {
+      if (unit.target || unit.manualTarget) {
         unit.target = null
+        unit.manualTarget = null
+        unit.forcedAttack = false
         stoppedCount++
       }
 

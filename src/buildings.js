@@ -163,7 +163,14 @@ export const buildingData = {
     image: 'artillery_turret.webp',
     displayName: 'Artillery Turret',
     health: 300,
-    smokeSpots: []
+    smokeSpots: [],
+    // Combat properties
+    fireRange: 18, // 100% more than tank range
+    fireCooldown: 7000, // 7 seconds between shots
+    damage: 100, // 500% of basic tank damage
+    armor: 2,
+    projectileType: 'artillery',
+    projectileSpeed: 4
   },
   concreteWall: {
     width: 1,
@@ -204,7 +211,7 @@ export function createBuilding(type, x, y) {
   }
 
   // Add combat properties for defensive buildings (including teslaCoil)
-  if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil') {
+  if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil' || type === 'artilleryTurret') {
     building.fireRange = data.fireRange
     building.fireCooldown = data.fireCooldown
     building.damage = data.damage
@@ -214,7 +221,7 @@ export function createBuilding(type, x, y) {
     building.lastShotTime = 0
     
     // Set initial turret direction towards nearest enemy base for defensive buildings
-    if (data.fireRange && (building.type.startsWith('turretGun') || building.type === 'rocketTurret')) {
+    if (data.fireRange && (building.type.startsWith('turretGun') || building.type === 'rocketTurret' || building.type === 'artilleryTurret')) {
       building.turretDirection = calculateInitialTurretDirection(building.x, building.y, building.owner)
     } else {
       building.turretDirection = 0 // Direction the turret is facing
@@ -232,6 +239,9 @@ export function createBuilding(type, x, y) {
       building.currentBurst = 0
       building.lastBurstTime = 0
     }
+
+    building.manualTarget = null
+    building.forcedAttack = false
   }
 
   return building

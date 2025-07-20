@@ -14,8 +14,8 @@ export let explosions = [] // Global explosion effects for rocket impacts
 // --- Helper Functions ---
 
 // Trigger explosion effect and apply area damage
-export function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, _mapGrid) {
-  const explosionRadius = TILE_SIZE * 2
+export function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, _mapGrid, customRadius) {
+  const explosionRadius = customRadius || TILE_SIZE * 2
 
   // Add explosion visual effect
   explosions.push({

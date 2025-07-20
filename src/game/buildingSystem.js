@@ -97,7 +97,7 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil
-    if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil') && building.health > 0) {
+    if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil' || building.type === 'artilleryTurret') && building.health > 0) {
 
       const centerX = (building.x + building.width / 2) * TILE_SIZE
       const centerY = (building.y + building.height / 2) * TILE_SIZE      // Find closest enemy for all defensive buildings
@@ -117,12 +117,29 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         }
       }
 
+      // Override with manual force attack target if present
+      if (building.manualTarget) {
+        const mt = building.manualTarget
+        const tx = mt.x
+        const ty = mt.y
+        const dist = Math.hypot(tx - centerX, ty - centerY)
+        if (dist <= building.fireRange * TILE_SIZE) {
+          if (mt.target && mt.target.health > 0) {
+            closestEnemy = mt.target
+          }
+          building.currentTargetPosition = { x: tx, y: ty }
+        } else {
+          building.manualTarget = null
+          building.forcedAttack = false
+        }
+      }
+
       // Update turret rotation for gun turrets (continuous tracking)
-      if (building.type.startsWith('turretGun')) {
-        if (closestEnemy) {
+      if (building.type.startsWith('turretGun') || building.type === 'artilleryTurret') {
+        if (closestEnemy || building.manualTarget) {
           // Calculate target angle
-          const targetX = closestEnemy.x + TILE_SIZE / 2
-          const targetY = closestEnemy.y + TILE_SIZE / 2
+          const targetX = closestEnemy ? closestEnemy.x + TILE_SIZE / 2 : building.manualTarget.x
+          const targetY = closestEnemy ? closestEnemy.y + TILE_SIZE / 2 : building.manualTarget.y
           const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
           
           // Smoothly rotate turret towards target
@@ -238,10 +255,10 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
           if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
             // We already have closestEnemy from the shared enemy detection code above
 
-            if (closestEnemy) {
+            if (closestEnemy || building.manualTarget) {
               // For gun turrets, target angle is already calculated in continuous tracking above
-              const targetX = closestEnemy.x + TILE_SIZE / 2
-              const targetY = closestEnemy.y + TILE_SIZE / 2
+              const targetX = closestEnemy ? closestEnemy.x + TILE_SIZE / 2 : building.manualTarget.x
+              const targetY = closestEnemy ? closestEnemy.y + TILE_SIZE / 2 : building.manualTarget.y
               const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
 
               // Only fire if turret is aligned with target (within tolerance)
@@ -344,6 +361,46 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets) 
 
     // Play rocket sound
     playPositionalSound('shoot_rocket', centerX, centerY, 0.5)
+  } else if (building.type === 'artilleryTurret') {
+    // Artillery shell with ballistic trajectory
+    projectile.homing = false
+
+    // Determine impact point with accuracy mechanics
+    let targetX, targetY
+    if (building.currentTargetPosition) {
+      targetX = building.currentTargetPosition.x
+      targetY = building.currentTargetPosition.y
+    } else if (target) {
+      targetX = target.x + TILE_SIZE / 2
+      targetY = target.y + TILE_SIZE / 2
+    } else {
+      return
+    }
+
+    // 25% chance to hit exact tile
+    if (Math.random() > 0.25) {
+      const angleRand = Math.random() * Math.PI * 2
+      const radiusRand = Math.sqrt(Math.random()) * 3 * TILE_SIZE
+      targetX += Math.cos(angleRand) * radiusRand
+      targetY += Math.sin(angleRand) * radiusRand
+    }
+
+    const dx = targetX - projectile.x
+    const dy = targetY - projectile.y
+    const distance = Math.hypot(dx, dy)
+    projectile.arcTrajectory = true
+    projectile.startX = projectile.x
+    projectile.startY = projectile.y
+    projectile.targetX = targetX
+    projectile.targetY = targetY
+    projectile.dx = dx
+    projectile.dy = dy
+    projectile.distance = distance
+    projectile.flightDuration = distance / projectile.speed
+    projectile.arcHeight = distance / 2
+    projectile.targetPosition = { x: targetX, y: targetY }
+    projectile.explosionRadius = TILE_SIZE * 3
+    playPositionalSound('shoot_heavy', centerX, centerY, 0.6)
   } else {
     // Standard bullet - calculate trajectory and store target position with spread
     projectile.homing = false

@@ -647,8 +647,27 @@ export class MouseHandler {
   }
 
   handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid, selectionManager) {
-    // Only process Force Attack if units are selected, not factories
+    // Only process Force Attack if units or turrets are selected, not factories
     if (selectedUnits[0].type !== 'factory') {
+      const first = selectedUnits[0]
+      if (first.isBuilding && first.type !== 'constructionYard' && first.type !== 'vehicleFactory') {
+        const targetTileX = Math.floor(worldX / TILE_SIZE)
+        const targetTileY = Math.floor(worldY / TILE_SIZE)
+        let target = null
+        for (const unit of units) {
+          const ux = unit.x + TILE_SIZE / 2
+          const uy = unit.y + TILE_SIZE / 2
+          if (Math.hypot(worldX - ux, worldY - uy) < TILE_SIZE / 2) {
+            target = unit
+            break
+          }
+        }
+        selectedUnits.forEach(b => {
+          b.forcedAttack = true
+          b.manualTarget = { x: worldX, y: worldY, target }
+        })
+        return true
+      }
       let forceAttackTarget = null
 
       // Check friendly buildings first

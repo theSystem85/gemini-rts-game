@@ -333,6 +333,34 @@ export class BuildingRenderer {
           ctx.arc(screenX + 10, screenY + height - 10, 5, 0, Math.PI * 2)
           ctx.fill()
         }
+      } else if (building.type === 'artilleryTurret') {
+        const img = getBuildingImage('artilleryTurret')
+        if (img) {
+          ctx.save()
+          ctx.translate(centerX, centerY)
+          ctx.rotate((building.turretDirection || 0) - Math.PI * 3 / 4)
+          ctx.drawImage(img, -width / 2, -height / 2, width, height)
+
+          const now = performance.now()
+          if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+            const prog = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
+            const alpha = 1 - prog
+            const flashSize = MUZZLE_FLASH_SIZE * 2 * (1 - prog * 0.5)
+            const fx = 7 - img.width / 2
+            const fy = 13 - img.height / 2
+            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, flashSize)
+            grad.addColorStop(0, '#FFF')
+            grad.addColorStop(0.3, '#FF0')
+            grad.addColorStop(1, 'rgba(255,165,0,0)')
+            ctx.globalAlpha = alpha
+            ctx.fillStyle = grad
+            ctx.beginPath()
+            ctx.arc(fx, fy, flashSize, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.globalAlpha = 1
+          }
+          ctx.restore()
+        }
       }
 
       // Draw range indicator if selected (for non-tesla coil buildings)
