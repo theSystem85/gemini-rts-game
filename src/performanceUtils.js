@@ -13,14 +13,12 @@ export function logPerformance(functionToWrap, printEachCall = false) {
     // Store performance statistics
     if (!window.performanceStatistics[functionToWrap.name]) {
       window.performanceStatistics[functionToWrap.name] = {
-        durationMin: duration,
         durationMax: duration,
         durationAvg: duration,
         callCount: 1,
       };
     }
     window.performanceStatistics[functionToWrap.name] = {
-      durationMin: Math.min(window.performanceStatistics[functionToWrap.name].durationMin, duration),
       durationMax: Math.max(window.performanceStatistics[functionToWrap.name].durationMax, duration),
       durationAvg: (window.performanceStatistics[functionToWrap.name].durationAvg * window.performanceStatistics[functionToWrap.name].callCount + duration) / (window.performanceStatistics[functionToWrap.name].callCount + 1),
       callCount: window.performanceStatistics[functionToWrap.name].callCount + 1,
