@@ -268,7 +268,19 @@
             Seed:
             <input type="number" class="sidebar-input" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
           </label>
-          <button id="shuffleMapBtn" class="action-button" style="margin: 10px 0;">Shuffle Map</button>
+          <div style="display: flex; gap: 5px; margin: 10px 0;">
+            <button id="shuffleMapBtn" class="action-button">Shuffle Map</button>
+            <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
+              <span class="button-icon settings-icon">⚙</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="mapSettingsMenu" style="display:none; margin-bottom:10px;">
+          <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
+            <input type="checkbox" id="oreSpreadCheckbox">
+            <span>ORE_SPREAD_ENABLED</span>
+          </label>
         </div>
         
         <div id="playerCountControl">
