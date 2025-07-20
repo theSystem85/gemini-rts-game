@@ -112,6 +112,8 @@ export const WIND_STRENGTH = 0.008 // How much wind affects particle movement
 
 export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 export const ORE_SPREAD_PROBABILITY = 0.06
+// Toggle ore spreading to improve performance when disabled
+export const ORE_SPREAD_ENABLED = true
 
 // New: Path recalculation interval (in milliseconds)
 export const PATH_CALC_INTERVAL = 2000
