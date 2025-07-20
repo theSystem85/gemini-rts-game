@@ -6,6 +6,7 @@ import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
+import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -235,14 +236,15 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
             const isRocketTankRocket = projectileType === 'rocket' && unit.type === 'rocketTank';
             const bulletSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED);
 
-            const muzzleOffset = TILE_SIZE * 0.4;
-            const muzzleX = unitCenterX + Math.cos(unit.direction) * muzzleOffset;
-            const muzzleY = unitCenterY + Math.sin(unit.direction) * muzzleOffset;
+            let rocketSpawn = null;
+            if (isRocketTankRocket) {
+                rocketSpawn = getRocketSpawnPoint(unit, unitCenterX, unitCenterY);
+            }
 
             const bullet = {
                 id: Date.now() + Math.random(),
-                x: isRocketTankRocket ? muzzleX : unitCenterX,
-                y: isRocketTankRocket ? muzzleY : unitCenterY,
+                x: isRocketTankRocket ? rocketSpawn.x : unitCenterX,
+                y: isRocketTankRocket ? rocketSpawn.y : unitCenterY,
                 speed: bulletSpeed,
                 baseDamage: getDamageForUnitType(unit.type),
                 active: true,
@@ -254,12 +256,12 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
             };
 
             if (isRocketTankRocket) {
-                const dx = finalTarget.x - muzzleX;
-                const dy = finalTarget.y - muzzleY;
+                const dx = finalTarget.x - rocketSpawn.x;
+                const dy = finalTarget.y - rocketSpawn.y;
                 const distance = Math.hypot(dx, dy);
                 bullet.ballistic = true;
-                bullet.startX = muzzleX;
-                bullet.startY = muzzleY;
+                bullet.startX = rocketSpawn.x;
+                bullet.startY = rocketSpawn.y;
                 bullet.targetX = finalTarget.x;
                 bullet.targetY = finalTarget.y;
                 bullet.dx = dx;

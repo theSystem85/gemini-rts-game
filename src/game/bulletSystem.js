@@ -11,6 +11,7 @@ import { markBuildingForRepairPause } from '../buildings.js'
 import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
+import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -425,16 +426,17 @@ export function fireBullet(unit, target, bullets, now) {
       target
     }
   } else if (unit.type === 'rocketTank') {
-    const dx = targetCenterX - unitCenterX
-    const dy = targetCenterY - unitCenterY
+    const spawn = getRocketSpawnPoint(unit, unitCenterX, unitCenterY)
+    const dx = targetCenterX - spawn.x
+    const dy = targetCenterY - spawn.y
     const distance = Math.hypot(dx, dy)
     const speed = 6
     const flightDuration = distance / speed
 
     bullet = {
       id: Date.now() + Math.random(),
-      x: unitCenterX,
-      y: unitCenterY,
+      x: spawn.x,
+      y: spawn.y,
       speed,
       baseDamage: BULLET_DAMAGES.rocketTank,
       active: true,
@@ -442,8 +444,8 @@ export function fireBullet(unit, target, bullets, now) {
       homing: false,
       target,
       ballistic: true,
-      startX: unitCenterX,
-      startY: unitCenterY,
+      startX: spawn.x,
+      startY: spawn.y,
       targetX: targetCenterX,
       targetY: targetCenterY,
       dx,

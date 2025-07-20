@@ -13,6 +13,7 @@ import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
 import { preloadTankImages } from './tankImageRenderer.js'
 import { preloadHarvesterImage } from './harvesterImageRenderer.js'
+import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -36,9 +37,10 @@ export class Renderer {
     let texturesLoaded = false
     let tankImagesLoaded = false
     let harvesterLoaded = false
+    let rocketTankLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded) {
         if (callback) callback()
       }
     }
@@ -63,6 +65,14 @@ export class Renderer {
         console.warn('Harvester image failed to load')
       }
       harvesterLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadRocketTankImage((success) => {
+      if (!success) {
+        console.warn('Rocket tank image failed to load')
+      }
+      rocketTankLoaded = true
       checkAllLoaded()
     })
   }
