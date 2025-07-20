@@ -259,6 +259,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
                 bullet.targetY = finalTarget.y;
                 bullet.dx = dx;
                 bullet.dy = dy;
+                bullet.distance = distance;
                 bullet.flightDuration = distance / bulletSpeed;
                 bullet.arcHeight = Math.max(50, distance * 0.3);
             } else if (!bullet.homing) {

@@ -38,13 +38,13 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
       bullet.startTime = now
     }
 
-    // Ballistic projectile handling
+    // Ballistic projectile handling with late guidance and smoke trail
     if (bullet.ballistic) {
       const progress = ((now - bullet.startTime) * bullet.effectiveSpeed) / bullet.distance
       if (progress >= 1) {
         triggerExplosion(
-          bullet.targetX,
-          bullet.targetY,
+          bullet.x,
+          bullet.y,
           bullet.baseDamage,
           units,
           factories,
@@ -56,11 +56,41 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
         continue
       }
 
+      // Update target position in the second half of the flight for guidance
+      if (progress > 0.5 && bullet.target && bullet.target.health > 0) {
+        if (typeof bullet.target.width === 'number' && typeof bullet.target.height === 'number') {
+          bullet.targetX = bullet.target.x * TILE_SIZE + (bullet.target.width * TILE_SIZE) / 2
+          bullet.targetY = bullet.target.y * TILE_SIZE + (bullet.target.height * TILE_SIZE) / 2
+        } else {
+          bullet.targetX = bullet.target.x + TILE_SIZE / 2
+          bullet.targetY = bullet.target.y + TILE_SIZE / 2
+        }
+      }
+
+      // Recalculate path towards (possibly updated) target
+      bullet.dx = bullet.targetX - bullet.startX
+      bullet.dy = bullet.targetY - bullet.startY
+
       const baseX = bullet.startX + bullet.dx * progress
       const baseY = bullet.startY + bullet.dy * progress
       const arcOffset = -4 * bullet.arcHeight * progress * (1 - progress)
       bullet.x = baseX
       bullet.y = baseY + arcOffset
+
+      // Emit a small smoke particle for the trail
+      if (gameState && gameState.smokeParticles) {
+        gameState.smokeParticles.push({
+          x: bullet.x,
+          y: bullet.y,
+          vx: (Math.random() - 0.5) * 0.05,
+          vy: (Math.random() - 0.5) * 0.05,
+          alpha: 0.6,
+          size: 4,
+          startTime: now,
+          duration: 300
+        })
+      }
+
       continue
     }
 
