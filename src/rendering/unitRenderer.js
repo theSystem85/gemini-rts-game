@@ -4,6 +4,7 @@ import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
+import { renderRocketTankWithImage, isRocketTankImageLoaded } from './rocketTankImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -49,8 +50,8 @@ export class UnitRenderer {
 
     const now = performance.now()
     
-    // Special handling for rocket tanks - render 3 static tubes instead of turret
-    if (unit.type === 'rocketTank') {
+    // Special handling for rocket tanks - render fallback tubes only if image not loaded
+    if (unit.type === 'rocketTank' && !isRocketTankImageLoaded()) {
       this.renderRocketTubes(ctx, unit, centerX, centerY, now)
       return
     }
@@ -407,6 +408,15 @@ export class UnitRenderer {
 
     if (unit.type === 'harvester' && isHarvesterImageLoaded()) {
       const ok = renderHarvesterWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'rocketTank' && isRocketTankImageLoaded()) {
+      const ok = renderRocketTankWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
