@@ -12,6 +12,7 @@ import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
 import { preloadTankImages } from './tankImageRenderer.js'
+import { preloadHarvesterImage } from './harvesterImageRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -34,9 +35,10 @@ export class Renderer {
     // Load both tile textures and tank images in parallel
     let texturesLoaded = false
     let tankImagesLoaded = false
+    let harvesterLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded) {
         if (callback) callback()
       }
     }
@@ -53,6 +55,14 @@ export class Renderer {
         console.warn('Tank images failed to load, falling back to original rendering')
       }
       tankImagesLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadHarvesterImage((success) => {
+      if (!success) {
+        console.warn('Harvester image failed to load')
+      }
+      harvesterLoaded = true
       checkAllLoaded()
     })
   }

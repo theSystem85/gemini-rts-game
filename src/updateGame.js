@@ -82,7 +82,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
       if (
         unit.maxHealth &&
         unit.health / unit.maxHealth < 0.25 &&
-        unit.type.includes('tank')
+        (unit.type.includes('tank') || unit.type === 'harvester')
       ) {
         if (!unit.lastSmokeTime || now - unit.lastSmokeTime > SMOKE_EMIT_INTERVAL) {
           const offsetX = -Math.cos(unit.direction) * TILE_SIZE * 0.4
@@ -96,9 +96,9 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
             now,
             particleCount
           )
-        unit.lastSmokeTime = now
+          unit.lastSmokeTime = now
+        }
       }
-    }
     })
 
     // Emit smoke for buildings with smoke spots
