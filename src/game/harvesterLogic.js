@@ -53,7 +53,12 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     }
 
     // Mining ore logic with more tolerant detection
-    if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery) {
+    // Skip auto-harvesting if harvester is heading to or being repaired at workshop, or is in repair queue
+    const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue && 
+                           unit.targetWorkshop.repairQueue.includes(unit)
+    
+    if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery && 
+        !unit.targetWorkshop && !unit.repairingAtWorkshop && !isInRepairQueue) {
       // Check if harvester is near an ore tile (more tolerant detection)
       const nearbyOreTile = findNearbyOreTile(unit, mapGrid, unitTileX, unitTileY)
       if (nearbyOreTile) {
@@ -144,7 +149,9 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     }
 
     // Handle unloading when at capacity
-    if (unit.oreCarried >= HARVESTER_CAPPACITY && !unit.unloadingAtRefinery && !unit.harvesting) {
+    // Skip auto-unloading if harvester is heading to or being repaired at workshop, or is in repair queue
+    if (unit.oreCarried >= HARVESTER_CAPPACITY && !unit.unloadingAtRefinery && !unit.harvesting &&
+        !unit.targetWorkshop && !unit.repairingAtWorkshop && !isInRepairQueue) {
       handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap, units)
     }
 
@@ -154,8 +161,10 @@ export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, fa
     }
 
     // Find new ore when idle and not carrying ore
+    // Skip auto-ore finding if harvester is heading to or being repaired at workshop, or is in repair queue
     if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery &&
-        (!unit.path || unit.path.length === 0) && !unit.oreField) {
+        (!unit.path || unit.path.length === 0) && !unit.oreField &&
+        !unit.targetWorkshop && !unit.repairingAtWorkshop && !isInRepairQueue) {
       // Check if there's a manual ore target first
       if (unit.manualOreTarget) {
         handleManualOreTarget(unit, mapGrid, occupancyMap)
@@ -1278,6 +1287,13 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
 function checkHarvesterProductivity(unit, mapGrid, occupancyMap, now) {
   // Don't interfere with manual commands
   if (unit.manualOreTarget) {
+    return
+  }
+  
+  // Don't interfere with workshop repair operations
+  const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue && 
+                         unit.targetWorkshop.repairQueue.includes(unit)
+  if (unit.targetWorkshop || unit.repairingAtWorkshop || isInRepairQueue) {
     return
   }
   

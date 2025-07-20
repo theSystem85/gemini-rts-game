@@ -9,6 +9,7 @@ export const buildingImageMap = {
   powerPlant: 'images/map/buildings/power_plant.webp',
   oreRefinery: 'images/map/buildings/refinery.webp',
   vehicleFactory: 'images/map/buildings/vehicle_factory.webp',
+  vehicleWorkshop: 'images/map/buildings/vehicle_workshop.webp',
   radarStation: 'images/map/buildings/radar_station.webp',
   turretGunV1: 'images/map/buildings/turret01_base.webp', // Use base image as fallback when turret images are disabled
   turretGunV2: 'images/map/buildings/turret02.webp',

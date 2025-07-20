@@ -111,7 +111,7 @@ export const gameState = {
 
   // Initially no units are available (require vehicle factory), only basic buildings
   availableUnitTypes: new Set([]),
-  availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'radarStation', 'turretGunV1', 'concreteWall']),
+  availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'vehicleWorkshop', 'radarStation', 'turretGunV1', 'concreteWall']),
   newUnitTypes: new Set(),
   newBuildingTypes: new Set(),
 
