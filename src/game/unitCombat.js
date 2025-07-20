@@ -231,21 +231,43 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
             const angle = Math.atan2(finalTarget.y - unitCenterY, finalTarget.x - unitCenterX);
 
+            const isRocketTankRocket = projectileType === 'rocket' && unit.type === 'rocketTank';
+            const bulletSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED);
+
+            const muzzleOffset = TILE_SIZE * 0.4;
+            const muzzleX = unitCenterX + Math.cos(unit.direction) * muzzleOffset;
+            const muzzleY = unitCenterY + Math.sin(unit.direction) * muzzleOffset;
+
             const bullet = {
                 id: Date.now() + Math.random(),
-                x: unitCenterX,
-                y: unitCenterY,
-                speed: projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED,
+                x: isRocketTankRocket ? muzzleX : unitCenterX,
+                y: isRocketTankRocket ? muzzleY : unitCenterY,
+                speed: bulletSpeed,
                 baseDamage: getDamageForUnitType(unit.type),
                 active: true,
                 shooter: unit,
-                homing: projectileType === 'rocket',
+                homing: isRocketTankRocket ? false : (projectileType === 'rocket'),
                 target: projectileType === 'rocket' ? target : null,
                 targetPosition: { x: finalTarget.x, y: finalTarget.y },
                 startTime: now
             };
 
-            if (!bullet.homing) {
+            if (isRocketTankRocket) {
+                const dx = finalTarget.x - muzzleX;
+                const dy = finalTarget.y - muzzleY;
+                const distance = Math.hypot(dx, dy);
+                bullet.ballistic = true;
+                bullet.startX = muzzleX;
+                bullet.startY = muzzleY;
+                bullet.targetX = finalTarget.x;
+                bullet.targetY = finalTarget.y;
+                bullet.dx = dx;
+                bullet.dy = dy;
+                bullet.distance = distance;
+                bullet.flightDuration = distance / bulletSpeed;
+                bullet.ballisticDuration = bullet.flightDuration / 2;
+                bullet.arcHeight = Math.max(50, distance * 0.3);
+            } else if (!bullet.homing) {
                 bullet.vx = bullet.speed * Math.cos(angle);
                 bullet.vy = bullet.speed * Math.sin(angle);
             }
