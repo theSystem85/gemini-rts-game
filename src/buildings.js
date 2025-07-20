@@ -2,6 +2,7 @@
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
+import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -211,7 +212,14 @@ export function createBuilding(type, x, y) {
     building.projectileType = data.projectileType
     building.projectileSpeed = data.projectileSpeed
     building.lastShotTime = 0
-    building.turretDirection = 0 // Direction the turret is facing
+    
+    // Set initial turret direction towards nearest enemy base for defensive buildings
+    if (data.fireRange && (building.type.startsWith('turretGun') || building.type === 'rocketTurret')) {
+      building.turretDirection = calculateInitialTurretDirection(building.x, building.y, building.owner)
+    } else {
+      building.turretDirection = 0 // Direction the turret is facing
+    }
+    
     building.targetDirection = 0 // Direction the turret should face
     if (data.isTeslaCoil) {
       building.isTeslaCoil = true
@@ -227,6 +235,47 @@ export function createBuilding(type, x, y) {
   }
 
   return building
+}
+
+/**
+ * Calculate initial turret direction towards the nearest enemy base
+ * @param {number} buildingX - Building X position in tiles
+ * @param {number} buildingY - Building Y position in tiles 
+ * @param {string} owner - Building owner ('player' or enemy player ID)
+ * @returns {number} Angle in radians pointing towards nearest enemy base
+ */
+function calculateInitialTurretDirection(buildingX, buildingY, owner) {
+  const buildingCenterX = buildingX + 0.5 // Center of building tile
+  const buildingCenterY = buildingY + 0.5
+  
+  let nearestEnemyDistance = Infinity
+  let targetDirection = 0
+  
+  // Check all player positions for enemies
+  Object.entries(PLAYER_POSITIONS).forEach(([playerId, position]) => {
+    // Skip if this is the same owner
+    if (playerId === owner || (owner === 'player' && playerId === 'player1')) {
+      return
+    }
+    
+    // For human player, all other players are enemies
+    // For AI players, human player is the enemy
+    const isEnemy = (owner === 'player' && playerId !== 'player1') || 
+                   (owner !== 'player' && playerId === 'player1')
+    
+    if (isEnemy) {
+      const enemyX = position.x * MAP_TILES_X
+      const enemyY = position.y * MAP_TILES_Y
+      const distance = Math.hypot(enemyX - buildingCenterX, enemyY - buildingCenterY)
+      
+      if (distance < nearestEnemyDistance) {
+        nearestEnemyDistance = distance
+        targetDirection = Math.atan2(enemyY - buildingCenterY, enemyX - buildingCenterX)
+      }
+    }
+  })
+  
+  return targetDirection
 }
 
 // Helper function to check if a position is within 3 tiles of any existing player building

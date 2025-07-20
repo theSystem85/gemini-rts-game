@@ -83,6 +83,9 @@ export const gameState = {
   // Tank image rendering toggle - initialize from config
   useTankImages: true,
 
+  // Turret image rendering toggle - initialize from config  
+  useTurretImages: true,
+
   // Cheat dialog state
   cheatDialogOpen: false,
 

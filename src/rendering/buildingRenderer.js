@@ -3,6 +3,7 @@ import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATI
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
+import { renderTurretWithImages, turretImagesAvailable } from './turretImageRenderer.js'
 
 export class BuildingRenderer {
   constructor() {
@@ -163,8 +164,17 @@ export class BuildingRenderer {
           ctx.restore()
         }
       }
-      // For turret guns, draw rotating barrel
+      // For turret guns, try image-based rendering first
       else if (building.type.startsWith('turretGun')) {
+        // Try to render with images first (for turretGunV1) if the toggle is enabled
+        if (gameState.useTurretImages && turretImagesAvailable(building.type)) {
+          const rendered = renderTurretWithImages(ctx, building, screenX, screenY, width, height)
+          if (rendered) {
+            return // Successfully rendered with images, skip fallback rendering
+          }
+        }
+        
+        // Fallback to original drawing method
         const now = performance.now()
         
         // Calculate recoil offset

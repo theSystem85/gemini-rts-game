@@ -1,14 +1,16 @@
 import { preloadTileTextures } from './rendering.js'
 import { preloadBuildingImages } from './buildingImageMap.js'
+import { preloadTurretImages } from './rendering/turretImageRenderer.js'
 import { MAP_TILES_X, MAP_TILES_Y, PLAYER_POSITIONS } from './config.js'
 import { gameState } from './gameState.js'
 
 let texturesLoaded = false
 let buildingImagesLoaded = false
+let turretImagesLoaded = false
 let onAllAssetsLoadedCallback = null
 
 function checkAllAssetsLoaded() {
-  if (texturesLoaded && buildingImagesLoaded && onAllAssetsLoadedCallback) {
+  if (texturesLoaded && buildingImagesLoaded && turretImagesLoaded && onAllAssetsLoadedCallback) {
     onAllAssetsLoadedCallback()
   }
 }
@@ -23,6 +25,11 @@ export function initializeGameAssets(callback) {
 
   preloadBuildingImages(() => {
     buildingImagesLoaded = true
+    checkAllAssetsLoaded()
+  })
+
+  preloadTurretImages(() => {
+    turretImagesLoaded = true
     checkAllAssetsLoaded()
   })
 }

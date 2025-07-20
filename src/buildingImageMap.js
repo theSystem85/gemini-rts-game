@@ -10,13 +10,13 @@ export const buildingImageMap = {
   oreRefinery: 'images/map/buildings/refinery.webp',
   vehicleFactory: 'images/map/buildings/vehicle_factory.webp',
   radarStation: 'images/map/buildings/radar_station.webp',
-  turretGunV1: 'images/map/buildings/turret01.webp',
+  turretGunV1: 'images/map/buildings/turret01_base.webp', // Use base image as fallback when turret images are disabled
   turretGunV2: 'images/map/buildings/turret02.webp',
   turretGunV3: 'images/map/buildings/turret02.webp', // Using turret02 as fallback
   rocketTurret: 'images/map/buildings/rocket_gun.webp',
   teslaCoil: 'images/map/buildings/teslacoil.webp',
   constructionYard: 'images/map/buildings/construction_yard.webp',
-  concreteWall: 'images/map/buildings/turret01.webp', // Using turret01 as a fallback
+  concreteWall: 'images/map/buildings/concrete_wall_cross.webp', // Using turret01 as a fallback
   artilleryTurret: 'images/map/buildings/artillery_turret.webp'
 }
 

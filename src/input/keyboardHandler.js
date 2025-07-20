@@ -133,6 +133,11 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleTankImageToggle()
       }
+      // R key to toggle turret image rendering
+      else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        this.handleTurretImageToggle()
+      }
       // P key to toggle FPS display
       else if (e.key.toLowerCase() === 'p') {
         e.preventDefault()
@@ -614,6 +619,18 @@ export class KeyboardHandler {
     // Show notification to user
     const status = gameState.useTankImages ? 'ON' : 'OFF'
     this.showNotification(`Tank image rendering: ${status}`, 2000)
+    
+    // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleTurretImageToggle() {
+    // Toggle turret image rendering
+    gameState.useTurretImages = !gameState.useTurretImages
+    
+    // Show notification to user
+    const status = gameState.useTurretImages ? 'ON' : 'OFF'
+    this.showNotification(`Turret image rendering: ${status}`, 2000)
     
     // Play a sound for feedback
     playSound('confirmed', 0.5)

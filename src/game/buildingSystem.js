@@ -1,11 +1,12 @@
 // Building System Module - Handles building updates, defensive buildings, and Tesla coils
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, TANK_TURRET_ROT } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
+import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -115,6 +116,25 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
           }
         }
       }
+
+      // Update turret rotation for gun turrets (continuous tracking)
+      if (building.type.startsWith('turretGun')) {
+        if (closestEnemy) {
+          // Calculate target angle
+          const targetX = closestEnemy.x + TILE_SIZE / 2
+          const targetY = closestEnemy.y + TILE_SIZE / 2
+          const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
+          
+          // Smoothly rotate turret towards target
+          const turretRotationSpeed = TANK_TURRET_ROT
+          building.turretDirection = smoothRotateTowardsAngle(
+            building.turretDirection || 0, 
+            targetAngle, 
+            turretRotationSpeed
+          )
+        }
+        // If no enemy, turret keeps its current direction
+      }
       // Tesla Coil special logic
       if (building.type === 'teslaCoil') {
         // Check power level - Tesla coil doesn't work when power is below 0
@@ -219,24 +239,30 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
             // We already have closestEnemy from the shared enemy detection code above
 
             if (closestEnemy) {
-              // Aim at the target
+              // For gun turrets, target angle is already calculated in continuous tracking above
               const targetX = closestEnemy.x + TILE_SIZE / 2
               const targetY = closestEnemy.y + TILE_SIZE / 2
-              building.turretDirection = Math.atan2(targetY - centerY, targetX - centerX)
+              const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
 
-              // Store current target position for projectile calculation
-              building.currentTargetPosition = { x: targetX, y: targetY }
+              // Only fire if turret is aligned with target (within tolerance)
+              const angleError = Math.abs(angleDiff(building.turretDirection, targetAngle))
+              const aimingTolerance = 0.1 // ~5.7 degrees tolerance
+              
+              if (angleError <= aimingTolerance) {
+                // Store current target position for projectile calculation
+                building.currentTargetPosition = { x: targetX, y: targetY }
 
-              // Fire projectile
-              fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets)
+                // Fire projectile
+                fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets)
 
-              // Handle burst fire for turret gun v3 and rocket turret
-              if (building.burstFire) {
-                building.currentBurst = building.burstCount - 1 // Already fired first shot
-                building.lastBurstTime = now
-              } else {
-                // Set cooldown for non-burst weapons
-                building.lastShotTime = now
+                // Handle burst fire for turret gun v3 and rocket turret
+                if (building.burstFire) {
+                  building.currentBurst = building.burstCount - 1 // Already fired first shot
+                  building.lastBurstTime = now
+                } else {
+                  // Set cooldown for non-burst weapons
+                  building.lastShotTime = now
+                }
               }
             }
           }

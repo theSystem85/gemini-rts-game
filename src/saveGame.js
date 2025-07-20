@@ -143,6 +143,7 @@ export function saveGame(label) {
       occupancyVisible: gameState.occupancyVisible,
       fpsVisible: gameState.fpsVisible,
       useTankImages: gameState.useTankImages,
+      useTurretImages: gameState.useTurretImages,
       nextVehicleFactoryIndex: gameState.nextVehicleFactoryIndex,
       refineryStatus: gameState.refineryStatus,
       playerCount: gameState.playerCount,

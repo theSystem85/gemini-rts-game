@@ -1,0 +1,11 @@
+{
+  "turretGunV1": {
+    "base": "turret01_base.webp",
+    "top": "turret01_top.webp",
+    "muzzleFlashOffset": {
+      "x": 31,
+      "y": 0
+    },
+    "comment": "Muzzle flash spawns at (31x0y) coords relative to the top left of the turret01_top.webp image"
+  }
+}
