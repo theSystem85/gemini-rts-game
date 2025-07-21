@@ -30,6 +30,7 @@ export class GameLoop {
 
     // Track last UI update values to avoid unnecessary DOM writes
     this.lastMoneyDisplayed = null
+    this.lastMoneyUpdate = 0
     this.lastGameTimeUpdate = 0
     this.lastEnergyUpdate = 0
 
@@ -133,11 +134,15 @@ export class GameLoop {
     // Render FPS overlay on top of everything when game is running
     this.fpsDisplay.render(gameCtx, gameCanvas)
 
-    // Update money display only when the value changes
+    // Update money display at most every 333ms and only when the value changes
     const currentMoney = Math.floor(gameState.money)
-    if (currentMoney !== this.lastMoneyDisplayed) {
+    if (
+      currentMoney !== this.lastMoneyDisplayed &&
+      now - this.lastMoneyUpdate >= 333
+    ) {
       this.moneyEl.textContent = `$${currentMoney}`
       this.lastMoneyDisplayed = currentMoney
+      this.lastMoneyUpdate = now
     }
 
     // Update game time display at most once per second
@@ -226,9 +231,13 @@ export class GameLoop {
 
     // Update money and time less frequently in legacy loop
     const legacyMoney = Math.floor(gameState.money)
-    if (legacyMoney !== this.lastMoneyDisplayed) {
+    if (
+      legacyMoney !== this.lastMoneyDisplayed &&
+      timestamp - this.lastMoneyUpdate >= 333
+    ) {
       this.moneyEl.textContent = `${legacyMoney}`
       this.lastMoneyDisplayed = legacyMoney
+      this.lastMoneyUpdate = timestamp
     }
 
     if (timestamp - this.lastGameTimeUpdate >= 1000) {
