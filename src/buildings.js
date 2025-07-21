@@ -24,7 +24,7 @@ export const buildingData = {
     width: 3,
     height: 3,
     cost: 2500,
-    power: -30,
+    power: -150,
     image: 'ore_refinery.webp',
     displayName: 'Ore Refinery',
     health: 200,
@@ -95,7 +95,7 @@ export const buildingData = {
     smokeSpots: [],
     // Add combat properties
     fireRange: 10, // 50% more than tank range (TANK_FIRE_RANGE + 50%)
-    fireCooldown: 1600, // Same as regular tank
+    fireCooldown: 3000, // Same as regular tank
     damage: 10, // Reduced by 50% (was 20)
     armor: 1,
     projectileType: 'bullet',
@@ -112,7 +112,7 @@ export const buildingData = {
     smokeSpots: [],
     // Add combat properties
     fireRange: 10, // 50% more than tank range
-    fireCooldown: 1600,
+    fireCooldown: 3000,
     damage: 12, // Reduced by 50% (was 24)
     armor: 1,
     projectileType: 'bullet',
@@ -132,7 +132,7 @@ export const buildingData = {
     smokeSpots: [],
     // Add combat properties
     fireRange: 12, // Even more range
-    fireCooldown: 1400, // Faster firing
+    fireCooldown: 3500, // Faster firing
     damage: 15, // Reduced by 50% (was 30)
     armor: 1.5,
     projectileType: 'bullet',
@@ -183,7 +183,7 @@ export const buildingData = {
   artilleryTurret: {
     width: 2,
     height: 2,
-    cost: 3500,
+    cost: 4000,
     power: -45,
     image: 'artillery_turret.webp',
     displayName: 'Artillery Turret',

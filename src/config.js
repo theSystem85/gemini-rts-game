@@ -158,7 +158,7 @@ export const STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets i
 export const UNIT_COSTS = {
   tank: 1000,
   rocketTank: 2000,
-  harvester: 500,
+  harvester: 1500,
   'tank-v2': 2000,
   'tank-v3': 3000,
   ambulance: 500

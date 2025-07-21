@@ -6,7 +6,7 @@ import { findPath } from '../units.js'
 // Configuration constants for AI behavior
 const AI_CONFIG = {
   GROUP_ATTACK_MIN_SIZE: 3,           // Minimum units needed for group attack
-  LOW_HEALTH_RETREAT_THRESHOLD: 0.1,  // 10% health threshold for retreat
+  LOW_HEALTH_RETREAT_THRESHOLD: 0.33, // 33% health threshold for retreat
   HARVESTER_DEFENSE_RANGE: 6,         // Range in tiles to defend harvesters
   BASE_RETREAT_RANGE: 10,             // Range in tiles to consider as "base area"
   GROUP_FORMATION_RANGE: 8,           // Range in tiles for units to be considered in same group
@@ -188,6 +188,8 @@ function findNearestEnemyBase(unit, gameState) {
  */
 export function handleRetreatToBase(unit, gameState, mapGrid) {
   const nearestBase = findNearestEnemyBase(unit, gameState)
+
+  console.log('Handling retreat for unit:', unit.id, 'to base:', nearestBase ? nearestBase.id : 'none')
   
   if (!nearestBase) return false
   
@@ -210,6 +212,7 @@ export function handleRetreatToBase(unit, gameState, mapGrid) {
       unit.path = path.slice(1)
       unit.isRetreating = true
       unit.retreatTarget = retreatTarget
+      unit.needsWorkshopRepair = true
       return true
     }
   }
@@ -326,6 +329,51 @@ function findDefensivePosition(baseBuilding, gameState, mapGrid) {
 }
 
 /**
+ * Sends a damaged unit to the nearest vehicle workshop for repair
+ */
+function sendUnitToWorkshop(unit, gameState, mapGrid) {
+  const workshops = gameState.buildings.filter(b =>
+    b.type === 'vehicleWorkshop' && b.owner === unit.owner && b.health > 0
+  )
+
+  if (workshops.length === 0) return
+
+  // Find nearest workshop
+  let nearest = null
+  let nearestDist = Infinity
+  workshops.forEach(ws => {
+    const dist = Math.hypot(unit.tileX - ws.x, unit.tileY - ws.y)
+    if (dist < nearestDist) {
+      nearest = ws
+      nearestDist = dist
+    }
+  })
+
+  if (!nearest) return
+
+  if (!nearest.repairQueue) nearest.repairQueue = []
+  if (!nearest.repairQueue.includes(unit)) {
+    nearest.repairQueue.push(unit)
+    unit.targetWorkshop = nearest
+  }
+
+  const waitingY = nearest.y + nearest.height + 1
+  const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
+  const targetTile = { x: waitingX, y: waitingY }
+  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  if (path && path.length > 0) {
+    unit.path = path.slice(1)
+    unit.moveTarget = targetTile
+  } else {
+    unit.x = targetTile.x * TILE_SIZE
+    unit.y = targetTile.y * TILE_SIZE
+    unit.tileX = targetTile.x
+    unit.tileY = targetTile.y
+    unit.moveTarget = null
+  }
+}
+
+/**
  * Checks if a unit should stop retreating (reached safe zone or health recovered)
  */
 export function shouldStopRetreating(unit, gameState) {
@@ -333,7 +381,8 @@ export function shouldStopRetreating(unit, gameState) {
   
   // Stop retreating if health is above threshold and near base
   const healthPercent = unit.health / unit.maxHealth
-  if (healthPercent > 0.3) { // 30% health to stop retreating
+  const notUnderFire = !unit.isBeingAttacked && (!unit.lastDamageTime || performance.now() - unit.lastDamageTime > 2000)
+  if (healthPercent > 0.3 && notUnderFire) { // 30% health to stop retreating and no recent attacks
     // Check if unit is near enemy base
     const nearestBase = findNearestEnemyBase(unit, gameState)
     if (nearestBase) {
@@ -386,6 +435,10 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
       unit.isRetreating = false
       unit.retreatTarget = null
       unit.path = []
+      if (unit.needsWorkshopRepair && unit.health < unit.maxHealth) {
+        sendUnitToWorkshop(unit, gameState, mapGrid)
+        unit.needsWorkshopRepair = false
+      }
     } else {
       // Continue retreating
       return

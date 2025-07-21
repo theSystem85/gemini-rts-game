@@ -1,5 +1,5 @@
 // utils.js
-import { TILE_SIZE, XP_MULTIPLIER } from './config.js'
+import { TILE_SIZE, XP_MULTIPLIER, UNIT_COSTS } from './config.js'
 
 export function tileToPixel(tileX, tileY) {
   return { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE }
@@ -66,16 +66,7 @@ export function initializeUnitLeveling(unit) {
  * @returns {number} The cost of the unit
  */
 export function getUnitCost(unitType) {
-  // Import UNIT_COSTS dynamically to avoid circular imports
-  const costs = {
-    tank: 1000,
-    rocketTank: 2000,
-    harvester: 500,
-    'tank-v2': 2000,
-    'tank-v3': 3000,
-    tank_v1: 1000
-  }
-  return costs[unitType] || 1000
+  return UNIT_COSTS[unitType] || 9999999 // Default to a very high cost if not found
 }
 
 /**
