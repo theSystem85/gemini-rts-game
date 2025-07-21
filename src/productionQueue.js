@@ -165,7 +165,7 @@ export const productionQueue = {
 
     // Mark button as active
     item.button.classList.add('active')
-    playSound('productionStart', 1.0, 0, true)
+    playSound('constructionStarted', 1.0, 0, true)
 
     // Show notification about production speed if multiple factories exist
     if (vehicleUnitTypes.includes(item.type) && vehicleMultiplier > 1) {
@@ -279,7 +279,7 @@ export const productionQueue = {
 
     // Mark button as active
     item.button.classList.add('active')
-    playSound('productionStart', 1.0, 0, true)
+    playSound('constructionStarted', 1.0, 0, true)
 
     // Show notification about construction speed if we have construction yards
     if (constructionMultiplier > 1) {
@@ -530,10 +530,10 @@ export const productionQueue = {
     this.pausedUnit = !this.pausedUnit
     if (this.pausedUnit) {
       this.currentUnit.button.classList.add('paused')
-      playSound('productionPaused', 1.0, 0, true)
+      playSound('constructionPaused', 1.0, 0, true)
     } else {
       this.currentUnit.button.classList.remove('paused')
-      playSound('productionStart', 1.0, 0, true)
+      playSound('constructionStarted', 1.0, 0, true)
     }
   },
 
@@ -543,10 +543,10 @@ export const productionQueue = {
     this.pausedBuilding = !this.pausedBuilding
     if (this.pausedBuilding) {
       this.currentBuilding.button.classList.add('paused')
-      playSound('productionPaused', 1.0, 0, true)
+      playSound('constructionPaused', 1.0, 0, true)
     } else {
       this.currentBuilding.button.classList.remove('paused')
-      playSound('productionStart', 1.0, 0, true)
+      playSound('constructionStarted', 1.0, 0, true)
     }
   },
 
@@ -557,7 +557,7 @@ export const productionQueue = {
     const type = this.currentUnit.type
 
     // Play cancel sound before cancelling
-    playSound('productionCancelled', 1.0, 0, true)
+    playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
     gameState.money += this.unitPaid || 0
@@ -594,7 +594,7 @@ export const productionQueue = {
     const type = this.currentBuilding.type
 
     // Play cancel sound before cancelling
-    playSound('productionCancelled', 1.0, 0, true)
+    playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
     gameState.money += this.buildingPaid || 0
@@ -639,7 +639,7 @@ export const productionQueue = {
     const type = completedBuilding.type
 
     // Play cancel sound
-    playSound('productionCancelled', 1.0, 0, true)
+    playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the building
     gameState.money += buildingCosts[type] || 0
@@ -760,7 +760,7 @@ export const productionQueue = {
     const completedBuilding = this.completedBuildings[completedBuildingIndex]
 
     // Play cancel sound
-    playSound('productionCancelled', 1.0, 0, true)
+    playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the building
     gameState.money += buildingCosts[buildingType] || 0

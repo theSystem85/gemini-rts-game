@@ -177,12 +177,12 @@ function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
             // Play loading sound immediately
-            playSound('teslacoil_loading')
+            playPositionalSound('teslacoil_loading', centerX, centerY, 1.0)
             
             // Schedule the firing sequence
             setTimeout(() => {
               // Play firing sound first
-              playSound('teslacoil_firing')
+              playPositionalSound('teslacoil_firing', centerX, centerY, 1.0)
               
               // Apply effects after a short delay to sync with bolt sound
               setTimeout(() => {

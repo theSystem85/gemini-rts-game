@@ -850,7 +850,7 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
       } else {
         repairInfo.paused = true
         repairInfo.startTime = currentTime - progress * repairInfo.duration
-        playSound('construction_paused', 1.0, 0, true)
+        playSound('repairPaused', 1.0, 0, true)
         showNotification('Repair paused: not enough money.')
         continue
       }
@@ -859,7 +859,7 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
     if (progress >= 1.0) {
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
-      playSound('constructionComplete', 1.0, 0, true)
+      playSound('repairFinished', 1.0, 0, true)
     } else {
       const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress)
       repairInfo.building.health = newHealth
@@ -933,7 +933,7 @@ function actuallyPauseRepair(building, gameState, currentTime) {
           factoryCost: isFactory ? 5000 : undefined
         })
         
-        playSound('construction_paused', 1.0, 0, true)
+        playSound('repairPaused', 1.0, 0, true)
         showNotification('Repair paused due to attack!')
       }
     }
@@ -997,7 +997,7 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
           })
 
           showNotification(`Factory repair started for $${awaitingRepair.repairCost}`)
-          playSound('construction_started', 1.0, 0, true)
+          playSound('repairStarted', 1.0, 0, true)
         } else {
           // Start building repair manually (don't use repairBuilding as it starts immediately)
           if (!gameState.buildingsUnderRepair) {
@@ -1022,7 +1022,7 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
           })
 
           showNotification(`Building repair started for $${awaitingRepair.repairCost}`)
-          playSound('construction_started', 1.0, 0, true)
+          playSound('repairStarted', 1.0, 0, true)
         }
       }
       

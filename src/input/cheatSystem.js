@@ -345,7 +345,6 @@ export class CheatSystem {
     })
 
     showNotification('🛡️ God mode ENABLED - All player units are now invincible!', 4000)
-    playSound('constructionComplete', 0.7, 0, true)
   }
 
   disableGodMode() {
@@ -370,7 +369,6 @@ export class CheatSystem {
     this.originalHealthValues.clear()
     this.godModeUnits.clear()
     showNotification('🛡️ God mode DISABLED - Units are now vulnerable', 4000)
-    playSound('construction_cancelled', 0.7)
   }
 
   addMoney(amount) {
