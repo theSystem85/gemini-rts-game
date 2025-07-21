@@ -84,11 +84,6 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           return
         }
 
-        // Check if player has enough money
-        if (gameState.money < repairCost) {
-          showNotification(`Not enough money for repairs. Cost: $${repairCost}`)
-          return
-        }
 
         // Always use awaiting repair system, even if not under attack
         // This ensures consistent behavior and allows for immediate start if no cooldown

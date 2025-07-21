@@ -774,11 +774,6 @@ export function repairBuilding(building, gameState) {
   // Calculate repair cost
   const repairCost = calculateRepairCost(building)
 
-  // Check if player has enough money
-  if (gameState.money < repairCost) {
-    return { success: false, message: 'Not enough money for repairs' }
-  }
-
   // Setup gradual repair
   if (!gameState.buildingsUnderRepair) {
     gameState.buildingsUnderRepair = []
@@ -832,23 +827,40 @@ export function updateBuildingsUnderRepair(gameState, currentTime) {
 
   for (let i = gameState.buildingsUnderRepair.length - 1; i >= 0; i--) {
     const repairInfo = gameState.buildingsUnderRepair[i]
-    const progress = (currentTime - repairInfo.startTime) / repairInfo.duration
+    let progress = (currentTime - repairInfo.startTime) / repairInfo.duration
 
-    // Gradually deduct repair cost based on progress
+    if (repairInfo.paused) {
+      if (gameState.money > 0) {
+        repairInfo.startTime = currentTime - progress * repairInfo.duration
+        repairInfo.paused = false
+      } else {
+        repairInfo.startTime = currentTime - progress * repairInfo.duration
+        continue
+      }
+    }
+
+    progress = (currentTime - repairInfo.startTime) / repairInfo.duration
+
     const expectedPaid = Math.min(progress, 1) * repairInfo.cost
     const deltaCost = expectedPaid - repairInfo.costPaid
     if (deltaCost > 0) {
-      gameState.money -= deltaCost
-      repairInfo.costPaid += deltaCost
+      if (gameState.money >= deltaCost) {
+        gameState.money -= deltaCost
+        repairInfo.costPaid += deltaCost
+      } else {
+        repairInfo.paused = true
+        repairInfo.startTime = currentTime - progress * repairInfo.duration
+        playSound('construction_paused', 1.0, 0, true)
+        showNotification('Repair paused: not enough money.')
+        continue
+      }
     }
 
     if (progress >= 1.0) {
-      // Repair is complete
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
       playSound('constructionComplete', 1.0, 0, true)
     } else {
-      // Repair in progress - update health proportionally
       const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress)
       repairInfo.building.health = newHealth
     }
@@ -961,8 +973,8 @@ export function updateBuildingsAwaitingRepair(gameState, currentTime) {
       // Cooldown complete - start the repair automatically
       const building = awaitingRepair.building
       
-      // Check if building is still damaged and player has money
-      if (building.health < building.maxHealth && gameState.money >= awaitingRepair.repairCost) {
+      // Check if building is still damaged
+      if (building.health < building.maxHealth) {
         if (awaitingRepair.isFactory) {
           // Start factory repair
           if (!gameState.buildingsUnderRepair) {
