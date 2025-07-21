@@ -8,6 +8,7 @@ import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
+import { logPerformance } from '../performanceUtils.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -18,7 +19,7 @@ import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turret
  * @param {Array} mapGrid - 2D array representing the map
  * @param {number} delta - Time delta
  */
-export function updateBuildings(gameState, units, bullets, factories, mapGrid, delta) {
+export const updateBuildings = logPerformance(function _updateBuildings(gameState, units, bullets, factories, mapGrid, delta) {
   const now = performance.now()
 
   if (gameState.buildings && gameState.buildings.length > 0) {
@@ -80,7 +81,7 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
   if (gameState.buildings && gameState.buildings.length > 0) {
     updateDefensiveBuildings(gameState.buildings, units, bullets, delta, gameState)
   }
-}
+}, false)
 
 /**
  * Updates defensive buildings like turrets and Tesla coils
@@ -90,7 +91,7 @@ export function updateBuildings(gameState, units, bullets, factories, mapGrid, d
  * @param {number} delta - Time delta
  * @param {Object} gameState - Game state object
  */
-function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
+const updateDefensiveBuildings = logPerformance(function _updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now()
 
   // Debug: Count Tesla coils
@@ -506,4 +507,4 @@ export function updateTeslaCoilEffects(units) {
       unit.teslaSlowed = false
     }
   }
-}
+}, false)

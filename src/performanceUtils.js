@@ -31,3 +31,12 @@ export function logPerformance(functionToWrap, printEachCall = false) {
     return result;
   };
 }
+
+export function resetPerformanceStatistics() {
+  const stats = window.performanceStatistics || {};
+  Object.keys(stats).forEach(key => {
+    stats[key].durationMax = 0;
+    stats[key].durationAvg = 0;
+    stats[key].callCount = 0;
+  });
+}

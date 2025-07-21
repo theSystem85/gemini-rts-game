@@ -3,6 +3,7 @@ import { findPath } from '../units.js'
 import { updateUnitSpeedModifier, getUnitCost } from '../utils.js'
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
+import { logPerformance } from '../performanceUtils.js'
 
 function initWorkshop(workshop) {
   if (!workshop.repairSlots) {
@@ -69,7 +70,7 @@ function assignUnitsToSlots(workshop, mapGrid) {
   }
 }
 
-export function updateWorkshopLogic(units, buildings, mapGrid, delta) {
+export const updateWorkshopLogic = logPerformance(function _updateWorkshopLogic(units, buildings, mapGrid, delta) {
   const workshops = buildings.filter(b => b.type === 'vehicleWorkshop')
   const now = performance.now()
   workshops.forEach(workshop => {
@@ -172,4 +173,4 @@ export function updateWorkshopLogic(units, buildings, mapGrid, delta) {
       }
     })
   })
-}
+}, false)

@@ -7,6 +7,7 @@ import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { logPerformance } from '../performanceUtils.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -580,7 +581,7 @@ export function cleanupAttackGroupTargets() {
 /**
  * Updates unit combat behavior including targeting and shooting
  */
-export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
+export const updateUnitCombat = logPerformance(function _updateUnitCombat(units, bullets, mapGrid, gameState, now) {
   const occupancyMap = gameState.occupancyMap
   
   let combatUnitsCount = 0
@@ -614,7 +615,7 @@ export function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
-}
+}, false)
 
 /**
  * Updates standard tank combat

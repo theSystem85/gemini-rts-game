@@ -2,6 +2,7 @@
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
+import { logPerformance } from './performanceUtils.js'
 import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y } from './config.js'
 
 // Building dimensions and costs
@@ -195,7 +196,7 @@ export const buildingData = {
     health: 200,
     smokeSpots: []
   }
-}
+}, false)
 
 export function createBuilding(type, x, y) {
   if (!buildingData[type]) return null
@@ -822,7 +823,7 @@ export function pauseActiveRepair(building) {
 }
 
 // Update buildings that are currently under repair
-export function updateBuildingsUnderRepair(gameState, currentTime) {
+export const updateBuildingsUnderRepair = logPerformance(function _updateBuildingsUnderRepair(gameState, currentTime) {
   if (!gameState.buildingsUnderRepair || gameState.buildingsUnderRepair.length === 0) {
     return
   }
@@ -929,7 +930,7 @@ function actuallyPauseRepair(building, gameState, currentTime) {
 }
 
 // Update buildings that are awaiting repair (under attack cooldown)
-export function updateBuildingsAwaitingRepair(gameState, currentTime) {
+export const updateBuildingsAwaitingRepair = logPerformance(function _updateBuildingsAwaitingRepair(gameState, currentTime) {
   if (!gameState.buildingsAwaitingRepair || gameState.buildingsAwaitingRepair.length === 0) {
     return
   }

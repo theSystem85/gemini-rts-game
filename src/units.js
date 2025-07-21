@@ -8,6 +8,7 @@ import {
   MAX_SPAWN_SEARCH_DISTANCE,
   STREET_PATH_COST
 } from './config.js'
+import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { gameState } from './gameState.js'
@@ -106,7 +107,7 @@ export function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
     occupancyMap[currentTileY][currentTileX] =
       (occupancyMap[currentTileY][currentTileX] || 0) + 1
   }
-}
+}, false)
 
 export function removeUnitOccupancy(unit, occupancyMap) {
   if (!occupancyMap) return
@@ -218,7 +219,7 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
-export function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
+export const findPath = logPerformance(function _findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
   // Validate input coordinates
   if (!start || !end || 
       typeof start.x !== 'number' || typeof start.y !== 'number' ||
