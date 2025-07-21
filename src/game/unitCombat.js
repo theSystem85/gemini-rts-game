@@ -581,7 +581,7 @@ export function cleanupAttackGroupTargets() {
 /**
  * Updates unit combat behavior including targeting and shooting
  */
-export const updateUnitCombat = logPerformance(function _updateUnitCombat(units, bullets, mapGrid, gameState, now) {
+export const updateUnitCombat = logPerformance(function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
   const occupancyMap = gameState.occupancyMap
   
   let combatUnitsCount = 0

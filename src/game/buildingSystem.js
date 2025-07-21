@@ -19,7 +19,7 @@ import { logPerformance } from '../performanceUtils.js'
  * @param {Array} mapGrid - 2D array representing the map
  * @param {number} delta - Time delta
  */
-export const updateBuildings = logPerformance(function _updateBuildings(gameState, units, bullets, factories, mapGrid, delta) {
+export const updateBuildings = logPerformance(function updateBuildings(gameState, units, bullets, factories, mapGrid, delta) {
   const now = performance.now()
 
   if (gameState.buildings && gameState.buildings.length > 0) {
@@ -115,7 +115,7 @@ export const updateBuildings = logPerformance(function _updateBuildings(gameStat
  * @param {number} delta - Time delta
  * @param {Object} gameState - Game state object
  */
-const updateDefensiveBuildings = logPerformance(function _updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
+const updateDefensiveBuildings = logPerformance(function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now()
 
   // Debug: Count Tesla coils
@@ -334,7 +334,7 @@ const updateDefensiveBuildings = logPerformance(function _updateDefensiveBuildin
       }
     }
   })
-}
+})
 
 /**
  * Helper function to fire a projectile from a turret
@@ -531,4 +531,4 @@ export function updateTeslaCoilEffects(units) {
       unit.teslaSlowed = false
     }
   }
-}, false)
+}

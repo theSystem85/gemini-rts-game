@@ -39,7 +39,7 @@ import {
 import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
 
-export const updateGame = logPerformance(function _updateGame(delta, mapGrid, factories, units, bullets, gameState) {
+export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
     if (gameState.gamePaused) return
     const now = performance.now()

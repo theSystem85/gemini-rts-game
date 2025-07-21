@@ -70,7 +70,7 @@ function assignUnitsToSlots(workshop, mapGrid) {
   }
 }
 
-export const updateWorkshopLogic = logPerformance(function _updateWorkshopLogic(units, buildings, mapGrid, delta) {
+export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(units, buildings, mapGrid, delta) {
   const workshops = buildings.filter(b => b.type === 'vehicleWorkshop')
   const now = performance.now()
   workshops.forEach(workshop => {

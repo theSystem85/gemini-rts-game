@@ -705,7 +705,7 @@ html, body {
   top: 60px;
   right: 10px;
   width: 260px;
-  max-height: 300px;
+  max-height: 95vh;
   overflow-y: auto;
   background: #333;
   color: #fff;

@@ -3,7 +3,6 @@ import { spawnEnemyUnit } from './enemySpawner.js'
 import { resetAttackDirections } from './enemyStrategies.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
-import { gameState } from '../gameState.js'
 import { logPerformance } from '../performanceUtils.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
@@ -83,7 +82,7 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   return null
 }
 
-const updateAIPlayer = logPerformance(function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
+const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
   const aiFactory = factories.find(
     f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0
   )

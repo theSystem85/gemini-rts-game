@@ -58,11 +58,15 @@ class PerformanceDialog {
     } else {
       entries.sort((a, b) => a[0].localeCompare(b[0]))
     }
-    this.contentEl.innerHTML = ''
+    this.contentEl.innerHTML = '<h3>avg (ms) / max (ms) / calls</h3>'
     entries.forEach(([name, data]) => {
-      const div = document.createElement('div')
-      div.textContent = `${name}: avg ${data.durationAvg.toFixed(2)}ms max ${data.durationMax.toFixed(2)}ms calls ${data.callCount}`
-      this.contentEl.appendChild(div)
+      const div1 = document.createElement('div')
+      div1.textContent = name
+      this.contentEl.appendChild(div1)
+
+      const div2 = document.createElement('div')
+      div2.textContent = `${data.durationAvg.toFixed(2)} / ${data.durationMax.toFixed(2)} / ${data.callCount}`
+      this.contentEl.appendChild(div2)
     })
   }
 }

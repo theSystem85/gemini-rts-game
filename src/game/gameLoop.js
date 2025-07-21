@@ -166,7 +166,7 @@ export class GameLoop {
     } else {
       this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
     }
-  }, false)
+  }, false, 'animate')
 
   // Legacy game loop for compatibility (if needed)
   legacyGameLoop(timestamp) {

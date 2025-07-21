@@ -3,7 +3,7 @@ import { updateAIPlayer } from './ai/enemyAIPlayer.js'
 import { logPerformance } from './performanceUtils.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
 
-export const updateEnemyAI = logPerformance(function _updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
+export const updateEnemyAI = logPerformance(function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const occupancyMap = gameState.occupancyMap
   const now = performance.now()
   const humanPlayer = gameState.humanPlayer || 'player1'

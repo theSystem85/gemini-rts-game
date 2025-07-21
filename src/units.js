@@ -78,7 +78,7 @@ export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) 
   return null
 }
 
-export function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
+export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
   if (!occupancyMap) return
   
   // Remove occupancy from previous position (using center coordinates)
@@ -219,7 +219,7 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
-export const findPath = logPerformance(function _findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
+export const findPath = logPerformance(function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
   // Validate input coordinates
   if (!start || !end || 
       typeof start.x !== 'number' || typeof start.y !== 'number' ||
@@ -407,7 +407,7 @@ export const findPath = logPerformance(function _findPath(start, end, mapGrid, o
   }
 
   return smoothPath(chosenPath, mapGrid, occupancyMap)
-}
+})
 
 function getNeighbors(node, mapGrid) {
   const neighbors = []

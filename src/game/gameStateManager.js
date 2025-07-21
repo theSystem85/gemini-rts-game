@@ -28,7 +28,7 @@ export function updateMapScrolling(gameState, mapGrid) {
  * @param {Array} mapGrid - 2D array representing the map
  * @param {Array} factories - Array of factory objects
  */
-export const updateOreSpread = logPerformance(function _updateOreSpread(gameState, mapGrid, factories = []) {
+export const updateOreSpread = logPerformance(function updateOreSpread(gameState, mapGrid, factories = []) {
   const now = performance.now()
 
   if (!ORE_SPREAD_ENABLED) {
@@ -229,7 +229,7 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
  * @param {Array} units - Array of unit objects
  * @param {Array} mapGrid - 2D array representing the map
  */
-export const updateUnitCollisions = logPerformance(function _updateUnitCollisions(units, mapGrid) {
+export const updateUnitCollisions = logPerformance(function updateUnitCollisions(units, mapGrid) {
   resolveUnitCollisions(units, mapGrid)
 }, false)
 

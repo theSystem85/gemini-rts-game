@@ -22,7 +22,7 @@ import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
  * @param {Object} gameState - Game state object
  * @param {Array} mapGrid - 2D array representing the map
  */
-export const updateBullets = logPerformance(function _updateBullets(bullets, units, factories, gameState, mapGrid) {
+export const updateBullets = logPerformance(function updateBullets(bullets, units, factories, gameState, mapGrid) {
   const now = performance.now()
 
   // Update bullet speeds based on game speed multiplier

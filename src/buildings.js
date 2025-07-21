@@ -196,7 +196,7 @@ export const buildingData = {
     health: 200,
     smokeSpots: []
   }
-}, false)
+}
 
 export function createBuilding(type, x, y) {
   if (!buildingData[type]) return null
@@ -818,7 +818,7 @@ export function pauseActiveRepair(building) {
 }
 
 // Update buildings that are currently under repair
-export const updateBuildingsUnderRepair = logPerformance(function _updateBuildingsUnderRepair(gameState, currentTime) {
+export const updateBuildingsUnderRepair = logPerformance(function updateBuildingsUnderRepair(gameState, currentTime) {
   if (!gameState.buildingsUnderRepair || gameState.buildingsUnderRepair.length === 0) {
     return
   }
@@ -866,7 +866,7 @@ export const updateBuildingsUnderRepair = logPerformance(function _updateBuildin
       repairInfo.building.health = newHealth
     }
   }
-}
+})
 
 // Process buildings marked for repair pause (safe deferred processing)
 function processPendingRepairPauses(gameState, currentTime) {
@@ -942,7 +942,7 @@ function actuallyPauseRepair(building, gameState, currentTime) {
 }
 
 // Update buildings that are awaiting repair (under attack cooldown)
-export const updateBuildingsAwaitingRepair = logPerformance(function _updateBuildingsAwaitingRepair(gameState, currentTime) {
+export const updateBuildingsAwaitingRepair = logPerformance(function updateBuildingsAwaitingRepair(gameState, currentTime) {
   if (!gameState.buildingsAwaitingRepair || gameState.buildingsAwaitingRepair.length === 0) {
     return
   }
@@ -1031,4 +1031,4 @@ export const updateBuildingsAwaitingRepair = logPerformance(function _updateBuil
       gameState.buildingsAwaitingRepair.splice(i, 1)
     }
   }
-}
+})
