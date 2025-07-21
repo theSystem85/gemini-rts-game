@@ -10,6 +10,7 @@ class PerformanceDialog {
         <div class="perf-controls">
           <button id="perfSortName">Name</button>
           <button id="perfSortDuration">Avg</button>
+          <button id="perfReset">Reset</button>
         </div>
         <div id="perfContent"></div>
       `
@@ -21,6 +22,9 @@ class PerformanceDialog {
       document.getElementById('perfSortDuration').addEventListener('click', () => {
         this.sortMode = 'duration'
         this.render()
+      })
+      document.getElementById('perfReset').addEventListener('click', () => {
+        this.resetStatistics()
       })
     }
   }
@@ -47,6 +51,13 @@ class PerformanceDialog {
       clearInterval(this.intervalId)
       this.intervalId = null
     }
+  }
+
+  resetStatistics() {
+    // Clear all performance statistics
+    window.performanceStatistics = {}
+    // Immediately update the display
+    this.render()
   }
 
   render() {
