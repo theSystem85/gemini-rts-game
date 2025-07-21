@@ -3,6 +3,7 @@ import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, HARVESTER_PRODUC
 import { findPath, buildOccupancyMap } from '../units.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
+import { logPerformance } from '../performanceUtils.js'
 import { 
   findClosestOre, 
   findAdjacentTile, 
@@ -20,7 +21,7 @@ const refineryQueues = {}
 /**
  * Updates all harvester logic including mining, unloading, and pathfinding
  */
-export function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now) {
+export const updateHarvesterLogic = logPerformance(function _updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now) {
   // now parameter is passed from the main game loop
   
   // Initialize refinery status if not exists
@@ -468,7 +469,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
       }
     }
   }
-}
+}, false)
 
 /**
  * Completes the unloading process at a refinery

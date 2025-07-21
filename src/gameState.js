@@ -71,6 +71,9 @@ export const gameState = {
   // Occupancy map visibility toggle
   occupancyVisible: false,
 
+  // Performance dialog visibility toggle
+  performanceVisible: false,
+
   // FPS display toggle and tracking
   fpsVisible: false,
   fpsCounter: {

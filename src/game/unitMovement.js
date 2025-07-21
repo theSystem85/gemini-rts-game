@@ -7,11 +7,12 @@ import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
 import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
+import { logPerformance } from '../performanceUtils.js'
 
 /**
  * Updates unit movement, pathfinding, and formation handling
  */
-export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories = null) {
+export const updateUnitMovement = logPerformance(function _updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories = null) {
   // Clean up unit selection - prevent null references
   cleanupDestroyedSelectedUnits()
 
@@ -147,7 +148,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
       }
     }
   }
-}
+}, false)
 
 /**
  * Updates unit pathfinding based on movement targets

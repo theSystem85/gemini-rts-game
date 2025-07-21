@@ -9,6 +9,7 @@ import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { toggleUnitLogging } from '../utils/logger.js'
 import { cancelUnitMovement } from '../game/unifiedMovement.js'
 import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
+import { performanceDialog } from '../ui/performanceDialog.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -147,6 +148,11 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'l') {
         e.preventDefault()
         this.handleLoggingToggle(selectedUnits)
+      }
+      // M key to toggle performance dialog
+      else if (e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        this.handlePerformanceToggle()
       }
     })
 
@@ -655,6 +661,13 @@ export class KeyboardHandler {
     this.showNotification(`FPS display: ${status}`, 2000)
     
     // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handlePerformanceToggle() {
+    performanceDialog.toggle()
+    const status = gameState.performanceVisible ? 'ON' : 'OFF'
+    this.showNotification(`Performance stats: ${status}`, 2000)
     playSound('confirmed', 0.5)
   }
 

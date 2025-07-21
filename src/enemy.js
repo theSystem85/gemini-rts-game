@@ -1,8 +1,9 @@
 // enemy orchestrator
 import { updateAIPlayer } from './ai/enemyAIPlayer.js'
+import { logPerformance } from './performanceUtils.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
 
-export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
+export const updateEnemyAI = logPerformance(function _updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   const occupancyMap = gameState.occupancyMap
   const now = performance.now()
   const humanPlayer = gameState.humanPlayer || 'player1'
@@ -14,4 +15,4 @@ export function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
   aiPlayers.forEach(aiPlayerId => {
     updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles)
   })
-}
+}, false)
