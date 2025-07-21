@@ -108,6 +108,9 @@ export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longe
 export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
 export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
 
+// Duration of the building sell animation (in milliseconds)
+export const BUILDING_SELL_DURATION = 3000
+
 // Wind effects for smoke particles
 export const WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
 export const WIND_STRENGTH = 0.008 // How much wind affects particle movement

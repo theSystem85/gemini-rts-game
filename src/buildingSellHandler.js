@@ -3,8 +3,7 @@ import { playSound } from './sound.js'
 import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
-import { updatePowerSupply, clearBuildingFromMapGrid } from './buildings.js'
-import { checkGameEndConditions } from './game/gameStateManager.js'
+// No need to modify map grid immediately; building removal occurs after the sell animation
 
 /**
  * Handles the selling of buildings
@@ -51,26 +50,19 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       }
       moneyEl.textContent = gameState.money
 
-      // Remove building from the map grid: restore original tiles and clear building flag
-      clearBuildingFromMapGrid(building, mapGrid)
-
-      // Remove the building from the gameState.buildings array
-      gameState.buildings.splice(i, 1)
-
-      // Update power supply using the proper function that allows negative power
-      updatePowerSupply(gameState.buildings, gameState)
+      // Mark the building as being sold
+      building.isBeingSold = true
+      building.sellStartTime = performance.now()
 
       // Play selling sound and show notification
       playSound('deposit')
       showNotification(`Building sold for $${sellValue}.`)
 
-      // Check for game end conditions after a building is sold
-      checkGameEndConditions(factories, gameState)
-
-      return
+      // Selling initiated successfully
+      return true
     }
   }
 
   showNotification('No player building found to sell.')
-  return
+  return false
 }

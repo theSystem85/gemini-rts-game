@@ -1,5 +1,5 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS, WIND_DIRECTION } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS, WIND_DIRECTION, BUILDING_SELL_DURATION } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
@@ -58,6 +58,14 @@ export class BuildingRenderer {
     
     if (img) {
       const now = performance.now()
+
+      if (building.isBeingSold) {
+        const progress = Math.min((now - building.sellStartTime) / BUILDING_SELL_DURATION, 1)
+        const heightProgress = 1 - progress
+        this.drawBuildingUnderConstruction(ctx, img, screenX, screenY, width, height, heightProgress, 1)
+        return
+      }
+
       const elapsed = now - (building.constructionStartTime || 0)
 
       if (!building.constructionFinished) {
@@ -127,6 +135,9 @@ export class BuildingRenderer {
   }
 
   renderBuildingOverlays(ctx, building, scrollOffset) {
+    if (building.isBeingSold) {
+      return
+    }
     const screenX = building.x * TILE_SIZE - scrollOffset.x
     const screenY = building.y * TILE_SIZE - scrollOffset.y
     const width = building.width * TILE_SIZE
