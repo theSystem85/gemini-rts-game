@@ -8,6 +8,7 @@ import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { markBuildingForRepairPause } from '../buildings.js'
+import { logPerformance } from '../performanceUtils.js'
 import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
@@ -21,7 +22,7 @@ import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
  * @param {Object} gameState - Game state object
  * @param {Array} mapGrid - 2D array representing the map
  */
-export function updateBullets(bullets, units, factories, gameState, mapGrid) {
+export const updateBullets = logPerformance(function updateBullets(bullets, units, factories, gameState, mapGrid) {
   const now = performance.now()
 
   // Update bullet speeds based on game speed multiplier
@@ -364,7 +365,7 @@ export function updateBullets(bullets, units, factories, gameState, mapGrid) {
     }
     }
   }
-}
+}, false)
 
 /**
  * Creates and fires a bullet from a unit

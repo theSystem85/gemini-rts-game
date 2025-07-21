@@ -4,6 +4,7 @@ import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
+import { logPerformance } from '../performanceUtils.js'
 
 /**
  * Updates map scrolling with inertia
@@ -27,7 +28,7 @@ export function updateMapScrolling(gameState, mapGrid) {
  * @param {Array} mapGrid - 2D array representing the map
  * @param {Array} factories - Array of factory objects
  */
-export function updateOreSpread(gameState, mapGrid, factories = []) {
+export const updateOreSpread = logPerformance(function updateOreSpread(gameState, mapGrid, factories = []) {
   const now = performance.now()
 
   if (!ORE_SPREAD_ENABLED) {
@@ -74,7 +75,7 @@ export function updateOreSpread(gameState, mapGrid, factories = []) {
     }
     gameState.lastOreUpdate = now
   }
-}
+}, false)
 
 /**
  * Updates explosion effects
@@ -228,9 +229,9 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
  * @param {Array} units - Array of unit objects
  * @param {Array} mapGrid - 2D array representing the map
  */
-export function updateUnitCollisions(units, mapGrid) {
+export const updateUnitCollisions = logPerformance(function updateUnitCollisions(units, mapGrid) {
   resolveUnitCollisions(units, mapGrid)
-}
+}, false)
 
 /**
  * Gets the defeat sound for a specific player based on their color

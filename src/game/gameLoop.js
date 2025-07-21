@@ -8,6 +8,7 @@ import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from '../bu
 import { updateEnergyBar } from '../ui/energyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
+import { logPerformance } from '../performanceUtils.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -55,7 +56,7 @@ export class GameLoop {
     }
   }
 
-  animate(timestamp) {
+  animate = logPerformance((timestamp) => {
     // Stop if the loop has been stopped
     if (!this.running) {
       return
@@ -165,7 +166,7 @@ export class GameLoop {
     } else {
       this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
     }
-  }
+  }, false, 'animate')
 
   // Legacy game loop for compatibility (if needed)
   legacyGameLoop(timestamp) {

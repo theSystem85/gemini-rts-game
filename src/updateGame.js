@@ -7,6 +7,8 @@ import {
 import { emitSmokeParticles } from './utils/smokeUtils.js'
 import { getBuildingImage } from './buildingImageMap.js'
 
+import { logPerformance } from './performanceUtils.js'
+
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits, getUnitCommandsHandler } from './inputHandler.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
@@ -37,7 +39,7 @@ import {
 import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
 
-export function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
+export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
     if (gameState.gamePaused) return
     const now = performance.now()
@@ -223,7 +225,7 @@ export function updateGame(delta, mapGrid, factories, units, bullets, gameState)
     console.trace() // Add stack trace to see exactly where the error occurs
     // Don't allow the game to completely crash
   }
-}
+}, false)
 
 // Re-export Tesla Coil effects for backward compatibility
 export { updateTeslaCoilEffects }

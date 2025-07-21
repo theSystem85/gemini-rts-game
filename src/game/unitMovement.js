@@ -1,17 +1,18 @@
 // unitMovement.js - Handles all unit movement logic
 import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
 import { gameState } from '../gameState.js'
-import { findPath, updateUnitOccupancy, removeUnitOccupancy } from '../units.js'
+import { findPath, removeUnitOccupancy } from '../units.js'
 import { getCachedPath } from './pathfinding.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
-import { updateUnitPosition, initializeUnitMovement, stopUnitMovement } from './unifiedMovement.js'
+import { updateUnitPosition, initializeUnitMovement } from './unifiedMovement.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
+import { logPerformance } from '../performanceUtils.js'
 
 /**
  * Updates unit movement, pathfinding, and formation handling
  */
-export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories = null) {
+export const updateUnitMovement = logPerformance(function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories = null) {
   // Clean up unit selection - prevent null references
   cleanupDestroyedSelectedUnits()
 
@@ -147,7 +148,7 @@ export function updateUnitMovement(units, mapGrid, occupancyMap, gameState, now,
       }
     }
   }
-}
+}, false)
 
 /**
  * Updates unit pathfinding based on movement targets
