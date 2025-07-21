@@ -42,7 +42,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           gameState.money += refund
           gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existing)
           showNotification('Building repair cancelled')
-          playSound('constructionCancelled', 1.0, 0, true)
+          playSound('repairCancelled', 1.0, 0, true)
           moneyEl.textContent = gameState.money
           return
         }
@@ -84,11 +84,6 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           return
         }
 
-        // Check if player has enough money
-        if (gameState.money < repairCost) {
-          showNotification(`Not enough money for repairs. Cost: $${repairCost}`)
-          return
-        }
 
         // Always use awaiting repair system, even if not under attack
         // This ensures consistent behavior and allows for immediate start if no cooldown
@@ -196,7 +191,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         savePlayerBuildPatterns(buildingType)
       } else {
         // Play error sound for invalid placement
-        playSound('construction_obstructed', 1.0, 0, true)
+        playSound('constructionObstructed', 1.0, 0, true)
       }
     } catch (error) {
       console.error('Error during building placement:', error)

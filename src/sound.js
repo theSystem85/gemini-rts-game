@@ -47,7 +47,6 @@ const soundFiles = {
   tankShot03: ['tankShot03.mp3'], // Specific sound for turretGunV3
   tankMove: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'],
   confirmed: ['confirmed.mp3'], // Direct mapping for confirmed sound
-  constructionComplete: ['constructionComplete.mp3'],
   unitReady: ['unitReady01.mp3', 'unitReady02.mp3', 'unitReady03.mp3'],
   unitReady01: ['unitReady01.mp3'],
   unitReady02: ['unitReady02.mp3'], 
@@ -57,9 +56,15 @@ const soundFiles = {
   deposit: ['deposit.mp3'],
   unitSelection: ['yesSir01.mp3'],
   patriotMissile: ['patriotMissile01.mp3', 'patriotMissile02.mp3'],
+  repairStarted: ['repairStarted.mp3', 'repairing.mp3'],
+  repairFinished: ['repairFinished.mp3'],
+  repairPaused: ['repairPaused.mp3'],
+  repairCancelled: ['repairCancelled.mp3'],
   constructionStarted: ['construction_started.mp3', 'building.mp3'],
+  constructionComplete: ['constructionComplete.mp3'],
   constructionPaused: ['construction_paused.mp3'],
   constructionCancelled: ['construction_cancelled.mp3'],
+  constructionObstructed: ['construction_obstructed.mp3'], // alias for constructionObstructed
   building: ['building.mp3'],
   buildingPlaced: ['buildingPlaced.mp3'],
   harvest: ['harvest.mp3'],
@@ -92,10 +97,6 @@ const soundFiles = {
   shoot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'], // alias for tankShot
   shoot_rocket: ['patriotMissile01.mp3', 'patriotMissile02.mp3'], // alias for patriotMissile
   shoot_heavy: ['tankShot03.mp3'], // alias for tankShot03
-  productionStart: ['construction_started.mp3', 'building.mp3'], // alias for constructionStarted
-  productionPaused: ['construction_paused.mp3'], // alias for constructionPaused
-  productionCancelled: ['construction_cancelled.mp3'], // alias for constructionCancelled
-  construction_obstructed: ['construction_obstructed.mp3'], // alias for constructionObstructed
   
   // Direct file access (for legacy compatibility)
   yesSir01: ['yesSir01.mp3'],
@@ -359,6 +360,8 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, op
       if (onEnded) onEnded()
     })
     return
+  } else {
+    console.warn(`No sound files found for event: ${eventName}`)
   }
 
   // Fallback beep sound.
@@ -433,7 +436,7 @@ export function playPositionalSound(eventName, x, y, volume = 1.0, throttleSecon
 // Test function for narrated sound stacking (can be called from browser console)
 export function testNarratedSounds() {
   console.log('Testing narrated sound stacking...')
-  playSound('construction_started', 1.0, 0, true)
+  playSound('constructionStarted', 1.0, 0, true)
   playSound('constructionComplete', 1.0, 0, true)
   playSound('unitReady01', 1.0, 0, true)
   console.log('Queued 3 narrated sounds. They should play one after another.')
