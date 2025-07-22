@@ -216,7 +216,7 @@ export class MilestoneSystem {
     if (!this.achievedMilestones.has("hospitalBuilt")) {
       const hasHospital = gameState.buildings?.some(b => b.type === "hospital" && b.owner === gameState.humanPlayer)
       if (hasHospital) {
-        this.triggerMilestone("hospitalBuilt")
+        // this.triggerMilestone("hospitalBuilt")
         this.unlockAmbulance()
       }
     }

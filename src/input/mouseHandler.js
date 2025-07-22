@@ -544,14 +544,6 @@ export class MouseHandler {
   }
 
   handleAttackGroupMouseUp(worldX, worldY, units, selectedUnits, unitCommands, mapGrid = null) {
-    console.log('AGF Mouse Up - Before clearing:', {
-      mode: gameState.attackGroupMode,
-      start: gameState.attackGroupStart,
-      end: gameState.attackGroupEnd,
-      isSelecting: this.isAttackGroupSelecting,
-      wasDragging: this.attackGroupWasDragging
-    })
-    
     // Immediately stop all selection activity to prevent further updates
     this.isAttackGroupSelecting = false
     this.isSelecting = false
@@ -586,12 +578,6 @@ export class MouseHandler {
     gameState.attackGroupMode = false
     gameState.attackGroupStart = { x: 0, y: 0 }
     gameState.attackGroupEnd = { x: 0, y: 0 }
-    
-    console.log('AGF Mouse Up - After clearing:', {
-      mode: gameState.attackGroupMode,
-      start: gameState.attackGroupStart,
-      end: gameState.attackGroupEnd
-    })
     
     // Reset the rest of the state
     this.resetAttackGroupState()

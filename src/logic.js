@@ -67,7 +67,7 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       
       // Award experience if unit dies from explosion
       if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
-        console.log(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
+        // console.log(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
         awardExperience(shooter, unit)
       }
       
