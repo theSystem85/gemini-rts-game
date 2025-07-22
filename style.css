@@ -306,7 +306,7 @@ html, body {
   border-radius: 50%;
   font-size: 10px;
   font-weight: bold;
-  z-index: 3; /* Ensure counter appears above everything */
+  z-index: 5; /* Ensure counter appears above NEW label */
 }
 
 /* Ready building counter for production buttons */
@@ -488,7 +488,7 @@ html, body {
   align-items: center;
   font-size: 12px;
   font-weight: bold;
-  z-index: 2;
+  z-index: 5;
 }
 
 /* Ready building counter for production buttons */
