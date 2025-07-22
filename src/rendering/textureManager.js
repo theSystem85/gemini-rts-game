@@ -1,5 +1,5 @@
 // rendering/textureManager.js
-import { TILE_SIZE, TILE_IMAGES, GRASS_DECORATIVE_RATIO, GRASS_IMPASSABLE_RATIO, TILE_SPRITE_SHEET, TILE_SPRITE_MAP } from '../config.js'
+import { TILE_SIZE, TILE_IMAGES, TILE_COLORS, GRASS_DECORATIVE_RATIO, GRASS_IMPASSABLE_RATIO, TILE_SPRITE_SHEET, TILE_SPRITE_MAP } from '../config.js'
 import { buildingImageMap } from '../buildingImageMap.js'
 import { getDevicePixelRatio } from './renderingUtils.js'
 import { discoverGrassTiles } from '../utils/grassTileDiscovery.js'
@@ -225,12 +225,55 @@ export class TextureManager {
         // Draw from the intermediate canvas to the final canvas
         baseCtx.drawImage(tempCanvas, 0, 0, TILE_SIZE, TILE_SIZE)
 
+        // Apply edge smoothing for street tiles once during load
+        if (tileType === 'street') {
+          this.smoothStreetEdges(baseCanvas)
+        }
+
         // Add the single texture to the cache (no variations)
         this.tileTextureCache[tileType].push(baseCanvas)
       }
 
       onComplete()
     })
+  }
+
+  // Convert hex color to RGB object
+  hexToRgb(hex) {
+    const sanitized = hex.replace('#', '')
+    const num = parseInt(sanitized, 16)
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255
+    }
+  }
+
+  // Blend edge pixels of a canvas with surrounding land color for smoother appearance
+  smoothStreetEdges(canvas, borderWidth = 2) {
+    const ctx = canvas.getContext('2d')
+    const { width, height } = canvas
+    const imgData = ctx.getImageData(0, 0, width, height)
+    const data = imgData.data
+    const land = this.hexToRgb(TILE_COLORS.land)
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let factor = 0
+        if (x < borderWidth) factor = Math.max(factor, 1 - x / borderWidth)
+        if (x >= width - borderWidth) factor = Math.max(factor, (x - (width - borderWidth) + 1) / borderWidth)
+        if (y < borderWidth) factor = Math.max(factor, 1 - y / borderWidth)
+        if (y >= height - borderWidth) factor = Math.max(factor, (y - (height - borderWidth) + 1) / borderWidth)
+        if (factor > 0) {
+          const idx = (y * width + x) * 4
+          data[idx] = data[idx] * (1 - factor) + land.r * factor
+          data[idx + 1] = data[idx + 1] * (1 - factor) + land.g * factor
+          data[idx + 2] = data[idx + 2] * (1 - factor) + land.b * factor
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0)
   }
 
   // Get a consistent tile variation based on position
