@@ -26,6 +26,29 @@
     8.5 the ambulance has a loading bar (like the harvester) that correlates to the amount of loaded people (10 people equals 100%)
     8.6 the restore process starts when the ambulance is assigned to the unit and it is within 1 tile range. It takes 2 seconds for each person to go from the ambulance to the target unit. Make sure to update the loading bar of the ambulance during this process and add the mannequinns to the target unit.
     8.7 The mannequinns are added in this order: driver, commander, loader, gunner
+- [ ] Add a gas station to the game
+  1) add the image asset for the sidebar to the build button ()
+  2) add the image asset for the building on the map ()
+  3) the building has 50hp and consumes 30MW and costs 2000
+  4) when a units is at one of the 3 tiles below the building it can refill its gas.
+  5) It takes 7 seconds for each unit to refill its gas.
+  6) One refill costs 50.
+  7) Ensure that now every unit has a gas indicator that lives in the center of the bottom of the hud and is about 50% the witdth of the HUD. It looks like the harvesters loading bar but in blue.
+  8) When the gas loading bar is at 0% the unit cannot move anymore until it gets refilled by a mobile tanker truck.
+  9) Gas tank sizes and consumption of units (assume 1 tile is about 1000m in width and height => put this tile length for gas consumption into a constant from config.js and reuse it for any further calculation )
+     9.1 tank_v1 gas tank size is 1900l and consumes 450l/100km
+     9.2 tank_v2 and tank_v3 same as tank_v1
+     9.3 rocket_tank gas tank same as tank_v1
+     9.4 harvester gas tank is 2.650l and consumes 30l/100km gas when moving AND 100l per harvested ore tile
+     9.5 ambulance gas tank is 75l and consumes 25l/100km
+- [ ] Add a mobile tanker truck to the game
+  1) add the image asset for the sidebar to the unit build button ()
+  2) add the image asset for the unit on the map ()
+  3) the tanker truck has 20hp and costs 300. It moves twice as fast as a tank_v1.
+  4) when the tanker truck is within 1 tile range of another unit this the tanker refils all surrounding units automatically one by one. Each refill tankes 7 seconds.
+  5) when the tanker truck is selected and the mouse hovers over another unit the cursor turns into the "moveInto" cursor and when then left clicked on it the tanker truck will move there to refill that unit.
+  6) the tanker truck has an own gas tank that is required for it to drive that takes 700l. This gas tank is indicated by a blue bar at the bottom (same like with any other unit).
+  7) the tanker truck has another gas tank to refill other units. This gas tank has 40000l of gasoline. It is indicated by a loading bar on the top (same like the one used for harvesters).
 - [ ] Add a sound for when party A attacks party B for the first time.
 - [ ] Implement an allies system so that the player can ask an enemy to become an allie by clicking at thier base building and click the "unite" button that will appear when the diplomacy level between both parties reached 100%. The diplomacy level "DL" will level is a value that is hold for each party to each party. So party A can have another DL to B than B to A. When A attacks the enemy of B then DL for A raises on B. If A attacks B or an allie of B then the B's DL of A falls. When player clicks a base building then the DL of the party will be shown for each other party on the map with another "loading" bar below the health bar with the title "Diplomacy". The color of each bar indicates to which party it relaes to (each parties color).
 - [ ] Ensure for each party P there is an internal statistic that tracks for each other party how much economical damage was made by adding the cost of the units and buildings destroyed by that specific party. Make sure there is a shortkey that toggles the display of that statistics during gameplay. Each enemy AI focusses on attacking the party that caused the most amount of economical harm to them so far.
