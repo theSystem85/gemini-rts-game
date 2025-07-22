@@ -316,23 +316,36 @@ export class UnitRenderer {
     }
   }
   renderCrewStatus(ctx, unit, scrollOffset) {
-    if (!unit.crew) return;
-    const size = 4;
-    const x = unit.x - scrollOffset.x;
-    const y = unit.y - scrollOffset.y;
-    const colors = { driver: "#00F", gunner: "#F00", loader: "#FF0", commander: "#0F0" };
-    ctx.save();
-    Object.entries(unit.crew).forEach(([role, alive], idx) => {
-      if (!alive) return;
-      let dx = 0, dy = 0;
-      if (role === "driver") { dx = 0; dy = 0; }
-      if (role === "gunner") { dx = TILE_SIZE - size; dy = 0; }
-      if (role === "loader") { dx = 0; dy = TILE_SIZE - size; }
-      if (role === "commander") { dx = TILE_SIZE - size; dy = TILE_SIZE - size; }
-      ctx.fillStyle = colors[role];
-      ctx.fillRect(x + dx, y + dy, size, size);
-    });
-    ctx.restore();
+    if (!unit.selected || !unit.crew) return
+
+    const size = 5
+    const baseX = unit.x - scrollOffset.x
+    const baseY = unit.y + TILE_SIZE - scrollOffset.y
+    const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#006400' }
+    const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
+
+    ctx.save()
+    let idx = 0
+    Object.entries(unit.crew).forEach(([role, alive]) => {
+      if (!alive) return
+
+      const x = baseX + idx * (size + 2)
+      const y = baseY
+
+      const rectHeight = size * 2 * 0.7
+
+      ctx.fillStyle = colors[role]
+      ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+      ctx.fillStyle = '#FFF'
+      ctx.font = '4px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+
+      idx++
+    })
+    ctx.restore()
   }
 
   renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
