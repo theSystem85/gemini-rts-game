@@ -7,6 +7,7 @@ export const MAP_TILES_Y = 100
 export const MAP_WIDTH = MAP_TILES_X * TILE_SIZE
 export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
 export const SAFE_RANGE_ENABLED = false
+export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
 // Sound configuration
 export const MASTER_VOLUME = 0.25  // Default to 50% volume

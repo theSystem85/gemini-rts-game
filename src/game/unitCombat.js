@@ -167,8 +167,8 @@ const COMBAT_CONFIG = {
         ROCKET: 1.8
     },
     FIRE_RATES: {
-        STANDARD: 2000,
-        ROCKET: 6000
+        STANDARD: 4000,  // Doubled from 2000ms to 4000ms
+        ROCKET: 12000    // Doubled from 6000ms to 12000ms
     },
     DAMAGE: {
         STANDARD: 25,

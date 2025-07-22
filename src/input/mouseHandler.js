@@ -912,6 +912,24 @@ export class MouseHandler {
           }
         }
       }
+
+      // Check for ambulance refilling command if ambulances are selected
+      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      
+      if (hasSelectedNotFullyLoadedAmbulances) {
+        // Check if clicking on a player hospital
+        for (const building of gameState.buildings) {
+          if (building.type === 'hospital' && 
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            // Handle ambulance refill command
+            unitCommands.handleAmbulanceRefillCommand(selectedUnits, building, mapGrid)
+            return // Exit early, don't process building selection
+          }
+        }
+      }
     }
 
     // PRIORITY 2: Check for building selection (including vehicle factories)
@@ -1015,6 +1033,7 @@ export class MouseHandler {
       }
 
       let workshopTarget = null
+      let hospitalTarget = null
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -1024,12 +1043,27 @@ export class MouseHandler {
             break
           }
         }
+        
+        // Check for hospital if ambulances that need refilling are selected
+        const hasNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+        if (hasNotFullyLoadedAmbulances) {
+          for (const building of gameState.buildings) {
+            if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
+              hospitalTarget = building
+              break
+            }
+          }
+        }
       }
 
       if (refineryTarget) {
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
       } else if (workshopTarget) {
         unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
+      } else if (hospitalTarget) {
+        unitCommands.handleAmbulanceRefillCommand(selectedUnits, hospitalTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

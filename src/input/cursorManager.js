@@ -94,12 +94,16 @@ export class CursorManager {
     this.isOverPlayerRefinery = false
     // Check if mouse is over a healable unit when ambulances are selected
     this.isOverHealableUnit = false
+    // Check if mouse is over a hospital when ambulances are selected and not fully loaded
+    this.isOverPlayerHospital = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
-      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance')
+      const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew >= 4)
+      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
       
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
@@ -114,8 +118,22 @@ export class CursorManager {
         }
       }
       
-      // Check for healable units when ambulances are selected
-      if (hasSelectedAmbulances && units && Array.isArray(units)) {
+      // Check for hospital when ambulances that are not fully loaded are selected
+      if (hasSelectedNotFullyLoadedAmbulances) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'hospital' &&
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            this.isOverPlayerHospital = true
+            break
+          }
+        }
+      }
+      
+      // Check for healable units when fully loaded ambulances are selected
+      if (hasSelectedFullyLoadedAmbulances && units && Array.isArray(units)) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && 
               unit.crew && typeof unit.crew === 'object') {
@@ -367,6 +385,10 @@ export class CursorManager {
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverHealableUnit) {
         // Over healable unit with ambulances selected - show move into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+      } else if (this.isOverPlayerHospital) {
+        // Over hospital with not fully loaded ambulances selected - show move into cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerRefinery) {

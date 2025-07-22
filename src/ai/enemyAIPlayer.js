@@ -1,6 +1,6 @@
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding } from '../buildings.js'
 import { spawnEnemyUnit } from './enemySpawner.js'
-import { resetAttackDirections } from './enemyStrategies.js'
+import { resetAttackDirections, manageAICrewHealing } from './enemyStrategies.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -109,6 +109,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const turrets = aiBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret')
     const radarStations = aiBuildings.filter(b => b.type === 'radarStation')
     const teslaCoils = aiBuildings.filter(b => b.type === 'teslaCoil')
+    const hospitals = aiBuildings.filter(b => b.type === 'hospital')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
 
     // Debug logging (enable temporarily to debug building issues)
@@ -152,17 +153,22 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       buildingType = 'radarStation'
       cost = buildingData.radarStation.cost
 
-    // Phase 4: Advanced defense (Tesla Coils require radar)
+    // Phase 4: Hospital for crew support (after basic defense)
+    } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
+      buildingType = 'hospital'
+      cost = buildingData.hospital.cost
+
+    // Phase 5: Advanced defense (Tesla Coils require radar)
     } else if (teslaCoils.length < 2 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
       buildingType = 'teslaCoil'
       cost = buildingData.teslaCoil.cost
 
-    // Phase 5: Expansion - more production buildings
+    // Phase 6: Expansion - more production buildings
     } else if (vehicleFactories.length < 2 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
 
-    // Phase 6: More refineries based on harvester count
+    // Phase 7: More refineries based on harvester count
     } else {
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const maxHarvestersForRefineries = aiRefineries.length * 3 // 1:3 ratio for better efficiency
@@ -171,7 +177,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
 
-      // Phase 7: More advanced defense
+      // Phase 8: More advanced defense
       } else if (turrets.length < 6 && aiFactory.budget >= 3000) {
         if (aiFactory.budget >= 5000 && teslaCoils.length < 3 && radarStations.length > 0) {
           buildingType = 'teslaCoil'
@@ -184,7 +190,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           cost = 3000
         }
 
-      // Phase 8: Power plants for high energy consumption
+      // Phase 9: Power plants for high energy consumption
       } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
         buildingType = 'powerPlant'
         cost = buildingData.powerPlant.cost
@@ -409,16 +415,27 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
             cost = 3000
           }
         } else {
-          // Normal budget: Mix of basic and medium units
-          if (rand < 0.5) {
+          // Normal budget: Mix of basic and medium units, plus occasional ambulance
+          const rand = Math.random()
+          if (rand < 0.4) {
             unitType = 'tank_v1'
             cost = 1000
-          } else if (rand < 0.8) {
+          } else if (rand < 0.7) {
             unitType = 'tank-v2'
             cost = 2000
-          } else {
+          } else if (rand < 0.9) {
             unitType = 'rocketTank'
             cost = 2000
+          } else {
+            // 10% chance to build ambulance if we have a hospital
+            const hasHospital = gameState.buildings.some(b => b.type === 'hospital' && b.owner === aiPlayerId)
+            if (hasHospital) {
+              unitType = 'ambulance'
+              cost = 500
+            } else {
+              unitType = 'tank_v1'
+              cost = 1000
+            }
           }
         }
       }
@@ -427,7 +444,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         let spawnFactory = aiFactory // Default to main construction yard
 
         // Harvesters and other vehicle units should spawn from vehicle factories
-        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'tank-v3' || unitType === 'rocketTank') {
+        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'tank-v3' || unitType === 'rocketTank' || unitType === 'ambulance') {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
           )
@@ -473,6 +490,13 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
     updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles, bullets)
   })
+  
+  // --- Manage AI Crew Healing ---
+  // Run crew management for this AI player
+  const aiUnits = units.filter(u => u.owner === aiPlayerId)
+  if (aiUnits.length > 0) {
+    manageAICrewHealing(units, gameState, now)
+  }
 }, false)
 
 export { updateAIPlayer }

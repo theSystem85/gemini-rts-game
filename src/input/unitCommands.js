@@ -421,11 +421,64 @@ export class UnitCommandsHandler {
         showNotification('Cannot path to target for healing!', 2000)
       }
     })
-
+    
     playSound('movement', 0.5)
   }
 
-  /**
+  handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
+    // Filter for ambulances that need refilling
+    const ambulances = selectedUnits.filter(unit => 
+      unit.type === 'ambulance' && unit.crew < 4
+    )
+
+    if (ambulances.length === 0) {
+      showNotification('No ambulances need refilling!', 2000)
+      return
+    }
+
+    // Assign ambulances to refill at the hospital
+    ambulances.forEach(ambulance => {
+      ambulance.refillingTarget = hospital
+      
+      // Set path to hospital refill area (3 tiles below hospital)
+      const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
+      const refillY = hospital.y + hospital.height + 1 // 1 tile below hospital
+      
+      // Find available position in refill area
+      const refillPositions = [
+        { x: hospitalCenterX - 1, y: refillY },
+        { x: hospitalCenterX, y: refillY },
+        { x: hospitalCenterX + 1, y: refillY },
+        { x: hospitalCenterX - 1, y: refillY + 1 },
+        { x: hospitalCenterX, y: refillY + 1 },
+        { x: hospitalCenterX + 1, y: refillY + 1 },
+        { x: hospitalCenterX - 1, y: refillY + 2 },
+        { x: hospitalCenterX, y: refillY + 2 },
+        { x: hospitalCenterX + 1, y: refillY + 2 }
+      ]
+      
+      let destinationFound = false
+      for (const pos of refillPositions) {
+        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
+          const path = this.findPath(ambulance, pos.x, pos.y, mapGrid)
+          if (path && path.length > 0) {
+            ambulance.path = path
+            ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+            ambulance.target = null // Clear any attack target
+            destinationFound = true
+            break
+          }
+        }
+      }
+      
+      if (!destinationFound) {
+        showNotification('Cannot reach hospital refill area!', 2000)
+        ambulance.refillingTarget = null
+      }
+    })
+    
+    playSound('movement', 0.5)
+  }  /**
    * Calculate semicircle attack formation positions around a target
    */
   calculateSemicircleFormation(units, target, safeAttackDistance) {

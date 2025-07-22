@@ -1,5 +1,5 @@
 // Bullet System Module - Handles all bullet/projectile updates and collision detection
-import { TILE_SIZE, BULLET_DAMAGES } from '../config.js'
+import { TILE_SIZE, BULLET_DAMAGES, CREW_KILL_CHANCE } from '../config.js'
 import { triggerExplosion } from '../logic.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { awardExperience } from '../utils.js'
@@ -193,9 +193,12 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             updateUnitSpeedModifier(unit)
             if (unit.crew) {
               for (const member of Object.keys(unit.crew)) {
-                if (unit.crew[member] && Math.random() < 0.15) {
+                if (unit.crew[member] && Math.random() < CREW_KILL_CHANCE) {
                   unit.crew[member] = false;
-                  playSound("our" + member.charAt(0).toUpperCase() + member.slice(1) + "IsOut");
+                  // Only play sound for human player units
+                  if (unit.owner === gameState.humanPlayer) {
+                    playSound("our" + member.charAt(0).toUpperCase() + member.slice(1) + "IsOut");
+                  }
                 }
               }
             }

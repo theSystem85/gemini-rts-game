@@ -108,6 +108,14 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       'tank-v2': 2000,
       'tank-v3': 3000
     }
+    
+    // Initialize crew for combat units
+    unit.crew = {
+      driver: true,
+      gunner: true,
+      commander: true,
+      loader: true
+    }
     unit.baseCost = unitCosts[unitType] || 1000
   }
 

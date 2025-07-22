@@ -7,25 +7,26 @@
 
 ## Features
 - [ ] Add a hospital to the game:
-  1) Add the build button to sidebar: cost 4000, health 200, power -50MW
-  2) Add the image asset of the building for the map
-  3) All tanks now have 4 crew people on board (each person is indicated by a small colored mannequin in a corner of the HUD):
-    3.1 driver (top left blue) if dead tank cannot move wagon anymore but can still rotate the turret and fire at targets within range
-    3.2 gunner (top right red) if dead tank cannot rotate the turret anymore but the tank can still fire at a target by rotating the entire wagon until gun points at target (might look funny)
-    3.3 loader (bottom left yellow) if dead tank cannot fire anymore at all
-    3.4 commander (bottom right green) if dead tank cannot be moved anymore by the user => it will only operate own and only defend itself or move back to base or complete it path when it was added before the commander died. Prio is as follows then: first defend yourself then continue path/waypoints if there is one then go back to base ideally directly to repair if there is a workshop.
-  4) when the tank goes to the 3 tiles in below the hospital dead people will fill up again. One person will take 10s to be restored and costs 100.
-  5) when a tank gets hit the likelyhood for each individual crew member to be killed is 15%.
-  6) Make sure to play the respective sound file when a crew member got killed (loaderIsOut.mp3, driverIsOut.mp3, commanderIsOut.mp3, gunnerIsOut.mp3)
-  7) Ensure that the enemy AI will move the tanks with missing crew members back to hospital before continuing the battle.
-  8) Ambulance: When a hospital is build it unlocks the build button of an ambulance unit
-    8.1 an ambulance unit costs 500 and has 25 health
-    8.2 it is 3 times as fast as tank_v1 on streets and 1.5 times as fast as tank_v1 on grass
-    8.3 when freshly build the ambulance has 10 people on board
-    8.4 when an ambulance is selected and the mouse hovers over a friendly unit with missing crew members than the cursor turns into a "moveInto" cursor and the user can left click to command the ambulance to go to the target unit to restore the missing crew members.
-    8.5 the ambulance has a loading bar (like the harvester) that correlates to the amount of loaded people (10 people equals 100%)
-    8.6 the restore process starts when the ambulance is assigned to the unit and it is within 1 tile range. It takes 2 seconds for each person to go from the ambulance to the target unit. Make sure to update the loading bar of the ambulance during this process and add the mannequinns to the target unit.
-    8.7 The mannequinns are added in this order: driver, commander, loader, gunner
+- [x] 1) Add the build button to sidebar: cost 4000, health 200, power -50MW
+- [x] 2) Add the image asset of the building for the map
+- [x] 3) All tanks now have 4 crew people on board (each person is indicated by a small colored mannequin in a corner of the HUD):
+- [x] 3.1 driver (top left blue) if dead tank cannot move wagon anymore but can still rotate the turret and fire at targets within range
+- [ ] 3.2 gunner (top right red) if dead tank cannot rotate the turret anymore but the tank can still fire at a target by rotating the entire wagon until gun points at target (might look funny)
+- [x] 3.3 loader (bottom left yellow) if dead tank cannot fire anymore at all
+- [x] 3.4 commander (bottom right green) if dead tank cannot be moved anymore by the user => it will only operate own and only defend itself or move back to base or complete it path when it was added before the commander died. Prio is as follows then: first defend yourself then continue path/waypoints if there is one then go back to base ideally directly to repair if there is a workshop.
+- [ ] 4) when the tank goes to the 3 tiles in below the hospital dead people will fill up again. One person will take 10s to be restored and costs 100.
+- [x] 5) when a tank gets hit the likelyhood for each individual crew member to be killed is 15%.
+- [x] 6) Make sure to play the respective sound file when a crew member got killed (loaderIsOut.mp3, driverIsOut.mp3, commanderIsOut.mp3, gunnerIsOut.mp3)
+- [ ] 7) Ensure that the enemy AI will move the tanks with missing crew members back to hospital before continuing the battle.
+- [x] 8) Ambulance: When a hospital is build it unlocks the build button of an ambulance unit
+- [x] 8.1 an ambulance unit costs 500 and has 25 health
+- [x] 8.2 it is 3 times as fast as tank_v1 on streets and 1.5 times as fast as tank_v1 on grass
+- [x] 8.3 when freshly build the ambulance has 10 people on board
+- [x] 8.4 when an ambulance is selected and the mouse hovers over a friendly unit with missing crew members than the cursor turns into a "moveInto" cursor and the user can left click to command the ambulance to go to the target unit to restore the missing crew members.
+- [x] 8.5 the ambulance has a loading bar (like the harvester) that correlates to the amount of loaded people (10 people equals 100%)
+- [x] 8.6 the restore process starts when the ambulance is assigned to the unit and it is within 1 tile range. It takes 2 seconds for each person to go from the ambulance to the target unit. Make sure to update the loading bar of the ambulance during this process and add the mannequinns to the target unit.
+- [ ] 8.7 The mannequinns are added in this order: driver, commander, loader, gunner
+
 - [ ] Add a gas station to the game
   1) add the image asset for the sidebar to the build button ()
   2) add the image asset for the building on the map ()
