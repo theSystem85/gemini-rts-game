@@ -134,6 +134,8 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         b.type === 'rocketTurret' ||
         b.type === 'artilleryTurret'
     )
+    const rocketTurrets = aiBuildings.filter(b => b.type === 'rocketTurret')
+    const artilleryTurrets = aiBuildings.filter(b => b.type === 'artilleryTurret')
     const radarStations = aiBuildings.filter(b => b.type === 'radarStation')
     const teslaCoils = aiBuildings.filter(b => b.type === 'teslaCoil')
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
@@ -179,6 +181,17 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (vehicleWorkshops.length === 0 && aiFactory.budget >= buildingData.vehicleWorkshop.cost) {
       buildingType = 'vehicleWorkshop'
       cost = buildingData.vehicleWorkshop.cost
+
+    // Early special defenses - build at least one of each before expansion
+    } else if (rocketTurrets.length === 0 && radarStations.length > 0 && aiFactory.budget >= 4000) {
+      buildingType = 'rocketTurret'
+      cost = 4000
+    } else if (teslaCoils.length === 0 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
+      buildingType = 'teslaCoil'
+      cost = buildingData.teslaCoil.cost
+    } else if (artilleryTurrets.length === 0 && aiFactory.budget >= buildingData.artilleryTurret.cost) {
+      buildingType = 'artilleryTurret'
+      cost = buildingData.artilleryTurret.cost
 
     // Phase 5: Advanced defense (Tesla Coils require radar)
     } else if (teslaCoils.length < 2 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
@@ -389,6 +402,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
+      const rocketTurretsBuilt = aiBuildings.filter(b => b.type === 'rocketTurret').length
+      const teslaCoilsBuilt = aiBuildings.filter(b => b.type === 'teslaCoil').length
+      const artilleryTurretsBuilt = aiBuildings.filter(b => b.type === 'artilleryTurret').length
+      const specialDefensesReady =
+        rocketTurretsBuilt > 0 && teslaCoilsBuilt > 0 && artilleryTurretsBuilt > 0
       
       let unitType = 'tank_v1'
       let cost = 1000
@@ -423,7 +441,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         // We have enough harvesters and ambulance, hospital exists, now focus on diverse combat units
         const rand = Math.random()
 
-        if (isVeryHighBudget) {
+        if (!specialDefensesReady) {
+          // Delay tank production until key defenses are built
+          unitType = 'harvester'
+          cost = 500
+        } else if (isVeryHighBudget) {
           // Very high budget: Focus on elite units
           if (rand < 0.1) {
             unitType = 'tank_v1'
