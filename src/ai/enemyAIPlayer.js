@@ -164,10 +164,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.vehicleFactory.cost
 
     // Phase 7: Additional refineries (only after core support buildings and if harvesters justify it)
-    } else if (oreRefineries.length < 3 && hospitals.length > 0 && radarStations.length > 0 && vehicleWorkshops.length > 0) {
-      const maxHarvestersForRefineries = oreRefineries.length * 4 // 1:4 ratio (4 harvesters per refinery)
-      
-      if (aiHarvesters.length >= maxHarvestersForRefineries && aiFactory.budget >= buildingData.oreRefinery.cost) {
+      } else if (oreRefineries.length < 3 && hospitals.length > 0 && radarStations.length > 0 && vehicleWorkshops.length > 0) {
+        const maxHarvestersForRefineries = oreRefineries.length * 4 // 1:4 ratio (4 harvesters per refinery)
+        const harvesterCountInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
+
+        if (aiHarvesters.length + harvesterCountInProduction >= maxHarvestersForRefineries && aiFactory.budget >= buildingData.oreRefinery.cost) {
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
 
@@ -372,12 +373,14 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       // 6. Maintain harvester count but prioritize combat
 
       const MAX_HARVESTERS = aiRefineries.length * 4 // Strict 4 harvesters per refinery limit
+      const harvesterCountInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
+      const currentHarvesterTotal = aiHarvesters.length + harvesterCountInProduction
       const HIGH_BUDGET_THRESHOLD = 12000
       const VERY_HIGH_BUDGET_THRESHOLD = 20000
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
 
-      if (aiHarvesters.length < MAX_HARVESTERS) {
+      if (currentHarvesterTotal < MAX_HARVESTERS) {
         // Priority: Build up harvesters first, but strict limit of 4 per refinery
         unitType = 'harvester'
         cost = 500
