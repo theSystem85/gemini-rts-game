@@ -304,6 +304,25 @@ export class UnitRenderer {
       )
     }
   }
+  renderCrewStatus(ctx, unit, scrollOffset) {
+    if (!unit.crew) return;
+    const size = 4;
+    const x = unit.x - scrollOffset.x;
+    const y = unit.y - scrollOffset.y;
+    const colors = { driver: "#00F", gunner: "#F00", loader: "#FF0", commander: "#0F0" };
+    ctx.save();
+    Object.entries(unit.crew).forEach(([role, alive], idx) => {
+      if (!alive) return;
+      let dx = 0, dy = 0;
+      if (role === "driver") { dx = 0; dy = 0; }
+      if (role === "gunner") { dx = TILE_SIZE - size; dy = 0; }
+      if (role === "loader") { dx = 0; dy = TILE_SIZE - size; }
+      if (role === "commander") { dx = TILE_SIZE - size; dy = TILE_SIZE - size; }
+      ctx.fillStyle = colors[role];
+      ctx.fillRect(x + dx, y + dy, size, size);
+    });
+    ctx.restore();
+  }
 
   renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
     // Check if this unit is in the attack group targets OR if it's currently being targeted by selected units
@@ -455,6 +474,7 @@ export class UnitRenderer {
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)
+    this.renderCrewStatus(ctx, unit, scrollOffset)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
   }
 

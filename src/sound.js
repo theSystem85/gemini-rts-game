@@ -85,6 +85,10 @@ const soundFiles = {
   new_units_types_available: ['new_units_types_available.mp3'],
   new_building_types_available: ['new_building_types_available.mp3'],
   new_production_options: ['new_production_options.mp3'],
+  outLoaderIsOut: ['outLoaderIsOut.mp3'],
+  outDriverIsOut: ['outDriverIsOut.mp3'],
+  outCommanderIsOut: ['outCommanderIsOut.mp3'],
+  outGunnerIsOut: ['outGunnerIsOut.mp3'],
   
   // New waypoint and attack notification sounds
   movingAlongThePath: ['movingAlongThePath.mp3'],

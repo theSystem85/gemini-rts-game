@@ -136,6 +136,14 @@ export class MilestoneSystem {
     this.productionController.unlockUnitType('tank-v3')
   }
 
+  unlockAmbulance() {
+    if (!this.productionController) {
+      console.warn("ProductionController not set, cannot unlock ambulance")
+      return
+    }
+    this.productionController.unlockUnitType("ambulance")
+  }
+
   /**
    * Set the production controller reference for unlocking units/buildings
    */
@@ -202,6 +210,14 @@ export class MilestoneSystem {
       if (vehicleFactories && vehicleFactories.length >= 2) {
         this.triggerMilestone('tankV3Unlocked')
         this.unlockTankV3()
+      }
+    }
+    // Check for hospital built to unlock ambulance
+    if (!this.achievedMilestones.has("hospitalBuilt")) {
+      const hasHospital = gameState.buildings?.some(b => b.type === "hospital" && b.owner === gameState.humanPlayer)
+      if (hasHospital) {
+        this.triggerMilestone("hospitalBuilt")
+        this.unlockAmbulance()
       }
     }
 

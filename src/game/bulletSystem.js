@@ -191,6 +191,14 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             
             // Update speed modifier based on new health level
             updateUnitSpeedModifier(unit)
+            if (unit.crew) {
+              for (const member of Object.keys(unit.crew)) {
+                if (unit.crew[member] && Math.random() < 0.15) {
+                  unit.crew[member] = false;
+                  playSound("out" + member.charAt(0).toUpperCase() + member.slice(1) + "IsOut");
+                }
+              }
+            }
           }
 
           // Play critical damage sound for rear hits on player's units only (with cooldown)

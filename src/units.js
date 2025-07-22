@@ -659,6 +659,9 @@ export function createUnit(factory, unitType, x, y) {
   }
 
   // Add unit-specific properties
+  if (actualType.startsWith('tank')) {
+    unit.crew = { driver: true, gunner: true, loader: true, commander: true };
+  }
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode
   } else if (unitType === 'harvester') {
