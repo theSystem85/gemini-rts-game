@@ -449,8 +449,9 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
  * Completes the unloading process at a refinery
  */
 function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMap) {
-  // Unloading takes 5 seconds (2x faster than before)
-  if (now - unit.unloadStartTime >= HARVESTER_UNLOAD_TIME) {
+  const powerSupply = unit.owner === gameState.humanPlayer ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+  const unloadTime = powerSupply < 0 ? HARVESTER_UNLOAD_TIME * 2 : HARVESTER_UNLOAD_TIME
+  if (now - unit.unloadStartTime >= unloadTime) {
     // Calculate money based on ore carried
     const moneyEarned = unit.oreCarried * 1000
     
@@ -492,6 +493,11 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     unit.findOreAfterUnload = now + 500 // Schedule ore search after 500ms
     if (unit.owner === gameState.humanPlayer) {
       playSound('deposit')
+    }
+
+    // Enemy harvesters repair after unloading if damaged
+    if (unit.owner !== gameState.humanPlayer && unit.health < unit.maxHealth) {
+      sendUnitToWorkshop(unit, gameState, mapGrid)
     }
   }
 }
@@ -837,6 +843,45 @@ export function assignHarvesterToOptimalRefinery(harvester, gameState) {
   }
   
   return optimalRefineryId
+}
+
+function sendUnitToWorkshop(unit, gameState, mapGrid) {
+  const workshops = gameState.buildings.filter(b =>
+    b.type === 'vehicleWorkshop' && b.owner === unit.owner && b.health > 0
+  )
+  if (workshops.length === 0) return
+
+  let nearest = null
+  let nearestDist = Infinity
+  workshops.forEach(ws => {
+    const dist = Math.hypot(unit.tileX - ws.x, unit.tileY - ws.y)
+    if (dist < nearestDist) {
+      nearest = ws
+      nearestDist = dist
+    }
+  })
+
+  if (!nearest) return
+  if (!nearest.repairQueue) nearest.repairQueue = []
+  if (!nearest.repairQueue.includes(unit)) {
+    nearest.repairQueue.push(unit)
+    unit.targetWorkshop = nearest
+  }
+
+  const waitingY = nearest.y + nearest.height + 1
+  const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
+  const targetTile = { x: waitingX, y: waitingY }
+  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  if (path && path.length > 0) {
+    unit.path = path.slice(1)
+    unit.moveTarget = targetTile
+  } else {
+    unit.x = targetTile.x * TILE_SIZE
+    unit.y = targetTile.y * TILE_SIZE
+    unit.tileX = targetTile.x
+    unit.tileY = targetTile.y
+    unit.moveTarget = null
+  }
 }
 
 /**

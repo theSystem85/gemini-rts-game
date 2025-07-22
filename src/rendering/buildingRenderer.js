@@ -146,6 +146,7 @@ export class BuildingRenderer {
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
+    this.renderFactoryBudget(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -759,6 +760,27 @@ export class BuildingRenderer {
     }
     
     ctx.restore()
+  }
+
+  renderFactoryBudget(ctx, building, screenX, screenY, width, height) {
+    // Only for enemy construction yards
+    if (building.type === 'constructionYard' && building.owner !== gameState.humanPlayer && gameState.factories) {
+      const factory = gameState.factories.find(f => f.id === building.owner)
+      if (factory && typeof factory.budget === 'number') {
+        const budgetText = `$${factory.budget}`
+        ctx.save()
+        ctx.fillStyle = '#FFF'
+        ctx.font = '12px Arial'
+        ctx.textAlign = 'center'
+        ctx.strokeStyle = '#000'
+        ctx.lineWidth = 2
+        const textX = screenX + width / 2
+        const textY = screenY // display above building
+        ctx.strokeText(budgetText, textX, textY)
+        ctx.fillText(budgetText, textX, textY)
+        ctx.restore()
+      }
+    }
   }
 
   renderBases(ctx, buildings, mapGrid, scrollOffset) {
