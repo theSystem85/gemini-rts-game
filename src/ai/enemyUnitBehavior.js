@@ -24,6 +24,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     }
   }
 
+  // Skip decision making while returning to or repairing at a workshop
+  if (unit.returningToWorkshop || unit.repairingAtWorkshop) {
+    return
+  }
+
   // Apply new AI strategies first - but only when allowed to make decisions to prevent wiggling
   const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
   const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)

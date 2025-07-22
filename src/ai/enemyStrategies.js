@@ -336,7 +336,7 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
     b.type === 'vehicleWorkshop' && b.owner === unit.owner && b.health > 0
   )
 
-  if (workshops.length === 0) return
+  if (workshops.length === 0) return false
 
   // Find nearest workshop
   let nearest = null
@@ -349,13 +349,14 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
     }
   })
 
-  if (!nearest) return
+  if (!nearest) return false
 
   if (!nearest.repairQueue) nearest.repairQueue = []
   if (!nearest.repairQueue.includes(unit)) {
     nearest.repairQueue.push(unit)
     unit.targetWorkshop = nearest
   }
+  unit.returningToWorkshop = true
 
   const waitingY = nearest.y + nearest.height + 1
   const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
@@ -371,6 +372,8 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
     unit.tileY = targetTile.y
     unit.moveTarget = null
   }
+  unit.target = null
+  return true
 }
 
 /**
@@ -428,6 +431,11 @@ function isUnitInPlayerBase(unit, gameState) {
 export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
   // Skip if unit is dead
   if (!unit.health || unit.health <= 0) return
+
+  // Ignore other strategies while heading to or being repaired at a workshop
+  if (unit.returningToWorkshop || unit.repairingAtWorkshop) {
+    return
+  }
   
   // Handle retreating units
   if (unit.isRetreating) {
@@ -445,10 +453,13 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
     }
   }
   
-  // Check for low health retreat (combat units)
+  // Check for low health - immediately send to workshop when possible
   if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
     if (shouldRetreatLowHealth(unit)) {
-      handleRetreatToBase(unit, gameState, mapGrid)
+      const sent = sendUnitToWorkshop(unit, gameState, mapGrid)
+      if (!sent) {
+        handleRetreatToBase(unit, gameState, mapGrid)
+      }
       return
     }
   }
