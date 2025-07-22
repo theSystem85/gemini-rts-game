@@ -1,6 +1,16 @@
 // rendering/mapRenderer.js
 import { TILE_SIZE, TILE_COLORS, USE_TEXTURES } from '../config.js'
 
+// Helper: convert hex color to rgba string with given alpha
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '')
+  const bigint = parseInt(h, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 export class MapRenderer {
   constructor(textureManager) {
     this.textureManager = textureManager
@@ -98,6 +108,97 @@ export class MapRenderer {
       }
     }
 
+    // Draw random bleed segments along an edge
+    const drawBleedSegments = (x, y, orientation, color, bleed) => {
+      for (let pos = 0; pos < TILE_SIZE; ) {
+        const segLen = Math.floor(Math.random() * 4) + 2
+        const step = Math.floor(Math.random() * 4) + 2
+        const alpha = 0.2 + Math.random() * 0.3
+        ctx.fillStyle = hexToRgba(color, alpha)
+        if (orientation === 'top') {
+          ctx.fillRect(x + pos, y, segLen, bleed)
+        } else if (orientation === 'bottom') {
+          ctx.fillRect(x + pos, y + TILE_SIZE - bleed, segLen, bleed)
+        } else if (orientation === 'left') {
+          ctx.fillRect(x, y + pos, bleed, segLen)
+        } else if (orientation === 'right') {
+          ctx.fillRect(x + TILE_SIZE - bleed, y + pos, bleed, segLen)
+        }
+        pos += step
+      }
+    }
+
+    // Apply bleed effect to edges of a street tile
+    const applyStreetBleed = (tileX, tileY) => {
+      const screenX = tileX * TILE_SIZE - scrollOffset.x
+      const screenY = tileY * TILE_SIZE - scrollOffset.y
+
+      const neighbor = (dx, dy) =>
+        mapGrid[tileY + dy] && mapGrid[tileY + dy][tileX + dx]
+
+      const edges = [
+        { dx: 0, dy: -1, orientation: 'top' },
+        { dx: 0, dy: 1, orientation: 'bottom' },
+        { dx: -1, dy: 0, orientation: 'left' },
+        { dx: 1, dy: 0, orientation: 'right' }
+      ]
+
+      edges.forEach(({ dx, dy, orientation }) => {
+        const n = neighbor(dx, dy)
+        if (n && n.type !== 'street') {
+          const bleed = Math.floor(Math.random() * 5) + 1
+          drawBleedSegments(screenX, screenY, orientation, TILE_COLORS[n.type], bleed)
+        }
+      })
+    }
+
+    // Apply bleed to SOT overlays
+    const applySOTBleed = (tileX, tileY, orientation, type) => {
+      const screenX = tileX * TILE_SIZE - scrollOffset.x - 1
+      const screenY = tileY * TILE_SIZE - scrollOffset.y - 1
+      const bleed = Math.floor(Math.random() * 5) + 1
+      ctx.save()
+      ctx.beginPath()
+      const size = TILE_SIZE + 3
+      switch (orientation) {
+        case 'top-left':
+          ctx.moveTo(screenX, screenY)
+          ctx.lineTo(screenX + size, screenY)
+          ctx.lineTo(screenX, screenY + size)
+          break
+        case 'top-right':
+          ctx.moveTo(screenX + size, screenY)
+          ctx.lineTo(screenX, screenY)
+          ctx.lineTo(screenX + size, screenY + size)
+          break
+        case 'bottom-left':
+          ctx.moveTo(screenX, screenY + size)
+          ctx.lineTo(screenX, screenY)
+          ctx.lineTo(screenX + size, screenY + size)
+          break
+        case 'bottom-right':
+          ctx.moveTo(screenX + size, screenY + size)
+          ctx.lineTo(screenX, screenY + size)
+          ctx.lineTo(screenX + size, screenY)
+          break
+      }
+      ctx.closePath()
+      ctx.clip()
+      if (orientation.includes('top')) {
+        drawBleedSegments(screenX, screenY, 'top', TILE_COLORS[type], bleed)
+      }
+      if (orientation.includes('bottom')) {
+        drawBleedSegments(screenX, screenY, 'bottom', TILE_COLORS[type], bleed)
+      }
+      if (orientation.includes('left')) {
+        drawBleedSegments(screenX, screenY, 'left', TILE_COLORS[type], bleed)
+      }
+      if (orientation.includes('right')) {
+        drawBleedSegments(screenX, screenY, 'right', TILE_COLORS[type], bleed)
+      }
+      ctx.restore()
+    }
+
     // Single pass rendering: process all layers for each tile in one iteration
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
@@ -105,6 +206,9 @@ export class MapRenderer {
         
         // Render base tile layer
         drawTile(x, y, tile.type)
+        if (tile.type === 'street') {
+          applyStreetBleed(x, y)
+        }
         
         // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets or water
         if (tile.type === 'land') {
@@ -144,6 +248,7 @@ export class MapRenderer {
 
           if (orientation) {
             this.drawSOT(ctx, x, y, orientation, scrollOffset, useTexture, sotApplied, overlayType)
+            applySOTBleed(x, y, orientation, overlayType)
           }
         }
         
