@@ -1,6 +1,6 @@
 // gameState.js
 export const gameState = {
-  money: 10000,
+  money: 12000,
   gameTime: 0,
   frameCount: 0, // Add frame counter for milestone checking
   wins: 0,

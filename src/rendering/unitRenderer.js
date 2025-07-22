@@ -296,26 +296,31 @@ export class UnitRenderer {
   }
 
   renderGasBar(ctx, unit, scrollOffset) {
-    if (typeof unit.maxGas !== 'number') return
+    if (!unit.selected || typeof unit.maxGas !== 'number') return
 
     const ratio = unit.gas / unit.maxGas
-    const healthBarWidth = TILE_SIZE * 0.8
-    const healthBarHeight = 4
-    const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
-    const healthBarY = unit.y - 10 - scrollOffset.y
 
-    const barHeight = healthBarWidth * 0.9
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const halfTile = TILE_SIZE / 2
+    const cornerSize = 8
+    const offset = 2
+
+    const right = centerX + halfTile + offset
+    const top = centerY - halfTile - offset
+    const bottom = centerY + halfTile + offset
+
     const barWidth = 3
-    const bottom = healthBarY + healthBarHeight
-    const barX = healthBarX + healthBarWidth + 2
-    const barTop = bottom - barHeight
+    const barHeight = bottom - top - cornerSize * 2
+    const barX = right - barWidth - 1
+    const barTop = top + cornerSize
 
     ctx.fillStyle = '#333'
     ctx.fillRect(barX, barTop, barWidth, barHeight)
 
     const fillHeight = barHeight * ratio
     ctx.fillStyle = '#4A90E2'
-    ctx.fillRect(barX, bottom - fillHeight, barWidth, fillHeight)
+    ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
 
     ctx.strokeStyle = '#000'
     ctx.strokeRect(barX, barTop, barWidth, barHeight)

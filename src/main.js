@@ -391,7 +391,7 @@ class Game {
     const preservedLosses = gameState.losses
     
     // Reset game state
-    gameState.money = 10000
+    gameState.money = 12000
     gameState.gameTime = 0
     gameState.frameCount = 0
     gameState.gameStarted = true  // Auto-start the game

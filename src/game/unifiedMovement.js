@@ -1,5 +1,5 @@
 // unifiedMovement.js - Unified movement system for all ground units
-import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER } from '../config.js'
+import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER, TILE_LENGTH_METERS } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
 import { playPositionalSound } from '../sound.js'
@@ -306,8 +306,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.y += movement.velocity.y;
 
   if (typeof unit.gas === 'number') {
-    const dist = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
-    unit.gas = Math.max(0, unit.gas - (unit.gasConsumption || 0) * dist / 100)
+    const distTiles = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
+    const distMeters = distTiles * TILE_LENGTH_METERS
+    const usage = (unit.gasConsumption || 0) * distMeters / 100000
+    unit.gas = Math.max(0, unit.gas - usage)
   }
   
   // Handle collisions
