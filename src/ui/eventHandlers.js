@@ -303,6 +303,11 @@ export class EventHandlers {
           // Save player building patterns
           savePlayerBuildPatterns(buildingType)
 
+          // Unlock ambulance when hospital is built
+          if (buildingType === 'hospital' && this.productionController) {
+            this.productionController.unlockUnitType('ambulance')
+          }
+
           // UPDATE: Update button states after successful placement
           if (this.productionController) {
             this.productionController.updateVehicleButtonStates()

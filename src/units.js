@@ -658,6 +658,15 @@ export function createUnit(factory, unitType, x, y) {
     currentCommand: null
   }
 
+  if (['tank_v1', 'tank-v2', 'tank-v3', 'rocketTank'].includes(actualType)) {
+    unit.crewStatus = {
+      driver: true,
+      gunner: true,
+      loader: true,
+      commander: true
+    }
+  }
+
   // Add unit-specific properties
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode

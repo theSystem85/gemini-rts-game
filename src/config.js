@@ -158,6 +158,7 @@ export const UNIT_COSTS = {
   tank: 1000,
   rocketTank: 2000,
   harvester: 500,
+  ambulance: 500,
   'tank-v2': 2000,
   'tank-v3': 3000
 }
@@ -213,6 +214,13 @@ export const UNIT_PROPERTIES = {
     speed: 0.35,  // 50% slower: 0.7 * 0.5 = 0.35
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
+  },
+  ambulance: {
+    health: 25,
+    maxHealth: 25,
+    speed: 0.99,
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: 0
   }
 }
 

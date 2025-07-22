@@ -74,6 +74,16 @@ export const buildingData = {
     health: 200,
     smokeSpots: []
   },
+  hospital: {
+    width: 3,
+    height: 3,
+    cost: 4000,
+    power: -50,
+    image: 'hospital.webp',
+    displayName: 'Hospital',
+    health: 200,
+    smokeSpots: []
+  },
   turretGunV1: {
     width: 1,
     height: 1,
