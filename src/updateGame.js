@@ -21,6 +21,8 @@ import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.j
 import { updateHarvesterLogic } from './game/harvesterLogic.js'
 import { updateWorkshopLogic } from './game/workshopLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
+import { updateHospitalLogic } from './game/hospitalLogic.js'
+import { updateAmbulanceLogic } from './game/ambulanceSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { processCommandQueues } from './game/commandQueue.js'
@@ -76,6 +78,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
     updateWorkshopLogic(units, gameState.buildings, mapGrid, delta)
 
+    updateHospitalLogic(units, gameState.buildings, gameState, delta)
+    updateAmbulanceLogic(units, gameState, delta)
     // Handle self-repair for level 3 units
     units.forEach(unit => {
       handleSelfRepair(unit, now)

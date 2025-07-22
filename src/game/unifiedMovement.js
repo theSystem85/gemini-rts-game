@@ -67,6 +67,18 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   }
 
+  // **CREW MOVEMENT RESTRICTIONS** - Check crew status for tanks (exclude ambulance and rocket tank for AI)
+  if (unit.crew && typeof unit.crew === 'object' && !unit.crew.driver && unit.type !== 'ambulance' && unit.type !== 'rocketTank') {
+    // Tank cannot move without driver
+    unit.path = [] // Clear any pending movement
+    unit.moveTarget = null
+    unit.movement.velocity = { x: 0, y: 0 }
+    unit.movement.targetVelocity = { x: 0, y: 0 }
+    unit.movement.isMoving = false
+    unit.movement.currentSpeed = 0
+    return // Exit early - no movement allowed
+  }
+
   // Units undergoing repair should not move
   if (unit.repairingAtWorkshop) {
     unit.path = []
@@ -83,7 +95,15 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE);
   const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE);
   const onStreet = mapGrid[tileY] && mapGrid[tileY][tileX] && mapGrid[tileY][tileX].type === 'street';
-  const terrainMultiplier = onStreet ? STREET_SPEED_MULTIPLIER : 1;
+  
+  // Special handling for ambulance speed on streets
+  let terrainMultiplier = onStreet ? STREET_SPEED_MULTIPLIER : 1;
+  if (unit.type === 'ambulance' && onStreet) {
+    // Use ambulance-specific street speed multiplier from config
+    const ambulanceProps = unit.ambulanceProps || { streetSpeedMultiplier: 6.0 };
+    terrainMultiplier = ambulanceProps.streetSpeedMultiplier || 6.0;
+  }
+  
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier;
   
   // Handle path following
@@ -229,7 +249,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   if (shouldDecelerate || !movement.isMoving) {
     accelRate = MOVEMENT_CONFIG.DECELERATION;
   } else if (canAccelerate && movement.isMoving) {
-    accelRate = MOVEMENT_CONFIG.ACCELERATION;
+    // Special case for ambulances - they accelerate half as fast
+    if (unit.type === 'ambulance') {
+      accelRate = MOVEMENT_CONFIG.ACCELERATION * 0.5;
+    } else {
+      accelRate = MOVEMENT_CONFIG.ACCELERATION;
+    }
   } else {
     accelRate = MOVEMENT_CONFIG.DECELERATION; // Default to deceleration when unsure
   }

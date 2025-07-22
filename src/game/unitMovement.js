@@ -298,8 +298,16 @@ function updateUnitRotation(unit, now) {
       // Calculate target turret angle
       const turretAngle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
 
-      // Smoothly rotate the turret using separate turret rotation speed
-      unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.turretRotationSpeed)
+      // Check crew restrictions for turret rotation
+      if (unit.crew && typeof unit.crew === 'object' && !unit.crew.gunner) {
+        // Tank cannot rotate turret without gunner - turret follows wagon direction
+        unit.turretDirection = unit.direction
+        // When gunner is out, the tank can still aim and fire by rotating the entire wagon
+        // This is handled by the unit's direction already pointing towards target
+      } else {
+        // Smoothly rotate the turret using separate turret rotation speed
+        unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.turretRotationSpeed)
+      }
       
       // Clear movement turret flag when actively targeting
       unit.turretShouldFollowMovement = false

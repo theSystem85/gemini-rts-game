@@ -1,6 +1,7 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, AI_DECISION_INTERVAL } from '../config.js'
 import { getCachedPath } from '../game/pathfinding.js'
-import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth } from './enemyStrategies.js'
+import { findPath } from '../units.js'
+import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth, shouldAIStartAttacking } from './enemyStrategies.js'
 import { isEnemyTo } from './enemyUtils.js'
 
 const ENABLE_DODGING = false
@@ -34,6 +35,72 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
   // Skip further processing if unit is retreating
   if (unit.isRetreating) return
+
+  // PRIORITY: Check crew status and handle hospital returns (exclude ambulance and rocket tank for AI)
+  if (unit.crew && typeof unit.crew === 'object' && unit.type !== 'ambulance' && unit.type !== 'rocketTank') {
+    const missingCrew = Object.values(unit.crew).filter(alive => !alive).length
+    
+    if (missingCrew > 0 && !unit.returningToHospital) {
+      // Unit has missing crew - prioritize hospital return
+      const canMove = unit.crew.driver && unit.crew.commander
+      
+      if (!canMove) {
+        // Unit cannot move - wait for ambulance assistance
+        unit.target = null
+        unit.moveTarget = null
+        unit.path = []
+        // Allow defensive firing only
+        if (unit.isBeingAttacked && unit.lastAttacker && unit.crew.gunner) {
+          unit.target = unit.lastAttacker
+        }
+        return // Skip normal AI behavior
+      } else {
+        // Unit can move - should return to hospital immediately
+        // This will be handled by manageAICrewHealing
+        // For now, just mark it as needing hospital
+        unit.needsHospital = true
+      }
+    }
+    
+    // If unit is returning to hospital, only allow defensive actions
+    if (unit.returningToHospital) {
+      // Allow firing back if being attacked and has gunner
+      if (unit.isBeingAttacked && unit.lastAttacker && unit.crew.gunner) {
+        unit.target = unit.lastAttacker
+      } else {
+        unit.target = null
+      }
+      
+      // Check if reached hospital area for healing
+      if (unit.hospitalTarget && unit.moveTarget) {
+        const distanceToHospital = Math.hypot(
+          unit.x - unit.moveTarget.x,
+          unit.y - unit.moveTarget.y
+        )
+        
+        if (distanceToHospital < TILE_SIZE * 2) {
+          // Near hospital - check if crew is restored
+          const currentMissingCrew = Object.values(unit.crew).filter(alive => !alive).length
+          if (currentMissingCrew === 0) {
+            // Crew fully restored - resume normal behavior
+            unit.returningToHospital = false
+            unit.hospitalTarget = null
+            unit.needsHospital = false
+            unit.moveTarget = null
+            unit.path = []
+          }
+        }
+      }
+      
+      return // Skip normal combat AI when returning to hospital
+    }
+  }
+
+  // Handle ambulance behavior
+  if (unit.type === 'ambulance') {
+    updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId)
+    return // Ambulances don't engage in combat
+  }
 
   // Combat unit behavior
   if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
@@ -222,13 +289,45 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
           // Fourth priority: Group attack strategy (target player base and units)
           if (!newTarget) {
-          // Check if we should conduct group attack before selecting targets
-            const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
-            (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
-            Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
+            // Check if AI should start attacking (has hospital built)
+            const shouldAttack = shouldAIStartAttacking(aiPlayerId, gameState)
+            if (!shouldAttack) {
+              // AI not ready for major attacks - only defend and target harvesters
+              const playerHarvesters = units.filter(u => 
+                u.owner === gameState.humanPlayer && 
+                u.type === 'harvester' && 
+                u.health > 0
+              )
+              
+              if (playerHarvesters.length > 0) {
+                // Target closest harvester only
+                let closestHarvester = null
+                let closestDist = Infinity
+                
+                playerHarvesters.forEach(harvester => {
+                  const d = Math.hypot(
+                    (harvester.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
+                    (harvester.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
+                  )
+                  if (d < closestDist) {
+                    closestDist = d
+                    closestHarvester = harvester
+                  }
+                })
+                
+                if (closestHarvester && closestDist < 10 * TILE_SIZE) {
+                  newTarget = closestHarvester
+                }
+              }
+            } else {
+              // AI ready for major attacks - proceed with normal group attack logic
+              // Check if we should conduct group attack before selecting targets
+              const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
+                (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+                Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
-            // Use group attack strategy with priority targeting
-            if (nearbyAllies.length >= 1) { // Reduced from 2 to make AI more aggressive
+              // Use group attack strategy with priority targeting
+              if (nearbyAllies.length >= 1) { // Reduced from 2 to make AI more aggressive
             // Priority 1: Target closest player combat unit
               let closestPlayerUnit = null
               let closestPlayerDist = Infinity
@@ -311,6 +410,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
               }
             }
           }
+        } // Close the else block for shouldAttack check
         } // End of if (!keepCurrentTarget) block
 
         if (unit.target !== newTarget) {
@@ -625,6 +725,62 @@ function findBaseDefenseTarget(unit, units, gameState, aiPlayerId) {
   })
   
   return closestThreat
+}
+
+// Handle ambulance AI behavior
+function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
+  // Skip if ambulance is on critical healing mission (should have priority)
+  if (unit.criticalHealing) return
+  
+  // Skip if already refilling or healing
+  if (unit.refillingTarget || unit.healingTarget) return
+  
+  // Check if ambulance needs refilling
+  if (unit.crew < 4) {
+    const hospitals = gameState.buildings?.filter(b => 
+      b.type === 'hospital' && 
+      b.owner === aiPlayerId && 
+      b.health > 0
+    )
+    
+    if (hospitals.length > 0 && !unit.refillingTarget) {
+      // Send to hospital for refilling
+      unit.refillingTarget = hospitals[0]
+      const hospitalCenterX = hospitals[0].x + Math.floor(hospitals[0].width / 2)
+      const refillY = hospitals[0].y + hospitals[0].height + 1
+      
+      const path = findPath(unit, hospitalCenterX, refillY, mapGrid)
+      if (path && path.length > 0) {
+        unit.path = path
+        unit.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
+      }
+    }
+    return
+  }
+  
+  // Look for nearby units that need healing
+  const unitsNeedingHealing = units.filter(u => 
+    u.owner === aiPlayerId &&
+    u !== unit &&
+    u.crew &&
+    typeof u.crew === 'object' &&
+    Object.values(u.crew).some(alive => !alive) &&
+    Math.hypot(u.x - unit.x, u.y - unit.y) < 15 * TILE_SIZE
+  )
+  
+  if (unitsNeedingHealing.length > 0) {
+    // Prioritize units that cannot move (excluding ambulance and rocket tank which don't use crew system)
+    const immobileUnits = unitsNeedingHealing.filter(u => 
+      u.crew && (u.type !== 'ambulance' && u.type !== 'rocketTank') && (!u.crew.driver || !u.crew.commander)
+    )
+    const targetUnit = immobileUnits.length > 0 ? immobileUnits[0] : unitsNeedingHealing[0]
+    
+    unit.healingTarget = targetUnit
+    unit.healingTimer = 0
+    unit.target = null
+    unit.moveTarget = null
+    unit.path = []
+  }
 }
 
 export { updateAIUnit }

@@ -28,13 +28,15 @@ export const productionQueue = {
   // Utility function to update batch counter display
   updateBatchCounter: function(button, count) {
     const batchCounter = button.querySelector('.batch-counter')
-    if (count <= 0) {
-      batchCounter.style.display = 'none'
-      button.classList.remove('active')
-      button.classList.remove('paused')
-    } else {
-      batchCounter.textContent = count
-      batchCounter.style.display = 'flex'
+    if (batchCounter) {
+      if (count <= 0) {
+        batchCounter.style.display = 'none'
+        button.classList.remove('active')
+        button.classList.remove('paused')
+      } else {
+        batchCounter.textContent = count
+        batchCounter.style.display = 'flex'
+      }
     }
   },
 

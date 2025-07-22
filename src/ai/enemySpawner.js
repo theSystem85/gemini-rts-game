@@ -106,8 +106,25 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       tank: 1000,
       rocketTank: 2000,
       'tank-v2': 2000,
-      'tank-v3': 3000
+      'tank-v3': 3000,
+      ambulance: 500
     }
+    
+    // Initialize crew for combat units (excluding ambulance and rocket tank for AI)
+    if (unitType !== 'ambulance' && unitType !== 'rocketTank') {
+      unit.crew = {
+        driver: true,
+        gunner: true,
+        commander: true,
+        loader: true
+      }
+    }
+    
+    // Ambulances use numeric crew (number of crew members they carry)
+    if (unitType === 'ambulance') {
+      unit.crew = 4 // Start with full crew capacity
+    }
+    
     unit.baseCost = unitCosts[unitType] || 1000
   }
 

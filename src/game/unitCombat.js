@@ -167,8 +167,8 @@ const COMBAT_CONFIG = {
         ROCKET: 1.8
     },
     FIRE_RATES: {
-        STANDARD: 2000,
-        ROCKET: 6000
+        STANDARD: 4000,  // Doubled from 2000ms to 4000ms
+        ROCKET: 12000    // Doubled from 6000ms to 12000ms
     },
     DAMAGE: {
         STANDARD: 25,
@@ -194,6 +194,12 @@ const COMBAT_CONFIG = {
 function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null) {
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
+    
+    // Check crew restrictions for firing
+    if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
+        // Tank cannot fire without loader
+        return false;
+    }
     
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
         // Check if turret is properly aimed at the target before firing

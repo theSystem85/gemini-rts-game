@@ -659,6 +659,16 @@ export function createUnit(factory, unitType, x, y) {
   }
 
   // Add unit-specific properties
+  if (actualType.startsWith('tank')) {
+    unit.crew = { driver: true, gunner: true, loader: true, commander: true };
+  }
+  if (actualType === 'ambulance') {
+    unit.crew = unitProps.crew || 10;
+    unit.maxCrew = unitProps.maxCrew || 10;
+    unit.ambulanceProps = {
+      streetSpeedMultiplier: unitProps.streetSpeedMultiplier || 6.0
+    };
+  }
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode
   } else if (unitType === 'harvester') {

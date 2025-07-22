@@ -85,7 +85,7 @@ export class MouseHandler {
       }
 
       // Update custom cursor position and visibility
-      cursorManager.updateCustomCursor(e, mapGrid, factories, selectedUnits)
+      cursorManager.updateCustomCursor(e, mapGrid, factories, selectedUnits, units)
     })
 
     gameCanvas.addEventListener('mouseup', e => {
@@ -418,7 +418,7 @@ export class MouseHandler {
       
       this.rightWasDragging = false
       // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
       return
     }
     
@@ -457,7 +457,7 @@ export class MouseHandler {
       
       this.rightWasDragging = false
       // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
       return
     }
 
@@ -480,7 +480,7 @@ export class MouseHandler {
     this.rightWasDragging = false
 
     // Update custom cursor visibility after unit selection changes
-    cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits)
+    cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
   }
 
   handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -888,6 +888,48 @@ export class MouseHandler {
           }
         }
       }
+
+      // Check for ambulance healing command if ambulances are selected
+      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+      
+      if (hasSelectedAmbulances) {
+        // Check if clicking on a friendly unit that needs healing
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && 
+              unit.crew && typeof unit.crew === 'object') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              // Check if unit has missing crew members
+              const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
+              if (missingCrew.length > 0) {
+                // Handle ambulance healing command
+                unitCommands.handleAmbulanceHealCommand(selectedUnits, unit, mapGrid)
+                return // Exit early, don't process unit selection
+              }
+            }
+          }
+        }
+      }
+
+      // Check for ambulance refilling command if ambulances are selected
+      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      
+      if (hasSelectedNotFullyLoadedAmbulances) {
+        // Check if clicking on a player hospital
+        for (const building of gameState.buildings) {
+          if (building.type === 'hospital' && 
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            // Handle ambulance refill command
+            unitCommands.handleAmbulanceRefillCommand(selectedUnits, building, mapGrid)
+            return // Exit early, don't process building selection
+          }
+        }
+      }
     }
 
     // PRIORITY 2: Check for building selection (including vehicle factories)
@@ -991,6 +1033,7 @@ export class MouseHandler {
       }
 
       let workshopTarget = null
+      let hospitalTarget = null
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -1000,12 +1043,27 @@ export class MouseHandler {
             break
           }
         }
+        
+        // Check for hospital if ambulances that need refilling are selected
+        const hasNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+        if (hasNotFullyLoadedAmbulances) {
+          for (const building of gameState.buildings) {
+            if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
+              hospitalTarget = building
+              break
+            }
+          }
+        }
       }
 
       if (refineryTarget) {
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
       } else if (workshopTarget) {
         unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
+      } else if (hospitalTarget) {
+        unitCommands.handleAmbulanceRefillCommand(selectedUnits, hospitalTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

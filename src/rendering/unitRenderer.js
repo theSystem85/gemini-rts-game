@@ -5,6 +5,7 @@ import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
 import { renderRocketTankWithImage, isRocketTankImageLoaded } from './rocketTankImageRenderer.js'
+import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -45,6 +46,11 @@ export class UnitRenderer {
       if (!isHarvesterImageLoaded()) {
         this.renderHarvesterMiningBar(ctx, unit, centerX, centerY)
       }
+      return
+    }
+
+    // Ambulances don't have turrets
+    if (unit.type === 'ambulance') {
       return
     }
 
@@ -228,7 +234,7 @@ export class UnitRenderer {
   }
 
   renderHarvesterProgress(ctx, unit, scrollOffset) {
-    // Handle both harvester progress and experience progress for combat units
+    // Handle harvester progress, ambulance crew, and experience progress for combat units
     let progress = 0
     let barColor = '#FFD700' // Default gold
     let shouldShowBar = false
@@ -251,6 +257,11 @@ export class UnitRenderer {
         progress = unit.oreCarried / HARVESTER_CAPPACITY
         barColor = '#FFD700' // Gold for ore
       }
+    } else if (unit.type === 'ambulance') {
+      // Ambulance crew loading bar
+      shouldShowBar = true
+      progress = (unit.crew || 0) / (unit.maxCrew || 10)
+      barColor = '#00FFFF' // Cyan for ambulance crew
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
@@ -303,6 +314,25 @@ export class UnitRenderer {
         unit.y + TILE_SIZE - 2 - scrollOffset.y
       )
     }
+  }
+  renderCrewStatus(ctx, unit, scrollOffset) {
+    if (!unit.crew) return;
+    const size = 4;
+    const x = unit.x - scrollOffset.x;
+    const y = unit.y - scrollOffset.y;
+    const colors = { driver: "#00F", gunner: "#F00", loader: "#FF0", commander: "#0F0" };
+    ctx.save();
+    Object.entries(unit.crew).forEach(([role, alive], idx) => {
+      if (!alive) return;
+      let dx = 0, dy = 0;
+      if (role === "driver") { dx = 0; dy = 0; }
+      if (role === "gunner") { dx = TILE_SIZE - size; dy = 0; }
+      if (role === "loader") { dx = 0; dy = TILE_SIZE - size; }
+      if (role === "commander") { dx = TILE_SIZE - size; dy = TILE_SIZE - size; }
+      ctx.fillStyle = colors[role];
+      ctx.fillRect(x + dx, y + dy, size, size);
+    });
+    ctx.restore();
   }
 
   renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
@@ -424,6 +454,15 @@ export class UnitRenderer {
       }
     }
 
+    if (unit.type === 'ambulance' && isAmbulanceImageLoaded()) {
+      const ok = renderAmbulanceWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
     if (useTankImage) {
       // Try to render with images
       const imageRenderSuccess = renderTankWithImages(ctx, unit, centerX, centerY)
@@ -455,6 +494,7 @@ export class UnitRenderer {
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
     this.renderGroupNumber(ctx, unit, scrollOffset)
+    this.renderCrewStatus(ctx, unit, scrollOffset)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
   }
 
