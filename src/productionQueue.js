@@ -9,7 +9,8 @@ import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester'] // Added harvester as a vehicle
+// Ambulance should spawn from the vehicle factory as well
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance']
 
 // Enhanced production queue system
 export const productionQueue = {
