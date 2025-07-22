@@ -122,6 +122,9 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
       }
       if (now - unit.harvestTimer > 10000) {
         unit.oreCarried++
+        if (typeof unit.gas === 'number') {
+          unit.gas = Math.max(0, unit.gas - (unit.harvestGasConsumption || 0))
+        }
         unit.harvesting = false
         const tileKey = `${unit.oreField.x},${unit.oreField.y}`
         harvestedTiles.delete(tileKey) // Free up the tile

@@ -295,6 +295,32 @@ export class UnitRenderer {
     }
   }
 
+  renderGasBar(ctx, unit, scrollOffset) {
+    if (typeof unit.maxGas !== 'number') return
+
+    const ratio = unit.gas / unit.maxGas
+    const healthBarWidth = TILE_SIZE * 0.8
+    const healthBarHeight = 4
+    const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
+    const healthBarY = unit.y - 10 - scrollOffset.y
+
+    const barHeight = healthBarWidth * 0.9
+    const barWidth = 3
+    const bottom = healthBarY + healthBarHeight
+    const barX = healthBarX + healthBarWidth + 2
+    const barTop = bottom - barHeight
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+    const fillHeight = barHeight * ratio
+    ctx.fillStyle = '#4A90E2'
+    ctx.fillRect(barX, bottom - fillHeight, barWidth, fillHeight)
+
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(barX, barTop, barWidth, barHeight)
+  }
+
   renderQueueNumber(ctx, unit, scrollOffset) {
     // Queue numbers are now handled by the HarvesterHUD overlay
     // This function is kept for compatibility but no longer renders anything
@@ -503,6 +529,7 @@ export class UnitRenderer {
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
 
     this.renderHealthBar(ctx, unit, scrollOffset)
+    this.renderGasBar(ctx, unit, scrollOffset)
     this.renderLevelStars(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)

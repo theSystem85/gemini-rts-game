@@ -140,6 +140,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const radarStations = aiBuildings.filter(b => b.type === 'radarStation')
     const teslaCoils = aiBuildings.filter(b => b.type === 'teslaCoil')
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
+    const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
 
@@ -159,6 +160,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (oreRefineries.length === 0 && aiFactory.budget >= buildingData.oreRefinery.cost) {
       buildingType = 'oreRefinery'
       cost = buildingData.oreRefinery.cost
+    } else if (oreRefineries.length > 0 && gasStations.length === 0 && aiFactory.budget >= buildingData.gasStation.cost) {
+      buildingType = 'gasStation'
+      cost = buildingData.gasStation.cost
 
     // Production - Vehicle Factory for unit production
     } else if (vehicleFactories.length === 0 && aiFactory.budget >= buildingData.vehicleFactory.cost) {

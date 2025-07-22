@@ -41,6 +41,16 @@ export function initializeUnitMovement(unit) {
  */
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit);
+
+  if (typeof unit.gas === 'number' && unit.gas <= 0) {
+    unit.path = []
+    unit.moveTarget = null
+    unit.movement.velocity = { x: 0, y: 0 }
+    unit.movement.targetVelocity = { x: 0, y: 0 }
+    unit.movement.isMoving = false
+    unit.movement.currentSpeed = 0
+    return
+  }
   
   // **HARVESTER MOVEMENT RESTRICTIONS** - Prevent movement during critical operations
   if (unit.type === 'harvester') {
@@ -294,6 +304,11 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   // Always apply velocity to position - tanks should move even when decelerating
   unit.x += movement.velocity.x;
   unit.y += movement.velocity.y;
+
+  if (typeof unit.gas === 'number') {
+    const dist = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
+    unit.gas = Math.max(0, unit.gas - (unit.gasConsumption || 0) * dist / 100)
+  }
   
   // Handle collisions
   if (checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
