@@ -20,18 +20,38 @@ export class MapRenderer {
       if (useTexture && this.textureManager.tileTextureCache[type]) {
         const idx = this.textureManager.getTileVariation(type, x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
-          const info = this.textureManager.tileTextureCache[type][idx]
-          ctx.drawImage(
-            this.textureManager.spriteImage,
-            info.x,
-            info.y,
-            info.width,
-            info.height,
-            screenX,
-            screenY,
-            TILE_SIZE + 1,
-            TILE_SIZE + 1
-          )
+          if (type === 'street') {
+            const canvas = this.textureManager.getSmoothedStreetCanvas(idx)
+            if (canvas) {
+              ctx.drawImage(canvas, screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+            } else {
+              const info = this.textureManager.tileTextureCache[type][idx]
+              ctx.drawImage(
+                this.textureManager.spriteImage,
+                info.x,
+                info.y,
+                info.width,
+                info.height,
+                screenX,
+                screenY,
+                TILE_SIZE + 1,
+                TILE_SIZE + 1
+              )
+            }
+          } else {
+            const info = this.textureManager.tileTextureCache[type][idx]
+            ctx.drawImage(
+              this.textureManager.spriteImage,
+              info.x,
+              info.y,
+              info.width,
+              info.height,
+              screenX,
+              screenY,
+              TILE_SIZE + 1,
+              TILE_SIZE + 1
+            )
+          }
         } else {
           ctx.fillStyle = TILE_COLORS[type]
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -203,18 +223,38 @@ export class MapRenderer {
     if (useTexture) {
       const idx = this.textureManager.getTileVariation(type, tileX, tileY)
       if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
-        const info = this.textureManager.tileTextureCache[type][idx]
-        ctx.drawImage(
-          this.textureManager.spriteImage,
-          info.x,
-          info.y,
-          info.width,
-          info.height,
-          screenX,
-          screenY,
-          size,
-          size
-        )
+        if (type === 'street') {
+          const canvas = this.textureManager.getSmoothedStreetCanvas(idx)
+          if (canvas) {
+            ctx.drawImage(canvas, screenX, screenY, size, size)
+          } else {
+            const info = this.textureManager.tileTextureCache[type][idx]
+            ctx.drawImage(
+              this.textureManager.spriteImage,
+              info.x,
+              info.y,
+              info.width,
+              info.height,
+              screenX,
+              screenY,
+              size,
+              size
+            )
+          }
+        } else {
+          const info = this.textureManager.tileTextureCache[type][idx]
+          ctx.drawImage(
+            this.textureManager.spriteImage,
+            info.x,
+            info.y,
+            info.width,
+            info.height,
+            screenX,
+            screenY,
+            size,
+            size
+          )
+        }
       } else {
         ctx.fillStyle = TILE_COLORS[type]
         ctx.fill()

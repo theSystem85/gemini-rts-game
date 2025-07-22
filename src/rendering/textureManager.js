@@ -27,6 +27,8 @@ export class TextureManager {
     this.spriteMap = {}
     this.allTexturesLoaded = false
     this.loadingStarted = false
+    // Cache for smoothed street textures so we don't recompute every frame
+    this.smoothStreetCache = {}
   }
 
   // Helper function to load images once
@@ -386,6 +388,48 @@ export class TextureManager {
     
     // Check if the selected index falls in the impassable range
     return selectedIndex >= impassableStartIndex && selectedIndex < totalTextureCount
+  }
+
+  // Get a canvas with smoothed edges for the specified street texture index
+  getSmoothedStreetCanvas(idx) {
+    if (this.smoothStreetCache[idx]) {
+      return this.smoothStreetCache[idx]
+    }
+
+    const info = this.tileTextureCache.street && this.tileTextureCache.street[idx]
+    if (!info || !this.spriteImage) {
+      return null
+    }
+
+    const baseCanvas = document.createElement('canvas')
+    baseCanvas.width = TILE_SIZE
+    baseCanvas.height = TILE_SIZE
+
+    const tempCanvas = document.createElement('canvas')
+    const size = TILE_SIZE + 2
+    tempCanvas.width = size
+    tempCanvas.height = size
+
+    const tempCtx = tempCanvas.getContext('2d')
+    tempCtx.imageSmoothingEnabled = true
+    tempCtx.drawImage(
+      this.spriteImage,
+      info.x,
+      info.y,
+      info.width,
+      info.height,
+      0,
+      0,
+      size,
+      size
+    )
+
+    const ctx = baseCanvas.getContext('2d')
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(tempCanvas, -1, -1)
+
+    this.smoothStreetCache[idx] = baseCanvas
+    return baseCanvas
   }
 
   // Export getter for unit image map for compatibility
