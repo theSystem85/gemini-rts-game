@@ -321,7 +321,7 @@ export class UnitRenderer {
     const size = 5
     const baseX = unit.x - scrollOffset.x
     const baseY = unit.y + TILE_SIZE - scrollOffset.y
-    const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#0F0' }
+    const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#006400' }
     const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
 
     ctx.save()
@@ -332,14 +332,16 @@ export class UnitRenderer {
       const x = baseX + idx * (size + 2)
       const y = baseY
 
+      const rectHeight = size * 2 * 0.7
+
       ctx.fillStyle = colors[role]
-      ctx.fillRect(x, y - size * 2, size, size * 2)
+      ctx.fillRect(x, y - rectHeight, size, rectHeight)
 
       ctx.fillStyle = '#FFF'
       ctx.font = '4px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(letters[role], x + size / 2, y - size / 2)
+      ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
 
       idx++
     })
