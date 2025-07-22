@@ -68,6 +68,9 @@ function evaluatePlayerDefenses(target, gameState) {
           case 'teslaCoil':
             defenseScore += 5
             break
+          case 'artilleryTurret':
+            defenseScore += 6
+            break
         }
       }
     })
@@ -165,7 +168,10 @@ function findNearestEnemyBase(unit, gameState) {
     )
     
     // Prioritize defensive buildings
-    const isDefensive = building.type.includes('turret') || building.type === 'teslaCoil'
+    const isDefensive =
+      building.type.includes('turret') ||
+      building.type === 'teslaCoil' ||
+      building.type === 'artilleryTurret'
     const adjustedDistance = isDefensive ? distance * 0.8 : distance
     
     if (adjustedDistance < nearestDistance) {
@@ -294,9 +300,9 @@ function findDefensivePosition(baseBuilding, gameState, mapGrid) {
   if (!gameState.buildings) return null
   
   // Look for defensive buildings near the base
-  const defensiveBuildings = gameState.buildings.filter(b => 
-    b.owner === 'enemy' && 
-    (b.type.includes('turret') || b.type === 'teslaCoil') &&
+  const defensiveBuildings = gameState.buildings.filter(b =>
+    b.owner === 'enemy' &&
+    (b.type.includes('turret') || b.type === 'teslaCoil' || b.type === 'artilleryTurret') &&
     Math.hypot(
       (b.x + b.width / 2) - (baseBuilding.x + baseBuilding.width / 2),
       (b.y + b.height / 2) - (baseBuilding.y + baseBuilding.height / 2)
