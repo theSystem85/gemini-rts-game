@@ -23,6 +23,35 @@ import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator } from './ui/energyBar.js'
 
+const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
+const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
+
+function loadPersistedSettings() {
+  try {
+    const seedInput = document.getElementById('mapSeed')
+    const storedSeed = localStorage.getItem(MAP_SEED_STORAGE_KEY)
+    if (seedInput && storedSeed !== null) {
+      seedInput.value = storedSeed
+    }
+  } catch (e) {
+    console.warn('Failed to load map seed from localStorage:', e)
+  }
+
+  try {
+    const playerInput = document.getElementById('playerCount')
+    const storedCount = localStorage.getItem(PLAYER_COUNT_STORAGE_KEY)
+    if (playerInput && storedCount !== null) {
+      const parsed = parseInt(storedCount)
+      if (!isNaN(parsed) && parsed >= 2 && parsed <= 4) {
+        playerInput.value = parsed
+        gameState.playerCount = parsed
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load player count from localStorage:', e)
+  }
+}
+
 // Initialize loading states
 let allAssetsLoaded = false
 
@@ -243,6 +272,11 @@ class Game {
         const value = parseInt(e.target.value)
         if (value >= 2 && value <= 4) {
           gameState.playerCount = value
+          try {
+            localStorage.setItem(PLAYER_COUNT_STORAGE_KEY, value.toString())
+          } catch (err) {
+            console.warn('Failed to save player count to localStorage:', err)
+          }
           // Note: Map will be regenerated on next shuffle
         } else {
           e.target.value = gameState.playerCount || 2
@@ -252,9 +286,24 @@ class Game {
   }
 
   setupMapShuffle() {
+    const seedInput = document.getElementById('mapSeed')
+    if (seedInput) {
+      seedInput.addEventListener('change', (e) => {
+        try {
+          localStorage.setItem(MAP_SEED_STORAGE_KEY, e.target.value)
+        } catch (err) {
+          console.warn('Failed to save map seed to localStorage:', err)
+        }
+      })
+    }
+
     document.getElementById('shuffleMapBtn').addEventListener('click', () => {
-      const seedInput = document.getElementById('mapSeed')
-      const seed = seedInput.value || '1'
+      const seed = seedInput ? seedInput.value || '1' : '1'
+      try {
+        localStorage.setItem(MAP_SEED_STORAGE_KEY, seed)
+      } catch (err) {
+        console.warn('Failed to save map seed to localStorage:', err)
+      }
       this.resetGameWithNewMap(seed)
     })
   }
@@ -540,6 +589,7 @@ export { showNotification }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+  loadPersistedSettings()
   gameInstance = new Game()
   
   // Also make it available globally for debugging
