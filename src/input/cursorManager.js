@@ -13,6 +13,7 @@ export class CursorManager {
     this.isOverPlayerWorkshop = false
     this.isOverOreTile = false
     this.isOverPlayerRefinery = false
+    this.isOverHealableUnit = false
     this.isForceAttackMode = false
     this.isGuardMode = false
     this.lastMouseEvent = null
@@ -60,7 +61,7 @@ export class CursorManager {
   }
 
   // Function to update custom cursor position and visibility
-  updateCustomCursor(e, mapGrid, factories, selectedUnits) {
+  updateCustomCursor(e, mapGrid, factories, selectedUnits, units = []) {
     // Store last mouse event for later refreshes
     this.lastMouseEvent = e
     const gameCanvas = document.getElementById('gameCanvas')
@@ -91,10 +92,15 @@ export class CursorManager {
 
     // Check if mouse is over a player refinery when harvesters are selected
     this.isOverPlayerRefinery = false
+    // Check if mouse is over a healable unit when ambulances are selected
+    this.isOverHealableUnit = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+      // Check for ambulance healing
+      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+      
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
           if (building.type === 'oreRefinery' &&
@@ -104,6 +110,26 @@ export class CursorManager {
               tileY >= building.y && tileY < building.y + building.height) {
             this.isOverPlayerRefinery = true
             break
+          }
+        }
+      }
+      
+      // Check for healable units when ambulances are selected
+      if (hasSelectedAmbulances && units && Array.isArray(units)) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && 
+              unit.crew && typeof unit.crew === 'object') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              // Check if unit has missing crew members
+              const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
+              if (missingCrew.length > 0) {
+                this.isOverHealableUnit = true
+                break
+              }
+            }
           }
         }
       }
@@ -339,6 +365,10 @@ export class CursorManager {
         // Over vehicle workshop with damaged units selected - special move cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
+      } else if (this.isOverHealableUnit) {
+        // Over healable unit with ambulances selected - show move into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerRefinery) {
         // Over player refinery with harvesters selected - show move into cursor
         gameCanvas.style.cursor = 'none'
@@ -455,9 +485,9 @@ export class CursorManager {
   }
 
   // Reapply cursor appearance using the last known mouse position
-  refreshCursor(mapGrid, factories, selectedUnits) {
+  refreshCursor(mapGrid, factories, selectedUnits, units = []) {
     if (this.lastMouseEvent) {
-      this.updateCustomCursor(this.lastMouseEvent, mapGrid, factories, selectedUnits)
+      this.updateCustomCursor(this.lastMouseEvent, mapGrid, factories, selectedUnits, units)
     }
   }
 

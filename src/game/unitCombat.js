@@ -195,6 +195,12 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     const unitCenterX = unit.x + TILE_SIZE / 2;
     const unitCenterY = unit.y + TILE_SIZE / 2;
     
+    // Check crew restrictions for firing
+    if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
+        // Tank cannot fire without loader
+        return false;
+    }
+    
     if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
         // Check if turret is properly aimed at the target before firing
         const clearShot = unit.type === 'rocketTank' || hasClearShot(unit, target, units);

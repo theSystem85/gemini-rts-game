@@ -5,6 +5,7 @@ import { playSound, playPositionalSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
+import { showNotification } from '../ui/notifications.js'
 import { units } from '../main.js'
 
 export class UnitCommandsHandler {
@@ -24,23 +25,42 @@ export class UnitCommandsHandler {
   }
 
   handleMovementCommand(selectedUnits, targetX, targetY, mapGrid, skipQueueClear = false) {
+    // Filter out units that cannot be commanded due to missing commander
+    const commandableUnits = selectedUnits.filter(unit => {
+      if (unit.crew && typeof unit.crew === 'object' && !unit.crew.commander) {
+        // Unit cannot be commanded without commander
+        return false
+      }
+      return true
+    })
+
+    // If no commandable units, show notification and return
+    if (commandableUnits.length === 0 && selectedUnits.some(unit => 
+      unit.crew && typeof unit.crew === 'object' && !unit.crew.commander)) {
+      showNotification('Cannot command units without commanders!', 2000)
+      return
+    }
+
+    // Use commandable units for the rest of the function
+    const unitsToCommand = commandableUnits.length > 0 ? commandableUnits : selectedUnits
+
     // Clear attack group feature state when issuing movement commands
-    this.clearAttackGroupState(selectedUnits)
+    this.clearAttackGroupState(unitsToCommand)
 
     // Cancel retreat for all selected units when issuing movement commands
-    cancelRetreatForUnits(selectedUnits)
+    cancelRetreatForUnits(unitsToCommand)
 
     if (!skipQueueClear) {
-          selectedUnits.forEach(unit => {
+          unitsToCommand.forEach(unit => {
         unit.commandQueue = []
         unit.currentCommand = null
       })
     }
 
-    const count = selectedUnits.length
+    const count = unitsToCommand.length
 
     let anyMoved = false
-    selectedUnits.forEach((unit, index) => {
+    unitsToCommand.forEach((unit, index) => {
       unit.guardTarget = null
       unit.guardMode = false
       let formationOffset = { x: 0, y: 0 }
@@ -70,7 +90,7 @@ export class UnitCommandsHandler {
       const originalDestTile = { x: Math.floor(destX / TILE_SIZE), y: Math.floor(destY / TILE_SIZE) }
 
       // Check if this tile is already targeted by previously processed units
-      const alreadyTargeted = selectedUnits.slice(0, index).some(u =>
+      const alreadyTargeted = unitsToCommand.slice(0, index).some(u =>
         u.moveTarget && u.moveTarget.x === originalDestTile.x && u.moveTarget.y === originalDestTile.y
       )
 
@@ -332,6 +352,76 @@ export class UnitCommandsHandler {
         unit.moveTarget = null
       }
     })
+    playSound('movement', 0.5)
+  }
+
+  handleAmbulanceHealCommand(selectedUnits, targetUnit, mapGrid) {
+    // Filter for ambulances that can heal
+    const ambulances = selectedUnits.filter(unit => 
+      unit.type === 'ambulance' && unit.crew > 0
+    )
+
+    if (ambulances.length === 0) {
+      showNotification('No ambulances with crew selected!', 2000)
+      return
+    }
+
+    // Check if target can be healed
+    if (!targetUnit.crew || typeof targetUnit.crew !== 'object') {
+      showNotification('Target unit cannot be healed!', 2000)
+      return
+    }
+
+    const missingCrew = Object.entries(targetUnit.crew).filter(([_, alive]) => !alive)
+    if (missingCrew.length === 0) {
+      showNotification('Target unit is already fully crewed!', 2000)
+      return
+    }
+
+    // Assign ambulances to heal the target
+    ambulances.forEach(ambulance => {
+      ambulance.healingTarget = targetUnit
+      ambulance.healingTimer = 0
+      
+      // Set path to target (within 1 tile range)
+      const targetTileX = Math.floor((targetUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const targetTileY = Math.floor((targetUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+      
+      // Find a position within 1 tile of the target
+      const directions = [
+        { x: 0, y: 0 },   // Same tile if possible
+        { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+        { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+      ]
+      
+      let destinationFound = false
+      for (const dir of directions) {
+        const destX = targetTileX + dir.x
+        const destY = targetTileY + dir.y
+        
+        if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
+          const path = findPath(
+            { x: Math.floor((ambulance.x + TILE_SIZE / 2) / TILE_SIZE), 
+              y: Math.floor((ambulance.y + TILE_SIZE / 2) / TILE_SIZE) },
+            { x: destX, y: destY },
+            mapGrid,
+            null
+          )
+          
+          if (path && path.length > 0) {
+            ambulance.path = path.slice(1)
+            ambulance.moveTarget = { x: destX, y: destY }
+            destinationFound = true
+            break
+          }
+        }
+      }
+      
+      if (!destinationFound) {
+        showNotification('Cannot path to target for healing!', 2000)
+      }
+    })
+
     playSound('movement', 0.5)
   }
 

@@ -218,9 +218,12 @@ export const UNIT_PROPERTIES = {
   ambulance: {
     health: 25,
     maxHealth: 25,
-    speed: 0.75,
+    speed: 0.5, // Base speed (1.5x tank v1 on grass: 0.33 * 1.5 = 0.495)
+    streetSpeedMultiplier: 4.0,
     rotationSpeed: TANK_WAGON_ROT,
-    turretRotationSpeed: 0
+    turretRotationSpeed: 0,
+    maxCrew: 10,
+    crew: 10 // Initial crew capacity
   },
 }
 

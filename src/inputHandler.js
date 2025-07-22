@@ -49,7 +49,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
       cursorManager.updateForceAttackMode(isForceAttackModifierActive())
 
       // Update custom cursor position
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits, units)
 
       // Detect if over sidebar to ensure cursor is hidden there
       const sidebar = document.getElementById('sidebar')
