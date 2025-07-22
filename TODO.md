@@ -6,15 +6,15 @@
 - [ ] **Refactor:** move all constants into config.
 
 ## Features
-- [ ] Add a hospital to the game:
+- [x] Add a hospital to the game:
 - [x] 1) Add the build button to sidebar: cost 4000, health 200, power -50MW
 - [x] 2) Add the image asset of the building for the map
 - [x] 3) All tanks now have 4 crew people on board (each person is indicated by a small colored mannequin in a corner of the HUD):
 - [x] 3.1 driver (top left blue) if dead tank cannot move wagon anymore but can still rotate the turret and fire at targets within range
-- [ ] 3.2 gunner (top right red) if dead tank cannot rotate the turret anymore but the tank can still fire at a target by rotating the entire wagon until gun points at target (might look funny)
+- [x] 3.2 gunner (top right red) if dead tank cannot rotate the turret anymore but the tank can still fire at a target by rotating the entire wagon until gun points at target (might look funny)
 - [x] 3.3 loader (bottom left yellow) if dead tank cannot fire anymore at all
 - [x] 3.4 commander (bottom right green) if dead tank cannot be moved anymore by the user => it will only operate own and only defend itself or move back to base or complete it path when it was added before the commander died. Prio is as follows then: first defend yourself then continue path/waypoints if there is one then go back to base ideally directly to repair if there is a workshop.
-- [ ] 4) when the tank goes to the 3 tiles in below the hospital dead people will fill up again. One person will take 10s to be restored and costs 100.
+- [x] 4) when the tank goes to the 3 tiles in below the hospital dead people will fill up again. One person will take 10s to be restored and costs 100.
 - [x] 5) when a tank gets hit the likelyhood for each individual crew member to be killed is 15%.
 - [x] 6) Make sure to play the respective sound file when a crew member got killed (loaderIsOut.mp3, driverIsOut.mp3, commanderIsOut.mp3, gunnerIsOut.mp3)
 - [ ] 7) Ensure that the enemy AI will move the tanks with missing crew members back to hospital before continuing the battle.
@@ -28,8 +28,8 @@
 - [ ] 8.7 The mannequinns are added in this order: driver, commander, loader, gunner
 
 - [ ] Add a gas station to the game
-  1) add the image asset for the sidebar to the build button ()
-  2) add the image asset for the building on the map ()
+  1) add the image asset for the sidebar to the build button (images/sidebar/gas_station.webp)
+  2) add the image asset for the building on the map (images/map/buildings/gas_station.webp)
   3) the building has 50hp and consumes 30MW and costs 2000
   4) when a units is at one of the 3 tiles below the building it can refill its gas.
   5) It takes 7 seconds for each unit to refill its gas.
@@ -43,8 +43,8 @@
      9.4 harvester gas tank is 2.650l and consumes 30l/100km gas when moving AND 100l per harvested ore tile
      9.5 ambulance gas tank is 75l and consumes 25l/100km
 - [ ] Add a mobile tanker truck to the game
-  1) add the image asset for the sidebar to the unit build button ()
-  2) add the image asset for the unit on the map ()
+  1) add the image asset for the sidebar to the unit build button (images/sidebar/tanker_truck.webp)
+  2) add the image asset for the unit on the map (images/map/units/tanker_truck.webp)
   3) the tanker truck has 20hp and costs 300. It moves twice as fast as a tank_v1.
   4) when the tanker truck is within 1 tile range of another unit this the tanker refils all surrounding units automatically one by one. Each refill tankes 7 seconds.
   5) when the tanker truck is selected and the mouse hovers over another unit the cursor turns into the "moveInto" cursor and when then left clicked on it the tanker truck will move there to refill that unit.
