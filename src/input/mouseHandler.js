@@ -1,10 +1,9 @@
 // mouseHandler.js
-import { TILE_SIZE, ATTACK_GROUP_MIN_DRAG_DISTANCE } from '../config.js'
+import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { units } from '../main.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
-import { initiateRetreat, cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
 import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
