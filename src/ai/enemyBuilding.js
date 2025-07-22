@@ -69,7 +69,11 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Determine direction vector - prioritize direction toward player for defensive buildings
   let directionVector = { x: 0, y: 0 }
-  const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
+  const isDefensiveBuilding =
+    buildingType.startsWith('turretGun') ||
+    buildingType === 'rocketTurret' ||
+    buildingType === 'teslaCoil' ||
+    buildingType === 'artilleryTurret'
 
   if (isDefensiveBuilding && humanPlayerFactory) {
     // For defensive buildings, strongly prefer direction toward player
@@ -99,7 +103,12 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
   } else if (buildingType === 'vehicleFactory') {
     minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
-  } else if (buildingType.startsWith('turretGun') || buildingType === 'rocketTurret' || buildingType === 'teslaCoil') {
+  } else if (
+    buildingType.startsWith('turretGun') ||
+    buildingType === 'rocketTurret' ||
+    buildingType === 'teslaCoil' ||
+    buildingType === 'artilleryTurret'
+  ) {
     minSpaceBetweenBuildings = 2 // Defense buildings standard spacing
   }
 
@@ -486,7 +495,11 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
   // Get human player factory for directional placement of defensive buildings
   const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player1')
-  const isDefensiveBuilding = buildingType.startsWith('turretGun') || buildingType === 'rocketTurret'
+  const isDefensiveBuilding =
+    buildingType.startsWith('turretGun') ||
+    buildingType === 'rocketTurret' ||
+    buildingType === 'teslaCoil' ||
+    buildingType === 'artilleryTurret'
 
   // Calculate player direction for defensive buildings
   let playerDirection = null

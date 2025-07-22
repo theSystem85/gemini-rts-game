@@ -23,6 +23,27 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   const buildingWidth = buildingData[buildingType].width
   const buildingHeight = buildingData[buildingType].height
 
+  const isDefensive =
+    buildingType.startsWith('turretGun') ||
+    buildingType === 'rocketTurret' ||
+    buildingType === 'teslaCoil' ||
+    buildingType === 'artilleryTurret'
+
+  let angleOffset = 0
+  if (isDefensive) {
+    const playerFactory = factories.find(
+      f => f.id === gameState.humanPlayer || f.id === 'player1'
+    )
+    if (playerFactory) {
+      const fx = factory.x + Math.floor(factory.width / 2)
+      const fy = factory.y + Math.floor(factory.height / 2)
+      const px = playerFactory.x + Math.floor(playerFactory.width / 2)
+      const py = playerFactory.y + Math.floor(playerFactory.height / 2)
+      angleOffset = (Math.atan2(py - fy, px - fx) * 180) / Math.PI
+      if (angleOffset < 0) angleOffset += 360
+    }
+  }
+
   // Use appropriate spacing based on building type
   let minDistance = 2
   if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
@@ -32,10 +53,11 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   }
 
   // Extended spiral search around the factory with appropriate spacing
-  for (let radius = minDistance; radius <= 20; radius++) { // Increased from 12 to 20
-    for (let angle = 0; angle < 360; angle += 30) { // Reduced step from 45 to 30 for more positions
-      const x = factory.x + Math.round(Math.cos(angle * Math.PI / 180) * radius)
-      const y = factory.y + Math.round(Math.sin(angle * Math.PI / 180) * radius)
+  for (let radius = minDistance; radius <= 20; radius++) {
+    for (let step = 0; step < 360; step += 30) {
+      const angle = ((angleOffset + step) % 360) * (Math.PI / 180)
+      const x = factory.x + Math.round(Math.cos(angle) * radius)
+      const y = factory.y + Math.round(Math.sin(angle) * radius)
 
       // Check bounds
       if (x < 0 || y < 0 || x + buildingWidth >= mapGrid[0].length || y + buildingHeight >= mapGrid.length) {
@@ -106,7 +128,12 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
     const oreRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
-    const turrets = aiBuildings.filter(b => b.type.startsWith('turretGun') || b.type === 'rocketTurret')
+    const turrets = aiBuildings.filter(
+      b =>
+        b.type.startsWith('turretGun') ||
+        b.type === 'rocketTurret' ||
+        b.type === 'artilleryTurret'
+    )
     const radarStations = aiBuildings.filter(b => b.type === 'radarStation')
     const teslaCoils = aiBuildings.filter(b => b.type === 'teslaCoil')
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
@@ -180,6 +207,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         } else if (aiFactory.budget >= 4000) {
           buildingType = 'rocketTurret'
           cost = 4000
+        } else if (aiFactory.budget >= buildingData.artilleryTurret.cost) {
+          buildingType = 'artilleryTurret'
+          cost = buildingData.artilleryTurret.cost
         } else {
           buildingType = 'turretGunV3'
           cost = 3000
