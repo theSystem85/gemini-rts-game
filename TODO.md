@@ -6,6 +6,17 @@
 - [ ] **Refactor:** move all constants into config.
 
 ## Features
+- [x] Add recovery_tank to the game
+  - [ ] It can be built in the vehicle factory if a workshop exists
+  - [ ] The image assets for sidebar build button and unit on the map already exist in the respective folders named "recovery_tank.webp" each.
+  - [ ] It moves like a tocket_tank but 50% faster when not loaded otherwise it moves as fast as a tank when loaded
+  - [ ] It can repair any friendly damaged unit (repair mode).
+  - [ ] repairing a unit to 100% takes as long as buildings that specific unit.
+  - [ ] repairing works gradually and costs apply gradually but 100% repair would only cost 25% of the original cost to build that unit.
+  - [ ] any unit within 1 tile distance will be repaired automatically one by one at a time. The repair starts when the recovery_tank turned towards the unit (like aiming towards works from a rocket tank)
+  - [ ] with the recovery tank when selected the user can click on a tank that is not moveable anymore (indicated by "moveInto" cursor) for towing it around. When the user click again on the unit that is being towed then it will release again.
+  - [ ] the recovery tank costs 3000 and has the same armor as the tank_v3.
+  - [ ] ensure to play the existing repair sound like (repairing.mp3, repairFinished.mp3)
 - [x] Add a hospital to the game:
 - [x] 1) Add the build button to sidebar: cost 4000, health 200, power -50MW
 - [x] 2) Add the image asset of the building for the map
