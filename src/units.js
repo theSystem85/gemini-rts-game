@@ -685,6 +685,12 @@ export function createUnit(factory, unitType, x, y) {
     unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY;
     unit.supplyGas = TANKER_SUPPLY_CAPACITY;
   }
+  if (actualType === 'recoveryTank') {
+    unit.repairTarget = null;
+    unit.towedUnit = null;
+    unit.armor = unitProps.armor;
+    unit.currentSpeed = unitProps.speed; // Track current speed for loaded/unloaded state
+  }
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode
   } else if (unitType === 'harvester') {

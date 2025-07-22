@@ -61,6 +61,12 @@ export class MilestoneSystem {
         description: 'Advanced rocket technology unlocked',
         priority: 'medium'
       },
+      recoveryTankUnlocked: {
+        id: 'recoveryTankUnlocked',
+        displayName: 'Recovery Tank Available',
+        description: 'Field repair capabilities unlocked',
+        priority: 'medium'
+      },
       tankV3Unlocked: {
         id: 'tankV3Unlocked',
         displayName: 'Heavy Tank Available',
@@ -157,6 +163,14 @@ export class MilestoneSystem {
     }
     this.productionController.unlockUnitType('tankerTruck')
   }
+  
+  unlockRecoveryTank() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock recovery tank')
+      return
+    }
+    this.productionController.unlockUnitType('recoveryTank')
+  }
 
   /**
    * Set the production controller reference for unlocking units/buildings
@@ -245,6 +259,14 @@ export class MilestoneSystem {
       if (hasHospital) {
         // this.triggerMilestone("hospitalBuilt")
         this.unlockAmbulance()
+      }
+    }
+
+    if (!this.achievedMilestones.has('recoveryTankUnlocked')) {
+      const hasWorkshop = gameState.buildings?.some(b => b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer)
+      if (hasWorkshop) {
+        this.triggerMilestone('recoveryTankUnlocked')
+        this.unlockRecoveryTank()
       }
     }
 

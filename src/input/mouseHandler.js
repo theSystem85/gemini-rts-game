@@ -34,6 +34,7 @@ export class MouseHandler {
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
     this.gameFactories = factories // Store the passed factories list
+    this.gameUnits = units // Store the passed units list for recovery tank detection
     // Disable right-click context menu
     gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
@@ -50,7 +51,7 @@ export class MouseHandler {
         this.handleRightMouseDown(e, gameCanvas)
       } else if (e.button === 0) {
         // Left-click: start selection or force attack
-        this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits)
+        this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
       }
     })
 
@@ -76,7 +77,7 @@ export class MouseHandler {
       // Update selection rectangle if we're actively selecting 
       // Remove the unreliable (e.buttons & 1) check that was causing cancellations
       if (this.isSelecting || this.attackGroupHandler.isAttackGroupSelecting) {
-        this.updateSelectionRectangle(worldX, worldY)
+        this.updateSelectionRectangle(worldX, worldY, cursorManager)
       }
 
       // Update custom cursor position and visibility
@@ -109,7 +110,7 @@ export class MouseHandler {
     gameCanvas.style.cursor = 'grabbing'
   }
 
-  handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits) {
+  handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager) {
     // Track mouse down time and position
     this.mouseDownTime = performance.now()
 
@@ -118,11 +119,25 @@ export class MouseHandler {
     // Determine if this click should issue a guard command
     this.guardClick = selectedUnits.length > 0 && isGuardModifierActive(e)
 
+    // Check if we're over a recovery tank with damaged units selected
+    // This should prevent AGF mode from being triggered but allow normal selection
+    const isRecoveryTankInteraction = cursorManager && cursorManager.isOverRecoveryTank
+    
+    // Additional direct check for recovery tank interaction
+    const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+    const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
+    
+    // Store this for use during dragging
+    this.isRecoveryTankInteraction = isRecoveryTankInteraction || 
+      (hasSelectedDamagedUnits && this.isOverRecoveryTankAt(worldX, worldY)) ||
+      (hasSelectedRecoveryTanks && this.isOverDamagedUnitAt(worldX, worldY, selectedUnits))
+
     // Store potential attack group start position
     this.attackGroupHandler.potentialAttackGroupStart = { x: worldX, y: worldY }
-    this.attackGroupHandler.hasSelectedCombatUnits = !this.forceAttackClick && !this.guardClick && this.attackGroupHandler.shouldStartAttackGroupMode(selectedUnits)
+    // Don't enable AGF mode if we're doing a recovery tank interaction
+    this.attackGroupHandler.hasSelectedCombatUnits = !this.forceAttackClick && !this.guardClick && !this.isRecoveryTankInteraction && this.attackGroupHandler.shouldStartAttackGroupMode(selectedUnits)
 
-    // Only enable selection when not initiating a special command
+    // Allow normal selection for recovery tank interactions (but AGF will be disabled)
     this.isSelecting = !this.forceAttackClick && !this.guardClick
 
     // Prevent selection box from appearing when assigning rally points
@@ -343,9 +358,15 @@ export class MouseHandler {
     }
   }
 
-  updateSelectionRectangle(worldX, worldY) {
+  updateSelectionRectangle(worldX, worldY, cursorManager) {
+    // Use the stored recovery tank interaction state from mouse down
+    const isRecoveryTankInteraction = this.isRecoveryTankInteraction || (cursorManager && cursorManager.isOverRecoveryTank)
+    
     // Check if we should transition to attack group mode during dragging
-    if (!this.attackGroupHandler.isAttackGroupSelecting && this.attackGroupHandler.hasSelectedCombatUnits && this.isSelecting) {
+    if (!this.attackGroupHandler.isAttackGroupSelecting && 
+        this.attackGroupHandler.hasSelectedCombatUnits && 
+        this.isSelecting && 
+        !isRecoveryTankInteraction) { // Prevent AGF when recovery tank interaction is possible
       const dragDistance = Math.hypot(
         worldX - this.attackGroupHandler.potentialAttackGroupStart.x,
         worldY - this.attackGroupHandler.potentialAttackGroupStart.y
@@ -369,13 +390,13 @@ export class MouseHandler {
         return
       }
     }
-    
+
     if (this.attackGroupHandler.isAttackGroupSelecting) {
       // Update attack group rectangle (red box)
       gameState.attackGroupEnd = { x: worldX, y: worldY }
       this.attackGroupHandler.attackGroupWasDragging = true
-    } else if (this.isSelecting) {
-      // Update normal selection rectangle (yellow box)
+    } else if (this.isSelecting && !isRecoveryTankInteraction) {
+      // Update normal selection rectangle (yellow box) - but not during recovery tank interactions
       this.selectionEnd = { x: worldX, y: worldY }
       gameState.selectionEnd = { ...this.selectionEnd }
 
@@ -383,9 +404,7 @@ export class MouseHandler {
         this.wasDragging = true
       }
     }
-  }
-
-  handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager) {
+  }  handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager) {
     // End right-click drag
     gameState.isRightDragging = false
     const gameCanvas = document.getElementById('gameCanvas')
@@ -521,6 +540,9 @@ export class MouseHandler {
     // Reset force attack state captured on mouse down
     this.forceAttackClick = false
     this.guardClick = false
+    
+    // Reset recovery tank interaction state
+    this.isRecoveryTankInteraction = false
     
     // Clear any remaining AGF state if not handled above
     if (!this.attackGroupHandler.isAttackGroupSelecting) {
@@ -668,6 +690,21 @@ export class MouseHandler {
   }
 
   handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
+    // Check for AGF capability first - if units are AGF capable, prioritize normal AGF behavior
+    const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+    const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
+      unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
+    )
+    const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit =>
+      (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
+      (unit.id && (unit.id === gameState.humanPlayer))
+    )
+    const isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
+                        !gameState.buildingPlacementMode &&
+                        !gameState.repairMode &&
+                        !gameState.sellMode &&
+                        !gameState.attackGroupMode
+
     // PRIORITY 1: Check for refinery unload command if harvesters are already selected
     if (selectedUnits.length > 0) {
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
@@ -743,6 +780,62 @@ export class MouseHandler {
                 // Handle ambulance healing command
                 unitCommands.handleAmbulanceHealCommand(selectedUnits, unit, mapGrid)
                 return // Exit early, don't process unit selection
+              }
+            }
+          }
+        }
+      }
+
+      // Check for recovery tank repair command if recovery tanks are selected
+      const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
+      
+      if (hasSelectedRecoveryTanks) {
+        // Check if clicking on a friendly unit that needs repair
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && 
+              unit.type !== 'recoveryTank' &&
+              unit.health < unit.maxHealth) {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              // Handle recovery tank repair command
+              unitCommands.handleRecoveryTankRepairCommand(selectedUnits, unit, mapGrid)
+              return // Exit early, don't process unit selection
+            }
+          }
+        }
+      }
+
+      // Check for damaged unit requesting recovery tank help
+      const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      
+      if (hasSelectedDamagedUnits) {
+        // Check if clicking on a recovery tank
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              // Handle damaged unit requesting recovery tank help
+              unitCommands.handleDamagedUnitToRecoveryTankCommand(selectedUnits, unit, mapGrid)
+              return // Exit early, don't process unit selection
+            }
+          }
+        }
+      }
+
+      const hasSelectedRecovery = selectedUnits.some(unit => unit.type === 'recoveryTank')
+      if (hasSelectedRecovery) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer) {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (unitTileX === tileX && unitTileY === tileY) {
+              if (unit.crew && (!unit.crew.driver || !unit.crew.commander)) {
+                unitCommands.handleRecoveryTowCommand(selectedUnits, unit)
+                return
               }
             }
           }
@@ -1049,5 +1142,42 @@ export class MouseHandler {
 
   updateAGFCapability(selectedUnits) {
     this.attackGroupHandler.updateAGFCapability(selectedUnits)
+  }
+
+  // Helper method to check if mouse is over a recovery tank
+  isOverRecoveryTankAt(worldX, worldY) {
+    if (!this.gameUnits) return false
+    
+    const tileX = Math.floor(worldX / TILE_SIZE)
+    const tileY = Math.floor(worldY / TILE_SIZE)
+    
+    return this.gameUnits.some(unit => {
+      if (unit.type === 'recoveryTank' && unit.owner === gameState.humanPlayer) {
+        const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+        return unitTileX === tileX && unitTileY === tileY
+      }
+      return false
+    })
+  }
+
+  // Helper method to check if mouse is over a damaged unit  
+  isOverDamagedUnitAt(worldX, worldY, selectedUnits) {
+    if (!this.gameUnits) return false
+    
+    const tileX = Math.floor(worldX / TILE_SIZE)
+    const tileY = Math.floor(worldY / TILE_SIZE)
+    
+    return this.gameUnits.some(unit => {
+      if (unit.owner === gameState.humanPlayer && 
+          unit.type !== 'recoveryTank' &&
+          unit.health < unit.maxHealth &&
+          !selectedUnits.includes(unit)) {
+        const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+        return unitTileX === tileX && unitTileY === tileY
+      }
+      return false
+    })
   }
 }

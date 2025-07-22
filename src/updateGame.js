@@ -25,6 +25,7 @@ import { updateHospitalLogic } from './game/hospitalLogic.js'
 import { updateAmbulanceLogic } from './game/ambulanceSystem.js'
 import { updateGasStationLogic } from './game/gasStationLogic.js'
 import { updateTankerTruckLogic } from './game/tankerTruckLogic.js'
+import { updateRecoveryTankLogic } from './game/recoveryTankSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { processCommandQueues } from './game/commandQueue.js'
@@ -83,6 +84,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateUnitCombat(units, bullets, mapGrid, gameState, now)
     updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
     updateWorkshopLogic(units, gameState.buildings, mapGrid, delta)
+
+    updateRecoveryTankLogic(units, gameState, delta)
 
     updateHospitalLogic(units, gameState.buildings, gameState, delta)
     updateAmbulanceLogic(units, gameState, delta)

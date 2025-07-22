@@ -16,6 +16,7 @@ import { preloadHarvesterImage } from './harvesterImageRenderer.js'
 import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
 import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
 import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
+import { preloadRecoveryTankImage } from './recoveryTankImageRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -44,10 +45,11 @@ export class Renderer {
     let tankerLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded) {
         if (callback) callback()
       }
     }
+    let recoveryTankLoaded = false
 
     // Load tile textures
     this.textureManager.preloadAllTextures(() => {
@@ -93,6 +95,14 @@ export class Renderer {
         console.warn('Tanker truck image failed to load')
       }
       tankerLoaded = true
+      checkAllLoaded()
+    })
+    
+    preloadRecoveryTankImage((success) => {
+      if (!success) {
+        console.warn('Recovery tank image failed to load')
+      }
+      recoveryTankLoaded = true
       checkAllLoaded()
     })
   }
