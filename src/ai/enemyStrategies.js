@@ -756,131 +756,150 @@ export function getAttackDirectionStats() {
 }
 
 /**
- * Manages AI crew healing using ambulances and hospitals
+ * Manages AI crew healing and hospital usage
+ * Prioritizes units that need crew restoration
  */
 export function manageAICrewHealing(units, gameState, now) {
-  if (!gameState.buildings) return
-
-  const aiUnits = units.filter(u => u.owner !== gameState.humanPlayer)
-  const ambulances = aiUnits.filter(u => u.type === 'ambulance')
-  const hospitals = gameState.buildings.filter(b => b.type === 'hospital' && b.owner !== gameState.humanPlayer)
+  // Get all AI players
+  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
   
-  // Find units that need crew healing
-  const unitsNeedingHealing = aiUnits.filter(unit => {
-    if (!unit.crew || typeof unit.crew !== 'object') return false
-    const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
-    return missingCrew.length > 0
-  })
-
-  // Manage ambulance refilling at hospitals
-  ambulances.forEach(ambulance => {
-    if (ambulance.crew < 4 && hospitals.length > 0) {
-      const nearestHospital = hospitals
-        .filter(h => h.health > 0)
-        .sort((a, b) => {
-          const distA = Math.hypot(ambulance.tileX - (a.x + a.width/2), ambulance.tileY - (a.y + a.height/2))
-          const distB = Math.hypot(ambulance.tileX - (b.x + b.width/2), ambulance.tileY - (b.y + b.height/2))
-          return distA - distB
-        })[0]
-
-      if (nearestHospital && !ambulance.refillingTarget) {
-        ambulance.refillingTarget = nearestHospital
-        
-        // Set path to hospital refill area
-        const hospitalCenterX = nearestHospital.x + Math.floor(nearestHospital.width / 2)
-        const refillY = nearestHospital.y + nearestHospital.height + 1
-        
-        const refillPosition = { x: hospitalCenterX, y: refillY }
-        const path = findPath(
-          { x: ambulance.tileX, y: ambulance.tileY },
-          refillPosition,
-          gameState.mapGrid || []
-        )
-        
-        if (path && path.length > 1) {
-          ambulance.path = path.slice(1)
-          ambulance.moveTarget = { x: refillPosition.x * TILE_SIZE, y: refillPosition.y * TILE_SIZE }
-        }
-      }
-    }
-  })
-
-  // Assign ambulances to heal units
-  unitsNeedingHealing.forEach(unit => {
-    if (unit.type === 'ambulance') return // Don't heal ambulances themselves
-
-    const availableAmbulances = ambulances.filter(a => 
-      a.crew > 0 && 
-      !a.healingTarget && 
-      !a.refillingTarget &&
-      Math.hypot(a.tileX - unit.tileX, a.tileY - unit.tileY) <= AI_CONFIG.CREW_HEALING_RANGE
-    )
-
-    if (availableAmbulances.length > 0) {
-      const nearestAmbulance = availableAmbulances
-        .sort((a, b) => {
-          const distA = Math.hypot(a.tileX - unit.tileX, a.tileY - unit.tileY)
-          const distB = Math.hypot(b.tileX - unit.tileX, b.tileY - unit.tileY)
-          return distA - distB
-        })[0]
-
-      // Assign ambulance to heal this unit
-      nearestAmbulance.healingTarget = unit
-      nearestAmbulance.healingTimer = 0
-
-      // Move ambulance to unit
-      const path = findPath(
-        { x: nearestAmbulance.tileX, y: nearestAmbulance.tileY },
-        { x: unit.tileX, y: unit.tileY },
-        gameState.mapGrid || []
-      )
-
-      if (path && path.length > 1) {
-        nearestAmbulance.path = path.slice(1)
-        nearestAmbulance.moveTarget = { x: unit.x, y: unit.y }
-      }
-    }
-  })
-
-  // Send units with missing crew to hospitals for healing
-  if (hospitals.length > 0) {
-    unitsNeedingHealing.forEach(unit => {
-      if (unit.type === 'ambulance') return // Ambulances use different refill logic
-
-      const nearestHospital = hospitals
-        .filter(h => h.health > 0)
-        .sort((a, b) => {
-          const distA = Math.hypot(unit.tileX - (a.x + a.width/2), unit.tileY - (a.y + a.height/2))
-          const distB = Math.hypot(unit.tileX - (b.x + b.width/2), unit.tileY - (b.y + b.height/2))
-          return distA - distB
-        })[0]
-
-      // Only send to hospital if no ambulance is already helping and not too far
-      const hasAmbulanceHelp = ambulances.some(a => a.healingTarget === unit)
-      const distanceToHospital = Math.hypot(
-        unit.tileX - (nearestHospital.x + nearestHospital.width/2),
-        unit.tileY - (nearestHospital.y + nearestHospital.height/2)
-      )
-
-      if (!hasAmbulanceHelp && distanceToHospital <= AI_CONFIG.CREW_HEALING_RANGE && !unit.hospitalTarget) {
-        unit.hospitalTarget = nearestHospital
-        
-        // Set path to hospital healing area
-        const hospitalCenterX = nearestHospital.x + Math.floor(nearestHospital.width / 2)
-        const healingY = nearestHospital.y + nearestHospital.height + 1
-        
-        const healingPosition = { x: hospitalCenterX, y: healingY }
-        const path = findPath(
-          { x: unit.tileX, y: unit.tileY },
-          healingPosition,
-          gameState.mapGrid || []
-        )
-        
-        if (path && path.length > 1) {
-          unit.path = path.slice(1)
-          unit.moveTarget = { x: healingPosition.x * TILE_SIZE, y: healingPosition.y * TILE_SIZE }
-        }
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId)
+    const aiBuildings = gameState.buildings ? gameState.buildings.filter(b => b.owner === aiPlayerId) : []
+    const hospitals = aiBuildings.filter(b => b.type === 'hospital' && b.health > 0)
+    const ambulances = aiUnits.filter(u => u.type === 'ambulance')
+    
+    if (hospitals.length === 0) return // No hospitals available
+    
+    // Find units with missing crew members (excluding ambulance and rocket tank)
+    const unitsNeedingCrew = aiUnits.filter(unit => {
+      if (!unit.crew || typeof unit.crew !== 'object') return false
+      if (unit.type === 'ambulance' || unit.type === 'rocketTank') return false // AI units don't use crew system
+      return Object.values(unit.crew).some(alive => !alive)
+    })
+    
+    unitsNeedingCrew.forEach(unit => {
+      // Check if unit can move (has driver and commander)
+      const canMove = unit.crew.driver && unit.crew.commander
+      
+      if (!canMove) {
+        // Unit cannot move - needs ambulance assistance
+        assignAmbulanceToUnit(unit, ambulances, hospitals[0])
+      } else {
+        // Unit can move - send it to hospital
+        sendUnitToHospital(unit, hospitals[0], gameState.mapGrid, now)
       }
     })
+    
+    // Manage ambulance refilling
+    ambulances.forEach(ambulance => {
+      if (ambulance.crew < 4 && !ambulance.refillingTarget && !ambulance.healingTarget) {
+        sendAmbulanceToHospital(ambulance, hospitals[0], gameState.mapGrid)
+      }
+    })
+  })
+}
+
+/**
+ * Assigns an ambulance to heal a unit that cannot move
+ */
+function assignAmbulanceToUnit(targetUnit, ambulances, hospital) {
+  // Find available ambulance with crew
+  const availableAmbulance = ambulances.find(ambulance => 
+    ambulance.crew > 0 && 
+    !ambulance.healingTarget && 
+    !ambulance.refillingTarget &&
+    !ambulance.path // Not currently moving
+  )
+  
+  if (availableAmbulance) {
+    availableAmbulance.healingTarget = targetUnit
+    availableAmbulance.healingTimer = 0
+    
+    // Set priority flag to indicate this is a critical healing mission
+    availableAmbulance.criticalHealing = true
+    
+    // Clear any other objectives
+    availableAmbulance.target = null
+    availableAmbulance.moveTarget = null
+    availableAmbulance.path = []
   }
+}
+
+/**
+ * Sends a unit to hospital for crew restoration
+ */
+function sendUnitToHospital(unit, hospital, mapGrid, now) {
+  // Don't send if already en route or recently assigned
+  if (unit.returningToHospital || (unit.lastHospitalAssignment && now - unit.lastHospitalAssignment < 5000)) {
+    return
+  }
+  
+  // Mark unit as returning to hospital
+  unit.returningToHospital = true
+  unit.lastHospitalAssignment = now
+  unit.hospitalTarget = hospital
+  
+  // Clear other objectives
+  unit.target = null
+  unit.moveTarget = null
+  unit.path = []
+  unit.isRetreating = false // Override retreat behavior
+  
+  // Calculate path to hospital refill area (3 tiles below hospital)
+  const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
+  const refillY = hospital.y + hospital.height + 1
+  
+  const refillPositions = [
+    { x: hospitalCenterX, y: refillY },
+    { x: hospitalCenterX - 1, y: refillY },
+    { x: hospitalCenterX + 1, y: refillY },
+    { x: hospitalCenterX, y: refillY + 1 },
+    { x: hospitalCenterX - 1, y: refillY + 1 },
+    { x: hospitalCenterX + 1, y: refillY + 1 }
+  ]
+  
+  // Find best position
+  for (const pos of refillPositions) {
+    if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
+      const path = findPath(unit, pos.x, pos.y, mapGrid)
+      if (path && path.length > 0) {
+        unit.path = path
+        unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+        break
+      }
+    }
+  }
+}
+
+/**
+ * Sends an ambulance to hospital for refilling
+ */
+function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
+  ambulance.refillingTarget = hospital
+  
+  // Calculate path to hospital
+  const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
+  const refillY = hospital.y + hospital.height + 1
+  
+  const path = findPath(ambulance, hospitalCenterX, refillY, mapGrid)
+  if (path && path.length > 0) {
+    ambulance.path = path
+    ambulance.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
+  }
+}
+
+/**
+ * Checks if an AI player should start attacking (has hospital built)
+ */
+export function shouldAIStartAttacking(aiPlayerId, gameState) {
+  if (!gameState.buildings) return false
+  
+  const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+  const hasHospital = aiBuildings.some(b => b.type === 'hospital' && b.health > 0)
+  const hasVehicleFactory = aiBuildings.some(b => b.type === 'vehicleFactory' && b.health > 0)
+  const hasRefinery = aiBuildings.some(b => b.type === 'oreRefinery' && b.health > 0)
+  
+  // AI should only start major attacks after having core infrastructure
+  return hasHospital && hasVehicleFactory && hasRefinery
 }

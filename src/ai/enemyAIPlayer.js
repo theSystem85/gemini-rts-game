@@ -110,6 +110,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const radarStations = aiBuildings.filter(b => b.type === 'radarStation')
     const teslaCoils = aiBuildings.filter(b => b.type === 'teslaCoil')
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
+    const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
 
     // Debug logging (enable temporarily to debug building issues)
@@ -120,63 +121,57 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     let buildingType = null
     let cost = 0
 
-    // Phase 1: Essential infrastructure - prioritize refinery for economic growth
-    if (powerPlants.length === 0) {
+    // Phase 1: Early economy - Power Plant and first Ore Refinery
+    if (powerPlants.length === 0 && aiFactory.budget >= buildingData.powerPlant.cost) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
-    } else if (oreRefineries.length === 0) {
-      // Build refinery BEFORE vehicle factory to establish economy quickly
+
+    } else if (oreRefineries.length === 0 && aiFactory.budget >= buildingData.oreRefinery.cost) {
       buildingType = 'oreRefinery'
       cost = buildingData.oreRefinery.cost
-    } else if (vehicleFactories.length === 0) {
+
+    // Phase 2: Production - Vehicle Factory for unit production
+    } else if (vehicleFactories.length === 0 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
 
-    // Phase 2: Basic defense
-    } else if (turrets.length < 3) {
-      if (aiFactory.budget >= 4000) {
-        buildingType = 'rocketTurret'
-        cost = 4000
-      } else if (aiFactory.budget >= 3000) {
-        buildingType = 'turretGunV3'
-        cost = 3000
-      } else if (aiFactory.budget >= 2000) {
-        buildingType = 'turretGunV2'
-        cost = 2000
-      } else {
-        buildingType = 'turretGunV1'
-        cost = 1000
-      }
+    // Phase 3: Second refinery (max 2 before advanced buildings)
+    } else if (oreRefineries.length === 1 && aiHarvesters.length >= 4 && aiFactory.budget >= buildingData.oreRefinery.cost) {
+      buildingType = 'oreRefinery'
+      cost = buildingData.oreRefinery.cost
 
-    // Phase 3: Radar for advanced units and tesla coils
+    // Phase 4: Core support buildings (required before expansion)
+    } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
+      buildingType = 'hospital'
+      cost = buildingData.hospital.cost
+
     } else if (radarStations.length === 0 && aiFactory.budget >= buildingData.radarStation.cost) {
       buildingType = 'radarStation'
       cost = buildingData.radarStation.cost
 
-    // Phase 4: Hospital for crew support (after basic defense)
-    } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
-      buildingType = 'hospital'
-      cost = buildingData.hospital.cost
+    } else if (vehicleWorkshops.length === 0 && aiFactory.budget >= buildingData.vehicleWorkshop.cost) {
+      buildingType = 'vehicleWorkshop'
+      cost = buildingData.vehicleWorkshop.cost
 
     // Phase 5: Advanced defense (Tesla Coils require radar)
     } else if (teslaCoils.length < 2 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
       buildingType = 'teslaCoil'
       cost = buildingData.teslaCoil.cost
 
-    // Phase 6: Expansion - more production buildings
-    } else if (vehicleFactories.length < 2 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
+    // Phase 6: Expansion - more production buildings (only after core support buildings)
+    } else if (vehicleFactories.length < 2 && hospitals.length > 0 && radarStations.length > 0 && vehicleWorkshops.length > 0 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
 
-    // Phase 7: More refineries based on harvester count
-    } else {
-      const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
-      const maxHarvestersForRefineries = aiRefineries.length * 3 // 1:3 ratio for better efficiency
-
+    // Phase 7: Additional refineries (only after core support buildings and if harvesters justify it)
+    } else if (oreRefineries.length < 3 && hospitals.length > 0 && radarStations.length > 0 && vehicleWorkshops.length > 0) {
+      const maxHarvestersForRefineries = oreRefineries.length * 4 // 1:4 ratio (4 harvesters per refinery)
+      
       if (aiHarvesters.length >= maxHarvestersForRefineries && aiFactory.budget >= buildingData.oreRefinery.cost) {
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
 
+      // Phase 8: More advanced defense
       // Phase 8: More advanced defense
       } else if (turrets.length < 6 && aiFactory.budget >= 3000) {
         if (aiFactory.budget >= 5000 && teslaCoils.length < 3 && radarStations.length > 0) {
@@ -190,6 +185,8 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           cost = 3000
         }
 
+      // Phase 9: Power plants for high energy consumption
+      } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
       // Phase 9: Power plants for high energy consumption
       } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
         buildingType = 'powerPlant'
@@ -358,30 +355,42 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     if (aiFactory && !aiFactory.currentlyProducingUnit &&
         now - (gameState[lastProductionKey] || 0) >= 8000) {
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+      const aiAmbulances = units.filter(u => u.owner === aiPlayerId && u.type === 'ambulance')
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
+      const hasHospital = aiBuildings.some(b => b.type === 'hospital')
       
       let unitType = 'tank_v1'
       let cost = 1000
 
       // Enhanced production rules:
-      // 1. Build up to 6 harvesters first as priority
-      // 2. Then build diverse combat units
-      // 3. Focus on advanced units when budget is high
-      // 4. Maintain harvester count but prioritize combat
+      // 1. Build up to 4 harvesters per refinery (strict limit)
+      // 2. Always build ambulance if none exists and hospital is available
+      // 3. Only build tanks if hospital exists (for crew support)
+      // 4. Then build diverse combat units
+      // 5. Focus on advanced units when budget is high
+      // 6. Maintain harvester count but prioritize combat
 
-      const MAX_HARVESTERS = Math.min(6 + aiRefineries.length * 2, 12) // Scale with refineries, cap at 12
+      const MAX_HARVESTERS = aiRefineries.length * 4 // Strict 4 harvesters per refinery limit
       const HIGH_BUDGET_THRESHOLD = 12000
       const VERY_HIGH_BUDGET_THRESHOLD = 20000
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
 
       if (aiHarvesters.length < MAX_HARVESTERS) {
-        // Priority: Build up harvesters first, but only if we need more relative to our refineries
+        // Priority: Build up harvesters first, but strict limit of 4 per refinery
+        unitType = 'harvester'
+        cost = 500
+      } else if (hasHospital && aiAmbulances.length === 0) {
+        // Always ensure at least one ambulance exists if hospital is available
+        unitType = 'ambulance'
+        cost = 500
+      } else if (!hasHospital) {
+        // If no hospital, only build harvesters to avoid crew casualties
         unitType = 'harvester'
         cost = 500
       } else {
-        // We have enough harvesters, now focus on diverse combat units
+        // We have enough harvesters and ambulance, hospital exists, now focus on diverse combat units
         const rand = Math.random()
 
         if (isVeryHighBudget) {
@@ -415,27 +424,16 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
             cost = 3000
           }
         } else {
-          // Normal budget: Mix of basic and medium units, plus occasional ambulance
-          const rand = Math.random()
+          // Normal budget: Mix of basic and medium units
           if (rand < 0.4) {
             unitType = 'tank_v1'
             cost = 1000
           } else if (rand < 0.7) {
             unitType = 'tank-v2'
             cost = 2000
-          } else if (rand < 0.9) {
+          } else {
             unitType = 'rocketTank'
             cost = 2000
-          } else {
-            // 10% chance to build ambulance if we have a hospital
-            const hasHospital = gameState.buildings.some(b => b.type === 'hospital' && b.owner === aiPlayerId)
-            if (hasHospital) {
-              unitType = 'ambulance'
-              cost = 500
-            } else {
-              unitType = 'tank_v1'
-              cost = 1000
-            }
           }
         }
       }
