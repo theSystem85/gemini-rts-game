@@ -222,6 +222,7 @@ export const UNIT_PROPERTIES = {
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0
   },
+}
 
 // Tank V3 burst fire configuration
 export const TANK_V3_BURST = {

@@ -85,11 +85,11 @@ const soundFiles = {
   new_units_types_available: ['new_units_types_available.mp3'],
   new_building_types_available: ['new_building_types_available.mp3'],
   new_production_options: ['new_production_options.mp3'],
-  outLoaderIsOut: ['outLoaderIsOut.mp3'],
-  outDriverIsOut: ['outDriverIsOut.mp3'],
-  outCommanderIsOut: ['outCommanderIsOut.mp3'],
-  outGunnerIsOut: ['outGunnerIsOut.mp3'],
-  
+  ourLoaderIsOut: ['ourLoaderIsOut.mp3'],
+  ourDriverIsOut: ['ourDriverIsOut.mp3'],
+  ourCommanderIsOut: ['ourCommanderIsOut.mp3'],
+  ourGunnerIsOut: ['ourGunnerIsOut.mp3'],
+
   // New waypoint and attack notification sounds
   movingAlongThePath: ['movingAlongThePath.mp3'],
   ourBaseIsUnderAttack: ['ourBaseIsUnderAttack.mp3'],

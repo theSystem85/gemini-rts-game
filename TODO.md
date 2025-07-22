@@ -16,7 +16,7 @@
     3.4 commander (bottom right green) if dead tank cannot be moved anymore by the user => it will only operate own and only defend itself or move back to base or complete it path when it was added before the commander died. Prio is as follows then: first defend yourself then continue path/waypoints if there is one then go back to base ideally directly to repair if there is a workshop.
   4) when the tank goes to the 3 tiles in below the hospital dead people will fill up again. One person will take 10s to be restored and costs 100.
   5) when a tank gets hit the likelyhood for each individual crew member to be killed is 15%.
-  6) Make sure to play the respective sound file when a crew member got killed (outLoaderIsOut.mp3, outDriverIsOut.mp3, outCommanderIsOut.mp3, outGunnerIsOut.mp3)
+  6) Make sure to play the respective sound file when a crew member got killed (loaderIsOut.mp3, driverIsOut.mp3, commanderIsOut.mp3, gunnerIsOut.mp3)
   7) Ensure that the enemy AI will move the tanks with missing crew members back to hospital before continuing the battle.
   8) Ambulance: When a hospital is build it unlocks the build button of an ambulance unit
     8.1 an ambulance unit costs 500 and has 25 health

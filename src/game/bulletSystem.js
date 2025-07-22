@@ -195,7 +195,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               for (const member of Object.keys(unit.crew)) {
                 if (unit.crew[member] && Math.random() < 0.15) {
                   unit.crew[member] = false;
-                  playSound("out" + member.charAt(0).toUpperCase() + member.slice(1) + "IsOut");
+                  playSound("our" + member.charAt(0).toUpperCase() + member.slice(1) + "IsOut");
                 }
               }
             }
