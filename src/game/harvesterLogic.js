@@ -18,6 +18,37 @@ const targetedOreTiles = {}
 // Track refinery queues
 const refineryQueues = {}
 
+function stopMovement(unit) {
+  unit.path = []
+  unit.moveTarget = null
+  if (unit.movement) {
+    unit.movement.velocity = { x: 0, y: 0 }
+    unit.movement.targetVelocity = { x: 0, y: 0 }
+    unit.movement.isMoving = false
+    unit.movement.currentSpeed = 0
+  }
+}
+
+function clearOreField(unit) {
+  if (unit.oreField) {
+    const tileKey = `${unit.oreField.x},${unit.oreField.y}`
+    if (targetedOreTiles[tileKey] === unit.id) {
+      delete targetedOreTiles[tileKey]
+    }
+    unit.oreField = null
+  }
+}
+
+function startHarvesting(unit, tileKey, now, gameState) {
+  unit.harvesting = true
+  unit.harvestTimer = now
+  stopMovement(unit)
+  harvestedTiles.add(tileKey)
+  if (unit.owner === gameState.humanPlayer) {
+    playSound('harvest')
+  }
+}
+
 /**
  * Updates all harvester logic including mining, unloading, and pathfinding
  */
@@ -71,32 +102,11 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
             targetedOreTiles[tileKey] = unit.id
           }
           if (unit.oreField.x === nearbyOreTile.x && unit.oreField.y === nearbyOreTile.y) {
-            unit.harvesting = true
-            unit.harvestTimer = now
-            // Stop all movement while harvesting
-            unit.path = []
-            unit.moveTarget = null
-            if (unit.movement) {
-              unit.movement.velocity = { x: 0, y: 0 }
-              unit.movement.targetVelocity = { x: 0, y: 0 }
-              unit.movement.isMoving = false
-              unit.movement.currentSpeed = 0
-            }
-          harvestedTiles.add(tileKey) // Mark tile as being harvested
-          if (unit.owner === gameState.humanPlayer) {
-            playSound('harvest')
-          }
+            startHarvesting(unit, tileKey, now, gameState)
           }
         } else {
           // Tile is being harvested by another unit, find a new ore tile
-          if (unit.oreField) {
-            // Remove the previous targeting
-            const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
-            if (targetedOreTiles[prevTileKey] === unit.id) {
-              delete targetedOreTiles[prevTileKey]
-            }
-          }
-          unit.oreField = null
+          clearOreField(unit)
           // Immediately try to find new ore to prevent getting stuck
           findNewOreTarget(unit, mapGrid, occupancyMap)
         }
@@ -136,8 +146,7 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
           // Clear any cached texture variations for this tile to force re-render
           mapGrid[unit.oreField.y][unit.oreField.x].textureVariation = null
           // Remove targeting once the tile is depleted
-          delete targetedOreTiles[tileKey]
-          unit.oreField = null
+          clearOreField(unit)
           
           // Force all harvesters targeting this depleted tile to find new ore
           Object.keys(targetedOreTiles).forEach(key => {
@@ -193,28 +202,10 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
         if (mapGrid[unit.oreField.y][unit.oreField.x].ore &&
             !mapGrid[unit.oreField.y][unit.oreField.x].seedCrystal &&
             !harvestedTiles.has(tileKey)) {
-          // Start harvesting
-          unit.harvesting = true
-          unit.harvestTimer = now
-          // Stop all movement while harvesting
-          unit.path = []
-          unit.moveTarget = null
-          if (unit.movement) {
-            unit.movement.velocity = { x: 0, y: 0 }
-            unit.movement.targetVelocity = { x: 0, y: 0 }
-            unit.movement.isMoving = false
-            unit.movement.currentSpeed = 0
-          }
-          harvestedTiles.add(tileKey)
-          if (unit.owner === gameState.humanPlayer) {
-            playSound('harvest')
-          }
+          startHarvesting(unit, tileKey, now, gameState)
         } else {
           // Ore field is no longer valid, find new one
-          if (targetedOreTiles[tileKey] === unit.id) {
-            delete targetedOreTiles[tileKey]
-          }
-          unit.oreField = null
+          clearOreField(unit)
           findNewOreTarget(unit, mapGrid, occupancyMap)
         }
       } else {
@@ -225,10 +216,7 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
           unit.moveTarget = unit.oreField // Set move target so the harvester actually moves
         } else {
           // Can't path to ore field, abandon it and find new one
-          if (targetedOreTiles[tileKey] === unit.id) {
-            delete targetedOreTiles[tileKey]
-          }
-          unit.oreField = null
+          clearOreField(unit)
           findNewOreTarget(unit, mapGrid, occupancyMap)
         }
       }
@@ -252,13 +240,7 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
  */
 function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occupancyMap, units) {
   // Clear targeting when full of ore and returning to base
-  if (unit.oreField) {
-    const tileKey = `${unit.oreField.x},${unit.oreField.y}`
-    if (targetedOreTiles[tileKey] === unit.id) {
-      delete targetedOreTiles[tileKey]
-    }
-    unit.oreField = null
-  }
+  clearOreField(unit)
 
   // Find available refinery
   const refineries = gameState.buildings?.filter(b => 
@@ -269,8 +251,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
 
   if (refineries.length === 0) {
     // No refineries available - wait until one is built
-    unit.path = []
-    unit.moveTarget = null
+    stopMovement(unit)
     return
   }
 
@@ -421,14 +402,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
         unit.unloadStartTime = now
         unit.unloadRefinery = refineryId
         // Stop all movement while unloading
-        unit.path = [] // Clear path while unloading
-        unit.moveTarget = null
-        if (unit.movement) {
-          unit.movement.velocity = { x: 0, y: 0 }
-          unit.movement.targetVelocity = { x: 0, y: 0 }
-          unit.movement.isMoving = false
-          unit.movement.currentSpeed = 0
-        }
+        stopMovement(unit)
 
         // Remove from queue since now unloading
         removeFromRefineryQueue(refineryId, unit.id)
@@ -438,7 +412,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
         showUnloadingFeedback(unit, targetRefinery)
       } else {
         // **STAY PUT** - Don't move when wanting to unload but not closest
-        unit.path = [] // Clear any movement when waiting
+        stopMovement(unit)
         // Update queue position based on distance ranking
         const position = waitingHarvesters.findIndex(h => h.id === unit.id) + 1
         unit.queuePosition = position > 0 ? position : 1
@@ -534,13 +508,7 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
   }
   
   // Clear any existing ore field reservation
-  if (unit.oreField) {
-    const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
-    if (targetedOreTiles[prevTileKey] === unit.id) {
-      delete targetedOreTiles[prevTileKey]
-    }
-    unit.oreField = null
-  }
+  clearOreField(unit)
   
   const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
   if (orePos) {
@@ -757,59 +725,10 @@ function cleanupQueues(units) {
 }
 
 /**
- * Cleans up harvester from all queues (call when harvester is destroyed)
- */
-export function cleanupHarvesterFromQueues(harvesterId) {
-  for (const refineryId in refineryQueues) {
-    removeFromRefineryQueue(refineryId, harvesterId)
-  }
-}
-
-/**
  * Gets the current refinery queues (for external access)
  */
 export function getRefineryQueues() {
   return refineryQueues
-}
-
-/**
- * Finds a waiting position near a refinery based on queue position
- */
-function findQueuePosition(refinery, queuePosition, mapGrid) {
-  const centerX = refinery.x + Math.floor(refinery.width / 2)
-  const centerY = refinery.y + Math.floor(refinery.height / 2)
-  
-  // Create positions in a more organized pattern around the refinery
-  const positions = []
-  
-  // First, add positions adjacent to the refinery (for immediate access)
-  for (let y = refinery.y - 1; y <= refinery.y + refinery.height; y++) {
-    for (let x = refinery.x - 1; x <= refinery.x + refinery.width; x++) {
-      if (x >= 0 && x < mapGrid[0].length && y >= 0 && y < mapGrid.length &&
-          (x < refinery.x || x >= refinery.x + refinery.width || 
-           y < refinery.y || y >= refinery.y + refinery.height) &&
-          mapGrid[y][x].type !== 'water' && mapGrid[y][x].type !== 'rock') {
-        positions.push({ x, y })
-      }
-    }
-  }
-  
-  // Then add positions in expanding rings for longer queues
-  for (let ring = 2; ring <= 4 && positions.length < 20; ring++) {
-    for (let y = centerY - ring; y <= centerY + ring; y++) {
-      for (let x = centerX - ring; x <= centerX + ring; x++) {
-        if (x >= 0 && x < mapGrid[0].length && y >= 0 && y < mapGrid.length &&
-            (Math.abs(x - centerX) === ring || Math.abs(y - centerY) === ring) &&
-            mapGrid[y][x].type !== 'water' && mapGrid[y][x].type !== 'rock') {
-          positions.push({ x, y })
-        }
-      }
-    }
-  }
-  
-  // Return the position based on queue position (1-based)
-  const index = Math.min(queuePosition - 1, positions.length - 1)
-  return positions[index] || { x: centerX + 2, y: centerY }
 }
 
 /**
@@ -1026,12 +945,7 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
   }
   
   // Clear any existing ore field reservation
-  if (unit.oreField) {
-    const prevTileKey = `${unit.oreField.x},${unit.oreField.y}`
-    if (targetedOreTiles[prevTileKey] === unit.id) {
-      delete targetedOreTiles[prevTileKey]
-    }
-  }
+  clearOreField(unit)
   
   // Reserve the manual target
   targetedOreTiles[tileKey] = unit.id
@@ -1080,33 +994,13 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
       // Harvester should start harvesting this tile
       unit.oreField = { x: unitTileX, y: unitTileY }
       targetedOreTiles[tileKey] = unit.id
-      unit.harvesting = true
-      unit.harvestTimer = performance.now()
-      // Stop all movement while harvesting
-      unit.path = [] // Clear any conflicting path
-      unit.moveTarget = null
-      if (unit.movement) {
-        unit.movement.velocity = { x: 0, y: 0 }
-        unit.movement.targetVelocity = { x: 0, y: 0 }
-        unit.movement.isMoving = false
-        unit.movement.currentSpeed = 0
-      }
-        harvestedTiles.add(tileKey)
-        if (unit.owner === gameState.humanPlayer) {
-          playSound('harvest')
-        }
+      startHarvesting(unit, tileKey, performance.now(), gameState)
       return
     }
   }
   
   // Clear current targets and path
-  if (unit.oreField) {
-    const tileKey = `${unit.oreField.x},${unit.oreField.y}`
-    if (targetedOreTiles[tileKey] === unit.id) {
-      delete targetedOreTiles[tileKey]
-    }
-    unit.oreField = null
-  }
+  clearOreField(unit)
   
   // Clear refinery queue if unloading
   if (unit.targetRefinery) {
@@ -1115,7 +1009,7 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
     unit.targetRefinery = null
   }
   
-  unit.path = []
+  stopMovement(unit)
   
   // Determine what the harvester should do based on its state
   if (unit.oreCarried >= HARVESTER_CAPPACITY) {
@@ -1178,8 +1072,7 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
   }
   
   // No alternative refinery found - wait until a refinery is available again
-  unit.path = []
-  unit.moveTarget = null
+  stopMovement(unit)
 }
 
 /**
@@ -1311,22 +1204,14 @@ function checkHarvesterProductivity(unit, mapGrid, occupancyMap, now) {
     
     if (unit.oreCarried >= HARVESTER_CAPPACITY) {
       // Full harvester should be unloading
-      unit.path = []
-      unit.moveTarget = null
+      stopMovement(unit)
     } else {
       // Empty harvester should be finding ore
       
       // Clear current targets
-      if (unit.oreField) {
-        const tileKey = `${unit.oreField.x},${unit.oreField.y}`
-        if (targetedOreTiles[tileKey] === unit.id) {
-          delete targetedOreTiles[tileKey]
-        }
-        unit.oreField = null
-      }
-      
-      unit.path = []
-      unit.moveTarget = null
+      clearOreField(unit)
+
+      stopMovement(unit)
       
       // Try to find new ore target
       findNewOreTarget(unit, mapGrid, occupancyMap)
