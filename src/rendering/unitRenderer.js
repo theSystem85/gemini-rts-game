@@ -318,10 +318,10 @@ export class UnitRenderer {
   renderCrewStatus(ctx, unit, scrollOffset) {
     if (!unit.selected || !unit.crew) return
 
-    const size = 6
+    const size = 5
     const baseX = unit.x - scrollOffset.x
     const baseY = unit.y + TILE_SIZE - scrollOffset.y
-    const colors = { driver: '#00F', gunner: '#F00', loader: '#FF0', commander: '#0F0' }
+    const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#0F0' }
     const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
 
     ctx.save()
@@ -333,15 +333,10 @@ export class UnitRenderer {
       const y = baseY
 
       ctx.fillStyle = colors[role]
-      ctx.beginPath()
-      ctx.moveTo(x, y)
-      ctx.lineTo(x + size / 2, y - size)
-      ctx.lineTo(x + size, y)
-      ctx.closePath()
-      ctx.fill()
+      ctx.fillRect(x, y - size * 2, size, size * 2)
 
       ctx.fillStyle = '#FFF'
-      ctx.font = '6px Arial'
+      ctx.font = '4px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(letters[role], x + size / 2, y - size / 2)
