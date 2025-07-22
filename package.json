@@ -10,7 +10,8 @@
     "lint": "eslint src/ *.js",
     "lint:fix": "eslint src/ *.js --fix",
     "map:analyse": "node map_analyse.js",
-    "make:sprites": "node makeSprites.js"
+    "make:sprites": "node makeSprites.js",
+    "count:locs": "node countLocs.js"
   },
   "devDependencies": {
     "eslint": "^9.27.0",
