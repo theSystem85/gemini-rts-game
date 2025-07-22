@@ -24,9 +24,12 @@ const srcDir = path.join(__dirname, 'src')
 const files = getAllFiles(srcDir)
 
 const counts = files.map(file => ({ file, lines: countLines(file) }))
+  .sort((a, b) => b.lines - a.lines)
+
 const total = counts.reduce((sum, { lines }) => sum + lines, 0)
 
 console.log(`Total LOCs: ${total}`)
 counts.forEach(({ file, lines }) => {
-  console.log(`${path.relative(process.cwd(), file)}: ${lines}`)
+  const relativePath = path.relative(process.cwd(), file)
+  console.log(`${lines}\t\t${relativePath}`)
 })
