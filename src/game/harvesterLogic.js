@@ -849,7 +849,7 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
   const workshops = gameState.buildings.filter(b =>
     b.type === 'vehicleWorkshop' && b.owner === unit.owner && b.health > 0
   )
-  if (workshops.length === 0) return
+  if (workshops.length === 0) return false
 
   let nearest = null
   let nearestDist = Infinity
@@ -861,12 +861,13 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
     }
   })
 
-  if (!nearest) return
+  if (!nearest) return false
   if (!nearest.repairQueue) nearest.repairQueue = []
   if (!nearest.repairQueue.includes(unit)) {
     nearest.repairQueue.push(unit)
     unit.targetWorkshop = nearest
   }
+  unit.returningToWorkshop = true
 
   const waitingY = nearest.y + nearest.height + 1
   const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
@@ -882,6 +883,8 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
     unit.tileY = targetTile.y
     unit.moveTarget = null
   }
+  unit.target = null
+  return true
 }
 
 /**

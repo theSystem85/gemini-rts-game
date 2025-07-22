@@ -94,6 +94,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
       if (unit.repairingAtWorkshop && (unit.path.length > 0 || (unit.moveTarget && (unit.moveTarget.x !== slot.x || unit.moveTarget.y !== slot.y)))) {
         // Unit is being moved away, clean up repair state and workshop assignment
         unit.repairingAtWorkshop = false
+        unit.returningToWorkshop = false
         slot.unit = null
         unit.repairSlot = null
         delete unit.workshopRepairCost
@@ -154,6 +155,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
         } else {
           // Repair complete - clean up cost tracking and workshop assignment
           unit.repairingAtWorkshop = false
+          unit.returningToWorkshop = false
           slot.unit = null
           unit.repairSlot = null
           delete unit.workshopRepairCost
