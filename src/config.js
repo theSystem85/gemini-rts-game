@@ -10,6 +10,8 @@ export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
 export const TILE_LENGTH_METERS = 1000
 export const SAFE_RANGE_ENABLED = false
 export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
+// Allow selecting enemy units to view their HUD
+export const ALLOW_ENEMY_UNIT_SELECTION = false
 
 // Sound configuration
 export const MASTER_VOLUME = 0.25  // Default to 50% volume

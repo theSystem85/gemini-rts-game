@@ -1,5 +1,5 @@
 // selectionManager.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, ALLOW_ENEMY_UNIT_SELECTION } from '../config.js'
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
@@ -25,6 +25,9 @@ export class SelectionManager {
 
   // Helper function to check if a unit belongs to the human player
   isHumanPlayerUnit(unit) {
+    if (ALLOW_ENEMY_UNIT_SELECTION) {
+      return true
+    }
     const humanPlayer = this.getHumanPlayer()
     return unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')
   }
