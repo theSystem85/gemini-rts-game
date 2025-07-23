@@ -154,6 +154,23 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handlePerformanceToggle()
       }
+      // Arrow keys and Space for remote control feature
+      else if (e.code === 'ArrowUp') {
+        e.preventDefault()
+        gameState.remoteControl.forward = true
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault()
+        gameState.remoteControl.backward = true
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault()
+        gameState.remoteControl.turnLeft = true
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault()
+        gameState.remoteControl.turnRight = true
+      } else if (e.code === 'Space') {
+        e.preventDefault()
+        gameState.remoteControl.fire = true
+      }
     })
 
     document.addEventListener('keyup', e => {
@@ -168,6 +185,17 @@ export class KeyboardHandler {
       if (e.key === 'Alt') {
         gameState.altKeyDown = false
         handleAltKeyRelease() // Check if waypoints were added and play sound
+      }
+      if (e.code === 'ArrowUp') {
+        gameState.remoteControl.forward = false
+      } else if (e.code === 'ArrowDown') {
+        gameState.remoteControl.backward = false
+      } else if (e.code === 'ArrowLeft') {
+        gameState.remoteControl.turnLeft = false
+      } else if (e.code === 'ArrowRight') {
+        gameState.remoteControl.turnRight = false
+      } else if (e.code === 'Space') {
+        gameState.remoteControl.fire = false
       }
     })
   }
