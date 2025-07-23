@@ -217,10 +217,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       }
     }
   } else {
-    // No path - decelerate to stop
-    movement.targetVelocity.x = 0;
-    movement.targetVelocity.y = 0;
-    movement.isMoving = false;
+    // No path - decelerate to stop unless unit is under manual remote control
+    if (!unit.remoteControlActive) {
+      movement.targetVelocity.x = 0;
+      movement.targetVelocity.y = 0;
+      movement.isMoving = false;
+    }
   }
   
   // Handle rotation before movement (tanks should rotate towards target before moving)

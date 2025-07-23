@@ -41,6 +41,7 @@ import {
 } from './game/gameStateManager.js'
 import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
+import { updateRemoteControlledUnits } from './game/remoteControl.js'
 
 export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
@@ -68,6 +69,9 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Process queued unit commands before running unit systems
     const unitCommands = getUnitCommandsHandler()
     processCommandQueues(units, mapGrid, unitCommands)
+
+    // Apply remote control inputs for selected tanks
+    updateRemoteControlledUnits(units, bullets, mapGrid)
 
     // Unit system updates
     units.forEach(unit => {

@@ -168,6 +168,38 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handlePerformanceToggle()
       }
+      // Arrow keys and Space for remote control feature
+      else if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
+        e.preventDefault()
+        if (!gameState.remoteControl.forward) {
+          console.log('Remote control: up key down')
+        }
+        gameState.remoteControl.forward = true
+      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
+        e.preventDefault()
+        if (!gameState.remoteControl.backward) {
+          console.log('Remote control: down key down')
+        }
+        gameState.remoteControl.backward = true
+      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
+        e.preventDefault()
+        if (!gameState.remoteControl.turnLeft) {
+          console.log('Remote control: left key down')
+        }
+        gameState.remoteControl.turnLeft = true
+      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
+        e.preventDefault()
+        if (!gameState.remoteControl.turnRight) {
+          console.log('Remote control: right key down')
+        }
+        gameState.remoteControl.turnRight = true
+      } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+        e.preventDefault()
+        if (!gameState.remoteControl.fire) {
+          console.log('Remote control: space pressed')
+        }
+        gameState.remoteControl.fire = true
+      }
     })
 
     document.addEventListener('keyup', e => {
@@ -182,6 +214,32 @@ export class KeyboardHandler {
       if (e.key === 'Alt') {
         gameState.altKeyDown = false
         handleAltKeyRelease() // Check if waypoints were added and play sound
+      }
+      if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
+        if (gameState.remoteControl.forward) {
+          console.log('Remote control: up key up')
+        }
+        gameState.remoteControl.forward = false
+      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
+        if (gameState.remoteControl.backward) {
+          console.log('Remote control: down key up')
+        }
+        gameState.remoteControl.backward = false
+      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
+        if (gameState.remoteControl.turnLeft) {
+          console.log('Remote control: left key up')
+        }
+        gameState.remoteControl.turnLeft = false
+      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
+        if (gameState.remoteControl.turnRight) {
+          console.log('Remote control: right key up')
+        }
+        gameState.remoteControl.turnRight = false
+      } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+        if (gameState.remoteControl.fire) {
+          console.log('Remote control: space released')
+        }
+        gameState.remoteControl.fire = false
       }
     })
   }

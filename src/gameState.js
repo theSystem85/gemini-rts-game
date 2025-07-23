@@ -53,6 +53,15 @@ export const gameState = {
   // Track option/alt key state for path planning
   altKeyDown: false,
 
+  // Remote control key states for tanks
+  remoteControl: {
+    forward: false,
+    backward: false,
+    turnLeft: false,
+    turnRight: false,
+    fire: false
+  },
+
   // Repair mode
   repairMode: false,
   buildingsUnderRepair: [],
