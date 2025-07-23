@@ -30,6 +30,9 @@ export class ProductionController {
     const hasWorkshop = gameState.buildings.some(
       b => b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasHospital = gameState.buildings.some(
+      b => b.type === 'hospital' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
@@ -50,6 +53,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Workshop'
+        }
+      } else if (unitType === 'ambulance') {
+        if (hasVehicleFactory && hasHospital) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Hospital'
         }
       } else if (this.vehicleUnitTypes.includes(unitType)) {
         if (hasVehicleFactory) {
@@ -815,6 +826,8 @@ export class ProductionController {
     const hasRocketTurret = buildings.some(b => b.type === 'rocketTurret')
     const hasRadar = buildings.some(b => b.type === 'radarStation')
     const hasGasStation = buildings.some(b => b.type === 'gasStation')
+    const hasHospital = buildings.some(b => b.type === 'hospital')
+    const hasWorkshop = buildings.some(b => b.type === 'vehicleWorkshop')
     const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
 
     if (hasFactory) {
@@ -827,6 +840,14 @@ export class ProductionController {
 
     if (hasFactory && hasGasStation) {
       this.forceUnlockUnitType('tankerTruck')
+    }
+
+    if (hasHospital) {
+      this.forceUnlockUnitType('ambulance')
+    }
+
+    if (hasFactory && hasWorkshop) {
+      this.forceUnlockUnitType('recoveryTank')
     }
 
     if (factoryCount >= 2) {
