@@ -696,7 +696,22 @@ export class MouseHandler {
 
       // Check for ambulance healing command if ambulances are selected
       const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+
+      const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recovery_tank')
       
+      if (hasSelectedRecoveryTanks) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && unit.health < unit.maxHealth && unit.type !== 'recovery_tank') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (unitTileX === tileX && unitTileY === tileY) {
+              unitCommands.handleRecoveryTankRepairCommand(selectedUnits, unit, mapGrid)
+              return
+            }
+          }
+        }
+      }
+
       if (hasSelectedAmbulances) {
         // Check if clicking on a friendly unit that needs healing
         for (const unit of units) {
@@ -713,6 +728,20 @@ export class MouseHandler {
                 unitCommands.handleAmbulanceHealCommand(selectedUnits, unit, mapGrid)
                 return // Exit early, don't process unit selection
               }
+            }
+          }
+        }
+      }
+
+      const hasDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      if (hasDamagedUnits) {
+        for (const unit of units) {
+          if (unit.type === 'recovery_tank' && unit.owner === gameState.humanPlayer) {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (unitTileX === tileX && unitTileY === tileY) {
+              unitCommands.handleRecoveryTankRepairCommand(selectedUnits, unit, mapGrid)
+              return
             }
           }
         }
@@ -839,6 +868,7 @@ export class MouseHandler {
 
       let workshopTarget = null
       let hospitalTarget = null
+      let recoveryTankTarget = null
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -863,12 +893,42 @@ export class MouseHandler {
         }
       }
 
+      const hasSelectedRecoveryTanksStd = selectedUnits.some(u => u.type === 'recovery_tank')
+      const hasDamagedUnitsStd = selectedUnits.some(u => u.health < u.maxHealth)
+      if (units && Array.isArray(units)) {
+        if (hasSelectedRecoveryTanksStd) {
+          for (const unit of units) {
+            if (unit.owner === gameState.humanPlayer && unit.health < unit.maxHealth && unit.type !== 'recovery_tank') {
+              const uTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+              const uTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+              if (uTileX === tileX && uTileY === tileY) {
+                recoveryTankTarget = unit
+                break
+              }
+            }
+          }
+        } else if (hasDamagedUnitsStd) {
+          for (const unit of units) {
+            if (unit.type === 'recovery_tank' && unit.owner === gameState.humanPlayer) {
+              const uTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+              const uTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+              if (uTileX === tileX && uTileY === tileY) {
+                recoveryTankTarget = unit
+                break
+              }
+            }
+          }
+        }
+      }
+
       if (refineryTarget) {
         unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
       } else if (workshopTarget) {
         unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
       } else if (hospitalTarget) {
         unitCommands.handleAmbulanceRefillCommand(selectedUnits, hospitalTarget, mapGrid)
+      } else if (recoveryTankTarget) {
+        unitCommands.handleRecoveryTankRepairCommand(selectedUnits, recoveryTankTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

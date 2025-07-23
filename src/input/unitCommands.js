@@ -425,6 +425,33 @@ export class UnitCommandsHandler {
     playSound('movement', 0.5)
   }
 
+  handleRecoveryTankRepairCommand(selectedUnits, targetUnit, mapGrid) {
+    const tanks = selectedUnits.filter(u => u.type === 'recovery_tank')
+
+    if (tanks.length > 0) {
+      tanks.forEach(tank => {
+        const path = findPath({ x: tank.tileX, y: tank.tileY }, { x: targetUnit.tileX, y: targetUnit.tileY }, mapGrid, gameState.occupancyMap)
+        if (path && path.length > 0) {
+          tank.path = path.slice(1)
+          tank.moveTarget = { x: targetUnit.tileX, y: targetUnit.tileY }
+        }
+        tank.repairTarget = null
+      })
+    } else {
+      selectedUnits.forEach(unit => {
+        const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: targetUnit.tileX, y: targetUnit.tileY }, mapGrid, gameState.occupancyMap)
+        if (path && path.length > 0) {
+          unit.path = path.slice(1)
+          unit.moveTarget = { x: targetUnit.tileX, y: targetUnit.tileY }
+        }
+        unit.guardTarget = targetUnit
+        unit.guardMode = true
+      })
+    }
+
+    playSound('movement', 0.5)
+  }
+
   handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
     // Filter for ambulances that need refilling
     const ambulances = selectedUnits.filter(unit => 

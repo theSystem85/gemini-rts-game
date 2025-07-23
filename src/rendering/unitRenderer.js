@@ -6,6 +6,7 @@ import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.j
 import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
 import { renderRocketTankWithImage, isRocketTankImageLoaded } from './rocketTankImageRenderer.js'
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
+import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -460,6 +461,15 @@ export class UnitRenderer {
 
     if (unit.type === 'rocketTank' && isRocketTankImageLoaded()) {
       const ok = renderRocketTankWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'recovery_tank' && isRecoveryTankImageLoaded()) {
+      const ok = renderRecoveryTankWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)

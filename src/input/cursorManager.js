@@ -13,7 +13,9 @@ export class CursorManager {
     this.isOverPlayerWorkshop = false
     this.isOverOreTile = false
     this.isOverPlayerRefinery = false
+    this.isOverPlayerRecoveryTank = false
     this.isOverHealableUnit = false
+    this.isOverDamagedUnit = false
     this.isForceAttackMode = false
     this.isGuardMode = false
     this.lastMouseEvent = null
@@ -92,8 +94,10 @@ export class CursorManager {
 
     // Check if mouse is over a player refinery when harvesters are selected
     this.isOverPlayerRefinery = false
+    this.isOverPlayerRecoveryTank = false
     // Check if mouse is over a healable unit when ambulances are selected
     this.isOverHealableUnit = false
+    this.isOverDamagedUnit = false
     // Check if mouse is over a hospital when ambulances are selected and not fully loaded
     this.isOverPlayerHospital = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
@@ -151,6 +155,21 @@ export class CursorManager {
           }
         }
       }
+
+      // Check for damaged units when recovery tanks are selected
+      const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recovery_tank')
+      if (hasSelectedRecoveryTanks && units && Array.isArray(units)) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && unit.health < unit.maxHealth && unit.type !== 'recovery_tank') {
+            const uTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const uTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (uTileX === tileX && uTileY === tileY) {
+              this.isOverDamagedUnit = true
+              break
+            }
+          }
+        }
+      }
     }
 
     // Check if mouse is over an ore tile when harvesters are selected
@@ -176,6 +195,24 @@ export class CursorManager {
               tileY >= building.y && tileY < building.y + building.height) {
             this.isOverPlayerWorkshop = true
             break
+          }
+        }
+      }
+    }
+
+    // Check if mouse is over a friendly recovery tank when damaged units selected
+    if (this.isOverGameCanvas && units && Array.isArray(units) && tileX >= 0 && tileY >= 0 &&
+        tileX < mapGrid[0].length && tileY < mapGrid.length) {
+      const hasDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      if (hasDamagedUnits) {
+        for (const unit of units) {
+          if (unit.type === 'recovery_tank' && unit.owner === gameState.humanPlayer) {
+            const uTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const uTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (uTileX === tileX && uTileY === tileY) {
+              this.isOverPlayerRecoveryTank = true
+              break
+            }
           }
         }
       }
@@ -381,6 +418,12 @@ export class CursorManager {
         gameCanvas.classList.add('attack-mode')
       } else if (this.isOverPlayerWorkshop) {
         // Over vehicle workshop with damaged units selected - special move cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+      } else if (this.isOverPlayerRecoveryTank) {
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+      } else if (this.isOverDamagedUnit) {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverHealableUnit) {

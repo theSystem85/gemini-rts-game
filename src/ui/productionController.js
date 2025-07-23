@@ -10,7 +10,7 @@ import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance', 'recovery_tank']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -24,21 +24,31 @@ export class ProductionController {
     const hasRefinery = gameState.buildings.some(
       b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasWorkshop = gameState.buildings.some(
+      b => b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
       const unitType = button.getAttribute('data-unit-type')
 
-      if (this.vehicleUnitTypes.includes(unitType)) {
-        if (hasVehicleFactory) {
-          button.classList.remove('disabled')
-          button.title = '' // Clear tooltip
-        } else {
-          button.classList.add('disabled')
-          button.title = 'Requires Vehicle Factory' // Add tooltip
-        }
-      }
-      else if (unitType === 'harvester') {
+        if (unitType === 'recovery_tank') {
+          if (hasVehicleFactory && hasWorkshop) {
+            button.classList.remove('disabled')
+            button.title = ''
+          } else {
+            button.classList.add('disabled')
+            button.title = 'Requires Vehicle Factory & Vehicle Workshop'
+          }
+        } else if (this.vehicleUnitTypes.includes(unitType)) {
+          if (hasVehicleFactory) {
+            button.classList.remove('disabled')
+            button.title = '' // Clear tooltip
+          } else {
+            button.classList.add('disabled')
+            button.title = 'Requires Vehicle Factory' // Add tooltip
+          }
+        } else if (unitType === 'harvester') {
         if (hasVehicleFactory && hasRefinery) {
           button.classList.remove('disabled')
           button.title = '' // Clear tooltip
@@ -148,7 +158,14 @@ export class ProductionController {
         let requirementsMet = true
         let requirementText = ''
 
-        if (this.vehicleUnitTypes.includes(unitType)) {
+        if (unitType === 'recovery_tank') {
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+          const hasWorkshop = gameState.buildings.some(b => b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer)
+          if (!hasVehicleFactory || !hasWorkshop) {
+            requirementsMet = false
+            requirementText = 'Requires Vehicle Factory & Vehicle Workshop'
+          }
+        } else if (this.vehicleUnitTypes.includes(unitType)) {
           const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
           if (!hasVehicleFactory) {
             requirementsMet = false
