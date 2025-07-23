@@ -6,6 +6,13 @@
 - [ ] **Refactor:** move all constants into config.
 
 ## Features
+- [ ] Add remote control feature (aka RCF) for tanks
+  - [ ] when one or multiple tank(s) are selected the user can
+    - [ ] move it forwards by holding the arrow up key
+    - [ ] move it backwards by holding the arrow down key
+    - [ ] turn the wagon left by holding the left key
+    - [ ] turn the wagon right by holding the right key
+    - [ ] fire forwards by pressing the space key. Then the tank aims at the farthest point within range.
 - [x] Add recovery_tank to the game
   - [ ] It can be built in the vehicle factory if a workshop exists
   - [ ] The image assets for sidebar build button and unit on the map already exist in the respective folders named "recovery_tank.webp" each.
