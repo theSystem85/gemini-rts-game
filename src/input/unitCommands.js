@@ -470,7 +470,12 @@ export class UnitCommandsHandler {
       let destinationFound = false
       for (const pos of refillPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = this.findPath(ambulance, pos.x, pos.y, mapGrid)
+      const path = findPath(
+        { x: ambulance.tileX, y: ambulance.tileY },
+        { x: pos.x, y: pos.y },
+        mapGrid,
+        gameState.occupancyMap
+      )
           if (path && path.length > 0) {
             ambulance.path = path
             ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
@@ -501,15 +506,10 @@ export class UnitCommandsHandler {
     }
 
     const positions = []
-    for (let x = station.x - 1; x <= station.x + station.width; x++) {
-      for (let y = station.y - 1; y <= station.y + station.height; y++) {
-        if (
-          x >= 0 &&
-          y >= 0 &&
-          x < mapGrid[0].length &&
-          y < mapGrid.length &&
-          !(x >= station.x && x < station.x + station.width && y >= station.y && y < station.y + station.height)
-        ) {
+    const startY = station.y + station.height
+    for (let x = station.x; x < station.x + station.width; x++) {
+      for (let y = startY; y <= startY + 2; y++) {
+        if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
           positions.push({ x, y })
         }
       }
@@ -517,7 +517,12 @@ export class UnitCommandsHandler {
 
     unitsNeedingGas.forEach((unit, index) => {
       const pos = positions[index % positions.length]
-      const path = this.findPath(unit, pos.x, pos.y, mapGrid)
+      const path = findPath(
+        { x: unit.tileX, y: unit.tileY },
+        { x: pos.x, y: pos.y },
+        mapGrid,
+        gameState.occupancyMap
+      )
       if (path && path.length > 0) {
         unit.path = path
         unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
