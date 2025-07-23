@@ -99,14 +99,36 @@ export class CursorManager {
     this.isOverPlayerGasStation = false
     // Check if mouse is over a hospital when ambulances are selected and not fully loaded
     this.isOverPlayerHospital = false
+    // Check if mouse is over a repairable unit when recovery tanks are selected
+    this.isOverRepairableUnit = false
+    // Check if mouse is over a recovery tank when damaged units are selected
+    this.isOverRecoveryTank = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+      // Calculate AGF capability early to check if recovery tank interactions should be disabled
+      const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+      const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
+        unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
+      )
+      const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit =>
+        (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
+        (unit.id && (unit.id === gameState.humanPlayer))
+      )
+      const isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
+                          !gameState.buildingPlacementMode &&
+                          !gameState.repairMode &&
+                          !gameState.sellMode &&
+                          !gameState.attackGroupMode
+
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
       const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance')
       const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew >= 4)
       const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      // Check for recovery tank interactions
+      const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
+      const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
       
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
@@ -181,6 +203,36 @@ export class CursorManager {
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
             if (unitTileX === tileX && unitTileY === tileY && unit.gas < unit.maxGas) {
               this.isOverRefuelableUnit = true
+              break
+            }
+          }
+        }
+      }
+      // Check for repairable units when recovery tanks are selected
+      if (hasSelectedRecoveryTanks && units && Array.isArray(units)) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && unit.type !== 'recoveryTank' &&
+              unit.health < unit.maxHealth) {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              this.isOverRepairableUnit = true
+              break
+            }
+          }
+        }
+      }
+
+      // Check for recovery tanks when damaged units are selected
+      if (hasSelectedDamagedUnits && units && Array.isArray(units)) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            
+            if (unitTileX === tileX && unitTileY === tileY) {
+              this.isOverRecoveryTank = true
               break
             }
           }
@@ -309,6 +361,55 @@ export class CursorManager {
 
       // Clear all cursor classes first
       gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+
+      // CHECK FOR AGF MODE CAPABILITY FIRST - but allow recovery tank interactions to override
+      const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+      const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
+        unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
+      )
+      const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit =>
+        (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
+        (unit.id && (unit.id === gameState.humanPlayer))
+      )
+      const isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
+                          !gameState.buildingPlacementMode &&
+                          !gameState.repairMode &&
+                          !gameState.sellMode &&
+                          !gameState.attackGroupMode
+
+      // Check for recovery tank interactions first - these take priority over AGF
+      if (this.isOverRepairableUnit) {
+        // Over repairable unit with recovery tanks selected - show move into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+        return // Exit early - recovery tank interaction takes priority
+      } else if (this.isOverRecoveryTank) {
+        // Over recovery tank with damaged units selected - show move into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+        return // Exit early - recovery tank interaction takes priority
+      }
+
+      // If AGF capable and no recovery tank interactions, use AGF behavior
+      if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
+        if (this.isOverEnemy) {
+          // Over enemy - use attack cursor
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('attack-mode')
+        } else if (this.isOverBlockedTerrain) {
+          // Over blocked terrain - use move-blocked cursor
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('move-blocked-mode')
+        } else if (!gameState.isRightDragging) {
+          // Normal move cursor for AGF-capable units
+          gameCanvas.style.cursor = 'none'
+          gameCanvas.classList.add('move-mode')
+        } else {
+          // Right-drag scrolling
+          gameCanvas.style.cursor = 'grabbing'
+        }
+        return // Exit early to prevent other interactions
+      }
 
       if (!hasNonBuildingSelected) {
         // Only buildings are selected

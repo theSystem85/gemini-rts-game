@@ -166,7 +166,8 @@ export const UNIT_COSTS = {
   'tank-v2': 2000,
   'tank-v3': 3000,
   ambulance: 500,
-  tankerTruck: 300
+  tankerTruck: 300,
+  recoveryTank: 3000
 }
 
 // Unit properties
@@ -220,6 +221,15 @@ export const UNIT_PROPERTIES = {
     speed: 0.35,  // 50% slower: 0.7 * 0.5 = 0.35
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: TANK_TURRET_ROT
+  },
+  recoveryTank: {
+    health: 150,
+    maxHealth: 150,
+    speed: 0.525, // 50% faster than rocket tank when unloaded
+    loadedSpeed: 0.33, // Same as tank speed when towing
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: TANK_TURRET_ROT,
+    armor: 3
   },
   ambulance: {
     health: 25,
@@ -288,7 +298,8 @@ export const UNIT_TYPE_COLORS = {
   harvester: '#9400D3',   // Purple
   rocketTank: '#800000',
   ambulance: '#00FFFF',   // Dark red
-  tankerTruck: '#FFA500'
+  tankerTruck: '#FFA500',
+  recoveryTank: '#FFD700' // Gold
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)

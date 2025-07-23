@@ -616,7 +616,117 @@ export class UnitCommandsHandler {
         unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
       }
     })
+    playSound('movement', 0.5)
+  }
 
+  handleRecoveryTowCommand(selectedUnits, targetUnit) {
+    const tanks = selectedUnits.filter(u => u.type === 'recoveryTank')
+    if (tanks.length === 0) return
+
+    tanks.forEach(tank => {
+      if (tank.towedUnit && tank.towedUnit.id === targetUnit.id) {
+        tank.towedUnit.towedBy = null
+        tank.towedUnit = null
+        return
+      }
+      if (!tank.towedUnit && targetUnit.crew && (!targetUnit.crew.driver || !targetUnit.crew.commander)) {
+        tank.towedUnit = targetUnit
+        targetUnit.towedBy = tank
+      }
+    })
+  }
+
+  handleRecoveryTankRepairCommand(selectedUnits, targetUnit, mapGrid) {
+    const recoveryTanks = selectedUnits.filter(unit => unit.type === 'recoveryTank')
+    if (recoveryTanks.length === 0) {
+      return
+    }
+
+    recoveryTanks.forEach(tank => {
+      // Calculate the position where the recovery tank should move to repair the target
+      const targetTileX = targetUnit.tileX
+      const targetTileY = targetUnit.tileY
+      
+      // Find a position within 1 tile of the target
+      const repairPositions = [
+        { x: targetTileX - 1, y: targetTileY },     // Left
+        { x: targetTileX + 1, y: targetTileY },     // Right
+        { x: targetTileX, y: targetTileY - 1 },     // Above
+        { x: targetTileX, y: targetTileY + 1 },     // Below
+        { x: targetTileX - 1, y: targetTileY - 1 }, // Top-left
+        { x: targetTileX + 1, y: targetTileY - 1 }, // Top-right
+        { x: targetTileX - 1, y: targetTileY + 1 }, // Bottom-left
+        { x: targetTileX + 1, y: targetTileY + 1 }  // Bottom-right
+      ]
+      
+      let destinationFound = false
+      for (const pos of repairPositions) {
+        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
+          const path = findPath({ x: tank.tileX, y: tank.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap)
+          if (path && path.length > 0) {
+            tank.path = path.slice(1) // Remove the first node (current position)
+            tank.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+            tank.target = null // Clear any attack target
+            tank.repairTargetUnit = targetUnit // Mark the unit to repair when in range
+            destinationFound = true
+            break
+          }
+        }
+      }
+      
+      if (!destinationFound) {
+        showNotification('Cannot reach unit for repair!', 2000)
+      }
+    })
+    
+    playSound('movement', 0.5)
+  }
+
+  handleDamagedUnitToRecoveryTankCommand(selectedUnits, recoveryTank, mapGrid) {
+    const damagedUnits = selectedUnits.filter(unit => unit.health < unit.maxHealth && unit.type !== 'recoveryTank')
+    if (damagedUnits.length === 0) {
+      return
+    }
+
+    damagedUnits.forEach(unit => {
+      // Calculate the position where the damaged unit should move to get repaired
+      const tankTileX = recoveryTank.tileX
+      const tankTileY = recoveryTank.tileY
+      
+      // Find a position within 1 tile of the recovery tank
+      const repairPositions = [
+        { x: tankTileX - 1, y: tankTileY },     // Left
+        { x: tankTileX + 1, y: tankTileY },     // Right
+        { x: tankTileX, y: tankTileY - 1 },     // Above
+        { x: tankTileX, y: tankTileY + 1 },     // Below
+        { x: tankTileX - 1, y: tankTileY - 1 }, // Top-left
+        { x: tankTileX + 1, y: tankTileY - 1 }, // Top-right
+        { x: tankTileX - 1, y: tankTileY + 1 }, // Bottom-left
+        { x: tankTileX + 1, y: tankTileY + 1 }  // Bottom-right
+      ]
+      
+      let destinationFound = false
+      for (const pos of repairPositions) {
+        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
+          const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap)
+          if (path && path.length > 0) {
+            unit.path = path.slice(1) // Remove the first node (current position)
+            unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+            unit.target = null // Clear any attack target
+            // Set guard mode to protect the recovery tank while being repaired
+            unit.guardMode = true
+            unit.guardTarget = recoveryTank
+            destinationFound = true
+            break
+          }
+        }
+      }
+      
+      if (!destinationFound) {
+        showNotification('Cannot reach recovery tank for repair!', 2000)
+      }
+    })
+    
     playSound('movement', 0.5)
   }
 
