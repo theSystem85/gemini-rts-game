@@ -251,27 +251,31 @@ export class CursorManager {
       }
     }
 
-    // Check if mouse is over player vehicle workshop when damaged units or
-    // tanker trucks are selected
+    // Check if mouse is over player vehicle workshop when a repairable unit is
+    // selected (damaged or tanker truck)
     this.isOverPlayerWorkshop = false
-    if (this.isOverGameCanvas &&
-        gameState.buildings && Array.isArray(gameState.buildings) &&
-        tileX >= 0 && tileY >= 0 &&
-        tileX < mapGrid[0].length && tileY < mapGrid.length) {
-      const hasDamagedUnits = selectedUnits.some(
-        unit => unit.health < unit.maxHealth
+    if (
+      this.isOverGameCanvas &&
+      gameState.buildings &&
+      Array.isArray(gameState.buildings) &&
+      tileX >= 0 &&
+      tileY >= 0 &&
+      tileX < mapGrid[0].length &&
+      tileY < mapGrid.length
+    ) {
+      const needsWorkshop = selectedUnits.some(
+        unit => unit.health < unit.maxHealth || unit.type === 'tankerTruck'
       )
-      const hasSelectedTankers = selectedUnits.some(
-        unit => unit.type === 'tankerTruck'
-      )
-      if (hasDamagedUnits || hasSelectedTankers) {
+      if (needsWorkshop) {
         for (const building of gameState.buildings) {
           if (
             building.type === 'vehicleWorkshop' &&
             building.owner === gameState.humanPlayer &&
             building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height
+            tileX >= building.x &&
+            tileX < building.x + building.width &&
+            tileY >= building.y &&
+            tileY < building.y + building.height
           ) {
             this.isOverPlayerWorkshop = true
             break
