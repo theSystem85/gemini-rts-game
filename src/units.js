@@ -525,8 +525,13 @@ function smoothPath(path, mapGrid, occupancyMap) {
     let nextIndex = path.length - 1
     for (let i = path.length - 1; i > currentIndex; i--) {
       if (isDirectPathClear(path[currentIndex], path[i], mapGrid, occupancyMap)) {
-        nextIndex = i
-        break
+        const directSegment = getLineTiles(path[currentIndex], path[i])
+        const directCost = calculatePathCost(directSegment, mapGrid)
+        const originalCost = calculatePathCost(path.slice(currentIndex, i + 1), mapGrid)
+        if (directCost <= originalCost) {
+          nextIndex = i
+          break
+        }
       }
     }
     smoothed.push(path[nextIndex])
