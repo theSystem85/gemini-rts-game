@@ -38,6 +38,13 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
         tileX >= building.x && tileX < (building.x + building.width) &&
         tileY >= building.y && tileY < (building.y + building.height)) {
 
+      // Don't allow selling again while the sell animation runs
+      if (building.isBeingSold) {
+        showNotification('Building is already being sold.')
+        playSound('error')
+        return false
+      }
+
       // Calculate sell value (70% of original cost)
       const buildingType = building.type
       const originalCost = buildingCosts[buildingType] || 0

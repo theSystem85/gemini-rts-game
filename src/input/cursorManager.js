@@ -307,8 +307,9 @@ export class CursorManager {
         for (const building of gameState.buildings) {
           if (building.owner === gameState.humanPlayer &&
               tileX >= building.x && tileX < (building.x + building.width) &&
-              tileY >= building.y && tileY < (building.y + building.height)) {
-            // All player buildings can be sold
+              tileY >= building.y && tileY < (building.y + building.height) &&
+              !building.isBeingSold) {
+            // All player buildings can be sold if not currently being sold
             this.isOverSellableBuilding = true
             break
           }
