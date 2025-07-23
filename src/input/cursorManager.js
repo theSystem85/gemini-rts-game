@@ -400,6 +400,11 @@ export class CursorManager {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
         return // Exit early - recovery tank interaction takes priority
+      } else if (this.isOverPlayerWorkshop) {
+        // Damaged units or tankers over workshop - highest priority move-into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+        return
       }
 
       // If AGF capable and no recovery tank interactions, use AGF behavior
@@ -530,10 +535,6 @@ export class CursorManager {
         // Over enemy - use attack cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
-      } else if (this.isOverPlayerWorkshop) {
-        // Over vehicle workshop with damaged units selected - special move cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverHealableUnit) {
         // Over healable unit with ambulances selected - show move into cursor
         gameCanvas.style.cursor = 'none'
