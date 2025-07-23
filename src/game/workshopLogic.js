@@ -161,7 +161,17 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
           delete unit.workshopStartHealth
           delete unit.targetWorkshop // Clear workshop assignment
           
-          if (workshop.rallyPoint) {
+          if (unit.returnTile) {
+            const path = findPath({ x: unit.tileX, y: unit.tileY }, unit.returnTile, mapGrid, gameState.occupancyMap)
+            if (path && path.length > 1) {
+              unit.path = path.slice(1)
+              unit.moveTarget = { x: unit.returnTile.x, y: unit.returnTile.y }
+              unit.returningFromWorkshop = true
+            } else {
+              unit.returningFromWorkshop = false
+              unit.returnTile = null
+            }
+          } else if (workshop.rallyPoint) {
             const path = findPath({ x: unit.tileX, y: unit.tileY }, workshop.rallyPoint, mapGrid, gameState.occupancyMap)
             if (path && path.length > 1) {
               unit.path = path.slice(1)

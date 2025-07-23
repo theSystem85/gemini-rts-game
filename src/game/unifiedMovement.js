@@ -322,9 +322,14 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   if ((prevTileX !== currentTileX || prevTileY !== currentTileY) && occupancyMap) {
     updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap);
   }
-  
+
   // Handle stuck unit detection and recovery for all units (as requested)
   handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState, factories);
+
+  if (unit.returningFromWorkshop && (!unit.path || unit.path.length === 0) && !unit.moveTarget) {
+    unit.returningFromWorkshop = false
+    unit.returnTile = null
+  }
 }
 
 /**

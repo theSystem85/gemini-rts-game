@@ -34,6 +34,9 @@ function executeAction(unit, action, mapGrid, unitCommands) {
     case 'retreat':
       initiateRetreat([unit], action.x, action.y, mapGrid);
       break;
+    case 'workshopRepair':
+      unitCommands.handleWorkshopRepairHotkey([unit], mapGrid, false, true);
+      break;
   }
 }
 
@@ -46,6 +49,8 @@ function isActionComplete(unit, action) {
       return (!unit.target || unit.target.health <= 0) && (!unit.attackQueue || unit.attackQueue.length === 0);
     case 'retreat':
       return !unit.isRetreating;
+    case 'workshopRepair':
+      return !unit.targetWorkshop && !unit.repairingAtWorkshop && !unit.returningFromWorkshop && (!unit.moveTarget && (!unit.path || unit.path.length === 0));
   }
   return true;
 }
