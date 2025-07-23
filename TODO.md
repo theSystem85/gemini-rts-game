@@ -6,6 +6,10 @@
 - [ ] **Refactor:** move all constants into config.
 
 ## Features
+- [ ] Danger Zone Map Feature (aka DZM): Let each enemy AI create a DZM where for each tile the damage per second is calculated based on the defence buildings of all non friendly other players on the map (including human and ai players). For each tile the damage per second will be calculated by checking which non allied defence buildings are in range and how much damage they could make based on their firing rate and damage per shot (also take burst shots into account). Whenever a new defence building is added to the map update that DZM. Ensure not to make this updates on a frame base in the game loop. Only do updates event based when new defence buildings get added or destroyed/sold. Also ensure this map is generated whenever a game is loaded (do not persist the DZM itself in save games). the DZM for each player can be show as an overlay on the map when pressing the z key. first time z key is pressed the DZM for the user player is shown. 2nd time the z key is pressed the DZM for the next player is shown and so on until all players were looped. Then it will hide the DZM overlay. Next time it will again start from user player DZM and so on.
+
+The DZM overlay will look like a height map overlay with red 1px width lines that have 50% opacity. The closer the lines are together the higher the gradient is at this tile. Ensure to put the DZM overlay renderer into a separate new file. the DZM will be rendered on the map tiles but below buildings, units and HUD. When DZM overlay is active show in top right corner which player's (player red, yellow, green, blue) DZM is visible.
+
 - [x] Add remote control feature (aka RCF) for tanks
   - [x] when one or multiple tank(s) are selected the user can
     - [x] move it forwards by holding the arrow up key
@@ -17,10 +21,10 @@
   - [x] It can be built in the vehicle factory if a workshop exists
   - [x] The image assets for sidebar build button and unit on the map already exist in the respective folders named "recovery_tank.webp" each.
   - [x] It moves like a tocket_tank but 50% faster when not loaded otherwise it moves as fast as a tank when loaded
-  - [ ] It can repair any friendly damaged unit (repair mode).
-  - [ ] repairing a unit to 100% takes as long as buildings that specific unit.
-  - [ ] repairing works gradually and costs apply gradually but 100% repair would only cost 25% of the original cost to build that unit.
-  - [ ] any unit within 1 tile distance will be repaired automatically one by one at a time. The repair starts when the recovery_tank turned towards the unit (like aiming towards works from a rocket tank)
+  - [x] It can repair any friendly damaged unit (repair mode).
+  - [x] repairing a unit to 100% takes as long as buildings that specific unit.
+  - [x] repairing works gradually and costs apply gradually but 100% repair would only cost 25% of the original cost to build that unit.
+  - [x] any unit within 1 tile distance will be repaired automatically one by one at a time. The repair starts when the recovery_tank turned towards the unit (like aiming towards works from a rocket tank)
   - [ ] with the recovery tank when selected the user can click on a tank that is not moveable anymore (indicated by "moveInto" cursor) for towing it around. When the user click again on the unit that is being towed then it will release again.
   - [x] the recovery tank costs 3000 and has the same armor as the tank_v3.
   - [x] ensure to play the existing repair sound like (repairing.mp3, repairFinished.mp3)
