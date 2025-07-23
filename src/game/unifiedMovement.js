@@ -2,7 +2,7 @@
 import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER, TILE_LENGTH_METERS } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
-import { playPositionalSound } from '../sound.js'
+import { playPositionalSound, playSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 
 /**
@@ -43,6 +43,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   initializeUnitMovement(unit);
 
   if (typeof unit.gas === 'number' && unit.gas <= 0) {
+    if (!unit.outOfGasPlayed) {
+      playSound('outOfGas')
+      unit.outOfGasPlayed = true
+    }
     unit.path = []
     unit.moveTarget = null
     unit.movement.velocity = { x: 0, y: 0 }
@@ -309,7 +313,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distTiles = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
     const distMeters = distTiles * TILE_LENGTH_METERS
     const usage = (unit.gasConsumption || 0) * distMeters / 100000
+    const prevGas = unit.gas
     unit.gas = Math.max(0, unit.gas - usage)
+    if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
+      playSound('outOfGas')
+      unit.outOfGasPlayed = true
+    }
   }
   
   // Handle collisions

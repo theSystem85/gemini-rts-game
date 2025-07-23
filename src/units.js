@@ -666,6 +666,7 @@ export function createUnit(factory, unitType, x, y) {
     unit.gas = gasProps.tankSize
     unit.gasConsumption = gasProps.consumption
     unit.harvestGasConsumption = gasProps.harvestConsumption || 0
+    unit.outOfGasPlayed = false
   }
 
   // Add unit-specific properties
