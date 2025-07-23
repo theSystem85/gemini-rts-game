@@ -397,7 +397,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   let isAnyTileInRange = false
   for (let y = tileY; y < tileY + height; y++) {
     for (let x = tileX; x < tileX + width; x++) {
-      if (isNearExistingBuilding(x, y, buildings, factories, 2, owner)) {
+      if (isNearExistingBuilding(x, y, buildings, factories, 3, owner)) {
         isAnyTileInRange = true
         break
       }

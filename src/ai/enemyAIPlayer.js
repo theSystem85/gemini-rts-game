@@ -5,6 +5,7 @@ import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
 import { logPerformance } from '../performanceUtils.js'
+import { gameState } from '../gameState.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   // Validate inputs
@@ -46,11 +47,11 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   }
 
   // Use appropriate spacing based on building type
-  let minDistance = 1
+  let minDistance = 2 // MINIMUM 2 tiles spacing for all buildings
   if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
     minDistance = 4 // More space for refineries and factories
   } else if (buildingType === 'concreteWall') {
-    minDistance = 0 // Walls can be adjacent
+    minDistance = 2 // Walls now also require 2-tile spacing to prevent clustering
   }
 
   // Extended spiral search around the factory with appropriate spacing
@@ -69,11 +70,11 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
       let valid = true
 
       // For refineries and vehicle factories, check extra clearance around the building
-      let clearanceNeeded = 1
+      let clearanceNeeded = 2 // Default minimum clearance to enforce 2-tile spacing
       if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
-        clearanceNeeded = 2
+        clearanceNeeded = 3
       } else if (buildingType === 'concreteWall') {
-        clearanceNeeded = 0
+        clearanceNeeded = 2 // Walls now also require 2-tile clearance
       }
 
       for (let by = y - clearanceNeeded; by < y + buildingHeight + clearanceNeeded && valid; by++) {

@@ -103,10 +103,10 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Special case for walls - they can be placed closer together
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 1 // Default spacing
+  let minSpaceBetweenBuildings = 2 // Default spacing - MINIMUM 2 tiles between all buildings
   
   if (buildingType === 'concreteWall') {
-    minSpaceBetweenBuildings = 1 // Walls can be closer
+    minSpaceBetweenBuildings = 2 // Walls now also require 2-tile spacing to prevent clustering
   } else if (buildingType === 'oreRefinery') {
     minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
   } else if (buildingType === 'vehicleFactory') {
@@ -230,7 +230,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       // Check if ANY tile of the building is within range of an existing enemy building
       // This means we're connected to the base, but not too close
       // Use different connection ranges for different building types
-      const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 6 : 5
+      const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 7 : 6
       
       let isNearBase = false
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
@@ -259,200 +259,94 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
 // New helper function to ensure there are clear paths around a potential building placement
 function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace, aiPlayerId) {
-  // First, check all sides of the building to ensure there's adequate space
-  let accessibleSides = 0
+  // Enhanced spacing validation: ensure full minSpace gap between building footprints
+  // This checks that there are at least minSpace tiles of clear space between the edge of 
+  // this building and any other building
+  
+  // Check the entire perimeter with the required spacing
+  for (let spaceLayer = 1; spaceLayer <= minSpace; spaceLayer++) {
+    // Check north border (multiple rows if minSpace > 1)
+    for (let checkX = x - spaceLayer; checkX < x + width + spaceLayer; checkX++) {
+      const checkY = y - spaceLayer
+      if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
-  // Check north side
-  let northClear = true
-  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
-    const checkY = y - minSpace
-    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+      // Check if this tile is blocked by another building
+      if (mapGrid[checkY][checkX].building ||
+          mapGrid[checkY][checkX].type === 'water' ||
+          mapGrid[checkY][checkX].type === 'rock' ||
+          mapGrid[checkY][checkX].seedCrystal ||
+          mapGrid[checkY][checkX].noBuild) {
+        return false
+      }
 
-    // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].building ||
-        mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal ||
-        mapGrid[checkY][checkX].noBuild) {
-      northClear = false
-      break
+      // Check if this tile is part of an existing factory
+      if (isPartOfFactory(checkX, checkY, factories)) {
+        return false
+      }
     }
 
-    // Check if this tile is part of an existing factory
-    if (isPartOfFactory(checkX, checkY, factories)) {
-      northClear = false
-      break
-    }
-  }
-  if (northClear) accessibleSides++
+    // Check south border (multiple rows if minSpace > 1)
+    for (let checkX = x - spaceLayer; checkX < x + width + spaceLayer; checkX++) {
+      const checkY = y + height + spaceLayer - 1
+      if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
-  // Check south side
-  let southClear = true
-  for (let checkX = x - minSpace; checkX < x + width + minSpace; checkX++) {
-    const checkY = y + height + (minSpace - 1)
-    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+      // Check if this tile is blocked by another building
+      if (mapGrid[checkY][checkX].building ||
+          mapGrid[checkY][checkX].type === 'water' ||
+          mapGrid[checkY][checkX].type === 'rock' ||
+          mapGrid[checkY][checkX].seedCrystal ||
+          mapGrid[checkY][checkX].noBuild) {
+        return false
+      }
 
-    // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].building ||
-        mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal ||
-        mapGrid[checkY][checkX].noBuild) {
-      southClear = false
-      break
+      // Check if this tile is part of an existing factory
+      if (isPartOfFactory(checkX, checkY, factories)) {
+        return false
+      }
     }
 
-    // Check if this tile is part of an existing factory
-    if (isPartOfFactory(checkX, checkY, factories)) {
-      southClear = false
-      break
-    }
-  }
-  if (southClear) accessibleSides++
+    // Check west border (multiple columns if minSpace > 1)
+    for (let checkY = y - spaceLayer; checkY < y + height + spaceLayer; checkY++) {
+      const checkX = x - spaceLayer
+      if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
-  // Check west side
-  let westClear = true
-  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
-    const checkX = x - minSpace
-    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+      // Check if this tile is blocked by another building
+      if (mapGrid[checkY][checkX].building ||
+          mapGrid[checkY][checkX].type === 'water' ||
+          mapGrid[checkY][checkX].type === 'rock' ||
+          mapGrid[checkY][checkX].seedCrystal ||
+          mapGrid[checkY][checkX].noBuild) {
+        return false
+      }
 
-    // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].building ||
-        mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal ||
-        mapGrid[checkY][checkX].noBuild) {
-      westClear = false
-      break
+      // Check if this tile is part of an existing factory
+      if (isPartOfFactory(checkX, checkY, factories)) {
+        return false
+      }
     }
 
-    // Check if this tile is part of an existing factory
-    if (isPartOfFactory(checkX, checkY, factories)) {
-      westClear = false
-      break
-    }
-  }
-  if (westClear) accessibleSides++
+    // Check east border (multiple columns if minSpace > 1)
+    for (let checkY = y - spaceLayer; checkY < y + height + spaceLayer; checkY++) {
+      const checkX = x + width + spaceLayer - 1
+      if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
 
-  // Check east side
-  let eastClear = true
-  for (let checkY = y - minSpace; checkY < y + height + minSpace; checkY++) {
-    const checkX = x + width + (minSpace - 1)
-    if (checkX < 0 || checkY < 0 || checkX >= mapGrid[0].length || checkY >= mapGrid.length) continue
+      // Check if this tile is blocked by another building
+      if (mapGrid[checkY][checkX].building ||
+          mapGrid[checkY][checkX].type === 'water' ||
+          mapGrid[checkY][checkX].type === 'rock' ||
+          mapGrid[checkY][checkX].seedCrystal ||
+          mapGrid[checkY][checkX].noBuild) {
+        return false
+      }
 
-    // Check if this tile is blocked by another building
-    if (mapGrid[checkY][checkX].building ||
-        mapGrid[checkY][checkX].type === 'water' ||
-        mapGrid[checkY][checkX].type === 'rock' ||
-        mapGrid[checkY][checkX].seedCrystal ||
-        mapGrid[checkY][checkX].noBuild) {
-      eastClear = false
-      break
-    }
-
-    // Check if this tile is part of an existing factory
-    if (isPartOfFactory(checkX, checkY, factories)) {
-      eastClear = false
-      break
-    }
-  }
-  if (eastClear) accessibleSides++
-
-  // Need at least 2 accessible sides (preferably opposite sides)
-  if (accessibleSides < 2) {
-    return false
-  }
-
-  // Now, check if this placement would create a pathfinding bottleneck by:
-  // 1. Creating a temporary map grid with this building placed
-  // 2. Trying to find paths between key points around the base
-
-  // Create a safe copy of the map grid without circular references
-  const tempMapGrid = mapGrid.map(row => 
-    row.map(tile => ({
-      type: tile.type,
-      ore: tile.ore,
-      building: tile.building ? true : false // Just track existence, not reference
-    }))
-  )
-
-  // Simulate placing the building in the temp grid
-  for (let cy = y; cy < y + height; cy++) {
-    for (let cx = x; cx < x + width; cx++) {
-      if (cx >= 0 && cy >= 0 && cx < tempMapGrid[0].length && cy < tempMapGrid.length) {
-        tempMapGrid[cy][cx].type = 'building'
+      // Check if this tile is part of an existing factory
+      if (isPartOfFactory(checkX, checkY, factories)) {
+        return false
       }
     }
   }
 
-  // Get an AI factory for path testing
-  const aiFactory = factories.find(f => f.id === aiPlayerId || f.owner === aiPlayerId)
-  if (!aiFactory) return true // If no AI factory, placement should be allowed
-
-  // Find existing buildings to test paths between
-  const aiBuildings = buildings ? buildings.filter(b => b.owner === aiPlayerId) : []
-
-  if (aiBuildings.length < 1) {
-    return true // No existing buildings to test paths between
-  }
-
-  // Create test points around the AI base
-  const testPoints = []
-
-  // Add factory exit points
-  testPoints.push({
-    x: aiFactory.x + Math.floor(aiFactory.width / 2),
-    y: aiFactory.y + aiFactory.height + 1  // Below the factory
-  })
-
-  // Add points near existing buildings
-  aiBuildings.forEach(building => {
-    // Add points around the building
-    testPoints.push({ x: building.x - 1, y: building.y }) // Left
-    testPoints.push({ x: building.x + building.width, y: building.y }) // Right
-    testPoints.push({ x: building.x, y: building.y - 1 }) // Top
-    testPoints.push({ x: building.x, y: building.y + building.height }) // Bottom
-  })
-
-  // Filter out invalid test points
-  const validTestPoints = testPoints.filter(point => {
-    return point.x >= 0 && point.y >= 0 &&
-           point.x < tempMapGrid[0].length && point.y < tempMapGrid.length &&
-           tempMapGrid[point.y][point.x].type !== 'building' &&
-           tempMapGrid[point.y][point.x].type !== 'water' &&
-           tempMapGrid[point.y][point.x].type !== 'rock'
-  })
-
-  // Need at least 2 valid test points to check paths
-  if (validTestPoints.length < 2) {
-    return true
-  }
-
-  // Select a few random pairs of points to test paths between (no need to test all combinations)
-  const pathTestPairs = []
-  for (let i = 0; i < Math.min(3, validTestPoints.length - 1); i++) {
-    // Randomly select two points
-    const point1 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)]
-    let point2
-    do {
-      point2 = validTestPoints[Math.floor(Math.random() * validTestPoints.length)]
-    } while (point1 === point2)
-
-    pathTestPairs.push({ start: point1, end: point2 })
-  }
-
-  // Test if paths exist between these points with the new building placed
-  for (const { start, end } of pathTestPairs) {
-    // Use our own simple path finder instead of importing findPath to avoid circular dependencies
-    const hasPath = checkSimplePath(start, end, tempMapGrid, 150) // Limit path length to avoid infinite loops
-
-    if (!hasPath) {
-      // If any path test fails, this building placement would create a bottleneck
-      return false
-    }
-  }
-
-  // All tests passed, this building placement maintains paths between key points
+  // All spacing layers passed - building has adequate separation from other structures
   return true
 }
 
@@ -551,12 +445,12 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   const buildingHeight = buildingData[buildingType].height
 
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 1 // Default spacing
+  let minSpaceBetweenBuildings = 2 // Default spacing
   let preferredDistances = [3, 4, 5, 2] // Default distances
   
   if (buildingType === 'concreteWall') {
-    minSpaceBetweenBuildings = 1 // Walls can be closer
-    preferredDistances = [2, 3, 4, 1]
+    minSpaceBetweenBuildings = 2 // Walls now also require 2-tile spacing to prevent clustering
+    preferredDistances = [3, 4, 5, 2] // Updated to maintain consistent spacing
   } else if (buildingType === 'oreRefinery') {
     minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
     preferredDistances = [4, 5, 6, 3] // Place them further away
@@ -718,7 +612,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         let isNearBase = false
         for (let cy = y; cy < y + buildingHeight && !isNearBase; cy++) {
           for (let cx = x; cx < x + buildingWidth && !isNearBase; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 6, aiPlayerId)) {
               isNearBase = true
             }
           }
@@ -739,7 +633,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         if (!isValid) continue
 
         // Use the same path checking as in the main function
-        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
         if (!hasClearPaths) continue
 
@@ -786,7 +680,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         for (let cy = y; cy < y + buildingHeight; cy++) {
           for (let cx = x; cx < x + buildingWidth; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 5, aiPlayerId)) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, 6, aiPlayerId)) {
               isNearBase = true
             }
             if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {
@@ -798,7 +692,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         if (!isNearBase || !allTilesValid) continue
 
         // Final check for pathfinding
-        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings)
+        const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
         if (!hasClearPaths) continue
 
