@@ -1,4 +1,4 @@
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, UNIT_PROPERTIES } from '../config.js'
 import { findPath } from '../units.js'
 import { getUniqueId } from '../utils.js'
 import { findClosestOre } from '../logic.js'
@@ -122,7 +122,8 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     
     // Ambulances use numeric crew (number of crew members they carry)
     if (unitType === 'ambulance') {
-      unit.crew = 4 // Start with full crew capacity
+      unit.crew = UNIT_PROPERTIES.ambulance.crew
+      unit.maxCrew = UNIT_PROPERTIES.ambulance.maxCrew
     }
     
     unit.baseCost = unitCosts[unitType] || 1000
