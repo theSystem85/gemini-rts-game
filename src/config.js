@@ -12,7 +12,7 @@ export const SAFE_RANGE_ENABLED = false
 export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
 // Toggle to allow selecting enemy units to view their HUD only
-export let ENABLE_ENEMY_SELECTION = false
+export let ENABLE_ENEMY_SELECTION = true
 
 export function setEnemySelectionEnabled(value) {
   ENABLE_ENEMY_SELECTION = value
