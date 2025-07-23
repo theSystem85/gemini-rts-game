@@ -143,6 +143,18 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+    const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
+    const aiTanks = units.filter(
+      u =>
+        u.owner === aiPlayerId &&
+        (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3')
+    )
+    const tanksInProduction = ['tank_v1', 'tank-v2', 'tank-v3'].includes(
+      aiFactory.currentlyProducingUnit
+    )
+      ? 1
+      : 0
+    const totalTanks = aiTanks.length + tanksInProduction
 
     // Debug logging (enable temporarily to debug building issues)
     if (DEBUG_AI_BUILDING) {
@@ -177,16 +189,17 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.hospital.cost
     } else if (turrets.length < 3) {
       // Basic defense: choose turret based on budget
+      const allowTurretGun = turretGunCount < 2 || totalTanks >= 4
       if (aiFactory.budget >= buildingData.rocketTurret.cost) {
         buildingType = 'rocketTurret'
         cost = buildingData.rocketTurret.cost
-      } else if (aiFactory.budget >= buildingData.turretGunV3.cost) {
+      } else if (allowTurretGun && aiFactory.budget >= buildingData.turretGunV3.cost) {
         buildingType = 'turretGunV3'
         cost = buildingData.turretGunV3.cost
-      } else if (aiFactory.budget >= buildingData.turretGunV2.cost) {
+      } else if (allowTurretGun && aiFactory.budget >= buildingData.turretGunV2.cost) {
         buildingType = 'turretGunV2'
         cost = buildingData.turretGunV2.cost
-      } else {
+      } else if (allowTurretGun && aiFactory.budget >= buildingData.turretGunV1.cost) {
         buildingType = 'turretGunV1'
         cost = buildingData.turretGunV1.cost
       }
@@ -240,8 +253,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         buildingType = 'artilleryTurret'
         cost = buildingData.artilleryTurret.cost
       } else {
-        buildingType = 'turretGunV3'
-        cost = buildingData.turretGunV3.cost
+        const allowTurretGun = turretGunCount < 2 || totalTanks >= 4
+        if (allowTurretGun) {
+          buildingType = 'turretGunV3'
+          cost = buildingData.turretGunV3.cost
+        }
       }
     // Phase 9: Power plants for high energy consumption
     } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
