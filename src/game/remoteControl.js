@@ -23,6 +23,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
       unit.moveTarget = null
     }
 
+    // Track whether this unit is actively being moved via remote control
+    unit.remoteControlActive = rc.forward || rc.backward
+
     // Adjust rotation
     if (rc.turnLeft) {
       unit.movement.targetRotation -= unit.rotationSpeed || 0.05
