@@ -232,7 +232,7 @@ export const productionQueue = {
               item.blueprint.y + y,
               gameState.buildings,
               factories,
-              2,
+              3,
               gameState.humanPlayer
             )
           ) {
