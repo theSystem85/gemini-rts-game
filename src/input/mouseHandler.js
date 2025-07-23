@@ -137,6 +137,29 @@ export class MouseHandler {
     gameState.attackGroupStart = { x: 0, y: 0 }
     gameState.attackGroupEnd = { x: 0, y: 0 }
     gameState.disableAGFRendering = false
+
+    // If cursor is over a player gas station for refueling, disable selection/AGF
+    const tileX = Math.floor(worldX / TILE_SIZE)
+    const tileY = Math.floor(worldY / TILE_SIZE)
+    const needsGas = selectedUnits.some(
+      u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
+    )
+    if (needsGas && gameState.buildings && Array.isArray(gameState.buildings)) {
+      for (const building of gameState.buildings) {
+        if (
+          building.type === 'gasStation' &&
+          building.owner === gameState.humanPlayer &&
+          building.health > 0 &&
+          tileX >= building.x && tileX < building.x + building.width &&
+          tileY >= building.y && tileY < building.y + building.height
+        ) {
+          this.isSelecting = false
+          gameState.selectionActive = false
+          gameState.disableAGFRendering = true
+          break
+        }
+      }
+    }
   }
 
 
