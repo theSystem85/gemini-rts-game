@@ -476,10 +476,9 @@ export class MouseHandler {
       }
       playPositionalSound('movement', worldX, worldY, 0.5)
 
-      selectedBuilding.selected = false
-      const buildingIndex = selectedUnits.indexOf(selectedBuilding)
-      if (buildingIndex > -1) {
-        selectedUnits.splice(buildingIndex, 1)
+      // Keep the building selected so the rally point flag remains visible
+      if (selectedUnits.indexOf(selectedBuilding) === -1) {
+        selectedUnits.push(selectedBuilding)
       }
       this.updateAGFCapability(selectedUnits)
 
