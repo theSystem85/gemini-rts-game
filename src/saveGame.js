@@ -60,6 +60,8 @@ export function saveGame(label) {
     id: u.id,
     gas: u.gas,
     maxGas: u.maxGas,
+    supplyGas: u.supplyGas,
+    maxSupplyGas: u.maxSupplyGas,
     gasRefillTimer: u.gasRefillTimer,
     refueling: u.refueling,
     outOfGasPlayed: u.outOfGasPlayed,
@@ -260,6 +262,8 @@ export function loadGame(key) {
       hydrated.y = u.y
       hydrated.gas = u.gas
       hydrated.maxGas = u.maxGas
+      if (u.supplyGas !== undefined) hydrated.supplyGas = u.supplyGas
+      if (u.maxSupplyGas !== undefined) hydrated.maxSupplyGas = u.maxSupplyGas
       hydrated.gasRefillTimer = u.gasRefillTimer
       hydrated.refueling = u.refueling
       hydrated.outOfGasPlayed = u.outOfGasPlayed
