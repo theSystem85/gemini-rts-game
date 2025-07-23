@@ -815,6 +815,8 @@ export class ProductionController {
     const hasRocketTurret = buildings.some(b => b.type === 'rocketTurret')
     const hasRadar = buildings.some(b => b.type === 'radarStation')
     const hasGasStation = buildings.some(b => b.type === 'gasStation')
+    const hasHospital = buildings.some(b => b.type === 'hospital')
+    const hasWorkshop = buildings.some(b => b.type === 'vehicleWorkshop')
     const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
 
     if (hasFactory) {
@@ -827,6 +829,14 @@ export class ProductionController {
 
     if (hasFactory && hasGasStation) {
       this.forceUnlockUnitType('tankerTruck')
+    }
+
+    if (hasHospital) {
+      this.forceUnlockUnitType('ambulance')
+    }
+
+    if (hasFactory && hasWorkshop) {
+      this.forceUnlockUnitType('recoveryTank')
     }
 
     if (factoryCount >= 2) {
