@@ -14,22 +14,28 @@ export class DangerZoneRenderer {
     ctx.save()
     ctx.strokeStyle = 'rgba(255,0,0,0.5)'
     ctx.lineWidth = 1
+    ctx.font = '8px Arial'
+    ctx.fillStyle = '#fff'
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'bottom'
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
         const dps = dzm[y][x]
-        if (dps <= 0) continue
-        const spacing = Math.max(2, 32 / Math.max(1, dps))
-        const lines = Math.floor(TILE_SIZE / spacing)
         const baseX = x * TILE_SIZE - scrollOffset.x
         const baseY = y * TILE_SIZE - scrollOffset.y
-        for (let i = 1; i <= lines; i++) {
-          const off = i * spacing
-          if (off >= TILE_SIZE) break
-          ctx.beginPath()
-          ctx.moveTo(baseX, baseY + off)
-          ctx.lineTo(baseX + TILE_SIZE, baseY + off)
-          ctx.stroke()
+        if (dps > 0) {
+          const spacing = Math.max(2, 32 / Math.max(1, dps))
+          const lines = Math.floor(TILE_SIZE / spacing)
+          for (let i = 1; i <= lines; i++) {
+            const off = i * spacing
+            if (off >= TILE_SIZE) break
+            ctx.beginPath()
+            ctx.moveTo(baseX, baseY + off)
+            ctx.lineTo(baseX + TILE_SIZE, baseY + off)
+            ctx.stroke()
+          }
         }
+        ctx.fillText(dps.toFixed(1), baseX + TILE_SIZE - 1, baseY + TILE_SIZE - 1)
       }
     }
     ctx.restore()

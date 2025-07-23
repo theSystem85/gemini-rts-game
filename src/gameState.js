@@ -120,6 +120,10 @@ export const gameState = {
   attackGroupTargets: [], // Array of enemy units to be attacked
   disableAGFRendering: false, // Flag to temporarily disable AGF rendering
 
+  // Shared AI attack point updated periodically
+  globalAttackPoint: null,
+  lastGlobalAttackDecision: 0,
+
   // Multiplayer settings
   playerCount: 2,  // Number of players (2-4)
   humanPlayer: 'player1',  // Which player is controlled by human
