@@ -928,7 +928,11 @@ export class MouseHandler {
       }
     }
 
-    if (clickedUnit) {
+    const friendlySelected = selectedUnits.some(u => selectionManager.isHumanPlayerUnit(u))
+    const clickedIsEnemy = clickedUnit && !selectionManager.isHumanPlayerUnit(clickedUnit)
+
+    if (clickedUnit && !(friendlySelected && clickedIsEnemy)) {
+      // Only allow enemy selection when no friendly units are currently selected
       selectionManager.handleUnitSelection(clickedUnit, e, units, factories, selectedUnits)
       // Update AGF capability after unit selection
       this.updateAGFCapability(selectedUnits)
