@@ -2,6 +2,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE, STREET_SPEED_MULTIPLIER } from '../config.j
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
+import { normalizeAngle } from '../logic.js'
 
 function getFireRateForUnit(unit) {
   if (unit.type === 'rocketTank') return 12000
@@ -26,13 +27,20 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
     // Track whether this unit is actively being moved via remote control
     unit.remoteControlActive = rc.forward || rc.backward
 
-    // Adjust rotation
+    // Adjust rotation of the wagon directly so movement aligns with it
     if (rc.turnLeft) {
-      unit.movement.targetRotation -= unit.rotationSpeed || 0.05
+      unit.direction = normalizeAngle(
+        (unit.direction || 0) - (unit.rotationSpeed || 0.05)
+      )
     }
     if (rc.turnRight) {
-      unit.movement.targetRotation += unit.rotationSpeed || 0.05
+      unit.direction = normalizeAngle(
+        (unit.direction || 0) + (unit.rotationSpeed || 0.05)
+      )
     }
+    // Keep movement rotation in sync with wagon direction
+    unit.movement.rotation = unit.direction
+    unit.movement.targetRotation = unit.direction
 
     // Compute effective max speed similar to unified movement
     const speedModifier = unit.speedModifier || 1
@@ -46,16 +54,16 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
     }
     const effectiveMaxSpeed = 0.9 * speedModifier * terrainMultiplier
 
-    // Move forward/backward
+    // Move forward/backward relative to wagon direction
     if (rc.forward) {
-      const fx = Math.cos(unit.movement.rotation)
-      const fy = Math.sin(unit.movement.rotation)
+      const fx = Math.cos(unit.direction)
+      const fy = Math.sin(unit.direction)
       unit.movement.targetVelocity.x = fx * effectiveMaxSpeed
       unit.movement.targetVelocity.y = fy * effectiveMaxSpeed
       unit.movement.isMoving = true
     } else if (rc.backward) {
-      const fx = Math.cos(unit.movement.rotation)
-      const fy = Math.sin(unit.movement.rotation)
+      const fx = Math.cos(unit.direction)
+      const fy = Math.sin(unit.direction)
       unit.movement.targetVelocity.x = -fx * effectiveMaxSpeed
       unit.movement.targetVelocity.y = -fy * effectiveMaxSpeed
       unit.movement.isMoving = true
