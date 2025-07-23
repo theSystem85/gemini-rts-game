@@ -12,10 +12,18 @@ export const SAFE_RANGE_ENABLED = false
 export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
 // Toggle to allow selecting enemy units to view their HUD only
-export const ENABLE_ENEMY_SELECTION = false
+export let ENABLE_ENEMY_SELECTION = false
+
+export function setEnemySelectionEnabled(value) {
+  ENABLE_ENEMY_SELECTION = value
+}
 
 // Toggle to allow issuing commands to enemy units when selected
-export const ENABLE_ENEMY_CONTROL = false
+export let ENABLE_ENEMY_CONTROL = false
+
+export function setEnemyControlEnabled(value) {
+  ENABLE_ENEMY_CONTROL = value
+}
 
 // Sound configuration
 export const MASTER_VOLUME = 0.25  // Default to 50% volume

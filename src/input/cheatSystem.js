@@ -4,6 +4,7 @@ import { units } from '../main.js'
 import { showNotification } from '../ui/notifications.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
+import { ENABLE_ENEMY_CONTROL, setEnemyControlEnabled } from '../config.js'
 
 export class CheatSystem {
   constructor() {
@@ -191,6 +192,7 @@ export class CheatSystem {
           <li><code>give [amount]</code> - Add money (e.g., <code>give 10000</code>)</li>
           <li><code>money [amount]</code> - Set money to specific amount</li>
           <li><code>status</code> - Show current cheat status</li>
+          <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
         </ul>
       </div>
     `
@@ -298,6 +300,12 @@ export class CheatSystem {
           this.showError('Invalid amount. Use: money [number]')
         }
       }
+      // Enemy control command
+      else if (normalizedCode === 'enemycontrol on') {
+        this.enableEnemyControl()
+      } else if (normalizedCode === 'enemycontrol off') {
+        this.disableEnemyControl()
+      }
       // Status command
       else if (normalizedCode === 'status') {
         this.showStatus()
@@ -394,13 +402,32 @@ export class CheatSystem {
     }
   }
 
+  enableEnemyControl() {
+    if (ENABLE_ENEMY_CONTROL) {
+      showNotification('Enemy control already enabled', 3000)
+      return
+    }
+    setEnemyControlEnabled(true)
+    showNotification('Enemy control ENABLED', 3000)
+  }
+
+  disableEnemyControl() {
+    if (!ENABLE_ENEMY_CONTROL) {
+      showNotification('Enemy control already disabled', 3000)
+      return
+    }
+    setEnemyControlEnabled(false)
+    showNotification('Enemy control DISABLED', 3000)
+  }
+
   showStatus() {
     const statusLines = [
       `💰 Money: $${gameState.money.toLocaleString()}`,
       `🛡️ God Mode: ${this.godModeEnabled ? 'ENABLED' : 'DISABLED'}`,
       `👥 Player Units: ${units.filter(u => u.owner === gameState.humanPlayer).length}`,
       `🤖 AI Units: ${units.filter(u => u.owner !== gameState.humanPlayer).length}`,
-      `🏭 Player Buildings: ${gameState.buildings.filter(b => b.owner === gameState.humanPlayer).length}`
+      `🏭 Player Buildings: ${gameState.buildings.filter(b => b.owner === gameState.humanPlayer).length}`,
+      `🎮 Enemy Control: ${ENABLE_ENEMY_CONTROL ? 'ENABLED' : 'DISABLED'}`
     ]
 
     showNotification(statusLines.join('\n'), 5000)

@@ -70,7 +70,9 @@ export class SelectionManager {
         clickedUnit.selected = true
         selectedUnits.push(clickedUnit)
       }
-      playSound('unitSelection')
+      if (this.isCommandableUnit(clickedUnit)) {
+        playSound('unitSelection')
+      }
     } else if (e.shiftKey && isDoubleClick) {
       // Shift+double click: Add all visible units of this type to selection
       const gameCanvas = document.getElementById('gameCanvas')
@@ -86,7 +88,9 @@ export class SelectionManager {
         }
       })
       
-      playSound('unitSelection')
+      if (visibleUnitsOfType.some(u => this.isCommandableUnit(u))) {
+        playSound('unitSelection')
+      }
       showNotification(`Added ${visibleUnitsOfType.length} ${clickedUnit.type}(s) to selection`)
     } else if (isDoubleClick) {
       // Double click: Select all visible units of this type
@@ -110,7 +114,9 @@ export class SelectionManager {
         selectedUnits.push(unit)
       })
       
-      playSound('unitSelection')
+      if (visibleUnitsOfType.some(u => this.isCommandableUnit(u))) {
+        playSound('unitSelection')
+      }
       showNotification(`Selected ${visibleUnitsOfType.length} ${clickedUnit.type}(s)`)
     } else {
       // Normal single click: Select only this unit
@@ -123,7 +129,9 @@ export class SelectionManager {
       
       clickedUnit.selected = true
       selectedUnits.push(clickedUnit)
-      playSound('unitSelection')
+      if (this.isCommandableUnit(clickedUnit)) {
+        playSound('unitSelection')
+      }
     }
 
     // Update double-click tracking
@@ -243,7 +251,7 @@ export class SelectionManager {
         }
       }
 
-      if (anySelected) {
+      if (anySelected && selectedUnits.some(u => this.isCommandableUnit(u))) {
         playSound('unitSelection')
       }
 

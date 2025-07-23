@@ -18,6 +18,10 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
   - `give 10000` - Adds $10,000
   - `money 50000` - Sets money to $50,000
 
+### 🎮 Enemy Control
+- **Command**: `enemycontrol on` / `enemycontrol off`
+- **Function**: Allows selecting and issuing commands to enemy units
+
 ### 📊 Status Command
 - **Command**: `status`
 - **Function**: Shows current game state including:
