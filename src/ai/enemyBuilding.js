@@ -67,7 +67,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     }
   }
 
-  // Determine direction vector - prioritize direction toward player for defensive buildings
+  // Determine direction vector - defensive structures should face the nearest ore field
   let directionVector = { x: 0, y: 0 }
   const isDefensiveBuilding =
     buildingType.startsWith('turretGun') ||
@@ -75,21 +75,29 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     buildingType === 'teslaCoil' ||
     buildingType === 'artilleryTurret'
 
-  if (isDefensiveBuilding && humanPlayerFactory) {
-    // For defensive buildings, strongly prefer direction toward player
-    directionVector = playerDirection
-  } else if (closestOrePos) {
-    // For other buildings, prefer direction toward ore fields
+  if (isDefensiveBuilding && closestOrePos) {
+    // Face defenses towards the closest ore field to protect harvesters
     directionVector.x = closestOrePos.x - factoryX
     directionVector.y = closestOrePos.y - factoryY
-    // Normalize
+    const mag = Math.hypot(directionVector.x, directionVector.y)
+    if (mag > 0) {
+      directionVector.x /= mag
+      directionVector.y /= mag
+    }
+  } else if (isDefensiveBuilding && humanPlayerFactory) {
+    // Fallback to facing the human player if no ore exists
+    directionVector = playerDirection
+  } else if (closestOrePos) {
+    // Non‑defensive buildings prefer ore direction
+    directionVector.x = closestOrePos.x - factoryX
+    directionVector.y = closestOrePos.y - factoryY
     const mag = Math.hypot(directionVector.x, directionVector.y)
     if (mag > 0) {
       directionVector.x /= mag
       directionVector.y /= mag
     }
   } else if (humanPlayerFactory) {
-    // Fallback to player direction if no ore fields
+    // Otherwise face towards the human player's base
     directionVector = playerDirection
   }
 
@@ -494,14 +502,16 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   }
 
   // Get human player factory for directional placement of defensive buildings
-  const playerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player1')
+  const playerFactory = factories.find(
+    f => f.id === gameState.humanPlayer || f.id === 'player1'
+  )
   const isDefensiveBuilding =
     buildingType.startsWith('turretGun') ||
     buildingType === 'rocketTurret' ||
     buildingType === 'teslaCoil' ||
     buildingType === 'artilleryTurret'
 
-  // Calculate player direction for defensive buildings
+  // Calculate player direction for fallback
   let playerDirection = null
   if (playerFactory && isDefensiveBuilding) {
     const factoryX = factory.x + Math.floor(factory.width / 2)
@@ -514,7 +524,6 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
       y: playerY - factoryY
     }
 
-    // Normalize
     const mag = Math.hypot(playerDirection.x, playerDirection.y)
     if (mag > 0) {
       playerDirection.x /= mag
@@ -522,24 +531,52 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
     }
   }
 
+  // Determine direction towards closest ore field for defensive buildings
+  let oreDirection = null
+  if (isDefensiveBuilding) {
+    const fx = factory.x + Math.floor(factory.width / 2)
+    const fy = factory.y + Math.floor(factory.height / 2)
+    let closestDist = Infinity
+    for (let y = 0; y < mapGrid.length; y++) {
+      for (let x = 0; x < mapGrid[0].length; x++) {
+        if (mapGrid[y][x].ore) {
+          const dist = Math.hypot(x - fx, y - fy)
+          if (dist < closestDist) {
+            closestDist = dist
+            oreDirection = { x: x - fx, y: y - fy }
+          }
+        }
+      }
+    }
+    if (oreDirection) {
+      const mag = Math.hypot(oreDirection.x, oreDirection.y)
+      if (mag > 0) {
+        oreDirection.x /= mag
+        oreDirection.y /= mag
+      }
+    }
+  }
+
+  const defendDirection = oreDirection || playerDirection
+
   // Search in a spiral pattern around the factory with preference to player direction
   for (let distance = 1; distance <= 10; distance++) {
     // Prioritize distances from our preferred list
     if (preferredDistances.includes(distance)) {
       // Prioritize building in 8 cardinal directions first
       for (let angle = 0; angle < 360; angle += 45) {
-        // For defensive buildings, prioritize direction toward player
-        if (isDefensiveBuilding && playerDirection) {
-          // Calculate how closely this angle aligns with player direction
+        // For defensive buildings, prioritize direction toward ore field
+        if (isDefensiveBuilding && defendDirection) {
+          // Calculate how closely this angle aligns with preferred direction
           const angleRad = angle * Math.PI / 180
           const dirVector = {
             x: Math.cos(angleRad),
             y: Math.sin(angleRad)
           }
 
-          const dotProduct = playerDirection.x * dirVector.x + playerDirection.y * dirVector.y
+          const dotProduct = defendDirection.x * dirVector.x + defendDirection.y * dirVector.y
 
-          // Skip angles that don't face toward player (negative dot product)
+          // Skip angles that don't face toward the preferred direction
           if (dotProduct < 0.3 && Math.random() < 0.7) continue
         }
 
