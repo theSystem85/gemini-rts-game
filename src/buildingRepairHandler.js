@@ -3,6 +3,7 @@ import { canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply, cal
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { buildingData } from './buildings.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
 
 export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl) {
@@ -141,6 +142,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           gameState.buildings = []
         }
         gameState.buildings.push(newBuilding)
+        updateDangerZoneMaps(gameState)
 
         // Mark building tiles in the map grid
         placeBuilding(newBuilding, mapGrid)

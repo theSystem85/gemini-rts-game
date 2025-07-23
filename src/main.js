@@ -14,6 +14,7 @@ import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
 import { getTextureManager, preloadTileTextures } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -166,6 +167,8 @@ class Game {
     })
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    updateDangerZoneMaps(gameState)
+    updateDangerZoneMaps(gameState)
   }
 
   centerOnPlayerFactory() {
@@ -354,6 +357,7 @@ class Game {
     bullets.length = 0
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    updateDangerZoneMaps(gameState)
 
     this.centerOnPlayerFactory()
 
@@ -373,6 +377,7 @@ class Game {
     productionQueue.resumeProductionAfterUnpause()
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    updateDangerZoneMaps(gameState)
   }
 
   async resetGame() {

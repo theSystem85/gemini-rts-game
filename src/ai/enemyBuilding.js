@@ -1,6 +1,7 @@
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearExistingBuilding, isTileValid, updatePowerSupply } from '../buildings.js'
 import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
+import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 
 // Let's improve this function to fix issues with enemy building placement
 // Modified to improve building placement with better spacing and factory avoidance
@@ -685,6 +686,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
 
     // Add to game state
     gameState.buildings.push(newBuilding)
+    updateDangerZoneMaps(gameState)
 
     // Update map grid
     placeBuilding(newBuilding, mapGrid)

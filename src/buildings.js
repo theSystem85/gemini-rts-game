@@ -4,6 +4,7 @@ import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { logPerformance } from './performanceUtils.js'
 import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -644,6 +645,9 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
 
 // Update the game's power supply
 export function updatePowerSupply(buildings, gameState) {
+  const prevPlayerPower = gameState.playerPowerSupply || 0
+  const prevEnemyPower = gameState.enemyPowerSupply || 0
+
   // Player power calculation
   let playerTotalPower = 0
   let playerTotalProduction = 0
@@ -712,6 +716,13 @@ export function updatePowerSupply(buildings, gameState) {
   gameState.enemyPowerSupply = enemyTotalPower
   gameState.enemyTotalPowerProduction = enemyTotalProduction
   gameState.enemyPowerConsumption = enemyTotalConsumption
+
+  const playerCross = (prevPlayerPower >= 0 && playerTotalPower < 0) || (prevPlayerPower < 0 && playerTotalPower >= 0)
+  const enemyCross = (prevEnemyPower >= 0 && enemyTotalPower < 0) || (prevEnemyPower < 0 && enemyTotalPower >= 0)
+  
+  if (playerCross || enemyCross) {
+    updateDangerZoneMaps(gameState)
+  }
 
   // Calculate energy percentage for UI display
   // Calculate energy percentage for informational purposes

@@ -4,6 +4,7 @@ import { resetAttackDirections, manageAICrewHealing } from './enemyStrategies.js
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
+import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { logPerformance } from '../performanceUtils.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
@@ -320,6 +321,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         const newBuilding = createBuilding(buildingType, position.x, position.y)
         newBuilding.owner = aiPlayerId
         gameState.buildings.push(newBuilding)
+        updateDangerZoneMaps(gameState)
         placeBuilding(newBuilding, mapGrid)
 
         if (DEBUG_AI_BUILDING) {
@@ -344,6 +346,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           const newBuilding = createBuilding(buildingType, alternativePosition.x, alternativePosition.y)
           newBuilding.owner = aiPlayerId
           gameState.buildings.push(newBuilding)
+          updateDangerZoneMaps(gameState)
           placeBuilding(newBuilding, mapGrid)
           
           if (DEBUG_AI_BUILDING) {

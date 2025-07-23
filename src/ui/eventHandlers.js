@@ -18,6 +18,7 @@ import {
   buildingData,
   isTileValid
 } from '../buildings.js'
+import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { playSound } from '../sound.js'
 import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
 import { TILE_SIZE } from '../config.js'
@@ -253,6 +254,7 @@ export class EventHandlers {
             gameState.buildings = []
           }
           gameState.buildings.push(newBuilding)
+          updateDangerZoneMaps(gameState)
 
           // Mark building tiles in the map grid
           placeBuilding(newBuilding, this.mapGrid)

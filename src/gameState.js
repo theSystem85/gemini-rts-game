@@ -83,6 +83,9 @@ export const gameState = {
   // Performance dialog visibility toggle
   performanceVisible: false,
 
+  dangerZoneMaps: {},
+  dzmOverlayIndex: -1,
+
   // FPS display toggle and tracking
   fpsVisible: false,
   fpsCounter: {

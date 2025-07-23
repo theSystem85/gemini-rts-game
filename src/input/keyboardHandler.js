@@ -143,6 +143,10 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleOccupancyMapToggle()
       }
+      else if (e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        this.handleDzmToggle()
+      }
       // T key to toggle tank image rendering
       else if (e.key.toLowerCase() === 't') {
         e.preventDefault()
@@ -687,6 +691,25 @@ export class KeyboardHandler {
     this.showNotification(`Occupancy map: ${status}`, 2000)
     
     // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleDzmToggle() {
+    const ids = Object.keys(gameState.dangerZoneMaps || {})
+    if (ids.length === 0) return
+    if (gameState.dzmOverlayIndex === -1) {
+      gameState.dzmOverlayIndex = 0
+    } else {
+      gameState.dzmOverlayIndex++
+      if (gameState.dzmOverlayIndex >= ids.length) {
+        gameState.dzmOverlayIndex = -1
+        this.showNotification('Danger zone map: OFF', 2000)
+        playSound('confirmed', 0.5)
+        return
+      }
+    }
+    const pid = ids[gameState.dzmOverlayIndex]
+    this.showNotification(`Danger zone map: ${pid}`, 2000)
     playSound('confirmed', 0.5)
   }
 
