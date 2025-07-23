@@ -11,6 +11,9 @@ export const TILE_LENGTH_METERS = 1000
 export const SAFE_RANGE_ENABLED = false
 export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
+// Toggle to allow selecting enemy units and viewing their HUD
+export const ENABLE_ENEMY_SELECTION = false
+
 // Sound configuration
 export const MASTER_VOLUME = 0.25  // Default to 50% volume
 

@@ -418,8 +418,8 @@ export class MouseHandler {
     // Right click no longer sets rally points, it only deselects
 
     // Only deselect other units if this was NOT a drag operation AND no factory was selected
-    if (!this.rightWasDragging) {
-      units.forEach(u => { if (selectionManager.isHumanPlayerUnit(u)) u.selected = false })
+      if (!this.rightWasDragging) {
+        units.forEach(u => { if (selectionManager.isSelectableUnit(u)) u.selected = false })
       
       // Clear factory selections
       factories.forEach(f => f.selected = false)
@@ -579,9 +579,9 @@ export class MouseHandler {
       }
 
       // Check friendly units if no building was targeted
-      if (!forceAttackTarget) {
-        for (const unit of units) {
-          if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
+        if (!forceAttackTarget) {
+          for (const unit of units) {
+            if (selectionManager.isSelectableUnit(unit) && !unit.selected) {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -634,9 +634,9 @@ export class MouseHandler {
   }
 
   handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid) {
-    let guardTarget = null
-    for (const unit of units) {
-      if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
+      let guardTarget = null
+      for (const unit of units) {
+        if (selectionManager.isSelectableUnit(unit) && !unit.selected) {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -906,7 +906,7 @@ export class MouseHandler {
     // PRIORITY 3: Normal unit selection
     let clickedUnit = null
     for (const unit of units) {
-      if (selectionManager.isHumanPlayerUnit(unit)) {
+      if (selectionManager.isSelectableUnit(unit)) {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         const dx = worldX - centerX
