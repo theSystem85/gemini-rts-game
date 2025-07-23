@@ -35,6 +35,7 @@ export class MouseHandler {
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
     this.gameFactories = factories // Store the passed factories list
     this.gameUnits = units // Store the passed units list for recovery tank detection
+    this.selectionManager = selectionManager
     // Disable right-click context menu
     gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
@@ -418,8 +419,8 @@ export class MouseHandler {
     // Right click no longer sets rally points, it only deselects
 
     // Only deselect other units if this was NOT a drag operation AND no factory was selected
-    if (!this.rightWasDragging) {
-      units.forEach(u => { if (selectionManager.isHumanPlayerUnit(u)) u.selected = false })
+      if (!this.rightWasDragging) {
+        units.forEach(u => { if (selectionManager.isSelectableUnit(u)) u.selected = false })
       
       // Clear factory selections
       factories.forEach(f => f.selected = false)
@@ -554,8 +555,12 @@ export class MouseHandler {
 
 
   handleForceAttackCommand(worldX, worldY, units, selectedUnits, unitCommands, mapGrid, selectionManager) {
+    const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
+    if (commandableUnits.length === 0) {
+      return false
+    }
     // Only process Force Attack if units or defensive buildings are selected, not factories
-    if (selectedUnits[0].type !== 'factory') {
+    if (commandableUnits[0].type !== 'factory') {
       let forceAttackTarget = null
 
       // Check friendly buildings first
@@ -579,9 +584,9 @@ export class MouseHandler {
       }
 
       // Check friendly units if no building was targeted
-      if (!forceAttackTarget) {
-        for (const unit of units) {
-          if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
+        if (!forceAttackTarget) {
+          for (const unit of units) {
+            if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -613,19 +618,19 @@ export class MouseHandler {
 
       // If we found a target (friendly unit/building or ground), issue the Force Attack command
       if (forceAttackTarget) {
-        const first = selectedUnits[0]
+        const first = commandableUnits[0]
         if (first.isBuilding) {
-          selectedUnits.forEach(b => {
+          commandableUnits.forEach(b => {
             b.forcedAttackTarget = forceAttackTarget
             b.forcedAttack = true
             b.holdFire = false
           })
           return true
         } else {
-          selectedUnits.forEach(unit => {
+          commandableUnits.forEach(unit => {
             unit.forcedAttack = true
           })
-          unitCommands.handleAttackCommand(selectedUnits, forceAttackTarget, mapGrid, true)
+          unitCommands.handleAttackCommand(commandableUnits, forceAttackTarget, mapGrid, true)
           return true
         }
       }
@@ -634,6 +639,10 @@ export class MouseHandler {
   }
 
   handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid) {
+    const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
+    if (commandableUnits.length === 0) {
+      return false
+    }
     let guardTarget = null
     for (const unit of units) {
       if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
@@ -647,7 +656,7 @@ export class MouseHandler {
     }
 
     if (guardTarget) {
-      selectedUnits.forEach(u => {
+      commandableUnits.forEach(u => {
         u.guardTarget = guardTarget
         u.guardMode = true
         u.target = null
@@ -706,7 +715,8 @@ export class MouseHandler {
 
     // PRIORITY 1: Check for refinery unload command if harvesters are already selected
     if (selectedUnits.length > 0) {
-      const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+      const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
+      const hasSelectedHarvesters = commandableUnits.some(unit => unit.type === 'harvester')
       
       if (hasSelectedHarvesters) {
         // Check if clicking on a player refinery with harvesters selected
@@ -721,7 +731,7 @@ export class MouseHandler {
                 tileX >= building.x && tileX < building.x + building.width &&
                 tileY >= building.y && tileY < building.y + building.height) {
               // Handle forced unload at specific refinery
-              unitCommands.handleRefineryUnloadCommand(selectedUnits, building, mapGrid)
+              unitCommands.handleRefineryUnloadCommand(commandableUnits, building, mapGrid)
               return // Exit early, don't process building selection
             }
           }
@@ -740,21 +750,21 @@ export class MouseHandler {
               tileX >= building.x && tileX < building.x + building.width &&
               tileY >= building.y && tileY < building.y + building.height) {
             // Handle repair workshop command - don't select the building
-            unitCommands.handleRepairWorkshopCommand(selectedUnits, building, mapGrid)
+            unitCommands.handleRepairWorkshopCommand(commandableUnits, building, mapGrid)
             return // Exit early, don't process building selection
           }
         }
       }
 
       // Check for tanker truck refuel command
-      const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
+      const hasSelectedTankers = commandableUnits.some(unit => unit.type === 'tankerTruck')
       if (hasSelectedTankers) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number') {
             const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
             if (uX === tileX && uY === tileY && unit.gas < unit.maxGas) {
-              unitCommands.handleTankerRefuelCommand(selectedUnits, unit, mapGrid)
+              unitCommands.handleTankerRefuelCommand(commandableUnits, unit, mapGrid)
               return
             }
           }
@@ -762,7 +772,7 @@ export class MouseHandler {
       }
 
       // Check for ambulance healing command if ambulances are selected
-      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+      const hasSelectedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
       
       if (hasSelectedAmbulances) {
         // Check if clicking on a friendly unit that needs healing
@@ -777,7 +787,7 @@ export class MouseHandler {
               const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
               if (missingCrew.length > 0) {
                 // Handle ambulance healing command
-                unitCommands.handleAmbulanceHealCommand(selectedUnits, unit, mapGrid)
+                unitCommands.handleAmbulanceHealCommand(commandableUnits, unit, mapGrid)
                 return // Exit early, don't process unit selection
               }
             }
@@ -786,7 +796,7 @@ export class MouseHandler {
       }
 
       // Check for recovery tank repair command if recovery tanks are selected
-      const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
+      const hasSelectedRecoveryTanks = commandableUnits.some(unit => unit.type === 'recoveryTank')
       
       if (hasSelectedRecoveryTanks) {
         // Check if clicking on a friendly unit that needs repair
@@ -799,7 +809,7 @@ export class MouseHandler {
             
             if (unitTileX === tileX && unitTileY === tileY) {
               // Handle recovery tank repair command
-              unitCommands.handleRecoveryTankRepairCommand(selectedUnits, unit, mapGrid)
+              unitCommands.handleRecoveryTankRepairCommand(commandableUnits, unit, mapGrid)
               return // Exit early, don't process unit selection
             }
           }
@@ -807,7 +817,7 @@ export class MouseHandler {
       }
 
       // Check for damaged unit requesting recovery tank help
-      const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      const hasSelectedDamagedUnits = commandableUnits.some(unit => unit.health < unit.maxHealth)
       
       if (hasSelectedDamagedUnits) {
         // Check if clicking on a recovery tank
@@ -818,14 +828,14 @@ export class MouseHandler {
             
             if (unitTileX === tileX && unitTileY === tileY) {
               // Handle damaged unit requesting recovery tank help
-              unitCommands.handleDamagedUnitToRecoveryTankCommand(selectedUnits, unit, mapGrid)
+              unitCommands.handleDamagedUnitToRecoveryTankCommand(commandableUnits, unit, mapGrid)
               return // Exit early, don't process unit selection
             }
           }
         }
       }
 
-      const hasSelectedRecovery = selectedUnits.some(unit => unit.type === 'recoveryTank')
+      const hasSelectedRecovery = commandableUnits.some(unit => unit.type === 'recoveryTank')
       if (hasSelectedRecovery) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer) {
@@ -833,7 +843,7 @@ export class MouseHandler {
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
             if (unitTileX === tileX && unitTileY === tileY) {
               if (unit.crew && (!unit.crew.driver || !unit.crew.commander)) {
-                unitCommands.handleRecoveryTowCommand(selectedUnits, unit)
+                unitCommands.handleRecoveryTowCommand(commandableUnits, unit)
                 return
               }
             }
@@ -842,7 +852,7 @@ export class MouseHandler {
       }
 
       // Check for ambulance refilling command if ambulances are selected
-      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      const hasSelectedNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
       
       if (hasSelectedNotFullyLoadedAmbulances) {
         // Check if clicking on a player hospital
@@ -853,13 +863,13 @@ export class MouseHandler {
               tileX >= building.x && tileX < building.x + building.width &&
               tileY >= building.y && tileY < building.y + building.height) {
             // Handle ambulance refill command
-            unitCommands.handleAmbulanceRefillCommand(selectedUnits, building, mapGrid)
+            unitCommands.handleAmbulanceRefillCommand(commandableUnits, building, mapGrid)
             return // Exit early, don't process building selection
           }
         }
       }
 
-      const needsGas = selectedUnits.some(
+      const needsGas = commandableUnits.some(
         u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
       )
       if (needsGas) {
@@ -869,7 +879,7 @@ export class MouseHandler {
               building.health > 0 &&
               tileX >= building.x && tileX < building.x + building.width &&
               tileY >= building.y && tileY < building.y + building.height) {
-            unitCommands.handleGasStationRefillCommand(selectedUnits, building, mapGrid)
+            unitCommands.handleGasStationRefillCommand(commandableUnits, building, mapGrid)
             return
           }
         }
@@ -906,7 +916,7 @@ export class MouseHandler {
     // PRIORITY 3: Normal unit selection
     let clickedUnit = null
     for (const unit of units) {
-      if (selectionManager.isHumanPlayerUnit(unit)) {
+      if (selectionManager.isSelectableUnit(unit)) {
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         const dx = worldX - centerX
@@ -923,25 +933,30 @@ export class MouseHandler {
       // Update AGF capability after unit selection
       this.updateAGFCapability(selectedUnits)
     } else {
-      // No unit clicked - handle as movement command if units are selected and not in special modes
-        if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+      // No unit clicked - handle as movement/attack command if commandable units are selected
+      if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+        const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
+        if (commandableUnits.length > 0) {
           if (e.shiftKey) {
             // Initiate immediate retreat without using path planning
-            initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
+            initiateRetreat(commandableUnits, worldX, worldY, mapGrid)
           } else if (e.altKey) {
             // Queue planned action using Alt/Option
-            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, true)
+            this.handleStandardCommands(worldX, worldY, commandableUnits, unitCommands, mapGrid, true)
           } else if (!isForceAttackModifierActive(e)) {
             // Normal command (not Ctrl+Click which is self attack)
-            this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, false)
+            this.handleStandardCommands(worldX, worldY, commandableUnits, unitCommands, mapGrid, false)
           }
+        }
       }
     }
   }
 
   handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, altPressed = false) {
+    const selectionManager = this.selectionManager
+    const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
     // Skip command issuing for factory selection
-    if (selectedUnits.length > 0 && selectedUnits[0].type !== 'factory') {
+    if (commandableUnits.length > 0 && commandableUnits[0].type !== 'factory') {
       let target = null
       let oreTarget = null
       let refineryTarget = null
@@ -949,11 +964,11 @@ export class MouseHandler {
       // Check if clicking on a player refinery with harvesters selected
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
-      const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
+      const hasSelectedHarvesters = commandableUnits.some(unit => unit.type === 'harvester')
       
       if (hasSelectedHarvesters && gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
-          if (building.type === 'oreRefinery' && 
+          if (building.type === 'oreRefinery' &&
               building.owner === gameState.humanPlayer &&
               building.health > 0 &&
               tileX >= building.x && tileX < building.x + building.width &&
@@ -986,7 +1001,7 @@ export class MouseHandler {
         }
         
         // Check for hospital if ambulances that need refilling are selected
-        const hasNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
         if (hasNotFullyLoadedAmbulances) {
           for (const building of gameState.buildings) {
             if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -998,7 +1013,7 @@ export class MouseHandler {
           }
         }
 
-        const needsGas = selectedUnits.some(u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75)
+        const needsGas = commandableUnits.some(u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75)
         if (needsGas) {
           for (const building of gameState.buildings) {
             if (building.type === 'gasStation' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -1012,37 +1027,37 @@ export class MouseHandler {
       }
 
       if (refineryTarget) {
-        unitCommands.handleRefineryUnloadCommand(selectedUnits, refineryTarget, mapGrid)
+        unitCommands.handleRefineryUnloadCommand(commandableUnits, refineryTarget, mapGrid)
       } else if (workshopTarget) {
-        unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
+        unitCommands.handleRepairWorkshopCommand(commandableUnits, workshopTarget, mapGrid)
       } else if (hospitalTarget) {
-        unitCommands.handleAmbulanceRefillCommand(selectedUnits, hospitalTarget, mapGrid)
+        unitCommands.handleAmbulanceRefillCommand(commandableUnits, hospitalTarget, mapGrid)
       } else if (gasStationTarget) {
-        unitCommands.handleGasStationRefillCommand(selectedUnits, gasStationTarget, mapGrid)
+        unitCommands.handleGasStationRefillCommand(commandableUnits, gasStationTarget, mapGrid)
       } else if (oreTarget) {
-        unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
+        unitCommands.handleHarvesterCommand(commandableUnits, oreTarget, mapGrid)
       } else {
         target = this.findEnemyTarget(worldX, worldY)
 
         if (target) {
           if (altPressed) {
-            selectedUnits.forEach(unit => {
+            commandableUnits.forEach(unit => {
               if (!unit.commandQueue) unit.commandQueue = []
               unit.commandQueue.push({ type: 'attack', target })
             })
             markWaypointsAdded() // Mark that waypoints were added during Alt press
           } else {
-            unitCommands.handleAttackCommand(selectedUnits, target, mapGrid, false)
+            unitCommands.handleAttackCommand(commandableUnits, target, mapGrid, false)
           }
         } else {
           if (altPressed) {
-            selectedUnits.forEach(unit => {
+            commandableUnits.forEach(unit => {
               if (!unit.commandQueue) unit.commandQueue = []
               unit.commandQueue.push({ type: 'move', x: worldX, y: worldY })
             })
             markWaypointsAdded() // Mark that waypoints were added during Alt press
           } else {
-            unitCommands.handleMovementCommand(selectedUnits, worldX, worldY, mapGrid)
+            unitCommands.handleMovementCommand(commandableUnits, worldX, worldY, mapGrid)
           }
         }
       }
