@@ -46,11 +46,11 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   }
 
   // Use appropriate spacing based on building type
-  let minDistance = 2
+  let minDistance = 1
   if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
     minDistance = 4 // More space for refineries and factories
   } else if (buildingType === 'concreteWall') {
-    minDistance = 1 // Walls can be closer
+    minDistance = 0 // Walls can be adjacent
   }
 
   // Extended spiral search around the factory with appropriate spacing
@@ -69,7 +69,12 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
       let valid = true
 
       // For refineries and vehicle factories, check extra clearance around the building
-      const clearanceNeeded = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 1 : 0
+      let clearanceNeeded = 1
+      if (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') {
+        clearanceNeeded = 2
+      } else if (buildingType === 'concreteWall') {
+        clearanceNeeded = 0
+      }
 
       for (let by = y - clearanceNeeded; by < y + buildingHeight + clearanceNeeded && valid; by++) {
         for (let bx = x - clearanceNeeded; bx < x + buildingWidth + clearanceNeeded && valid; bx++) {

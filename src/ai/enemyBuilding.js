@@ -103,7 +103,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Special case for walls - they can be placed closer together
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 2 // Default spacing
+  let minSpaceBetweenBuildings = 1 // Default spacing
   
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 1 // Walls can be closer
@@ -125,6 +125,52 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') 
     ? [4, 5, 6, 3] 
     : [3, 4, 5, 2]
+
+  // First try placing along the line from the factory to the closest ore field
+  if (isDefensiveBuilding && closestOrePos) {
+    const lineDistances = preferredDistances.concat([6, 7])
+    for (const distance of lineDistances) {
+      const x = factory.x + Math.round(directionVector.x * distance)
+      const y = factory.y + Math.round(directionVector.y * distance)
+
+      if (
+        x >= 0 &&
+        y >= 0 &&
+        x + buildingWidth <= mapGrid[0].length &&
+        y + buildingHeight <= mapGrid.length
+      ) {
+        let valid = true
+
+        for (let cy = y; cy < y + buildingHeight && valid; cy++) {
+          for (let cx = x; cx < x + buildingWidth && valid; cx++) {
+            if (
+              !isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)
+            ) {
+              valid = false
+            }
+          }
+        }
+
+        if (!valid) continue
+
+        const hasClearPaths = ensurePathsAroundBuilding(
+          x,
+          y,
+          buildingWidth,
+          buildingHeight,
+          mapGrid,
+          buildings,
+          factories,
+          minSpaceBetweenBuildings,
+          aiPlayerId
+        )
+
+        if (hasClearPaths) {
+          return { x, y }
+        }
+      }
+    }
+  }
 
   // Search for positions prioritizing direction and preferred distance
   for (let angle = 0; angle < 360; angle += 30) {
@@ -466,6 +512,24 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
   return false
 }
 
+// Calculate direction to the closest ore field from a given position
+function directionToClosestOre(x, y, mapGrid) {
+  let closest = Infinity
+  let angle = null
+  for (let oy = 0; oy < mapGrid.length; oy++) {
+    for (let ox = 0; ox < mapGrid[0].length; ox++) {
+      if (mapGrid[oy][ox].ore) {
+        const dist = Math.hypot(ox - x, oy - y)
+        if (dist < closest) {
+          closest = dist
+          angle = Math.atan2(oy - y, ox - x)
+        }
+      }
+    }
+  }
+  return angle
+}
+
 // Fallback position search with the original spiral pattern
 function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
   // Validate inputs
@@ -487,7 +551,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   const buildingHeight = buildingData[buildingType].height
 
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 2 // Default spacing
+  let minSpaceBetweenBuildings = 1 // Default spacing
   let preferredDistances = [3, 4, 5, 2] // Default distances
   
   if (buildingType === 'concreteWall') {
@@ -558,6 +622,49 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   }
 
   const defendDirection = oreDirection || playerDirection
+
+  if (isDefensiveBuilding && oreDirection) {
+    const lineDistances = preferredDistances.concat([6, 7])
+    for (const distance of lineDistances) {
+      const x = factory.x + Math.round(oreDirection.x * distance)
+      const y = factory.y + Math.round(oreDirection.y * distance)
+
+      if (
+        x < 0 ||
+        y < 0 ||
+        x + buildingWidth > mapGrid[0].length ||
+        y + buildingHeight > mapGrid.length
+      ) {
+        continue
+      }
+
+      let valid = true
+      for (let cy = y; cy < y + buildingHeight && valid; cy++) {
+        for (let cx = x; cx < x + buildingWidth && valid; cx++) {
+          if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {
+            valid = false
+          }
+        }
+      }
+
+      if (!valid) continue
+
+      const hasClearPaths = ensurePathsAroundBuilding(
+        x,
+        y,
+        buildingWidth,
+        buildingHeight,
+        mapGrid,
+        buildings,
+        factories,
+        minSpaceBetweenBuildings
+      )
+
+      if (hasClearPaths) {
+        return { x, y }
+      }
+    }
+  }
 
   // Search in a spiral pattern around the factory with preference to player direction
   for (let distance = 1; distance <= 10; distance++) {
@@ -719,6 +826,21 @@ function completeEnemyBuilding(gameState, mapGrid) {
     // Create and place the building
     const newBuilding = createBuilding(buildingType, x, y)
     newBuilding.owner = 'enemy'
+
+    if (
+      buildingType.startsWith('turretGun') ||
+      buildingType === 'rocketTurret' ||
+      buildingType === 'teslaCoil' ||
+      buildingType === 'artilleryTurret'
+    ) {
+      const centerX = x + Math.floor(newBuilding.width / 2)
+      const centerY = y + Math.floor(newBuilding.height / 2)
+      const oreDir = directionToClosestOre(centerX, centerY, gameState.mapGrid || mapGrid)
+      if (oreDir !== null) {
+        newBuilding.turretDirection = oreDir
+        newBuilding.targetDirection = oreDir
+      }
+    }
 
     // Add to game state
     gameState.buildings.push(newBuilding)
