@@ -131,5 +131,9 @@ export const gameState = {
   newBuildingTypes: new Set(),
 
   // Flag to refresh production buttons after building destruction
-  pendingButtonUpdate: false
+  pendingButtonUpdate: false,
+
+  // Danger zone maps generated from defensive structures
+  dangerZoneMaps: {},
+  dzmOverlayIndex: -1
 }

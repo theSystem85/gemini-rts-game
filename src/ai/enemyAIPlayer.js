@@ -5,6 +5,7 @@ import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
 import { logPerformance } from '../performanceUtils.js'
+import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   // Validate inputs
@@ -321,6 +322,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         newBuilding.owner = aiPlayerId
         gameState.buildings.push(newBuilding)
         placeBuilding(newBuilding, mapGrid)
+        updateDangerZoneMaps(gameState)
 
         if (DEBUG_AI_BUILDING) {
           console.log(`AI ${aiPlayerId} successfully placed ${buildingType} at (${position.x}, ${position.y})`)
@@ -345,6 +347,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           newBuilding.owner = aiPlayerId
           gameState.buildings.push(newBuilding)
           placeBuilding(newBuilding, mapGrid)
+          updateDangerZoneMaps(gameState)
           
           if (DEBUG_AI_BUILDING) {
             console.log(`AI ${aiPlayerId} placed ${buildingType} at alternative position (${alternativePosition.x}, ${alternativePosition.y})`)

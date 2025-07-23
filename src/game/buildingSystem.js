@@ -9,6 +9,7 @@ import { updateUnitSpeedModifier } from '../utils.js'
 import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
+import { updateDangerZoneMaps } from './dangerZoneMap.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -40,6 +41,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
 
           clearBuildingFromMapGrid(building, mapGrid)
           gameState.buildings.splice(i, 1)
+          updateDangerZoneMaps(gameState)
           gameState.pendingButtonUpdate = true
           updatePowerSupply(gameState.buildings, gameState)
           checkGameEndConditions(factories, gameState)
@@ -76,6 +78,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
 
         // Remove the building from the buildings array
         gameState.buildings.splice(i, 1)
+        updateDangerZoneMaps(gameState)
 
         // Trigger UI refresh for production buttons
         gameState.pendingButtonUpdate = true

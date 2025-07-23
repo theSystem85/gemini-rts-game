@@ -8,6 +8,7 @@ import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { initializeOccupancyMap } from './units.js'
 import { getTextureManager } from './rendering.js'
@@ -450,6 +451,7 @@ export function loadGame(key) {
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    updateDangerZoneMaps(gameState)
 
     // Restore targeted ore tiles for harvester system
     if (loaded.targetedOreTiles) {

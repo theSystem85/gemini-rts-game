@@ -699,6 +699,27 @@ html, body {
   color: #ff0000; /* Red for <15 FPS */
 }
 
+/* Danger Zone Map Overlay */
+.dzm-overlay {
+  position: absolute;
+  top: 10px;
+  right: 140px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  border: 1px solid rgba(255, 0, 0, 0.8);
+  z-index: 999;
+  pointer-events: none;
+  display: none;
+}
+
+.dzm-overlay.visible {
+  display: block;
+}
+
 /* Performance Dialog */
 .performance-dialog {
   position: absolute;
