@@ -123,6 +123,13 @@ export class MouseHandler {
 
     // Only enable selection when not initiating a special command
     this.isSelecting = !this.forceAttackClick && !this.guardClick
+
+    // Prevent selection box from appearing when assigning rally points
+    if (selectedUnits.length === 1 && selectedUnits[0].isBuilding &&
+        (selectedUnits[0].type === 'vehicleFactory' || selectedUnits[0].type === 'vehicleWorkshop')) {
+      this.isSelecting = false
+    }
+
     gameState.selectionActive = this.isSelecting
     this.wasDragging = false
     this.selectionStart = { x: worldX, y: worldY }
@@ -364,73 +371,8 @@ export class MouseHandler {
     const rect = gameCanvas.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
-    
-    // Check selected factories first (but not when in repair mode)
-    const selectedFactory = factories.find(f => f.selected && f.id === gameState.humanPlayer)
-    if (selectedFactory && !this.rightWasDragging && !gameState.repairMode) {
-      // Set rally point at clicked tile
-      selectedFactory.rallyPoint = {
-        x: Math.floor(worldX / TILE_SIZE),
-        y: Math.floor(worldY / TILE_SIZE)
-      }
-      playPositionalSound('movement', worldX, worldY, 0.5)
-      
-      // Deselect the factory after setting rally point
-      selectedFactory.selected = false
-      const factoryIndex = selectedUnits.indexOf(selectedFactory)
-      if (factoryIndex > -1) {
-        selectedUnits.splice(factoryIndex, 1)
-      }
-      // Update AGF capability after deselection
-      this.updateAGFCapability(selectedUnits)
-      
-      // Show notification
-      showNotification('Rally point set for Construction Yard', 1500)
-      
-      this.rightWasDragging = false
-      // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
-      return
-    }
-    
-    // Check selected buildings that can produce units (but not when in repair mode)
-    // Vehicle factory and vehicle workshop should have rally points, not construction yard
-    const selectedBuilding = gameState.buildings && gameState.buildings.find(building => 
-      building.selected && 
-      building.owner === gameState.humanPlayer && 
-      (building.type === 'vehicleFactory' || building.type === 'vehicleWorkshop')
-    )
-    if (selectedBuilding && !this.rightWasDragging && !gameState.repairMode) {
-      // Set rally point at clicked tile
-      selectedBuilding.rallyPoint = {
-        x: Math.floor(worldX / TILE_SIZE),
-        y: Math.floor(worldY / TILE_SIZE)
-      }
-      playPositionalSound('movement', worldX, worldY, 0.5)
-      
-      // Deselect the building after setting rally point
-      selectedBuilding.selected = false
-      const buildingIndex = selectedUnits.indexOf(selectedBuilding)
-      if (buildingIndex > -1) {
-        selectedUnits.splice(buildingIndex, 1)
-      }
-      // Update AGF capability after deselection
-      this.updateAGFCapability(selectedUnits)
-      
-      // Show notification
-      let buildingName = 'Factory'
-      if (selectedBuilding.type === 'vehicleFactory') {
-        buildingName = 'Vehicle Factory'
-      } else if (selectedBuilding.type === 'vehicleWorkshop') {
-        buildingName = 'Vehicle Workshop'
-      }
-      showNotification(`Rally point set for ${buildingName}`, 1500)
-      
-      this.rightWasDragging = false
-      // Update custom cursor visibility after unit selection changes
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
-      return
-    }
+
+    // Right click no longer sets rally points, it only deselects
 
     // Only deselect other units if this was NOT a drag operation AND no factory was selected
     if (!this.rightWasDragging) {
@@ -458,6 +400,56 @@ export class MouseHandler {
     const rect = e.target.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+
+    // Check if a player factory or workshop is selected to place a rally point
+    const selectedFactory = factories.find(f => f.selected && f.id === gameState.humanPlayer)
+    if (selectedFactory && !this.wasDragging && !gameState.repairMode) {
+      selectedFactory.rallyPoint = {
+        x: Math.floor(worldX / TILE_SIZE),
+        y: Math.floor(worldY / TILE_SIZE)
+      }
+      playPositionalSound('movement', worldX, worldY, 0.5)
+
+      selectedFactory.selected = false
+      const factoryIndex = selectedUnits.indexOf(selectedFactory)
+      if (factoryIndex > -1) {
+        selectedUnits.splice(factoryIndex, 1)
+      }
+      this.updateAGFCapability(selectedUnits)
+      showNotification('Rally point set for Construction Yard', 1500)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+      return
+    }
+
+    const selectedBuilding = gameState.buildings && gameState.buildings.find(building =>
+      building.selected &&
+      building.owner === gameState.humanPlayer &&
+      (building.type === 'vehicleFactory' || building.type === 'vehicleWorkshop')
+    )
+    if (selectedBuilding && !this.wasDragging && !gameState.repairMode) {
+      selectedBuilding.rallyPoint = {
+        x: Math.floor(worldX / TILE_SIZE),
+        y: Math.floor(worldY / TILE_SIZE)
+      }
+      playPositionalSound('movement', worldX, worldY, 0.5)
+
+      selectedBuilding.selected = false
+      const buildingIndex = selectedUnits.indexOf(selectedBuilding)
+      if (buildingIndex > -1) {
+        selectedUnits.splice(buildingIndex, 1)
+      }
+      this.updateAGFCapability(selectedUnits)
+
+      let buildingName = 'Factory'
+      if (selectedBuilding.type === 'vehicleFactory') {
+        buildingName = 'Vehicle Factory'
+      } else if (selectedBuilding.type === 'vehicleWorkshop') {
+        buildingName = 'Vehicle Workshop'
+      }
+      showNotification(`Rally point set for ${buildingName}`, 1500)
+      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+      return
+    }
 
     // Handle attack group mode (only if it was actually activated during dragging)
     if (this.attackGroupHandler.isAttackGroupSelecting && gameState.attackGroupMode) {
