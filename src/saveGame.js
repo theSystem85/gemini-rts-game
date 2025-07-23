@@ -4,7 +4,7 @@ import { factories } from './main.js'
 import { units } from './main.js'
 import { mapGrid } from './main.js'
 import { cleanupOreFromBuildings } from './gameSetup.js'
-import { TILE_SIZE } from './config.js'
+import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
@@ -60,6 +60,8 @@ export function saveGame(label) {
     id: u.id,
     gas: u.gas,
     maxGas: u.maxGas,
+    supplyGas: u.supplyGas,
+    maxSupplyGas: u.maxSupplyGas,
     gasRefillTimer: u.gasRefillTimer,
     refueling: u.refueling,
     outOfGasPlayed: u.outOfGasPlayed,
@@ -260,6 +262,17 @@ export function loadGame(key) {
       hydrated.y = u.y
       hydrated.gas = u.gas
       hydrated.maxGas = u.maxGas
+      if (typeof u.supplyGas === 'number') {
+        hydrated.supplyGas = u.supplyGas
+      } else if (hydrated.type === 'tankerTruck') {
+        // Fallback for older save games
+        hydrated.supplyGas = TANKER_SUPPLY_CAPACITY
+      }
+      if (typeof u.maxSupplyGas === 'number') {
+        hydrated.maxSupplyGas = u.maxSupplyGas
+      } else if (hydrated.type === 'tankerTruck') {
+        hydrated.maxSupplyGas = TANKER_SUPPLY_CAPACITY
+      }
       hydrated.gasRefillTimer = u.gasRefillTimer
       hydrated.refueling = u.refueling
       hydrated.outOfGasPlayed = u.outOfGasPlayed

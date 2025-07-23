@@ -66,6 +66,12 @@ export class MilestoneSystem {
         displayName: 'Heavy Tank Available',
         description: 'Advanced tank production capabilities unlocked',
         priority: 'medium'
+      },
+      tankerTruckUnlocked: {
+        id: 'tankerTruckUnlocked',
+        displayName: 'Tanker Truck Available',
+        description: 'Mobile refueling capabilities unlocked',
+        priority: 'medium'
       }
     }
   }
@@ -144,6 +150,14 @@ export class MilestoneSystem {
     this.productionController.unlockUnitType("ambulance")
   }
 
+  unlockTankerTruck() {
+    if (!this.productionController) {
+      console.warn('ProductionController not set, cannot unlock tanker truck')
+      return
+    }
+    this.productionController.unlockUnitType('tankerTruck')
+  }
+
   /**
    * Set the production controller reference for unlocking units/buildings
    */
@@ -179,15 +193,28 @@ export class MilestoneSystem {
 
     // Check for harvester unlock (requires both vehicle factory and refinery)
     if (!this.achievedMilestones.has('harvesterUnlocked')) {
-      const hasFactory = gameState.buildings?.some(building => 
+      const hasFactory = gameState.buildings?.some(building =>
         building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
       )
-      const hasRefinery = gameState.buildings?.some(building => 
+      const hasRefinery = gameState.buildings?.some(building =>
         building.type === 'oreRefinery' && building.owner === gameState.humanPlayer
       )
       if (hasFactory && hasRefinery) {
         this.triggerMilestone('harvesterUnlocked')
         this.unlockHarvester()
+      }
+    }
+
+    if (!this.achievedMilestones.has('tankerTruckUnlocked')) {
+      const hasFactory = gameState.buildings?.some(b =>
+        b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer
+      )
+      const hasGasStation = gameState.buildings?.some(b =>
+        b.type === 'gasStation' && b.owner === gameState.humanPlayer
+      )
+      if (hasFactory && hasGasStation) {
+        this.triggerMilestone('tankerTruckUnlocked')
+        this.unlockTankerTruck()
       }
     }
 

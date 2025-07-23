@@ -698,7 +698,7 @@ export class MouseHandler {
       
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
-          if (building.type === 'vehicleWorkshop' && 
+          if (building.type === 'vehicleWorkshop' &&
               building.owner === gameState.humanPlayer &&
               building.health > 0 &&
               tileX >= building.x && tileX < building.x + building.width &&
@@ -706,6 +706,21 @@ export class MouseHandler {
             // Handle repair workshop command - don't select the building
             unitCommands.handleRepairWorkshopCommand(selectedUnits, building, mapGrid)
             return // Exit early, don't process building selection
+          }
+        }
+      }
+
+      // Check for tanker truck refuel command
+      const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
+      if (hasSelectedTankers) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number') {
+            const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (uX === tileX && uY === tileY && unit.gas < unit.maxGas) {
+              unitCommands.handleTankerRefuelCommand(selectedUnits, unit, mapGrid)
+              return
+            }
           }
         }
       }

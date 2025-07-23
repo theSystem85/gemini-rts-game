@@ -22,7 +22,10 @@ export const updateGasStationLogic = logPerformance(function(units, buildings, g
         unit.tileY <= areaEndY
 
       if (inArea) {
+        let refilling = false
+
         if (unit.gas < unit.maxGas) {
+          refilling = true
           if (!unit.refueling) {
             unit.refueling = true
             // if (unit.owner === gameState.humanPlayer) playSound('unitRefules')
@@ -31,6 +34,17 @@ export const updateGasStationLogic = logPerformance(function(units, buildings, g
           const fillRate = unit.maxGas / GAS_REFILL_TIME
           unit.gasRefillTimer = (unit.gasRefillTimer || 0) + delta
           unit.gas = Math.min(unit.maxGas, unit.gas + fillRate * delta)
+        }
+
+        if (unit.type === 'tankerTruck' && unit.supplyGas < unit.maxSupplyGas) {
+          refilling = true
+          if (!unit.refueling) unit.refueling = true
+          const supplyRate = unit.maxSupplyGas / GAS_REFILL_TIME
+          unit.gasRefillTimer = (unit.gasRefillTimer || 0) + delta
+          unit.supplyGas = Math.min(unit.maxSupplyGas, unit.supplyGas + supplyRate * delta)
+        }
+
+        if (refilling) {
           if (unit.owner === gameState.humanPlayer) {
             if (gameState.money >= GAS_REFILL_COST) gameState.money -= GAS_REFILL_COST
           } else {

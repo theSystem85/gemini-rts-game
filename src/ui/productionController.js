@@ -10,7 +10,7 @@ import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance', 'tankerTruck']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -24,12 +24,23 @@ export class ProductionController {
     const hasRefinery = gameState.buildings.some(
       b => b.type === 'oreRefinery' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasGasStation = gameState.buildings.some(
+      b => b.type === 'gasStation' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
       const unitType = button.getAttribute('data-unit-type')
 
-      if (this.vehicleUnitTypes.includes(unitType)) {
+      if (unitType === 'tankerTruck') {
+        if (hasVehicleFactory && hasGasStation) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Gas Station'
+        }
+      } else if (this.vehicleUnitTypes.includes(unitType)) {
         if (hasVehicleFactory) {
           button.classList.remove('disabled')
           button.title = '' // Clear tooltip
@@ -37,8 +48,7 @@ export class ProductionController {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory' // Add tooltip
         }
-      }
-      else if (unitType === 'harvester') {
+      } else if (unitType === 'harvester') {
         if (hasVehicleFactory && hasRefinery) {
           button.classList.remove('disabled')
           button.title = '' // Clear tooltip
@@ -148,7 +158,14 @@ export class ProductionController {
         let requirementsMet = true
         let requirementText = ''
 
-        if (this.vehicleUnitTypes.includes(unitType)) {
+        if (unitType === 'tankerTruck') {
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+          const hasGasStation = gameState.buildings.some(b => b.type === 'gasStation' && b.owner === gameState.humanPlayer)
+          if (!hasVehicleFactory || !hasGasStation) {
+            requirementsMet = false
+            requirementText = 'Requires Vehicle Factory & Gas Station'
+          }
+        } else if (this.vehicleUnitTypes.includes(unitType)) {
           const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
           if (!hasVehicleFactory) {
             requirementsMet = false
@@ -786,6 +803,7 @@ export class ProductionController {
     const hasRefinery = buildings.some(b => b.type === 'oreRefinery')
     const hasRocketTurret = buildings.some(b => b.type === 'rocketTurret')
     const hasRadar = buildings.some(b => b.type === 'radarStation')
+    const hasGasStation = buildings.some(b => b.type === 'gasStation')
     const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
 
     if (hasFactory) {
@@ -794,6 +812,10 @@ export class ProductionController {
 
     if (hasFactory && hasRefinery) {
       this.forceUnlockUnitType('harvester')
+    }
+
+    if (hasFactory && hasGasStation) {
+      this.forceUnlockUnitType('tankerTruck')
     }
 
     if (factoryCount >= 2) {

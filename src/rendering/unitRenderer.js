@@ -1,11 +1,12 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
 import { renderRocketTankWithImage, isRocketTankImageLoaded } from './rocketTankImageRenderer.js'
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
+import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -262,6 +263,10 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.crew || 0) / (unit.maxCrew || 10)
       barColor = '#00FFFF' // Cyan for ambulance crew
+    } else if (unit.type === 'tankerTruck') {
+      shouldShowBar = true
+      progress = (unit.supplyGas || 0) / (unit.maxSupplyGas || TANKER_SUPPLY_CAPACITY)
+      barColor = '#4A90E2'
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
@@ -500,6 +505,15 @@ export class UnitRenderer {
 
     if (unit.type === 'ambulance' && isAmbulanceImageLoaded()) {
       const ok = renderAmbulanceWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'tankerTruck' && isTankerTruckImageLoaded()) {
+      const ok = renderTankerTruckWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)

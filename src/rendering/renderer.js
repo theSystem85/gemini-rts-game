@@ -15,6 +15,7 @@ import { preloadTankImages } from './tankImageRenderer.js'
 import { preloadHarvesterImage } from './harvesterImageRenderer.js'
 import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
 import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
+import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -40,9 +41,10 @@ export class Renderer {
     let harvesterLoaded = false
     let rocketTankLoaded = false
     let ambulanceLoaded = false
+    let tankerLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded) {
         if (callback) callback()
       }
     }
@@ -83,6 +85,14 @@ export class Renderer {
         console.warn('Ambulance image failed to load')
       }
       ambulanceLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadTankerTruckImage((success) => {
+      if (!success) {
+        console.warn('Tanker truck image failed to load')
+      }
+      tankerLoaded = true
       checkAllLoaded()
     })
   }

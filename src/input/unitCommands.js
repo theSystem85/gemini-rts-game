@@ -489,6 +489,38 @@ export class UnitCommandsHandler {
     playSound('movement', 0.5)
   }
 
+  handleTankerRefuelCommand(selectedUnits, targetUnit, mapGrid) {
+    const tankers = selectedUnits.filter(u => u.type === 'tankerTruck')
+    if (tankers.length === 0) return
+    if (typeof targetUnit.maxGas !== 'number' || targetUnit.gas >= targetUnit.maxGas) {
+      showNotification('Target unit does not need fuel!', 2000)
+      return
+    }
+    tankers.forEach(tanker => {
+      tanker.refuelTarget = targetUnit
+      tanker.refuelTimer = 0
+      const targetTileX = Math.floor((targetUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const targetTileY = Math.floor((targetUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+      const directions = [
+        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+        { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+      ]
+      for (const dir of directions) {
+        const destX = targetTileX + dir.x
+        const destY = targetTileY + dir.y
+        if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
+          const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: destX, y: destY }, mapGrid, null)
+          if (path && path.length > 0) {
+            tanker.path = path.slice(1)
+            tanker.moveTarget = { x: destX, y: destY }
+            break
+          }
+        }
+      }
+    })
+    playSound('movement', 0.5)
+  }
+
   handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
     // Filter for ambulances that need refilling
     const ambulances = selectedUnits.filter(unit => 

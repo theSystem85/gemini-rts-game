@@ -22,6 +22,8 @@ export const HARVESTER_CAPPACITY = 1
 
 // Harvester unload time (in milliseconds)
 export const HARVESTER_UNLOAD_TIME = 5000  // 5 seconds (2x faster than before)
+// Capacity of tanker truck supply tank
+export const TANKER_SUPPLY_CAPACITY = 40000
 
 // Fallback colors for tiles when images aren't available
 export const TILE_COLORS = {
@@ -163,7 +165,8 @@ export const UNIT_COSTS = {
   harvester: 1500,
   'tank-v2': 2000,
   'tank-v3': 3000,
-  ambulance: 500
+  ambulance: 500,
+  tankerTruck: 300
 }
 
 // Unit properties
@@ -228,6 +231,13 @@ export const UNIT_PROPERTIES = {
     maxCrew: 10,
     crew: 10 // Initial crew capacity
   },
+  tankerTruck: {
+    health: 20,
+    maxHealth: 20,
+    speed: 0.66,
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: 0
+  }
 }
 
 // Tank V3 burst fire configuration
@@ -277,7 +287,8 @@ export const UNIT_TYPE_COLORS = {
   'tank-v3': '#32CD32',   // Lime green
   harvester: '#9400D3',   // Purple
   rocketTank: '#800000',
-  ambulance: '#00FFFF'   // Dark red
+  ambulance: '#00FFFF',   // Dark red
+  tankerTruck: '#FFA500'
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
@@ -312,5 +323,6 @@ export const UNIT_GAS_PROPERTIES = {
   'tank-v3': { tankSize: 1900, consumption: 450 },
   rocketTank: { tankSize: 1900, consumption: 450 },
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
-  ambulance: { tankSize: 75, consumption: 25 }
+  ambulance: { tankSize: 75, consumption: 25 },
+  tankerTruck: { tankSize: 700, consumption: 150 }
 }
