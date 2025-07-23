@@ -978,6 +978,88 @@ function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
 }
 
 /**
+ * Manages tanker truck refueling and guard behavior for all AI players
+ */
+export function manageAITankerTrucks(units, gameState, mapGrid) {
+  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId)
+    const tankers = aiUnits.filter(u => u.type === 'tankerTruck')
+    if (tankers.length === 0) return
+
+    const harvesters = aiUnits.filter(u => u.type === 'harvester' && u.health > 0)
+    const gasStations = (gameState.buildings || []).filter(
+      b => b.owner === aiPlayerId && b.type === 'gasStation' && b.health > 0
+    )
+    const lowGasUnits = aiUnits.filter(
+      u =>
+        u.type !== 'tankerTruck' &&
+        typeof u.maxGas === 'number' &&
+        u.gas / u.maxGas < 0.2 &&
+        u.health > 0
+    )
+
+    tankers.forEach(tanker => {
+      const needsRefill =
+        (typeof tanker.maxGas === 'number' && tanker.gas / tanker.maxGas < 0.2) ||
+        (typeof tanker.maxSupplyGas === 'number' &&
+          tanker.supplyGas / tanker.maxSupplyGas < 0.2)
+
+      if (needsRefill && gasStations.length > 0) {
+        sendTankerToGasStation(tanker, gasStations[0], mapGrid)
+        return
+      }
+
+      if (lowGasUnits.length > 0) {
+        let target = lowGasUnits[0]
+        let best = Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY)
+        lowGasUnits.forEach(u => {
+          const d = Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+          if (d < best) {
+            best = d
+            target = u
+          }
+        })
+        sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+        return
+      }
+
+      if (harvesters.length > 0) {
+        if (!tanker.guardTarget || tanker.guardTarget.health <= 0) {
+          tanker.guardTarget = harvesters[0]
+        }
+      }
+    })
+  })
+}
+
+function sendTankerToGasStation(tanker, station, mapGrid) {
+  const cx = station.x + Math.floor(station.width / 2)
+  const cy = station.y + station.height + 1
+  const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: cx, y: cy }, mapGrid)
+  if (path && path.length > 1) {
+    tanker.path = path.slice(1)
+    tanker.moveTarget = { x: cx, y: cy }
+  }
+  tanker.guardTarget = null
+}
+
+function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
+  const path = findPath(
+    { x: tanker.tileX, y: tanker.tileY },
+    { x: unit.tileX, y: unit.tileY },
+    mapGrid,
+    occupancyMap
+  )
+  if (path && path.length > 1) {
+    tanker.path = path.slice(1)
+    tanker.moveTarget = { x: unit.tileX, y: unit.tileY }
+  }
+  tanker.guardTarget = null
+}
+
+/**
  * Checks if an AI player should start attacking (has hospital built)
  */
 export function shouldAIStartAttacking(aiPlayerId, gameState) {

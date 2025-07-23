@@ -1,4 +1,4 @@
-import { TILE_SIZE, UNIT_PROPERTIES } from '../config.js'
+import { TILE_SIZE, UNIT_PROPERTIES, UNIT_GAS_PROPERTIES, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { findPath } from '../units.js'
 import { getUniqueId } from '../utils.js'
 import { findClosestOre } from '../logic.js'
@@ -98,6 +98,20 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     isRotating: false
   }
   unit.effectiveSpeed = unit.speed
+
+  // Initialize gas properties to match player units
+  const gasProps = UNIT_GAS_PROPERTIES[unit.type]
+  if (gasProps && gasProps.tankSize) {
+    unit.maxGas = gasProps.tankSize
+    unit.gas = gasProps.tankSize
+    unit.gasConsumption = gasProps.consumption
+    unit.harvestGasConsumption = gasProps.harvestConsumption || 0
+    unit.outOfGasPlayed = false
+  }
+  if (unit.type === 'tankerTruck') {
+    unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY
+    unit.supplyGas = TANKER_SUPPLY_CAPACITY
+  }
 
   if (unitType !== 'harvester') {
     unit.level = 0
