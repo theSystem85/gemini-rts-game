@@ -251,16 +251,32 @@ export class CursorManager {
       }
     }
 
-    // Check if mouse is over player vehicle workshop when damaged units selected
+    // Check if mouse is over player vehicle workshop when a repairable unit is
+    // selected (damaged or tanker truck)
     this.isOverPlayerWorkshop = false
-    if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
-        tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
-      const hasDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
-      if (hasDamagedUnits) {
+    if (
+      this.isOverGameCanvas &&
+      gameState.buildings &&
+      Array.isArray(gameState.buildings) &&
+      tileX >= 0 &&
+      tileY >= 0 &&
+      tileX < mapGrid[0].length &&
+      tileY < mapGrid.length
+    ) {
+      const needsWorkshop = selectedUnits.some(
+        unit => unit.health < unit.maxHealth || unit.type === 'tankerTruck'
+      )
+      if (needsWorkshop) {
         for (const building of gameState.buildings) {
-          if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
-              tileX >= building.x && tileX < building.x + building.width &&
-              tileY >= building.y && tileY < building.y + building.height) {
+          if (
+            building.type === 'vehicleWorkshop' &&
+            building.owner === gameState.humanPlayer &&
+            building.health > 0 &&
+            tileX >= building.x &&
+            tileX < building.x + building.width &&
+            tileY >= building.y &&
+            tileY < building.y + building.height
+          ) {
             this.isOverPlayerWorkshop = true
             break
           }
@@ -389,6 +405,11 @@ export class CursorManager {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
         return // Exit early - recovery tank interaction takes priority
+      } else if (this.isOverPlayerWorkshop) {
+        // Damaged units or tankers over workshop - highest priority move-into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+        return
       }
 
       // If AGF capable and no recovery tank interactions, use AGF behavior
@@ -519,10 +540,6 @@ export class CursorManager {
         // Over enemy - use attack cursor
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('attack-mode')
-      } else if (this.isOverPlayerWorkshop) {
-        // Over vehicle workshop with damaged units selected - special move cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverHealableUnit) {
         // Over healable unit with ambulances selected - show move into cursor
         gameCanvas.style.cursor = 'none'
