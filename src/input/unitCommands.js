@@ -506,9 +506,11 @@ export class UnitCommandsHandler {
     }
 
     const positions = []
-    const startY = station.y + station.height
-    for (let x = station.x; x < station.x + station.width; x++) {
-      for (let y = startY; y <= startY + 2; y++) {
+    for (let x = station.x - 1; x <= station.x + station.width; x++) {
+      for (let y = station.y - 1; y <= station.y + station.height; y++) {
+        const insideX = x >= station.x && x < station.x + station.width
+        const insideY = y >= station.y && y < station.y + station.height
+        if (insideX && insideY) continue
         if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
           positions.push({ x, y })
         }
