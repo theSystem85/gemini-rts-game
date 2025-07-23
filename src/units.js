@@ -7,7 +7,8 @@ import {
   DIRECTIONS,
   MAX_SPAWN_SEARCH_DISTANCE,
   STREET_PATH_COST,
-  UNIT_GAS_PROPERTIES
+  UNIT_GAS_PROPERTIES,
+  TANKER_SUPPLY_CAPACITY
 } from './config.js'
 import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
@@ -679,6 +680,10 @@ export function createUnit(factory, unitType, x, y) {
     unit.ambulanceProps = {
       streetSpeedMultiplier: unitProps.streetSpeedMultiplier || 6.0
     };
+  }
+  if (actualType === 'tankerTruck') {
+    unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY;
+    unit.supplyGas = TANKER_SUPPLY_CAPACITY;
   }
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode

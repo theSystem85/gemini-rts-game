@@ -15,6 +15,7 @@ export class CursorManager {
     this.isOverPlayerRefinery = false
     this.isOverHealableUnit = false
     this.isOverPlayerGasStation = false
+    this.isOverRefuelableUnit = false
     this.isForceAttackMode = false
     this.isGuardMode = false
     this.lastMouseEvent = null
@@ -153,7 +154,7 @@ export class CursorManager {
       // Check for healable units when fully loaded ambulances are selected
       if (hasSelectedFullyLoadedAmbulances && units && Array.isArray(units)) {
         for (const unit of units) {
-          if (unit.owner === gameState.humanPlayer && 
+          if (unit.owner === gameState.humanPlayer &&
               unit.crew && typeof unit.crew === 'object') {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
@@ -165,6 +166,22 @@ export class CursorManager {
                 this.isOverHealableUnit = true
                 break
               }
+            }
+          }
+        }
+      }
+
+      // Check for refuelable units when tanker trucks are selected
+      this.isOverRefuelableUnit = false
+      const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
+      if (hasSelectedTankers && units && Array.isArray(units)) {
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (unitTileX === tileX && unitTileY === tileY && unit.gas < unit.maxGas) {
+              this.isOverRefuelableUnit = true
+              break
             }
           }
         }
@@ -390,6 +407,9 @@ export class CursorManager {
           gameCanvas.style.cursor = 'none'
           gameCanvas.classList.add('attack-mode')
         }
+      } else if (this.isOverRefuelableUnit) {
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverFriendlyUnit) {
         // Over friendly unit - use normal arrow cursor
         gameCanvas.style.cursor = 'default'
