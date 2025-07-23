@@ -123,6 +123,13 @@ export class MouseHandler {
 
     // Only enable selection when not initiating a special command
     this.isSelecting = !this.forceAttackClick && !this.guardClick
+
+    // Prevent selection box from appearing when assigning rally points
+    if (selectedUnits.length === 1 && selectedUnits[0].isBuilding &&
+        (selectedUnits[0].type === 'vehicleFactory' || selectedUnits[0].type === 'vehicleWorkshop')) {
+      this.isSelecting = false
+    }
+
     gameState.selectionActive = this.isSelecting
     this.wasDragging = false
     this.selectionStart = { x: worldX, y: worldY }
