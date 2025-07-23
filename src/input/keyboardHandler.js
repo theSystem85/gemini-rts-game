@@ -21,10 +21,15 @@ export class KeyboardHandler {
     this.helpSystem = new HelpSystem()
     this.playerFactory = null
     this.cheatSystem = new CheatSystem()
+    this.unitCommands = null
   }
 
   setPlayerFactory(factory) {
     this.playerFactory = factory
+  }
+
+  setUnitCommands(unitCommands) {
+    this.unitCommands = unitCommands
   }
 
   setupKeyboardEvents(units, selectedUnits, mapGrid, factories) {
@@ -93,6 +98,15 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'r') {
         e.preventDefault()
         this.handleRepairMode()
+      }
+      // W key to send damaged units to workshop
+      else if (e.key.toLowerCase() === 'w') {
+        e.preventDefault()
+        const queue = e.altKey
+        if (this.unitCommands) {
+          this.unitCommands.handleWorkshopRepairHotkey(selectedUnits, mapGrid, queue, false)
+        }
+        if (queue) markWaypointsAdded()
       }
       // X key for dodge
       else if (e.key.toLowerCase() === 'x') {

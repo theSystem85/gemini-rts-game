@@ -1,4 +1,5 @@
 import { TILE_SIZE, MOVE_TARGET_INDICATOR_SIZE } from "../config.js"
+import { gameState } from "../gameState.js"
 
 export class PathPlanningRenderer {
   render(ctx, units, scrollOffset) {
@@ -51,6 +52,22 @@ export class PathPlanningRenderer {
               targetX = (t.x + t.width / 2) * TILE_SIZE
               targetY = (t.y + t.height / 2) * TILE_SIZE
             }
+            break
+          }
+          case 'workshopRepair': {
+            const workshops = gameState.buildings.filter(b =>
+              b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer && b.health > 0
+            )
+            if (workshops.length === 0) return
+            let nearest = null
+            let nearestDist = Infinity
+            workshops.forEach(ws => {
+              const dist = Math.hypot(unit.tileX - ws.x, unit.tileY - ws.y)
+              if (dist < nearestDist) { nearest = ws; nearestDist = dist }
+            })
+            if (!nearest) return
+            targetX = (nearest.x + nearest.width / 2) * TILE_SIZE
+            targetY = (nearest.y + nearest.height) * TILE_SIZE
             break
           }
           default:

@@ -355,6 +355,60 @@ export class UnitCommandsHandler {
     playSound('movement', 0.5)
   }
 
+  handleWorkshopRepairHotkey(selectedUnits, mapGrid, queue = false, fromQueue = false) {
+    const workshops = gameState.buildings.filter(b =>
+      b.type === 'vehicleWorkshop' && b.owner === gameState.humanPlayer && b.health > 0
+    )
+    if (workshops.length === 0) {
+      showNotification('No operational workshop available!', 2000)
+      return
+    }
+
+    const damaged = selectedUnits.filter(u => u.health < u.maxHealth)
+    if (damaged.length === 0) {
+      if (!fromQueue) showNotification('No damaged units selected', 2000)
+      return
+    }
+
+    damaged.forEach(unit => {
+      // Determine nearest workshop each time for accuracy
+      let nearest = null
+      let nearestDist = Infinity
+      workshops.forEach(ws => {
+        const dist = Math.hypot(unit.tileX - ws.x, unit.tileY - ws.y)
+        if (dist < nearestDist) { nearest = ws; nearestDist = dist }
+      })
+      if (!nearest) return
+
+      if (queue) {
+        if (!unit.commandQueue) unit.commandQueue = []
+        unit.commandQueue.push({ type: 'workshopRepair' })
+      } else {
+        unit.returnTile = { x: unit.tileX, y: unit.tileY }
+        if (!nearest.repairQueue) nearest.repairQueue = []
+        if (!nearest.repairQueue.includes(unit)) {
+          nearest.repairQueue.push(unit)
+          unit.targetWorkshop = nearest
+        }
+        const waitingY = nearest.y + nearest.height + 1
+        const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
+        const targetTile = { x: waitingX, y: waitingY }
+        const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+        if (path && path.length > 0) {
+          unit.path = path.slice(1)
+          unit.moveTarget = targetTile
+        } else {
+          unit.x = targetTile.x * TILE_SIZE
+          unit.y = targetTile.y * TILE_SIZE
+          unit.tileX = targetTile.x
+          unit.tileY = targetTile.y
+          unit.moveTarget = null
+        }
+        if (!fromQueue) playSound('movement', 0.5)
+      }
+    })
+  }
+
   handleAmbulanceHealCommand(selectedUnits, targetUnit, mapGrid) {
     // Filter for ambulances that can heal
     const ambulances = selectedUnits.filter(unit => 

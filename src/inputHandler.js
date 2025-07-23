@@ -18,6 +18,7 @@ const mouseHandler = new MouseHandler()
 const keyboardHandler = new KeyboardHandler()
 const selectionManager = new SelectionManager()
 const unitCommands = new UnitCommandsHandler()
+keyboardHandler.setUnitCommands(unitCommands)
 
 export function setupInputHandlers(units, factories, mapGrid) {
   // Store human player factory reference for later use
