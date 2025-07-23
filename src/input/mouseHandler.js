@@ -6,6 +6,7 @@ import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
 import { markWaypointsAdded } from '../game/waypointSounds.js'
+import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
 
 export class MouseHandler {
@@ -779,12 +780,8 @@ export class MouseHandler {
       // No unit clicked - handle as movement command if units are selected and not in special modes
         if (selectedUnits.length > 0 && !gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
           if (e.shiftKey) {
-            // Queue retreat action instead of immediate execute
-            selectedUnits.forEach(unit => {
-              if (!unit.commandQueue) unit.commandQueue = []
-              unit.commandQueue.push({ type: 'retreat', x: worldX, y: worldY })
-            })
-            markWaypointsAdded() // Mark that waypoints were added during Shift press
+            // Initiate immediate retreat without using path planning
+            initiateRetreat(selectedUnits, worldX, worldY, mapGrid)
           } else if (e.altKey) {
             // Queue planned action using Alt/Option
             this.handleStandardCommands(worldX, worldY, selectedUnits, unitCommands, mapGrid, true)
