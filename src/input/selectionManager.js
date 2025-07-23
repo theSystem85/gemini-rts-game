@@ -1,5 +1,5 @@
 // selectionManager.js
-import { TILE_SIZE, ENABLE_ENEMY_SELECTION } from '../config.js'
+import { TILE_SIZE, ENABLE_ENEMY_SELECTION, ENABLE_ENEMY_CONTROL } from '../config.js'
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
@@ -31,10 +31,18 @@ export class SelectionManager {
 
   // Determine if a unit can be selected based on configuration
   isSelectableUnit(unit) {
-    if (ENABLE_ENEMY_SELECTION) {
+    if (this.isHumanPlayerUnit(unit)) {
       return unit.health > 0
     }
-    return this.isHumanPlayerUnit(unit)
+    if (ENABLE_ENEMY_SELECTION || ENABLE_ENEMY_CONTROL) {
+      return unit.health > 0
+    }
+    return false
+  }
+
+  // Determine if a unit can receive commands
+  isCommandableUnit(unit) {
+    return this.isHumanPlayerUnit(unit) || ENABLE_ENEMY_CONTROL
   }
 
   // Helper function to check if a building belongs to the human player
