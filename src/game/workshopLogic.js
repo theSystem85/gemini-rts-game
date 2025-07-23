@@ -8,8 +8,14 @@ import { logPerformance } from '../performanceUtils.js'
 function initWorkshop(workshop) {
   if (!workshop.repairSlots) {
     workshop.repairSlots = []
-    for (let i = 0; i < 3; i++) {
-      workshop.repairSlots.push({ x: workshop.x + i, y: workshop.y + workshop.height, unit: null })
+    for (let x = workshop.x - 1; x <= workshop.x + workshop.width; x++) {
+      for (let y = workshop.y - 1; y <= workshop.y + workshop.height; y++) {
+        const around = x === workshop.x - 1 || x === workshop.x + workshop.width ||
+                       y === workshop.y - 1 || y === workshop.y + workshop.height
+        if (around) {
+          workshop.repairSlots.push({ x, y, unit: null })
+        }
+      }
     }
     workshop.repairQueue = []
   }
@@ -23,10 +29,9 @@ function assignUnitsToSlots(workshop, mapGrid) {
   while (index < workshop.repairQueue.length) {
     const slot = workshop.repairSlots.find(s => !s.unit)
     if (!slot) break // No available slots
-    
+
     const unit = workshop.repairQueue[index]
     if (!unit || unit.health <= 0) {
-      // Clean up repair cost tracking and workshop assignment if unit is removed from queue
       if (unit) {
         delete unit.workshopRepairCost
         delete unit.workshopRepairPaid
@@ -36,21 +41,24 @@ function assignUnitsToSlots(workshop, mapGrid) {
       workshop.repairQueue.splice(index, 1)
       continue
     }
-    
-    // Check if unit is in the waiting area or close enough to workshop
-    const waitingAreaY = workshop.y + workshop.height + 1
-    const isInWaitingArea = (unit.tileY === waitingAreaY && 
-                            unit.tileX >= workshop.x && 
-                            unit.tileX < workshop.x + workshop.width)
-    const distToWorkshop = Math.hypot(unit.tileX - (workshop.x + 1), unit.tileY - (workshop.y + workshop.height))
-    
-    if (isInWaitingArea || distToWorkshop <= 2) {
-      // Unit is ready to be assigned to a repair slot
+
+    const distToWorkshop = Math.hypot(
+      unit.tileX - (workshop.x + workshop.width / 2),
+      unit.tileY - (workshop.y + workshop.height / 2)
+    )
+
+    if (distToWorkshop <= 3) {
       workshop.repairQueue.splice(index, 1)
       slot.unit = unit
       unit.repairSlot = slot
-      
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: slot.x, y: slot.y }, mapGrid, gameState.occupancyMap)
+
+      const path = findPath(
+        { x: unit.tileX, y: unit.tileY },
+        { x: slot.x, y: slot.y },
+        mapGrid,
+        gameState.occupancyMap
+      )
+
       if (path && path.length > 1) {
         unit.path = path.slice(1)
         unit.moveTarget = { x: slot.x, y: slot.y }
@@ -60,11 +68,10 @@ function assignUnitsToSlots(workshop, mapGrid) {
         unit.tileX = slot.x
         unit.tileY = slot.y
       }
-      
+
       // Only assign one unit per update cycle to prevent congestion
       break
     } else {
-      // Unit not in position yet, continue to next
       index++
     }
   }
@@ -131,7 +138,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
       } else {
         if (unit.health < unit.maxHealth) {
           // Calculate how much health to restore this frame
-          const healthIncrease = unit.maxHealth * 0.03 * (delta / 1000)
+          const healthIncrease = unit.maxHealth * 0.06 * (delta / 1000)
           const newHealth = Math.min(unit.health + healthIncrease, unit.maxHealth)
           
           // Calculate cost for this health increase
