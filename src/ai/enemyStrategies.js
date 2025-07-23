@@ -768,9 +768,27 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     unit.tileX - target.x,
     unit.tileY - target.y
   )
-  
+
   if (distanceToTarget <= 8) return false // Close enough for direct engagement
-  
+
+  const globalPoint = gameState.globalAttackPoint
+  if (globalPoint) {
+    unit.approachPosition = globalPoint
+    unit.approachDirection = 'global'
+    unit.lastDirectionAssignment = now
+    const occupancyMap = gameState.occupancyMap
+    const path = findPath(
+      { x: unit.tileX, y: unit.tileY },
+      globalPoint,
+      mapGrid,
+      occupancyMap
+    )
+    if (path.length > 1) {
+      unit.path = path.slice(1)
+      return true
+    }
+  }
+
   // Only assign new attack directions every 5 seconds to prevent wiggling
   const lastDirectionAssignment = unit.lastDirectionAssignment || 0
   if (now - lastDirectionAssignment < 5000) {
@@ -972,4 +990,32 @@ export function shouldAIStartAttacking(aiPlayerId, gameState) {
   
   // AI should only start major attacks after having core infrastructure
   return hasHospital && hasVehicleFactory && hasRefinery
+}
+
+// Determine a tile around the player's buildings with the lowest danger level
+export function computeLeastDangerAttackPoint(gameState) {
+  const human = gameState.humanPlayer || 'player1'
+  const dzm = gameState.dangerZoneMaps && gameState.dangerZoneMaps[human]
+  if (!dzm) return null
+
+  const buildings = (gameState.buildings || []).filter(
+    b => b.owner === human && b.health > 0
+  )
+  if (buildings.length === 0) return null
+
+  let best = null
+  buildings.forEach(b => {
+    for (let y = b.y - 1; y <= b.y + b.height; y++) {
+      if (y < 0 || y >= dzm.length) continue
+      for (let x = b.x - 1; x <= b.x + b.width; x++) {
+        if (x < 0 || x >= dzm[0].length) continue
+        const dps = dzm[y][x]
+        if (!best || dps < best.dps) {
+          best = { dps, x, y }
+        }
+      }
+    }
+  })
+
+  return best ? { x: best.x, y: best.y } : null
 }
