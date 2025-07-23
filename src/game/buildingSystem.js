@@ -6,6 +6,7 @@ import { triggerExplosion } from '../logic.js'
 import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
+import { updateDangerZoneMaps } from './dangerZoneMap.js'
 import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -42,6 +43,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
           gameState.buildings.splice(i, 1)
           gameState.pendingButtonUpdate = true
           updatePowerSupply(gameState.buildings, gameState)
+          updateDangerZoneMaps(gameState)
           checkGameEndConditions(factories, gameState)
           continue
         } else {
@@ -82,6 +84,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
 
         // Update power supply after building is destroyed
         updatePowerSupply(gameState.buildings, gameState)
+        updateDangerZoneMaps(gameState)
 
         // Calculate building center for explosion effects
         const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)

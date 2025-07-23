@@ -14,6 +14,7 @@ import { getTextureManager } from './rendering.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { productionQueue } from './productionQueue.js'
 import { getCurrentGame } from './main.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
 
 // === Save/Load Game Logic ===
@@ -450,6 +451,7 @@ export function loadGame(key) {
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    updateDangerZoneMaps(gameState)
 
     // Restore targeted ore tiles for harvester system
     if (loaded.targetedOreTiles) {

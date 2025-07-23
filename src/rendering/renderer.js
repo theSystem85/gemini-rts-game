@@ -11,6 +11,7 @@ import { PathPlanningRenderer } from "./pathPlanningRenderer.js"
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
+import { DangerZoneRenderer } from './dangerZoneRenderer.js'
 import { preloadTankImages } from './tankImageRenderer.js'
 import { preloadHarvesterImage } from './harvesterImageRenderer.js'
 import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
@@ -32,6 +33,7 @@ export class Renderer {
     this.guardRenderer = new GuardRenderer()
     this.pathPlanningRenderer = new PathPlanningRenderer()
     this.harvesterHUD = new HarvesterHUD()
+    this.dangerZoneRenderer = new DangerZoneRenderer()
   }
 
   // Initialize texture loading
@@ -133,6 +135,12 @@ export class Renderer {
     }
     
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
+    if (gameState.dzmOverlayIndex !== -1) {
+      const ids = Object.keys(gameState.dangerZoneMaps || {})
+      const pid = ids[gameState.dzmOverlayIndex]
+      const dzm = pid ? gameState.dangerZoneMaps[pid] : null
+      if (dzm) this.dangerZoneRenderer.render(gameCtx, dzm, scrollOffset, pid)
+    }
     this.buildingRenderer.renderBases(gameCtx, buildings, mapGrid, scrollOffset)
     // Render initial construction yards using the same renderer
     this.buildingRenderer.renderBases(gameCtx, factories, mapGrid, scrollOffset)

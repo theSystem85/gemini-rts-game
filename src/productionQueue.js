@@ -7,6 +7,7 @@ import { buildingData, createBuilding, placeBuilding, canPlaceBuilding, updatePo
 import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
@@ -491,6 +492,7 @@ export const productionQueue = {
         newBuilding.owner = gameState.humanPlayer
         if (!gameState.buildings) gameState.buildings = []
         gameState.buildings.push(newBuilding)
+        updateDangerZoneMaps(gameState)
         placeBuilding(newBuilding, gameState.mapGrid)
         updatePowerSupply(gameState.buildings, gameState)
         playSound('buildingPlaced')
