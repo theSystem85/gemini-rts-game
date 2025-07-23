@@ -2,6 +2,7 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
+import { createFormationOffsets } from '../game/pathfinding.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -12,6 +13,41 @@ const AI_CONFIG = {
   GROUP_FORMATION_RANGE: 8,           // Range in tiles for units to be considered in same group
   DEFENSE_BUILDING_RANGE: 12,         // Range to seek protection from defense buildings
   CREW_HEALING_RANGE: 15              // Range to consider for ambulance healing
+}
+
+// Pre-computed DPS values for enemy unit types
+const UNIT_DPS = {
+  tank_v1: 20 / (4000 / 1000),
+  tank_v2: 24 / (4000 / 1000),
+  'tank-v2': 24 / (4000 / 1000),
+  'tank-v3': 30 / (4000 / 1000),
+  rocketTank: 120 / (12000 / 1000)
+}
+
+function getUnitDps(unit) {
+  const type = unit.type === 'tank' ? 'tank_v1' : unit.type
+  return UNIT_DPS[type] || UNIT_DPS.tank_v1
+}
+
+function computeDangerAtTarget(aiPlayerId, target, gameState) {
+  const dzm = gameState.dangerZoneMaps && gameState.dangerZoneMaps[aiPlayerId]
+  if (!dzm) return 0
+  const tx = target.tileX !== undefined ? target.tileX : Math.floor(target.x)
+  const ty = target.tileY !== undefined ? target.tileY : Math.floor(target.y)
+  if (ty >= 0 && ty < dzm.length && tx >= 0 && tx < dzm[0].length) {
+    return dzm[ty][tx]
+  }
+  return 0
+}
+
+function computeRequiredGroupSize(aiPlayerId, target, gameState) {
+  const danger = computeDangerAtTarget(aiPlayerId, target, gameState)
+  if (danger <= 0) return AI_CONFIG.GROUP_ATTACK_MIN_SIZE
+  const avgDps = UNIT_DPS.tank_v1
+  return Math.max(
+    AI_CONFIG.GROUP_ATTACK_MIN_SIZE,
+    Math.ceil(danger / avgDps)
+  )
 }
 
 // Multi-directional attack configuration
@@ -120,25 +156,18 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
   
   const nearbyAllies = countNearbyAllies(unit, units)
   const totalGroupSize = nearbyAllies + 1 // Include the unit itself
-  
-  // Check if we have minimum group size for heavily defended targets
-  if (totalGroupSize < AI_CONFIG.GROUP_ATTACK_MIN_SIZE) {
-    // Allow solo attacks on weak or economic targets
-    if (target.type === 'harvester' || 
-        (target.health && target.maxHealth && target.health <= target.maxHealth * 0.3) ||
-        target.type === 'oreRefinery') {
+
+  const requiredGroupSize = computeRequiredGroupSize(unit.owner, target, gameState)
+
+  if (totalGroupSize < requiredGroupSize) {
+    // Allow solo harvester attacks or very weak targets
+    if (target.type === 'harvester' || (target.health && target.health <= (target.maxHealth || 0) * 0.3)) {
       return true
     }
     return false
   }
-  
-  // Evaluate player defenses at target location
-  const defenseStrength = evaluatePlayerDefenses(target, gameState)
-  
-  // Require larger groups for heavily defended targets
-  const requiredGroupSize = Math.max(AI_CONFIG.GROUP_ATTACK_MIN_SIZE, Math.ceil(defenseStrength / 2))
-  
-  return totalGroupSize >= requiredGroupSize
+
+  return true
 }
 
 /**
@@ -803,7 +832,17 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     unit.approachPosition = approachPos
     unit.approachDirection = direction.name
     unit.lastDirectionAssignment = now // Track when we last assigned a direction
-    
+
+    // Apply simple formation to nearby allies
+    const group = units.filter(u =>
+      u.owner === unit.owner &&
+      (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+      Math.hypot(u.x - unit.x, u.y - unit.y) <= AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE
+    )
+    if (group.length > 1) {
+      createFormationOffsets(group, unit.id)
+    }
+
     // Set path to approach position
     // Always respect the occupancy map for attack movement
     const occupancyMap = gameState.occupancyMap
