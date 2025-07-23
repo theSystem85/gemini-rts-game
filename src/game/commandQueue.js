@@ -1,5 +1,3 @@
-import { initiateRetreat } from '../behaviours/retreat.js'
-
 export function processCommandQueues(units, mapGrid, unitCommands) {
   units.forEach(unit => {
     if (!unit.commandQueue || unit.commandQueue.length === 0) return;
@@ -31,9 +29,6 @@ function executeAction(unit, action, mapGrid, unitCommands) {
         unitCommands.handleAttackCommand([unit], unit.attackQueue[0], mapGrid, false, true);
       }
       break;
-    case 'retreat':
-      initiateRetreat([unit], action.x, action.y, mapGrid);
-      break;
     case 'workshopRepair':
       unitCommands.handleWorkshopRepairHotkey([unit], mapGrid, false, true);
       break;
@@ -47,8 +42,6 @@ function isActionComplete(unit, action) {
     case 'attack':
     case 'agf':
       return (!unit.target || unit.target.health <= 0) && (!unit.attackQueue || unit.attackQueue.length === 0);
-    case 'retreat':
-      return !unit.isRetreating;
     case 'workshopRepair':
       return !unit.targetWorkshop && !unit.repairingAtWorkshop && !unit.returningFromWorkshop && (!unit.moveTarget && (!unit.path || unit.path.length === 0));
   }
