@@ -3,6 +3,11 @@ import { fireBullet } from './bulletSystem.js'
 import { selectedUnits } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
 
+function getFireRateForUnit(unit) {
+  if (unit.type === 'rocketTank') return 12000
+  return 4000
+}
+
 export function updateRemoteControlledUnits(units, bullets, mapGrid) {
   const rc = gameState.remoteControl
   if (!rc) return
@@ -58,18 +63,27 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
     }
 
     // Fire forward when requested
-    if (rc.fire) {
-      const rangePx = TANK_FIRE_RANGE * TILE_SIZE
-      const dir = unit.turretDirection !== undefined ? unit.turretDirection : unit.movement.rotation
-      const tx = unit.x + TILE_SIZE / 2 + Math.cos(dir) * rangePx
-      const ty = unit.y + TILE_SIZE / 2 + Math.sin(dir) * rangePx
-      const target = {
-        tileX: Math.floor(tx / TILE_SIZE),
-        tileY: Math.floor(ty / TILE_SIZE),
-        x: tx,
-        y: ty
+    if (rc.fire && unit.canFire !== false) {
+      const baseRate = getFireRateForUnit(unit)
+      const effectiveRate =
+        unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate
+
+      if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveRate) {
+        const rangePx = TANK_FIRE_RANGE * TILE_SIZE
+        const dir =
+          unit.turretDirection !== undefined
+            ? unit.turretDirection
+            : unit.movement.rotation
+        const tx = unit.x + TILE_SIZE / 2 + Math.cos(dir) * rangePx
+        const ty = unit.y + TILE_SIZE / 2 + Math.sin(dir) * rangePx
+        const target = {
+          tileX: Math.floor(tx / TILE_SIZE),
+          tileY: Math.floor(ty / TILE_SIZE),
+          x: tx,
+          y: ty
+        }
+        fireBullet(unit, target, bullets, now)
       }
-      fireBullet(unit, target, bullets, now)
     }
   })
   rc.fire = false

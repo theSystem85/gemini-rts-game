@@ -155,19 +155,19 @@ export class KeyboardHandler {
         this.handlePerformanceToggle()
       }
       // Arrow keys and Space for remote control feature
-      else if (e.code === 'ArrowUp') {
+      else if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up') {
         e.preventDefault()
         gameState.remoteControl.forward = true
-      } else if (e.code === 'ArrowDown') {
+      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down') {
         e.preventDefault()
         gameState.remoteControl.backward = true
-      } else if (e.code === 'ArrowLeft') {
+      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left') {
         e.preventDefault()
         gameState.remoteControl.turnLeft = true
-      } else if (e.code === 'ArrowRight') {
+      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right') {
         e.preventDefault()
         gameState.remoteControl.turnRight = true
-      } else if (e.code === 'Space') {
+      } else if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault()
         gameState.remoteControl.fire = true
       }
@@ -186,15 +186,15 @@ export class KeyboardHandler {
         gameState.altKeyDown = false
         handleAltKeyRelease() // Check if waypoints were added and play sound
       }
-      if (e.code === 'ArrowUp') {
+      if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up') {
         gameState.remoteControl.forward = false
-      } else if (e.code === 'ArrowDown') {
+      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down') {
         gameState.remoteControl.backward = false
-      } else if (e.code === 'ArrowLeft') {
+      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left') {
         gameState.remoteControl.turnLeft = false
-      } else if (e.code === 'ArrowRight') {
+      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right') {
         gameState.remoteControl.turnRight = false
-      } else if (e.code === 'Space') {
+      } else if (e.code === 'Space' || e.key === ' ') {
         gameState.remoteControl.fire = false
       }
     })
