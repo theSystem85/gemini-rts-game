@@ -6,7 +6,8 @@ import {
   PATHFINDING_LIMIT,
   DIRECTIONS,
   MAX_SPAWN_SEARCH_DISTANCE,
-  STREET_PATH_COST
+  STREET_PATH_COST,
+  UNIT_GAS_PROPERTIES
 } from './config.js'
 import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
@@ -656,6 +657,16 @@ export function createUnit(factory, unitType, x, y) {
     // Command queue for path planning feature
     commandQueue: [],
     currentCommand: null
+  }
+
+  // Gas system
+  const gasProps = UNIT_GAS_PROPERTIES[actualType]
+  if (gasProps) {
+    unit.maxGas = gasProps.tankSize
+    unit.gas = gasProps.tankSize
+    unit.gasConsumption = gasProps.consumption
+    unit.harvestGasConsumption = gasProps.harvestConsumption || 0
+    unit.outOfGasPlayed = false
   }
 
   // Add unit-specific properties

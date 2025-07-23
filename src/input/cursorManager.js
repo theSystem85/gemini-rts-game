@@ -14,6 +14,7 @@ export class CursorManager {
     this.isOverOreTile = false
     this.isOverPlayerRefinery = false
     this.isOverHealableUnit = false
+    this.isOverPlayerGasStation = false
     this.isForceAttackMode = false
     this.isGuardMode = false
     this.lastMouseEvent = null
@@ -94,6 +95,7 @@ export class CursorManager {
     this.isOverPlayerRefinery = false
     // Check if mouse is over a healable unit when ambulances are selected
     this.isOverHealableUnit = false
+    this.isOverPlayerGasStation = false
     // Check if mouse is over a hospital when ambulances are selected and not fully loaded
     this.isOverPlayerHospital = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
@@ -127,6 +129,22 @@ export class CursorManager {
               tileX >= building.x && tileX < building.x + building.width &&
               tileY >= building.y && tileY < building.y + building.height) {
             this.isOverPlayerHospital = true
+            break
+          }
+        }
+      }
+
+      const hasUnitsNeedingGas = selectedUnits.some(
+        u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
+      )
+      if (hasUnitsNeedingGas) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'gasStation' &&
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            this.isOverPlayerGasStation = true
             break
           }
         }
@@ -389,6 +407,9 @@ export class CursorManager {
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerHospital) {
         // Over hospital with not fully loaded ambulances selected - show move into cursor
+        gameCanvas.style.cursor = 'none'
+        gameCanvas.classList.add('move-into-mode')
+      } else if (this.isOverPlayerGasStation) {
         gameCanvas.style.cursor = 'none'
         gameCanvas.classList.add('move-into-mode')
       } else if (this.isOverPlayerRefinery) {

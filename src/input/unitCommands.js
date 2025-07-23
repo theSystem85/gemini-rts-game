@@ -60,6 +60,7 @@ export class UnitCommandsHandler {
     const count = unitsToCommand.length
 
     let anyMoved = false
+    let outOfGasCount = 0
     unitsToCommand.forEach((unit, index) => {
       unit.guardTarget = null
       unit.guardMode = false
@@ -124,12 +125,15 @@ export class UnitCommandsHandler {
       }
 
       // Fixed: correctly pass unit.tileX and unit.tileY as source coordinates
-      const path = findPath(
-        { x: unit.tileX, y: unit.tileY },
-        destTile,
-        mapGrid,
-        gameState.occupancyMap
-      )
+      const path =
+        unit.gas <= 0 && typeof unit.maxGas === 'number'
+          ? null
+          : findPath(
+              { x: unit.tileX, y: unit.tileY },
+              destTile,
+              mapGrid,
+              gameState.occupancyMap
+            )
 
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
@@ -147,10 +151,16 @@ export class UnitCommandsHandler {
         // Clear force attack flag when issuing a move command
         unit.forcedAttack = false
         anyMoved = true
+      } else if (typeof unit.maxGas === 'number' && unit.gas <= 0) {
+        outOfGasCount++
       }
 
     })
-    if (anyMoved) {
+    if (outOfGasCount > 0) {
+      const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
+      const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
+      playPositionalSound('outOfGas', avgX, avgY, 0.5)
+    } else if (anyMoved) {
       const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
       const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
       playPositionalSound('movement', avgX, avgY, 0.5)
@@ -514,7 +524,12 @@ export class UnitCommandsHandler {
       let destinationFound = false
       for (const pos of refillPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = this.findPath(ambulance, pos.x, pos.y, mapGrid)
+      const path = findPath(
+        { x: ambulance.tileX, y: ambulance.tileY },
+        { x: pos.x, y: pos.y },
+        mapGrid,
+        gameState.occupancyMap
+      )
           if (path && path.length > 0) {
             ambulance.path = path
             ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
@@ -532,7 +547,48 @@ export class UnitCommandsHandler {
     })
     
     playSound('movement', 0.5)
-  }  /**
+  }
+
+  handleGasStationRefillCommand(selectedUnits, station, mapGrid) {
+    const unitsNeedingGas = selectedUnits.filter(
+      u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
+    )
+
+    if (unitsNeedingGas.length === 0) {
+      showNotification('No units need refilling!', 2000)
+      return
+    }
+
+    const positions = []
+    for (let x = station.x - 1; x <= station.x + station.width; x++) {
+      for (let y = station.y - 1; y <= station.y + station.height; y++) {
+        const insideX = x >= station.x && x < station.x + station.width
+        const insideY = y >= station.y && y < station.y + station.height
+        if (insideX && insideY) continue
+        if (x >= 0 && y >= 0 && x < mapGrid[0].length && y < mapGrid.length) {
+          positions.push({ x, y })
+        }
+      }
+    }
+
+    unitsNeedingGas.forEach((unit, index) => {
+      const pos = positions[index % positions.length]
+      const path = findPath(
+        { x: unit.tileX, y: unit.tileY },
+        { x: pos.x, y: pos.y },
+        mapGrid,
+        gameState.occupancyMap
+      )
+      if (path && path.length > 0) {
+        unit.path = path
+        unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+      }
+    })
+
+    playSound('movement', 0.5)
+  }
+
+  /**
    * Calculate semicircle attack formation positions around a target
    */
   calculateSemicircleFormation(units, target, safeAttackDistance) {

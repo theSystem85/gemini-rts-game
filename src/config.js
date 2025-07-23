@@ -6,6 +6,8 @@ export const MAP_TILES_X = 100
 export const MAP_TILES_Y = 100
 export const MAP_WIDTH = MAP_TILES_X * TILE_SIZE
 export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
+// Approximate real world length of one tile in meters
+export const TILE_LENGTH_METERS = 1000
 export const SAFE_RANGE_ENABLED = false
 export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
@@ -299,3 +301,16 @@ export const PLAYER_POSITIONS = {
 
 // Default number of players
 export const DEFAULT_PLAYER_COUNT = 2
+
+// Gas system configuration
+export const GAS_REFILL_TIME = 7000 // ms to fully refill at station
+export const GAS_REFILL_COST = 50
+
+export const UNIT_GAS_PROPERTIES = {
+  tank_v1: { tankSize: 1900, consumption: 450 },
+  'tank-v2': { tankSize: 1900, consumption: 450 },
+  'tank-v3': { tankSize: 1900, consumption: 450 },
+  rocketTank: { tankSize: 1900, consumption: 450 },
+  harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
+  ambulance: { tankSize: 75, consumption: 25 }
+}

@@ -58,6 +58,11 @@ export function saveGame(label) {
     health: u.health,
     maxHealth: u.maxHealth,
     id: u.id,
+    gas: u.gas,
+    maxGas: u.maxGas,
+    gasRefillTimer: u.gasRefillTimer,
+    refueling: u.refueling,
+    outOfGasPlayed: u.outOfGasPlayed,
     // Harvester-specific properties
     oreCarried: u.oreCarried,
     assignedRefinery: u.assignedRefinery,
@@ -253,6 +258,11 @@ export function loadGame(key) {
       hydrated.tileY = tileY
       hydrated.x = u.x
       hydrated.y = u.y
+      hydrated.gas = u.gas
+      hydrated.maxGas = u.maxGas
+      hydrated.gasRefillTimer = u.gasRefillTimer
+      hydrated.refueling = u.refueling
+      hydrated.outOfGasPlayed = u.outOfGasPlayed
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
       

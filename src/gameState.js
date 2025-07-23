@@ -1,6 +1,6 @@
 // gameState.js
 export const gameState = {
-  money: 10000,
+  money: 12000,
   gameTime: 0,
   frameCount: 0, // Add frame counter for milestone checking
   wins: 0,
@@ -117,7 +117,7 @@ export const gameState = {
 
   // Initially no units are available (require vehicle factory), only basic buildings
   availableUnitTypes: new Set([]),
-  availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'vehicleWorkshop', 'radarStation', 'hospital', 'turretGunV1', 'concreteWall']),
+  availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'vehicleWorkshop', 'radarStation', 'hospital', 'gasStation', 'turretGunV1', 'concreteWall']),
   newUnitTypes: new Set(),
   newBuildingTypes: new Set(),
 

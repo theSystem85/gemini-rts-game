@@ -145,6 +145,29 @@ export class MouseHandler {
     gameState.attackGroupStart = { x: 0, y: 0 }
     gameState.attackGroupEnd = { x: 0, y: 0 }
     gameState.disableAGFRendering = false
+
+    // If cursor is over a player gas station for refueling, disable selection/AGF
+    const tileX = Math.floor(worldX / TILE_SIZE)
+    const tileY = Math.floor(worldY / TILE_SIZE)
+    const needsGas = selectedUnits.some(
+      u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
+    )
+    if (needsGas && gameState.buildings && Array.isArray(gameState.buildings)) {
+      for (const building of gameState.buildings) {
+        if (
+          building.type === 'gasStation' &&
+          building.owner === gameState.humanPlayer &&
+          building.health > 0 &&
+          tileX >= building.x && tileX < building.x + building.width &&
+          tileY >= building.y && tileY < building.y + building.height
+        ) {
+          this.isSelecting = false
+          gameState.selectionActive = false
+          gameState.disableAGFRendering = true
+          break
+        }
+      }
+    }
   }
 
 
@@ -717,7 +740,7 @@ export class MouseHandler {
       if (hasSelectedNotFullyLoadedAmbulances) {
         // Check if clicking on a player hospital
         for (const building of gameState.buildings) {
-          if (building.type === 'hospital' && 
+          if (building.type === 'hospital' &&
               building.owner === gameState.humanPlayer &&
               building.health > 0 &&
               tileX >= building.x && tileX < building.x + building.width &&
@@ -725,6 +748,22 @@ export class MouseHandler {
             // Handle ambulance refill command
             unitCommands.handleAmbulanceRefillCommand(selectedUnits, building, mapGrid)
             return // Exit early, don't process building selection
+          }
+        }
+      }
+
+      const needsGas = selectedUnits.some(
+        u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
+      )
+      if (needsGas) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'gasStation' &&
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            unitCommands.handleGasStationRefillCommand(selectedUnits, building, mapGrid)
+            return
           }
         }
       }
@@ -828,6 +867,7 @@ export class MouseHandler {
 
       let workshopTarget = null
       let hospitalTarget = null
+      let gasStationTarget = null
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -850,6 +890,18 @@ export class MouseHandler {
             }
           }
         }
+
+        const needsGas = selectedUnits.some(u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75)
+        if (needsGas) {
+          for (const building of gameState.buildings) {
+            if (building.type === 'gasStation' && building.owner === gameState.humanPlayer && building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
+              gasStationTarget = building
+              break
+            }
+          }
+        }
       }
 
       if (refineryTarget) {
@@ -858,6 +910,8 @@ export class MouseHandler {
         unitCommands.handleRepairWorkshopCommand(selectedUnits, workshopTarget, mapGrid)
       } else if (hospitalTarget) {
         unitCommands.handleAmbulanceRefillCommand(selectedUnits, hospitalTarget, mapGrid)
+      } else if (gasStationTarget) {
+        unitCommands.handleGasStationRefillCommand(selectedUnits, gasStationTarget, mapGrid)
       } else if (oreTarget) {
         unitCommands.handleHarvesterCommand(selectedUnits, oreTarget, mapGrid)
       } else {

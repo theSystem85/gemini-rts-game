@@ -84,6 +84,16 @@ export const buildingData = {
     health: 200,
     smokeSpots: []
   },
+  gasStation: {
+    width: 3,
+    height: 3,
+    cost: 2000,
+    power: -30,
+    image: 'gas_station.webp',
+    displayName: 'Gas Station',
+    health: 50,
+    smokeSpots: []
+  },
   turretGunV1: {
     width: 1,
     height: 1,
