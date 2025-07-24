@@ -1,4 +1,9 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, STREET_SPEED_MULTIPLIER } from '../config.js'
+import {
+  TILE_SIZE,
+  TANK_FIRE_RANGE,
+  STREET_SPEED_MULTIPLIER,
+  ENABLE_ENEMY_CONTROL
+} from '../config.js'
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
@@ -9,7 +14,7 @@ function getFireRateForUnit(unit) {
   return 4000
 }
 
-export function updateRemoteControlledUnits(units, bullets, mapGrid) {
+export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
   const rc = gameState.remoteControl
   if (!rc) return
   if (!selectedUnits || selectedUnits.length === 0) return
@@ -17,6 +22,14 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
   selectedUnits.forEach(unit => {
     if (!unit.type || !unit.type.includes('tank')) return
     if (!unit.movement) return
+
+    // Only allow remote control for player units unless enemy control is enabled
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const isPlayerUnit =
+      unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')
+    if (!isPlayerUnit && !ENABLE_ENEMY_CONTROL) {
+      return
+    }
 
     // Cancel pathing when using remote control
     if (rc.forward || rc.backward || rc.turnLeft || rc.turnRight) {
@@ -55,18 +68,31 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid) {
     const effectiveMaxSpeed = 0.9 * speedModifier * terrainMultiplier
 
     // Move forward/backward relative to wagon direction
-    if (rc.forward) {
+    if (rc.forward || rc.backward) {
+      const directionSign = rc.forward ? 1 : -1
       const fx = Math.cos(unit.direction)
       const fy = Math.sin(unit.direction)
-      unit.movement.targetVelocity.x = fx * effectiveMaxSpeed
-      unit.movement.targetVelocity.y = fy * effectiveMaxSpeed
-      unit.movement.isMoving = true
-    } else if (rc.backward) {
-      const fx = Math.cos(unit.direction)
-      const fy = Math.sin(unit.direction)
-      unit.movement.targetVelocity.x = -fx * effectiveMaxSpeed
-      unit.movement.targetVelocity.y = -fy * effectiveMaxSpeed
-      unit.movement.isMoving = true
+
+      // Check the tile one tile ahead (or behind) for occupancy
+      const checkDistance = TILE_SIZE
+      const checkX = unit.x + TILE_SIZE / 2 + fx * checkDistance * directionSign
+      const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance * directionSign
+      const nextTileX = Math.floor(checkX / TILE_SIZE)
+      const nextTileY = Math.floor(checkY / TILE_SIZE)
+      const occupied =
+        occupancyMap &&
+        occupancyMap[nextTileY] &&
+        occupancyMap[nextTileY][nextTileX]
+
+      if (!occupied) {
+        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign
+        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * directionSign
+        unit.movement.isMoving = true
+      } else {
+        unit.movement.targetVelocity.x = 0
+        unit.movement.targetVelocity.y = 0
+        unit.movement.isMoving = false
+      }
     } else {
       unit.movement.targetVelocity.x = 0
       unit.movement.targetVelocity.y = 0
