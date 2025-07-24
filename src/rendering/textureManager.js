@@ -27,6 +27,7 @@ export class TextureManager {
     this.spriteMap = {}
     this.allTexturesLoaded = false
     this.loadingStarted = false
+    this.animatedTileFrames = {}
   }
 
   // Helper function to load images once
@@ -200,9 +201,18 @@ export class TextureManager {
 
     this.getOrLoadImage(imagePath, extensions, (img) => {
       if (img) {
-        // If the loaded image is a GIF, store it directly to preserve animation
+        // If the loaded image is a GIF, capture its frames to an offscreen canvas
         if (img.src.endsWith('.gif')) {
-          this.tileTextureCache[tileType].push(img)
+          if (!this.animatedTileFrames[tileType]) {
+            const canvas = document.createElement('canvas')
+            canvas.width = TILE_SIZE + 1
+            canvas.height = TILE_SIZE + 1
+            const ctx = canvas.getContext('2d')
+            this.animatedTileFrames[tileType] = { image: img, canvas, ctx }
+            this.tileTextureCache[tileType].push(canvas)
+          } else {
+            this.animatedTileFrames[tileType].image = img
+          }
           onComplete()
           return
         }
@@ -264,6 +274,16 @@ export class TextureManager {
 
       onComplete()
     })
+  }
+
+  // Update canvases for animated GIF textures
+  updateAnimatedFrames() {
+    for (const key in this.animatedTileFrames) {
+      const { image, canvas, ctx } = this.animatedTileFrames[key]
+      if (!image || !ctx) continue
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+    }
   }
 
   // Get a consistent tile variation based on position

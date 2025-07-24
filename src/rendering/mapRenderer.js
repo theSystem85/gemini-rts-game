@@ -36,6 +36,8 @@ export class MapRenderer {
     ctx.imageSmoothingEnabled = false
 
     const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
+    // Update animated GIF frames once per render
+    this.textureManager.updateAnimatedFrames()
     const sotApplied = new Set()
 
 
