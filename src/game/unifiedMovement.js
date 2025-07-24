@@ -2,8 +2,24 @@
 import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER, TILE_LENGTH_METERS } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
-import { playPositionalSound, playSound } from '../sound.js'
+import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
+
+function calculatePositionalAudio(x, y) {
+  const canvas = document.getElementById('gameCanvas')
+  if (!canvas) {
+    return { pan: 0, volumeFactor: 1 }
+  }
+  const centerX = gameState.scrollOffset.x + canvas.width / 2
+  const centerY = gameState.scrollOffset.y + canvas.height / 2
+  const dx = x - centerX
+  const dy = y - centerY
+  const distance = Math.hypot(dx, dy)
+  const maxDistance = Math.max(canvas.width, canvas.height) * 0.75
+  const volumeFactor = Math.max(0, 1 - distance / maxDistance)
+  const pan = Math.max(-1, Math.min(1, dx / maxDistance))
+  return { pan, volumeFactor }
+}
 
 /**
  * Unified movement configuration
@@ -364,6 +380,47 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   if (unit.returningFromWorkshop && (!unit.path || unit.path.length === 0) && !unit.moveTarget) {
     unit.returningFromWorkshop = false
     unit.returnTile = null
+  }
+
+  // --- Engine sound handling ---
+  const isTank = unit.type && unit.type.includes('tank')
+  if (isTank) {
+    const moving = movement.currentSpeed > MOVEMENT_CONFIG.MIN_SPEED
+    if (moving) {
+      if (!unit.engineSound) {
+        playPositionalSound('tankDriveLoop', unit.x, unit.y, 0.2, 0, false, { playLoop: true })
+          .then(handle => {
+            if (!handle) return
+            // If unit was destroyed before the sound loaded, stop immediately
+            if (unit.health <= 0 || unit.destroyed) {
+              try {
+                handle.source.stop()
+              } catch (e) {
+                console.error('Error stopping pending engine sound:', e)
+              }
+              return
+            }
+            const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+            const targetGain = 0.2 * volumeFactor * getMasterVolume()
+            handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+            handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.5)
+            if (handle.panner) handle.panner.pan.value = pan
+            unit.engineSound = handle
+          })
+      } else {
+        const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+        const targetGain = 0.2 * volumeFactor * getMasterVolume()
+        if (unit.engineSound.panner) unit.engineSound.panner.pan.value = pan
+        unit.engineSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
+      }
+    } else if (unit.engineSound) {
+      const { source, gainNode } = unit.engineSound
+      gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+      gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5)
+      source.stop(audioContext.currentTime + 0.5)
+      unit.engineSound = null
+    }
   }
 }
 
