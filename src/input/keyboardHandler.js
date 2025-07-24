@@ -35,6 +35,7 @@ export class KeyboardHandler {
   setupKeyboardEvents(units, selectedUnits, mapGrid, factories) {
     // Store references for use in other methods
     this.selectedUnits = selectedUnits
+    this.cheatSystem.setSelectedUnitsRef(selectedUnits)
     this.units = units
     this.mapGrid = mapGrid
     this.factories = factories
