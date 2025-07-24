@@ -195,7 +195,7 @@ export class CheatSystem {
           <li><code>money [amount]</code> - Set money to specific amount</li>
           <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
           <li><code>status</code> - Show current cheat status</li>
-          <li><code>fuel [amount]</code> - Set fuel level of selected unit</li>
+          <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
         </ul>
@@ -318,11 +318,11 @@ export class CheatSystem {
           this.showError('Invalid amount. Use: hp [number] or hp [number]%')
         }
       } else if (normalizedCode.startsWith('fuel ')) {
-        const amount = this.parseAmount(normalizedCode.substring(5))
-        if (amount !== null) {
-          this.setFuel(amount)
+        const parsed = this.parseFuelValue(code.substring(5))
+        if (parsed) {
+          this.setFuel(parsed)
         } else {
-          this.showError('Invalid amount. Use: fuel [number]')
+          this.showError('Invalid amount. Use: fuel [number] or fuel [percent%]')
         }
       }
       // Enemy control command
@@ -353,6 +353,19 @@ export class CheatSystem {
     const cleaned = amountStr.replace(/[,$]/g, '').trim()
     const amount = parseInt(cleaned, 10)
     return isNaN(amount) ? null : Math.max(0, amount)
+  }
+
+  parseFuelValue(input) {
+    if (!input) return null
+    const trimmed = input.trim()
+    if (trimmed.endsWith('%')) {
+      const percent = parseFloat(trimmed.slice(0, -1))
+      if (isNaN(percent)) return null
+      return { value: percent / 100, isPercent: true, display: `${percent}%` }
+    }
+    const amount = this.parseAmount(trimmed)
+    if (amount === null) return null
+    return { value: amount, isPercent: false, display: `${amount}` }
   }
 
   enableGodMode() {
@@ -431,7 +444,9 @@ export class CheatSystem {
     }
   }
 
-  setFuel(amount) {
+  setFuel(parsed) {
+    const { value, isPercent, display } = parsed
+
     let selected = []
     if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
       try {
@@ -448,13 +463,14 @@ export class CheatSystem {
 
     selected.forEach(unit => {
       if (typeof unit.maxGas === 'number') {
-        const clamped = Math.max(0, Math.min(amount, unit.maxGas))
+        const target = isPercent ? unit.maxGas * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxGas))
         unit.gas = clamped
         if (clamped > 0) unit.outOfGasPlayed = false
       }
     })
 
-    showNotification(`⛽ Fuel set to ${amount} for ${selected.length} unit${selected.length > 1 ? 's' : ''}`,
+    showNotification(`⛽ Fuel set to ${display} for ${selected.length} unit${selected.length > 1 ? 's' : ''}`,
       3000)
     playSound('confirmed', 0.5)
   }
