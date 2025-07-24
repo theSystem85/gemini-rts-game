@@ -1,6 +1,6 @@
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding } from '../buildings.js'
 import { spawnEnemyUnit } from './enemySpawner.js'
-import { resetAttackDirections, manageAICrewHealing } from './enemyStrategies.js'
+import { resetAttackDirections, manageAICrewHealing, manageAITankerTrucks } from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
@@ -431,6 +431,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     if ( aiFactory && !aiFactory.currentlyProducingUnit && now - (gameState[lastProductionKey] || 0) >= 8000 ) {
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
       const aiAmbulances = units.filter(u => u.owner === aiPlayerId && u.type === 'ambulance')
+      const aiTankers = units.filter(u => u.owner === aiPlayerId && u.type === 'tankerTruck')
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
@@ -442,11 +443,12 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
       // Enhanced production rules:
       // 1. Build up to 4 harvesters per refinery (strict limit)
-      // 2. Always build ambulance if none exists and hospital is available
-      // 3. Only build tanks if hospital exists (for crew support)
-      // 4. Then build diverse combat units
-      // 5. Focus on advanced units when budget is high
-      // 6. Maintain harvester count but prioritize combat
+      // 2. Build a tanker truck when none exists and a harvester is present
+      // 3. Always build ambulance if none exists and hospital is available
+      // 4. Only build tanks if hospital exists (for crew support)
+      // 5. Then build diverse combat units
+      // 6. Focus on advanced units when budget is high
+      // 7. Maintain harvester count but prioritize combat
 
       const MAX_HARVESTERS = aiRefineries.length * 4 // Strict 4 harvesters per refinery limit
       const harvesterCountInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
@@ -456,7 +458,10 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
 
-      if (currentHarvesterTotal < MAX_HARVESTERS) {
+      if (aiTankers.length === 0 && aiHarvesters.length > 0) {
+        // Ensure at least one tanker truck exists to refuel units
+        unitType = 'tankerTruck'
+      } else if (currentHarvesterTotal < MAX_HARVESTERS) {
         // Priority: Build up harvesters first, but strict limit of 4 per refinery
         unitType = 'harvester'
       } else if (hasHospital && aiAmbulances.length === 0) {
@@ -549,6 +554,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
   const aiUnits = units.filter(u => u.owner === aiPlayerId)
   if (aiUnits.length > 0) {
     manageAICrewHealing(units, gameState, now)
+    manageAITankerTrucks(units, gameState, mapGrid)
   }
 }, false)
 

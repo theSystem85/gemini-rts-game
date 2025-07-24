@@ -978,6 +978,160 @@ function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
 }
 
 /**
+ * Manages tanker truck refueling and guard behavior for all AI players
+ */
+export function manageAITankerTrucks(units, gameState, mapGrid) {
+  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId)
+    const tankers = aiUnits.filter(u => u.type === 'tankerTruck')
+    if (tankers.length === 0) return
+
+    const harvesters = aiUnits.filter(u => u.type === 'harvester' && u.health > 0)
+    const gasStations = (gameState.buildings || []).filter(
+      b => b.owner === aiPlayerId && b.type === 'gasStation' && b.health > 0
+    )
+    
+    // Separate critical (gas <= 0) and low gas units for priority handling
+    const criticalUnits = []
+    const lowGasUnits = []
+    aiUnits.forEach(u => {
+      if (u.type === 'tankerTruck' || typeof u.maxGas !== 'number' || u.health <= 0) {
+        return
+      }
+      if (u.gas <= 0) {
+        criticalUnits.push(u)
+      } else if (u.gas / u.maxGas < 0.3) { // Changed from 0.2 to 0.3 (30% threshold)
+        lowGasUnits.push(u)
+      }
+    })
+
+    tankers.forEach(tanker => {
+      // First priority: tanker needs refill
+      const needsRefill =
+        (typeof tanker.maxGas === 'number' && tanker.gas / tanker.maxGas < 0.2) ||
+        (typeof tanker.maxSupplyGas === 'number' &&
+          tanker.supplyGas / tanker.maxSupplyGas < 0.2)
+
+      if (needsRefill && gasStations.length > 0) {
+        sendTankerToGasStation(tanker, gasStations[0], mapGrid)
+        return
+      }
+
+      // Second priority: IMMEDIATE response to critical units (gas <= 0)
+      if (criticalUnits.length > 0) {
+        // Find the closest critical unit that doesn't already have a tanker assigned
+        let target = null
+        let bestDistance = Infinity
+        
+        criticalUnits.forEach(criticalUnit => {
+          // Skip if another tanker is already handling this critical unit
+          const alreadyAssigned = tankers.some(otherTanker => 
+            otherTanker !== tanker && 
+            (otherTanker.emergencyTarget?.id === criticalUnit.id ||
+             otherTanker.refuelTarget?.id === criticalUnit.id)
+          )
+          if (alreadyAssigned) return
+          
+          const distance = Math.hypot(criticalUnit.tileX - tanker.tileX, criticalUnit.tileY - tanker.tileY)
+          if (distance < bestDistance) {
+            bestDistance = distance
+            target = criticalUnit
+          }
+        })
+        
+        if (target) {
+          // INTERRUPT current non-critical tasks for emergency response
+          if (tanker.refuelTarget && tanker.refuelTarget.gas > 0) {
+            tanker.refuelTarget = null
+            tanker.refuelTimer = 0
+          }
+          tanker.guardTarget = null
+          
+          sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+          tanker.emergencyTarget = target // Mark as emergency mission
+          tanker.emergencyMode = true
+          return
+        }
+      }
+
+      // Third priority: low gas units
+      if (lowGasUnits.length > 0) {
+        let target = lowGasUnits[0]
+        let best = Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY)
+        lowGasUnits.forEach(u => {
+          const d = Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+          if (d < best) {
+            best = d
+            target = u
+          }
+        })
+        sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+        return
+      }
+
+      // Fourth priority: guard harvesters
+      if (harvesters.length > 0) {
+        const guardTarget = harvesters.find(h => !lowGasUnits.includes(h) && !criticalUnits.includes(h)) || harvesters[0]
+        if (!tanker.guardTarget || tanker.guardTarget.health <= 0 || tanker.guardTarget.id !== guardTarget.id) {
+          tanker.guardTarget = guardTarget
+        }
+      }
+    })
+  })
+}
+
+function sendTankerToGasStation(tanker, station, mapGrid) {
+  const cx = station.x + Math.floor(station.width / 2)
+  const cy = station.y + station.height + 1
+  const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: cx, y: cy }, mapGrid)
+  if (path && path.length > 1) {
+    tanker.path = path.slice(1)
+    tanker.moveTarget = { x: cx, y: cy }
+  }
+  tanker.guardTarget = null
+}
+
+function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
+  // Set the refuel target BEFORE pathfinding, just like player tanker commands
+  tanker.refuelTarget = unit
+  tanker.refuelTimer = 0
+  
+  console.log(`AI: Assigning tanker ${tanker.id} to refuel ${unit.type} ${unit.id} (${Math.round(unit.gas)}/${unit.maxGas} gas)`)
+  
+  // Try to find an adjacent position to the target unit (like player tanker commands do)
+  const targetTileX = unit.tileX
+  const targetTileY = unit.tileY
+  const directions = [
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+  ]
+  
+  let pathFound = false
+  for (const dir of directions) {
+    const destX = targetTileX + dir.x
+    const destY = targetTileY + dir.y
+    if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
+      const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: destX, y: destY }, mapGrid, occupancyMap)
+      if (path && path.length > 0) {
+        tanker.path = path.slice(1)
+        tanker.moveTarget = { x: destX, y: destY }
+        console.log(`AI: Tanker ${tanker.id} pathing to adjacent position (${destX}, ${destY}) near target at (${targetTileX}, ${targetTileY})`)
+        pathFound = true
+        break
+      }
+    }
+  }
+  
+  if (!pathFound) {
+    console.log(`AI: Tanker ${tanker.id} could not find path to target ${unit.type} ${unit.id}`)
+  }
+  
+  tanker.guardTarget = null
+}
+
+/**
  * Checks if an AI player should start attacking (has hospital built)
  */
 export function shouldAIStartAttacking(aiPlayerId, gameState) {

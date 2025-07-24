@@ -54,6 +54,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     unit.movement.isMoving = false
     unit.movement.currentSpeed = 0
     return
+  } else if (unit.gas > 0 && unit.needsEmergencyFuel) {
+    // Clear emergency fuel flag if unit has gas again
+    unit.needsEmergencyFuel = false
+    unit.emergencyFuelRequestTime = null
   }
   
   // **HARVESTER MOVEMENT RESTRICTIONS** - Prevent movement during critical operations
@@ -320,6 +324,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
       playSound('outOfGas')
       unit.outOfGasPlayed = true
+      // Mark unit as needing immediate fuel assistance
+      unit.needsEmergencyFuel = true
+      unit.emergencyFuelRequestTime = performance.now()
     }
   }
   
