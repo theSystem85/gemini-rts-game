@@ -97,6 +97,9 @@ const soundFiles = {
   ourBaseIsUnderAttack: ['ourBaseIsUnderAttack.mp3'],
   ourHarvestersAreUnderAttack: ['ourHarvestersAreUnderAttack.mp3'],
   chainOfCommandsReceived: ['chainOfCommandsReceived.mp3'],
+
+  // Looping tank drive sound
+  tankDriveLoop: ['tankDrive4sLoop.mp3'],
   
   // Game event aliases (previously in soundMapping)
   movement: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'], // alias for tankMove
@@ -171,10 +174,10 @@ async function loadAudioBuffer(soundPath) {
 }
 
 function playAudioBuffer(audioBuffer, volume = 1.0, onEnded, options = {}) {
-  const { pan = 0 } = options
+  const { pan = 0, loop = false } = options
   if (!audioContext || !audioBuffer) {
     if (onEnded) setTimeout(onEnded, 0)
-    return
+    return null
   }
 
   try {
@@ -183,6 +186,7 @@ function playAudioBuffer(audioBuffer, volume = 1.0, onEnded, options = {}) {
     let panner = null
 
     source.buffer = audioBuffer
+    source.loop = loop
     if (typeof audioContext.createStereoPanner === 'function') {
       panner = audioContext.createStereoPanner()
       panner.pan.value = pan
@@ -200,7 +204,7 @@ function playAudioBuffer(audioBuffer, volume = 1.0, onEnded, options = {}) {
     }
 
     source.start()
-    return source
+    return { source, gainNode, panner }
   } catch (error) {
     console.error('Error playing audio buffer:', error)
     if (onEnded) setTimeout(onEnded, 0)
@@ -326,24 +330,24 @@ async function playAssetSound(eventName, volume = 1.0, onEnded, options = {}) {
         if (onEnded) onEnded()
       }
       
-      const source = playAudioBuffer(audioBuffer, volume, cleanup, options)
-      if (source) {
-        activeAudioElements.set(audioId, source)
-        return true
+      const nodes = playAudioBuffer(audioBuffer, volume, cleanup, { ...options, loop: options.playLoop })
+      if (nodes) {
+        activeAudioElements.set(audioId, nodes.source)
+        return nodes
       }
     } catch (error) {
       console.error('Error playing cached audio buffer:', soundPath, error)
       if (onEnded) onEnded()
     }
   }
-  // Return false if no files available (will trigger fallback beep)
-  return false
+  // Return null if no files available (will trigger fallback beep)
+  return null
 }
 
 function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, options = {}) {
-  if (!audioContext) { 
+  if (!audioContext) {
     if (onEnded) setTimeout(onEnded, 0)
-    return 
+    return Promise.resolve(null)
   }
 
   // Check throttling if throttleSeconds > 0
@@ -361,11 +365,11 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, op
 
   // Use eventName directly with soundFiles instead of mapping
   if (soundFiles[eventName]) {
-    playAssetSound(eventName, volume, onEnded, options).catch(e => {
+    return playAssetSound(eventName, volume, onEnded, options).catch(e => {
       console.error('Error in playAssetSound:', e)
       if (onEnded) onEnded()
+      return null
     })
-    return
   } else {
     console.warn(`No sound files found for event: ${eventName}`)
   }
@@ -398,9 +402,11 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, op
       // Also set a timeout as backup
       setTimeout(callOnce, duration * 1000 + 50) // Add 50ms buffer
     }
+    return { source: oscillator, gainNode }
   } catch (e) {
     console.error('AudioContext error:', e)
     if (onEnded) setTimeout(onEnded, 0)
+    return null
   }
 }
 
@@ -428,15 +434,15 @@ export function playSound(eventName, volume = 1.0, throttleSeconds = 0, stackabl
     return
   }
 
-  playImmediate(eventName, volume, throttleSeconds, undefined, options)
+  return playImmediate(eventName, volume, throttleSeconds, undefined, options)
 }
 
-export function playPositionalSound(eventName, x, y, volume = 1.0, throttleSeconds = 0, stackable = false) {
+export function playPositionalSound(eventName, x, y, volume = 1.0, throttleSeconds = 0, stackable = false, options = {}) {
   const { pan, volumeFactor } = calculatePositionalAudio(x, y)
   const finalVolume = volume * volumeFactor
-  if (finalVolume <= 0) return
-  const options = { pan }
-  playSound(eventName, finalVolume, throttleSeconds, stackable, options)
+  if (finalVolume <= 0) return Promise.resolve(null)
+  options = { ...options, pan }
+  return playSound(eventName, finalVolume, throttleSeconds, stackable, options)
 }
 
 // Test function for narrated sound stacking (can be called from browser console)
@@ -610,3 +616,5 @@ export function clearSoundCache() {
   
   console.log('Sound cache cleared, background music reset')
 }
+
+export { audioContext }
