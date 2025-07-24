@@ -573,6 +573,7 @@ export class KeyboardHandler {
         mapGrid[0].length * TILE_SIZE - gameCanvas.width))
       gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - gameCanvas.height / 2,
         mapGrid.length * TILE_SIZE - gameCanvas.height))
+      gameState.dragVelocity = { x: 0, y: 0 }
       playSound('unitSelection')
     }
   }
@@ -609,6 +610,8 @@ export class KeyboardHandler {
       focusY - logicalCanvasHeight / 2,
       mapGrid.length * TILE_SIZE - logicalCanvasHeight
     ))
+
+    gameState.dragVelocity = { x: 0, y: 0 }
 
     playSound('confirmed')
   }
