@@ -121,7 +121,11 @@ export class KeyboardHandler {
       // E key to focus on selected unit(s)
       else if (e.key.toLowerCase() === 'e') {
         e.preventDefault()
-        this.handleSelectedUnitFocus(selectedUnits, mapGrid)
+        if (e.shiftKey || gameState.shiftKeyDown) {
+          this.toggleAutoFocus(selectedUnits, mapGrid)
+        } else {
+          this.handleSelectedUnitFocus(selectedUnits, mapGrid)
+        }
       }
       // Control group assignment (ctrl+number)
       else if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
@@ -614,6 +618,24 @@ export class KeyboardHandler {
     gameState.dragVelocity = { x: 0, y: 0 }
 
     playSound('confirmed')
+  }
+
+  toggleAutoFocus(selectedUnits, mapGrid) {
+    if (
+      gameState.cameraFollowUnitId &&
+      selectedUnits.length === 1 &&
+      selectedUnits[0].id === gameState.cameraFollowUnitId
+    ) {
+      gameState.cameraFollowUnitId = null
+      return
+    }
+
+    if (selectedUnits.length === 1) {
+      gameState.cameraFollowUnitId = selectedUnits[0].id
+      this.handleSelectedUnitFocus(selectedUnits, mapGrid)
+    } else {
+      gameState.cameraFollowUnitId = null
+    }
   }
 
   handleControlGroupAssignment(groupNum, selectedUnits) {
