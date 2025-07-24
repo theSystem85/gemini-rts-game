@@ -204,13 +204,17 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
         const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
-            // Play loading sound immediately
+            // Play loading sound and mark coil as charging
             playPositionalSound('teslacoil_loading', centerX, centerY, 1.0)
+            building.teslaState = 'charging'
+            building.teslaChargeStartTime = performance.now()
             
             // Schedule the firing sequence
             setTimeout(() => {
-              // Play firing sound first
+              // Play firing sound and mark as firing
               playPositionalSound('teslacoil_firing', centerX, centerY, 1.0)
+              building.teslaState = 'firing'
+              building.teslaFireStartTime = performance.now()
               
               // Apply effects after a short delay to sync with bolt sound
               setTimeout(() => {
@@ -244,14 +248,27 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
                 }
               }, 200) // Small delay after bolt sound starts
             }, 400) // Delay for loading sound to finish
+
+            // Return to idle state after bolt animation
+            setTimeout(() => {
+              if (building.teslaState === 'firing') {
+                building.teslaState = 'idle'
+                building.teslaChargeStartTime = 0
+                building.teslaFireStartTime = 0
+              }
+            }, 800) // 400ms charge + 400ms bolt
             
             // Create visual lightning effect synchronized with firing sound
             setTimeout(() => {
               const targetX = closestEnemy.x + TILE_SIZE / 2
               const targetY = closestEnemy.y + TILE_SIZE / 2
+              const imgWidth = building.width * TILE_SIZE
+              const imgHeight = building.height * TILE_SIZE
+              const fromX = building.x * TILE_SIZE + imgWidth * (96 / 192)
+              const fromY = building.y * TILE_SIZE + imgHeight * (42 / 192)
               closestEnemy.teslaCoilHit = {
-                fromX: centerX,
-                fromY: centerY,
+                fromX,
+                fromY,
                 toX: targetX,
                 toY: targetY,
                 impactTime: performance.now()
@@ -260,7 +277,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             
             building.lastShotTime = now
             building.firingAt = closestEnemy
-            building.fireStartTime = now
+            building.fireStartTime = performance.now()
           }
         }
       }      // Regular turret logic

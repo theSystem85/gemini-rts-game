@@ -265,6 +265,9 @@ export function createBuilding(type, x, y) {
     building.targetDirection = 0 // Direction the turret should face
     if (data.isTeslaCoil) {
       building.isTeslaCoil = true
+      building.teslaState = 'idle'
+      building.teslaChargeStartTime = 0
+      building.teslaFireStartTime = 0
     }
     if (building.type === 'artilleryTurret') {
       building.isArtillery = true

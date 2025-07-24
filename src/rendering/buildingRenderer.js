@@ -116,6 +116,8 @@ export class BuildingRenderer {
             ctx.restore()
           }
           ctx.restore()
+        } else if (building.type === 'teslaCoil') {
+          this.drawTeslaCoilImage(ctx, img, building, screenX, screenY, width, height)
         } else {
           this.drawBuildingImageNatural(ctx, img, screenX, screenY, width, height)
         }
@@ -164,6 +166,29 @@ export class BuildingRenderer {
     ctx.drawImage(img, screenX, screenY, maxWidth, maxHeight)
     
     // Restore canvas state
+    ctx.restore()
+  }
+
+  drawTeslaCoilImage(ctx, img, building, screenX, screenY, maxWidth, maxHeight) {
+    const SOURCE_HEIGHT = 192
+    const CHARGE_CLIP_START = 51
+    const CHARGE_DURATION = 400
+
+    ctx.save()
+
+    let clipY = CHARGE_CLIP_START
+    if (building.teslaState === 'charging') {
+      const progress = Math.min((performance.now() - (building.teslaChargeStartTime || 0)) / CHARGE_DURATION, 1)
+      clipY = CHARGE_CLIP_START * (1 - progress)
+    } else if (building.teslaState === 'firing') {
+      clipY = 0
+    }
+
+    const sourceHeight = SOURCE_HEIGHT - clipY
+    const destHeight = maxHeight * (sourceHeight / SOURCE_HEIGHT)
+    const destY = screenY + maxHeight - destHeight
+
+    ctx.drawImage(img, 0, clipY, SOURCE_HEIGHT, sourceHeight, screenX, destY, maxWidth, destHeight)
     ctx.restore()
   }
 
