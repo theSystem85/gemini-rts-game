@@ -20,7 +20,11 @@ export class MapRenderer {
         size,
         size
       )
-    } else if (info instanceof HTMLCanvasElement || info instanceof Image) {
+    } else if (
+      (typeof globalThis.HTMLCanvasElement !== 'undefined' &&
+        info instanceof globalThis.HTMLCanvasElement) ||
+      info instanceof Image
+    ) {
       ctx.drawImage(info, x, y, size, size)
     } else if (info.image) {
       ctx.drawImage(info.image, x, y, size, size)
