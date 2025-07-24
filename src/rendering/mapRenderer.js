@@ -6,6 +6,27 @@ export class MapRenderer {
     this.textureManager = textureManager
   }
 
+  drawFromInfo(ctx, info, x, y, size = TILE_SIZE + 1) {
+    if (!info) return
+    if (info.x !== undefined) {
+      ctx.drawImage(
+        this.textureManager.spriteImage,
+        info.x,
+        info.y,
+        info.width,
+        info.height,
+        x,
+        y,
+        size,
+        size
+      )
+    } else if (info instanceof HTMLCanvasElement || info instanceof Image) {
+      ctx.drawImage(info, x, y, size, size)
+    } else if (info.image) {
+      ctx.drawImage(info.image, x, y, size, size)
+    }
+  }
+
   renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
     // Disable image smoothing to prevent antialiasing gaps between tiles
     ctx.imageSmoothingEnabled = false
@@ -13,26 +34,6 @@ export class MapRenderer {
     const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
     const sotApplied = new Set()
 
-    const drawFromInfo = (info, x, y, size = TILE_SIZE + 1) => {
-      if (!info) return
-      if (info.x !== undefined) {
-        ctx.drawImage(
-          this.textureManager.spriteImage,
-          info.x,
-          info.y,
-          info.width,
-          info.height,
-          x,
-          y,
-          size,
-          size
-        )
-      } else if (info instanceof HTMLCanvasElement || info instanceof Image) {
-        ctx.drawImage(info, x, y, size, size)
-      } else if (info.image) {
-        ctx.drawImage(info.image, x, y, size, size)
-      }
-    }
 
     const drawTile = (x, y, type) => {
       const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
@@ -42,7 +43,7 @@ export class MapRenderer {
         const idx = this.textureManager.getTileVariation(type, x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
           const info = this.textureManager.tileTextureCache[type][idx]
-          drawFromInfo(info, screenX, screenY)
+          this.drawFromInfo(ctx, info, screenX, screenY)
         } else {
           ctx.fillStyle = TILE_COLORS[type]
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -60,7 +61,7 @@ export class MapRenderer {
         const idx = this.textureManager.getTileVariation('ore', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
           const info = this.textureManager.tileTextureCache.ore[idx]
-          drawFromInfo(info, screenX, screenY)
+          this.drawFromInfo(ctx, info, screenX, screenY)
         } else {
           ctx.fillStyle = TILE_COLORS.ore
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -78,7 +79,7 @@ export class MapRenderer {
         const idx = this.textureManager.getTileVariation('seedCrystal', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.seedCrystal.length) {
           const info = this.textureManager.tileTextureCache.seedCrystal[idx]
-          drawFromInfo(info, screenX, screenY)
+          this.drawFromInfo(ctx, info, screenX, screenY)
         } else {
           ctx.fillStyle = TILE_COLORS.seedCrystal
           ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
@@ -93,10 +94,10 @@ export class MapRenderer {
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
-        
+
         // Render base tile layer
         drawTile(x, y, tile.type)
-        
+
         // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets or water
         if (tile.type === 'land') {
           const top = y > 0 ? mapGrid[y - 1][x] : null
@@ -137,7 +138,7 @@ export class MapRenderer {
             this.drawSOT(ctx, x, y, orientation, scrollOffset, useTexture, sotApplied, overlayType)
           }
         }
-        
+
         // Render ore or seed overlays if present
         if (tile.seedCrystal) {
           drawSeedOverlay(x, y)
@@ -195,7 +196,7 @@ export class MapRenderer {
       const idx = this.textureManager.getTileVariation(type, tileX, tileY)
       if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
         const info = this.textureManager.tileTextureCache[type][idx]
-        drawFromInfo(info, screenX, screenY, size)
+        this.drawFromInfo(ctx, info, screenX, screenY, size)
       } else {
         ctx.fillStyle = TILE_COLORS[type]
         ctx.fill()
@@ -236,7 +237,7 @@ export class MapRenderer {
     if (gameState.occupancyVisible && occupancyMap) {
       // Set up the red glow effect
       ctx.fillStyle = 'rgba(255, 0, 0, 0.3)' // Semi-transparent red
-      
+
       // Draw occupied tiles with red glow
       for (let y = startTileY; y < endTileY; y++) {
         for (let x = startTileX; x < endTileX; x++) {
