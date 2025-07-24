@@ -256,7 +256,8 @@ function calculatePositionalAudio(x, y) {
   const dx = x - centerX
   const dy = y - centerY
   const distance = Math.hypot(dx, dy)
-  const maxDistance = Math.max(canvas.width, canvas.height) * 0.75
+  // Increase positional sound range by 50%
+  const maxDistance = Math.max(canvas.width, canvas.height) * 1.125
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
