@@ -5,6 +5,7 @@ import { showNotification } from '../ui/notifications.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
 import { ENABLE_ENEMY_CONTROL, setEnemyControlEnabled } from '../config.js'
+import { updateUnitSpeedModifier } from '../utils.js'
 
 export class CheatSystem {
   constructor() {
@@ -12,6 +13,7 @@ export class CheatSystem {
     this.godModeEnabled = false
     this.originalHealthValues = new Map()
     this.godModeUnits = new Set()
+    this.selectedUnits = null
     this.setupStyles()
   }
 
@@ -191,6 +193,7 @@ export class CheatSystem {
           <li><code>godmode on</code> / <code>godmode off</code> - Toggle invincibility for all units</li>
           <li><code>give [amount]</code> - Add money (e.g., <code>give 10000</code>)</li>
           <li><code>money [amount]</code> - Set money to specific amount</li>
+          <li><code>hp [amount]</code> - Set HP of selected unit(s)</li>
           <li><code>status</code> - Show current cheat status</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
         </ul>
@@ -298,6 +301,13 @@ export class CheatSystem {
           this.setMoney(amount)
         } else {
           this.showError('Invalid amount. Use: money [number]')
+        }
+      } else if (normalizedCode.startsWith('hp ')) {
+        const amount = this.parseAmount(normalizedCode.substring(3))
+        if (amount !== null) {
+          this.setSelectedUnitsHP(amount)
+        } else {
+          this.showError('Invalid amount. Use: hp [number]')
         }
       }
       // Enemy control command
@@ -431,6 +441,30 @@ export class CheatSystem {
     ]
 
     showNotification(statusLines.join('\n'), 5000)
+  }
+
+  setSelectedUnitsRef(selectedUnits) {
+    this.selectedUnits = selectedUnits
+  }
+
+  setSelectedUnitsHP(amount) {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let appliedCount = 0
+    this.selectedUnits.forEach(unit => {
+      if (!unit || unit.maxHealth === undefined) return
+      const clamped = Math.min(Math.max(amount, 0), unit.maxHealth)
+      unit.health = clamped
+      updateUnitSpeedModifier(unit)
+      appliedCount++
+    })
+
+    if (appliedCount > 0) {
+      showNotification(`❤ Set HP to ${amount} for ${appliedCount} unit(s)`, 3000)
+    }
   }
 
   showError(message) {
