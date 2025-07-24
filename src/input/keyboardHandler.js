@@ -118,6 +118,11 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handleFactoryFocus(mapGrid)
       }
+      // E key to focus on selected unit(s)
+      else if (e.key.toLowerCase() === 'e') {
+        e.preventDefault()
+        this.handleSelectedUnitFocus(selectedUnits, mapGrid)
+      }
       // Control group assignment (ctrl+number)
       else if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
         e.preventDefault()
@@ -568,8 +573,47 @@ export class KeyboardHandler {
         mapGrid[0].length * TILE_SIZE - gameCanvas.width))
       gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - gameCanvas.height / 2,
         mapGrid.length * TILE_SIZE - gameCanvas.height))
+      gameState.dragVelocity = { x: 0, y: 0 }
       playSound('unitSelection')
     }
+  }
+
+  handleSelectedUnitFocus(selectedUnits, mapGrid) {
+    if (!selectedUnits || selectedUnits.length === 0) return
+
+    const gameCanvas = document.getElementById('gameCanvas')
+
+    // Get device pixel ratio to account for Retina displays
+    const pixelRatio = window.devicePixelRatio || 1
+
+    // Calculate logical canvas dimensions
+    const logicalCanvasWidth = gameCanvas.width / pixelRatio
+    const logicalCanvasHeight = gameCanvas.height / pixelRatio
+
+    let focusX, focusY
+
+    if (selectedUnits.length === 1) {
+      focusX = selectedUnits[0].x
+      focusY = selectedUnits[0].y
+    } else {
+      // Average position of all selected units
+      focusX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
+      focusY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
+    }
+
+    gameState.scrollOffset.x = Math.max(0, Math.min(
+      focusX - logicalCanvasWidth / 2,
+      mapGrid[0].length * TILE_SIZE - logicalCanvasWidth
+    ))
+
+    gameState.scrollOffset.y = Math.max(0, Math.min(
+      focusY - logicalCanvasHeight / 2,
+      mapGrid.length * TILE_SIZE - logicalCanvasHeight
+    ))
+
+    gameState.dragVelocity = { x: 0, y: 0 }
+
+    playSound('confirmed')
   }
 
   handleControlGroupAssignment(groupNum, selectedUnits) {
