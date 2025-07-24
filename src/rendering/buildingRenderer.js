@@ -149,6 +149,7 @@ export class BuildingRenderer {
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
     this.renderFactoryBudget(ctx, building, screenX, screenY, width, height)
+    this.renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height)
   }
 
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
@@ -806,6 +807,28 @@ export class BuildingRenderer {
         ctx.fillText(budgetText, textX, textY)
         ctx.restore()
       }
+    }
+  }
+
+  renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height) {
+    // Show power status when an enemy construction yard is selected
+    if (
+      building.type === 'constructionYard' &&
+      building.owner !== gameState.humanPlayer &&
+      building.selected
+    ) {
+      const powerText = `Power: ${gameState.enemyPowerSupply}`
+      ctx.save()
+      ctx.fillStyle = '#FFF'
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+      ctx.strokeStyle = '#000'
+      ctx.lineWidth = 2
+      const textX = screenX + width / 2
+      const textY = screenY - 12
+      ctx.strokeText(powerText, textX, textY)
+      ctx.fillText(powerText, textX, textY)
+      ctx.restore()
     }
   }
 

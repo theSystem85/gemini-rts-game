@@ -289,6 +289,12 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         aiFactory.buildStartTime = now
         // Build duration aligned with player: base 750ms * (cost/500)
         aiFactory.buildDuration = 750 * (cost / 500)
+        // Slow down construction if enemy power is negative
+        if (gameState.enemyPowerSupply < 0) {
+          aiFactory.buildDuration = aiFactory.buildDuration / Math.max(gameState.enemyBuildSpeedModifier, 0.01)
+        }
+        // Apply game speed multiplier
+        aiFactory.buildDuration = aiFactory.buildDuration / gameState.speedMultiplier
         aiFactory.buildingPosition = position // Store position for completion
         gameState[lastBuildingTimeKey] = now
 
@@ -525,7 +531,14 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         aiFactory.budget -= cost
         aiFactory.currentlyProducingUnit = unitType
         aiFactory.unitBuildStartTime = now
+        // Base unit production time
         aiFactory.unitBuildDuration = 10000
+        // Slow production if enemy power is negative
+        if (gameState.enemyPowerSupply < 0) {
+          aiFactory.unitBuildDuration = aiFactory.unitBuildDuration / Math.max(gameState.enemyBuildSpeedModifier, 0.01)
+        }
+        // Apply game speed multiplier
+        aiFactory.unitBuildDuration = aiFactory.unitBuildDuration / gameState.speedMultiplier
         aiFactory.unitSpawnBuilding = spawnFactory
         gameState[lastProductionKey] = now
 
