@@ -347,6 +347,8 @@ export const UNIT_GAS_PROPERTIES = {
   'tank-v2': { tankSize: 1900, consumption: 450 },
   'tank-v3': { tankSize: 1900, consumption: 450 },
   rocketTank: { tankSize: 1900, consumption: 450 },
+  // Recovery tanks consume the same fuel as standard tanks
+  recoveryTank: { tankSize: 1900, consumption: 450 },
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
   ambulance: { tankSize: 75, consumption: 25 },
   tankerTruck: { tankSize: 700, consumption: 150 }
