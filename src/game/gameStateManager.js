@@ -181,6 +181,8 @@ export function cleanupDestroyedUnits(units, gameState) {
         }
         unit.engineSound = null
       }
+      // Mark unit as destroyed so any pending async tasks can clean up
+      unit.destroyed = true
       units.splice(i, 1)
     }
   }

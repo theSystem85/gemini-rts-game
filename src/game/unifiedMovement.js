@@ -390,14 +390,22 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       if (!unit.engineSound) {
         playPositionalSound('tankDriveLoop', unit.x, unit.y, 0.2, 0, false, { playLoop: true })
           .then(handle => {
-            if (handle) {
-              const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
-              const targetGain = 0.2 * volumeFactor * getMasterVolume()
-              handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-              handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.5)
-              if (handle.panner) handle.panner.pan.value = pan
-              unit.engineSound = handle
+            if (!handle) return
+            // If unit was destroyed before the sound loaded, stop immediately
+            if (unit.health <= 0 || unit.destroyed) {
+              try {
+                handle.source.stop()
+              } catch (e) {
+                console.error('Error stopping pending engine sound:', e)
+              }
+              return
             }
+            const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+            const targetGain = 0.2 * volumeFactor * getMasterVolume()
+            handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+            handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.5)
+            if (handle.panner) handle.panner.pan.value = pan
+            unit.engineSound = handle
           })
       } else {
         const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
