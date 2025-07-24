@@ -140,6 +140,9 @@ export class TextureManager {
       const info = this.spriteMap[key]
       if (info) {
         this.tileTextureCache[type].push({ key, ...info })
+      } else {
+        // Fall back to loading standalone image (e.g. GIF animation)
+        this.loadSingleTexture(p, type, () => {})
       }
     }
 
@@ -170,6 +173,10 @@ export class TextureManager {
     // For grass tiles, try png first since they're png files
     else if (imagePath.includes('grass_tiles') || tileType === 'land') {
       extensions = ['png', 'jpg', 'webp']
+    }
+    // For water animation GIFs
+    else if (imagePath.includes('water_animation') || tileType === 'water') {
+      extensions = ['gif', 'jpg', 'webp', 'png']
     }
     
     this.getOrLoadImage(imagePath, extensions, (img) => {
