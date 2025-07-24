@@ -73,7 +73,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     processCommandQueues(units, mapGrid, unitCommands)
 
     // Apply remote control inputs for selected tanks
-    updateRemoteControlledUnits(units, bullets, mapGrid)
+    updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap)
 
     // Unit system updates
     units.forEach(unit => {
