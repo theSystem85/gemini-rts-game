@@ -17,6 +17,14 @@ export class MapRenderer {
       const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
       const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
 
+      if (type === 'water' && this.textureManager.waterFrames.length) {
+        const frame = this.textureManager.getCurrentWaterFrame()
+        if (frame) {
+          ctx.drawImage(frame, screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          return
+        }
+      }
+
       if (useTexture && this.textureManager.tileTextureCache[type]) {
         const idx = this.textureManager.getTileVariation(type, x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
@@ -200,7 +208,15 @@ export class MapRenderer {
     ctx.closePath()
     ctx.clip()
 
-    if (useTexture) {
+    if (type === 'water' && this.textureManager.waterFrames.length) {
+      const frame = this.textureManager.getCurrentWaterFrame()
+      if (frame) {
+        ctx.drawImage(frame, screenX, screenY, size, size)
+      } else {
+        ctx.fillStyle = TILE_COLORS[type]
+        ctx.fill()
+      }
+    } else if (useTexture) {
       const idx = this.textureManager.getTileVariation(type, tileX, tileY)
       if (idx >= 0 && idx < this.textureManager.tileTextureCache[type].length) {
         const info = this.textureManager.tileTextureCache[type][idx]

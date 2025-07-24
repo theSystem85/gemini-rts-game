@@ -27,6 +27,9 @@ export class TextureManager {
     this.spriteMap = {}
     this.allTexturesLoaded = false
     this.loadingStarted = false
+    this.waterFrames = []
+    this.waterFrameIndex = 0
+    this.lastWaterFrameTime = 0
   }
 
   // Helper function to load images once
@@ -111,6 +114,27 @@ export class TextureManager {
       img.src = TILE_SPRITE_SHEET
     })
     this.spriteImage = spriteImg
+
+    // Load water animation frames
+    const waterImg = await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = 'images/map/water_spritesheet.png'
+    })
+    this.waterFrames = []
+    for (let i = 0; i < 16; i++) {
+      const canvas = document.createElement('canvas')
+      canvas.width = TILE_SIZE
+      canvas.height = TILE_SIZE
+      const ctx = canvas.getContext('2d')
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      const sx = (i % 8) * 64
+      const sy = Math.floor(i / 8) * 64
+      ctx.drawImage(waterImg, sx, sy, 64, 64, 0, 0, TILE_SIZE, TILE_SIZE)
+      this.waterFrames.push(canvas)
+    }
 
     // Discover grass tiles configuration
     let grassTileData = null
@@ -383,9 +407,19 @@ export class TextureManager {
     const { passableCount, decorativeCount, impassableCount } = this.grassTileMetadata
     const impassableStartIndex = passableCount + decorativeCount
     const totalTextureCount = passableCount + decorativeCount + impassableCount
-    
+
     // Check if the selected index falls in the impassable range
     return selectedIndex >= impassableStartIndex && selectedIndex < totalTextureCount
+  }
+
+  getCurrentWaterFrame() {
+    if (!this.waterFrames.length) return null
+    const now = performance.now()
+    if (now - this.lastWaterFrameTime > 100) {
+      this.waterFrameIndex = (this.waterFrameIndex + 1) % this.waterFrames.length
+      this.lastWaterFrameTime = now
+    }
+    return this.waterFrames[this.waterFrameIndex]
   }
 
   // Export getter for unit image map for compatibility
