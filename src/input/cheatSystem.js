@@ -193,6 +193,7 @@ export class CheatSystem {
           <li><code>money [amount]</code> - Set money to specific amount</li>
           <li><code>status</code> - Show current cheat status</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
+          <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
         </ul>
       </div>
     `
@@ -305,6 +306,10 @@ export class CheatSystem {
         this.enableEnemyControl()
       } else if (normalizedCode === 'enemycontrol off') {
         this.disableEnemyControl()
+      }
+      // Crew toggle commands
+      else if (['driver', 'commander', 'loader', 'gunner'].includes(normalizedCode)) {
+        this.toggleCrewMember(normalizedCode)
       }
       // Status command
       else if (normalizedCode === 'status') {
@@ -511,5 +516,34 @@ export class CheatSystem {
       }
       unit.isInvincible = true
     }
+  }
+
+  toggleCrewMember(role) {
+    let selected = []
+    try {
+      if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
+        selected = window.debugGetSelectedUnits()
+      }
+    } catch (e) {
+      selected = []
+    }
+
+    if (!selected || selected.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    selected.forEach(unit => {
+      if (unit.crew && typeof unit.crew === 'object' && role in unit.crew) {
+        unit.crew[role] = !unit.crew[role]
+
+        if (!unit.crew[role] && unit.owner === gameState.humanPlayer) {
+          playSound('our' + role.charAt(0).toUpperCase() + role.slice(1) + 'IsOut')
+        }
+
+        const state = unit.crew[role] ? 'restored' : 'removed'
+        showNotification(`${role} ${state}`, 2000)
+      }
+    })
   }
 }
