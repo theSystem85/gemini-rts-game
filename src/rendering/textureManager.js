@@ -77,13 +77,16 @@ export class TextureManager {
             container = document.createElement('div')
             container.id = 'texture-preload'
             container.style.position = 'absolute'
-            container.style.width = '0'
-            container.style.height = '0'
+            container.style.width = '1px'
+            container.style.height = '1px'
             container.style.overflow = 'hidden'
-            container.style.visibility = 'hidden'
+            container.style.opacity = '0'
             container.style.pointerEvents = 'none'
             document.body.appendChild(container)
           }
+          img.style.width = '1px'
+          img.style.height = '1px'
+          img.style.position = 'absolute'
           container.appendChild(img)
         }
         // Cache the loaded image
