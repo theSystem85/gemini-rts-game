@@ -889,15 +889,23 @@ export class MouseHandler {
     // PRIORITY 2: Check for building selection (including vehicle factories)
     let clickedBuilding = null
     if (gameState.buildings && gameState.buildings.length > 0) {
+      const humanPlayer = gameState.humanPlayer || 'player1'
       for (const building of gameState.buildings) {
-        if (selectionManager.isHumanPlayerBuilding(building)) {
+        const isPlayerBuilding = selectionManager.isHumanPlayerBuilding(building)
+        const isEnemyYard =
+          building.type === 'constructionYard' && building.owner !== humanPlayer
+        if (isPlayerBuilding || isEnemyYard) {
           const buildingX = building.x * TILE_SIZE
           const buildingY = building.y * TILE_SIZE
           const buildingWidth = building.width * TILE_SIZE
           const buildingHeight = building.height * TILE_SIZE
 
-          if (worldX >= buildingX && worldX < buildingX + buildingWidth &&
-              worldY >= buildingY && worldY < buildingY + buildingHeight) {
+          if (
+            worldX >= buildingX &&
+            worldX < buildingX + buildingWidth &&
+            worldY >= buildingY &&
+            worldY < buildingY + buildingHeight
+          ) {
             clickedBuilding = building
             break
           }

@@ -790,8 +790,13 @@ export class BuildingRenderer {
   }
 
   renderFactoryBudget(ctx, building, screenX, screenY, width, height) {
-    // Only for enemy construction yards
-    if (building.type === 'constructionYard' && building.owner !== gameState.humanPlayer && gameState.factories) {
+    // Show enemy budget only when their construction yard is selected
+    if (
+      building.type === 'constructionYard' &&
+      building.owner !== gameState.humanPlayer &&
+      building.selected &&
+      gameState.factories
+    ) {
       const factory = gameState.factories.find(f => f.id === building.owner)
       if (factory && typeof factory.budget === 'number') {
         const budgetText = `$${factory.budget}`

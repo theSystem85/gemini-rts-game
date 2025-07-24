@@ -199,9 +199,9 @@ export class SelectionManager {
       const factories = gameState.factories || []
       factories.forEach(f => f.selected = false)
 
-      // Clear other building selections
+      // Clear any other building selections
       if (gameState.buildings) {
-        gameState.buildings.forEach(b => { if (this.isHumanPlayerBuilding(b)) b.selected = false })
+        gameState.buildings.forEach(b => { b.selected = false })
       }
       
       // Clear attack group targets when selection changes
@@ -259,9 +259,7 @@ export class SelectionManager {
       // Buildings can only be selected by direct clicking, not by drag selection
       if (gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
-          if (this.isHumanPlayerBuilding(building)) {
-            building.selected = false
-          }
+          building.selected = false
         }
       }
     } catch (error) {
