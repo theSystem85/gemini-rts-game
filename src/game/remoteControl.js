@@ -95,10 +95,13 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance * directionSign
       const nextTileX = Math.floor(checkX / TILE_SIZE)
       const nextTileY = Math.floor(checkY / TILE_SIZE)
+      const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
       const occupied =
         occupancyMap &&
         occupancyMap[nextTileY] &&
-        occupancyMap[nextTileY][nextTileX]
+        occupancyMap[nextTileY][nextTileX] &&
+        !(nextTileX === currentTileX && nextTileY === currentTileY)
 
       if (!occupied) {
         unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign

@@ -256,7 +256,10 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   const destType = destTile.type
   const destHasBuilding = destTile.building
   const destSeedCrystal = destTile.seedCrystal
-  const destOccupied = occupancyMap && occupancyMap[adjustedEnd.y][adjustedEnd.x]
+  const destOccupied =
+    occupancyMap &&
+    !(adjustedEnd.x === start.x && adjustedEnd.y === start.y) &&
+    occupancyMap[adjustedEnd.y][adjustedEnd.x]
   if (
     destType === 'water' ||
     destType === 'rock' ||
@@ -340,8 +343,14 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     for (const neighbor of neighbors) {
       const neighborKey = `${neighbor.x},${neighbor.y}`
       if (closedSet.has(neighborKey)) continue
-      // Skip if occupancyMap is provided and the tile is occupied.
-      if (occupancyMap && occupancyMap[neighbor.y][neighbor.x]) continue
+      // Skip if occupancyMap is provided and the tile is occupied,
+      // except when the tile is the starting tile for this path.
+      if (
+        occupancyMap &&
+        !(neighbor.x === start.x && neighbor.y === start.y) &&
+        occupancyMap[neighbor.y][neighbor.x]
+      )
+        continue
 
       const baseCost = Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
       const tileType = mapGrid[neighbor.y][neighbor.x].type
