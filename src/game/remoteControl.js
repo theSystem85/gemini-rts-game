@@ -51,6 +51,22 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         (unit.direction || 0) + (unit.rotationSpeed || 0.05)
       )
     }
+
+    // Manual turret rotation when shift-modified keys are used
+    if (rc.turretLeft) {
+      const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+      const current =
+        unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
+      unit.turretDirection = normalizeAngle(current - speed)
+      unit.turretShouldFollowMovement = false
+    }
+    if (rc.turretRight) {
+      const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+      const current =
+        unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
+      unit.turretDirection = normalizeAngle(current + speed)
+      unit.turretShouldFollowMovement = false
+    }
     // Keep movement rotation in sync with wagon direction
     unit.movement.rotation = unit.direction
     unit.movement.targetRotation = unit.direction

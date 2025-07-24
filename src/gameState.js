@@ -59,6 +59,8 @@ export const gameState = {
     backward: false,
     turnLeft: false,
     turnRight: false,
+    turretLeft: false,
+    turretRight: false,
     fire: false
   },
 
