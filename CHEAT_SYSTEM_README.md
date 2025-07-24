@@ -14,13 +14,17 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 ### 💰 Money Commands
 - **Give Money**: `give [amount]` - Adds money to current total
 - **Set Money**: `money [amount]` - Sets money to specific amount
-- **Examples**: 
+- **Examples**:
   - `give 10000` - Adds $10,000
   - `money 50000` - Sets money to $50,000
 
 ### ❤️ HP Command
 - **Command**: `hp [amount]` or `hp [amount]%`
 - **Function**: Sets the health of all currently selected units. Append `%` to use a percentage of each unit's max HP
+
+### ⛽ Fuel Command
+- **Command**: `fuel [amount]`
+- **Function**: Sets the fuel level of the currently selected unit. The value is clamped between `0` and the unit's maximum tank capacity.
 
 ### 🎮 Enemy Control
 - **Command**: `enemycontrol on` / `enemycontrol off`
@@ -61,6 +65,9 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 
 > hp 75%
 ❤ Set HP to 75% for 1 unit(s)
+
+> fuel 100
+⛽ Fuel set to 100 for 1 unit
 
 > status
 💰 Money: $35,000
