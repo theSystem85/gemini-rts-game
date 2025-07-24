@@ -8,7 +8,15 @@ export class MapRenderer {
 
   drawFromInfo(ctx, info, x, y, size = TILE_SIZE + 1) {
     if (!info) return
-    if (info.x !== undefined) {
+    if (
+      (typeof globalThis.HTMLCanvasElement !== 'undefined' &&
+        info instanceof globalThis.HTMLCanvasElement) ||
+      info instanceof Image
+    ) {
+      ctx.drawImage(info, x, y, size, size)
+    } else if (info.image) {
+      ctx.drawImage(info.image, x, y, size, size)
+    } else if (info.x !== undefined) {
       ctx.drawImage(
         this.textureManager.spriteImage,
         info.x,
@@ -20,14 +28,6 @@ export class MapRenderer {
         size,
         size
       )
-    } else if (
-      (typeof globalThis.HTMLCanvasElement !== 'undefined' &&
-        info instanceof globalThis.HTMLCanvasElement) ||
-      info instanceof Image
-    ) {
-      ctx.drawImage(info, x, y, size, size)
-    } else if (info.image) {
-      ctx.drawImage(info.image, x, y, size, size)
     }
   }
 
