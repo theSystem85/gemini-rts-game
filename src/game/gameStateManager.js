@@ -355,3 +355,33 @@ export function handleRightClickDeselect(gameState, units) {
     gameState.rightClick = false // reset flag after processing
   }
 }
+
+/**
+ * Keeps the camera centered on a followed unit if set.
+ * Automatically clears follow mode when the unit is deselected or destroyed.
+ * @param {Object} gameState - Game state object
+ * @param {Array} units - Array of unit objects
+ * @param {Array} mapGrid - 2D array representing the map
+ */
+export function updateCameraFollow(gameState, units, mapGrid) {
+  if (!gameState.cameraFollowUnitId) return
+
+  const followUnit = units.find(u => u.id === gameState.cameraFollowUnitId)
+  if (!followUnit || !followUnit.selected) {
+    gameState.cameraFollowUnitId = null
+    return
+  }
+
+  const gameCanvas = document.getElementById('gameCanvas')
+  if (!gameCanvas) return
+  const pixelRatio = window.devicePixelRatio || 1
+  const logicalWidth = gameCanvas.width / pixelRatio
+  const logicalHeight = gameCanvas.height / pixelRatio
+
+  const maxScrollX = mapGrid[0].length * TILE_SIZE - logicalWidth
+  const maxScrollY = mapGrid.length * TILE_SIZE - logicalHeight
+
+  gameState.scrollOffset.x = Math.max(0, Math.min(followUnit.x - logicalWidth / 2, maxScrollX))
+  gameState.scrollOffset.y = Math.max(0, Math.min(followUnit.y - logicalHeight / 2, maxScrollY))
+  gameState.dragVelocity = { x: 0, y: 0 }
+}

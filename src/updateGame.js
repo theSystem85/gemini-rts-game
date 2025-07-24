@@ -31,6 +31,7 @@ import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { processCommandQueues } from './game/commandQueue.js'
 import { 
   updateMapScrolling,
+  updateCameraFollow,
   updateOreSpread,
   updateExplosions,
   updateSmokeParticles,
@@ -67,6 +68,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
 
     // Map scrolling with inertia
     updateMapScrolling(gameState, mapGrid)
+    // Keep camera focused on followed unit when enabled
+    updateCameraFollow(gameState, units, mapGrid)
 
     // Process queued unit commands before running unit systems
     const unitCommands = getUnitCommandsHandler()
