@@ -421,8 +421,8 @@ export class UnitCommandsHandler {
 
   handleAmbulanceHealCommand(selectedUnits, targetUnit, mapGrid) {
     // Filter for ambulances that can heal
-    const ambulances = selectedUnits.filter(unit => 
-      unit.type === 'ambulance' && unit.crew > 0
+    const ambulances = selectedUnits.filter(unit =>
+      unit.type === 'ambulance' && unit.medics > 0
     )
 
     if (ambulances.length === 0) {
@@ -523,8 +523,8 @@ export class UnitCommandsHandler {
 
   handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
     // Filter for ambulances that need refilling
-    const ambulances = selectedUnits.filter(unit => 
-      unit.type === 'ambulance' && unit.crew < 4
+    const ambulances = selectedUnits.filter(unit =>
+      unit.type === 'ambulance' && unit.medics < 4
     )
 
     if (ambulances.length === 0) {

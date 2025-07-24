@@ -772,7 +772,7 @@ export class MouseHandler {
       }
 
       // Check for ambulance healing command if ambulances are selected
-      const hasSelectedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew > 0)
+      const hasSelectedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics > 0)
       
       if (hasSelectedAmbulances) {
         // Check if clicking on a friendly unit that needs healing
@@ -852,7 +852,7 @@ export class MouseHandler {
       }
 
       // Check for ambulance refilling command if ambulances are selected
-      const hasSelectedNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      const hasSelectedNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
       
       if (hasSelectedNotFullyLoadedAmbulances) {
         // Check if clicking on a player hospital
@@ -1005,7 +1005,7 @@ export class MouseHandler {
         }
         
         // Check for hospital if ambulances that need refilling are selected
-      const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
         if (hasNotFullyLoadedAmbulances) {
           for (const building of gameState.buildings) {
             if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&

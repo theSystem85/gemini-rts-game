@@ -265,7 +265,7 @@ export class UnitRenderer {
     } else if (unit.type === 'ambulance') {
       // Ambulance crew loading bar
       shouldShowBar = true
-      progress = (unit.crew || 0) / (unit.maxCrew || 10)
+      progress = (unit.medics || 0) / (unit.maxMedics || 10)
       barColor = '#00FFFF' // Cyan for ambulance crew
     } else if (unit.type === 'tankerTruck') {
       shouldShowBar = true
