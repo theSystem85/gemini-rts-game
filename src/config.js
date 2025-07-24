@@ -57,7 +57,7 @@ export const TILE_IMAGES = {
     useGrassTileDiscovery: true
   },
   water: {
-    paths: ['images/map/water01']
+    animated: true
   },
   rock: {
     paths: ['images/map/rock_on_grass01', 'images/map/rock01', 'images/map/rock02', 'images/map/rock03', 'images/map/rock04', 'images/map/rock05']
