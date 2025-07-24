@@ -35,6 +35,8 @@
     </style>
   </head>
   <body>
+    <!-- Hidden container to keep animated textures alive -->
+    <div id="texture-preload" style="position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none"></div>
     <div id="sidebar">
       <!-- Energy bar will be inserted here by JS at the very top -->
       <div id="energyBarContainer"></div>

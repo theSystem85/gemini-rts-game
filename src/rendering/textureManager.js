@@ -69,6 +69,23 @@ export class TextureManager {
 
       const img = new Image()
       img.onload = () => {
+        // If this is an animated gif, keep it in the DOM (hidden) so the
+        // animation frames advance and drawImage captures them
+        if (img.src.endsWith('.gif')) {
+          let container = document.getElementById('texture-preload')
+          if (!container) {
+            container = document.createElement('div')
+            container.id = 'texture-preload'
+            container.style.position = 'absolute'
+            container.style.width = '0'
+            container.style.height = '0'
+            container.style.overflow = 'hidden'
+            container.style.visibility = 'hidden'
+            container.style.pointerEvents = 'none'
+            document.body.appendChild(container)
+          }
+          container.appendChild(img)
+        }
         // Cache the loaded image
         this.imageCache[baseName] = img
         console.debug(`✅ Successfully loaded: ${baseName}.${extensions[index]}`)
