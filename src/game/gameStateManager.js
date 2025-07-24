@@ -2,7 +2,7 @@
 import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
-import { playSound, playPositionalSound } from '../sound.js'
+import { playSound, playPositionalSound, audioContext } from '../sound.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 
@@ -170,6 +170,16 @@ export function cleanupDestroyedUnits(units, gameState) {
       
       if (!unit.occupancyRemoved) {
         removeUnitOccupancy(unit, gameState.occupancyMap)
+      }
+
+      if (unit.engineSound) {
+        try {
+          unit.engineSound.gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+          unit.engineSound.source.stop()
+        } catch (e) {
+          console.error('Error stopping engine sound:', e)
+        }
+        unit.engineSound = null
       }
       units.splice(i, 1)
     }
