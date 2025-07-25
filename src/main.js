@@ -4,7 +4,7 @@
 import { setupInputHandlers, selectedUnits } from './inputHandler.js'
 import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } from './units.js'
 import { gameState } from './gameState.js'
-import { buildingData } from './buildings.js'
+import { buildingData, updatePowerSupply } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from './config.js'
 import { initFactories } from './factories.js'
@@ -127,6 +127,7 @@ class Game {
     
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    updatePowerSupply(gameState.buildings, gameState)
 
     // Initialize rally points as null
     factories.forEach(factory => {
@@ -332,6 +333,12 @@ class Game {
     // Clear existing buildings before generating new map
     gameState.buildings.length = 0
     gameState.powerSupply = 0
+    gameState.playerPowerSupply = 0
+    gameState.playerTotalPowerProduction = 0
+    gameState.playerPowerConsumption = 0
+    gameState.enemyPowerSupply = 0
+    gameState.enemyTotalPowerProduction = 0
+    gameState.enemyPowerConsumption = 0
     gameState.buildingPlacementMode = false
     gameState.currentBuildingType = null
     gameState.repairMode = false
@@ -352,6 +359,7 @@ class Game {
 
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    updatePowerSupply(gameState.buildings, gameState)
 
     units.length = 0
     bullets.length = 0
@@ -413,6 +421,12 @@ class Game {
     // Reset other game state properties
     gameState.buildings = []
     gameState.powerSupply = 0
+    gameState.playerPowerSupply = 0
+    gameState.playerTotalPowerProduction = 0
+    gameState.playerPowerConsumption = 0
+    gameState.enemyPowerSupply = 0
+    gameState.enemyTotalPowerProduction = 0
+    gameState.enemyPowerConsumption = 0
     gameState.buildingPlacementMode = false
     gameState.currentBuildingType = null
     gameState.repairMode = false
@@ -442,6 +456,7 @@ class Game {
 
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    updatePowerSupply(gameState.buildings, gameState)
     
     units.length = 0
     bullets.length = 0

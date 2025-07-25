@@ -830,7 +830,8 @@ export class BuildingRenderer {
       ctx.strokeStyle = '#000'
       ctx.lineWidth = 2
       const textX = screenX + width / 2
-      const textY = screenY - 12
+      // Display power below the budget text
+      const textY = screenY + 12
       ctx.strokeText(powerText, textX, textY)
       ctx.fillText(powerText, textX, textY)
       ctx.restore()
