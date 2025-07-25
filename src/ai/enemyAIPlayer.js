@@ -1,4 +1,4 @@
-import { buildingData, createBuilding, canPlaceBuilding, placeBuilding } from '../buildings.js'
+import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
 import { spawnEnemyUnit } from './enemySpawner.js'
 import { resetAttackDirections, manageAICrewHealing, manageAITankerTrucks } from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
@@ -351,6 +351,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         gameState.buildings.push(newBuilding)
         updateDangerZoneMaps(gameState)
         placeBuilding(newBuilding, mapGrid)
+        updatePowerSupply(gameState.buildings, gameState)
 
         if (DEBUG_AI_BUILDING) {
           console.log(`AI ${aiPlayerId} successfully placed ${buildingType} at (${position.x}, ${position.y})`)
@@ -376,6 +377,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           gameState.buildings.push(newBuilding)
           updateDangerZoneMaps(gameState)
           placeBuilding(newBuilding, mapGrid)
+          updatePowerSupply(gameState.buildings, gameState)
           
           if (DEBUG_AI_BUILDING) {
             console.log(`AI ${aiPlayerId} placed ${buildingType} at alternative position (${alternativePosition.x}, ${alternativePosition.y})`)
