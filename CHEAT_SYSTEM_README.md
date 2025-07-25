@@ -34,6 +34,10 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 - **Commands**: `driver`, `commander`, `loader`, `gunner`
 - **Function**: Toggles the specified crew member for all selected units
 
+### 🚀 Spawn Units
+- **Command**: `[type] [amount] [party]`
+- **Function**: Spawns the specified unit type around the mouse cursor. `amount` and `party` are optional.
+
 ### 📊 Status Command
 - **Command**: `status`
 - **Function**: Shows current game state including:
@@ -165,8 +169,6 @@ window.cheatSystem.addMoney(10000)
 window.cheatSystem.showStatus()
 ```
 
-## Future Enhancements
-
 ## Recent Bug Fixes
 
 - **v1.1** - Fixed god mode damage prevention issue where units with armor would still take 1 damage due to `Math.max(1, ...)` calculation in bulletSystem.js. Now damage is only applied when `actualDamage > 0`.
@@ -182,8 +184,7 @@ window.cheatSystem.showStatus()
 
 ## Future Enhancements
 
-Potential future additions:
-- Unit spawning commands
+- Potential future additions:
 - Speed manipulation
 - Resource commands
 - AI behavior toggles

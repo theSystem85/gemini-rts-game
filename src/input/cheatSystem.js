@@ -4,7 +4,15 @@ import { units } from '../main.js'
 import { showNotification } from '../ui/notifications.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
-import { ENABLE_ENEMY_CONTROL, setEnemyControlEnabled } from '../config.js'
+import {
+  ENABLE_ENEMY_CONTROL,
+  setEnemyControlEnabled,
+  TILE_SIZE,
+  DIRECTIONS,
+  MAX_SPAWN_SEARCH_DISTANCE,
+  UNIT_PROPERTIES
+} from '../config.js'
+import { createUnit, updateUnitOccupancy } from '../units.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 
 export class CheatSystem {
@@ -198,6 +206,7 @@ export class CheatSystem {
           <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
+          <li><code>[type] [amount] [party]</code> - Spawn units around the cursor (amount and party optional)</li>
         </ul>
       </div>
     `
@@ -324,29 +333,26 @@ export class CheatSystem {
         } else {
           this.showError('Invalid amount. Use: fuel [number] or fuel [percent%]')
         }
+      } else {
+        const spawn = this.parseSpawnCommand(code)
+        if (spawn) {
+          this.spawnUnitsAroundCursor(spawn.unitType, spawn.count, spawn.owner)
+        } else if (normalizedCode === 'enemycontrol on') {
+          this.enableEnemyControl()
+        } else if (normalizedCode === 'enemycontrol off') {
+          this.disableEnemyControl()
+        } else if (['driver', 'commander', 'loader', 'gunner'].includes(normalizedCode)) {
+          this.toggleCrewMember(normalizedCode)
+        } else if (normalizedCode === 'status') {
+          this.showStatus()
+        } else {
+          this.showError(`Unknown cheat code: "${code}"`)
+        }
       }
-      // Enemy control command
-      else if (normalizedCode === 'enemycontrol on') {
-        this.enableEnemyControl()
-      } else if (normalizedCode === 'enemycontrol off') {
-        this.disableEnemyControl()
+      } catch (error) {
+        console.error('Cheat system error:', error)
+        this.showError('Error processing cheat code')
       }
-      // Crew toggle commands
-      else if (['driver', 'commander', 'loader', 'gunner'].includes(normalizedCode)) {
-        this.toggleCrewMember(normalizedCode)
-      }
-      // Status command
-      else if (normalizedCode === 'status') {
-        this.showStatus()
-      }
-      // Unknown command
-      else {
-        this.showError(`Unknown cheat code: "${code}"`)
-      }
-    } catch (error) {
-      console.error('Cheat system error:', error)
-      this.showError('Error processing cheat code')
-    }
   }
 
   parseAmount(amountStr) {
@@ -366,6 +372,131 @@ export class CheatSystem {
     const amount = this.parseAmount(trimmed)
     if (amount === null) return null
     return { value: amount, isPercent: false, display: `${amount}` }
+  }
+
+  parseSpawnCommand(input) {
+    if (!input) return null
+    const tokens = input.trim().split(/\s+/)
+    if (tokens.length === 0) return null
+    const unitType = tokens[0].toLowerCase()
+    if (!UNIT_PROPERTIES[unitType]) return null
+
+    let count = 1
+    let owner = gameState.humanPlayer
+    if (tokens.length >= 2) {
+      const maybeNum = parseInt(tokens[1], 10)
+      if (!isNaN(maybeNum)) {
+        count = Math.max(1, maybeNum)
+        if (tokens.length >= 3) {
+          owner = this.resolvePartyAlias(tokens[2]) || owner
+        }
+      } else {
+        owner = this.resolvePartyAlias(tokens[1]) || owner
+      }
+    }
+    return { unitType, count, owner }
+  }
+
+  resolvePartyAlias(alias) {
+    if (!alias) return null
+    const map = {
+      player1: 'player1',
+      player2: 'player2',
+      player3: 'player3',
+      player4: 'player4',
+      green: 'player1',
+      red: 'player2',
+      blue: 'player3',
+      yellow: 'player4',
+      player: 'player1',
+      enemy: 'player2'
+    }
+    return map[alias.toLowerCase()] || null
+  }
+
+  isValidSpawnPosition(x, y) {
+    const mapGrid = gameState.mapGrid
+    if (
+      x < 0 ||
+      y < 0 ||
+      y >= mapGrid.length ||
+      x >= mapGrid[0].length
+    ) {
+      return false
+    }
+
+    const tile = mapGrid[y][x]
+    if (tile.type !== 'land' && tile.type !== 'street') return false
+    if (tile.seedCrystal) return false
+
+    const occupied = units.some(
+      u => Math.floor(u.x / TILE_SIZE) === x && Math.floor(u.y / TILE_SIZE) === y
+    )
+    return !occupied
+  }
+
+  findSpawnPositionNear(x, y) {
+    if (this.isValidSpawnPosition(x, y)) return { x, y }
+
+    for (let distance = 1; distance <= 5; distance++) {
+      for (const dir of DIRECTIONS) {
+        const nx = x + dir.x * distance
+        const ny = y + dir.y * distance
+        if (this.isValidSpawnPosition(nx, ny)) return { x: nx, y: ny }
+      }
+    }
+
+    for (let distance = 6; distance <= MAX_SPAWN_SEARCH_DISTANCE; distance++) {
+      for (let dx = -distance; dx <= distance; dx++) {
+        for (let dy = -distance; dy <= distance; dy++) {
+          if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+          const nx = x + dx
+          const ny = y + dy
+          if (this.isValidSpawnPosition(nx, ny)) return { x: nx, y: ny }
+        }
+      }
+    }
+    return null
+  }
+
+  spawnUnitsAroundCursor(unitType, count, owner) {
+    const baseX = Math.floor(gameState.cursorX / TILE_SIZE)
+    const baseY = Math.floor(gameState.cursorY / TILE_SIZE)
+
+    let spawned = 0
+    for (let i = 0; i < count; i++) {
+      const pos = this.findSpawnPositionNear(baseX, baseY)
+      if (!pos) break
+      const newUnit = createUnit({ id: owner }, unitType, pos.x, pos.y)
+      units.push(newUnit)
+
+      if (gameState.occupancyMap) {
+        const cX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const cY = Math.floor((newUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (
+          cY >= 0 &&
+          cY < gameState.occupancyMap.length &&
+          cX >= 0 &&
+          cX < gameState.occupancyMap[0].length
+        ) {
+          gameState.occupancyMap[cY][cX] =
+            (gameState.occupancyMap[cY][cX] || 0) + 1
+        }
+      }
+
+      updateUnitOccupancy(newUnit, -1, -1, gameState.occupancyMap)
+      this.updateNewUnit(newUnit)
+      spawned++
+    }
+
+    if (spawned > 0) {
+      showNotification(
+        `🚀 Spawned ${spawned} ${unitType}${spawned > 1 ? 's' : ''} for ${owner}`,
+        3000
+      )
+    } else {
+      this.showError('No valid spawn position found')
+    }
   }
 
   enableGodMode() {
