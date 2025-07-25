@@ -182,10 +182,10 @@ export class CheatSystem {
     dialog.innerHTML = `
       <h2>🎮 Cheat Console</h2>
       <div class="cheat-input-container">
-        <input 
-          type="text" 
-          class="cheat-input" 
-          id="cheat-input" 
+        <input
+          type="text"
+          class="cheat-input"
+          id="cheat-input"
           placeholder="Enter cheat code..."
           autocomplete="off"
           spellcheck="false"
@@ -290,7 +290,7 @@ export class CheatSystem {
 
   processCheatCode(code) {
     const normalizedCode = code.toLowerCase().trim()
-    
+
     try {
       // God mode commands
       if (normalizedCode === 'godmode on' || normalizedCode === 'god on' || normalizedCode === 'invincible on') {
@@ -349,10 +349,10 @@ export class CheatSystem {
           this.showError(`Unknown cheat code: "${code}"`)
         }
       }
-      } catch (error) {
-        console.error('Cheat system error:', error)
-        this.showError('Error processing cheat code')
-      }
+    } catch (error) {
+      console.error('Cheat system error:', error)
+      this.showError('Error processing cheat code')
+    }
   }
 
   parseAmount(amountStr) {
@@ -516,9 +516,9 @@ export class CheatSystem {
           health: unit.health,
           maxHealth: unit.maxHealth
         })
-        
+
         this.godModeUnits.add(unit.id)
-        
+
         // Set to maximum health and make effectively invincible
         unit.health = unit.maxHealth
         unit.isInvincible = true
@@ -553,7 +553,6 @@ export class CheatSystem {
   }
 
   addMoney(amount) {
-    const oldMoney = gameState.money
     gameState.money += amount
     gameState.totalMoneyEarned += amount
 
@@ -565,7 +564,6 @@ export class CheatSystem {
   }
 
   setMoney(amount) {
-    const oldMoney = gameState.money
     gameState.money = amount
 
     showNotification(`💰 Money set to $${amount.toLocaleString()}`, 3000)
@@ -582,7 +580,7 @@ export class CheatSystem {
     if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
       try {
         selected = window.debugGetSelectedUnits()
-      } catch (e) {
+      } catch {
         selected = []
       }
     }
@@ -674,22 +672,22 @@ export class CheatSystem {
   // Hook into unit damage to prevent damage when god mode is enabled
   preventDamage(target, damage) {
     if (!this.godModeEnabled) return damage
-    
+
     // Handle units
     if (target.owner === gameState.humanPlayer && target.id && this.godModeUnits.has(target.id)) {
       return 0 // Prevent all damage to player units
     }
-    
+
     // Handle buildings (buildings have owner but different structure)
     if (target.owner === gameState.humanPlayer && target.type && !target.id) {
       return 0 // Prevent all damage to player buildings
     }
-    
+
     // Handle factories (factories use id as human player ID)
     if (target.id === gameState.humanPlayer) {
       return 0 // Prevent all damage to player factory
     }
-    
+
     return damage // Allow normal damage
   }
 
@@ -752,7 +750,7 @@ export class CheatSystem {
       if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
         selected = window.debugGetSelectedUnits()
       }
-    } catch (e) {
+    } catch {
       selected = []
     }
 
