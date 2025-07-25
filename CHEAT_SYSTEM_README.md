@@ -36,7 +36,10 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 
 ### 🚀 Spawn Units
 - **Command**: `[type] [amount] [party]`
-- **Function**: Spawns the specified unit type around the mouse cursor. `amount` and `party` are optional.
+- **Function**: Spawns the specified unit type around the mouse cursor. `amount` and `party` are optional. When `party` is omitted, units belong to the player's party.
+  - `tank_v1 9` spawns nine tanks for the player
+  - `tank_v3` spawns one tank for the player
+  - `tank_v2 3 red` spawns three tanks for the red party
 
 ### 📊 Status Command
 - **Command**: `status`
