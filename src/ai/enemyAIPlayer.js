@@ -508,7 +508,15 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         let spawnFactory = aiFactory // Default to main construction yard
 
         // Harvesters and other vehicle units should spawn from vehicle factories
-        if (unitType === 'harvester' || unitType === 'tank_v1' || unitType === 'tank-v2' || unitType === 'tank-v3' || unitType === 'rocketTank' || unitType === 'ambulance') {
+        if (
+          unitType === 'harvester' ||
+          unitType === 'tank_v1' ||
+          unitType === 'tank-v2' ||
+          unitType === 'tank-v3' ||
+          unitType === 'rocketTank' ||
+          unitType === 'ambulance' ||
+          unitType === 'tankerTruck'
+        ) {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
           )
