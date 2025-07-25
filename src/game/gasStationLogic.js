@@ -21,7 +21,9 @@ export const updateGasStationLogic = logPerformance(function(units, buildings, g
         unit.tileY >= areaStartY &&
         unit.tileY <= areaEndY
 
-      if (inArea) {
+      const stationary = !(unit.movement && unit.movement.isMoving)
+
+      if (inArea && stationary) {
         let refilling = false
 
         if (unit.gas < unit.maxGas) {

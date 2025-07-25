@@ -98,7 +98,11 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
       const dist = Math.hypot(unit.x - slot.x * TILE_SIZE, unit.y - slot.y * TILE_SIZE)
       
       // Check if unit has been moved away from workshop (new path or move target)
-      if (unit.repairingAtWorkshop && (unit.path.length > 0 || (unit.moveTarget && (unit.moveTarget.x !== slot.x || unit.moveTarget.y !== slot.y)))) {
+      if (unit.repairingAtWorkshop && (
+          unit.path.length > 0 ||
+          (unit.moveTarget && (unit.moveTarget.x !== slot.x || unit.moveTarget.y !== slot.y)) ||
+          (unit.movement && unit.movement.isMoving)
+        )) {
         // Unit is being moved away, clean up repair state and workshop assignment
         unit.repairingAtWorkshop = false
         unit.returningToWorkshop = false
@@ -111,7 +115,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
         return
       }
       if (!unit.repairingAtWorkshop) {
-        if (dist < TILE_SIZE / 3) {
+        if (dist < TILE_SIZE / 3 && !(unit.movement && unit.movement.isMoving)) {
           unit.repairingAtWorkshop = true
           unit.path = []
           unit.moveTarget = null
