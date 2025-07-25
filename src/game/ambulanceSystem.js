@@ -43,6 +43,13 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         return
       }
 
+      // Target must be stationary to receive healing
+      if (target.movement && target.movement.isMoving) {
+        ambulance.healingTarget = null
+        ambulance.healingTimer = 0
+        return
+      }
+
       const missingCrew = Object.entries(target.crew).filter(([_, alive]) => !alive)
       if (missingCrew.length === 0) {
         // Target is fully healed
@@ -98,6 +105,10 @@ export function canAmbulanceHealUnit(ambulance, targetUnit) {
     return false
   }
 
+  if (targetUnit.movement && targetUnit.movement.isMoving) {
+    return false
+  }
+
   // Check if target has missing crew members
   const missingCrew = Object.entries(targetUnit.crew).filter(([_, alive]) => !alive)
   if (missingCrew.length === 0) {
@@ -117,6 +128,10 @@ export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
     return false
   }
   if (!canAmbulanceHealUnit(ambulance, targetUnit)) {
+    return false
+  }
+
+  if (targetUnit.movement && targetUnit.movement.isMoving) {
     return false
   }
 

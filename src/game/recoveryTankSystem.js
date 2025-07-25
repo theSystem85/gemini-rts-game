@@ -36,10 +36,12 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
     // Auto-repair logic - find nearby damaged units
     if (!tank.repairTarget) {
       const target = units.find(u =>
-        u.owner === tank.owner && u !== tank &&
+        u.owner === tank.owner &&
+        u !== tank &&
         u.health < u.maxHealth &&
         Math.abs(u.tileX - tank.tileX) <= 1 &&
-        Math.abs(u.tileY - tank.tileY) <= 1
+        Math.abs(u.tileY - tank.tileY) <= 1 &&
+        !(u.movement && u.movement.isMoving)
       )
       if (target) {
         tank.repairTarget = target
@@ -64,7 +66,10 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       const target = tank.repairTarget
       
       // Check if target is still valid
-      if (target.health <= 0 || Math.abs(target.tileX - tank.tileX) > 1 || Math.abs(target.tileY - tank.tileY) > 1) {
+      if (target.health <= 0 ||
+          Math.abs(target.tileX - tank.tileX) > 1 ||
+          Math.abs(target.tileY - tank.tileY) > 1 ||
+          (target.movement && target.movement.isMoving)) {
         // console.log(`Recovery tank repair cancelled: target invalid`)
         tank.repairTarget = null
         tank.repairData = null

@@ -58,7 +58,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       } else {
         // Check if we're close enough to start refueling
         const distance = Math.abs(emergencyUnit.tileX - tanker.tileX) + Math.abs(emergencyUnit.tileY - tanker.tileY)
-        if (distance <= 1) {
+        if (distance <= 1 && !(emergencyUnit.movement && emergencyUnit.movement.isMoving)) {
           // Start emergency refueling
           tanker.refuelTarget = emergencyUnit
           tanker.refuelTimer = 0
@@ -79,7 +79,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         u.gas < (u.maxGas * 0.95) && // Only refuel if unit has less than 95% gas
         u.health > 0 && // Ensure target is alive
         Math.abs(u.tileX - tanker.tileX) <= 1 &&
-        Math.abs(u.tileY - tanker.tileY) <= 1
+        Math.abs(u.tileY - tanker.tileY) <= 1 &&
+        !(u.movement && u.movement.isMoving)
       )
       if (target && (tanker.supplyGas > 0 || tanker.supplyGas === undefined)) {
         // Initialize supply gas if not set
@@ -121,7 +122,11 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         tanker.lastRefuelDebug = performance.now()
       }
       
-      if (!target || target.health <= 0 || Math.abs(target.tileX - tanker.tileX) > 1 || Math.abs(target.tileY - tanker.tileY) > 1) {
+      if (!target ||
+          target.health <= 0 ||
+          Math.abs(target.tileX - tanker.tileX) > 1 ||
+          Math.abs(target.tileY - tanker.tileY) > 1 ||
+          (target.movement && target.movement.isMoving)) {
         const distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
         console.log(`Tanker ${tanker.id} lost refuel target - target exists: ${!!target}, distance: ${distance}`)
         
