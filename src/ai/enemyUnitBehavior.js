@@ -41,8 +41,8 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   // Skip further processing if unit is retreating
   if (unit.isRetreating) return
 
-  // PRIORITY: Check crew status and handle hospital returns (exclude ambulance and rocket tank for AI)
-  if (unit.crew && typeof unit.crew === 'object' && unit.type !== 'ambulance' && unit.type !== 'rocketTank') {
+  // PRIORITY: Check crew status and handle hospital returns (exclude ambulance for AI)
+  if (unit.crew && typeof unit.crew === 'object' && unit.type !== 'ambulance') {
     const missingCrew = Object.values(unit.crew).filter(alive => !alive).length
     
     if (missingCrew > 0 && !unit.returningToHospital) {
@@ -774,9 +774,9 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
   )
   
   if (unitsNeedingHealing.length > 0) {
-    // Prioritize units that cannot move (excluding ambulance and rocket tank which don't use crew system)
-    const immobileUnits = unitsNeedingHealing.filter(u => 
-      u.crew && (u.type !== 'ambulance' && u.type !== 'rocketTank') && (!u.crew.driver || !u.crew.commander)
+    // Prioritize units that cannot move (excluding ambulance which doesn't use the crew system)
+    const immobileUnits = unitsNeedingHealing.filter(u =>
+      u.crew && u.type !== 'ambulance' && (!u.crew.driver || !u.crew.commander)
     )
     const targetUnit = immobileUnits.length > 0 ? immobileUnits[0] : unitsNeedingHealing[0]
     

@@ -859,10 +859,10 @@ export function manageAICrewHealing(units, gameState, now) {
     
     if (hospitals.length === 0) return // No hospitals available
     
-    // Find units with missing crew members (excluding ambulance and rocket tank)
+    // Find units with missing crew members (excluding ambulance)
     const unitsNeedingCrew = aiUnits.filter(unit => {
       if (!unit.crew || typeof unit.crew !== 'object') return false
-      if (unit.type === 'ambulance' || unit.type === 'rocketTank') return false // AI units don't use crew system
+      if (unit.type === 'ambulance') return false
       return Object.values(unit.crew).some(alive => !alive)
     })
     
@@ -881,7 +881,7 @@ export function manageAICrewHealing(units, gameState, now) {
     
     // Manage ambulance refilling
     ambulances.forEach(ambulance => {
-      if (ambulance.crew < 4 && !ambulance.refillingTarget && !ambulance.healingTarget) {
+      if (ambulance.medics < 4 && !ambulance.refillingTarget && !ambulance.healingTarget) {
         sendAmbulanceToHospital(ambulance, hospitals[0], gameState.mapGrid)
       }
     })
@@ -893,9 +893,9 @@ export function manageAICrewHealing(units, gameState, now) {
  */
 function assignAmbulanceToUnit(targetUnit, ambulances, hospital) {
   // Find available ambulance with crew
-  const availableAmbulance = ambulances.find(ambulance => 
-    ambulance.crew > 0 && 
-    !ambulance.healingTarget && 
+  const availableAmbulance = ambulances.find(ambulance =>
+    ambulance.medics > 0 &&
+    !ambulance.healingTarget &&
     !ambulance.refillingTarget &&
     !ambulance.path // Not currently moving
   )

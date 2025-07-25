@@ -8,8 +8,8 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
     const healRow = hospital.y + hospital.height
     units.forEach(unit=>{
       if(!unit.crew) return
-      // Skip ambulances and rocket tanks for AI players as they don't use crew system
-      if((unit.owner !== gameState.humanPlayer) && (unit.type === 'ambulance' || unit.type === 'rocketTank')) return
+      // Skip ambulances for AI players as they don't use the crew system
+      if((unit.owner !== gameState.humanPlayer) && (unit.type === 'ambulance')) return
       if(unit.tileY===healRow && unit.tileX>=hospital.x && unit.tileX<hospital.x+hospital.width){
         unit.healTimer = (unit.healTimer||0)+delta
         const missing = Object.entries(unit.crew).filter(([_,alive])=>!alive)

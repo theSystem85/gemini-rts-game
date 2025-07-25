@@ -46,7 +46,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       }
 
       // Check if ambulance has crew to give
-      if (!ambulance.crew || ambulance.crew <= 0) {
+      if (!ambulance.medics || ambulance.medics <= 0) {
         ambulance.healingTarget = null
         ambulance.healingTimer = 0
         return
@@ -56,7 +56,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       ambulance.healingTimer = (ambulance.healingTimer || 0) + delta
       const healingInterval = 2000 // 2 seconds per crew member
 
-      while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.crew > 0) {
+      while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
         const [role] = missingCrew.shift()
         
         // Heal in order: driver, commander, loader, gunner
@@ -72,7 +72,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         }
         
         if (healedRole) {
-          ambulance.crew -= 1
+          ambulance.medics -= 1
           ambulance.healingTimer -= healingInterval
           
           // Play sound effect
@@ -96,7 +96,7 @@ export function canAmbulanceHealUnit(ambulance, targetUnit) {
   }
 
   // Check if ambulance has crew to give
-  if (!ambulance.crew || ambulance.crew <= 0) {
+  if (!ambulance.medics || ambulance.medics <= 0) {
     return false
   }
 

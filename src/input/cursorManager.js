@@ -124,8 +124,8 @@ export class CursorManager {
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
       const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance')
-      const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew >= 4)
-      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.crew < 4)
+      const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics >= 4)
+      const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
       // Check for recovery tank interactions
       const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
       const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)

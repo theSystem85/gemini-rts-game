@@ -685,15 +685,24 @@ export function createUnit(factory, unitType, x, y) {
   }
 
   // Add unit-specific properties
-  if (actualType.startsWith('tank')) {
-    unit.crew = { driver: true, gunner: true, loader: true, commander: true };
+  const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
+  const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
+
+  unit.crew = { driver: true, commander: true }
+
+  if (fullCrewTanks.includes(actualType)) {
+    unit.crew.gunner = true
+    unit.crew.loader = true
+  } else if (loaderUnits.includes(actualType)) {
+    unit.crew.loader = true
   }
+
   if (actualType === 'ambulance') {
-    unit.crew = unitProps.crew || 10;
-    unit.maxCrew = unitProps.maxCrew || 10;
+    unit.medics = unitProps.medics || 10
+    unit.maxMedics = unitProps.maxMedics || 10
     unit.ambulanceProps = {
       streetSpeedMultiplier: unitProps.streetSpeedMultiplier || 6.0
-    };
+    }
   }
   if (actualType === 'tankerTruck') {
     unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY;

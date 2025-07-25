@@ -101,8 +101,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   }
 
-  // **CREW MOVEMENT RESTRICTIONS** - Check crew status for tanks (exclude ambulance and rocket tank for AI)
-  if (unit.crew && typeof unit.crew === 'object' && !unit.crew.driver && unit.type !== 'ambulance' && unit.type !== 'rocketTank') {
+  // **CREW MOVEMENT RESTRICTIONS** - Check crew status (exclude ambulance for AI)
+  if (unit.crew && typeof unit.crew === 'object' && !unit.crew.driver && unit.type !== 'ambulance') {
     // Tank cannot move without driver
     unit.path = [] // Clear any pending movement
     unit.moveTarget = null

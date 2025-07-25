@@ -252,8 +252,8 @@ export const UNIT_PROPERTIES = {
     streetSpeedMultiplier: 4.0,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0,
-    maxCrew: 10,
-    crew: 10 // Initial crew capacity
+    maxMedics: 10,
+    medics: 10 // Initial crew capacity
   },
   tankerTruck: {
     health: 20,
