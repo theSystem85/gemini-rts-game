@@ -456,7 +456,7 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
   const unloadTime = powerSupply < 0 ? HARVESTER_UNLOAD_TIME * 2 : HARVESTER_UNLOAD_TIME
   if (now - unit.unloadStartTime >= unloadTime) {
     // Calculate money based on ore carried
-    const moneyEarned = unit.oreCarried * 1000
+    const moneyEarned = Math.max(0, unit.oreCarried * 1000)
     
     // Unloading complete
     if (unit.owner === gameState.humanPlayer) {

@@ -289,7 +289,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
       if (position) {
         // Start construction process instead of placing immediately
-        aiFactory.budget -= cost
+        aiFactory.budget = Math.max(0, aiFactory.budget - cost)
         aiFactory.currentlyBuilding = buildingType
         aiFactory.buildStartTime = now
         // Build duration aligned with player: base 750ms * (cost/500)
@@ -544,7 +544,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         // Determine cost based on unit type
         const cost = getUnitCost(unitType)
         // Record production details and delay spawning until build time completes
-        aiFactory.budget -= cost
+        aiFactory.budget = Math.max(0, aiFactory.budget - cost)
         aiFactory.currentlyProducingUnit = unitType
         aiFactory.unitBuildStartTime = now
         // Base unit production time
