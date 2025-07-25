@@ -799,7 +799,7 @@ export class BuildingRenderer {
     ) {
       const factory = gameState.factories.find(f => f.id === building.owner)
       if (factory && typeof factory.budget === 'number') {
-        const budgetText = `$${factory.budget}`
+        const budgetText = `$${Math.round(factory.budget)}`
         ctx.save()
         ctx.fillStyle = '#FFF'
         ctx.font = '12px Arial'
