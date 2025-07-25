@@ -22,3 +22,4 @@ TODO-Temporary.md
 *.njsproj
 *.sln
 *.sw?
+.env
