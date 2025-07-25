@@ -45,11 +45,17 @@ export const updateGasStationLogic = logPerformance(function(units, buildings, g
         }
 
         if (refilling) {
+          const costPerMs = GAS_REFILL_COST / GAS_REFILL_TIME
+          const costThisTick = costPerMs * delta
           if (unit.owner === gameState.humanPlayer) {
-            if (gameState.money >= GAS_REFILL_COST) gameState.money -= GAS_REFILL_COST
+            if (gameState.money > 0) {
+              gameState.money = Math.max(0, gameState.money - costThisTick)
+            }
           } else {
             const aiFactory = gameState.factories?.find(f => f.id === unit.owner)
-            if (aiFactory) aiFactory.budget -= GAS_REFILL_COST
+            if (aiFactory && typeof aiFactory.budget === 'number') {
+              aiFactory.budget = Math.max(0, aiFactory.budget - costThisTick)
+            }
           }
         } else {
           unit.gasRefillTimer = 0
