@@ -34,6 +34,16 @@ export const gameState = {
   mapGrid: [], // Add mapGrid array to gameState
   occupancyMap: [], // Global occupancy map updated incrementally
   powerSupply: 0,
+  // Separate power tracking for each side
+  playerPowerSupply: 0,
+  playerTotalPowerProduction: 0,
+  playerPowerConsumption: 0,
+  enemyPowerSupply: 0,
+  enemyTotalPowerProduction: 0,
+  enemyPowerConsumption: 0,
+  // Build speed modifiers start at normal speed
+  playerBuildSpeedModifier: 1.0,
+  enemyBuildSpeedModifier: 1.0,
   buildingPlacementMode: false,
   currentBuildingType: null,
   cursorX: 0,
