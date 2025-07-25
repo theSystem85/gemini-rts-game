@@ -83,6 +83,10 @@ export class CursorManager {
     const worldX = x - rect.left + gameState.scrollOffset.x
     const worldY = y - rect.top + gameState.scrollOffset.y
 
+    // Update global cursor position for other systems like cheats
+    gameState.cursorX = worldX
+    gameState.cursorY = worldY
+
     // Convert to tile coordinates
     const tileX = Math.floor(worldX / TILE_SIZE)
     const tileY = Math.floor(worldY / TILE_SIZE)
