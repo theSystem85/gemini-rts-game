@@ -590,6 +590,9 @@ export const productionQueue = {
     if (this.unitItems.length > 0) {
       this.startNextUnitProduction()
     }
+
+    // Resume any paused productions that might now be affordable
+    this.tryResumeProduction()
   },
 
   cancelBuildingProduction: function() {
@@ -628,6 +631,9 @@ export const productionQueue = {
     if (this.buildingItems.length > 0) {
       this.startNextBuildingProduction()
     }
+
+    // Resume other productions that might have been paused
+    this.tryResumeProduction()
   },
 
   // Method to cancel a building placement
@@ -664,6 +670,9 @@ export const productionQueue = {
 
     // Show notification
     showNotification(`${buildingData[type].displayName} construction canceled`)
+
+    // Resume other productions if possible
+    this.tryResumeProduction()
   },
 
   // Method to enable building placement mode for a ready building
@@ -798,6 +807,9 @@ export const productionQueue = {
 
     // Show notification
     showNotification(`${buildingData[buildingType].displayName} construction canceled`)
+
+    // Resume other productions if possible
+    this.tryResumeProduction()
   },
 
   // Method to update the ready building counter display
