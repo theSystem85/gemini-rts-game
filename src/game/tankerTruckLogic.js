@@ -10,6 +10,13 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
   handleEmergencyFuelRequests(tankers, units, gameState)
 
   tankers.forEach(tanker => {
+    // Tankers need a loader to operate the refueling equipment
+    if (tanker.crew && typeof tanker.crew === 'object' && !tanker.crew.loader) {
+      tanker.refuelTarget = null
+      tanker.emergencyTarget = null
+      tanker.refuelTimer = 0
+      return
+    }
     // Ensure tanker has proper gas properties initialized
     if (tanker.supplyGas === undefined || tanker.maxSupplyGas === undefined) {
       tanker.maxSupplyGas = TANKER_SUPPLY_CAPACITY
