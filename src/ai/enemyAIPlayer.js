@@ -125,7 +125,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
   // Define the keys we'll use for this AI player's state
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`
   const lastProductionKey = `${aiPlayerId}LastProductionTime`
-  
+
   // Debug logging (enable temporarily to debug building issues)
   const DEBUG_AI_BUILDING = false  // Disable debugging
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
@@ -179,14 +179,19 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (oreRefineries.length === 0 && aiFactory.budget >= buildingData.oreRefinery.cost) {
       buildingType = 'oreRefinery'
       cost = buildingData.oreRefinery.cost
-    } else if (oreRefineries.length > 0 && gasStations.length === 0 && aiFactory.budget >= buildingData.gasStation.cost) {
-      buildingType = 'gasStation'
-      cost = buildingData.gasStation.cost
-
     // Production - Vehicle Factory for unit production
     } else if (vehicleFactories.length === 0 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
+    } else if (
+      vehicleFactories.length > 0 &&
+      aiHarvesters.length > 0 &&
+      gasStations.length === 0 &&
+      aiFactory.budget >= buildingData.gasStation.cost
+    ) {
+      // Build gas station only after the first harvester is produced
+      buildingType = 'gasStation'
+      cost = buildingData.gasStation.cost
     } else if (aiBuildings.filter(b => b.type === 'vehicleWorkshop').length === 0) {
       // Build a vehicle workshop once a factory exists
       buildingType = 'vehicleWorkshop'
@@ -276,7 +281,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     if (buildingType && aiFactory.budget >= cost) {
       // Try advanced positioning first, then fallback to simple positioning
       let position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories, aiPlayerId)
-      
+
       if (!position) {
         console.log(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
         position = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
@@ -361,15 +366,15 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         if (DEBUG_AI_BUILDING) {
           console.log(`AI ${aiPlayerId} original position became invalid for ${buildingType}, searching for alternative`)
         }
-        
+
         // Try the advanced algorithm first
         let alternativePosition = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories, aiPlayerId)
-        
+
         // If that fails, try the simple algorithm
         if (!alternativePosition) {
           alternativePosition = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
         }
-        
+
         if (alternativePosition) {
           // Found an alternative position, place the building there
           const newBuilding = createBuilding(buildingType, alternativePosition.x, alternativePosition.y)
@@ -378,14 +383,14 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
           updateDangerZoneMaps(gameState)
           placeBuilding(newBuilding, mapGrid)
           updatePowerSupply(gameState.buildings, gameState)
-          
+
           if (DEBUG_AI_BUILDING) {
             console.log(`AI ${aiPlayerId} placed ${buildingType} at alternative position (${alternativePosition.x}, ${alternativePosition.y})`)
           }
         } else {
           // No alternative position found, refund the cost as last resort
           aiFactory.budget += buildingData[buildingType]?.cost || 0
-          
+
           if (DEBUG_AI_BUILDING) {
             console.log(`AI ${aiPlayerId} could not find any valid position for ${buildingType}, refunded cost`)
           }
@@ -434,7 +439,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
   if (gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'powerPlant').length > 0 &&
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'vehicleFactory').length > 0 &&
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'oreRefinery').length > 0) {
-    
+
     // Don't produce units if already producing a unit
     if ( aiFactory && !aiFactory.currentlyProducingUnit && now - (gameState[lastProductionKey] || 0) >= 8000 ) {
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
@@ -442,6 +447,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       const aiTankers = units.filter(u => u.owner === aiPlayerId && u.type === 'tankerTruck')
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
+      const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
       const rocketTurretsBuilt = aiBuildings.filter(b => b.type === 'rocketTurret').length
       const teslaCoilsBuilt = aiBuildings.filter(b => b.type === 'teslaCoil').length
@@ -466,7 +472,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
 
-      if (aiTankers.length === 0 && aiHarvesters.length > 0) {
+      if (aiTankers.length === 0 && aiHarvesters.length > 0 && gasStations.length > 0) {
         // Ensure at least one tanker truck exists to refuel units
         unitType = 'tankerTruck'
       } else if (currentHarvesterTotal < MAX_HARVESTERS) {
@@ -502,7 +508,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       }
       // Determine cost based on unit type
       const cost = getUnitCost(unitType)
-      
+
       if (unitType !== 'none' && aiFactory.budget >= cost) {
         // Find appropriate spawn factory for this unit type
         let spawnFactory = aiFactory // Default to main construction yard
@@ -563,7 +569,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
     updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, targetedOreTiles, bullets)
   })
-  
+
   // --- Manage AI Crew Healing ---
   // Run crew management for this AI player
   const aiUnits = units.filter(u => u.owner === aiPlayerId)
