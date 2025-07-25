@@ -378,8 +378,18 @@ export class CheatSystem {
     if (!input) return null
     const tokens = input.trim().split(/\s+/)
     if (tokens.length === 0) return null
-    const unitType = tokens[0].toLowerCase()
-    if (!UNIT_PROPERTIES[unitType]) return null
+    const rawType = tokens[0]
+
+    // Create a case-insensitive map of allowed unit types on first use
+    if (!this.unitTypeMap) {
+      this.unitTypeMap = Object.keys(UNIT_PROPERTIES).reduce((acc, key) => {
+        acc[key.toLowerCase()] = key
+        return acc
+      }, {})
+    }
+
+    const unitType = this.unitTypeMap[rawType.toLowerCase()]
+    if (!unitType) return null
 
     let count = 1
     let owner = gameState.humanPlayer
