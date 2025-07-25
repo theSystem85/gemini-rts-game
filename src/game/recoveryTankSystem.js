@@ -25,6 +25,14 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       tank.speed = unitProps
     }
 
+    const hasLoader = !(tank.crew && typeof tank.crew === 'object' && !tank.crew.loader)
+    if (!hasLoader) {
+      tank.repairTarget = null
+      tank.repairData = null
+      tank.repairStarted = false
+      return
+    }
+
     // Auto-repair logic - find nearby damaged units
     if (!tank.repairTarget) {
       const target = units.find(u =>

@@ -8,6 +8,12 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
   if (ambulances.length === 0) return
 
   ambulances.forEach(ambulance => {
+    // Ambulances require a loader to tend to wounded units
+    if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
+      ambulance.healingTarget = null
+      ambulance.healingTimer = 0
+      return
+    }
     // Handle ambulance healing target
     if (ambulance.healingTarget) {
       const target = ambulance.healingTarget
@@ -84,6 +90,9 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
 })
 
 export function canAmbulanceHealUnit(ambulance, targetUnit) {
+  if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
+    return false
+  }
   // Check if target has crew system
   if (!targetUnit.crew || typeof targetUnit.crew !== 'object') {
     return false
@@ -104,6 +113,9 @@ export function canAmbulanceHealUnit(ambulance, targetUnit) {
 }
 
 export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
+  if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
+    return false
+  }
   if (!canAmbulanceHealUnit(ambulance, targetUnit)) {
     return false
   }

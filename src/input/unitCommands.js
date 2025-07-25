@@ -422,7 +422,8 @@ export class UnitCommandsHandler {
   handleAmbulanceHealCommand(selectedUnits, targetUnit, mapGrid) {
     // Filter for ambulances that can heal
     const ambulances = selectedUnits.filter(unit =>
-      unit.type === 'ambulance' && unit.medics > 0
+      unit.type === 'ambulance' && unit.medics > 0 &&
+      (!unit.crew || unit.crew.loader)
     )
 
     if (ambulances.length === 0) {
@@ -490,7 +491,9 @@ export class UnitCommandsHandler {
   }
 
   handleTankerRefuelCommand(selectedUnits, targetUnit, mapGrid) {
-    const tankers = selectedUnits.filter(u => u.type === 'tankerTruck')
+    const tankers = selectedUnits.filter(u =>
+      u.type === 'tankerTruck' && (!u.crew || u.crew.loader)
+    )
     if (tankers.length === 0) return
     if (typeof targetUnit.maxGas !== 'number' || targetUnit.gas >= targetUnit.maxGas) {
       showNotification('Target unit does not need fuel!', 2000)
@@ -637,7 +640,9 @@ export class UnitCommandsHandler {
   }
 
   handleRecoveryTankRepairCommand(selectedUnits, targetUnit, mapGrid) {
-    const recoveryTanks = selectedUnits.filter(unit => unit.type === 'recoveryTank')
+    const recoveryTanks = selectedUnits.filter(unit =>
+      unit.type === 'recoveryTank' && (!unit.crew || unit.crew.loader)
+    )
     if (recoveryTanks.length === 0) {
       return
     }
