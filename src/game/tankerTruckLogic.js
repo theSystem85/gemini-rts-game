@@ -56,9 +56,10 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         tanker.emergencyMode = false
         tanker.emergencyStartTime = null
       } else {
-        // Check if we're close enough to start refueling
-        const distance = Math.abs(emergencyUnit.tileX - tanker.tileX) + Math.abs(emergencyUnit.tileY - tanker.tileY)
-        if (distance <= 1 && !(emergencyUnit.movement && emergencyUnit.movement.isMoving)) {
+        // Check if we're close enough to start refueling (any surrounding tile)
+        const dx = Math.abs(emergencyUnit.tileX - tanker.tileX)
+        const dy = Math.abs(emergencyUnit.tileY - tanker.tileY)
+        if (dx <= 1 && dy <= 1 && !(emergencyUnit.movement && emergencyUnit.movement.isMoving)) {
           // Start emergency refueling
           tanker.refuelTarget = emergencyUnit
           tanker.refuelTimer = 0
