@@ -254,14 +254,14 @@ export function createBuilding(type, x, y) {
     building.projectileType = data.projectileType
     building.projectileSpeed = data.projectileSpeed
     building.lastShotTime = 0
-    
+
     // Set initial turret direction towards nearest enemy base for defensive buildings
     if (data.fireRange && (building.type.startsWith('turretGun') || building.type === 'rocketTurret' || building.type === 'artilleryTurret')) {
       building.turretDirection = calculateInitialTurretDirection(building.x, building.y, building.owner)
     } else {
       building.turretDirection = 0 // Direction the turret is facing
     }
-    
+
     building.targetDirection = 0 // Direction the turret should face
     if (data.isTeslaCoil) {
       building.isTeslaCoil = true
@@ -290,41 +290,41 @@ export function createBuilding(type, x, y) {
 /**
  * Calculate initial turret direction towards the nearest enemy base
  * @param {number} buildingX - Building X position in tiles
- * @param {number} buildingY - Building Y position in tiles 
+ * @param {number} buildingY - Building Y position in tiles
  * @param {string} owner - Building owner ('player' or enemy player ID)
  * @returns {number} Angle in radians pointing towards nearest enemy base
  */
 function calculateInitialTurretDirection(buildingX, buildingY, owner) {
   const buildingCenterX = buildingX + 0.5 // Center of building tile
   const buildingCenterY = buildingY + 0.5
-  
+
   let nearestEnemyDistance = Infinity
   let targetDirection = 0
-  
+
   // Check all player positions for enemies
   Object.entries(PLAYER_POSITIONS).forEach(([playerId, position]) => {
     // Skip if this is the same owner
     if (playerId === owner || (owner === 'player' && playerId === 'player1')) {
       return
     }
-    
+
     // For human player, all other players are enemies
     // For AI players, human player is the enemy
-    const isEnemy = (owner === 'player' && playerId !== 'player1') || 
+    const isEnemy = (owner === 'player' && playerId !== 'player1') ||
                    (owner !== 'player' && playerId === 'player1')
-    
+
     if (isEnemy) {
       const enemyX = position.x * MAP_TILES_X
       const enemyY = position.y * MAP_TILES_Y
       const distance = Math.hypot(enemyX - buildingCenterX, enemyY - buildingCenterY)
-      
+
       if (distance < nearestEnemyDistance) {
         nearestEnemyDistance = distance
         targetDirection = Math.atan2(enemyY - buildingCenterY, enemyX - buildingCenterX)
       }
     }
   })
-  
+
   return targetDirection
 }
 
@@ -526,14 +526,14 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
       if (occupancyMap && occupancyMap[y] && occupancyMap[y][x] !== undefined) {
         occupancyMap[y][x] = (occupancyMap[y][x] || 0) + 1
       }
-      
+
       // Remove any ore from tiles where buildings are placed
       if (mapGrid[y][x].ore) {
         mapGrid[y][x].ore = false
         // Clear any cached texture variations for this tile to force re-render
         mapGrid[y][x].textureVariation = null
       }
-      
+
       // DON'T change the tile type - keep the original background texture visible
       // mapGrid[y][x].type = 'building' // REMOVED: This was causing solid color rendering
     }
@@ -552,7 +552,7 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
         addNoBuild(x, belowY)
       }
     }
-    
+
     // For vehicle workshop, also reserve an additional row for waiting area
     if (building.type === 'vehicleWorkshop') {
       const waitingY = building.y + building.height + 1
@@ -620,7 +620,7 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
         removeNoBuild(x, belowY)
       }
     }
-    
+
     // For vehicle workshop, also clean up the waiting area
     if (building.type === 'vehicleWorkshop') {
       const waitingY = building.y + building.height + 1
@@ -722,7 +722,7 @@ export function updatePowerSupply(buildings, gameState) {
 
   const playerCross = (prevPlayerPower >= 0 && playerTotalPower < 0) || (prevPlayerPower < 0 && playerTotalPower >= 0)
   const enemyCross = (prevEnemyPower >= 0 && enemyTotalPower < 0) || (prevEnemyPower < 0 && enemyTotalPower >= 0)
-  
+
   if (playerCross || enemyCross) {
     updateDangerZoneMaps(gameState)
   }
@@ -905,17 +905,17 @@ export const updateBuildingsUnderRepair = logPerformance(function updateBuilding
 // Process buildings marked for repair pause (safe deferred processing)
 function processPendingRepairPauses(gameState, currentTime) {
   if (!gameState.buildingsUnderRepair) return
-  
+
   // Collect buildings that need repair pause
   const buildingsToProcess = []
-  
+
   // Check all buildings under repair for pause marks
   gameState.buildingsUnderRepair.forEach(repairInfo => {
     if (repairInfo.building.needsRepairPause) {
       buildingsToProcess.push(repairInfo.building)
     }
   })
-  
+
   // Process pause requests safely
   buildingsToProcess.forEach(building => {
     actuallyPauseRepair(building, gameState, currentTime)
@@ -926,11 +926,11 @@ function processPendingRepairPauses(gameState, currentTime) {
 // Actually pause the repair (safe version)
 function actuallyPauseRepair(building, gameState, currentTime) {
   if (!gameState.buildingsUnderRepair) return
-  
+
   // Find the repair entry for this building
   let repairIndex = -1
   let activeRepair = null
-  
+
   for (let i = 0; i < gameState.buildingsUnderRepair.length; i++) {
     if (gameState.buildingsUnderRepair[i].building === building) {
       activeRepair = gameState.buildingsUnderRepair[i]
@@ -938,27 +938,27 @@ function actuallyPauseRepair(building, gameState, currentTime) {
       break
     }
   }
-  
+
   if (activeRepair && repairIndex !== -1) {
     // Calculate remaining work
     const healthRepaired = Math.max(0, building.health - activeRepair.startHealth)
     const remainingHealthToRepair = Math.max(0, activeRepair.healthToRepair - healthRepaired)
     const remainingCost = Math.max(0, activeRepair.cost - activeRepair.costPaid)
-    
+
     // Remove from active repairs
     gameState.buildingsUnderRepair.splice(repairIndex, 1)
-    
+
     // Add to awaiting repairs if there's work remaining
     if (remainingHealthToRepair > 1 && remainingCost > 1) {
       if (!gameState.buildingsAwaitingRepair) {
         gameState.buildingsAwaitingRepair = []
       }
-      
+
       // Check for duplicates
       const alreadyAwaiting = gameState.buildingsAwaitingRepair.some(ar => ar.building === building)
       if (!alreadyAwaiting) {
         const isFactory = (building.id !== undefined && building.type === undefined)
-        
+
         gameState.buildingsAwaitingRepair.push({
           building: building,
           repairCost: remainingCost,
@@ -967,7 +967,7 @@ function actuallyPauseRepair(building, gameState, currentTime) {
           isFactory: isFactory,
           factoryCost: isFactory ? 5000 : undefined
         })
-        
+
         playSound('repairPaused', 1.0, 0, true)
         showNotification('Repair paused due to attack!')
       }
@@ -989,7 +989,7 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
       gameState.buildingsAwaitingRepair.splice(i, 1)
       continue
     }
-    
+
     // Check if building was attacked more recently than when we started waiting
     // This resets the countdown if the building gets attacked again
     if (building.lastAttackedTime && building.lastAttackedTime > awaitingRepair.lastAttackedTime) {
@@ -998,16 +998,16 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
       playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
       showNotification('Repair countdown reset - building under attack!')
     }
-    
+
     const timeSinceLastAttack = (currentTime - awaitingRepair.lastAttackedTime) / 1000
-    
+
     // Store countdown info for rendering
     awaitingRepair.remainingCooldown = Math.max(0, 10 - timeSinceLastAttack)
-    
+
     if (timeSinceLastAttack >= 10) {
       // Cooldown complete - start the repair automatically
       const building = awaitingRepair.building
-      
+
       // Check if building is still damaged
       if (building.health < building.maxHealth) {
         if (awaitingRepair.isFactory) {
@@ -1060,7 +1060,7 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
           playSound('repairStarted', 1.0, 0, true)
         }
       }
-      
+
       // Remove from awaiting list
       gameState.buildingsAwaitingRepair.splice(i, 1)
     }

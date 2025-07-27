@@ -308,7 +308,7 @@ export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for
 // Unit type colors (same for all players/enemies of same type)
 export const UNIT_TYPE_COLORS = {
   tank: '#0000FF',        // Blue
-  tank_v1: '#0000FF',     // Blue  
+  tank_v1: '#0000FF',     // Blue
   'tank-v2': '#FFFFFF',   // White
   'tank-v3': '#32CD32',   // Lime green
   harvester: '#9400D3',   // Purple

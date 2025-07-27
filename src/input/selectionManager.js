@@ -53,7 +53,7 @@ export class SelectionManager {
 
   handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
     const currentTime = performance.now()
-    const isDoubleClick = this.lastClickedUnit === clickedUnit && 
+    const isDoubleClick = this.lastClickedUnit === clickedUnit &&
                           (currentTime - this.lastClickTime) < this.doubleClickThreshold
 
     if (e.shiftKey && !isDoubleClick) {
@@ -78,16 +78,16 @@ export class SelectionManager {
       const gameCanvas = document.getElementById('gameCanvas')
       const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
       const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
-      
+
       const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
-      
+
       visibleUnitsOfType.forEach(unit => {
         if (!unit.selected) {
           unit.selected = true
           selectedUnits.push(unit)
         }
       })
-      
+
       if (visibleUnitsOfType.some(u => this.isCommandableUnit(u))) {
         playSound('unitSelection')
       }
@@ -97,23 +97,23 @@ export class SelectionManager {
       const gameCanvas = document.getElementById('gameCanvas')
       const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
       const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
-      
+
       // Clear current selection
       units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
       factories.forEach(f => f.selected = false)
       selectedUnits.length = 0
-      
+
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
-      
+
       // Select all visible units of this type
       const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
-      
+
       visibleUnitsOfType.forEach(unit => {
         unit.selected = true
         selectedUnits.push(unit)
       })
-      
+
       if (visibleUnitsOfType.some(u => this.isCommandableUnit(u))) {
         playSound('unitSelection')
       }
@@ -123,10 +123,10 @@ export class SelectionManager {
       units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
       factories.forEach(f => f.selected = false) // Clear factory selections too
       selectedUnits.length = 0
-      
+
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
-      
+
       clickedUnit.selected = true
       selectedUnits.push(clickedUnit)
       if (this.isCommandableUnit(clickedUnit)) {
@@ -163,7 +163,7 @@ export class SelectionManager {
       // Clear factory selections
       const factories = gameState.factories || []
       factories.forEach(f => f.selected = false)
-      
+
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
 
@@ -203,7 +203,7 @@ export class SelectionManager {
       if (gameState.buildings) {
         gameState.buildings.forEach(b => { b.selected = false })
       }
-      
+
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
 
@@ -223,7 +223,7 @@ export class SelectionManager {
 
       // Clear current selection first
       selectedUnits.length = 0
-      
+
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
 
@@ -272,20 +272,20 @@ export class SelectionManager {
   // Function to get all visible units of the same type on screen
   getVisibleUnitsOfType(unitType, units, scrollOffset, canvasWidth, canvasHeight) {
     const visibleUnits = []
-    
+
     for (const unit of units) {
       if (this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0) {
         // Check if unit is visible on screen
         const unitScreenX = unit.x - scrollOffset.x
         const unitScreenY = unit.y - scrollOffset.y
-        
+
         if (unitScreenX >= -TILE_SIZE && unitScreenX <= canvasWidth + TILE_SIZE &&
             unitScreenY >= -TILE_SIZE && unitScreenY <= canvasHeight + TILE_SIZE) {
           visibleUnits.push(unit)
         }
       }
     }
-    
+
     return visibleUnits
   }
 
@@ -293,17 +293,17 @@ export class SelectionManager {
     // Clear current selection
     units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
     selectedUnits.length = 0
-    
+
     // Select all units of this type
-    const unitsOfType = units.filter(unit => 
+    const unitsOfType = units.filter(unit =>
       this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0
     )
-    
+
     unitsOfType.forEach(unit => {
       unit.selected = true
       selectedUnits.push(unit)
     })
-    
+
     return unitsOfType.length
   }
 

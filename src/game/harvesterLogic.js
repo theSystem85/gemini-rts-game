@@ -4,11 +4,11 @@ import { findPath } from '../units.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
 import { logPerformance } from '../performanceUtils.js'
-import { 
-  findClosestOre, 
-  findAdjacentTile, 
-  isAdjacentToBuilding, 
-  showUnloadingFeedback 
+import {
+  findClosestOre,
+  findAdjacentTile,
+  isAdjacentToBuilding,
+  showUnloadingFeedback
 } from '../logic.js'
 
 // Track tiles currently being harvested
@@ -54,7 +54,7 @@ function startHarvesting(unit, tileKey, now, gameState) {
  */
 export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now) {
   // now parameter is passed from the main game loop
-  
+
   // Initialize refinery status if not exists
   if (!gameState.refineryStatus) {
     gameState.refineryStatus = {}
@@ -62,10 +62,10 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
 
   // Clean up invalid queue entries and reassign harvesters from destroyed refineries
   cleanupQueues(units)
-  
+
   // Clean up stale ore tile reservations
   cleanupStaleOreReservations(units)
-  
+
   // Only check for destroyed refineries periodically or when buildings change
   if (!gameState.lastRefineryCheck || now - gameState.lastRefineryCheck > 1000) {
     cleanupDestroyedRefineries(units, gameState)
@@ -86,10 +86,10 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
 
     // Mining ore logic with more tolerant detection
     // Skip auto-harvesting if harvester is heading to or being repaired at workshop, or is in repair queue
-    const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue && 
+    const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue &&
                            unit.targetWorkshop.repairQueue.includes(unit)
-    
-    if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery && 
+
+    if (unit.oreCarried < HARVESTER_CAPPACITY && !unit.harvesting && !unit.unloadingAtRefinery &&
         !unit.targetWorkshop && !unit.repairingAtWorkshop && !isInRepairQueue) {
       // Check if harvester is near an ore tile (more tolerant detection)
       const nearbyOreTile = findNearbyOreTile(unit, mapGrid, unitTileX, unitTileY)
@@ -130,8 +130,8 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
         harvestedTiles.delete(tileKey) // Free up the tile
 
         // Clear manual ore target when harvesting is complete
-        if (unit.manualOreTarget && 
-            unit.manualOreTarget.x === unit.oreField.x && 
+        if (unit.manualOreTarget &&
+            unit.manualOreTarget.x === unit.oreField.x &&
             unit.manualOreTarget.y === unit.oreField.y) {
           unit.manualOreTarget = null
         }
@@ -141,7 +141,7 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
           mapGrid[unit.oreField.y][unit.oreField.x].harvests = 0
         }
         mapGrid[unit.oreField.y][unit.oreField.x].harvests++
-        
+
         // Deplete ore tile after 1 harvest (matches HARVESTER_CAPPACITY = 1)
         if (mapGrid[unit.oreField.y][unit.oreField.x].harvests >= 1) {
           // Remove ore overlay instead of changing tile type
@@ -150,7 +150,7 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
           mapGrid[unit.oreField.y][unit.oreField.x].textureVariation = null
           // Remove targeting once the tile is depleted
           clearOreField(unit)
-          
+
           // Force all harvesters targeting this depleted tile to find new ore
           Object.keys(targetedOreTiles).forEach(key => {
             if (key === tileKey) {
@@ -193,13 +193,13 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
       const tileKey = `${unit.oreField.x},${unit.oreField.y}`
       const currentTileX = Math.floor(unit.x / TILE_SIZE)
       const currentTileY = Math.floor(unit.y / TILE_SIZE)
-      
+
       // Check if we're near the ore field (more tolerant detection)
       const distanceToOreField = Math.hypot(
         (unit.x / TILE_SIZE) - unit.oreField.x,
         (unit.y / TILE_SIZE) - unit.oreField.y
       )
-      
+
       if (distanceToOreField <= 0.7) { // Allow harvester to be within 0.7 tiles of the ore field
         // We're close enough to the ore field, check if we can harvest
         if (mapGrid[unit.oreField.y][unit.oreField.x].ore &&
@@ -246,9 +246,9 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   clearOreField(unit)
 
   // Find available refinery
-  const refineries = gameState.buildings?.filter(b => 
-    b.type === 'oreRefinery' && 
-    b.owner === unit.owner && 
+  const refineries = gameState.buildings?.filter(b =>
+    b.type === 'oreRefinery' &&
+    b.owner === unit.owner &&
     b.health > 0
   ) || []
 
@@ -261,11 +261,11 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
   // **STABLE REFINERY ASSIGNMENT** - Only reassign if harvester has no target or target is invalid
   let targetRefinery = null
   let targetUnloadTile = null
-  
+
   // Priority 1: Check if harvester has a manual assignment from force unload command
   if (unit.assignedRefinery) {
-    const assignedRefinery = refineries.find(r => 
-      r === unit.assignedRefinery || 
+    const assignedRefinery = refineries.find(r =>
+      r === unit.assignedRefinery ||
       (r.id || `refinery_${r.x}_${r.y}`) === (unit.assignedRefinery.id || `refinery_${unit.assignedRefinery.x}_${unit.assignedRefinery.y}`)
     )
     if (assignedRefinery) {
@@ -276,7 +276,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
       unit.assignedRefinery = null
     }
   }
-  
+
   // Priority 2: Check if current target refinery is still valid (only if no manual assignment)
   if (!targetRefinery && unit.targetRefinery) {
     const currentRefinery = refineries.find(r => (r.id || `refinery_${r.x}_${r.y}`) === unit.targetRefinery)
@@ -286,29 +286,29 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
       targetUnloadTile = findAdjacentTile(targetRefinery, mapGrid)
     }
   }
-  
+
   // Only assign new refinery if no valid current assignment
   if (!targetRefinery) {
     // **DISTANCE-BASED REFINERY ASSIGNMENT** - Consider both distance and current load
     const refineryOptions = refineries.map(refinery => {
       const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`
       const unloadTile = findAdjacentTile(refinery, mapGrid)
-      
+
       if (!unloadTile) return null
-      
+
       // Calculate distance from harvester to refinery
       const distance = Math.hypot(
         unit.tileX - (refinery.x + refinery.width / 2),
         unit.tileY - (refinery.y + refinery.height / 2)
       )
-      
+
       const queueLength = getRefineryQueue(refineryId).length
       const isInUse = gameState.refineryStatus[refineryId] ? 1 : 0
       const totalWait = queueLength + isInUse
-      
+
       // Combine distance and wait time for scoring (prefer closer refineries with less wait)
       const score = distance * 2 + totalWait * 5 // Weight wait time more heavily
-      
+
       return {
         refinery,
         refineryId,
@@ -318,13 +318,13 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
         score
       }
     }).filter(Boolean).sort((a, b) => a.score - b.score) // Sort by best score (lowest)
-    
+
     // Choose the refinery with the best score (closest with least wait)
     if (refineryOptions.length > 0) {
       const chosen = refineryOptions[0]
       targetRefinery = chosen.refinery
       targetUnloadTile = chosen.unloadTile
-      
+
       // Set new assignment
       unit.assignedRefinery = chosen.refineryId
     }
@@ -336,7 +336,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     if (preferredUnloadTile) {
       targetUnloadTile = preferredUnloadTile
     }
-    
+
     const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`
 
     // **STABLE QUEUE MANAGEMENT** - Only modify queue if switching refineries
@@ -360,18 +360,18 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
 
     // Check if harvester is near the refinery (more tolerant detection)
     const isNearRefinery = isAdjacentToBuilding(unit, targetRefinery) || isAtRefineryUnloadingPosition(unit, targetRefinery)
-    
+
     if (isNearRefinery) {
       // **DISTANCE-BASED PRIORITY SYSTEM** - Check if this harvester is the closest
       const nextInQueue = getNextInQueue(refineryId)
       const isNextInQueue = nextInQueue === unit.id
       const refineryInUse = gameState.refineryStatus[refineryId]
-      
+
       // Get all harvesters waiting for this refinery and sort by distance
-      const waitingHarvesters = units.filter(u => 
-        u.type === 'harvester' && 
-        u.targetRefinery === refineryId && 
-        u.health > 0 && 
+      const waitingHarvesters = units.filter(u =>
+        u.type === 'harvester' &&
+        u.targetRefinery === refineryId &&
+        u.health > 0 &&
         (isAdjacentToBuilding(u, targetRefinery) || isAtRefineryUnloadingPosition(u, targetRefinery))
       ).sort((a, b) => {
         // Calculate distance to refinery center with preference for proper unloading positions
@@ -379,23 +379,23 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
           x: (targetRefinery.x + targetRefinery.width / 2) * TILE_SIZE,
           y: (targetRefinery.y + targetRefinery.height / 2) * TILE_SIZE
         }
-        
+
         // Give priority to harvesters in proper unloading positions
         const aInUnloadPosition = isAtRefineryUnloadingPosition(a, targetRefinery)
         const bInUnloadPosition = isAtRefineryUnloadingPosition(b, targetRefinery)
-        
+
         if (aInUnloadPosition && !bInUnloadPosition) return -1
         if (!aInUnloadPosition && bInUnloadPosition) return 1
-        
+
         // If both or neither are in unloading positions, sort by distance
         const distA = Math.hypot(a.x - refineryCenter.x, a.y - refineryCenter.y)
         const distB = Math.hypot(b.x - refineryCenter.x, b.y - refineryCenter.y)
         return distA - distB
       })
-      
+
       // This harvester can unload if it's the closest and refinery is free
       const isClosest = waitingHarvesters.length > 0 && waitingHarvesters[0].id === unit.id
-      
+
       if (isClosest && (!refineryInUse || refineryInUse === unit.id)) {
         // Mark this refinery as in use by this harvester
         gameState.refineryStatus[refineryId] = unit.id
@@ -429,7 +429,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
           unit.moveTarget = targetUnloadTile // Set move target so the harvester actually moves
         }
       }
-      
+
       // **PREVENT MOVING AWAY WHEN WANTING TO UNLOAD**
       // If harvester is full of ore and close to refinery, don't accept new movement commands
       if (unit.oreCarried >= HARVESTER_CAPPACITY) {
@@ -437,7 +437,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
           unit.tileX - (targetRefinery.x + targetRefinery.width / 2),
           unit.tileY - (targetRefinery.y + targetRefinery.height / 2)
         )
-        
+
         // If close to refinery (within 3 tiles), stay focused on unloading
         if (distanceToRefinery <= 3) {
           // Clear any other movement orders that might take harvester away
@@ -457,7 +457,7 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
   if (now - unit.unloadStartTime >= unloadTime) {
     // Calculate money based on ore carried
     const moneyEarned = Math.max(0, unit.oreCarried * 1000)
-    
+
     // Unloading complete
     if (unit.owner === gameState.humanPlayer) {
       gameState.money += moneyEarned
@@ -475,7 +475,7 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     // Clear refinery usage
     if (unit.unloadRefinery) {
       delete gameState.refineryStatus[unit.unloadRefinery]
-      
+
       // Process next harvester in queue
       const nextInQueue = getNextInQueue(unit.unloadRefinery)
       if (nextInQueue) {
@@ -515,14 +515,14 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
     unit.queuePosition = 0
     unit.targetRefinery = null
   }
-  
+
   // Clear any existing ore field reservation
   clearOreField(unit)
-  
+
   const orePos = findClosestOre(unit, mapGrid, targetedOreTiles, unit.assignedRefinery)
   if (orePos) {
     const tileKey = `${orePos.x},${orePos.y}`
-    
+
     // Double-check the tile isn't already taken (race condition protection)
     if (targetedOreTiles[tileKey] && targetedOreTiles[tileKey] !== unit.id) {
       // Try again with a small delay to avoid multiple harvesters fighting over the same tile
@@ -533,7 +533,7 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
       }, 100 + Math.random() * 200) // Random delay between 100-300ms
       return
     }
-    
+
     // Reserve the tile
     targetedOreTiles[tileKey] = unit.id
     unit.oreField = orePos
@@ -634,32 +634,32 @@ function getNextInQueue(refineryId) {
  */
 export function forceHarvesterUnloadPriority(harvester, targetRefinery, units) {
   const refineryId = targetRefinery.id || `refinery_${targetRefinery.x}_${targetRefinery.y}`
-  
+
   // Remove harvester from any current queue
   if (harvester.targetRefinery && harvester.targetRefinery !== refineryId) {
     removeFromRefineryQueue(harvester.targetRefinery, harvester.id)
   }
-  
+
   // Set the harvester's target refinery
   harvester.targetRefinery = refineryId
   harvester.assignedRefinery = refineryId
-  
+
   // Get current queue
   const queue = getRefineryQueue(refineryId)
-  
+
   // Remove harvester from current position in queue if already there
   removeFromRefineryQueue(refineryId, harvester.id)
-  
+
   // Add harvester at the front of the queue (highest priority)
   queue.unshift(harvester.id)
-  
+
   // Mark this as a forced unload for priority handling
   harvester.forcedUnload = true
   harvester.forcedUnloadRefinery = refineryId
-  
+
   // Reschedule the entire queue to ensure proper ordering
   rescheduleRefineryQueue(refineryId, targetRefinery, units)
-  
+
   // Move the forced harvester back to front after rescheduling
   removeFromRefineryQueue(refineryId, harvester.id)
   queue.unshift(harvester.id)
@@ -678,7 +678,7 @@ function rescheduleRefineryQueue(refineryId, refinery, units) {
       // Forced unload harvesters get highest priority
       if (a.forcedUnload && !b.forcedUnload) return -1
       if (!a.forcedUnload && b.forcedUnload) return 1
-      
+
       const aUnload = isAtRefineryUnloadingPosition(a, refinery)
       const bUnload = isAtRefineryUnloadingPosition(b, refinery)
       if (aUnload && !bUnload) return -1
@@ -696,14 +696,14 @@ function rescheduleRefineryQueue(refineryId, refinery, units) {
  */
 function cleanupStaleOreReservations(units) {
   const validHarvesterIds = new Set(units.filter(u => u.type === 'harvester' && u.health > 0).map(u => u.id))
-  
+
   // Remove reservations for dead or non-existent harvesters
   for (const [tileKey, harvesterId] of Object.entries(targetedOreTiles)) {
     if (!validHarvesterIds.has(harvesterId)) {
       delete targetedOreTiles[tileKey]
       continue
     }
-    
+
     // Check if the harvester still has this as their ore field
     const harvester = units.find(u => u.id === harvesterId)
     if (harvester && harvester.oreField) {
@@ -724,7 +724,7 @@ function cleanupStaleOreReservations(units) {
  */
 function cleanupQueues(units) {
   const validHarvesterIds = new Set(units.filter(u => u.type === 'harvester').map(u => u.id))
-  
+
   for (const refineryId in refineryQueues) {
     refineryQueues[refineryId] = refineryQueues[refineryId].filter(id => validHarvesterIds.has(id))
     if (refineryQueues[refineryId].length === 0) {
@@ -745,13 +745,13 @@ export function getRefineryQueues() {
  */
 function cleanupDestroyedRefineries(units, gameState) {
   if (!gameState.buildings) return
-  
+
   const existingRefineries = new Set(
     gameState.buildings
       .filter(b => b.type === 'oreRefinery' && b.health > 0)
       .map(b => b.id || `refinery_${b.x}_${b.y}`)
   )
-  
+
   // Check all harvesters for invalid refinery assignments
   units.forEach(unit => {
     if (unit.type === 'harvester' && unit.assignedRefinery) {
@@ -765,21 +765,21 @@ function cleanupDestroyedRefineries(units, gameState) {
         unit.unloadRefinery = null
       }
     }
-    
+
     // Clear refinery status for destroyed refineries
     if (unit.targetRefinery && !existingRefineries.has(unit.targetRefinery)) {
       unit.targetRefinery = null
       unit.queuePosition = 0
     }
   })
-  
+
   // Clean up refinery status for destroyed refineries
   for (const refineryId in gameState.refineryStatus) {
     if (!existingRefineries.has(refineryId)) {
       delete gameState.refineryStatus[refineryId]
     }
   }
-  
+
   // Clean up queues for destroyed refineries
   for (const refineryId in refineryQueues) {
     if (!existingRefineries.has(refineryId)) {
@@ -793,19 +793,19 @@ function cleanupDestroyedRefineries(units, gameState) {
  */
 export function getHarvesterDistribution(gameState) {
   const distribution = {}
-  
+
   if (!gameState.buildings) return distribution
-  
-  const refineries = gameState.buildings.filter(b => 
-    b.type === 'oreRefinery' && 
+
+  const refineries = gameState.buildings.filter(b =>
+    b.type === 'oreRefinery' &&
     b.health > 0
   )
-  
+
   refineries.forEach(refinery => {
     const refineryId = refinery.id || `refinery_${refinery.x}_${refinery.y}`
     const queueLength = getRefineryQueue(refineryId).length
     const isInUse = gameState.refineryStatus?.[refineryId] ? 1 : 0
-    
+
     distribution[refineryId] = {
       refinery,
       queueLength,
@@ -813,7 +813,7 @@ export function getHarvesterDistribution(gameState) {
       totalLoad: queueLength + isInUse
     }
   })
-  
+
   return distribution
 }
 
@@ -825,26 +825,26 @@ export function assignHarvesterToOptimalRefinery(harvester, gameState) {
   if (!gameState || !gameState.buildings) {
     return null
   }
-  
+
   const distribution = getHarvesterDistribution(gameState)
-  
+
   if (Object.keys(distribution).length === 0) return null
-  
+
   // Find refinery with minimum load
   let minLoad = Infinity
   let optimalRefineryId = null
-  
+
   for (const [refineryId, data] of Object.entries(distribution)) {
     if (data.totalLoad < minLoad) {
       minLoad = data.totalLoad
       optimalRefineryId = refineryId
     }
   }
-  
+
   if (optimalRefineryId) {
     harvester.assignedRefinery = optimalRefineryId
   }
-  
+
   return optimalRefineryId
 }
 
@@ -897,24 +897,24 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
 function isAtRefineryUnloadingPosition(harvester, refinery) {
   const harvesterTileX = Math.floor(harvester.x / TILE_SIZE)
   const harvesterTileY = Math.floor(harvester.y / TILE_SIZE)
-  
+
   // Check if harvester is adjacent to any tile of the refinery
   // This includes all sides: top, bottom, left, right and corners
   for (let y = refinery.y - 1; y <= refinery.y + refinery.height; y++) {
     for (let x = refinery.x - 1; x <= refinery.x + refinery.width; x++) {
       // Skip tiles that are inside the refinery
-      if (x >= refinery.x && x < refinery.x + refinery.width && 
+      if (x >= refinery.x && x < refinery.x + refinery.width &&
           y >= refinery.y && y < refinery.y + refinery.height) {
         continue
       }
-      
+
       // Check if harvester is at this adjacent position
       if (harvesterTileX === x && harvesterTileY === y) {
         return true
       }
     }
   }
-  
+
   return false
 }
 
@@ -923,43 +923,43 @@ function isAtRefineryUnloadingPosition(harvester, refinery) {
  */
 function findPreferredUnloadTile(refinery, mapGrid) {
   const bottomY = refinery.y + refinery.height
-  
+
   // First priority: Check tiles directly below the refinery (preferred unloading spots)
   for (let x = refinery.x; x < refinery.x + refinery.width; x++) {
-    if (bottomY < mapGrid.length && 
-        x < mapGrid[0].length && 
+    if (bottomY < mapGrid.length &&
+        x < mapGrid[0].length &&
         !mapGrid[bottomY][x].building &&
-        mapGrid[bottomY][x].type !== 'water' && 
+        mapGrid[bottomY][x].type !== 'water' &&
         mapGrid[bottomY][x].type !== 'rock') {
       return { x, y: bottomY }
     }
   }
-  
+
   // Second priority: Check all other adjacent tiles
   for (let y = refinery.y - 1; y <= refinery.y + refinery.height; y++) {
     for (let x = refinery.x - 1; x <= refinery.x + refinery.width; x++) {
       // Skip tiles that are inside the refinery
-      if (x >= refinery.x && x < refinery.x + refinery.width && 
+      if (x >= refinery.x && x < refinery.x + refinery.width &&
           y >= refinery.y && y < refinery.y + refinery.height) {
         continue
       }
-      
+
       // Skip tiles we already checked (directly below)
       if (y === bottomY && x >= refinery.x && x < refinery.x + refinery.width) {
         continue
       }
-      
+
       // Check if this adjacent tile is valid
-      if (x >= 0 && x < mapGrid[0].length && 
+      if (x >= 0 && x < mapGrid[0].length &&
           y >= 0 && y < mapGrid.length &&
           !mapGrid[y][x].building &&
-          mapGrid[y][x].type !== 'water' && 
+          mapGrid[y][x].type !== 'water' &&
           mapGrid[y][x].type !== 'rock') {
         return { x, y }
       }
     }
   }
-  
+
   // Fallback to the generic adjacent tile finder
   return findAdjacentTile(refinery, mapGrid)
 }
@@ -969,10 +969,10 @@ function findPreferredUnloadTile(refinery, mapGrid) {
  */
 function handleManualOreTarget(unit, mapGrid, occupancyMap) {
   const target = unit.manualOreTarget
-  
+
   // Validate the manual target
-  if (!target || 
-      target.x < 0 || target.y < 0 || 
+  if (!target ||
+      target.x < 0 || target.y < 0 ||
       target.x >= mapGrid[0].length || target.y >= mapGrid.length ||
       !mapGrid[target.y][target.x].ore) {
     // Invalid manual target, clear it and find automatic target
@@ -980,9 +980,9 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
     findNewOreTarget(unit, mapGrid, occupancyMap)
     return
   }
-  
+
   const tileKey = `${target.x},${target.y}`
-  
+
   // Check if another harvester is already harvesting this tile
   if (harvestedTiles.has(tileKey)) {
     // Tile is being actively harvested, wait or find alternative
@@ -994,20 +994,20 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
     }, 500 + Math.random() * 1000) // Wait 0.5-1.5 seconds
     return
   }
-  
+
   // Clear any existing ore field reservation
   clearOreField(unit)
-  
+
   // Reserve the manual target
   targetedOreTiles[tileKey] = unit.id
   unit.oreField = target
-  
+
   // Calculate path to manual target
   const path = findPath({ x: unit.tileX, y: unit.tileY }, target, mapGrid, occupancyMap)
   if (path.length > 1) {
     unit.path = path.slice(1)
     unit.moveTarget = target // Set move target so the harvester actually moves
-    } else if (path.length === 1) {
+  } else if (path.length === 1) {
     // Already at the target
     unit.path = []
   } else {
@@ -1023,22 +1023,22 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
  * Handle stuck harvester by finding alternative targets
  */
 export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, factories) {
-  
+
   // Don't interfere if harvester is manually commanded to a specific location
   if (unit.manualOreTarget) {
     return
   }
-  
+
   // Don't interfere if harvester is performing valid actions
   if (unit.harvesting || unit.unloadingAtRefinery) {
     return
   }
-  
+
   // Check if harvester is standing on ore and should be harvesting
   const unitTileX = Math.floor(unit.x / TILE_SIZE)
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
   const currentTile = mapGrid[unitTileY] && mapGrid[unitTileY][unitTileX]
-  
+
   if (currentTile && currentTile.ore && unit.oreCarried < HARVESTER_CAPPACITY) {
     const tileKey = `${unitTileX},${unitTileY}`
     if (!harvestedTiles.has(tileKey)) {
@@ -1049,19 +1049,19 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
       return
     }
   }
-  
+
   // Clear current targets and path
   clearOreField(unit)
-  
+
   // Clear refinery queue if unloading
   if (unit.targetRefinery) {
     removeFromRefineryQueue(unit.targetRefinery, unit.id)
     unit.queuePosition = 0
     unit.targetRefinery = null
   }
-  
+
   stopMovement(unit)
-  
+
   // Determine what the harvester should do based on its state
   if (unit.oreCarried >= HARVESTER_CAPPACITY) {
     // Harvester is full, need to find alternative unload location
@@ -1076,11 +1076,11 @@ export function handleStuckHarvester(unit, mapGrid, occupancyMap, gameState, fac
  * Find alternative unload location for stuck harvester
  */
 function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occupancyMap) {
-  
+
   // Try to find a different refinery than the one it was trying to reach
-  const refineries = gameState.buildings?.filter(b => 
-    b.type === 'oreRefinery' && 
-    b.owner === unit.owner && 
+  const refineries = gameState.buildings?.filter(b =>
+    b.type === 'oreRefinery' &&
+    b.owner === unit.owner &&
     b.health > 0
   ) || []
 
@@ -1090,7 +1090,7 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
       const refineryId = r.id || `refinery_${r.x}_${r.y}`
       return refineryId !== unit.assignedRefinery // Try a different refinery
     })
-    
+
     if (availableRefineries.length > 0) {
       // Find closest alternative refinery
       const refineryOptions = availableRefineries.map(refinery => {
@@ -1100,15 +1100,15 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
         )
         return { refinery, distance }
       }).sort((a, b) => a.distance - b.distance)
-      
+
       const closestRefinery = refineryOptions[0].refinery
       const refineryId = closestRefinery.id || `refinery_${closestRefinery.x}_${closestRefinery.y}`
-      
+
       // Assign to new refinery
       unit.assignedRefinery = refineryId
       unit.targetRefinery = refineryId
       addToRefineryQueue(refineryId, unit.id)
-      
+
       // Try to path to the new refinery
       const unloadTile = findAdjacentTile(closestRefinery, mapGrid)
       if (unloadTile) {
@@ -1121,7 +1121,7 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
       }
     }
   }
-  
+
   // No alternative refinery found - wait until a refinery is available again
   stopMovement(unit)
 }
@@ -1130,25 +1130,25 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
  * Find alternative ore target for stuck harvester
  */
 function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
-  
+
   // Try to find ore tiles that are farther away or in different directions
   const unitTileX = Math.floor(unit.x / TILE_SIZE)
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
-  
+
   const oreOptions = []
-  
+
   // Search in a larger radius for ore tiles
   for (let radius = 3; radius <= 15; radius++) {
     for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
       const searchX = Math.round(unitTileX + Math.cos(angle) * radius)
       const searchY = Math.round(unitTileY + Math.sin(angle) * radius)
-      
+
       if (searchX >= 0 && searchY >= 0 &&
           searchX < mapGrid[0].length && searchY < mapGrid.length &&
           mapGrid[searchY][searchX].ore && !mapGrid[searchY][searchX].seedCrystal) {
-        
+
         const tileKey = `${searchX},${searchY}`
-        
+
         // Skip tiles that are already targeted or being harvested
         if (!targetedOreTiles[tileKey] && !harvestedTiles.has(tileKey)) {
           const distance = Math.hypot(searchX - unitTileX, searchY - unitTileY)
@@ -1156,15 +1156,15 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
         }
       }
     }
-    
+
     // If we found ore options at this radius, use them
     if (oreOptions.length > 0) break
   }
-  
+
   if (oreOptions.length > 0) {
     // Sort by distance and try the closest ones first
     oreOptions.sort((a, b) => a.distance - b.distance)
-    
+
     for (const orePos of oreOptions) {
       const path = findPath({ x: unitTileX, y: unitTileY }, orePos, mapGrid, occupancyMap)
       if (path.length > 1) {
@@ -1178,7 +1178,7 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
       }
     }
   }
-  
+
   // If no alternative ore found, wait and try again later
   setTimeout(() => {
     if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
@@ -1196,11 +1196,11 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
     for (let dx = -1; dx <= 1; dx++) {
       const checkX = centerTileX + dx
       const checkY = centerTileY + dy
-      
+
       if (checkX >= 0 && checkY >= 0 &&
           checkX < mapGrid[0].length && checkY < mapGrid.length &&
           mapGrid[checkY][checkX].ore && !mapGrid[checkY][checkX].seedCrystal) {
-        
+
         // Calculate distance from harvester center to tile center
         const tileCenter = {
           x: checkX + 0.5,
@@ -1210,12 +1210,12 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
           x: unit.x / TILE_SIZE + 0.5,
           y: unit.y / TILE_SIZE + 0.5
         }
-        
+
         const distance = Math.hypot(
           tileCenter.x - harvesterCenter.x,
           tileCenter.y - harvesterCenter.y
         )
-        
+
         // Allow harvester to be within 0.7 tiles of ore center
         if (distance <= 0.7) {
           return { x: checkX, y: checkY }
@@ -1234,36 +1234,36 @@ function checkHarvesterProductivity(unit, mapGrid, occupancyMap, now) {
   if (unit.manualOreTarget) {
     return
   }
-  
+
   // Don't interfere with workshop repair operations
-  const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue && 
+  const isInRepairQueue = unit.targetWorkshop && unit.targetWorkshop.repairQueue &&
                          unit.targetWorkshop.repairQueue.includes(unit)
   if (unit.targetWorkshop || unit.repairingAtWorkshop || isInRepairQueue) {
     return
   }
-  
+
   // Check if harvester is doing something productive
-  const isProductive = unit.harvesting || 
-                      unit.unloadingAtRefinery || 
+  const isProductive = unit.harvesting ||
+                      unit.unloadingAtRefinery ||
                       (unit.path && unit.path.length > 0) ||
                       (unit.moveTarget && Math.hypot(
                         (unit.x / TILE_SIZE) - unit.moveTarget.x,
                         (unit.y / TILE_SIZE) - unit.moveTarget.y
                       ) > 0.3)
-  
+
   if (!isProductive) {
-    
+
     if (unit.oreCarried >= HARVESTER_CAPPACITY) {
       // Full harvester should be unloading
       stopMovement(unit)
     } else {
       // Empty harvester should be finding ore
-      
+
       // Clear current targets
       clearOreField(unit)
 
       stopMovement(unit)
-      
+
       // Try to find new ore target
       findNewOreTarget(unit, mapGrid, occupancyMap)
     }

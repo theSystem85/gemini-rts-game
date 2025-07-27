@@ -95,7 +95,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           tanker.refuelTimer = 0
           stopUnitMovement(tanker)
           tanker.moveTarget = null
-        } else {
         }
       }
     }
@@ -105,14 +104,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
       // Debug: Log refuelTarget details
       if (!tanker.lastRefuelDebug || performance.now() - tanker.lastRefuelDebug > 2000) {
-          refuelTargetId: tanker.refuelTarget.id,
-          refuelTargetType: tanker.refuelTarget.type,
-          targetFound: !!target,
-          targetId: target?.id,
-          targetType: target?.type,
-          targetGas: target ? `${Math.round(target.gas)}/${target.maxGas}` : 'N/A',
-          distance: target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
-        })
         tanker.lastRefuelDebug = performance.now()
       }
 

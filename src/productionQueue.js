@@ -338,7 +338,7 @@ export const productionQueue = {
         this.currentBuilding = null
         return
       }
-      
+
       const item = this.buildingItems[0]
       const cost = buildingCosts[item.type] || 0
       const elapsed = (timestamp - this.currentBuilding.startTime) * gameState.speedMultiplier
@@ -394,7 +394,7 @@ export const productionQueue = {
         gameState.nextVehicleFactoryIndex = gameState.nextVehicleFactoryIndex ?? 0
         spawnFactory = vehicleFactories[gameState.nextVehicleFactoryIndex % vehicleFactories.length]
         gameState.nextVehicleFactoryIndex++
-        
+
         // Use this specific factory's rally point if no custom one was set
         if (!rallyPointTarget) {
           rallyPointTarget = spawnFactory.rallyPoint
@@ -432,7 +432,7 @@ export const productionQueue = {
         if (newUnit.type === 'harvester' && !rallyPointTarget) {
           // Assign harvester to optimal refinery for even distribution
           assignHarvesterToOptimalRefinery(newUnit, gameState)
-          
+
           // Access the targetedOreTiles from the imported module
           const targetedOreTiles = gameState?.targetedOreTiles || {}
 
@@ -481,7 +481,7 @@ export const productionQueue = {
 
     // Remove item from queue immediately when completed
     this.buildingItems.shift()
-    
+
     // Update batch counter (subtract 1 for the completed building)
     this.updateBatchCounter(this.currentBuilding.button, this.buildingItems.filter(item => item.button === this.currentBuilding.button).length)
 
@@ -763,12 +763,12 @@ export const productionQueue = {
     if (this.currentBuilding === null) {
       this.pausedBuilding = false
     }
-    
+
     // Find the completed building for this button
     const completedBuildingIndex = this.completedBuildings.findIndex(
       building => building.type === buildingType && building.button === button
     )
-    
+
     if (completedBuildingIndex === -1) return
 
     const completedBuilding = this.completedBuildings[completedBuildingIndex]
@@ -815,7 +815,7 @@ export const productionQueue = {
   // Method to update the ready building counter display
   updateReadyBuildingCounter: function(button) {
     const readyCount = this.completedBuildings.filter(building => building.button === button).length
-    
+
     let readyCounter = button.querySelector('.ready-counter')
     if (!readyCounter) {
       // Create the ready counter element if it doesn't exist
@@ -823,7 +823,7 @@ export const productionQueue = {
       readyCounter.classList.add('ready-counter')
       button.appendChild(readyCounter)
     }
-    
+
     if (readyCount > 0) {
       readyCounter.textContent = readyCount
       readyCounter.style.display = 'flex'

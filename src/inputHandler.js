@@ -8,9 +8,9 @@ import { UnitCommandsHandler } from './input/unitCommands.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from './utils/inputUtils.js'
 
 export const selectedUnits = []
-export let selectionActive = false
-export let selectionStartExport = { x: 0, y: 0 }
-export let selectionEndExport = { x: 0, y: 0 }
+export const selectionActive = false
+export const selectionStartExport = { x: 0, y: 0 }
+export const selectionEndExport = { x: 0, y: 0 }
 
 // Initialize input system components
 const cursorManager = new CursorManager()
@@ -46,28 +46,28 @@ export function setupInputHandlers(units, factories, mapGrid) {
   // Apply the initial state for the custom cursor
   // Set up the document-level mousemove event
   document.addEventListener('mousemove', (e) => {
-      // Update Force Attack mode status based on the self-attack key
-      cursorManager.updateForceAttackMode(isForceAttackModifierActive())
+    // Update Force Attack mode status based on the self-attack key
+    cursorManager.updateForceAttackMode(isForceAttackModifierActive())
 
-      // Update custom cursor position
-      cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits, units)
+    // Update custom cursor position
+    cursorManager.updateCustomCursor(e, gameState.mapGrid || [], gameState.factories || [], selectedUnits, units)
 
-      // Detect if over sidebar to ensure cursor is hidden there
-      const sidebar = document.getElementById('sidebar')
-      if (sidebar) {
-        const sidebarRect = sidebar.getBoundingClientRect()
-        const isOverSidebar = (
-          e.clientX >= sidebarRect.left &&
+    // Detect if over sidebar to ensure cursor is hidden there
+    const sidebar = document.getElementById('sidebar')
+    if (sidebar) {
+      const sidebarRect = sidebar.getBoundingClientRect()
+      const isOverSidebar = (
+        e.clientX >= sidebarRect.left &&
           e.clientX <= sidebarRect.right &&
           e.clientY >= sidebarRect.top &&
           e.clientY <= sidebarRect.bottom
-        )
+      )
 
-        // Always hide custom cursor over sidebar
-        if (isOverSidebar) {
-          document.body.style.cursor = 'default'
-        }
+      // Always hide custom cursor over sidebar
+      if (isOverSidebar) {
+        document.body.style.cursor = 'default'
       }
+    }
   })
 
   // Listen for modifier key presses to toggle force attack or guard cursor

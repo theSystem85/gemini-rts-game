@@ -24,12 +24,12 @@ export const unitCosts = UNIT_COSTS
 export function buildOccupancyMap(units, mapGrid, textureManager = null) {
   const occupancy = []
   let impassableGrassCount = 0
-  
+
   for (let y = 0; y < mapGrid.length; y++) {
     occupancy[y] = []
     for (let x = 0; x < mapGrid[0].length; x++) {
       const tile = mapGrid[y][x]
-      
+
       // Check if this is an impassable grass tile
       let isImpassableGrass = false
       if (tile.type === 'land' && textureManager && textureManager.isLandTileImpassable) {
@@ -38,20 +38,20 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
           impassableGrassCount++
         }
       }
-      
+
       occupancy[y][x] =
-        tile.type === 'water' || 
-        tile.type === 'rock' || 
-        tile.seedCrystal || 
-        tile.building || 
+        tile.type === 'water' ||
+        tile.type === 'rock' ||
+        tile.seedCrystal ||
+        tile.building ||
         isImpassableGrass ? 1 : 0
     }
   }
-  
+
   if (impassableGrassCount > 0) {
     console.log(`Occupancy map built: ${impassableGrassCount} impassable grass tiles found`)
   }
-  
+
   units.forEach(unit => {
     const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
@@ -82,7 +82,7 @@ export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) 
 
 export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
   if (!occupancyMap) return
-  
+
   // Remove occupancy from previous position (using center coordinates)
   if (
     prevTileY >= 0 &&
@@ -95,11 +95,11 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
       (occupancyMap[prevTileY][prevTileX] || 0) - 1
     )
   }
-  
+
   // Add occupancy to current position (using center coordinates)
   const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
   const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-  
+
   if (
     currentTileY >= 0 &&
     currentTileY < occupancyMap.length &&
@@ -223,7 +223,7 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
 // Early exits if destination is out of bounds or impassable.
 export const findPath = logPerformance(function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
   // Validate input coordinates
-  if (!start || !end || 
+  if (!start || !end ||
       typeof start.x !== 'number' || typeof start.y !== 'number' ||
       typeof end.x !== 'number' || typeof end.y !== 'number' ||
       !isFinite(start.x) || !isFinite(start.y) ||
@@ -237,7 +237,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     console.warn('findPath: invalid mapGrid provided', { mapGrid })
     return []
   }
-  
+
   if (
     start.x < 0 || start.y < 0 ||
     start.x >= mapGrid[0].length || start.y >= mapGrid.length ||
@@ -288,9 +288,9 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
                 type: mapGrid[y][x].type,
                 building: mapGrid[y][x].building
                   ? {
-                      type: mapGrid[y][x].building.type,
-                      owner: mapGrid[y][x].building.owner
-                    }
+                    type: mapGrid[y][x].building.type,
+                    owner: mapGrid[y][x].building.owner
+                  }
                   : null,
                 occupied: occupancyMap && occupancyMap[y][x]
               }
@@ -444,7 +444,7 @@ function getNeighbors(node, mapGrid) {
 // Bresenham-like line algorithm to get all tiles on a line
 function getLineTiles(start, end) {
   // Validate input coordinates
-  if (!start || !end || 
+  if (!start || !end ||
       typeof start.x !== 'number' || typeof start.y !== 'number' ||
       typeof end.x !== 'number' || typeof end.y !== 'number' ||
       !isFinite(start.x) || !isFinite(start.y) ||
@@ -465,7 +465,7 @@ function getLineTiles(start, end) {
   // Prevent infinite loops for very large distances
   let iterations = 0
   const maxIterations = Math.max(dx, dy) + 1
-  
+
   while (!(x === end.x && y === end.y) && iterations < maxIterations) {
     iterations++
     const e2 = 2 * err
@@ -477,7 +477,7 @@ function getLineTiles(start, end) {
       err += dx
       y += sy
     }
-    
+
     // Validate coordinates before pushing
     if (isFinite(x) && isFinite(y)) {
       tiles.push({ x, y })
@@ -705,14 +705,14 @@ export function createUnit(factory, unitType, x, y) {
     }
   }
   if (actualType === 'tankerTruck') {
-    unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY;
-    unit.supplyGas = TANKER_SUPPLY_CAPACITY;
+    unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY
+    unit.supplyGas = TANKER_SUPPLY_CAPACITY
   }
   if (actualType === 'recoveryTank') {
-    unit.repairTarget = null;
-    unit.towedUnit = null;
-    unit.armor = unitProps.armor;
-    unit.currentSpeed = unitProps.speed; // Track current speed for loaded/unloaded state
+    unit.repairTarget = null
+    unit.towedUnit = null
+    unit.armor = unitProps.armor
+    unit.currentSpeed = unitProps.speed // Track current speed for loaded/unloaded state
   }
   if (unitType === 'tank-v2' || unitType === 'tank-v3') {
     unit.alertMode = unitProps.alertMode
@@ -724,14 +724,14 @@ export function createUnit(factory, unitType, x, y) {
 
   // Initialize unified movement system for the new unit
   initializeUnitMovement(unit)
-  
+
   // Initialize leveling system for combat units (not harvesters)
   if (unit.type !== 'harvester') {
     unit.level = 0
     unit.experience = 0
     unit.baseCost = unitCosts[unit.type] || unitCosts[unitType] || 1000
   }
-  
+
   // Initialize speed modifier based on current health
   updateUnitSpeedModifier(unit)
 
@@ -832,18 +832,18 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
         // Store previous tile position (using center coordinates)
         const prevTileX = Math.floor((blockingUnit.x + TILE_SIZE / 2) / TILE_SIZE)
         const prevTileY = Math.floor((blockingUnit.y + TILE_SIZE / 2) / TILE_SIZE)
-        
+
         // Move the blocking unit
         blockingUnit.tileX = newX
         blockingUnit.tileY = newY
         blockingUnit.x = newX * TILE_SIZE
         blockingUnit.y = newY * TILE_SIZE
-        
+
         // Update occupancy map
         if (gameState.occupancyMap) {
           updateUnitOccupancy(blockingUnit, prevTileX, prevTileY, gameState.occupancyMap)
         }
-        
+
         return true
       }
     }
@@ -856,9 +856,9 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
 // When multiple units share the same tile, naturally guide them to separate positions
 export function resolveUnitCollisions(units, mapGrid) {
   const assignedTiles = new Set()
-  const COLLISION_RADIUS = TILE_SIZE * 0.4; // Collision detection radius
-  const SEPARATION_FORCE = 0.5; // Force to separate overlapping units
-  
+  const COLLISION_RADIUS = TILE_SIZE * 0.4 // Collision detection radius
+  const SEPARATION_FORCE = 0.5 // Force to separate overlapping units
+
   // Update each unit's tile coordinates based on their current positions.
   units.forEach(u => {
     if (!u.path || u.path.length === 0) {
@@ -866,43 +866,43 @@ export function resolveUnitCollisions(units, mapGrid) {
       u.tileY = Math.floor(u.y / TILE_SIZE)
     }
   })
-  
+
   // Find overlapping units and apply gentle separation forces
   for (let i = 0; i < units.length; i++) {
-    const unit1 = units[i];
-    if (unit1.path && unit1.path.length > 0) continue; // Skip moving units
-    
+    const unit1 = units[i]
+    if (unit1.path && unit1.path.length > 0) continue // Skip moving units
+
     for (let j = i + 1; j < units.length; j++) {
-      const unit2 = units[j];
-      if (unit2.path && unit2.path.length > 0) continue; // Skip moving units
-      
-      const dx = unit2.x - unit1.x;
-      const dy = unit2.y - unit1.y;
-      const distance = Math.hypot(dx, dy);
-      
+      const unit2 = units[j]
+      if (unit2.path && unit2.path.length > 0) continue // Skip moving units
+
+      const dx = unit2.x - unit1.x
+      const dy = unit2.y - unit1.y
+      const distance = Math.hypot(dx, dy)
+
       // If units are overlapping, apply gentle separation
       if (distance < COLLISION_RADIUS && distance > 0) {
-        const overlap = COLLISION_RADIUS - distance;
-        const separationX = (dx / distance) * overlap * SEPARATION_FORCE;
-        const separationY = (dy / distance) * overlap * SEPARATION_FORCE;
-        
+        const overlap = COLLISION_RADIUS - distance
+        const separationX = (dx / distance) * overlap * SEPARATION_FORCE
+        const separationY = (dy / distance) * overlap * SEPARATION_FORCE
+
         // Apply separation force (split the movement between both units)
-        unit1.x -= separationX * 0.5;
-        unit1.y -= separationY * 0.5;
-        unit2.x += separationX * 0.5;
-        unit2.y += separationY * 0.5;
-        
+        unit1.x -= separationX * 0.5
+        unit1.y -= separationY * 0.5
+        unit2.x += separationX * 0.5
+        unit2.y += separationY * 0.5
+
         // Ensure units stay within map bounds
-        unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE));
-        unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE));
-        unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE));
-        unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE));
-        
+        unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE))
+        unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE))
+        unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE))
+        unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE))
+
         // Update tile positions
-        unit1.tileX = Math.floor(unit1.x / TILE_SIZE);
-        unit1.tileY = Math.floor(unit1.y / TILE_SIZE);
-        unit2.tileX = Math.floor(unit2.x / TILE_SIZE);
-        unit2.tileY = Math.floor(unit2.y / TILE_SIZE);
+        unit1.tileX = Math.floor(unit1.x / TILE_SIZE)
+        unit1.tileY = Math.floor(unit1.y / TILE_SIZE)
+        unit2.tileX = Math.floor(unit2.x / TILE_SIZE)
+        unit2.tileY = Math.floor(unit2.y / TILE_SIZE)
       }
     }
   }

@@ -35,7 +35,7 @@ export class UnitCommandsHandler {
     })
 
     // If no commandable units, show notification and return
-    if (commandableUnits.length === 0 && selectedUnits.some(unit => 
+    if (commandableUnits.length === 0 && selectedUnits.some(unit =>
       unit.crew && typeof unit.crew === 'object' && !unit.crew.commander)) {
       showNotification('Cannot command units without commanders!', 2000)
       return
@@ -51,7 +51,7 @@ export class UnitCommandsHandler {
     cancelRetreatForUnits(unitsToCommand)
 
     if (!skipQueueClear) {
-          unitsToCommand.forEach(unit => {
+      unitsToCommand.forEach(unit => {
         unit.commandQueue = []
         unit.currentCommand = null
       })
@@ -129,11 +129,11 @@ export class UnitCommandsHandler {
         unit.gas <= 0 && typeof unit.maxGas === 'number'
           ? null
           : findPath(
-              { x: unit.tileX, y: unit.tileY },
-              destTile,
-              mapGrid,
-              gameState.occupancyMap
-            )
+            { x: unit.tileX, y: unit.tileY },
+            destTile,
+            mapGrid,
+            gameState.occupancyMap
+          )
 
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
@@ -343,13 +343,13 @@ export class UnitCommandsHandler {
         workshop.repairQueue.push(unit)
         unit.targetWorkshop = workshop
       }
-      
+
       // Assign waiting positions in a line near the workshop
       // Position units in a line 2 tiles below the workshop for better queuing
       const waitingY = workshop.y + workshop.height + 1
       const waitingX = workshop.x + (index % workshop.width)
       const targetTile = { x: waitingX, y: waitingY }
-      
+
       const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
@@ -447,32 +447,32 @@ export class UnitCommandsHandler {
     ambulances.forEach(ambulance => {
       ambulance.healingTarget = targetUnit
       ambulance.healingTimer = 0
-      
+
       // Set path to target (within 1 tile range)
       const targetTileX = Math.floor((targetUnit.x + TILE_SIZE / 2) / TILE_SIZE)
       const targetTileY = Math.floor((targetUnit.y + TILE_SIZE / 2) / TILE_SIZE)
-      
+
       // Find a position within 1 tile of the target
       const directions = [
         { x: 0, y: 0 },   // Same tile if possible
         { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
         { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
       ]
-      
+
       let destinationFound = false
       for (const dir of directions) {
         const destX = targetTileX + dir.x
         const destY = targetTileY + dir.y
-        
+
         if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
           const path = findPath(
-            { x: Math.floor((ambulance.x + TILE_SIZE / 2) / TILE_SIZE), 
+            { x: Math.floor((ambulance.x + TILE_SIZE / 2) / TILE_SIZE),
               y: Math.floor((ambulance.y + TILE_SIZE / 2) / TILE_SIZE) },
             { x: destX, y: destY },
             mapGrid,
             null
           )
-          
+
           if (path && path.length > 0) {
             ambulance.path = path.slice(1)
             ambulance.moveTarget = { x: destX, y: destY }
@@ -481,12 +481,12 @@ export class UnitCommandsHandler {
           }
         }
       }
-      
+
       if (!destinationFound) {
         showNotification('Cannot path to target for healing!', 2000)
       }
     })
-    
+
     playSound('movement', 0.5)
   }
 
@@ -538,11 +538,11 @@ export class UnitCommandsHandler {
     // Assign ambulances to refill at the hospital
     ambulances.forEach(ambulance => {
       ambulance.refillingTarget = hospital
-      
+
       // Set path to hospital refill area (3 tiles below hospital)
       const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
       const refillY = hospital.y + hospital.height + 1 // 1 tile below hospital
-      
+
       // Find available position in refill area
       const refillPositions = [
         { x: hospitalCenterX - 1, y: refillY },
@@ -555,16 +555,16 @@ export class UnitCommandsHandler {
         { x: hospitalCenterX, y: refillY + 2 },
         { x: hospitalCenterX + 1, y: refillY + 2 }
       ]
-      
+
       let destinationFound = false
       for (const pos of refillPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-      const path = findPath(
-        { x: ambulance.tileX, y: ambulance.tileY },
-        { x: pos.x, y: pos.y },
-        mapGrid,
-        gameState.occupancyMap
-      )
+          const path = findPath(
+            { x: ambulance.tileX, y: ambulance.tileY },
+            { x: pos.x, y: pos.y },
+            mapGrid,
+            gameState.occupancyMap
+          )
           if (path && path.length > 0) {
             ambulance.path = path
             ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
@@ -574,13 +574,13 @@ export class UnitCommandsHandler {
           }
         }
       }
-      
+
       if (!destinationFound) {
         showNotification('Cannot reach hospital refill area!', 2000)
         ambulance.refillingTarget = null
       }
     })
-    
+
     playSound('movement', 0.5)
   }
 
@@ -651,7 +651,7 @@ export class UnitCommandsHandler {
       // Calculate the position where the recovery tank should move to repair the target
       const targetTileX = targetUnit.tileX
       const targetTileY = targetUnit.tileY
-      
+
       // Find a position within 1 tile of the target
       const repairPositions = [
         { x: targetTileX - 1, y: targetTileY },     // Left
@@ -663,7 +663,7 @@ export class UnitCommandsHandler {
         { x: targetTileX - 1, y: targetTileY + 1 }, // Bottom-left
         { x: targetTileX + 1, y: targetTileY + 1 }  // Bottom-right
       ]
-      
+
       let destinationFound = false
       for (const pos of repairPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
@@ -678,12 +678,12 @@ export class UnitCommandsHandler {
           }
         }
       }
-      
+
       if (!destinationFound) {
         showNotification('Cannot reach unit for repair!', 2000)
       }
     })
-    
+
     playSound('movement', 0.5)
   }
 
@@ -697,7 +697,7 @@ export class UnitCommandsHandler {
       // Calculate the position where the damaged unit should move to get repaired
       const tankTileX = recoveryTank.tileX
       const tankTileY = recoveryTank.tileY
-      
+
       // Find a position within 1 tile of the recovery tank
       const repairPositions = [
         { x: tankTileX - 1, y: tankTileY },     // Left
@@ -709,7 +709,7 @@ export class UnitCommandsHandler {
         { x: tankTileX - 1, y: tankTileY + 1 }, // Bottom-left
         { x: tankTileX + 1, y: tankTileY + 1 }  // Bottom-right
       ]
-      
+
       let destinationFound = false
       for (const pos of repairPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
@@ -726,12 +726,12 @@ export class UnitCommandsHandler {
           }
         }
       }
-      
+
       if (!destinationFound) {
         showNotification('Cannot reach recovery tank for repair!', 2000)
       }
     })
-    
+
     playSound('movement', 0.5)
   }
 

@@ -15,7 +15,7 @@ export class HarvesterHUD {
       if (isInputFieldFocused()) {
         return
       }
-      
+
       if (event.key.toLowerCase() === 'i') {
         event.preventDefault()
         event.stopPropagation()
@@ -32,15 +32,15 @@ export class HarvesterHUD {
     if (!this.isVisible || !gameState.buildings) return
 
     // Get all refineries
-    const refineries = gameState.buildings.filter(b => 
-      b.type === 'oreRefinery' && 
+    const refineries = gameState.buildings.filter(b =>
+      b.type === 'oreRefinery' &&
       b.health > 0
     )
 
     // Get all harvesters
-    const harvesters = units.filter(u => 
-      u.type === 'harvester' && 
-      u.health > 0 && 
+    const harvesters = units.filter(u =>
+      u.type === 'harvester' &&
+      u.health > 0 &&
       u.targetRefinery
     )
 
@@ -52,7 +52,7 @@ export class HarvesterHUD {
       if (!harvester.targetRefinery) return
 
       // Find the assigned refinery
-      const assignedRefinery = refineries.find(r => 
+      const assignedRefinery = refineries.find(r =>
         (r.id || `refinery_${r.x}_${r.y}`) === harvester.targetRefinery
       )
 
@@ -61,7 +61,7 @@ export class HarvesterHUD {
       // Calculate positions
       const harvesterX = harvester.x + TILE_SIZE / 2 - scrollOffset.x
       const harvesterY = harvester.y + TILE_SIZE / 2 - scrollOffset.y
-      
+
       const refineryX = (assignedRefinery.x + assignedRefinery.width / 2) * TILE_SIZE - scrollOffset.x
       const refineryY = (assignedRefinery.y + assignedRefinery.height / 2) * TILE_SIZE - scrollOffset.y
 

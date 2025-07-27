@@ -33,7 +33,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
     // Handle ambulance healing target
     if (ambulance.healingTarget) {
       const target = ambulance.healingTarget
-      
+
       // Check if target still exists and is within range
       const targetExists = units.find(u => u.id === target.id)
       if (!targetExists) {
@@ -87,11 +87,11 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
 
       while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
         const [role] = missingCrew.shift()
-        
+
         // Heal in order: driver, commander, loader, gunner
         const healOrder = ['driver', 'commander', 'loader', 'gunner']
         let healedRole = null
-        
+
         for (const checkRole of healOrder) {
           if (!target.crew[checkRole]) {
             target.crew[checkRole] = true
@@ -99,11 +99,11 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
             break
           }
         }
-        
+
         if (healedRole) {
           ambulance.medics -= 1
           ambulance.healingTimer -= healingInterval
-          
+
           // Play sound effect
           // playSound('crewRestored')
         }
@@ -153,9 +153,9 @@ export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
 
   ambulance.healingTarget = targetUnit
   ambulance.healingTimer = 0
-  
+
   // Set path to target
   // This would be handled by the input system when user clicks
-  
+
   return true
 }

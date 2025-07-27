@@ -20,24 +20,24 @@ export class UIRenderer {
       ctx.lineWidth = 2
       ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
     }
-    
+
     // Draw attack group rectangle in red - with debug logging and disable check
     const shouldDrawAGF = !gameState.disableAGFRendering &&
-        gameState.attackGroupMode && 
+        gameState.attackGroupMode &&
         gameState.attackGroupStart && gameState.attackGroupEnd &&
-        (gameState.attackGroupStart.x !== gameState.attackGroupEnd.x || 
+        (gameState.attackGroupStart.x !== gameState.attackGroupEnd.x ||
          gameState.attackGroupStart.y !== gameState.attackGroupEnd.y)
-    
+
     if (shouldDrawAGF) {
       const rectX = Math.min(gameState.attackGroupStart.x, gameState.attackGroupEnd.x) - scrollOffset.x
       const rectY = Math.min(gameState.attackGroupStart.y, gameState.attackGroupEnd.y) - scrollOffset.y
       const rectWidth = Math.abs(gameState.attackGroupEnd.x - gameState.attackGroupStart.x)
       const rectHeight = Math.abs(gameState.attackGroupEnd.y - gameState.attackGroupStart.y)
-      
+
       ctx.strokeStyle = '#FF0000'
       ctx.lineWidth = 2
       ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
-      
+
       // Add a subtle red fill
       ctx.fillStyle = 'rgba(255, 0, 0, 0.1)'
       ctx.fillRect(rectX, rectY, rectWidth, rectHeight)
@@ -46,21 +46,21 @@ export class UIRenderer {
 
   renderRallyPoints(ctx, factories, scrollOffset) {
     // Draw rally point flags only for selected unit-producing factories/buildings
-    
+
     // Check selected factories
     factories.forEach(factory => {
       if (factory.rallyPoint && factory.id === gameState.humanPlayer && factory.selected) {
         this.drawRallyPointFlag(ctx, factory.rallyPoint, scrollOffset)
       }
     })
-    
+
     // Check selected buildings that can produce units
     // Vehicle factory and vehicle workshop should show rally points, not construction yard
     if (gameState.buildings) {
       gameState.buildings.forEach(building => {
-        if (building.rallyPoint && 
-            building.owner === gameState.humanPlayer && 
-            building.selected && 
+        if (building.rallyPoint &&
+            building.owner === gameState.humanPlayer &&
+            building.selected &&
             (building.type === 'vehicleFactory' || building.type === 'vehicleWorkshop')) {
           this.drawRallyPointFlag(ctx, building.rallyPoint, scrollOffset)
         }
@@ -286,10 +286,10 @@ export class UIRenderer {
             clickY <= currentMessageY + 140
           ) {
             // Reset the game instead of reloading the page
-            (async () => {
+            (async() => {
               try {
                 const gameInstance = getCurrentGame()
-                
+
                 if (gameInstance && typeof gameInstance.resetGame === 'function') {
                   await gameInstance.resetGame()
                   // Show notification
@@ -305,7 +305,7 @@ export class UIRenderer {
             })()
           }
         }
-        
+
         gameCanvas.addEventListener('click', this.gameOverClickHandler)
         this.gameOverEventListenerAdded = true
       }

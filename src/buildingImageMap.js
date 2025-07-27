@@ -89,7 +89,7 @@ export function preloadBuildingImages(callback) {
   for (const buildingType of Object.keys(buildingImageMap)) {
     getBuildingImage(buildingType, (_img) => {
       loadedImages++
-      
+
       if (loadedImages === totalImages) {
         buildingImagesPreloaded = true
         buildingImagesLoading = false

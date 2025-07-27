@@ -50,7 +50,7 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
   if (!ORE_SPREAD_ENABLED) {
     return
   }
-  
+
   if (now - gameState.lastOreUpdate >= ORE_SPREAD_INTERVAL) {
     const directions = [
       { x: 1, y: 0 },
@@ -58,7 +58,7 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
       { x: 0, y: 1 },
       { x: 0, y: -1 }
     ]
-    
+
     for (let y = 0; y < mapGrid.length; y++) {
       for (let x = 0; x < mapGrid[0].length; x++) {
         if (mapGrid[y][x].ore || mapGrid[y][x].seedCrystal) {
@@ -72,13 +72,13 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
                 const bw = building.width || 1, bh = building.height || 1
                 return nx >= bx && nx < bx + bw && ny >= by && ny < by + bh
               })
-              
+
               // Check if there's a factory on this tile
               const hasFactory = factories.some(factory => {
                 return nx >= factory.x && nx < factory.x + factory.width &&
                        ny >= factory.y && ny < factory.y + factory.height
               })
-              
+
               // Only spread to land or street tiles that don't already have ore or seed crystals and don't have buildings or factories
               const tileType = mapGrid[ny][nx].type
               if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && Math.random() < spreadProb) {
@@ -99,7 +99,7 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
  */
 export function updateExplosions(gameState) {
   const now = performance.now()
-  
+
   for (let i = explosions.length - 1; i >= 0; i--) {
     if (now - explosions[i].startTime > explosions[i].duration) {
       explosions.splice(i, 1)
@@ -123,13 +123,13 @@ export function updateSmokeParticles(gameState) {
 
   for (let i = gameState.smokeParticles.length - 1; i >= 0; i--) {
     const p = gameState.smokeParticles[i]
-    
+
     // Safety check: remove particles with invalid properties
     if (!p || typeof p.startTime !== 'number' || typeof p.duration !== 'number' || !p.size || p.size <= 0) {
       gameState.smokeParticles.splice(i, 1)
       continue
     }
-    
+
     const progress = (now - p.startTime) / p.duration
     if (progress >= 1) {
       gameState.smokeParticles.splice(i, 1)
@@ -137,21 +137,21 @@ export function updateSmokeParticles(gameState) {
       // Update position with wind effect
       p.x += p.vx + WIND_DIRECTION.x * WIND_STRENGTH
       p.y += p.vy + WIND_DIRECTION.y * WIND_STRENGTH
-      
+
       // Gradually slow down vertical movement (simulate air resistance)
       p.vy *= 0.997
-      
+
       // Apply wind drift more gradually over time
       p.vx += WIND_DIRECTION.x * WIND_STRENGTH * 0.5
       p.vy += WIND_DIRECTION.y * WIND_STRENGTH * 0.5
-      
+
       // Add slight turbulence for realism (reduced)
       p.vx += (Math.random() - 0.5) * 0.003
       p.vy += (Math.random() - 0.5) * 0.003
-      
+
       // Fade out alpha and expand size over time (reduced expansion)
       p.alpha = (1 - progress) * p.alpha
-      
+
       // Smoke expands as it rises (reduced expansion rate)
       if (!p.originalSize || p.originalSize <= 0) {
         p.originalSize = Math.max(0.1, p.size || 8) // Fallback to a minimum safe size
@@ -193,7 +193,7 @@ export function cleanupDestroyedUnits(units, gameState) {
           triggerDistortionEffect(explosionX, explosionY, radius, gameState)
         }
       }
-      
+
       if (unit.owner === gameState.humanPlayer) {
         gameState.playerUnitsDestroyed++
       } else {
@@ -201,12 +201,12 @@ export function cleanupDestroyedUnits(units, gameState) {
         // Play enemy unit destroyed sound when an enemy unit is killed
         playSound('enemyUnitDestroyed', 1.0, 0, true)
       }
-      
+
       // Remove unit from cheat system tracking if it exists
       if (window.cheatSystem) {
         window.cheatSystem.removeUnitFromTracking(unit.id)
       }
-      
+
       if (!unit.occupancyRemoved) {
         removeUnitOccupancy(unit, gameState.occupancyMap)
       }
@@ -236,21 +236,21 @@ export function cleanupDestroyedUnits(units, gameState) {
 export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
   for (let i = factories.length - 1; i >= 0; i--) {
     const factory = factories[i]
-    
+
     if (factory.destroyed || factory.health <= 0) {
       // Clear the factory from the map grid to unblock tiles for pathfinding
       clearFactoryFromMapGrid(factory, mapGrid)
-      
+
       // Remove the factory from the factories array
       factories.splice(i, 1)
 
       // Trigger UI refresh for production buttons
       if (gameState) gameState.pendingButtonUpdate = true
-      
+
       // Calculate explosion position for both sound and visual effects
       const explosionX = (factory.x + factory.width / 2) * TILE_SIZE
       const explosionY = (factory.y + factory.height / 2) * TILE_SIZE
-      
+
       // Update statistics
       if (factory.id === gameState.humanPlayer || factory.owner === gameState.humanPlayer) {
         gameState.playerBuildingsDestroyed++
@@ -259,10 +259,10 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
         // Play enemy building destroyed sound when an enemy factory is destroyed
         playSound('enemyBuildingDestroyed', 1.0, 0, true)
       }
-      
+
       // Play explosion sound with reduced volume (0.5)
       playPositionalSound('explosion', explosionX, explosionY, 0.5)
-      
+
       // Add explosion effect at factory center
       gameState.explosions.push({
         x: explosionX,
@@ -292,7 +292,7 @@ export const updateUnitCollisions = logPerformance(function updateUnitCollisions
 function getPlayerDefeatSound(playerId) {
   const playerColorMap = {
     'player1': 'playerGreenDefeated',  // Green
-    'player2': 'playerRedDefeated',    // Red  
+    'player2': 'playerRedDefeated',    // Red
     'player3': 'playerBlueDefeated',   // Blue
     'player4': 'playerYellowDefeated'  // Yellow
   }
@@ -308,12 +308,12 @@ function getPlayerDefeatSound(playerId) {
 export function checkGameEndConditions(factories, gameState) {
   if (gameState.gameOver) return true
   if (!gameState.buildings) return false
-  
+
   // Count remaining buildings AND factories for human player
   const humanPlayerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
   const humanPlayerFactories = factories.filter(f => (f.id === gameState.humanPlayer || f.owner === gameState.humanPlayer) && f.health > 0)
   const totalHumanPlayerBuildings = humanPlayerBuildings.length + humanPlayerFactories.length
-  
+
   // Check if human player has no buildings left
   if (totalHumanPlayerBuildings === 0) {
     gameState.gameOver = true
@@ -329,15 +329,15 @@ export function checkGameEndConditions(factories, gameState) {
   const playerCount = gameState.playerCount || 2
   const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   const aiPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
-  
+
   let remainingAiPlayers = 0
-  let defeatedAiPlayers = []
+  const defeatedAiPlayers = []
 
   for (const aiPlayerId of aiPlayerIds) {
     const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
     const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0)
     const totalAiBuildings = aiBuildings.length + aiFactories.length
-    
+
     if (totalAiBuildings > 0) {
       remainingAiPlayers++
     } else {
@@ -351,7 +351,7 @@ export function checkGameEndConditions(factories, gameState) {
       }
     }
   }
-  
+
   // Play defeat sounds for newly defeated AI players
   defeatedAiPlayers.forEach((playerId, index) => {
     setTimeout(() => {

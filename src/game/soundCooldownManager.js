@@ -12,13 +12,13 @@ const lastCriticalDamageSoundTime = new Map()
  */
 export function canPlayCriticalDamageSound(unit, currentTime) {
   if (!unit || !unit.id) return false
-  
+
   const lastSoundTime = lastCriticalDamageSoundTime.get(unit.id)
-  
+
   if (!lastSoundTime) {
     return true // Never played before
   }
-  
+
   return (currentTime - lastSoundTime) >= CRITICAL_DAMAGE_SOUND_COOLDOWN
 }
 
@@ -29,7 +29,7 @@ export function canPlayCriticalDamageSound(unit, currentTime) {
  */
 export function recordCriticalDamageSoundPlayed(unit, currentTime) {
   if (!unit || !unit.id) return
-  
+
   lastCriticalDamageSoundTime.set(unit.id, currentTime)
 }
 
@@ -42,9 +42,9 @@ export function cleanupSoundCooldowns(units) {
     lastCriticalDamageSoundTime.clear()
     return
   }
-  
+
   const activeUnitIds = new Set(units.map(unit => unit.id).filter(id => id))
-  
+
   // Remove entries for units that no longer exist
   for (const unitId of lastCriticalDamageSoundTime.keys()) {
     if (!activeUnitIds.has(unitId)) {

@@ -6,7 +6,7 @@ import { gameState } from './gameState.js'
 export function initFactories(factories, mapGrid) {
   // Clear existing factories
   factories.length = 0
-  
+
   // Get the factory dimensions from buildingData
   const factoryWidth = buildingData.constructionYard.width
   const factoryHeight = buildingData.constructionYard.height
@@ -14,7 +14,7 @@ export function initFactories(factories, mapGrid) {
   // Create factories for each player based on player count
   const playerCount = gameState.playerCount || 2
   const playerIds = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
-  
+
   playerIds.forEach(playerId => {
     const position = PLAYER_POSITIONS[playerId]
     const factoryX = Math.floor(MAP_TILES_X * position.x) - Math.floor(factoryWidth / 2)
@@ -53,24 +53,24 @@ export function initFactories(factories, mapGrid) {
   factories.forEach(factory => {
     // Store original tile types for factories (similar to placeBuilding in buildings.js)
     factory.originalTiles = []
-    
+
     for (let y = factory.y; y < factory.y + factory.height; y++) {
       factory.originalTiles[y - factory.y] = []
-      
+
       for (let x = factory.x; x < factory.x + factory.width; x++) {
         // Store the original tile type before marking as building
         factory.originalTiles[y - factory.y][x - factory.x] = mapGrid[y][x].type
-        
+
         // Mark tile as having a building (for collision detection) but preserve the original tile type for rendering
         mapGrid[y][x].building = factory
-        
+
         // Remove any ore from tiles where factories are placed
         if (mapGrid[y][x].ore) {
           mapGrid[y][x].ore = false
           // Clear any cached texture variations for this tile to force re-render
           mapGrid[y][x].textureVariation = null
         }
-        
+
         // DON'T change the tile type - keep the original background texture visible
         // mapGrid[y][x].type = 'building' // REMOVED: This was causing solid color rendering
       }
@@ -83,12 +83,12 @@ export function initFactories(factories, mapGrid) {
     // For 2 factories, create a direct L-shaped connection
     const factory1 = factories[0]
     const factory2 = factories[1]
-    
+
     const startX = factory1.x + Math.floor(factory1.width / 2)
     const startY = factory1.y + Math.floor(factory1.height / 2)
     const endX = factory2.x + Math.floor(factory2.width / 2)
     const endY = factory2.y + Math.floor(factory2.height / 2)
-    
+
     // Create L-shaped connection (horizontal then vertical) with 2-tile thickness
     for (let x = Math.min(startX, endX); x <= Math.max(startX, endX); x++) {
       if (mapGrid[startY] && mapGrid[startY][x]) {
@@ -115,14 +115,14 @@ export function initFactories(factories, mapGrid) {
       for (let j = i + 1; j < factories.length; j++) {
         const factory1 = factories[i]
         const factory2 = factories[j]
-        
+
         const centerX1 = factory1.x + Math.floor(factory1.width / 2)
         const centerY1 = factory1.y + Math.floor(factory1.height / 2)
         const centerX2 = factory2.x + Math.floor(factory2.width / 2)
         const centerY2 = factory2.y + Math.floor(factory2.height / 2)
-        
+
         const distance = Math.hypot(centerX1 - centerX2, centerY1 - centerY2)
-        
+
         // Only connect if factories are very close (less than 15 tiles apart)
         if (distance < 15) {
           // Simple horizontal then vertical connection with 2-tile thickness

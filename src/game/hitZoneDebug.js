@@ -9,7 +9,7 @@ import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
  */
 export function testHitZoneCalculations() {
   console.log('Testing Hit Zone Damage Calculations...')
-  
+
   // Create a mock tank unit at position (100, 100) facing right (0 radians)
   const mockTank = {
     type: 'tank',
@@ -18,7 +18,7 @@ export function testHitZoneCalculations() {
     direction: 0, // Facing right
     id: 'test-tank'
   }
-  
+
   // Test bullets from different directions
   const testCases = [
     { name: 'Front hit', bullet: { x: 140, y: 116 } }, // From right (front)
@@ -28,11 +28,11 @@ export function testHitZoneCalculations() {
     { name: 'Front-right diagonal', bullet: { x: 140, y: 140 } },
     { name: 'Rear-left diagonal', bullet: { x: 60, y: 60 } }
   ]
-  
+
   console.log('Tank position: (116, 116) - center of 32x32 tile at (100, 100)')
   console.log('Tank facing: Right (0 radians)')
   console.log('')
-  
+
   testCases.forEach(testCase => {
     const result = calculateHitZoneDamageMultiplier(testCase.bullet, mockTank)
     console.log(`${testCase.name}:`)

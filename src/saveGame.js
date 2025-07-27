@@ -160,8 +160,8 @@ export function saveGame(label) {
       availableBuildingTypes: Array.from(gameState.availableBuildingTypes || []),
       newUnitTypes: Array.from(gameState.newUnitTypes || []),
       newBuildingTypes: Array.from(gameState.newBuildingTypes || []),
-      defeatedPlayers: gameState.defeatedPlayers instanceof Set ? 
-        Array.from(gameState.defeatedPlayers) : 
+      defeatedPlayers: gameState.defeatedPlayers instanceof Set ?
+        Array.from(gameState.defeatedPlayers) :
         (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : [])
     },
     aiFactoryBudgets, // Save AI player budgets
@@ -208,23 +208,23 @@ export function loadGame(key) {
     if (Array.isArray(loaded.gameState.newBuildingTypes)) {
       gameState.newBuildingTypes = new Set(loaded.gameState.newBuildingTypes)
     }
-    
+
     // Ensure smokeParticles is properly initialized and clean up any invalid particles
     if (!Array.isArray(gameState.smokeParticles)) {
       gameState.smokeParticles = []
     } else {
       // Clean up any invalid smoke particles from saved data
-      gameState.smokeParticles = gameState.smokeParticles.filter(p => 
-        p && typeof p === 'object' && 
-        typeof p.x === 'number' && 
-        typeof p.y === 'number' && 
-        typeof p.size === 'number' && 
+      gameState.smokeParticles = gameState.smokeParticles.filter(p =>
+        p && typeof p === 'object' &&
+        typeof p.x === 'number' &&
+        typeof p.y === 'number' &&
+        typeof p.size === 'number' &&
         p.size > 0 &&
         typeof p.startTime === 'number' &&
         typeof p.duration === 'number'
       )
     }
-    
+
     // Restore AI player budgets
     if (loaded.aiFactoryBudgets) {
       Object.entries(loaded.aiFactoryBudgets).forEach(([playerId, budget]) => {
@@ -240,7 +240,7 @@ export function loadGame(key) {
         enemyFactory.budget = loaded.enemyMoney
       }
     }
-    
+
     units.length = 0
     loaded.units.forEach(u => {
       // Rehydrate unit using createUnit logic
@@ -279,7 +279,7 @@ export function loadGame(key) {
       hydrated.outOfGasPlayed = u.outOfGasPlayed
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
-      
+
       // Initialize/restore experience system for combat units
       if (hydrated.type !== 'harvester') {
         // Ensure experience properties exist
@@ -289,21 +289,21 @@ export function loadGame(key) {
           const costs = { tank: 1000, rocketTank: 2000, 'tank-v2': 2000, 'tank-v3': 3000, tank_v1: 1000 }
           return costs[hydrated.type] || 1000
         })()
-        
+
         // Restore level bonuses if they exist
         if (u.rangeMultiplier) hydrated.rangeMultiplier = u.rangeMultiplier
         if (u.fireRateMultiplier) hydrated.fireRateMultiplier = u.fireRateMultiplier
         if (u.armor && u.armor > 1) hydrated.armor = u.armor
         if (u.selfRepair) hydrated.selfRepair = u.selfRepair
-        
+
         console.log(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
       }
-      
+
       // Restore harvester-specific properties and re-assign to refineries if needed
       if (hydrated.type === 'harvester') {
         hydrated.oreCarried = u.oreCarried || 0
         hydrated.oreField = u.oreField || null
-        
+
         // If harvester had an assigned refinery but it's lost during save/load, reassign
         if (u.assignedRefinery) {
           hydrated.assignedRefinery = u.assignedRefinery
@@ -313,7 +313,7 @@ export function loadGame(key) {
           hydrated.needsRefineryAssignment = true
         }
       }
-      
+
       units.push(hydrated)
     })
 
@@ -346,14 +346,14 @@ export function loadGame(key) {
       const building = { ...b }
       // Ensure we restore building flag so selection works correctly
       building.isBuilding = true
-      
+
       // Ensure all buildings have maxHealth restored for proper health bar rendering
       const data = buildingData[building.type]
       if (data) {
         // Always restore maxHealth from building data to ensure consistency
         building.maxHealth = data.health
       }
-      
+
       // Defensive turrets: turretGunV1/V2/V3, rocketTurret, teslaCoil, artilleryTurret
       if (building.type && (building.type.startsWith('turretGun') || building.type === 'rocketTurret' || building.type === 'teslaCoil' || building.type === 'artilleryTurret')) {
         // Get config from buildingData
@@ -385,7 +385,7 @@ export function loadGame(key) {
           building.isArtillery = true
         }
       }
-      
+
       // Restore rally point for vehicle factories only
       if (building.rallyPoint && building.type === 'vehicleFactory') {
         // Rally point is already in the building data from save
@@ -393,7 +393,7 @@ export function loadGame(key) {
         // Initialize rally point as null for vehicle factories
         building.rallyPoint = null
       }
-      
+
       gameState.buildings.push(building)
     })
 
@@ -446,7 +446,7 @@ export function loadGame(key) {
         }
       }
     })
-    
+
     // Ensure no ore overlaps with buildings or factories after loading
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
 
@@ -487,7 +487,7 @@ export function loadGame(key) {
     // Auto-start the game after loading
     gameState.gamePaused = false
     gameState.gameStarted = true
-    
+
     // Update pause button to show pause icon since game is now running
     const pauseBtn = document.getElementById('pauseBtn')
     if (pauseBtn) {
@@ -496,7 +496,7 @@ export function loadGame(key) {
         playPauseIcon.textContent = '⏸'
       }
     }
-    
+
     // Resume production after unpause
     productionQueue.resumeProductionAfterUnpause()
 

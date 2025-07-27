@@ -21,15 +21,15 @@ function isPlayerOwned(entity) {
  */
 function isPlayerBase(entity) {
   if (!isPlayerOwned(entity)) return false
-  
+
   // Check for construction yard (factory)
   if (entity.id && entity.id === gameState.humanPlayer) return true
-  
+
   // Check for base buildings
   if (entity.type) {
     const baseBuildings = [
       'constructionYard',
-      'powerPlant', 
+      'powerPlant',
       'oreRefinery',
       'vehicleFactory',
       'barracks',
@@ -40,7 +40,7 @@ function isPlayerBase(entity) {
     ]
     return baseBuildings.includes(entity.type)
   }
-  
+
   return false
 }
 
@@ -58,7 +58,7 @@ function isPlayerHarvester(unit) {
 export function handleAttackNotification(target, attacker, now) {
   // Only trigger notifications if attacker is an enemy
   if (!attacker || isPlayerOwned(attacker)) return
-  
+
   // Check for base under attack
   if (isPlayerBase(target)) {
     if (now - lastBaseAttackNotification >= NOTIFICATION_COOLDOWN) {
@@ -66,8 +66,8 @@ export function handleAttackNotification(target, attacker, now) {
       lastBaseAttackNotification = now
     }
   }
-  
-  // Check for harvester under attack  
+
+  // Check for harvester under attack
   if (isPlayerHarvester(target)) {
     if (now - lastHarvesterAttackNotification >= NOTIFICATION_COOLDOWN) {
       playSound('ourHarvestersAreUnderAttack', 1.0, 0, true) // Use stackable sound queue

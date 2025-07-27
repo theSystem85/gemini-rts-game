@@ -123,7 +123,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       'tank-v3': 3000,
       ambulance: 500
     }
-    
+
     const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
     const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
@@ -140,7 +140,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       unit.medics = UNIT_PROPERTIES.ambulance.medics
       unit.maxMedics = UNIT_PROPERTIES.ambulance.maxMedics
     }
-    
+
     unit.baseCost = unitCosts[unitType] || 1000
   }
 

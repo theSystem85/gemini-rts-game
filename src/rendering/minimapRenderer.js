@@ -124,12 +124,12 @@ export class MinimapRenderer {
   renderVideoOverlay(minimapCtx, minimapWidth, minimapHeight) {
     // Get the current video element from the overlay
     const videoElement = videoOverlay.getCurrentVideo()
-    
+
     if (!videoElement || videoElement.readyState < 2) {
       // Video not ready, show loading state
       minimapCtx.fillStyle = '#000'
       minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight)
-      
+
       minimapCtx.fillStyle = '#00ff00'
       minimapCtx.font = '14px Arial'
       minimapCtx.textAlign = 'center'
@@ -140,9 +140,9 @@ export class MinimapRenderer {
     // Calculate video dimensions maintaining aspect ratio
     const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight
     const minimapAspectRatio = minimapWidth / minimapHeight
-    
+
     let renderWidth, renderHeight, offsetX, offsetY
-    
+
     if (videoAspectRatio > minimapAspectRatio) {
       // Video is wider, fit to width
       renderWidth = minimapWidth

@@ -28,12 +28,12 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
           selectedUnits.splice(idx, 1)
         }
       }
-      
+
       // Remove unit from cheat system tracking if it exists
       if (window.cheatSystem) {
         window.cheatSystem.removeUnitFromTracking(unit.id)
       }
-      
+
       if (!unit.occupancyRemoved) {
         removeUnitOccupancy(unit, occupancyMap)
       }
@@ -90,11 +90,11 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
         // Only update if not already moving to target and throttle attack pathfinding to 3 seconds
         const targetTileX = unit.target.tileX !== undefined ? Math.floor(unit.target.x / TILE_SIZE) : unit.target.x
         const targetTileY = unit.target.tileY !== undefined ? Math.floor(unit.target.y / TILE_SIZE) : unit.target.y
-        const shouldRecalculatePath = !unit.moveTarget || 
-          Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE || 
+        const shouldRecalculatePath = !unit.moveTarget ||
+          Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE ||
           Math.abs(unit.moveTarget.y - targetCenterY) > TILE_SIZE
         const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
-        
+
         if (shouldRecalculatePath && pathRecalcNeeded) {
           unit.moveTarget = { x: targetCenterX, y: targetCenterY }
           unit.lastAttackPathCalcTime = now
@@ -221,7 +221,7 @@ export function updateSpawnExit(units, factories, mapGrid, occupancyMap) {
       const factory = unit.owner === gameState.humanPlayer
         ? factories.find(f => f.id === gameState.humanPlayer || f.id === 'player')
         : factories.find(f => f.owner === unit.owner)
-      
+
       if (factory && unit.tileX >= factory.x && unit.tileX < factory.x + factory.width &&
         unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
         const exitTile = findAdjacentTile(factory, mapGrid)
@@ -281,7 +281,7 @@ function updateUnitRotation(unit, now) {
     if (unit.target) {
       // Tank has a target - rotate turret to track target
       let targetCenterX, targetCenterY
-      
+
       if (unit.target.tileX !== undefined) {
         // Target is a unit
         targetCenterX = unit.target.x + TILE_SIZE / 2
@@ -308,7 +308,7 @@ function updateUnitRotation(unit, now) {
         // Smoothly rotate the turret using separate turret rotation speed
         unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, turretAngle, unit.turretRotationSpeed)
       }
-      
+
       // Clear movement turret flag when actively targeting
       unit.turretShouldFollowMovement = false
     } else if (unit.turretShouldFollowMovement && unit.path && unit.path.length > 0) {
@@ -319,14 +319,14 @@ function updateUnitRotation(unit, now) {
       const destY = finalDestination.y * TILE_SIZE + TILE_SIZE / 2
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
-      
+
       const movementDirection = Math.atan2(destY - unitCenterY, destX - unitCenterX)
-      
+
       // Rotate turret towards movement direction using turret rotation speed
       unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, movementDirection, unit.turretRotationSpeed)
     }
     // If no target AND turretShouldFollowMovement is false, leave turret direction unchanged (idle state)
-    
+
     // Clear the movement flag when path is complete
     if (!unit.path || unit.path.length === 0) {
       unit.turretShouldFollowMovement = false

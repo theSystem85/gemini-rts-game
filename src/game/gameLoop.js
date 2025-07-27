@@ -106,7 +106,7 @@ export class GameLoop {
 
     // Update buildings under repair
     updateBuildingsUnderRepair(gameState, timestamp)
-    
+
     // Update buildings awaiting repair (countdown for buildings under attack)
     updateBuildingsAwaitingRepair(gameState, timestamp)
 

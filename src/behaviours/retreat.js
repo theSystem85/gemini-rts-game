@@ -1,6 +1,6 @@
 /**
  * Retreat Behavior System
- * 
+ *
  * Handles tactical retreat behavior for combat units:
  * - Tanks move backwards while maintaining turret aim on target
  * - Minimal rotation - prefer reverse movement over turning
@@ -28,9 +28,9 @@ export function isRetreating(unit) {
  * Called when shift+click is used
  */
 export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
-  const retreatingUnits = selectedUnits.filter(unit => 
+  const retreatingUnits = selectedUnits.filter(unit =>
     unit.owner === gameState.humanPlayer &&
-    (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || 
+    (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' ||
      unit.type === 'tank-v3' || unit.type === 'rocketTank')
   )
 
@@ -40,7 +40,7 @@ export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
   const retreatTileY = Math.floor(targetY / TILE_SIZE)
 
   // Validate retreat position
-  if (retreatTileX < 0 || retreatTileX >= mapGrid[0].length || 
+  if (retreatTileX < 0 || retreatTileX >= mapGrid[0].length ||
       retreatTileY < 0 || retreatTileY >= mapGrid.length ||
       mapGrid[retreatTileY][retreatTileX].type === 'water' ||
       mapGrid[retreatTileY][retreatTileX].type === 'rock' ||
@@ -57,17 +57,17 @@ export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
     unit.isRetreating = true
     unit.retreatTarget = { x: retreatTileX, y: retreatTileY }
     unit.retreatStartTime = performance.now()
-    
+
     // Cancel any existing attack/movement behavior that might conflict
     unit.attackQueue = [] // Clear attack queue
     unit.isAttacking = false
     unit.lastAttackTime = 0
     unit.alertMode = false // Disable alert mode during retreat
-    
+
     // Apply formation offset for multiple units
     let formationOffsetX = 0
     let formationOffsetY = 0
-    
+
     if (retreatingUnits.length > 1) {
       const cols = Math.ceil(Math.sqrt(retreatingUnits.length))
       const col = index % cols
@@ -78,7 +78,7 @@ export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
 
     const finalRetreatX = Math.max(0, Math.min(mapGrid[0].length - 1, retreatTileX + formationOffsetX))
     const finalRetreatY = Math.max(0, Math.min(mapGrid.length - 1, retreatTileY + formationOffsetY))
-    
+
     unit.retreatTarget = { x: finalRetreatX, y: finalRetreatY }
 
     // Calculate retreat movement strategy
@@ -106,7 +106,7 @@ function calculateRetreatMovement(unit, mapGrid) {
   const dx = retreatWorldX - unitCenterX
   const dy = retreatWorldY - unitCenterY
   const retreatDirection = Math.atan2(dy, dx)
-  
+
   // Calculate current tank orientation
   const currentDirection = unit.direction || 0
   const forwardDirection = currentDirection
@@ -132,17 +132,17 @@ function calculateRetreatMovement(unit, mapGrid) {
     unit.targetDirection = retreatDirection
     unit.canAccelerate = false // Don't move until oriented correctly
   }
-  
+
   // Normalize target direction
   while (unit.targetDirection > Math.PI) unit.targetDirection -= 2 * Math.PI
   while (unit.targetDirection < -Math.PI) unit.targetDirection += 2 * Math.PI
-  
+
   // Set up path to retreat target for existing movement system (once rotation complete)
   unit.path = [{
     x: unit.retreatTarget.x,
     y: unit.retreatTarget.y
   }]
-  
+
   unit.moveTarget = {
     x: retreatWorldX,
     y: retreatWorldY
@@ -175,13 +175,13 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
     unit.canAccelerate = true
     unit.canFire = true // Reset firing capability when retreat ends
     unit.retreatStuckDetection = null // Clear stuck detection
-    
+
     // Clear movement system state
     if (unit.movement) {
       unit.movement.isMoving = false
       unit.movement.targetVelocity = { x: 0, y: 0 }
     }
-    
+
     // Keep target for defensive firing but don't chase
     if (unit.retreatOriginalTarget && unit.retreatOriginalTarget.health > 0) {
       const targetDistance = getDistanceToTarget(unit, unit.retreatOriginalTarget)
@@ -193,7 +193,7 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
         unit.retreatOriginalTarget = null
       }
     }
-    
+
     return true
   }
 
@@ -209,13 +209,13 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
     unit.canAccelerate = true
     unit.canFire = true // Reset firing capability when retreat ends
     unit.retreatStuckDetection = null // Clear stuck detection
-    
+
     // Clear movement system state
     if (unit.movement) {
       unit.movement.isMoving = false
       unit.movement.targetVelocity = { x: 0, y: 0 }
     }
-    
+
     // Keep original target for defensive firing
     if (unit.retreatOriginalTarget && unit.retreatOriginalTarget.health > 0) {
       const targetDistance = getDistanceToTarget(unit, unit.retreatOriginalTarget)
@@ -226,7 +226,7 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
         unit.retreatOriginalTarget = null
       }
     }
-    
+
     return true
   }
 
@@ -249,20 +249,20 @@ function updateRetreatMovement(unit, now) {
   const unitCenterY = unit.y + TILE_SIZE / 2
   const retreatWorldX = unit.retreatTarget.x * TILE_SIZE + TILE_SIZE / 2
   const retreatWorldY = unit.retreatTarget.y * TILE_SIZE + TILE_SIZE / 2
-  
+
   const currentDirection = unit.direction || 0
   const targetDirection = unit.targetDirection
-  
+
   // Check if rotation is complete for both forward and backward movement
   if (!unit.canAccelerate && targetDirection !== undefined) {
     const rotationDiff = Math.abs(angleDiff(currentDirection, targetDirection))
     const ROTATION_TOLERANCE = 0.15 // ~8.6 degrees tolerance
-    
+
     if (rotationDiff < ROTATION_TOLERANCE) {
       unit.canAccelerate = true
     }
   }
-  
+
   // Ensure we have valid path and moveTarget for existing movement system
   if (!unit.path || unit.path.length === 0) {
     unit.path = [{
@@ -270,14 +270,14 @@ function updateRetreatMovement(unit, now) {
       y: unit.retreatTarget.y
     }]
   }
-  
+
   if (!unit.moveTarget) {
     unit.moveTarget = {
       x: retreatWorldX,
       y: retreatWorldY
     }
   }
-  
+
   // Initialize retreat stuck detection if not present
   if (!unit.retreatStuckDetection) {
     unit.retreatStuckDetection = {
@@ -286,15 +286,15 @@ function updateRetreatMovement(unit, now) {
       lastCheck: now
     }
   }
-  
+
   // Check if unit is stuck during retreat (hasn't moved significantly in 2 seconds)
   const stuckDetection = unit.retreatStuckDetection
   if (now - stuckDetection.lastCheck > 1000) { // Check every second
     const distanceMoved = Math.hypot(unit.x - stuckDetection.lastPosition.x, unit.y - stuckDetection.lastPosition.y)
-    
+
     if (distanceMoved < TILE_SIZE / 4 && unit.canAccelerate) {
       stuckDetection.stuckTime += now - stuckDetection.lastCheck
-      
+
       // If stuck for more than 2 seconds, stop retreat
       if (stuckDetection.stuckTime > 2000) {
         // Clear retreat state - unit is stuck
@@ -307,20 +307,20 @@ function updateRetreatMovement(unit, now) {
         unit.canAccelerate = true
         unit.canFire = true // Reset firing capability when retreat ends
         unit.retreatStuckDetection = null
-        
+
         // Clear movement system state
         if (unit.movement) {
           unit.movement.isMoving = false
           unit.movement.targetVelocity = { x: 0, y: 0 }
         }
-        
+
         return
       }
     } else {
       // Unit is moving, reset stuck time
       stuckDetection.stuckTime = 0
     }
-    
+
     stuckDetection.lastPosition.x = unit.x
     stuckDetection.lastPosition.y = unit.y
     stuckDetection.lastCheck = now
@@ -334,7 +334,7 @@ function updateRetreatCombat(unit, now) {
   // Continue firing at target while retreating (if in range)
   if (unit.target && unit.target.health > 0) {
     const targetDistance = getDistanceToTarget(unit, unit.target)
-    
+
     if (targetDistance > TANK_FIRE_RANGE * TILE_SIZE) {
       // Target out of range - stop firing but continue retreat
       // Do NOT clear target immediately to avoid re-acquiring
@@ -360,11 +360,11 @@ export function cancelRetreat(unit) {
   unit.canFire = true
   unit.canAccelerate = true
   unit.retreatStuckDetection = null // Clear stuck detection
-  
+
   // Clear movement-related properties
   unit.path = []
   unit.moveTarget = null
-  
+
   // Clear any retreat-related movement flags
   if (unit.movement) {
     unit.movement.isMoving = false
@@ -442,10 +442,10 @@ function checkRetreatPathBlocked(unit, mapGrid, units) {
   const sx = unitTileX < retreatTileX ? 1 : -1
   const sy = unitTileY < retreatTileY ? 1 : -1
   let err = dx - dy
-  
+
   let currentX = unitTileX
   let currentY = unitTileY
-  
+
   // Check each tile along the path (skip the starting position)
   while (!(currentX === retreatTileX && currentY === retreatTileY)) {
     const e2 = 2 * err
@@ -457,22 +457,22 @@ function checkRetreatPathBlocked(unit, mapGrid, units) {
       err += dx
       currentY += sy
     }
-    
+
     // Skip checking the current unit's position
     if (currentX === unitTileX && currentY === unitTileY) continue
-    
+
     // Check bounds
-    if (currentX < 0 || currentX >= mapGrid[0].length || 
+    if (currentX < 0 || currentX >= mapGrid[0].length ||
         currentY < 0 || currentY >= mapGrid.length) {
       return true // Out of bounds = blocked
     }
-    
+
     // Check terrain obstacles
     const tile = mapGrid[currentY][currentX]
     if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
       return true // Terrain blocked
     }
-    
+
     // Check for other units occupying this tile
     const isOccupied = units.some(otherUnit => {
       if (otherUnit.id === unit.id || otherUnit.health <= 0) return false
@@ -480,11 +480,11 @@ function checkRetreatPathBlocked(unit, mapGrid, units) {
       const otherTileY = Math.floor(otherUnit.y / TILE_SIZE)
       return otherTileX === currentX && otherTileY === currentY
     })
-    
+
     if (isOccupied) {
       return true // Unit blocked
     }
   }
-  
+
   return false // Path is clear
 }

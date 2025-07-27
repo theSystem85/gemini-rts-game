@@ -10,7 +10,7 @@ export const gameState = {
   gameOver: false,
   gameOverMessage: null,
   gameResult: null, // 'victory' or 'defeat'
-  
+
   // Statistics tracking for game over screen
   playerUnitsDestroyed: 0,
   enemyUnitsDestroyed: 0,
@@ -117,7 +117,7 @@ export const gameState = {
   // Tank image rendering toggle - initialize from config
   useTankImages: true,
 
-  // Turret image rendering toggle - initialize from config  
+  // Turret image rendering toggle - initialize from config
   useTurretImages: true,
 
   // Cheat dialog state
@@ -143,7 +143,7 @@ export const gameState = {
   // Multiplayer settings
   playerCount: 2,  // Number of players (2-4)
   humanPlayer: 'player1',  // Which player is controlled by human
-  
+
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),
 

@@ -7,7 +7,7 @@ import { EffectsRenderer } from './effectsRenderer.js'
 import { MovementTargetRenderer } from './movementTargetRenderer.js'
 import { RetreatTargetRenderer } from './retreatTargetRenderer.js'
 import { GuardRenderer } from './guardRenderer.js'
-import { PathPlanningRenderer } from "./pathPlanningRenderer.js"
+import { PathPlanningRenderer } from './pathPlanningRenderer.js'
 import { UIRenderer } from './uiRenderer.js'
 import { MinimapRenderer } from './minimapRenderer.js'
 import { HarvesterHUD } from '../ui/harvesterHUD.js'
@@ -99,7 +99,7 @@ export class Renderer {
       tankerLoaded = true
       checkAllLoaded()
     })
-    
+
     preloadRecoveryTankImage((success) => {
       if (!success) {
         console.warn('Recovery tank image failed to load')
@@ -133,7 +133,7 @@ export class Renderer {
     if (gameState.occupancyVisible) {
       occupancyMap = gameState.occupancyMap
     }
-    
+
     this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
     if (gameState.dzmOverlayIndex !== -1) {
       const ids = Object.keys(gameState.dangerZoneMaps || {})
@@ -146,17 +146,17 @@ export class Renderer {
     this.buildingRenderer.renderBases(gameCtx, factories, mapGrid, scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
-    
+
     // Render movement target indicators (green triangles)
     this.movementTargetRenderer.render(gameCtx, units, scrollOffset)
     this.pathPlanningRenderer.render(gameCtx, units, scrollOffset)
-    
+
     // Render retreat target indicators (orange circles)
     this.retreatTargetRenderer.renderRetreatTargets(gameCtx, units, scrollOffset)
 
     // Render guard mode indicators
     this.guardRenderer.render(gameCtx, units, scrollOffset)
-    
+
     // Render harvester HUD overlay (if enabled)
     this.harvesterHUD.render(gameCtx, units, gameState, scrollOffset)
 

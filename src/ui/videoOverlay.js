@@ -22,7 +22,7 @@ export class VideoOverlay {
     this.overlayElement = document.createElement('div')
     this.overlayElement.id = 'video-overlay'
     this.overlayElement.className = 'video-overlay hidden'
-    
+
     this.overlayElement.innerHTML = `
       <div class="video-container">
         <video class="milestone-video" muted playsinline>
@@ -40,7 +40,7 @@ export class VideoOverlay {
 
     // Add CSS styles
     this.addStyles()
-    
+
     // Append to body
     document.body.appendChild(this.overlayElement)
 
@@ -199,7 +199,7 @@ export class VideoOverlay {
           errorCode: video.error?.code,
           errorMessage: video.error?.message
         })
-        
+
         // Only stop if we're actually playing and this is a real error
         this.stopCurrentVideo()
       } else {
@@ -232,24 +232,24 @@ export class VideoOverlay {
       this.overlayElement.className = `video-overlay priority-${milestoneInfo.priority || 'low'}`
 
       // Load video with comprehensive error handling
-      const tryLoadVideo = async (videoPath) => {
+      const tryLoadVideo = async(videoPath) => {
         return new Promise((resolve, reject) => {
           const video = this.overlayElement.querySelector('.milestone-video')
-          
+
           // Add timeout to prevent hanging
           const timeout = setTimeout(() => {
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
             reject(new Error(`Video load timeout for ${videoPath}`))
           }, 10000) // 10 second timeout
-          
+
           const onLoad = () => {
             clearTimeout(timeout)
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
             resolve()
           }
-          
+
           const onError = (e) => {
             clearTimeout(timeout)
             console.warn('Video failed to load:', videoPath, e)
@@ -257,10 +257,10 @@ export class VideoOverlay {
             video.removeEventListener('error', onError)
             reject(e)
           }
-          
+
           video.addEventListener('canplay', onLoad, { once: true })
           video.addEventListener('error', onError, { once: true })
-          
+
           // Set video source
           video.src = videoPath
           video.load() // Explicitly trigger load
@@ -290,7 +290,7 @@ export class VideoOverlay {
         this.stopCurrentVideo()
         return
       }
-      
+
       // Load and play audio with error handling
       if (audioFile) {
         const audioPaths = [
@@ -304,7 +304,7 @@ export class VideoOverlay {
           try {
             this.currentAudio = new Audio(path)
             this.currentAudio.volume = 0.7 * getMasterVolume() // Apply master volume to video audio
-            
+
             // Test if audio can load
             await new Promise((resolve, reject) => {
               const onLoad = () => {
@@ -320,7 +320,7 @@ export class VideoOverlay {
               this.currentAudio.addEventListener('canplaythrough', onLoad, { once: true })
               this.currentAudio.addEventListener('error', onError, { once: true })
             })
-            
+
             audioLoaded = true
             break
           } catch (e) {
@@ -387,7 +387,7 @@ export class VideoOverlay {
     if (!this.isPlaying) {
       return
     }
-    
+
     this.isPlaying = false
 
     // Hide overlay completely
@@ -506,13 +506,13 @@ export function playMilestoneVideo(videoFile, audioFile, milestoneInfo) {
 export function playSyncedVideoAudio(baseFilename, options = {}) {
   const videoFile = `${baseFilename}.mp4`
   const audioFile = `${baseFilename}.mp3`
-  
+
   const milestoneInfo = {
     title: options.title || 'Video Playback',
     description: options.description || '',
     priority: options.priority || 'medium'
   }
-  
+
   return videoOverlay.playMilestoneVideo(videoFile, audioFile, milestoneInfo)
 }
 

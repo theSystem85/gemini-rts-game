@@ -54,24 +54,24 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         // Check if building was attacked recently (within 10 seconds)
         const now = performance.now()
         const timeSinceLastAttack = building.lastAttackedTime ? (now - building.lastAttackedTime) / 1000 : Infinity
-        
+
         if (timeSinceLastAttack < 10) {
           // Building is under attack - enable repair mode but don't start repair yet
           // Play the sound immediately
           playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
-          
+
           // Set up delayed repair with countdown
           if (!gameState.buildingsAwaitingRepair) {
             gameState.buildingsAwaitingRepair = []
           }
-          
+
           // Check if this building is already waiting for repair
           const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === building)
           if (existingAwaitingRepair) {
             showNotification('Building repair already pending - waiting for attack cooldown')
             return
           }
-          
+
           // Add to awaiting repair list
           gameState.buildingsAwaitingRepair.push({
             building: building,
@@ -80,7 +80,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
             lastAttackedTime: building.lastAttackedTime,
             isFactory: false
           })
-          
+
           showNotification(`Building repair pending - waiting ${Math.ceil(10 - timeSinceLastAttack)}s for attack cooldown`)
           return
         }
@@ -91,14 +91,14 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
         if (!gameState.buildingsAwaitingRepair) {
           gameState.buildingsAwaitingRepair = []
         }
-        
+
         // Check if this building is already waiting for repair
         const existingAwaitingRepair = gameState.buildingsAwaitingRepair.find(ar => ar.building === building)
         if (existingAwaitingRepair) {
           showNotification('Building repair already pending')
           return
         }
-        
+
         // Add to awaiting repair list (will start immediately in next update if no cooldown)
         gameState.buildingsAwaitingRepair.push({
           building: building,
@@ -107,7 +107,7 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           lastAttackedTime: building.lastAttackedTime || 0,
           isFactory: false
         })
-        
+
         showNotification('Building repair initiated')
         return
       }

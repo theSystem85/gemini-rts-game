@@ -9,7 +9,7 @@ import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './g
 import { updateUnitSpeedModifier, awardExperience } from './utils.js'
 import { markBuildingForRepairPause } from './buildings.js'
 
-export let explosions = [] // Global explosion effects for rocket impacts
+export const explosions = [] // Global explosion effects for rocket impacts
 
 // --- Helper Functions ---
 
@@ -54,7 +54,7 @@ export function triggerExplosion(
         const falloff = 1 - distance / explosionRadius
         damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
       }
-      
+
       if (!constantDamage && shooter) {
         // Apply hit zone damage multiplier for tanks (simulate explosion hitting from all directions)
         // For explosions, we'll create a mock bullet object at explosion center for calculation
@@ -72,24 +72,24 @@ export function triggerExplosion(
           recordCriticalDamageSoundPlayed(unit, now)
         }
       }
-      
+
       // Check for god mode protection
       let actualDamage = damage
       if (window.cheatSystem) {
         actualDamage = window.cheatSystem.preventDamage(unit, damage)
       }
-      
+
       unit.health -= actualDamage
-      
+
       // Award experience if unit dies from explosion
       if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
         // console.log(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
         awardExperience(shooter, unit)
       }
-      
+
       // Update speed modifier based on new health level
       updateUnitSpeedModifier(unit)
-      
+
       // Track when units are being attacked for AI response
       if (shooter && shooter.owner !== unit.owner) {
         unit.lastDamageTime = now
@@ -120,22 +120,22 @@ export function triggerExplosion(
         const falloff = 1 - distance / explosionRadius
         damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
       }
-      
+
       // Check for god mode protection for player factories
       if (window.cheatSystem && factory.id === gameState.humanPlayer) {
         damage = window.cheatSystem.preventDamage(factory, damage)
       }
-      
+
       // Only apply damage if damage > 0 (god mode protection)
       if (damage > 0) {
         factory.health -= damage
-        
+
         // Ensure health doesn't go below 0
         factory.health = Math.max(0, factory.health)
-        
+
         // Mark factory for repair pause (deferred processing)
         markBuildingForRepairPause(factory)
-        
+
         // Track when factories are being attacked for repair delay
         // Set lastAttackedTime for ANY attack, including self-attacks
         if (shooter) {
@@ -164,22 +164,22 @@ export function triggerExplosion(
           const falloff = 1 - distance / explosionRadius
           damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
         }
-        
+
         // Check for god mode protection for player buildings
         if (window.cheatSystem && building.owner === gameState.humanPlayer) {
           damage = window.cheatSystem.preventDamage(building, damage)
         }
-        
+
         // Only apply damage if damage > 0 (god mode protection)
         if (damage > 0) {
           building.health -= damage
-          
+
           // Ensure health doesn't go below 0
           building.health = Math.max(0, building.health)
-          
+
           // Mark building for repair pause (deferred processing)
           markBuildingForRepairPause(building)
-          
+
           // Track when buildings are being attacked for repair delay
           // Set lastAttackedTime for ANY attack, including self-attacks
           if (shooter) {
@@ -244,20 +244,20 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
     console.error('findClosestOre called with undefined unit')
     return null
   }
-  
+
   if (!unit.hasOwnProperty('x') || !unit.hasOwnProperty('y')) {
     console.error('findClosestOre called with unit missing x/y properties:', unit)
     return null
   }
-  
+
   let closest = null
   let closestDist = Infinity
   const candidates = [] // Store all available ore tiles for better distribution
-  
+
   // Calculate unit's tile position from its pixel coordinates
   const unitTileX = Math.floor(unit.x / TILE_SIZE)
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
-  
+
   for (let y = 0; y < mapGrid.length; y++) {
     for (let x = 0; x < mapGrid[0].length; x++) {
       if (mapGrid[y][x].ore && !mapGrid[y][x].seedCrystal) {
@@ -270,10 +270,10 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
         const dx = x - unitTileX
         const dy = y - unitTileY
         const dist = Math.hypot(dx, dy)
-        
+
         // Store candidate for potential selection
         candidates.push({ x, y, dist })
-        
+
         if (dist < closestDist) {
           closestDist = dist
           closest = { x, y }
@@ -281,25 +281,25 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
       }
     }
   }
-  
+
   // If we have multiple nearby candidates, add some randomization to prevent clustering
   if (candidates.length > 1) {
     const closeDistance = closestDist * 1.5 // Allow tiles up to 50% further than closest
     const closeCandidates = candidates.filter(c => c.dist <= closeDistance)
-    
+
     if (closeCandidates.length > 1) {
       // Add unit ID based selection to ensure different harvesters pick different tiles
       const unitId = unit.id || Math.floor(Math.random() * 1000) // Fallback to random if no ID
       const unitBasedIndex = unitId % closeCandidates.length
       const selectedCandidate = closeCandidates[unitBasedIndex]
-      
+
       // Extra safety check
       if (selectedCandidate && selectedCandidate.x !== undefined && selectedCandidate.y !== undefined) {
         return { x: selectedCandidate.x, y: selectedCandidate.y }
       }
     }
   }
-  
+
   return closest
 }
 
@@ -308,7 +308,7 @@ export function findAdjacentTile(factory, mapGrid) {
     console.warn('findAdjacentTile called with invalid parameters:', { factory, mapGrid: !!mapGrid })
     return null
   }
-  
+
   for (let y = factory.y - 1; y <= factory.y + factory.height; y++) {
     for (let x = factory.x - 1; x <= factory.x + factory.width; x++) {
       if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) continue

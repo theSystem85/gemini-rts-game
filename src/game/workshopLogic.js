@@ -23,7 +23,7 @@ function initWorkshop(workshop) {
 
 function assignUnitsToSlots(workshop, mapGrid) {
   initWorkshop(workshop)
-  
+
   // Process queue in order - only assign the first eligible unit to avoid congestion
   let index = 0
   while (index < workshop.repairQueue.length) {
@@ -86,23 +86,23 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
     workshop.repairSlots.forEach(slot => {
       const unit = slot.unit
       if (!unit) return
-      if (unit.health <= 0) { 
+      if (unit.health <= 0) {
         // Clean up repair cost tracking and workshop assignment
         delete unit.workshopRepairCost
         delete unit.workshopRepairPaid
         delete unit.workshopStartHealth
         delete unit.targetWorkshop
         slot.unit = null
-        return 
+        return
       }
       const dist = Math.hypot(unit.x - slot.x * TILE_SIZE, unit.y - slot.y * TILE_SIZE)
-      
+
       // Check if unit has been moved away from workshop (new path or move target)
       if (unit.repairingAtWorkshop && (
-          unit.path.length > 0 ||
+        unit.path.length > 0 ||
           (unit.moveTarget && (unit.moveTarget.x !== slot.x || unit.moveTarget.y !== slot.y)) ||
           (unit.movement && unit.movement.isMoving)
-        )) {
+      )) {
         // Unit is being moved away, clean up repair state and workshop assignment
         unit.repairingAtWorkshop = false
         unit.returningToWorkshop = false
@@ -119,20 +119,20 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
           unit.repairingAtWorkshop = true
           unit.path = []
           unit.moveTarget = null
-          
+
           // Calculate repair cost (30% of unit cost based on missing health)
           const unitCost = getUnitCost(unit.type)
           const healthPercentageMissing = (unit.maxHealth - unit.health) / unit.maxHealth
           const totalRepairCost = Math.ceil(unitCost * 0.3 * healthPercentageMissing)
-          
+
           // Initialize repair cost tracking
           unit.workshopRepairCost = totalRepairCost
           unit.workshopRepairPaid = 0
           unit.workshopStartHealth = unit.health
-          
+
           // Play repair sound when repair starts
           playSound('unit_is_being_repaired', 0.7)
-          
+
           if (unit.movement) {
             unit.movement.velocity = { x: 0, y: 0 }
             unit.movement.targetVelocity = { x: 0, y: 0 }
@@ -145,22 +145,22 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
           // Calculate how much health to restore this frame
           const healthIncrease = unit.maxHealth * 0.06 * (delta / 1000)
           const newHealth = Math.min(unit.health + healthIncrease, unit.maxHealth)
-          
+
           // Calculate cost for this health increase
           if (unit.workshopRepairCost && unit.workshopRepairPaid < unit.workshopRepairCost) {
             const healthRepaired = newHealth - unit.workshopStartHealth
             const totalHealthToRepair = unit.maxHealth - unit.workshopStartHealth
             const repairProgress = totalHealthToRepair > 0 ? healthRepaired / totalHealthToRepair : 1
-            
+
             const expectedPaid = Math.min(repairProgress * unit.workshopRepairCost, unit.workshopRepairCost)
             const costThisFrame = expectedPaid - unit.workshopRepairPaid
-            
+
             if (costThisFrame > 0 && gameState.money >= costThisFrame) {
               gameState.money -= costThisFrame
               unit.workshopRepairPaid += costThisFrame
             }
           }
-          
+
           unit.health = newHealth
           updateUnitSpeedModifier(unit)
         } else {
@@ -173,7 +173,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
           delete unit.workshopRepairPaid
           delete unit.workshopStartHealth
           delete unit.targetWorkshop // Clear workshop assignment
-          
+
           if (unit.returnTile) {
             const path = findPath({ x: unit.tileX, y: unit.tileY }, unit.returnTile, mapGrid, gameState.occupancyMap)
             if (path && path.length > 1) {

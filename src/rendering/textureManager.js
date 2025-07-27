@@ -97,7 +97,6 @@ export class TextureManager {
   }
 
 
-
   // Preload all tile textures at startup
   async preloadAllTextures(callback) {
     if (this.loadingStarted) return
@@ -186,7 +185,7 @@ export class TextureManager {
   loadSingleTexture(imagePath, tileType, onComplete) {
     // Determine appropriate extensions based on tile type and path
     let extensions = ['jpg', 'webp', 'png'] // Default order
-    
+
     // For ore and seed crystal files, try webp first since they're primarily webp
     if (imagePath.includes('ore') || tileType === 'ore' || tileType === 'seedCrystal') {
       extensions = ['webp', 'jpg', 'png']
@@ -195,7 +194,7 @@ export class TextureManager {
     else if (imagePath.includes('grass_tiles') || tileType === 'land') {
       extensions = ['png', 'jpg', 'webp']
     }
-    
+
     this.getOrLoadImage(imagePath, extensions, (img) => {
       if (img) {
         const pixelRatio = getDevicePixelRatio()
@@ -275,7 +274,7 @@ export class TextureManager {
     // Special handling for land tiles with dynamically discovered grass tiles
     if (tileType === 'land' && this.grassTileMetadata) {
       const { passableCount, decorativeCount, impassableCount } = this.grassTileMetadata
-      
+
       // Better hash function - more random but still reliable
       // Mix x and y coordinates in a non-linear way to avoid patterns
       let hash = ((x * 73856093) ^ (y * 19349663) ^ ((x + y) * 83492791)) >>> 0
@@ -283,54 +282,54 @@ export class TextureManager {
       hash = ((hash >>> 16) ^ hash) * 0x45d9f3b
       hash = (hash >>> 16) ^ hash
       hash = Math.abs(hash)
-      
+
       // Simple ratio-based selection
       // Check for impassable first (rarer)
       if (hash % GRASS_IMPASSABLE_RATIO === 0) {
         // Select from impassable tiles (they start after passable + decorative)
         const impassableStartIndex = passableCount + decorativeCount
         const selectedIndex = impassableStartIndex + (hash % impassableCount)
-        
+
         // Bounds check
         if (selectedIndex >= this.tileTextureCache[tileType].length) {
           console.warn(`Impassable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
           return 0 // Default to first tile
         }
-        
+
         this.tileVariationMap[key] = selectedIndex
         return selectedIndex
       }
-      
-      // Check for decorative second  
+
+      // Check for decorative second
       if (hash % GRASS_DECORATIVE_RATIO === 0) {
         // Select from decorative tiles (they start after passable)
         const decorativeStartIndex = passableCount
         const selectedIndex = decorativeStartIndex + (hash % decorativeCount)
-        
+
         // Bounds check
         if (selectedIndex >= this.tileTextureCache[tileType].length) {
           console.warn(`Decorative index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
           return 0 // Default to first tile
         }
-        
+
         this.tileVariationMap[key] = selectedIndex
         return selectedIndex
       }
-      
+
       // Default to passable tiles
       const selectedIndex = hash % passableCount
-      
+
       // Bounds check
       if (selectedIndex >= this.tileTextureCache[tileType].length) {
         console.warn(`Passable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
         return 0 // Default to first tile
       }
-      
+
       this.tileVariationMap[key] = selectedIndex
-      
+
       return selectedIndex
     }
-    
+
     // Legacy handling for hardcoded grass tiles
     if (tileType === 'land') {
       const tileInfo = TILE_IMAGES[tileType]
@@ -339,19 +338,19 @@ export class TextureManager {
         const legacyCount = tileInfo.paths ? tileInfo.paths.length : 0
         const passableCount = tileInfo.passablePaths.length
         const impassableCount = tileInfo.impassablePaths.length
-        
+
         // Better hash function for good randomness without patterns
         let hash = ((x * 73856093) ^ (y * 19349663) ^ ((x + y) * 83492791)) >>> 0
         hash = ((hash >>> 16) ^ hash) * 0x45d9f3b
         hash = ((hash >>> 16) ^ hash) * 0x45d9f3b
         hash = (hash >>> 16) ^ hash
         hash = Math.abs(hash)
-        
+
         // Create weighted selection: prefer new grass tiles over legacy
         // If we have new tiles, use 50:1 ratio for passable:impassable
         // Total weight = 50 (passable) + 1 (impassable) = 51
         const weightedChoice = hash % 51
-        
+
         let selectedIndex
         if (weightedChoice < 50) {
           // Select from passable tiles (0-49 out of 51)
@@ -360,10 +359,10 @@ export class TextureManager {
           // Select from impassable tiles (50 out of 51)
           selectedIndex = legacyCount + passableCount + (hash % impassableCount)
         }
-        
+
         // Ensure we don't exceed the available textures
         selectedIndex = selectedIndex % this.tileTextureCache[tileType].length
-        
+
         // Store the variation for this position
         this.tileVariationMap[key] = selectedIndex
         return selectedIndex
@@ -393,17 +392,17 @@ export class TextureManager {
     if (!this.grassTileMetadata || !this.allTexturesLoaded) {
       return false // Return false if grass tiles aren't loaded yet
     }
-    
+
     const key = `land_${x}_${y}`
     let selectedIndex = this.tileVariationMap[key]
-    
+
     if (selectedIndex === undefined) {
       // Calculate the index if not cached yet
       selectedIndex = this.getTileVariation('land', x, y)
     }
-    
+
     if (selectedIndex === -1) return false
-    
+
     const { passableCount, decorativeCount, impassableCount } = this.grassTileMetadata
     const impassableStartIndex = passableCount + decorativeCount
     const totalTextureCount = passableCount + decorativeCount + impassableCount

@@ -57,7 +57,7 @@ export class UnitRenderer {
     }
 
     const now = performance.now()
-    
+
     // Special handling for rocket tanks - render fallback tubes only if image not loaded
     if (unit.type === 'rocketTank' && !isRocketTankImageLoaded()) {
       this.renderRocketTubes(ctx, unit, centerX, centerY, now)
@@ -66,7 +66,7 @@ export class UnitRenderer {
     if (unit.type === 'recoveryTank' && !isRecoveryTankImageLoaded()) {
       // no special fallback
     }
-    
+
     // Calculate recoil offset
     let recoilOffset = 0
     if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
@@ -96,16 +96,16 @@ export class UnitRenderer {
       const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
       const flashAlpha = 1 - flashProgress
       const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)
-      
+
       ctx.save()
       ctx.globalAlpha = flashAlpha
-      
+
       // Create radial gradient for muzzle flash
       const gradient = ctx.createRadialGradient(TILE_SIZE / 2, 0, 0, TILE_SIZE / 2, 0, flashSize)
       gradient.addColorStop(0, '#FFF')
       gradient.addColorStop(0.3, '#FF0')
       gradient.addColorStop(1, 'rgba(255, 165, 0, 0)')
-      
+
       ctx.fillStyle = gradient
       ctx.beginPath()
       ctx.arc(TILE_SIZE / 2, 0, flashSize, 0, Math.PI * 2)
@@ -121,9 +121,9 @@ export class UnitRenderer {
     if (!unit.harvesting) return
 
     const now = performance.now()
-    const miningProgress = unit.harvestTimer ? 
+    const miningProgress = unit.harvestTimer ?
       Math.sin((now - unit.harvestTimer) / 200) * 0.5 + 0.5 : 0  // Oscillating animation
-    
+
     const barWidth = TILE_SIZE * 0.6
     const barHeight = 4
     const barExtension = miningProgress * (barWidth * 0.3) // Bar moves back and forth
@@ -148,38 +148,38 @@ export class UnitRenderer {
     if (unit.selected) {
       ctx.strokeStyle = '#FF0'
       ctx.lineWidth = 2
-      
+
       const cornerSize = 8 // Size of corner brackets (smaller than buildings)
       const offset = 2 // Offset from unit edge
       const halfTile = TILE_SIZE / 2
-      
+
       // Calculate unit bounds
       const left = centerX - halfTile - offset
       const right = centerX + halfTile + offset
       const top = centerY - halfTile - offset
       const bottom = centerY + halfTile + offset
-      
+
       // Top-left corner
       ctx.beginPath()
       ctx.moveTo(left, top + cornerSize)
       ctx.lineTo(left, top)
       ctx.lineTo(left + cornerSize, top)
       ctx.stroke()
-      
+
       // Top-right corner
       ctx.beginPath()
       ctx.moveTo(right - cornerSize, top)
       ctx.lineTo(right, top)
       ctx.lineTo(right, top + cornerSize)
       ctx.stroke()
-      
+
       // Bottom-left corner
       ctx.beginPath()
       ctx.moveTo(left, bottom - cornerSize)
       ctx.lineTo(left, bottom)
       ctx.lineTo(left + cornerSize, bottom)
       ctx.stroke()
-      
+
       // Bottom-right corner
       ctx.beginPath()
       ctx.moveTo(right - cornerSize, bottom)
@@ -194,13 +194,13 @@ export class UnitRenderer {
     if (unit.alertMode && unit.type === 'tank-v2') {
       const now = performance.now()
       const pulse = Math.sin(now * 0.005) * 0.3 + 0.7 // Pulsing effect between 0.4 and 1.0
-      
+
       ctx.strokeStyle = `rgba(255, 0, 0, ${pulse})`
       ctx.lineWidth = 3
       ctx.beginPath()
       ctx.arc(centerX, centerY, TILE_SIZE / 2, 0, 2 * Math.PI)
       ctx.stroke()
-      
+
       // Add inner range indicator
       ctx.strokeStyle = `rgba(255, 100, 100, ${pulse * 0.3})`
       ctx.lineWidth = 1
@@ -214,11 +214,11 @@ export class UnitRenderer {
     // Only show health bar if unit is damaged or selected
     const isDamaged = unit.health < unit.maxHealth
     const isSelected = unit.selected
-    
+
     if (!isDamaged && !isSelected) {
       return
     }
-    
+
     // Draw health bar with party colors for owner distinction
     const unitHealthRatio = unit.health / unit.maxHealth
     const healthBarWidth = TILE_SIZE * 0.8
@@ -243,11 +243,11 @@ export class UnitRenderer {
     let progress = 0
     let barColor = '#FFD700' // Default gold
     let shouldShowBar = false
-    
+
     if (unit.type === 'harvester') {
       // Harvester-specific progress logic
       shouldShowBar = true
-      
+
       if (unit.unloadingAtRefinery && unit.unloadStartTime) {
         // Show unloading progress (reverse direction)
         const unloadProgress = Math.min((performance.now() - unit.unloadStartTime) / HARVESTER_UNLOAD_TIME, 1)
@@ -275,7 +275,7 @@ export class UnitRenderer {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
       const expProgress = getExperienceProgress(unit)
-      
+
       // Only show experience bar for selected combat units below max level
       if (unit.level < 3 && unit.selected) {
         shouldShowBar = true
@@ -283,21 +283,21 @@ export class UnitRenderer {
         barColor = '#FFFF00' // Bright yellow for experience
       }
     }
-    
+
     if (shouldShowBar) {
       const progressBarWidth = TILE_SIZE * 0.8
       const progressBarHeight = 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
       const progressBarY = unit.y - 5 - scrollOffset.y
-      
+
       // Background bar
       ctx.fillStyle = '#333'
       ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
-      
+
       // Progress fill
       ctx.fillStyle = barColor
       ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
-      
+
       // Border
       ctx.strokeStyle = '#000'
       ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
@@ -390,35 +390,35 @@ export class UnitRenderer {
 
   renderAttackTargetIndicator(ctx, unit, centerX, centerY) {
     // Check if this unit is in the attack group targets OR if it's currently being targeted by selected units
-    const isInAttackGroupTargets = gameState.attackGroupTargets && 
+    const isInAttackGroupTargets = gameState.attackGroupTargets &&
                                    gameState.attackGroupTargets.some(target => target === unit)
-    
+
     // Check if any selected unit is targeting this unit (for normal attacks and to show after reselection)
-    const isTargetedBySelectedUnit = selectedUnits && 
-                                     selectedUnits.some(selectedUnit => 
-                                       (selectedUnit.target && selectedUnit.target.id === unit.id) || 
+    const isTargetedBySelectedUnit = selectedUnits &&
+                                     selectedUnits.some(selectedUnit =>
+                                       (selectedUnit.target && selectedUnit.target.id === unit.id) ||
                                        (selectedUnit.attackQueue && selectedUnit.attackQueue.some(target => target.id === unit.id))
                                      )
-    
+
     // Show red indicator if: unit is in AGF targets OR being targeted by a selected unit
     const shouldShowAttackIndicator = isInAttackGroupTargets || isTargetedBySelectedUnit
-    
+
     if (shouldShowAttackIndicator) {
       const now = performance.now()
       const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
-      
+
       // Position above the health bar
       const indicatorX = centerX
       const indicatorY = centerY - TILE_SIZE / 2 - 15 + bounceOffset
-      
+
       // Draw semi-transparent red triangle (50% transparency, half size)
       ctx.save()
       ctx.fillStyle = 'rgba(255, 0, 0, 0.35)' // Reduced from 0.7 to 0.35
       ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)' // Reduced from 1.0 to 0.5
       ctx.lineWidth = 1
-      
+
       const halfSize = ATTACK_TARGET_INDICATOR_SIZE / 2 // Half the original size
-      
+
       // Draw triangle pointing down
       ctx.beginPath()
       ctx.moveTo(indicatorX, indicatorY + halfSize)
@@ -427,7 +427,7 @@ export class UnitRenderer {
       ctx.closePath()
       ctx.fill()
       ctx.stroke()
-      
+
       ctx.restore()
     }
   }
@@ -453,20 +453,20 @@ export class UnitRenderer {
 
     for (let i = 0; i < unit.level; i++) {
       const starX = startX + (i * starSpacing)
-      
+
       // Draw a simple 5-pointed star
       ctx.beginPath()
       for (let j = 0; j < 5; j++) {
         const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2 // Start at top
         const outerRadius = starSize / 2
         const innerRadius = starSize / 4
-        
+
         if (j === 0) {
           ctx.moveTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
         } else {
           ctx.lineTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
         }
-        
+
         // Inner point
         const innerAngle = angle + (2 * Math.PI) / 10
         ctx.lineTo(starX + innerRadius * Math.cos(innerAngle), starY + innerRadius * Math.sin(innerAngle))
@@ -537,7 +537,7 @@ export class UnitRenderer {
     if (useTankImage) {
       // Try to render with images
       const imageRenderSuccess = renderTankWithImages(ctx, unit, centerX, centerY)
-      
+
       if (imageRenderSuccess) {
         // Image rendering successful, still render other components
         this.renderSelection(ctx, unit, centerX, centerY)
@@ -606,13 +606,13 @@ export class UnitRenderer {
 
     for (let i = 0; i < 3; i++) {
       const tubeY = (i - 1) * tubeSpacing // Center tube at 0, others at +/- spacing
-      
+
       ctx.fillStyle = '#444'
-      ctx.fillRect(0, tubeY - tubeWidth/2, tubeLength, tubeWidth)
-      
+      ctx.fillRect(0, tubeY - tubeWidth / 2, tubeLength, tubeWidth)
+
       // Add tube caps
       ctx.fillStyle = '#222'
-      ctx.fillRect(tubeLength - 2, tubeY - tubeWidth/2, 2, tubeWidth)
+      ctx.fillRect(tubeLength - 2, tubeY - tubeWidth / 2, 2, tubeWidth)
     }
 
     // Render muzzle flash for rocket tubes
@@ -620,20 +620,20 @@ export class UnitRenderer {
       const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
       const flashAlpha = 1 - flashProgress
       const flashSize = MUZZLE_FLASH_SIZE * 0.8 * (1 - flashProgress * 0.5)
-      
+
       ctx.save()
       ctx.globalAlpha = flashAlpha
-      
+
       // Create muzzle flash for each tube
       for (let i = 0; i < 3; i++) {
         const tubeY = (i - 1) * tubeSpacing
-        
+
         const gradient = ctx.createRadialGradient(tubeLength, tubeY, 0, tubeLength, tubeY, flashSize)
         gradient.addColorStop(0, '#FFF')
         gradient.addColorStop(0.3, '#FF0')
         gradient.addColorStop(0.7, '#FF4500')
         gradient.addColorStop(1, 'rgba(255, 69, 0, 0)')
-        
+
         ctx.fillStyle = gradient
         ctx.beginPath()
         ctx.arc(tubeLength, tubeY, flashSize, 0, Math.PI * 2)

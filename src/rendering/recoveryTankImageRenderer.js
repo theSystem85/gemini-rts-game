@@ -28,7 +28,7 @@ export function renderRecoveryTankWithImage(ctx, unit, centerX, centerY) {
   const scale = TILE_SIZE / Math.max(image.width, image.height)
   const width = image.width * scale
   const height = image.height * scale
-  ctx.drawImage(image, -width/2, -height/2, width, height)
+  ctx.drawImage(image, -width / 2, -height / 2, width, height)
   ctx.restore()
   return true
 }

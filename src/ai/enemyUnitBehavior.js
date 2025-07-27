@@ -32,7 +32,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   // Apply new AI strategies first - but only when allowed to make decisions to prevent wiggling
   const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
   const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)
-  
+
   // Apply strategies on decision intervals OR when just got attacked (immediate response)
   if (allowDecision || justGotAttacked) {
     applyEnemyStrategies(unit, units, gameState, mapGrid, now)
@@ -44,11 +44,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   // PRIORITY: Check crew status and handle hospital returns (exclude ambulance for AI)
   if (unit.crew && typeof unit.crew === 'object' && unit.type !== 'ambulance') {
     const missingCrew = Object.values(unit.crew).filter(alive => !alive).length
-    
+
     if (missingCrew > 0 && !unit.returningToHospital) {
       // Unit has missing crew - prioritize hospital return
       const canMove = unit.crew.driver && unit.crew.commander
-      
+
       if (!canMove) {
         // Unit cannot move - wait for ambulance assistance
         unit.target = null
@@ -66,7 +66,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         unit.needsHospital = true
       }
     }
-    
+
     // If unit is returning to hospital, only allow defensive actions
     if (unit.returningToHospital) {
       // Allow firing back if being attacked and has gunner
@@ -75,14 +75,14 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
       } else {
         unit.target = null
       }
-      
+
       // Check if reached hospital area for healing
       if (unit.hospitalTarget && unit.moveTarget) {
         const distanceToHospital = Math.hypot(
           unit.x - unit.moveTarget.x,
           unit.y - unit.moveTarget.y
         )
-        
+
         if (distanceToHospital < TILE_SIZE * 2) {
           // Near hospital - check if crew is restored
           const currentMissingCrew = Object.values(unit.crew).filter(alive => !alive).length
@@ -96,7 +96,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
           }
         }
       }
-      
+
       return // Skip normal combat AI when returning to hospital
     }
   }
@@ -124,13 +124,13 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         unit.target = baseDefenseTarget
         unit.lastTargetChangeTime = now
         unit.defendingBase = true
-        
+
         // Store target position for movement tracking
         unit.lastTargetPosition = {
           x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
           y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
         }
-        
+
         // Immediate path calculation for base defense
         let targetPos = null
         if (unit.target.tileX !== undefined) {
@@ -138,7 +138,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         } else {
           targetPos = { x: unit.target.x, y: unit.target.y }
         }
-        
+
         if (targetPos && !unit.isDodging) {
           const occupancyMap = gameState.occupancyMap
           const path = getCachedPath(
@@ -152,7 +152,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
             unit.lastPathCalcTime = now
           }
         }
-        
+
         unit.lastDecisionTime = now
         return // Skip other target selection when defending base
       }
@@ -163,7 +163,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
       if (unit.defendingBase && !checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId)) {
         unit.defendingBase = false
       }
-      
+
       if (canChangeTarget) {
         let newTarget = null
 
@@ -193,7 +193,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
           const isInCombatRange = targetDistance < 30 * TILE_SIZE // Increased from 25 to 30
           const targetStillValid = unit.target.health > 0
           const hasRecentPath = unit.path && unit.path.length > 0
-          
+
           if (targetStillValid && isInCombatRange && !justGotAttacked && (hasRecentPath || targetDistance < 15 * TILE_SIZE)) {
             keepCurrentTarget = true
             newTarget = unit.target // Keep the current target
@@ -298,17 +298,17 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
             const shouldAttack = shouldAIStartAttacking(aiPlayerId, gameState)
             if (!shouldAttack) {
               // AI not ready for major attacks - only defend and target harvesters
-              const playerHarvesters = units.filter(u => 
-                u.owner === gameState.humanPlayer && 
-                u.type === 'harvester' && 
+              const playerHarvesters = units.filter(u =>
+                u.owner === gameState.humanPlayer &&
+                u.type === 'harvester' &&
                 u.health > 0
               )
-              
+
               if (playerHarvesters.length > 0) {
                 // Target closest harvester only
                 let closestHarvester = null
                 let closestDist = Infinity
-                
+
                 playerHarvesters.forEach(harvester => {
                   const d = Math.hypot(
                     (harvester.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
@@ -319,7 +319,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
                     closestHarvester = harvester
                   }
                 })
-                
+
                 if (closestHarvester && closestDist < 10 * TILE_SIZE) {
                   newTarget = closestHarvester
                 }
@@ -333,89 +333,89 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
               // Use group attack strategy with priority targeting
               if (nearbyAllies.length >= 1) { // Reduced from 2 to make AI more aggressive
-            // Priority 1: Target closest player combat unit
-              let closestPlayerUnit = null
-              let closestPlayerDist = Infinity
+                // Priority 1: Target closest player combat unit
+                let closestPlayerUnit = null
+                let closestPlayerDist = Infinity
 
-              units.forEach(u => {
-                if (u.owner === gameState.humanPlayer && u.health > 0) {
-                  const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                  if (d < closestPlayerDist) {
-                    closestPlayerDist = d
-                    closestPlayerUnit = u
-                  }
-                }
-              })
-
-              // Priority 2: If no player units nearby, target player buildings (base attack)
-              if (!closestPlayerUnit || closestPlayerDist > 15 * TILE_SIZE) {
-                const playerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
-                if (playerBuildings.length > 0) {
-                // Prioritize important buildings: construction yard > vehicle factory > ore refinery > others
-                  const priorityOrder = ['constructionYard', 'vehicleFactory', 'oreRefinery', 'powerPlant', 'radarStation']
-                  let targetBuilding = null
-
-                  for (const buildingType of priorityOrder) {
-                    const building = playerBuildings.find(b => b.type === buildingType)
-                    if (building) {
-                      targetBuilding = building
-                      break
+                units.forEach(u => {
+                  if (u.owner === gameState.humanPlayer && u.health > 0) {
+                    const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
+                    if (d < closestPlayerDist) {
+                      closestPlayerDist = d
+                      closestPlayerUnit = u
                     }
                   }
+                })
 
-                  // If no priority buildings, target any building
-                  if (!targetBuilding) {
-                    targetBuilding = playerBuildings[0]
-                  }
+                // Priority 2: If no player units nearby, target player buildings (base attack)
+                if (!closestPlayerUnit || closestPlayerDist > 15 * TILE_SIZE) {
+                  const playerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
+                  if (playerBuildings.length > 0) {
+                    // Prioritize important buildings: construction yard > vehicle factory > ore refinery > others
+                    const priorityOrder = ['constructionYard', 'vehicleFactory', 'oreRefinery', 'powerPlant', 'radarStation']
+                    let targetBuilding = null
 
-                  if (targetBuilding) {
-                    newTarget = targetBuilding
+                    for (const buildingType of priorityOrder) {
+                      const building = playerBuildings.find(b => b.type === buildingType)
+                      if (building) {
+                        targetBuilding = building
+                        break
+                      }
+                    }
+
+                    // If no priority buildings, target any building
+                    if (!targetBuilding) {
+                      targetBuilding = playerBuildings[0]
+                    }
+
+                    if (targetBuilding) {
+                      newTarget = targetBuilding
+                    }
                   }
+                } else {
+                  newTarget = closestPlayerUnit
                 }
-              } else {
-                newTarget = closestPlayerUnit
-              }
 
-              // Only attack if group is large enough for heavily defended targets
-              if (newTarget && shouldConductGroupAttack(unit, units, gameState, newTarget)) {
-              // Keep the target
-              } else if (nearbyAllies.length >= 2) {
-              // With 3+ units, attack anyway
-              // Keep the target
-              } else {
-              // Single unit or pair - only attack if very close or harvester
-                if (newTarget && (newTarget.type === 'harvester' ||
+                // Only attack if group is large enough for heavily defended targets
+                if (newTarget && shouldConductGroupAttack(unit, units, gameState, newTarget)) {
+                  // Keep the target
+                } else if (nearbyAllies.length >= 2) {
+                  // With 3+ units, attack anyway
+                  // Keep the target
+                } else {
+                  // Single unit or pair - only attack if very close or harvester
+                  if (newTarget && (newTarget.type === 'harvester' ||
                   Math.hypot((newTarget.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
                     (newTarget.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)) < 8 * TILE_SIZE)) {
-                // Keep the target
-                } else {
-                  newTarget = null
+                    // Keep the target
+                  } else {
+                    newTarget = null
+                  }
                 }
-              }
-            } else {
-            // Solo unit behavior - be more cautious, focus on harvesters and weak targets
-              const soloTargets = units.filter(u =>
-                u.owner === gameState.humanPlayer &&
+              } else {
+                // Solo unit behavior - be more cautious, focus on harvesters and weak targets
+                const soloTargets = units.filter(u =>
+                  u.owner === gameState.humanPlayer &&
               u.health > 0 &&
               (u.type === 'harvester' || u.health <= 50) // Target harvesters or damaged units
-              )
+                )
 
-              if (soloTargets.length > 0) {
-                let closestTarget = null
-                let closestDist = Infinity
-                soloTargets.forEach(target => {
-                  const d = Math.hypot((target.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (target.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
-                  if (d < closestDist) {
-                    closestDist = d
-                    closestTarget = target
-                  }
-                })
-                // Only engage if very close
-                newTarget = (closestTarget && closestDist < 6 * TILE_SIZE) ? closestTarget : null
+                if (soloTargets.length > 0) {
+                  let closestTarget = null
+                  let closestDist = Infinity
+                  soloTargets.forEach(target => {
+                    const d = Math.hypot((target.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (target.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
+                    if (d < closestDist) {
+                      closestDist = d
+                      closestTarget = target
+                    }
+                  })
+                  // Only engage if very close
+                  newTarget = (closestTarget && closestDist < 6 * TILE_SIZE) ? closestTarget : null
+                }
               }
             }
-          }
-        } // Close the else block for shouldAttack check
+          } // Close the else block for shouldAttack check
         } // End of if (!keepCurrentTarget) block
 
         if (unit.target !== newTarget) {
@@ -428,7 +428,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
             targetPos = { x: unit.target.x, y: unit.target.y }
           }
           unit.moveTarget = targetPos
-          
+
           // Store target position for movement tracking
           if (unit.target) {
             unit.lastTargetPosition = {
@@ -436,7 +436,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
               y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
             }
           }
-          
+
           if (!unit.isDodging && targetPos) {
             // Use occupancy map in attack mode to prevent moving through occupied tiles
             const occupancyMap = gameState.occupancyMap
@@ -477,7 +477,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         Math.abs(unit.target.x - unit.lastTargetPosition.x) > 2 * TILE_SIZE ||
         Math.abs(unit.target.y - unit.lastTargetPosition.y) > 2 * TILE_SIZE
       )
-      
+
       if (pathRecalcNeeded && !unit.isDodging && unit.target && (!hasValidPath || targetHasMoved)) {
         let targetPos = null
         if (unit.target.tileX !== undefined) {
@@ -485,13 +485,13 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         } else {
           targetPos = { x: unit.target.x, y: unit.target.y }
         }
-        
+
         // Store target position for movement tracking
         unit.lastTargetPosition = {
           x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
           y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
         }
-        
+
         // Use occupancy map in attack mode to prevent moving through occupied tiles
         const occupancyMap = gameState.occupancyMap
         const path = getCachedPath(
@@ -645,11 +645,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
   const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
   if (aiBuildings.length === 0) return false
-  
+
   // Check if any player units are near our base
   const playerUnitsNearBase = units.filter(u => {
     if (u.owner !== gameState.humanPlayer || u.health <= 0) return false
-    
+
     return aiBuildings.some(building => {
       const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
       const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
@@ -660,18 +660,18 @@ function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
       return distance < 12 * TILE_SIZE // Within 12 tiles of our base
     })
   })
-  
+
   // Check if we're already sending enough defenders
-  const currentDefenders = units.filter(u => 
-    u.owner === aiPlayerId && 
+  const currentDefenders = units.filter(u =>
+    u.owner === aiPlayerId &&
     u.health > 0 &&
     u.defendingBase &&
     (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank')
   )
-  
+
   // Need defense if player units near base and we don't have enough defenders
   const needsDefense = playerUnitsNearBase.length > 0 && currentDefenders.length < Math.min(playerUnitsNearBase.length * 2, 6)
-  
+
   // Only nearby units should defend (within reasonable distance)
   if (needsDefense) {
     const distanceToBase = Math.min(...aiBuildings.map(building => {
@@ -682,10 +682,10 @@ function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
         (unit.y + TILE_SIZE / 2) - buildingCenterY
       )
     }))
-    
+
     return distanceToBase < 20 * TILE_SIZE // Only units within 20 tiles should defend
   }
-  
+
   return false
 }
 
@@ -695,11 +695,11 @@ function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
 function findBaseDefenseTarget(unit, units, gameState, aiPlayerId) {
   const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
   if (aiBuildings.length === 0) return null
-  
+
   // Find player units threatening our base
   const threats = units.filter(u => {
     if (u.owner !== gameState.humanPlayer || u.health <= 0) return false
-    
+
     return aiBuildings.some(building => {
       const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
       const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
@@ -710,25 +710,25 @@ function findBaseDefenseTarget(unit, units, gameState, aiPlayerId) {
       return distance < 12 * TILE_SIZE
     })
   })
-  
+
   if (threats.length === 0) return null
-  
+
   // Find closest threat to our unit
   let closestThreat = null
   let closestDistance = Infinity
-  
+
   threats.forEach(threat => {
     const distance = Math.hypot(
       (threat.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2),
       (threat.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2)
     )
-    
+
     if (distance < closestDistance) {
       closestDistance = distance
       closestThreat = threat
     }
   })
-  
+
   return closestThreat
 }
 
@@ -736,24 +736,24 @@ function findBaseDefenseTarget(unit, units, gameState, aiPlayerId) {
 function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
   // Skip if ambulance is on critical healing mission (should have priority)
   if (unit.criticalHealing) return
-  
+
   // Skip if already refilling or healing
   if (unit.refillingTarget || unit.healingTarget) return
-  
+
   // Check if ambulance needs refilling
   if (unit.crew < 4) {
-    const hospitals = gameState.buildings?.filter(b => 
-      b.type === 'hospital' && 
-      b.owner === aiPlayerId && 
+    const hospitals = gameState.buildings?.filter(b =>
+      b.type === 'hospital' &&
+      b.owner === aiPlayerId &&
       b.health > 0
     )
-    
+
     if (hospitals.length > 0 && !unit.refillingTarget) {
       // Send to hospital for refilling
       unit.refillingTarget = hospitals[0]
       const hospitalCenterX = hospitals[0].x + Math.floor(hospitals[0].width / 2)
       const refillY = hospitals[0].y + hospitals[0].height + 1
-      
+
       const path = findPath(unit, hospitalCenterX, refillY, mapGrid)
       if (path && path.length > 0) {
         unit.path = path
@@ -762,9 +762,9 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     }
     return
   }
-  
+
   // Look for nearby units that need healing
-  const unitsNeedingHealing = units.filter(u => 
+  const unitsNeedingHealing = units.filter(u =>
     u.owner === aiPlayerId &&
     u !== unit &&
     u.crew &&
@@ -772,14 +772,14 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     Object.values(u.crew).some(alive => !alive) &&
     Math.hypot(u.x - unit.x, u.y - unit.y) < 15 * TILE_SIZE
   )
-  
+
   if (unitsNeedingHealing.length > 0) {
     // Prioritize units that cannot move (excluding ambulance which doesn't use the crew system)
     const immobileUnits = unitsNeedingHealing.filter(u =>
       u.crew && u.type !== 'ambulance' && (!u.crew.driver || !u.crew.commander)
     )
     const targetUnit = immobileUnits.length > 0 ? immobileUnits[0] : unitsNeedingHealing[0]
-    
+
     unit.healingTarget = targetUnit
     unit.healingTimer = 0
     unit.target = null

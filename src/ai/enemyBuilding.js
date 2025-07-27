@@ -105,7 +105,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   // Special case for walls - they can be placed closer together
   // Special spacing requirements for different building types
   let minSpaceBetweenBuildings = 2 // Default spacing - MINIMUM 2 tiles between all buildings
-  
+
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 2 // Walls now also require 2-tile spacing to prevent clustering
   } else if (buildingType === 'oreRefinery') {
@@ -123,8 +123,8 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Preferred placement distances - increased to ensure more space between buildings
   // For refineries and factories, use larger distances
-  const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') 
-    ? [4, 5, 6, 3] 
+  const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory')
+    ? [4, 5, 6, 3]
     : [3, 4, 5, 2]
 
   // First try placing along the line from the factory to the closest ore field
@@ -232,7 +232,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       // This means we're connected to the base, but not too close
       // Use different connection ranges for different building types
       const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 7 : 6
-      
+
       let isNearBase = false
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
         for (let checkX = x; checkX < x + buildingWidth && !isNearBase; checkX++) {
@@ -261,9 +261,9 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 // New helper function to ensure there are clear paths around a potential building placement
 function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, factories, minSpace, aiPlayerId) {
   // Enhanced spacing validation: ensure full minSpace gap between building footprints
-  // This checks that there are at least minSpace tiles of clear space between the edge of 
+  // This checks that there are at least minSpace tiles of clear space between the edge of
   // this building and any other building
-  
+
   // Check the entire perimeter with the required spacing
   for (let spaceLayer = 1; spaceLayer <= minSpace; spaceLayer++) {
     // Check north border (multiple rows if minSpace > 1)
@@ -448,7 +448,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   // Special spacing requirements for different building types
   let minSpaceBetweenBuildings = 2 // Default spacing
   let preferredDistances = [3, 4, 5, 2] // Default distances
-  
+
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 2 // Walls now also require 2-tile spacing to prevent clustering
     preferredDistances = [3, 4, 5, 2] // Updated to maintain consistent spacing

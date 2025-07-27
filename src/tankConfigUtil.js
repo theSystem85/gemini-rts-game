@@ -10,7 +10,7 @@ import { getTankImageConfig } from './rendering/tankImageRenderer.js'
  */
 export function printTankImageConfig(variant = 'all') {
   const config = getTankImageConfig()
-  
+
   if (variant === 'all') {
     console.log('Current Tank Image Configuration:')
     console.log(JSON.stringify(config, null, 2))
@@ -24,7 +24,7 @@ export function printTankImageConfig(variant = 'all') {
 
 /**
  * Example usage in browser console:
- * 
+ *
  * 1. Open browser console
  * 2. Import the utility:
  *    import('./src/tankConfigUtil.js').then(util => window.tankConfig = util)

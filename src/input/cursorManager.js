@@ -133,7 +133,7 @@ export class CursorManager {
       // Check for recovery tank interactions
       const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
       const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
-      
+
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
           if (building.type === 'oreRefinery' &&
@@ -146,7 +146,7 @@ export class CursorManager {
           }
         }
       }
-      
+
       // Check for hospital when ambulances that are not fully loaded are selected
       if (hasSelectedNotFullyLoadedAmbulances) {
         for (const building of gameState.buildings) {
@@ -176,7 +176,7 @@ export class CursorManager {
           }
         }
       }
-      
+
       // Check for healable units when fully loaded ambulances are selected
       if (hasSelectedFullyLoadedAmbulances && units && Array.isArray(units)) {
         for (const unit of units) {
@@ -184,7 +184,7 @@ export class CursorManager {
               unit.crew && typeof unit.crew === 'object') {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               // Check if unit has missing crew members
               const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
@@ -219,7 +219,7 @@ export class CursorManager {
               unit.health < unit.maxHealth) {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               this.isOverRepairableUnit = true
               break
@@ -234,7 +234,7 @@ export class CursorManager {
           if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               this.isOverRecoveryTank = true
               break
@@ -456,20 +456,20 @@ export class CursorManager {
         } else {
           // Other buildings: check if artillery turret is selected for range-based cursor
           const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-          
+
           // Also check gameState.buildings for selected artillery turrets (alternative selection method)
           let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
           if (!artilleryTurretSelected && gameState.buildings) {
-            artilleryTurretSelected = gameState.buildings.some(b => 
+            artilleryTurretSelected = gameState.buildings.some(b =>
               b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
             )
           }
-          
+
           // Also check selectedUnits directly for artillery turrets (without building filter)
           if (!artilleryTurretSelected) {
             artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
           }
-          
+
           if (artilleryTurretSelected) {
             // Artillery turret selected - show range-based cursor
             if (this.isOverEnemyInRange) {
@@ -500,20 +500,20 @@ export class CursorManager {
         // Force attack mode - check if artillery turret is selected for range-based cursor
         const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
         const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-        
+
         // Also check gameState.buildings for selected artillery turrets (alternative selection method)
         let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
         if (!artilleryTurretSelected && gameState.buildings) {
-          artilleryTurretSelected = gameState.buildings.some(b => 
+          artilleryTurretSelected = gameState.buildings.some(b =>
             b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
           )
         }
-        
+
         // Also check selectedUnits directly for artillery turrets (without building filter)
         if (!artilleryTurretSelected) {
           artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
         }
-        
+
         if (artilleryTurretSelected) {
           // Artillery turret selected in force attack mode - use range-based cursor
           if (this.isInArtilleryRange) {
@@ -575,20 +575,20 @@ export class CursorManager {
         // Check if artillery turret is selected and handle special cursor logic
         const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
         const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-        
+
         // Also check gameState.buildings for selected artillery turrets (alternative selection method)
         let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
         if (!artilleryTurretSelected && gameState.buildings) {
-          artilleryTurretSelected = gameState.buildings.some(b => 
+          artilleryTurretSelected = gameState.buildings.some(b =>
             b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
           )
         }
-        
+
         // Also check selectedUnits directly for artillery turrets (without building filter)
         if (!artilleryTurretSelected) {
           artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
         }
-        
+
         if (artilleryTurretSelected) {
           // Artillery turret is selected - apply range-based cursor logic
           if (this.isOverEnemyInRange) {

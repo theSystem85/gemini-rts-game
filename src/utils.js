@@ -19,14 +19,14 @@ export function calculateHealthSpeedModifier(unit) {
   if (!unit || !unit.health || !unit.maxHealth) {
     return 1.0
   }
-  
+
   const healthPercentage = unit.health / unit.maxHealth
-  
+
   // If below 25% health, move at 50% speed
   if (healthPercentage < 0.25) {
     return 0.5
   }
-  
+
   return 1.0
 }
 
@@ -37,13 +37,13 @@ export function calculateHealthSpeedModifier(unit) {
  */
 export function updateUnitSpeedModifier(unit) {
   if (!unit) return
-  
+
   // Calculate health-based speed modifier
   const healthSpeedModifier = calculateHealthSpeedModifier(unit)
-  
+
   // Get any existing speed modifier (from Tesla coil effects, etc.)
   const existingModifier = unit.baseSpeedModifier || 1.0
-  
+
   // Combine modifiers (multiplicative)
   unit.speedModifier = healthSpeedModifier * existingModifier
 }
@@ -54,7 +54,7 @@ export function updateUnitSpeedModifier(unit) {
  */
 export function initializeUnitLeveling(unit) {
   if (!unit || unit.type === 'harvester') return // Harvesters don't level up
-  
+
   unit.level = unit.level || 0
   unit.experience = unit.experience || 0
   unit.baseCost = unit.baseCost || getUnitCost(unit.type)
@@ -78,10 +78,10 @@ export function getUnitCost(unitType) {
 export function getExperienceRequiredForLevel(currentLevel, baseCost) {
   const multipliers = {
     1: 2, // Level 1 requires 2x unit cost
-    2: 4, // Level 2 requires 4x unit cost  
+    2: 4, // Level 2 requires 4x unit cost
     3: 6  // Level 3 requires 6x unit cost
   }
-  
+
   return multipliers[currentLevel + 1] ? multipliers[currentLevel + 1] * baseCost : null
 }
 
@@ -108,15 +108,15 @@ export function awardExperience(unit, killedUnit) {
  */
 export function checkLevelUp(unit) {
   if (!unit || unit.level >= 3) return
-  
+
   const experienceRequired = getExperienceRequiredForLevel(unit.level, unit.baseCost)
   if (experienceRequired && unit.experience >= experienceRequired) {
     unit.level++
     unit.experience = 0 // Reset experience for next level
-    
+
     // Apply level bonuses
     applyLevelBonuses(unit)
-    
+
     // Play level up sound or effect here if desired
   }
 }
@@ -127,12 +127,12 @@ export function checkLevelUp(unit) {
  */
 export function applyLevelBonuses(unit) {
   if (!unit) return
-  
+
   // Level 1: 20% range increase
   if (unit.level >= 1) {
     unit.rangeMultiplier = (unit.rangeMultiplier || 1) * 1.2
   }
-  
+
   // Level 2: 50% armor increase
   if (unit.level >= 2) {
     if (unit.armor) {
@@ -141,7 +141,7 @@ export function applyLevelBonuses(unit) {
       unit.armor = 1.5 // Give armor to units that don't have it
     }
   }
-  
+
   // Level 3: Self-repair and 33% fire rate increase
   if (unit.level >= 3) {
     unit.selfRepair = true
@@ -156,11 +156,11 @@ export function applyLevelBonuses(unit) {
  */
 export function getExperienceProgress(unit) {
   if (!unit || unit.level >= 3) return 0
-  
+
   initializeUnitLeveling(unit)
   const experienceRequired = getExperienceRequiredForLevel(unit.level, unit.baseCost)
   if (!experienceRequired) return 0
-  
+
   return Math.min(unit.experience / experienceRequired, 1)
 }
 
@@ -172,24 +172,24 @@ export function getExperienceProgress(unit) {
 export function handleSelfRepair(unit, now) {
   if (!unit || unit.level < 3 || !unit.selfRepair) return
   if (unit.health >= unit.maxHealth) return
-  
+
   // Only repair when not moving
   const isMoving = unit.path && unit.path.length > 0
   if (isMoving) return
-  
+
   // Repair 1% every 3 seconds
   const repairInterval = 3000 // 3 seconds
   const repairAmount = unit.maxHealth * 0.01 // 1% of max health
-  
+
   if (!unit.lastRepairTime) {
     unit.lastRepairTime = now
     return
   }
-  
+
   if (now - unit.lastRepairTime >= repairInterval) {
     unit.health = Math.min(unit.health + repairAmount, unit.maxHealth)
     unit.lastRepairTime = now
-    
+
     // Update speed modifier since health changed
     updateUnitSpeedModifier(unit)
   }
@@ -209,13 +209,13 @@ export function debugAddExperience(amount = 1000) {
   } catch (e) {
     console.log('Using fallback method to access selected units')
   }
-  
+
   if (selectedUnits.length === 0) {
     console.log('No units selected. Please select some units first.')
     console.log('Try clicking on some tanks, then run debugAddExperience(500) again')
     return
   }
-  
+
   selectedUnits.forEach(unit => {
     if (unit.type !== 'harvester') {
       initializeUnitLeveling(unit)
@@ -223,7 +223,7 @@ export function debugAddExperience(amount = 1000) {
       unit.experience += amount
       checkLevelUp(unit)
       console.log(`✅ Added ${amount} experience to ${unit.type} (Level ${unit.level}, Experience: ${oldExp} → ${unit.experience})`)
-      
+
       // Force a progress calculation
       const progress = getExperienceProgress(unit)
       console.log(`📊 Experience progress: ${Math.round(progress * 100)}%`)
@@ -284,7 +284,7 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
   if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
     const units = window.gameInstance.units
     const gameState = window.gameState || {}
-    
+
     // Create a simple enemy unit near the player's view
     const enemyUnit = {
       id: `debug_enemy_${Date.now()}`,
@@ -309,9 +309,9 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
       experience: 0,
       baseCost: 1000
     }
-    
+
     units.push(enemyUnit)
-    
+
     // Update occupancy map for debug spawned unit
     if (window.gameState && window.gameState.occupancyMap) {
       const centerTileX = Math.floor((enemyUnit.x + TILE_SIZE) / TILE_SIZE)
@@ -321,10 +321,10 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
         window.gameState.occupancyMap[centerTileY][centerTileX] = (window.gameState.occupancyMap[centerTileY][centerTileX] || 0) + 1
       }
     }
-    
+
     console.log(`🎯 Spawned enemy ${unitType} at (500, 500) for testing`)
-    console.log(`💡 Use your tanks to destroy it and gain experience!`)
-    
+    console.log('💡 Use your tanks to destroy it and gain experience!')
+
     return enemyUnit
   }
 }
@@ -335,12 +335,12 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
 export function debugTestExperienceAwarding() {
   if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
     const selectedUnits = window.debugGetSelectedUnits()
-    
+
     if (selectedUnits.length === 0) {
       console.log('❌ No units selected. Please select a unit first.')
       return
     }
-    
+
     // Create a fake killed unit
     const fakeKilledUnit = {
       type: 'tank',
@@ -348,20 +348,20 @@ export function debugTestExperienceAwarding() {
       health: 0,
       maxHealth: 100
     }
-    
+
     selectedUnits.forEach(unit => {
       if (unit.type !== 'harvester') {
         console.log(`🧪 Testing experience awarding for ${unit.type}...`)
-        
+
         // Force initialize leveling system first
         initializeUnitLeveling(unit)
         console.log(`📊 Before: Level ${unit.level}, Experience ${unit.experience}, BaseCost ${unit.baseCost}`)
-        
+
         const oldExp = unit.experience
         const oldLevel = unit.level
-        
+
         awardExperience(unit, fakeKilledUnit)
-        
+
         console.log(`📊 After: Level ${unit.level}, Experience ${unit.experience}`)
         console.log(`✅ Change: Experience +${unit.experience - oldExp}, Level ${oldLevel} → ${unit.level}`)
       }
@@ -376,7 +376,7 @@ export function debugListAllUnits() {
   if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
     const units = window.gameInstance.units
     console.log(`📋 Total units in game: ${units.length}`)
-    
+
     const unitsByOwner = {}
     units.forEach(unit => {
       const owner = unit.owner || 'unknown'
@@ -385,11 +385,11 @@ export function debugListAllUnits() {
       }
       unitsByOwner[owner].push(unit.type)
     })
-    
+
     Object.keys(unitsByOwner).forEach(owner => {
       console.log(`👥 ${owner}: ${unitsByOwner[owner].join(', ')}`)
     })
-    
+
     return units
   }
 }
@@ -401,19 +401,19 @@ export function debugInitializeAllUnits() {
   if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
     const units = window.gameInstance.units
     let count = 0
-    
+
     units.forEach(unit => {
       if (unit.type !== 'harvester') {
         const hadLeveling = !!(unit.level !== undefined && unit.experience !== undefined && unit.baseCost)
         initializeUnitLeveling(unit)
-        
+
         if (!hadLeveling) {
           count++
           console.log(`🔧 Initialized leveling for ${unit.type} (Owner: ${unit.owner})`)
         }
       }
     })
-    
+
     console.log(`✅ Initialized experience system for ${count} units`)
     console.log(`📊 Total combat units: ${units.filter(u => u.type !== 'harvester').length}`)
   }

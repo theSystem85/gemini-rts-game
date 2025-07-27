@@ -65,7 +65,7 @@ export function preloadTankImages(callback) {
 
   // Load images for all tank variants
   const variants = ['tankV1', 'tankV2', 'tankV3']
-  
+
   variants.forEach(variant => {
     // Load tank wagon
     const wagonImg = new Image()
@@ -97,10 +97,10 @@ export function preloadTankImages(callback) {
  */
 export function areTankImagesLoaded(tankType = 'tank_v1') {
   const variant = getTankVariant(tankType)
-  return tankImagesLoaded && 
-         tankImageCache[variant] && 
-         tankImageCache[variant].wagon && 
-         tankImageCache[variant].turret && 
+  return tankImagesLoaded &&
+         tankImageCache[variant] &&
+         tankImageCache[variant].wagon &&
+         tankImageCache[variant].turret &&
          tankImageCache[variant].barrel
 }
 
@@ -148,28 +148,28 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
 
   // 1. Render tank wagon (chassis)
   ctx.save()
-  
+
   // The wagon image faces down by default, but unit.direction = 0 means facing right
   // So we need to subtract π/2 to align the image with the unit direction
   // unit.direction = 0 (right) → rotate by -π/2 to make down-facing image face right
   // unit.direction = π/2 (down) → rotate by 0 to keep down-facing image facing down
-  // unit.direction = π (left) → rotate by π/2 to make down-facing image face left  
+  // unit.direction = π (left) → rotate by π/2 to make down-facing image face left
   // unit.direction = 3π/2 (up) → rotate by π to make down-facing image face up
   const wagonRotation = unit.direction - Math.PI / 2
   ctx.rotate(wagonRotation)
-  
+
   // Don't change aspect ratio - use original image dimensions scaled proportionally
   // Keep original size relationships - scale wagon to fit tile, others maintain relative size
   const wagonImg = tankImageCache[variant].wagon
   const wagonScale = TILE_SIZE / Math.max(wagonImg.width, wagonImg.height)
   const wagonWidth = wagonImg.width * wagonScale
   const wagonHeight = wagonImg.height * wagonScale
-  
+
   ctx.drawImage(
-    wagonImg, 
-    -wagonWidth / 2, 
-    -wagonHeight / 2, 
-    wagonWidth, 
+    wagonImg,
+    -wagonWidth / 2,
+    -wagonHeight / 2,
+    wagonWidth,
     wagonHeight
   )
   ctx.restore()
@@ -203,7 +203,7 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   // The mount point is where the CENTER of the turret should be positioned
   const turretMountX = (variantConfig.turretMountPoint.x - wagonImg.width / 2) * wagonScale
   const turretMountY = (variantConfig.turretMountPoint.y - wagonImg.height / 2) * wagonScale
-  
+
   // Rotate mount point by wagon rotation
   const rotatedMountX = turretMountX * Math.cos(wagonRotation) - turretMountY * Math.sin(wagonRotation)
   const rotatedMountY = turretMountX * Math.sin(wagonRotation) + turretMountY * Math.cos(wagonRotation)
@@ -212,19 +212,19 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   ctx.save()
   ctx.translate(rotatedMountX, rotatedMountY)
   ctx.rotate(turretRotation)
-  
+
   // Don't change aspect ratio for turret - maintain original size relationship to wagon
   const turretImg = tankImageCache[variant].turret
   const turretScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const turretWidth = turretImg.width * turretScale
   const turretHeight = turretImg.height * turretScale
-  
+
   // Center the turret on the mount point (no recoil - recoil is applied to barrel only)
   ctx.drawImage(
-    turretImg, 
-    -turretWidth / 2, 
-    -turretHeight / 2, 
-    turretWidth, 
+    turretImg,
+    -turretWidth / 2,
+    -turretHeight / 2,
+    turretWidth,
     turretHeight
   )
 
@@ -232,19 +232,19 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   // The mount point is relative to the turret image's top-left, but we need it relative to center
   const barrelMountX = (variantConfig.barrelMountPoint.x - turretImg.width / 2) * turretScale
   const barrelMountY = (variantConfig.barrelMountPoint.y - turretImg.height / 2) * turretScale
-  
+
   // Apply recoil offset to barrel only - recoil goes backward along turret's X-axis
   // Add configurable rotation offset for debugging/tweaking
   const recoilOffsetRadians = (variantConfig.recoilRotationOffset.degrees * Math.PI) / 180
   const recoilLocalX = -recoilOffset * Math.cos(recoilOffsetRadians)
   const recoilLocalY = -recoilOffset * Math.sin(recoilOffsetRadians)
-  
+
   // Don't change aspect ratio for barrel - barrel can extend beyond tile (this is OK)
   const barrelImg = tankImageCache[variant].barrel
   const barrelScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const barrelWidth = barrelImg.width * barrelScale
   const barrelHeight = barrelImg.height * barrelScale
-  
+
   // Center the barrel on its mount point with recoil offset in local coordinates
   ctx.drawImage(
     barrelImg,
@@ -259,21 +259,21 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
     const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
     const flashAlpha = 1 - flashProgress
     const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)
-    
+
     ctx.save()
     ctx.globalAlpha = flashAlpha
-    
+
     // Position muzzle flash using configurable offset relative to barrel
     // The flash should also be affected by recoil (same local coordinate system)
     const flashX = barrelMountX + (variantConfig.muzzleFlashOffset.x - barrelImg.width / 2) * barrelScale + recoilLocalX
     const flashY = barrelMountY + (variantConfig.muzzleFlashOffset.y - barrelImg.height / 2) * barrelScale + recoilLocalY
-    
+
     // Create radial gradient for muzzle flash
     const gradient = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, flashSize)
     gradient.addColorStop(0, '#FFF')
     gradient.addColorStop(0.3, '#FF0')
     gradient.addColorStop(1, 'rgba(255, 165, 0, 0)')
-    
+
     ctx.fillStyle = gradient
     ctx.beginPath()
     ctx.arc(flashX, flashY, flashSize, 0, Math.PI * 2)
@@ -398,7 +398,7 @@ if (typeof window !== 'undefined') {
     getOffset: getRecoilOffset,
     test: testRecoilOffsets
   }
-  
+
   console.log('🔫 Tank Recoil Debug Functions Available:')
   console.log('  tankRecoilDebug.setOffset(variant, degrees) - Set recoil offset for variant')
   console.log('  tankRecoilDebug.getOffset(variant) - Get current offset for variant')

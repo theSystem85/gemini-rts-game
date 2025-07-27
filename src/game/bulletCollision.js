@@ -10,7 +10,7 @@ import { TILE_SIZE } from '../config.js'
 export function checkUnitCollision(bullet, unit) {
   try {
     // Validate inputs
-    if (!bullet || !unit || unit.health <= 0) return false;
+    if (!bullet || !unit || unit.health <= 0) return false
 
     // Skip collision with self (building that shot the bullet)
     if (bullet.shooter && bullet.shooter.isBuilding &&
@@ -18,7 +18,7 @@ export function checkUnitCollision(bullet, unit) {
         bullet.x <= (bullet.shooter.x + bullet.shooter.width) * TILE_SIZE &&
         bullet.y >= bullet.shooter.y * TILE_SIZE &&
         bullet.y <= (bullet.shooter.y + bullet.shooter.height) * TILE_SIZE) {
-      return false;
+      return false
     }
 
     // Skip friendly units unless this is a forced attack
@@ -26,19 +26,19 @@ export function checkUnitCollision(bullet, unit) {
     const forcedTarget = bullet.target || bullet.shooter?.target
     if (unit.owner === bullet.shooter?.owner &&
         !(bullet.shooter?.forcedAttack && forcedTarget === unit)) {
-      return false;
+      return false
     }
 
     // Calculate distance from bullet to unit center
-    const dx = (unit.x + TILE_SIZE / 2) - bullet.x;
-    const dy = (unit.y + TILE_SIZE / 2) - bullet.y;
-    const distance = Math.hypot(dx, dy);
+    const dx = (unit.x + TILE_SIZE / 2) - bullet.x
+    const dy = (unit.y + TILE_SIZE / 2) - bullet.y
+    const distance = Math.hypot(dx, dy)
 
     // Return true if collision detected (within threshold)
-    return distance < 10; // 10-pixel threshold for collision
+    return distance < 10 // 10-pixel threshold for collision
   } catch (error) {
-    console.error('Error in checkUnitCollision:', error);
-    return false;
+    console.error('Error in checkUnitCollision:', error)
+    return false
   }
 }
 
@@ -50,28 +50,28 @@ export function checkUnitCollision(bullet, unit) {
  */
 export function checkBuildingCollision(bullet, building) {
   try {
-    if (!bullet || !building || building.health <= 0) return false;
+    if (!bullet || !building || building.health <= 0) return false
 
     // Skip friendly buildings unless this is a forced attack
     const forcedTarget = bullet.target || bullet.shooter?.target
     if (building.owner === bullet.shooter?.owner &&
         !(bullet.shooter?.forcedAttack && forcedTarget === building)) {
-      return false;
+      return false
     }
 
     // Check if bullet is within building bounds (with small buffer)
-    const buildingX = building.x * TILE_SIZE;
-    const buildingY = building.y * TILE_SIZE;
-    const buildingWidth = building.width * TILE_SIZE;
-    const buildingHeight = building.height * TILE_SIZE;
+    const buildingX = building.x * TILE_SIZE
+    const buildingY = building.y * TILE_SIZE
+    const buildingWidth = building.width * TILE_SIZE
+    const buildingHeight = building.height * TILE_SIZE
 
-    return bullet.x >= buildingX - 5 && 
+    return bullet.x >= buildingX - 5 &&
            bullet.x <= buildingX + buildingWidth + 5 &&
-           bullet.y >= buildingY - 5 && 
-           bullet.y <= buildingY + buildingHeight + 5;
+           bullet.y >= buildingY - 5 &&
+           bullet.y <= buildingY + buildingHeight + 5
   } catch (error) {
-    console.error('Error in checkBuildingCollision:', error);
-    return false;
+    console.error('Error in checkBuildingCollision:', error)
+    return false
   }
 }
 
@@ -83,27 +83,27 @@ export function checkBuildingCollision(bullet, building) {
  */
 export function checkFactoryCollision(bullet, factory) {
   try {
-    if (!bullet || !factory || factory.destroyed) return false;
+    if (!bullet || !factory || factory.destroyed) return false
 
     // Skip friendly factories unless this is a forced attack
     const forcedTarget = bullet.target || bullet.shooter?.target
     if (factory.id === bullet.shooter?.owner &&
         !(bullet.shooter?.forcedAttack && forcedTarget === factory)) {
-      return false;
+      return false
     }
 
     // Check if bullet is within factory bounds (with small buffer)
-    const factoryX = factory.x * TILE_SIZE;
-    const factoryY = factory.y * TILE_SIZE;
-    const factoryWidth = factory.width * TILE_SIZE;
-    const factoryHeight = factory.height * TILE_SIZE;
+    const factoryX = factory.x * TILE_SIZE
+    const factoryY = factory.y * TILE_SIZE
+    const factoryWidth = factory.width * TILE_SIZE
+    const factoryHeight = factory.height * TILE_SIZE
 
-    return bullet.x >= factoryX - 5 && 
+    return bullet.x >= factoryX - 5 &&
            bullet.x <= factoryX + factoryWidth + 5 &&
-           bullet.y >= factoryY - 5 && 
-           bullet.y <= factoryY + factoryHeight + 5;
+           bullet.y >= factoryY - 5 &&
+           bullet.y <= factoryY + factoryHeight + 5
   } catch (error) {
-    console.error('Error in checkFactoryCollision:', error);
-    return false;
+    console.error('Error in checkFactoryCollision:', error)
+    return false
   }
 }

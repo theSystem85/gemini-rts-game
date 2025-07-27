@@ -55,7 +55,7 @@ export class BuildingRenderer {
 
     // Try to get the building image synchronously first
     const img = getBuildingImage(imageKey)
-    
+
     if (img) {
       const now = performance.now()
 
@@ -155,17 +155,17 @@ export class BuildingRenderer {
   drawBuildingImageNatural(ctx, img, screenX, screenY, maxWidth, maxHeight) {
     // Save canvas state to isolate our rendering
     ctx.save()
-    
+
     // Don't reset transforms - use the existing canvas state to maintain proper coordinate system
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    
+
     // Draw the image to fill the entire building grid space
     // This ensures buildings appear at the correct size and position
     ctx.drawImage(img, screenX, screenY, maxWidth, maxHeight)
-    
+
     // Restore canvas state
     ctx.restore()
   }
@@ -256,7 +256,7 @@ export class BuildingRenderer {
           ctx.restore()
         }
       }
-      
+
       // For Artillery Turret, draw range indicator if selected (similar to Tesla Coil but red)
       if (building.type === 'artilleryTurret') {
         // Draw range indicator if selected
@@ -279,10 +279,10 @@ export class BuildingRenderer {
             return // Successfully rendered with images, skip fallback rendering
           }
         }
-        
+
         // Fallback to original drawing method
         const now = performance.now()
-        
+
         // Calculate recoil offset
         let recoilOffset = 0
         if (building.recoilStartTime && now - building.recoilStartTime <= RECOIL_DURATION) {
@@ -291,12 +291,12 @@ export class BuildingRenderer {
           const easedProgress = 1 - Math.pow(1 - progress, 3)
           recoilOffset = TURRET_RECOIL_DISTANCE * (1 - easedProgress)
         }
-        
+
         // Draw turret with rotation
         ctx.save()
         ctx.translate(centerX, centerY)
         ctx.rotate(building.turretDirection || 0)
-        
+
         // Apply recoil offset (move turret backwards)
         ctx.translate(-recoilOffset, 0)
 
@@ -348,16 +348,16 @@ export class BuildingRenderer {
           const flashProgress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
           const flashAlpha = 1 - flashProgress
           const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)
-          
+
           ctx.save()
           ctx.globalAlpha = flashAlpha
-          
+
           // Create radial gradient for muzzle flash
           const gradient = ctx.createRadialGradient(TILE_SIZE * 0.7, 0, 0, TILE_SIZE * 0.7, 0, flashSize)
           gradient.addColorStop(0, '#FFF')
           gradient.addColorStop(0.3, '#FF0')
           gradient.addColorStop(1, 'rgba(255, 165, 0, 0)')
-          
+
           ctx.fillStyle = gradient
           ctx.beginPath()
           ctx.arc(TILE_SIZE * 0.7, 0, flashSize, 0, Math.PI * 2)
@@ -382,30 +382,30 @@ export class BuildingRenderer {
         ctx.restore()
       } else if (building.type === 'rocketTurret') {
         const now = performance.now()
-        
+
         // Render muzzle flash for rocket turret (appears at center of building)
         if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
           const flashProgress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
           const flashAlpha = 1 - flashProgress
           const flashSize = MUZZLE_FLASH_SIZE * 1.5 * (1 - flashProgress * 0.5) // Larger flash for rockets
-          
+
           ctx.save()
           ctx.globalAlpha = flashAlpha
-          
+
           // Create radial gradient for rocket muzzle flash
           const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, flashSize)
           gradient.addColorStop(0, '#FFF')
           gradient.addColorStop(0.2, '#FF0')
           gradient.addColorStop(0.5, '#FF4500')
           gradient.addColorStop(1, 'rgba(255, 69, 0, 0)')
-          
+
           ctx.fillStyle = gradient
           ctx.beginPath()
           ctx.arc(centerX, centerY, flashSize, 0, Math.PI * 2)
           ctx.fill()
           ctx.restore()
         }
-        
+
       }
 
       // Draw range indicator if selected (for non-tesla coil and non-artillery buildings)
@@ -423,31 +423,31 @@ export class BuildingRenderer {
     if (building.selected) {
       ctx.strokeStyle = '#FF0'
       ctx.lineWidth = 2
-      
+
       const cornerSize = 12 // Size of corner brackets
       const offset = 2 // Offset from building edge
-      
+
       // Top-left corner
       ctx.beginPath()
       ctx.moveTo(screenX - offset, screenY - offset + cornerSize)
       ctx.lineTo(screenX - offset, screenY - offset)
       ctx.lineTo(screenX - offset + cornerSize, screenY - offset)
       ctx.stroke()
-      
+
       // Top-right corner
       ctx.beginPath()
       ctx.moveTo(screenX + width + offset - cornerSize, screenY - offset)
       ctx.lineTo(screenX + width + offset, screenY - offset)
       ctx.lineTo(screenX + width + offset, screenY - offset + cornerSize)
       ctx.stroke()
-      
+
       // Bottom-left corner
       ctx.beginPath()
       ctx.moveTo(screenX - offset, screenY + height + offset - cornerSize)
       ctx.lineTo(screenX - offset, screenY + height + offset)
       ctx.lineTo(screenX - offset + cornerSize, screenY + height + offset)
       ctx.stroke()
-      
+
       // Bottom-right corner
       ctx.beginPath()
       ctx.moveTo(screenX + width + offset - cornerSize, screenY + height + offset)
@@ -461,11 +461,11 @@ export class BuildingRenderer {
     // Only show health bar if building is damaged or selected
     const isDamaged = building.health < building.maxHealth
     const isSelected = building.selected
-    
+
     if (!isDamaged && !isSelected) {
       return
     }
-    
+
     // Draw health bar
     const healthBarWidth = width
     const healthBarHeight = 5
@@ -538,35 +538,35 @@ export class BuildingRenderer {
 
   renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height) {
     // Check if this building is in the attack group targets OR if it's currently being targeted by selected units
-    const isInAttackGroupTargets = gameState.attackGroupTargets && 
+    const isInAttackGroupTargets = gameState.attackGroupTargets &&
                                    gameState.attackGroupTargets.some(target => target === building)
-    
+
     // Check if any selected unit is targeting this building (for normal attacks and to show after reselection)
-    const isTargetedBySelectedUnit = selectedUnits && 
-                                     selectedUnits.some(selectedUnit => 
-                                       selectedUnit.target === building || 
+    const isTargetedBySelectedUnit = selectedUnits &&
+                                     selectedUnits.some(selectedUnit =>
+                                       selectedUnit.target === building ||
                                        (selectedUnit.attackQueue && selectedUnit.attackQueue.includes(building))
                                      )
-    
+
     // Show red indicator if: building is in AGF targets OR being targeted by a selected unit
     const shouldShowAttackIndicator = isInAttackGroupTargets || isTargetedBySelectedUnit
-    
+
     if (shouldShowAttackIndicator) {
       const now = performance.now()
       const bounceOffset = Math.sin(now * ATTACK_TARGET_BOUNCE_SPEED) * 3 // 3 pixel bounce
-      
+
       // Position above the building center
       const indicatorX = screenX + width / 2
       const indicatorY = screenY - 15 + bounceOffset
-      
+
       // Draw semi-transparent red triangle (50% transparency, half size)
       ctx.save()
       ctx.fillStyle = 'rgba(255, 0, 0, 0.35)' // Reduced from 0.7 to 0.35
       ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)' // Reduced from 1.0 to 0.5
       ctx.lineWidth = 1
-      
+
       const halfSize = ATTACK_TARGET_INDICATOR_SIZE / 2 // Half the original size
-      
+
       // Draw triangle pointing down
       ctx.beginPath()
       ctx.moveTo(indicatorX, indicatorY + halfSize)
@@ -575,38 +575,38 @@ export class BuildingRenderer {
       ctx.closePath()
       ctx.fill()
       ctx.stroke()
-      
+
       ctx.restore()
     }
   }
 
   renderRepairAnimation(ctx, building, screenX, screenY, width, height) {
     // Check if this building is currently under repair
-    const isUnderRepair = gameState.buildingsUnderRepair && 
+    const isUnderRepair = gameState.buildingsUnderRepair &&
                           gameState.buildingsUnderRepair.some(repair => repair.building === building)
-    
+
     if (!isUnderRepair || !this.wrenchIcon) {
       return
     }
-    
+
     const now = performance.now()
     const cycleTime = 4000 // 4 second cycle time
     const cycleProgress = (now % cycleTime) / cycleTime
-    
+
     // Create smooth in-out fading animation
     // Alpha varies from 0.3 to 1.0 in a sine wave pattern
     const alpha = 0.3 + 0.7 * (Math.sin(cycleProgress * Math.PI * 2) * 0.5 + 0.5)
-    
+
     // Position at center of building
     const centerX = screenX + width / 2
     const centerY = screenY + height / 2
-    
+
     // Icon size - 3x bigger than before, scale based on building size but cap it
     const iconSize = Math.min(72, Math.min(width, height) * 1.2)
-    
+
     ctx.save()
     ctx.globalAlpha = alpha
-    
+
     try {
       // Draw the repair cursor icon in yellow
       // Use canvas color manipulation to make it yellow
@@ -618,64 +618,64 @@ export class BuildingRenderer {
         iconSize,
         iconSize
       )
-      
+
     } catch (error) {
       // Fallback: draw a simple wrench shape if image fails
       ctx.filter = 'none'
       ctx.fillStyle = `rgba(255, 215, 0, ${alpha})` // Gold color
       ctx.strokeStyle = `rgba(255, 165, 0, ${alpha})` // Orange outline
       ctx.lineWidth = 3
-      
+
       // Draw simple wrench shape - 3x bigger
       const wrenchSize = iconSize * 0.8
       ctx.beginPath()
       // Handle
-      ctx.rect(centerX - wrenchSize/8, centerY - wrenchSize/2, wrenchSize/4, wrenchSize * 0.6)
+      ctx.rect(centerX - wrenchSize / 8, centerY - wrenchSize / 2, wrenchSize / 4, wrenchSize * 0.6)
       // Head
-      ctx.rect(centerX - wrenchSize/3, centerY + wrenchSize/6, wrenchSize * 0.6, wrenchSize/4)
+      ctx.rect(centerX - wrenchSize / 3, centerY + wrenchSize / 6, wrenchSize * 0.6, wrenchSize / 4)
       ctx.fill()
       ctx.stroke()
     }
-    
+
     ctx.restore()
   }
 
   renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height) {
     // Check if this building has a pending repair with countdown
-    const pendingRepair = gameState.buildingsAwaitingRepair && 
+    const pendingRepair = gameState.buildingsAwaitingRepair &&
                          gameState.buildingsAwaitingRepair.find(repair => repair.building === building)
-    
+
     if (!pendingRepair) {
       return
     }
-    
+
     // Use the pre-computed countdown from the awaiting repair system
     const secondsRemaining = pendingRepair.remainingCooldown
-    
+
     if (secondsRemaining <= 0) {
       return // Countdown is over
     }
-    
+
     // Calculate progress (reverse progress bar: 100% to 0%)
     const progress = secondsRemaining / 10 // 10 seconds total
-    
+
     // Position above the health bar to avoid overlap with selection markers
     // Health bar is at screenY - 10, so we place this at screenY - 13 (3px height)
     const progressBarWidth = width // Same width as health bar
     const progressBarHeight = 3 // Same height as harvester loading bars
     const progressBarX = screenX
     const progressBarY = screenY - 13
-    
+
     ctx.save()
-    
+
     // Background bar
     ctx.fillStyle = '#333'
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
-    
+
     // Progress fill (red color for attack cooldown)
     ctx.fillStyle = '#ff4444'
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
-    
+
     ctx.restore()
   }
 
@@ -686,7 +686,7 @@ export class BuildingRenderer {
     let currentlyBuilding = null
     let buildStartTime = null
     let buildDuration = null
-    
+
     // Check if it's a construction yard factory
     if (building.type === 'constructionYard' && building.id && gameState.factories) {
       factory = gameState.factories.find(f => f.id === building.owner)
@@ -710,44 +710,44 @@ export class BuildingRenderer {
         buildDuration = factory.unitBuildDuration
       }
     }
-    
+
     if (!isFactory || !currentlyBuilding) {
       return
     }
-    
+
     const now = performance.now()
     const elapsed = now - (buildStartTime || 0)
     const progress = Math.min(elapsed / (buildDuration || 5000), 1)
-    
+
     if (progress <= 0 || progress >= 1) {
       return // No progress to show
     }
-    
+
     // Position the progress bar below the health bar to avoid overlap
     // Health bar is at screenY - 10, so we place this at screenY - 16 (6px gap + 3px height)
     const progressBarWidth = width
     const progressBarHeight = 3
     const progressBarX = screenX
     const progressBarY = screenY - 16
-    
+
     ctx.save()
-    
+
     // Background bar
     ctx.fillStyle = '#333'
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
-    
+
     // Progress fill (blue color for production)
     ctx.fillStyle = '#4CAF50' // Green for building production
     if (['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'tankerTruck'].includes(currentlyBuilding)) {
       ctx.fillStyle = '#2196F3' // Blue for unit production
     }
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
-    
+
     // Border
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 1
     ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
-    
+
     // Show what's being built (text above the progress bar)
     if (building.owner !== gameState.humanPlayer) { // Only show for enemy factories
       ctx.fillStyle = '#FFF'
@@ -755,7 +755,7 @@ export class BuildingRenderer {
       ctx.textAlign = 'center'
       ctx.strokeStyle = '#000'
       ctx.lineWidth = 2
-      
+
       // Create more readable building names
       let displayName = currentlyBuilding
       if (currentlyBuilding === 'tank_v1') displayName = 'Tank'
@@ -773,12 +773,12 @@ export class BuildingRenderer {
       else if (currentlyBuilding === 'radarStation') displayName = 'Radar'
       else if (currentlyBuilding === 'teslaCoil') displayName = 'Tesla Coil'
       else if (currentlyBuilding === 'harvester') displayName = 'Harvester'
-      
+
       // Add black outline for better readability
       ctx.strokeText(displayName, screenX + width / 2, screenY - 18)
       ctx.fillText(displayName, screenX + width / 2, screenY - 18)
     }
-    
+
     ctx.restore()
   }
 

@@ -141,7 +141,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
 
   // Debug: Count Tesla coils
   const teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
-  
+
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil
     if ((building.type === 'rocketTurret' || building.type.startsWith('turretGun') || building.type === 'teslaCoil' || building.type === 'artilleryTurret') && building.health > 0) {
@@ -199,12 +199,12 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           const targetX = targetObj.x + (targetObj.width ? targetObj.width * TILE_SIZE / 2 : TILE_SIZE / 2)
           const targetY = targetObj.y + (targetObj.height ? targetObj.height * TILE_SIZE / 2 : TILE_SIZE / 2)
           const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
-          
+
           // Smoothly rotate turret towards target
           const turretRotationSpeed = TANK_TURRET_ROT
           building.turretDirection = smoothRotateTowardsAngle(
-            building.turretDirection || 0, 
-            targetAngle, 
+            building.turretDirection || 0,
+            targetAngle,
             turretRotationSpeed
           )
         }
@@ -218,7 +218,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           // Tesla coil is disabled due to insufficient power
           return
         }
-        
+
         const effectiveCooldown = building.fireCooldown / gameState.speedMultiplier
         if (!building.lastShotTime || now - building.lastShotTime >= effectiveCooldown) {
           if (closestEnemy) {
@@ -226,14 +226,14 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             playPositionalSound('teslacoil_loading', centerX, centerY, 1.0)
             building.teslaState = 'charging'
             building.teslaChargeStartTime = performance.now()
-            
+
             // Schedule the firing sequence
             setTimeout(() => {
               // Play firing sound and mark as firing
               playPositionalSound('teslacoil_firing', centerX, centerY, 1.0)
               building.teslaState = 'firing'
               building.teslaFireStartTime = performance.now()
-              
+
               // Apply effects after a short delay to sync with bolt sound
               setTimeout(() => {
                 // Check if enemy is still alive and in range
@@ -242,18 +242,18 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
                   closestEnemy.teslaDisabledUntil = now + 60000 // 60 seconds
                   closestEnemy.teslaSlowUntil = now + 60000
                   closestEnemy.teslaSlowed = true
-                  
+
                   // Apply damage to the target
                   let actualDamage = building.damage
                   if (window.cheatSystem) {
                     actualDamage = window.cheatSystem.preventDamage(closestEnemy, building.damage)
                   }
-                  
+
                   // Only apply damage if actualDamage > 0 (god mode protection)
                   if (actualDamage > 0) {
                     closestEnemy.health -= actualDamage
                   }
-                  
+
                   // Track when units are being attacked for AI response
                   if (building.owner !== closestEnemy.owner) {
                     closestEnemy.lastDamageTime = now
@@ -275,7 +275,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
                 building.teslaFireStartTime = 0
               }
             }, 800) // 400ms charge + 400ms bolt
-            
+
             // Create visual lightning effect synchronized with firing sound
             setTimeout(() => {
               const targetX = closestEnemy.x + TILE_SIZE / 2
@@ -292,7 +292,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
                 impactTime: performance.now()
               }
             }, 400) // Same timing as firing sound
-            
+
             building.lastShotTime = now
             building.firingAt = closestEnemy
             building.fireStartTime = performance.now()
@@ -308,7 +308,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             return
           }
         }
-        
+
         // Check burst fire status first
         if (building.burstFire && building.currentBurst > 0) {
           // Continue burst fire sequence
@@ -317,7 +317,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
               fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
               building.currentBurst--
               building.lastBurstTime = now
-              
+
               if (building.currentBurst <= 0) {
                 // Burst sequence complete, set normal cooldown
                 building.lastShotTime = now
@@ -340,7 +340,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
               // Only fire if turret is aligned with target (within tolerance)
               const angleError = Math.abs(angleDiff(building.turretDirection, targetAngle))
               const aimingTolerance = 0.1 // ~5.7 degrees tolerance
-              
+
               if (angleError <= aimingTolerance) {
                 // Store current target position for projectile calculation
                 building.currentTargetPosition = { x: targetX, y: targetY }
@@ -356,7 +356,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
 
                 // Fire projectile
                 fireTurretProjectile(building, firingTarget, centerX, centerY, now, bullets, gameState)
-                
+
                 // Handle burst fire for turret gun v3 and rocket turret
                 if (building.burstFire) {
                   building.currentBurst = building.burstCount - 1 // Already fired first shot
@@ -386,9 +386,9 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
 function fireTurretProjectile(building, target, centerX, centerY, now, bullets, gameState) {
   // Bail early if target is missing and we need it
   if (!target && !building.currentTargetPosition) {
-    return;
+    return
   }
-  
+
   // Apply targeting spread for more realistic shooting
   function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileType) {
     // Skip spread for rockets to maintain their precision
@@ -455,22 +455,22 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
     // Rocket projectile - homing but also store target position for explosion
     projectile.homing = true
     projectile.target = target
-    
+
     // Store target position for explosion even if homing
     if (building.currentTargetPosition) {
-      projectile.targetPosition = { 
-        x: building.currentTargetPosition.x, 
-        y: building.currentTargetPosition.y 
+      projectile.targetPosition = {
+        x: building.currentTargetPosition.x,
+        y: building.currentTargetPosition.y
       }
     } else if (target) {
       // Fallback to current target position if target exists
-      projectile.targetPosition = { 
-        x: target.x + TILE_SIZE / 2, 
-        y: target.y + TILE_SIZE / 2 
+      projectile.targetPosition = {
+        x: target.x + TILE_SIZE / 2,
+        y: target.y + TILE_SIZE / 2
       }
     } else {
       // No valid target position, don't fire
-      return;
+      return
     }
 
     // Play rocket sound
@@ -493,7 +493,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
   } else {
     // Standard bullet - calculate trajectory and store target position with spread
     projectile.homing = false
-    
+
     // Apply targeting spread for more realistic turret shooting
     let targetX, targetY
     if (building.currentTargetPosition) {
@@ -521,9 +521,9 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
       targetY = spreadTarget.y
     } else {
       // No valid target position, don't fire
-      return;
+      return
     }
-    
+
     // Calculate velocity towards the spread target position
     const angle = Math.atan2(targetY - projectile.y, targetX - projectile.x)
     projectile.vx = Math.cos(angle) * building.projectileSpeed
@@ -541,7 +541,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
   }
 
   bullets.push(projectile)
-  
+
   // Trigger recoil and muzzle flash animations for turrets
   building.recoilStartTime = now
   building.muzzleFlashStartTime = now

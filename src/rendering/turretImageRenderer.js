@@ -50,7 +50,7 @@ export function preloadTurretImages(callback) {
   // Load images for each turret type
   turretTypes.forEach(turretType => {
     const config = turretImageConfig[turretType]
-    
+
     // Initialize cache for this turret type
     turretImageCache[turretType] = {}
 
@@ -82,9 +82,9 @@ export function preloadTurretImages(callback) {
  * @returns {boolean} True if turret images are available and loaded
  */
 export function turretImagesAvailable(buildingType) {
-  return turretImagesPreloaded && 
-         turretImageCache[buildingType] && 
-         turretImageCache[buildingType].base && 
+  return turretImagesPreloaded &&
+         turretImageCache[buildingType] &&
+         turretImageCache[buildingType].base &&
          turretImageCache[buildingType].top &&
          turretImageCache[buildingType].base.complete &&
          turretImageCache[buildingType].top.complete
@@ -131,7 +131,7 @@ export function renderTurretWithImages(ctx, building, screenX, screenY, width, h
   // 2. Render the rotating top
   ctx.save()
   ctx.translate(centerX, centerY)
-  
+
   // Rotate based on turret direction
   // Building turret direction needs +π/2 adjustment for correct image orientation
   const rotationOffset = config.rotationOffset !== undefined ? config.rotationOffset : Math.PI / 2

@@ -5,97 +5,97 @@ import { drawTeslaCoilLightning } from './renderingUtils.js'
 export class EffectsRenderer {
   renderBullets(ctx, bullets, scrollOffset) {
     // Draw bullets with improved appearance
-    const now = performance.now();
+    const now = performance.now()
 
     bullets.forEach(bullet => {
-      const x = bullet.x - scrollOffset.x;
-      const y = bullet.y - scrollOffset.y;
+      const x = bullet.x - scrollOffset.x
+      const y = bullet.y - scrollOffset.y
 
       // Draw dissipating trail
       if (bullet.trail && bullet.trail.length > 1) {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(200,200,200,0.4)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
+        ctx.save()
+        ctx.strokeStyle = 'rgba(200,200,200,0.4)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
         bullet.trail.forEach((p, idx) => {
-          const px = p.x - scrollOffset.x;
-          const py = p.y - scrollOffset.y;
-          if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        });
-        ctx.stroke();
-        ctx.restore();
+          const px = p.x - scrollOffset.x
+          const py = p.y - scrollOffset.y
+          if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+        })
+        ctx.stroke()
+        ctx.restore()
       }
-      
+
       // Different rendering for different projectile types
       if (bullet.homing || bullet.ballistic) {
         // Rockets - small body with flame
-        let angle = 0;
+        let angle = 0
         if (bullet.vx !== undefined && bullet.vy !== undefined) {
-          angle = Math.atan2(bullet.vy, bullet.vx);
+          angle = Math.atan2(bullet.vy, bullet.vx)
         } else if (bullet.dx !== undefined && bullet.dy !== undefined) {
-          angle = Math.atan2(bullet.dy, bullet.dx);
+          angle = Math.atan2(bullet.dy, bullet.dx)
         }
 
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle);
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(angle)
 
         // Rocket body
-        ctx.fillStyle = '#CCCCCC';
-        ctx.fillRect(-4, -1.5, 6, 3);
+        ctx.fillStyle = '#CCCCCC'
+        ctx.fillRect(-4, -1.5, 6, 3)
 
         // Rocket nose
-        ctx.fillStyle = '#888888';
-        ctx.beginPath();
-        ctx.moveTo(2, -1.5);
-        ctx.lineTo(4, 0);
-        ctx.lineTo(2, 1.5);
-        ctx.closePath();
-        ctx.fill();
+        ctx.fillStyle = '#888888'
+        ctx.beginPath()
+        ctx.moveTo(2, -1.5)
+        ctx.lineTo(4, 0)
+        ctx.lineTo(2, 1.5)
+        ctx.closePath()
+        ctx.fill()
 
         // Flame with slight flicker
-        const flicker = Math.sin(now / 80 + bullet.id) * 1.2;
-        ctx.fillStyle = '#FF4500';
-        ctx.beginPath();
-        ctx.moveTo(-4, -1);
-        ctx.lineTo(-4 - 4 - flicker, 0);
-        ctx.lineTo(-4, 1);
-        ctx.closePath();
-        ctx.fill();
+        const flicker = Math.sin(now / 80 + bullet.id) * 1.2
+        ctx.fillStyle = '#FF4500'
+        ctx.beginPath()
+        ctx.moveTo(-4, -1)
+        ctx.lineTo(-4 - 4 - flicker, 0)
+        ctx.lineTo(-4, 1)
+        ctx.closePath()
+        ctx.fill()
 
-        ctx.restore();
+        ctx.restore()
       } else {
         // Tank bullets - smaller, copper-colored, bullet-shaped
-        const bulletLength = 6;
-        const bulletWidth = 2;
-        
+        const bulletLength = 6
+        const bulletWidth = 2
+
         // Calculate bullet direction if it has velocity
-        let angle = 0;
+        let angle = 0
         if (bullet.vx !== undefined && bullet.vy !== undefined) {
-          angle = Math.atan2(bullet.vy, bullet.vx);
+          angle = Math.atan2(bullet.vy, bullet.vx)
         }
-        
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle);
-        
+
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(angle)
+
         // Draw bullet shape with copper color
-        ctx.fillStyle = '#B87333'; // Copper color
-        ctx.beginPath();
-        
+        ctx.fillStyle = '#B87333' // Copper color
+        ctx.beginPath()
+
         // Draw bullet as an elongated oval/capsule shape
-        ctx.ellipse(0, 0, bulletLength / 2, bulletWidth / 2, 0, 0, 2 * Math.PI);
-        ctx.fill();
-        
+        ctx.ellipse(0, 0, bulletLength / 2, bulletWidth / 2, 0, 0, 2 * Math.PI)
+        ctx.fill()
+
         // Add a darker tip for the bullet
-        ctx.fillStyle = '#8B4513'; // Darker copper/bronze
-        ctx.beginPath();
-        ctx.ellipse(bulletLength / 4, 0, bulletLength / 4, bulletWidth / 4, 0, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        ctx.restore();
+        ctx.fillStyle = '#8B4513' // Darker copper/bronze
+        ctx.beginPath()
+        ctx.ellipse(bulletLength / 4, 0, bulletLength / 4, bulletWidth / 4, 0, 0, 2 * Math.PI)
+        ctx.fill()
+
+        ctx.restore()
       }
-    });
+    })
   }
 
   renderSmoke(ctx, gameState, scrollOffset) {
@@ -105,27 +105,27 @@ export class EffectsRenderer {
         if (!p.size || p.size <= 0) {
           return // Skip invalid particles
         }
-        
+
         ctx.save()
         ctx.globalAlpha = p.alpha
         const x = p.x - scrollOffset.x
         const y = p.y - scrollOffset.y
-        
+
         // Ensure size is positive for gradient creation
         const safeSize = Math.max(0.1, p.size)
-        
+
         // Create a more balanced gradient
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, safeSize)
         gradient.addColorStop(0, 'rgba(70,70,70,0.7)') // Slightly lighter center
         gradient.addColorStop(0.4, 'rgba(85,85,85,0.5)') // Mid-tone
         gradient.addColorStop(0.8, 'rgba(100,100,100,0.3)') // Lighter edge
         gradient.addColorStop(1, 'rgba(110,110,110,0)') // Transparent edge
-        
+
         ctx.fillStyle = gradient
         ctx.beginPath()
         ctx.arc(x, y, safeSize, 0, Math.PI * 2)
         ctx.fill()
-        
+
         // Add a more subtle dark core
         ctx.globalAlpha = p.alpha * 0.4 // Reduced opacity for core
         const coreSize = Math.max(0.1, safeSize * 0.25) // Ensure core size is also positive
@@ -136,7 +136,7 @@ export class EffectsRenderer {
         ctx.beginPath()
         ctx.arc(x, y, coreSize, 0, Math.PI * 2)
         ctx.fill()
-        
+
         ctx.restore()
       })
     }

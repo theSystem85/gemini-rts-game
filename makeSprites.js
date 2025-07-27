@@ -33,7 +33,7 @@ function relativeName(file) {
 async function main() {
   const files = walk(ROOT_DIR)
   console.log(`Processing ${files.length} image files...`)
-  
+
   // Process all images to TILE_SIZE and get their buffers
   const imageBuffers = []
   for (const file of files) {
@@ -53,11 +53,11 @@ async function main() {
   // Calculate grid dimensions
   const cols = Math.ceil(Math.sqrt(imageBuffers.length))
   const rows = Math.ceil(imageBuffers.length / cols)
-  
+
   // Create the sprite sheet
   const canvasWidth = cols * TILE_SIZE
   const canvasHeight = rows * TILE_SIZE
-  
+
   // Create base canvas
   const canvas = sharp({
     create: {
@@ -71,17 +71,17 @@ async function main() {
   // Prepare composite operations
   const compositeOps = []
   const map = {}
-  
+
   imageBuffers.forEach((buffer, i) => {
     const x = (i % cols) * TILE_SIZE
     const y = Math.floor(i / cols) * TILE_SIZE
-    
+
     compositeOps.push({
       input: buffer,
       left: x,
       top: y
     })
-    
+
     map[relativeName(files[i])] = { x, y, width: TILE_SIZE, height: TILE_SIZE }
   })
 

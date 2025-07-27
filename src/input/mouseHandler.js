@@ -20,7 +20,7 @@ export class MouseHandler {
     this.gameFactories = [] // Initialize gameFactories
     this.mouseDownTime = 0
     this.isDraggingThreshold = 150 // 150ms threshold before dragging activates
-    
+
     // Attack Group feature manager
     this.attackGroupHandler = new AttackGroupHandler()
 
@@ -29,7 +29,7 @@ export class MouseHandler {
 
     // Track if a guard click started while Meta was held
     this.guardClick = false
-    
+
   }
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -75,7 +75,7 @@ export class MouseHandler {
         gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
       }
 
-      // Update selection rectangle if we're actively selecting 
+      // Update selection rectangle if we're actively selecting
       // Remove the unreliable (e.buttons & 1) check that was causing cancellations
       if (this.isSelecting || this.attackGroupHandler.isAttackGroupSelecting) {
         this.updateSelectionRectangle(worldX, worldY, cursorManager)
@@ -123,13 +123,13 @@ export class MouseHandler {
     // Check if we're over a recovery tank with damaged units selected
     // This should prevent AGF mode from being triggered but allow normal selection
     const isRecoveryTankInteraction = cursorManager && cursorManager.isOverRecoveryTank
-    
+
     // Additional direct check for recovery tank interaction
     const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
     const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
-    
+
     // Store this for use during dragging
-    this.isRecoveryTankInteraction = isRecoveryTankInteraction || 
+    this.isRecoveryTankInteraction = isRecoveryTankInteraction ||
       (hasSelectedDamagedUnits && this.isOverRecoveryTankAt(worldX, worldY)) ||
       (hasSelectedRecoveryTanks && this.isOverDamagedUnitAt(worldX, worldY, selectedUnits))
 
@@ -153,7 +153,7 @@ export class MouseHandler {
     this.selectionEnd = { x: worldX, y: worldY }
     gameState.selectionStart = { ...this.selectionStart }
     gameState.selectionEnd = { ...this.selectionEnd }
-    
+
     // Reset AGF state initially
     gameState.attackGroupMode = false
     this.attackGroupHandler.isAttackGroupSelecting = false
@@ -263,26 +263,26 @@ export class MouseHandler {
 
       cursorManager.setIsOverEnemy(isOverEnemy)
       cursorManager.setIsOverFriendlyUnit(isOverFriendlyUnit)
-      
+
       // Update artillery turret range detection for cursor changes
       let enemyInRange = false
       let enemyOutOfRange = false
-      
+
       // Check if any selected unit is an artillery turret (for both enemy targeting and force attack mode)
-      const selectedArtilleryTurrets = selectedUnits.filter(unit => 
+      const selectedArtilleryTurrets = selectedUnits.filter(unit =>
         unit.type === 'artilleryTurret'  // Remove isBuilding check as it might be missing
       )
-      
+
       // Also check gameState.buildings for selected artillery turrets (alternative selection method)
       let additionalArtilleryTurrets = []
       if (gameState.buildings) {
-        additionalArtilleryTurrets = gameState.buildings.filter(b => 
+        additionalArtilleryTurrets = gameState.buildings.filter(b =>
           b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
         )
       }
-      
+
       const allArtilleryTurrets = [...selectedArtilleryTurrets, ...additionalArtilleryTurrets]
-      
+
       // Calculate range for artillery turrets when they are selected (both for enemy targeting and force attack)
       if (allArtilleryTurrets.length > 0) {
         for (const turret of allArtilleryTurrets) {
@@ -290,14 +290,14 @@ export class MouseHandler {
           const turretCenterY = (turret.y + turret.height / 2) * TILE_SIZE
           const distance = Math.hypot(worldX - turretCenterX, worldY - turretCenterY)
           const maxRange = turret.fireRange * TILE_SIZE
-          
+
           if (distance <= maxRange) {
             enemyInRange = true
           } else {
             enemyOutOfRange = true
           }
         }
-        
+
         // If some turrets can reach and some can't, prioritize in-range
         if (enemyInRange && enemyOutOfRange) {
           enemyInRange = true
@@ -307,10 +307,10 @@ export class MouseHandler {
           enemyOutOfRange = true
         }
       }
-      
+
       cursorManager.setIsOverEnemyInRange(isOverEnemy && enemyInRange)
       cursorManager.setIsOverEnemyOutOfRange(isOverEnemy && enemyOutOfRange)
-      
+
       // For force attack mode with artillery turrets, set range flags regardless of enemy presence
       if (allArtilleryTurrets.length > 0) {
         cursorManager.setIsInArtilleryRange(enemyInRange)
@@ -362,17 +362,17 @@ export class MouseHandler {
   updateSelectionRectangle(worldX, worldY, cursorManager) {
     // Use the stored recovery tank interaction state from mouse down
     const isRecoveryTankInteraction = this.isRecoveryTankInteraction || (cursorManager && cursorManager.isOverRecoveryTank)
-    
+
     // Check if we should transition to attack group mode during dragging
-    if (!this.attackGroupHandler.isAttackGroupSelecting && 
-        this.attackGroupHandler.hasSelectedCombatUnits && 
-        this.isSelecting && 
+    if (!this.attackGroupHandler.isAttackGroupSelecting &&
+        this.attackGroupHandler.hasSelectedCombatUnits &&
+        this.isSelecting &&
         !isRecoveryTankInteraction) { // Prevent AGF when recovery tank interaction is possible
       const dragDistance = Math.hypot(
         worldX - this.attackGroupHandler.potentialAttackGroupStart.x,
         worldY - this.attackGroupHandler.potentialAttackGroupStart.y
       )
-      
+
       // Transition to AGF mode immediately if combat units are selected and we start dragging
       if (dragDistance > 3) { // Small threshold to avoid accidental activation
         // Transition from normal selection to attack group mode
@@ -384,7 +384,7 @@ export class MouseHandler {
         gameState.attackGroupStart = { ...this.attackGroupHandler.potentialAttackGroupStart }
         gameState.attackGroupEnd = { x: worldX, y: worldY }
         this.attackGroupHandler.attackGroupWasDragging = true
-        
+
         // Clear normal selection rectangle coordinates to prevent rendering
         gameState.selectionStart = { x: 0, y: 0 }
         gameState.selectionEnd = { x: 0, y: 0 }
@@ -419,17 +419,17 @@ export class MouseHandler {
     // Right click no longer sets rally points, it only deselects
 
     // Only deselect other units if this was NOT a drag operation AND no factory was selected
-      if (!this.rightWasDragging) {
-        units.forEach(u => { if (selectionManager.isSelectableUnit(u)) u.selected = false })
-      
+    if (!this.rightWasDragging) {
+      units.forEach(u => { if (selectionManager.isSelectableUnit(u)) u.selected = false })
+
       // Clear factory selections
       factories.forEach(f => f.selected = false)
-      
+
       // Clear building selections
       if (gameState.buildings) {
         gameState.buildings.forEach(b => { if (selectionManager.isHumanPlayerBuilding(b)) b.selected = false })
       }
-      
+
       selectedUnits.length = 0
       // Update AGF capability after deselection
       this.updateAGFCapability(selectedUnits)
@@ -533,17 +533,17 @@ export class MouseHandler {
     gameState.selectionActive = false
     this.wasDragging = false
     this.attackGroupHandler.hasSelectedCombatUnits = false
-    
+
     // Also reset potential attack group state
     this.attackGroupHandler.potentialAttackGroupStart = { x: 0, y: 0 }
 
     // Reset force attack state captured on mouse down
     this.forceAttackClick = false
     this.guardClick = false
-    
+
     // Reset recovery tank interaction state
     this.isRecoveryTankInteraction = false
-    
+
     // Clear any remaining AGF state if not handled above
     if (!this.attackGroupHandler.isAttackGroupSelecting) {
       gameState.attackGroupMode = false
@@ -584,9 +584,9 @@ export class MouseHandler {
       }
 
       // Check friendly units if no building was targeted
-        if (!forceAttackTarget) {
-          for (const unit of units) {
-            if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
+      if (!forceAttackTarget) {
+        for (const unit of units) {
+          if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
             const centerX = unit.x + TILE_SIZE / 2
             const centerY = unit.y + TILE_SIZE / 2
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
@@ -601,7 +601,7 @@ export class MouseHandler {
       if (!forceAttackTarget) {
         const targetTileX = Math.floor(worldX / TILE_SIZE)
         const targetTileY = Math.floor(worldY / TILE_SIZE)
-        
+
         // Create a synthetic ground target object
         forceAttackTarget = {
           id: `ground_${targetTileX}_${targetTileY}_${Date.now()}`,
@@ -717,15 +717,15 @@ export class MouseHandler {
     if (selectedUnits.length > 0) {
       const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
       const hasSelectedHarvesters = commandableUnits.some(unit => unit.type === 'harvester')
-      
+
       if (hasSelectedHarvesters) {
         // Check if clicking on a player refinery with harvesters selected
         const tileX = Math.floor(worldX / TILE_SIZE)
         const tileY = Math.floor(worldY / TILE_SIZE)
-        
+
         if (gameState.buildings && Array.isArray(gameState.buildings)) {
           for (const building of gameState.buildings) {
-            if (building.type === 'oreRefinery' && 
+            if (building.type === 'oreRefinery' &&
                 building.owner === gameState.humanPlayer &&
                 building.health > 0 &&
                 tileX >= building.x && tileX < building.x + building.width &&
@@ -741,7 +741,7 @@ export class MouseHandler {
       // Check for vehicle workshop repair command if any units are selected
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
-      
+
       if (gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'vehicleWorkshop' &&
@@ -773,15 +773,15 @@ export class MouseHandler {
 
       // Check for ambulance healing command if ambulances are selected
       const hasSelectedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics > 0)
-      
+
       if (hasSelectedAmbulances) {
         // Check if clicking on a friendly unit that needs healing
         for (const unit of units) {
-          if (unit.owner === gameState.humanPlayer && 
+          if (unit.owner === gameState.humanPlayer &&
               unit.crew && typeof unit.crew === 'object') {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               // Check if unit has missing crew members
               const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
@@ -797,16 +797,16 @@ export class MouseHandler {
 
       // Check for recovery tank repair command if recovery tanks are selected
       const hasSelectedRecoveryTanks = commandableUnits.some(unit => unit.type === 'recoveryTank')
-      
+
       if (hasSelectedRecoveryTanks) {
         // Check if clicking on a friendly unit that needs repair
         for (const unit of units) {
-          if (unit.owner === gameState.humanPlayer && 
+          if (unit.owner === gameState.humanPlayer &&
               unit.type !== 'recoveryTank' &&
               unit.health < unit.maxHealth) {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               // Handle recovery tank repair command
               unitCommands.handleRecoveryTankRepairCommand(commandableUnits, unit, mapGrid)
@@ -818,14 +818,14 @@ export class MouseHandler {
 
       // Check for damaged unit requesting recovery tank help
       const hasSelectedDamagedUnits = commandableUnits.some(unit => unit.health < unit.maxHealth)
-      
+
       if (hasSelectedDamagedUnits) {
         // Check if clicking on a recovery tank
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            
+
             if (unitTileX === tileX && unitTileY === tileY) {
               // Handle damaged unit requesting recovery tank help
               unitCommands.handleDamagedUnitToRecoveryTankCommand(commandableUnits, unit, mapGrid)
@@ -853,7 +853,7 @@ export class MouseHandler {
 
       // Check for ambulance refilling command if ambulances are selected
       const hasSelectedNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
-      
+
       if (hasSelectedNotFullyLoadedAmbulances) {
         // Check if clicking on a player hospital
         for (const building of gameState.buildings) {
@@ -977,7 +977,7 @@ export class MouseHandler {
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
       const hasSelectedHarvesters = commandableUnits.some(unit => unit.type === 'harvester')
-      
+
       if (hasSelectedHarvesters && gameState.buildings && Array.isArray(gameState.buildings)) {
         for (const building of gameState.buildings) {
           if (building.type === 'oreRefinery' &&
@@ -992,7 +992,7 @@ export class MouseHandler {
       }
 
       // Check if clicking on an ore tile with harvesters selected
-      if (hasSelectedHarvesters && 
+      if (hasSelectedHarvesters &&
           mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
           tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length &&
           mapGrid[tileY][tileX].ore) {
@@ -1011,9 +1011,9 @@ export class MouseHandler {
             break
           }
         }
-        
+
         // Check for hospital if ambulances that need refilling are selected
-      const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
+        const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
         if (hasNotFullyLoadedAmbulances) {
           for (const building of gameState.buildings) {
             if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&
@@ -1077,7 +1077,7 @@ export class MouseHandler {
   }
 
   findEnemyTarget(worldX, worldY) {
-    
+
     // Check enemy buildings first (they have priority)
     if (gameState.buildings && gameState.buildings.length > 0) {
       for (const building of gameState.buildings) {
@@ -1173,10 +1173,10 @@ export class MouseHandler {
   // Helper method to check if mouse is over a recovery tank
   isOverRecoveryTankAt(worldX, worldY) {
     if (!this.gameUnits) return false
-    
+
     const tileX = Math.floor(worldX / TILE_SIZE)
     const tileY = Math.floor(worldY / TILE_SIZE)
-    
+
     return this.gameUnits.some(unit => {
       if (unit.type === 'recoveryTank' && unit.owner === gameState.humanPlayer) {
         const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -1187,15 +1187,15 @@ export class MouseHandler {
     })
   }
 
-  // Helper method to check if mouse is over a damaged unit  
+  // Helper method to check if mouse is over a damaged unit
   isOverDamagedUnitAt(worldX, worldY, selectedUnits) {
     if (!this.gameUnits) return false
-    
+
     const tileX = Math.floor(worldX / TILE_SIZE)
     const tileY = Math.floor(worldY / TILE_SIZE)
-    
+
     return this.gameUnits.some(unit => {
-      if (unit.owner === gameState.humanPlayer && 
+      if (unit.owner === gameState.humanPlayer &&
           unit.type !== 'recoveryTank' &&
           unit.health < unit.maxHealth &&
           !selectedUnits.includes(unit)) {

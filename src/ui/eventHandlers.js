@@ -66,21 +66,21 @@ export class EventHandlers {
     }
 
     // Restart functionality
-    restartBtn.addEventListener('click', async () => {
+    restartBtn.addEventListener('click', async() => {
       try {
         // Use the stored game instance first, fallback to dynamic import, then window
         let gameInstance = this.gameInstance
-        
+
         if (!gameInstance) {
           // Fallback 1: Get the current game instance via static import
           gameInstance = getCurrentGame()
         }
-        
+
         if (!gameInstance) {
           // Fallback 2: Try window.gameInstance
           gameInstance = window.gameInstance
         }
-        
+
         if (gameInstance && typeof gameInstance.resetGame === 'function') {
           await gameInstance.resetGame()
           showNotification('Game restarted while preserving win/loss statistics')
@@ -96,7 +96,7 @@ export class EventHandlers {
 
     // Background music initialization and control
     if (musicControlButton) {
-      musicControlButton.addEventListener('click', async () => {
+      musicControlButton.addEventListener('click', async() => {
         await toggleBackgroundMusic()
 
         // Toggle music icon
@@ -119,7 +119,7 @@ export class EventHandlers {
       if (isInputFieldFocused()) {
         return
       }
-      
+
       if (e.key === 'Escape' && gameState.buildingPlacementMode) {
         e.preventDefault()
         e.stopPropagation()
@@ -513,24 +513,24 @@ export class EventHandlers {
   setupVolumeControl() {
     const volumeSlider = document.getElementById('masterVolumeSlider')
     const volumeValue = document.getElementById('volumeValue')
-    
+
     if (volumeSlider && volumeValue) {
       // Set initial values based on current master volume
       const currentVolume = Math.round(getMasterVolume() * 100)
       volumeSlider.value = currentVolume
       volumeValue.textContent = currentVolume + '%'
-      
+
       // Handle volume changes
       volumeSlider.addEventListener('input', (e) => {
         const volumePercent = parseInt(e.target.value)
         const volumeDecimal = volumePercent / 100
-        
+
         // Update master volume
         setMasterVolume(volumeDecimal)
-        
+
         // Update display
         volumeValue.textContent = volumePercent + '%'
-        
+
         // Play a brief test sound to give feedback
         if (volumePercent > 0) {
           playSound('confirmed', 0.3)

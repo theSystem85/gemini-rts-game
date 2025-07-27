@@ -54,10 +54,10 @@ function getCachedPath(start, end, mapGrid, occupancyMap) {
  * @param {Object} occupancyMap - Map of occupied tiles
  * @param {Object} gameState - Game state object
  */
-export const updateGlobalPathfinding = logPerformance(_updateGlobalPathfinding, false);
+export const updateGlobalPathfinding = logPerformance(_updateGlobalPathfinding, false)
 function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
   const now = performance.now()
-  
+
   if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
     gameState.lastGlobalPathCalc = now
 
@@ -92,7 +92,7 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
       if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
         // Check if this is an attacking/chasing unit
         const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
-        
+
         // For AI units, respect target change timer
         if (unit.owner !== gameState.humanPlayer && unit.lastTargetChangeTime &&
           now - unit.lastTargetChangeTime < 2000) {
@@ -185,7 +185,7 @@ export function createFormationOffsets(units, groupNumber) {
   units.forEach((unit, index) => {
     const row = Math.floor(index / unitsPerRow)
     const col = index % unitsPerRow
-    
+
     // Center the formation
     const offsetX = (col - (unitsPerRow - 1) / 2) * spacing
     const offsetY = row * spacing

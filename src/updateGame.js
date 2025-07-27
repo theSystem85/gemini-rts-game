@@ -29,7 +29,7 @@ import { updateRecoveryTankLogic } from './game/recoveryTankSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { processCommandQueues } from './game/commandQueue.js'
-import { 
+import {
   updateMapScrolling,
   updateCameraFollow,
   updateOreSpread,
@@ -128,8 +128,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
       gameState.buildings.forEach(building => {
         const buildingConfig = buildingData[building.type]
         if (
-          buildingConfig && 
-          buildingConfig.smokeSpots && 
+          buildingConfig &&
+          buildingConfig.smokeSpots &&
           buildingConfig.smokeSpots.length > 0
         ) {
           // Initialize smoke emission tracking for each spot if not exists
@@ -139,28 +139,28 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
               emissionStage: 0 // Track which emission in the sequence we're on
             }))
           }
-          
+
           // Get the actual building image to determine real dimensions
           const buildingImage = getBuildingImage(building.type)
           if (!buildingImage) {
             return // Skip if image not loaded yet
           }
-          
+
           // Calculate dynamic scaling factors based on actual image vs rendered size
           const renderedWidth = building.width * TILE_SIZE
           const renderedHeight = building.height * TILE_SIZE
           const actualImageWidth = buildingImage.naturalWidth || buildingImage.width
           const actualImageHeight = buildingImage.naturalHeight || buildingImage.height
-          
+
           // Calculate individual scaling factors for X and Y (important for non-square images)
           const scaleX = renderedWidth / actualImageWidth
           const scaleY = renderedHeight / actualImageHeight
-          
+
           // Emit smoke from each smoke spot with proper coordinate scaling and timing
           buildingConfig.smokeSpots.forEach((smokeSpot, spotIndex) => {
             const tracker = building.smokeEmissionTrackers[spotIndex]
             const timeSinceLastEmission = now - tracker.lastEmissionTime
-            
+
             // Emit every 200ms for steady, overlapping smoke streams
             if (timeSinceLastEmission > 200) {
               const scaledX = smokeSpot.x * scaleX
@@ -168,10 +168,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
               // Use precise coordinates without additional offset now that scaling is accurate
               const smokeX = building.x * TILE_SIZE + scaledX
               const smokeY = building.y * TILE_SIZE + scaledY
-              
+
               // Emit 3 particles for denser, overlapping effect
               emitSmokeParticles(gameState, smokeX, smokeY, now, 3)
-              
+
               tracker.lastEmissionTime = now
               tracker.emissionStage = (tracker.emissionStage + 1) % 4 // Cycle through stages
             }
@@ -224,7 +224,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
       updateBuildingsUnderRepair(gameState, now)
     }
-    
+
     // Update buildings awaiting repair (countdown for buildings under attack)
     updateBuildingsAwaitingRepair(gameState, now)
 

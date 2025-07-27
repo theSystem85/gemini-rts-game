@@ -20,7 +20,7 @@ export const updateEnemyAI = logPerformance(function updateEnemyAI(units, factor
       gameState.lastGlobalAttackDecision = now
     }
   }
-  
+
   aiPlayers.forEach(aiPlayerId => {
     updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles)
   })

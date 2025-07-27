@@ -1,5 +1,5 @@
-import { TILE_SIZE, MOVE_TARGET_INDICATOR_SIZE } from "../config.js"
-import { gameState } from "../gameState.js"
+import { TILE_SIZE, MOVE_TARGET_INDICATOR_SIZE } from '../config.js'
+import { gameState } from '../gameState.js'
 
 export class PathPlanningRenderer {
   render(ctx, units, scrollOffset) {

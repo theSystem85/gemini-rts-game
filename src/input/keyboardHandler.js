@@ -39,7 +39,7 @@ export class KeyboardHandler {
     this.units = units
     this.mapGrid = mapGrid
     this.factories = factories
-    
+
     // Track Shift and Alt/Option key states globally
     document.addEventListener('keydown', e => {
       if (e.key === 'Shift') {
@@ -312,34 +312,34 @@ export class KeyboardHandler {
 
   handleEscapeKey() {
     let modeWasCanceled = false
-    
+
     // Cancel attack group mode if active
     if (gameState.attackGroupMode && this.mouseHandler) {
       this.mouseHandler.resetAttackGroupState()
       modeWasCanceled = true
     }
-    
+
     // Cancel any other active modes
     if (gameState.buildingPlacementMode) {
       gameState.buildingPlacementMode = false
       gameState.selectedBuilding = null
       modeWasCanceled = true
     }
-    
+
     if (gameState.repairMode) {
       gameState.repairMode = false
       const repairBtn = document.getElementById('repairBtn')
       if (repairBtn) repairBtn.classList.remove('active')
       modeWasCanceled = true
     }
-    
+
     if (gameState.sellMode) {
       gameState.sellMode = false
       const sellBtn = document.getElementById('sellBtn')
       if (sellBtn) sellBtn.classList.remove('active')
       modeWasCanceled = true
     }
-    
+
     // Deselect any selected factories or buildings (clear all selections)
     let hadSelections = false
     if (this.selectedUnits && this.selectedUnits.length > 0) {
@@ -348,28 +348,28 @@ export class KeyboardHandler {
       if (this.units) {
         this.units.forEach(unit => { if (unit.owner === gameState.humanPlayer) unit.selected = false })
       }
-      
-      // Clear factory selections  
+
+      // Clear factory selections
       if (this.factories) {
         this.factories.forEach(factory => factory.selected = false)
       }
-      
+
       // Clear building selections
       if (gameState.buildings) {
         gameState.buildings.forEach(building => { if (building.owner === gameState.humanPlayer) building.selected = false })
       }
-      
+
       // Clear selectedUnits array
       this.selectedUnits.length = 0
-      
+
       // Update AGF capability after clearing selections
       if (this.mouseHandler) {
         this.mouseHandler.updateAGFCapability(this.selectedUnits)
       }
-      
+
       modeWasCanceled = true
     }
-    
+
     if (modeWasCanceled) {
       const message = hadSelections ? 'Selection cleared' : 'Mode cancelled'
       this.showNotification(message, 1000)
@@ -380,7 +380,7 @@ export class KeyboardHandler {
     // Toggle alert mode on all selected player units.
     let alertToggledCount = 0
     let tankV2Count = 0
-    
+
     selectedUnits.forEach(unit => {
       // Only tank-v2 units can use alert mode
       if (unit.type === 'tank-v2') {
@@ -389,7 +389,7 @@ export class KeyboardHandler {
         alertToggledCount++
       }
     })
-    
+
     // Provide feedback to the user
     if (tankV2Count === 0) {
       this.showNotification('Alert mode only works with Tank V2 units', 2000)
@@ -409,7 +409,7 @@ export class KeyboardHandler {
     }
 
     const gameCanvas = document.getElementById('gameCanvas')
-    
+
     // If not in sell mode, toggle it
     if (!gameState.sellMode) {
       // Toggle sell mode
@@ -488,16 +488,16 @@ export class KeyboardHandler {
     }
 
     let dodgeSuccessCount = 0
-    
+
     // Make all selected units try to dodge by moving one tile forward or backward
     selectedUnits.forEach(unit => {
       // Get current tile coordinates
       const tileX = Math.floor(unit.x / TILE_SIZE)
       const tileY = Math.floor(unit.y / TILE_SIZE)
-      
+
       // Determine unit's facing direction (use movement direction if available, otherwise use last direction)
       let facingAngle = 0
-      
+
       // Use movement direction if unit is moving
       if (unit.movement && unit.movement.isMoving && (unit.movement.velocity.x !== 0 || unit.movement.velocity.y !== 0)) {
         facingAngle = Math.atan2(unit.movement.velocity.y, unit.movement.velocity.x)
@@ -517,25 +517,25 @@ export class KeyboardHandler {
         const dy = nextTile.y * TILE_SIZE - unit.y
         facingAngle = Math.atan2(dy, dx)
       }
-      
+
       // Calculate forward and backward positions (one tile away)
       const forwardX = Math.round(tileX + Math.cos(facingAngle))
       const forwardY = Math.round(tileY + Math.sin(facingAngle))
       const backwardX = Math.round(tileX - Math.cos(facingAngle))
       const backwardY = Math.round(tileY - Math.sin(facingAngle))
-      
+
       // Check if forward position is valid
       const isForwardValid = this.isValidDodgePosition(forwardX, forwardY, mapGrid, units)
-      
+
       // Check if backward position is valid
       const isBackwardValid = this.isValidDodgePosition(backwardX, backwardY, mapGrid, units)
-      
+
       let dodgeTarget = null
-      
+
       // Apply dodge logic based on requirements
       if (isForwardValid && isBackwardValid) {
         // Both are free - random decision
-        dodgeTarget = Math.random() < 0.5 
+        dodgeTarget = Math.random() < 0.5
           ? { x: forwardX, y: forwardY }
           : { x: backwardX, y: backwardY }
       } else if (isForwardValid && !isBackwardValid) {
@@ -546,14 +546,14 @@ export class KeyboardHandler {
         dodgeTarget = { x: backwardX, y: backwardY }
       }
       // If both are blocked, do not dodge (dodgeTarget remains null)
-      
+
       if (dodgeTarget) {
         // Store current path and target for restoration after dodge
         unit.originalPath = unit.path ? [...unit.path] : []
         unit.originalTarget = unit.target
         unit.isDodging = true
         unit.dodgeEndTime = performance.now() + 3000 // Dodge lasts up to 3 seconds
-        
+
         // Compute a new path to the dodge destination
         const newPath = findPath({ x: tileX, y: tileY }, dodgeTarget, mapGrid, null)
         if (newPath.length > 1) {
@@ -565,8 +565,8 @@ export class KeyboardHandler {
 
     // Show feedback to user
     if (dodgeSuccessCount > 0) {
-      const message = dodgeSuccessCount === 1 
-        ? 'Unit dodging!' 
+      const message = dodgeSuccessCount === 1
+        ? 'Unit dodging!'
         : `${dodgeSuccessCount} units dodging!`
       this.showNotification(message, 1500)
       const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
@@ -583,18 +583,18 @@ export class KeyboardHandler {
     if (x < 0 || x >= mapGrid[0].length || y < 0 || y >= mapGrid.length) {
       return false
     }
-    
+
     // Check tile type and buildings
     const tile = mapGrid[y][x]
     if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
       return false
     }
-    
+
     // Check if any unit occupies this tile
-    const occupied = units.some(u => 
+    const occupied = units.some(u =>
       Math.floor(u.x / TILE_SIZE) === x && Math.floor(u.y / TILE_SIZE) === y
     )
-    
+
     return !occupied
   }
 
@@ -800,11 +800,11 @@ export class KeyboardHandler {
   handleOccupancyMapToggle() {
     // Toggle occupancy map visibility
     gameState.occupancyVisible = !gameState.occupancyVisible
-    
+
     // Show notification to user
     const status = gameState.occupancyVisible ? 'ON' : 'OFF'
     this.showNotification(`Occupancy map: ${status}`, 2000)
-    
+
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }
@@ -831,11 +831,11 @@ export class KeyboardHandler {
   handleTankImageToggle() {
     // Toggle tank image rendering
     gameState.useTankImages = !gameState.useTankImages
-    
+
     // Show notification to user
     const status = gameState.useTankImages ? 'ON' : 'OFF'
     this.showNotification(`Tank image rendering: ${status}`, 2000)
-    
+
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }
@@ -843,11 +843,11 @@ export class KeyboardHandler {
   handleTurretImageToggle() {
     // Toggle turret image rendering
     gameState.useTurretImages = !gameState.useTurretImages
-    
+
     // Show notification to user
     const status = gameState.useTurretImages ? 'ON' : 'OFF'
     this.showNotification(`Turret image rendering: ${status}`, 2000)
-    
+
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }
@@ -855,7 +855,7 @@ export class KeyboardHandler {
   handleFpsDisplayToggle() {
     // Toggle FPS display visibility
     gameState.fpsVisible = !gameState.fpsVisible
-    
+
     // Update the display immediately
     const fpsElement = document.getElementById('fpsDisplay')
     if (fpsElement) {
@@ -865,11 +865,11 @@ export class KeyboardHandler {
         fpsElement.classList.remove('visible')
       }
     }
-    
+
     // Show notification to user
     const status = gameState.fpsVisible ? 'ON' : 'OFF'
     this.showNotification(`FPS display: ${status}`, 2000)
-    
+
     // Play a sound for feedback
     playSound('confirmed', 0.5)
   }
@@ -960,7 +960,7 @@ export class KeyboardHandler {
       if (unit.attackQueue) {
         unit.attackQueue = []
       }
-      
+
       // Clear any attack group targets
       if (unit.attackGroupTargets) {
         unit.attackGroupTargets = []

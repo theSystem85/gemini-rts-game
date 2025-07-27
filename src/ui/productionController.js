@@ -145,7 +145,7 @@ export class ProductionController {
     // Initial update of button states when setting up
     this.updateVehicleButtonStates()
     this.updateBuildingButtonStates()
-    
+
     this.isSetup = true
   }
 
@@ -268,7 +268,7 @@ export class ProductionController {
       button.addEventListener('wheel', (e) => {
         // Check both gameState.shiftKeyDown and the event's shiftKey property as fallbacks
         const isShiftPressed = gameState.shiftKeyDown || e.shiftKey
-        
+
         if (!isShiftPressed) return
         e.preventDefault()
         e.stopPropagation()
@@ -277,14 +277,14 @@ export class ProductionController {
         // then fall back to deltaY, wheelDelta, and detail
         let scrollUp = false
         let scrollDown = false
-        
+
         // Method 1: deltaX (some trackpads/systems report horizontal scroll for wheel)
         if (e.deltaX < 0) {
           scrollUp = true
         } else if (e.deltaX > 0) {
           scrollDown = true
         }
-        
+
         // Method 2: deltaY (most standard) - only if deltaX didn't determine direction
         if (!scrollUp && !scrollDown) {
           if (e.deltaY < 0 || Object.is(e.deltaY, -0)) {
@@ -293,7 +293,7 @@ export class ProductionController {
             scrollDown = true
           }
         }
-        
+
         // Method 3: wheelDelta (older browsers/systems) - only if neither deltaX nor deltaY worked
         if (!scrollUp && !scrollDown && e.wheelDelta !== undefined) {
           if (e.wheelDelta > 0) {
@@ -302,7 +302,7 @@ export class ProductionController {
             scrollDown = true
           }
         }
-        
+
         // Method 4: detail (Firefox legacy) - final fallback
         if (!scrollUp && !scrollDown && e.detail !== undefined) {
           if (e.detail < 0) {
@@ -412,7 +412,7 @@ export class ProductionController {
 
       // Drag and drop support
       button.setAttribute('draggable', 'true')
-      
+
       // Disable dragging on the image inside the button to prevent it from interfering
       const img = button.querySelector('img')
       if (img) {
@@ -423,7 +423,7 @@ export class ProductionController {
           return false
         })
       }
-      
+
       button.addEventListener('dragstart', (e) => {
         if (gameState.gamePaused || button.classList.contains('disabled')) {
           e.preventDefault()
@@ -432,7 +432,7 @@ export class ProductionController {
         gameState.draggedBuildingType = buildingType
         gameState.draggedBuildingButton = button
         gameState.chainBuildPrimed = gameState.shiftKeyDown
-        
+
         // Method 1: Try using a transparent 1x1 pixel div
         const dragImage = document.createElement('div')
         dragImage.style.width = '1px'
@@ -441,13 +441,13 @@ export class ProductionController {
         dragImage.style.position = 'absolute'
         dragImage.style.top = '-1000px'
         document.body.appendChild(dragImage)
-        
+
         try {
           e.dataTransfer.setDragImage(dragImage, 0, 0)
         } catch (err) {
           console.warn('Could not set custom drag image:', err)
         }
-        
+
         // Clean up the temporary element after a brief delay
         setTimeout(() => {
           if (dragImage.parentNode) {
@@ -528,10 +528,10 @@ export class ProductionController {
           if (productionQueue.currentBuilding === null) {
             productionQueue.pausedBuilding = false
           }
-          
+
           // Check if there are stacked buildings in queue
           const stackedCount = productionQueue.buildingItems.filter(item => item.button === button).length
-          
+
           if (stackedCount > 0) {
             // If there are stacked buildings, cancel the last one from the queue
             // Allow canceling ALL stacked buildings, including currently producing ones
@@ -608,7 +608,7 @@ export class ProductionController {
       button.addEventListener('wheel', (e) => {
         // Check both gameState.shiftKeyDown and the event's shiftKey property as fallbacks
         const isShiftPressed = gameState.shiftKeyDown || e.shiftKey
-        
+
         if (!isShiftPressed) return
         e.preventDefault()
         e.stopPropagation()
@@ -617,14 +617,14 @@ export class ProductionController {
         // then fall back to deltaY, wheelDelta, and detail
         let scrollUp = false
         let scrollDown = false
-        
+
         // Method 1: deltaX (some trackpads/systems report horizontal scroll for wheel)
         if (e.deltaX < 0) {
           scrollUp = true
         } else if (e.deltaX > 0) {
           scrollDown = true
         }
-        
+
         // Method 2: deltaY (most standard) - only if deltaX didn't determine direction
         if (!scrollUp && !scrollDown) {
           if (e.deltaY < 0 || Object.is(e.deltaY, -0)) {
@@ -633,7 +633,7 @@ export class ProductionController {
             scrollDown = true
           }
         }
-        
+
         // Method 3: wheelDelta (older browsers/systems) - only if neither deltaX nor deltaY worked
         if (!scrollUp && !scrollDown && e.wheelDelta !== undefined) {
           if (e.wheelDelta > 0) {
@@ -642,7 +642,7 @@ export class ProductionController {
             scrollDown = true
           }
         }
-        
+
         // Method 4: detail (Firefox legacy) - final fallback
         if (!scrollUp && !scrollDown && e.detail !== undefined) {
           if (e.detail < 0) {
@@ -915,7 +915,7 @@ export class ProductionController {
   updateTabStates() {
     const unitsTab = document.querySelector('.tab-button[data-tab="units"]')
     const buildingsTab = document.querySelector('.tab-button[data-tab="buildings"]')
-    
+
     // Check if units tab should be enabled (any unit types available)
     const hasAvailableUnits = gameState.availableUnitTypes.size > 0
     if (hasAvailableUnits) {
@@ -940,7 +940,7 @@ export class ProductionController {
       if (enabledTab) {
         activeTab.classList.remove('active')
         enabledTab.classList.add('active')
-        
+
         // Update content visibility
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'))
         const tabName = enabledTab.getAttribute('data-tab')

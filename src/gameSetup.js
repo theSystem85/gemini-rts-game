@@ -49,7 +49,7 @@ function drawStreetLine(grid, start, end, type) {
   const dx = end.x - start.x, dy = end.y - start.y
   const steps = Math.max(Math.abs(dx), Math.abs(dy))
   const thickness = 2 // Reduced street thickness
-  
+
   for (let j = 0; j <= steps; j++) {
     const x = Math.floor(start.x + (dx * j) / steps)
     const y = Math.floor(start.y + (dy * j) / steps)
@@ -96,10 +96,10 @@ function createOptimizedStreetNetwork(mapGrid, points, type) {
   // Find the most central point (closest to geometric center)
   const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length
   const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length
-  
+
   let hubPoint = points[0]
   let minDistanceToCenter = Math.hypot(points[0].x - centerX, points[0].y - centerY)
-  
+
   points.forEach(point => {
     const distance = Math.hypot(point.x - centerX, point.y - centerY)
     if (distance < minDistanceToCenter) {
@@ -107,14 +107,14 @@ function createOptimizedStreetNetwork(mapGrid, points, type) {
       hubPoint = point
     }
   })
-  
+
   // Connect all other points to the hub
   points.forEach(point => {
     if (point !== hubPoint) {
       drawStreetLine(mapGrid, hubPoint, point, type)
     }
   })
-  
+
   // For 4+ points, add one cross-connection for redundancy
   if (points.length >= 4) {
     // Find the two points farthest from the hub
@@ -124,7 +124,7 @@ function createOptimizedStreetNetwork(mapGrid, points, type) {
       const distB = Math.hypot(b.x - hubPoint.x, b.y - hubPoint.y)
       return distB - distA // Sort by distance from hub, descending
     })
-    
+
     if (nonHubPoints.length >= 2) {
       // Connect the two farthest points for redundancy
       drawStreetLine(mapGrid, nonHubPoints[0], nonHubPoints[1], type)
@@ -210,7 +210,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
   // Get player count and positions from gameState
   const playerCount = gameState?.playerCount || 2
   const playerPositions = []
-  
+
   // Calculate factory positions for current player count
   const playerIds = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
   playerIds.forEach(playerId => {
@@ -244,12 +244,12 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
   // -------- Step 4: Generate Ore Fields (AFTER terrain generation) --------
   // Generate ore clusters around the predefined centers, but only on passable terrain
   // and avoid factory and building locations
-  
+
   // Calculate factory positions to avoid placing ore there
   const factoryWidth = 3 // constructionYard width from buildings.js
   const factoryHeight = 3 // constructionYard height from buildings.js
   const factoryPositions = []
-  
+
   playerIds.forEach(playerId => {
     const position = PLAYER_POSITIONS[playerId]
     const factoryX = Math.floor(MAP_TILES_X * position.x) - Math.floor(factoryWidth / 2)
@@ -261,7 +261,7 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
       height: factoryHeight
     })
   })
-  
+
   oreClusterCenters.forEach(cluster => {
     const clusterRadius = Math.floor(rand() * 3) + 5 // radius between 5 and 7
     for (let y = Math.max(0, cluster.y - clusterRadius); y < Math.min(MAP_TILES_Y, cluster.y + clusterRadius); y++) {
@@ -270,20 +270,20 @@ export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
         // Only place ore on passable terrain (land or street) and within cluster radius
         if (Math.hypot(dx, dy) < clusterRadius && rand() < 0.9) {
           const tileType = mapGrid[y][x].type
-          
+
           // Check if this tile is part of any factory area
-          const isInFactory = factoryPositions.some(factory => 
+          const isInFactory = factoryPositions.some(factory =>
             x >= factory.x && x < factory.x + factory.width &&
             y >= factory.y && y < factory.y + factory.height
           )
-          
+
           // Check if this tile is part of any existing building area
           const isInBuilding = gameState.buildings && gameState.buildings.some(building => {
             const bx = building.x, by = building.y
             const bw = building.width || 1, bh = building.height || 1
             return x >= bx && x < bx + bw && y >= by && y < by + bh
           })
-          
+
           if ((tileType === 'land' || tileType === 'street') && !isInFactory && !isInBuilding) {
             // Set ore as an overlay property only on passable terrain away from factories and buildings
             mapGrid[y][x].ore = true
@@ -329,7 +329,7 @@ export function cleanupOreFromBuildings(mapGrid, buildings = [], factories = [])
       }
     }
   })
-  
+
   // Clean ore from building tiles
   buildings.forEach(building => {
     for (let y = building.y; y < building.y + building.height; y++) {

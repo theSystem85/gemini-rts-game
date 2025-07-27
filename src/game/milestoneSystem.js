@@ -150,10 +150,10 @@ export class MilestoneSystem {
 
   unlockAmbulance() {
     if (!this.productionController) {
-      console.warn("ProductionController not set, cannot unlock ambulance")
+      console.warn('ProductionController not set, cannot unlock ambulance')
       return
     }
-    this.productionController.unlockUnitType("ambulance")
+    this.productionController.unlockUnitType('ambulance')
   }
 
   unlockTankerTruck() {
@@ -163,7 +163,7 @@ export class MilestoneSystem {
     }
     this.productionController.unlockUnitType('tankerTruck')
   }
-  
+
   unlockRecoveryTank() {
     if (!this.productionController) {
       console.warn('ProductionController not set, cannot unlock recovery tank')
@@ -183,10 +183,10 @@ export class MilestoneSystem {
    * Check if a milestone should be triggered based on game state
    */
   checkMilestones(gameState) {
-    
+
     // Check for first refinery
     if (!this.achievedMilestones.has('firstRefinery')) {
-      const hasRefinery = gameState.buildings?.some(building => 
+      const hasRefinery = gameState.buildings?.some(building =>
         building.type === 'oreRefinery' && building.owner === gameState.humanPlayer
       )
       if (hasRefinery) {
@@ -196,7 +196,7 @@ export class MilestoneSystem {
 
     // Check for first factory and unlock basic units
     if (!this.achievedMilestones.has('firstFactory')) {
-      const hasFactory = gameState.buildings?.some(building => 
+      const hasFactory = gameState.buildings?.some(building =>
         building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
       )
       if (hasFactory) {
@@ -234,7 +234,7 @@ export class MilestoneSystem {
 
     // Check for rocket turret to unlock rocket tank
     if (!this.achievedMilestones.has('rocketTankUnlocked')) {
-      const hasRocketTurret = gameState.buildings?.some(building => 
+      const hasRocketTurret = gameState.buildings?.some(building =>
         building.type === 'rocketTurret' && building.owner === gameState.humanPlayer
       )
       if (hasRocketTurret) {
@@ -245,7 +245,7 @@ export class MilestoneSystem {
 
     // Check for 2 vehicle factories to unlock tank-v3
     if (!this.achievedMilestones.has('tankV3Unlocked')) {
-      const vehicleFactories = gameState.buildings?.filter(building => 
+      const vehicleFactories = gameState.buildings?.filter(building =>
         building.type === 'vehicleFactory' && building.owner === gameState.humanPlayer
       )
       if (vehicleFactories && vehicleFactories.length >= 2) {
@@ -254,8 +254,8 @@ export class MilestoneSystem {
       }
     }
     // Check for hospital built to unlock ambulance
-    if (!this.achievedMilestones.has("hospitalBuilt")) {
-      const hasHospital = gameState.buildings?.some(b => b.type === "hospital" && b.owner === gameState.humanPlayer)
+    if (!this.achievedMilestones.has('hospitalBuilt')) {
+      const hasHospital = gameState.buildings?.some(b => b.type === 'hospital' && b.owner === gameState.humanPlayer)
       if (hasHospital) {
         // this.triggerMilestone("hospitalBuilt")
         this.unlockAmbulance()
@@ -272,7 +272,7 @@ export class MilestoneSystem {
 
     // Check for ten buildings
     if (!this.achievedMilestones.has('tenBuildings')) {
-      const playerBuildings = gameState.buildings?.filter(building => 
+      const playerBuildings = gameState.buildings?.filter(building =>
         building.owner === gameState.humanPlayer
       )
       if (playerBuildings && playerBuildings.length >= 10) {
@@ -282,7 +282,7 @@ export class MilestoneSystem {
 
     // Check for first unit
     if (!this.achievedMilestones.has('firstUnit')) {
-      const hasUnit = gameState.units?.some(unit => 
+      const hasUnit = gameState.units?.some(unit =>
         unit.owner === gameState.humanPlayer && unit.type !== 'harvester'
       )
       if (hasUnit) {
@@ -292,7 +292,7 @@ export class MilestoneSystem {
 
     // Check for first Tesla coil
     if (!this.achievedMilestones.has('firstTeslaCoil')) {
-      const hasTeslaCoil = gameState.buildings?.some(building => 
+      const hasTeslaCoil = gameState.buildings?.some(building =>
         building.type === 'teslaCoil' && building.owner === gameState.humanPlayer
       )
       if (hasTeslaCoil) {
@@ -302,7 +302,7 @@ export class MilestoneSystem {
 
     // Check for radar station to unlock advanced units and buildings
     if (!this.achievedMilestones.has('radarBuilt')) {
-      const hasRadar = gameState.buildings?.some(building => 
+      const hasRadar = gameState.buildings?.some(building =>
         building.type === 'radarStation' && building.owner === gameState.humanPlayer
       )
       if (hasRadar) {
@@ -316,7 +316,7 @@ export class MilestoneSystem {
    * Trigger a specific milestone
    */
   triggerMilestone(milestoneId) {
-    
+
     if (this.achievedMilestones.has(milestoneId)) {
       return // Already achieved
     }

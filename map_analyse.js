@@ -39,13 +39,13 @@ async function scanDirectory(dirPath) {
   try {
     const files = await readdir(dirPath, { withFileTypes: true })
     const imageFiles = []
-    
+
     for (const file of files) {
       if (file.isFile() && isImageFile(file.name)) {
         imageFiles.push(file.name)
       }
     }
-    
+
     return imageFiles.sort() // Sort for consistent output
   } catch (error) {
     console.warn(`Warning: Could not read directory ${dirPath}:`, error.message)
@@ -65,29 +65,29 @@ function generatePaths(files, relativePath) {
  */
 async function analyzeGrassTiles() {
   console.log('🔍 Analyzing grass tiles structure...')
-  
+
   // Check if the grass tiles directory exists
   if (!existsSync(GRASS_TILES_DIR)) {
     console.error(`❌ Error: Grass tiles directory not found: ${GRASS_TILES_DIR}`)
     process.exit(1)
   }
-  
+
   try {
     // Scan each category of tiles
     console.log('📁 Scanning passable tiles...')
     const passableFiles = await scanDirectory(join(GRASS_TILES_DIR, 'passable'))
-    
+
     console.log('🎨 Scanning decorative tiles...')
     const decorativeFiles = await scanDirectory(join(GRASS_TILES_DIR, 'passable', 'decorative'))
-    
+
     console.log('🚫 Scanning impassable tiles...')
     const impassableFiles = await scanDirectory(join(GRASS_TILES_DIR, 'impassable'))
-    
+
     // Generate the paths (without file extensions for texture loading)
     const passablePaths = generatePaths(passableFiles, 'passable')
     const decorativePaths = generatePaths(decorativeFiles, 'passable/decorative')
     const impassablePaths = generatePaths(impassableFiles, 'impassable')
-    
+
     // Create the JSON structure
     const grassTilesConfig = {
       metadata: {
@@ -103,24 +103,24 @@ async function analyzeGrassTiles() {
       decorativePaths,
       impassablePaths
     }
-    
+
     // Write the JSON file
     const jsonContent = JSON.stringify(grassTilesConfig, null, 2)
     await writeFile(OUTPUT_FILE, jsonContent, 'utf8')
-    
+
     // Output summary
     console.log('\n✅ Grass tiles analysis complete!')
     console.log(`📄 Generated: ${OUTPUT_FILE}`)
-    console.log(`\n📊 Summary:`)
+    console.log('\n📊 Summary:')
     console.log(`   Passable tiles: ${passableFiles.length}`)
     console.log(`   Decorative tiles: ${decorativeFiles.length}`)
     console.log(`   Impassable tiles: ${impassableFiles.length}`)
     console.log(`   Total tiles: ${grassTilesConfig.metadata.totalFiles}`)
-    
+
     if (passableFiles.length === 0 && decorativeFiles.length === 0 && impassableFiles.length === 0) {
       console.warn('\n⚠️  Warning: No image files found in any category!')
     }
-    
+
   } catch (error) {
     console.error('❌ Error analyzing grass tiles:', error.message)
     process.exit(1)

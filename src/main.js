@@ -92,7 +92,7 @@ class Game {
     return new Promise((resolve) => {
       initializeGameAssets(() => {
         allAssetsLoaded = true
-        
+
         // Load textures and rebuild occupancy map once they're loaded
         preloadTileTextures(() => {
           console.log('Textures loaded, rebuilding occupancy map...')
@@ -102,7 +102,7 @@ class Game {
             console.log('Occupancy map updated with impassable grass tiles')
           }
         })
-        
+
         resolve()
       })
     })
@@ -113,20 +113,20 @@ class Game {
     const seed = document.getElementById('mapSeed').value || '1'
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
-    
+
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
     gameState.mapGrid.push(...mapGrid)
 
     // Initialize factories and units
     initFactories(factories, mapGrid)
-    
+
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
     // Treat initial factories as standard buildings
     gameState.buildings.push(...factories)
-    
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     updatePowerSupply(gameState.buildings, gameState)
@@ -348,14 +348,14 @@ class Game {
     // Remember the seed so further restarts use the same map
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
-    
+
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
     gameState.mapGrid.push(...mapGrid)
-    
+
     factories.length = 0
     initFactories(factories, mapGrid)
-    
+
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
@@ -384,7 +384,7 @@ class Game {
     if (playPauseIcon) {
       playPauseIcon.textContent = '⏸'
     }
-    
+
     // Resume production after unpause since game is now running
     productionQueue.resumeProductionAfterUnpause()
 
@@ -394,7 +394,7 @@ class Game {
 
   async resetGame() {
     console.log('Resetting game...')
-    
+
     // Stop existing game loop to prevent conflicts
     if (this.gameLoop) {
       if (typeof this.gameLoop.stop === 'function') {
@@ -402,11 +402,11 @@ class Game {
       }
       this.gameLoop = null
     }
-    
+
     // Preserve win/loss statistics
     const preservedWins = gameState.wins
     const preservedLosses = gameState.losses
-    
+
     // Reset game state
     gameState.money = 12000
     gameState.gameTime = 0
@@ -447,14 +447,14 @@ class Game {
     const seed = gameState.mapSeed || document.getElementById('mapSeed').value || '1'
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
-    
+
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
     gameState.mapGrid.push(...mapGrid)
-    
+
     factories.length = 0
     initFactories(factories, mapGrid)
-    
+
     // Sync factories with gameState
     gameState.factories.length = 0
     gameState.factories.push(...factories)
@@ -463,7 +463,7 @@ class Game {
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     updatePowerSupply(gameState.buildings, gameState)
-    
+
     units.length = 0
     bullets.length = 0
 
@@ -528,7 +528,7 @@ class Game {
     document.querySelectorAll('.production-progress').forEach(bar => {
       bar.style.width = '0%'
     })
-    
+
     document.querySelectorAll('.batch-counter').forEach(counter => {
       counter.style.display = 'none'
     })
@@ -547,11 +547,11 @@ class Game {
     // Update wins/losses display
     const winsEl = document.getElementById('wins')
     const lossesEl = document.getElementById('losses')
-    
+
     if (winsEl) {
       winsEl.textContent = gameState.wins
     }
-    
+
     if (lossesEl) {
       lossesEl.textContent = gameState.losses
     }
@@ -565,7 +565,7 @@ class Game {
       }
       this.gameLoop = null
     }
-    
+
     this.gameLoop = new GameLoop(
       this.canvasManager,
       this.productionController,
@@ -617,7 +617,7 @@ export { showNotification }
 document.addEventListener('DOMContentLoaded', () => {
   loadPersistedSettings()
   gameInstance = new Game()
-  
+
   // Also make it available globally for debugging
   window.gameInstance = gameInstance
   window.gameInstance.units = units

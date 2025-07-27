@@ -110,10 +110,10 @@ export class MapRenderer {
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
-        
+
         // Render base tile layer
         drawTile(x, y, tile.type)
-        
+
         // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets or water
         if (tile.type === 'land') {
           const top = y > 0 ? mapGrid[y - 1][x] : null
@@ -154,7 +154,7 @@ export class MapRenderer {
             this.drawSOT(ctx, x, y, orientation, scrollOffset, useTexture, sotApplied, overlayType)
           }
         }
-        
+
         // Render ore or seed overlays if present
         if (tile.seedCrystal) {
           drawSeedOverlay(x, y)
@@ -271,7 +271,7 @@ export class MapRenderer {
     if (gameState.occupancyVisible && occupancyMap) {
       // Set up the red glow effect
       ctx.fillStyle = 'rgba(255, 0, 0, 0.3)' // Semi-transparent red
-      
+
       // Draw occupied tiles with red glow
       for (let y = startTileY; y < endTileY; y++) {
         for (let x = startTileX; x < endTileX; x++) {

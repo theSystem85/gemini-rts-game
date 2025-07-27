@@ -15,7 +15,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       t.y = tank.y - TILE_SIZE / 2
       t.tileX = Math.floor(t.x / TILE_SIZE)
       t.tileY = Math.floor(t.y / TILE_SIZE)
-      
+
       // Update speed when towing
       const unitProps = tank.loadedSpeed || 0.33
       tank.speed = unitProps
@@ -64,7 +64,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
     // Process repair if we have a target
     if (tank.repairTarget) {
       const target = tank.repairTarget
-      
+
       // Check if target is still valid
       if (target.health <= 0 ||
           Math.abs(target.tileX - tank.tileX) > 1 ||
@@ -94,7 +94,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       }
 
       const repairData = tank.repairData
-      
+
       // Only proceed if we have valid repair rates
       if (repairData.healthPerMs > 0) {
         let heal = repairData.healthPerMs * delta
@@ -109,16 +109,16 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
           gameState.money -= spend
           const oldHealth = target.health
           target.health = Math.min(target.health + heal, target.maxHealth)
-          
+
           // console.log(`Repairing ${target.type}: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)} (+${heal.toFixed(1)} HP) cost: ${spend.toFixed(2)}`)
-          
+
           // Handle repair sounds with cooldown to prevent looping
           if (!repairData.repairStartSoundPlayed) {
             playSound('repairStarted', 0.7, 1, true)
             repairData.repairStartSoundPlayed = true
             repairData.soundCooldown = 2000 // 2 second cooldown
           }
-          
+
           if (repairData.soundCooldown <= 0) {
             if (target.health >= target.maxHealth) {
               if (!repairData.repairFinishedSoundPlayed) {
