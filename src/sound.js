@@ -651,4 +651,7 @@ export function clearSoundCache() {
   console.log('Sound cache cleared, background music reset')
 }
 
-export { audioContext, pauseAllSounds, resumeAllSounds }
+// Export the audio context for other modules that need direct access
+// Pause/resume helpers are already exported above with their function
+// declarations, so exporting them again would cause a duplicate export error.
+export { audioContext }
