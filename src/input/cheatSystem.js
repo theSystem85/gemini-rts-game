@@ -480,20 +480,9 @@ export class CheatSystem {
       const newUnit = createUnit({ id: owner }, unitType, pos.x, pos.y)
       units.push(newUnit)
 
-      if (gameState.occupancyMap) {
-        const cX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
-        const cY = Math.floor((newUnit.y + TILE_SIZE / 2) / TILE_SIZE)
-        if (
-          cY >= 0 &&
-          cY < gameState.occupancyMap.length &&
-          cX >= 0 &&
-          cX < gameState.occupancyMap[0].length
-        ) {
-          gameState.occupancyMap[cY][cX] =
-            (gameState.occupancyMap[cY][cX] || 0) + 1
-        }
-      }
-
+      // Update the occupancy map for the newly spawned unit
+      // Avoid double incrementing the spawn tile by letting
+      // updateUnitOccupancy handle the addition.
       updateUnitOccupancy(newUnit, -1, -1, gameState.occupancyMap)
       this.updateNewUnit(newUnit)
       spawned++
