@@ -1,5 +1,5 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
-import { INERTIA_DECAY, TILE_SIZE, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
+import { INERTIA_DECAY, TILE_SIZE, KEYBOARD_SCROLL_SPEED, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
@@ -15,10 +15,25 @@ export function updateMapScrolling(gameState, mapGrid) {
   if (!gameState.isRightDragging) {
     const maxScrollX = mapGrid[0].length * TILE_SIZE - (window.innerWidth - 250)
     const maxScrollY = mapGrid.length * TILE_SIZE - window.innerHeight
+    // Update velocity based on arrow key input
+    if (gameState.keyScroll.left) {
+      gameState.dragVelocity.x = KEYBOARD_SCROLL_SPEED
+    } else if (gameState.keyScroll.right) {
+      gameState.dragVelocity.x = -KEYBOARD_SCROLL_SPEED
+    } else {
+      gameState.dragVelocity.x *= INERTIA_DECAY
+    }
+
+    if (gameState.keyScroll.up) {
+      gameState.dragVelocity.y = KEYBOARD_SCROLL_SPEED
+    } else if (gameState.keyScroll.down) {
+      gameState.dragVelocity.y = -KEYBOARD_SCROLL_SPEED
+    } else {
+      gameState.dragVelocity.y *= INERTIA_DECAY
+    }
+
     gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX))
     gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, maxScrollY))
-    gameState.dragVelocity.x *= INERTIA_DECAY
-    gameState.dragVelocity.y *= INERTIA_DECAY
   }
 }
 
