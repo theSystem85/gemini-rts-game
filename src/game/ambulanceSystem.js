@@ -14,6 +14,22 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       ambulance.healingTimer = 0
       return
     }
+    // Auto-acquire healing target if none set
+    if (!ambulance.healingTarget) {
+      const potential = units.find(u =>
+        u.id !== ambulance.id &&
+        u.owner === ambulance.owner &&
+        u.crew && typeof u.crew === 'object' &&
+        Object.values(u.crew).some(alive => !alive) &&
+        Math.abs(u.tileX - ambulance.tileX) <= 1 &&
+        Math.abs(u.tileY - ambulance.tileY) <= 1 &&
+        !(u.movement && u.movement.isMoving)
+      )
+      if (potential && ambulance.medics > 0) {
+        ambulance.healingTarget = potential
+        ambulance.healingTimer = 0
+      }
+    }
     // Handle ambulance healing target
     if (ambulance.healingTarget) {
       const target = ambulance.healingTarget

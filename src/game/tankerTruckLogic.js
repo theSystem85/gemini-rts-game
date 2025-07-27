@@ -285,8 +285,10 @@ function assignTankerToEmergencyUnit(tanker, emergencyUnit, gameState) {
   const targetTileX = emergencyUnit.tileX
   const targetTileY = emergencyUnit.tileY
   const directions = [
-    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+    // Prefer actual adjacent tiles first, fall back to the unit tile
+    { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 },
+    { x: 0, y: 0 }
   ]
 
   for (const dir of directions) {
@@ -301,7 +303,8 @@ function assignTankerToEmergencyUnit(tanker, emergencyUnit, gameState) {
       )
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
-        tanker.moveTarget = { x: destX, y: destY }
+        const finalTile = path[path.length - 1]
+        tanker.moveTarget = { x: finalTile.x, y: finalTile.y }
         break
       }
     }
