@@ -3,7 +3,7 @@
 
 import { setupInputHandlers, selectedUnits } from './inputHandler.js'
 import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } from './units.js'
-import { gameState } from './gameState.js'
+import { gameState, resetGameState } from './gameState.js'
 import { buildingData, updatePowerSupply } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from './config.js'
@@ -109,8 +109,10 @@ class Game {
   }
 
   setupGameWorld() {
-    // Generate map
-    generateMapFromSetup(document.getElementById('mapSeed').value, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    // Generate map and store the seed used
+    const initialSeed = document.getElementById('mapSeed').value
+    gameState.mapSeed = initialSeed || '1'
+    generateMapFromSetup(gameState.mapSeed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
@@ -343,6 +345,7 @@ class Game {
     gameState.currentBuildingType = null
     gameState.repairMode = false
     
+    gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
@@ -399,48 +402,15 @@ class Game {
       this.gameLoop = null
     }
     
-    // Preserve win/loss statistics
-    const preservedWins = gameState.wins
-    const preservedLosses = gameState.losses
-    
-    // Reset game state
-    gameState.money = 12000
-    gameState.gameTime = 0
-    gameState.frameCount = 0
-    gameState.gameStarted = true  // Auto-start the game
-    gameState.gamePaused = false  // Make sure it's not paused
-    gameState.gameOver = false
-    gameState.gameOverMessage = null
-    gameState.gameResult = null
-    gameState.playerUnitsDestroyed = 0
-    gameState.enemyUnitsDestroyed = 0
-    gameState.playerBuildingsDestroyed = 0
-    gameState.enemyBuildingsDestroyed = 0
-    gameState.totalMoneyEarned = 0
+    // Preserve current map seed
+    const seed = gameState.mapSeed || '1'
 
-    // Reset other game state properties
-    gameState.buildings = []
-    gameState.powerSupply = 0
-    gameState.playerPowerSupply = 0
-    gameState.playerTotalPowerProduction = 0
-    gameState.playerPowerConsumption = 0
-    gameState.enemyPowerSupply = 0
-    gameState.enemyTotalPowerProduction = 0
-    gameState.enemyPowerConsumption = 0
-    gameState.buildingPlacementMode = false
-    gameState.currentBuildingType = null
-    gameState.repairMode = false
-    gameState.radarActive = false
-    gameState.targetedOreTiles = {}
-    gameState.refineryStatus = {}
-    gameState.defeatedPlayers = new Set() // Reset defeated players tracking
+    // Reset all game state properties to defaults
+    resetGameState()
+    gameState.mapSeed = seed
 
-    // Restore preserved statistics
-    gameState.wins = preservedWins
-    gameState.losses = preservedLosses
-
-    // Reset map and units
-    generateMapFromSetup(Date.now(), mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    // Reset map and units using the preserved seed
+    generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0

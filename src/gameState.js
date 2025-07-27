@@ -152,5 +152,19 @@ export const gameState = {
   newBuildingTypes: new Set(),
 
   // Flag to refresh production buttons after building destruction
-  pendingButtonUpdate: false
+  pendingButtonUpdate: false,
+
+  // Current map seed (persisted between reloads)
+  mapSeed: '1'
+}
+
+// Preserve a deep clone of the initial state for resetting
+export const defaultGameState = structuredClone(gameState)
+
+// Reset all gameState properties to their defaults
+export function resetGameState() {
+  const clone = structuredClone(defaultGameState)
+  for (const key of Object.keys(clone)) {
+    gameState[key] = clone[key]
+  }
 }
