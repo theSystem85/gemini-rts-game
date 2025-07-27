@@ -152,5 +152,8 @@ export const gameState = {
   newBuildingTypes: new Set(),
 
   // Flag to refresh production buttons after building destruction
-  pendingButtonUpdate: false
+  pendingButtonUpdate: false,
+
+  // Store current map seed so map generation stays consistent across restarts
+  mapSeed: '1'
 }

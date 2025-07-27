@@ -109,8 +109,10 @@ class Game {
   }
 
   setupGameWorld() {
-    // Generate map
-    generateMapFromSetup(document.getElementById('mapSeed').value, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    // Generate map using the seed from the input and store it
+    const seed = document.getElementById('mapSeed').value || '1'
+    gameState.mapSeed = seed
+    generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
@@ -342,7 +344,9 @@ class Game {
     gameState.buildingPlacementMode = false
     gameState.currentBuildingType = null
     gameState.repairMode = false
-    
+
+    // Remember the seed so further restarts use the same map
+    gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
@@ -439,8 +443,10 @@ class Game {
     gameState.wins = preservedWins
     gameState.losses = preservedLosses
 
-    // Reset map and units
-    generateMapFromSetup(Date.now(), mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    // Reset map and units using the stored seed so the layout stays the same
+    const seed = gameState.mapSeed || document.getElementById('mapSeed').value || '1'
+    gameState.mapSeed = seed
+    generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
     
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
