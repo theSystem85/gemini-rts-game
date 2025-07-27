@@ -406,13 +406,6 @@ export class BuildingRenderer {
           ctx.restore()
         }
         
-        // For rocket turret, only draw the ready indicator in bottom left corner
-        if (!building.lastShotTime || performance.now() - building.lastShotTime >= building.fireCooldown) {
-          ctx.fillStyle = '#0F0'
-          ctx.beginPath()
-          ctx.arc(screenX + 10, screenY + height - 10, 5, 0, Math.PI * 2)
-          ctx.fill()
-        }
       }
 
       // Draw range indicator if selected (for non-tesla coil and non-artillery buildings)
