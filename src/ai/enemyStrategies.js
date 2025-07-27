@@ -1137,7 +1137,6 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   tanker.refuelTarget = unit
   tanker.refuelTimer = 0
   
-  console.log(`AI: Assigning tanker ${tanker.id} to refuel ${unit.type} ${unit.id} (${Math.round(unit.gas)}/${unit.maxGas} gas)`)
   
   // Try to find an adjacent position to the target unit (like player tanker commands do)
   const targetTileX = unit.tileX
@@ -1156,7 +1155,6 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
         tanker.moveTarget = { x: destX, y: destY }
-        console.log(`AI: Tanker ${tanker.id} pathing to adjacent position (${destX}, ${destY}) near target at (${targetTileX}, ${targetTileY})`)
         pathFound = true
         break
       }
@@ -1164,7 +1162,6 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   }
   
   if (!pathFound) {
-    console.log(`AI: Tanker ${tanker.id} could not find path to target ${unit.type} ${unit.id}`)
   }
   
   tanker.guardTarget = null

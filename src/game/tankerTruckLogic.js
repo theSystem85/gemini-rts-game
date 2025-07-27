@@ -22,7 +22,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     if (tanker.supplyGas === undefined || tanker.maxSupplyGas === undefined) {
       tanker.maxSupplyGas = TANKER_SUPPLY_CAPACITY
       tanker.supplyGas = TANKER_SUPPLY_CAPACITY
-      console.log(`Tanker ${tanker.id} supply gas initialized to ${TANKER_SUPPLY_CAPACITY}`)
     }
 
     // Add periodic debugging for tankers
@@ -35,12 +34,10 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         Math.abs(u.tileY - tanker.tileY) <= 2
       )
       if (nearbyUnits.length > 0) {
-        console.log(`Tanker ${tanker.id} near ${nearbyUnits.length} units. SupplyGas: ${tanker.supplyGas}/${tanker.maxSupplyGas}`)
         nearbyUnits.forEach(u => {
           const distance = Math.abs(u.tileX - tanker.tileX) + Math.abs(u.tileY - tanker.tileY)
           const gasPercent = Math.round((u.gas / u.maxGas) * 100)
           const needsFuel = u.gas < (u.maxGas * 0.95) ? ' NEEDS FUEL' : ' (full)'
-          console.log(`  - ${u.type} ${u.id}: ${Math.round(u.gas)}/${u.maxGas} gas (${gasPercent}%), distance: ${distance}${needsFuel}`)
         })
       }
       tanker.lastDebugTime = performance.now()
@@ -91,7 +88,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         if (tanker.supplyGas === undefined) {
           tanker.maxSupplyGas = TANKER_SUPPLY_CAPACITY
           tanker.supplyGas = TANKER_SUPPLY_CAPACITY
-          console.log(`Tanker ${tanker.id} supply gas initialized to ${TANKER_SUPPLY_CAPACITY}`)
         }
 
         if (tanker.supplyGas > 0) {
@@ -99,9 +95,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           tanker.refuelTimer = 0
           stopUnitMovement(tanker)
           tanker.moveTarget = null
-          console.log(`Tanker ${tanker.id} starting to refuel ${target.type} ${target.id} (${Math.round(target.gas)}/${target.maxGas} gas, ${Math.round((target.gas / target.maxGas) * 100)}%)`)
         } else {
-          console.log(`Tanker ${tanker.id} found target but cannot refuel - supplyGas: ${tanker.supplyGas}`)
         }
       }
     }
@@ -111,7 +105,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
       // Debug: Log refuelTarget details
       if (!tanker.lastRefuelDebug || performance.now() - tanker.lastRefuelDebug > 2000) {
-        console.log(`DEBUG: Tanker ${tanker.id} has refuelTarget:`, {
           refuelTargetId: tanker.refuelTarget.id,
           refuelTargetType: tanker.refuelTarget.type,
           targetFound: !!target,
@@ -129,14 +122,12 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           Math.abs(target.tileY - tanker.tileY) > 1 ||
           (target.movement && target.movement.isMoving)) {
         const distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
-        console.log(`Tanker ${tanker.id} lost refuel target - target exists: ${!!target}, distance: ${distance}`)
 
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
       } else if (tanker.supplyGas > 0 && target.gas < (target.maxGas * 0.95)) {
         // Log when tanker starts refueling (distance <= 1)
         if (!tanker.refuelTimer || tanker.refuelTimer === 0) {
-          console.log(`Tanker ${tanker.id} starting refuel process for ${target.type} ${target.id} at distance ${Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY)}`)
         }
         // Emergency units get faster refueling rate
         const isEmergencyRefuel = target.gas <= 0
@@ -151,7 +142,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
         // Log refueling progress occasionally
         if (Math.floor(tanker.refuelTimer / 1000) !== Math.floor((tanker.refuelTimer - delta) / 1000)) {
-          console.log(`Tanker ${tanker.id} refueling ${target.type} ${target.id}: ${Math.round(target.gas)}/${target.maxGas} gas (gave ${Math.round(give)})`)
         }
 
         // For emergency refueling, only fill to 20% to quickly get unit moving
@@ -161,7 +151,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         if (target.gas >= emergencyThreshold || tanker.supplyGas <= 0 || tanker.refuelTimer >= GAS_REFILL_TIME) {
           if (target.gas > target.maxGas) target.gas = target.maxGas
 
-          console.log(`Tanker ${tanker.id} finished refueling ${target.type} ${target.id}: ${Math.round(target.gas)}/${target.maxGas} gas`)
 
           // Clear emergency flags when unit is refueled
           if (target.gas > 0) {
@@ -175,7 +164,6 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           tanker.emergencyMode = false // Clear emergency mode after successful refuel
         }
       } else {
-        console.log(`Tanker ${tanker.id} cannot refuel - supplyGas: ${tanker.supplyGas}, target gas: ${target.gas}/${target.maxGas}`)
 
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
