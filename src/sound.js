@@ -545,6 +545,39 @@ export async function toggleBackgroundMusic() {
   }
 }
 
+// --- Game Pause/Resume Helpers ---
+// Pause all currently playing audio including background music and looped sounds
+export function pauseAllSounds() {
+  if (bgMusicAudio && !bgMusicAudio.paused) {
+    try {
+      bgMusicAudio.pause()
+    } catch (e) {
+      console.warn('Error pausing background music:', e)
+    }
+  }
+
+  if (audioContext && audioContext.state === 'running') {
+    audioContext.suspend().catch(e => {
+      console.warn('Failed to suspend audio context:', e)
+    })
+  }
+}
+
+// Resume playback after game unpause
+export function resumeAllSounds() {
+  if (bgMusicAudio && bgMusicAudio.paused) {
+    bgMusicAudio.play().catch(e => {
+      console.warn('Error resuming background music:', e)
+    })
+  }
+
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume().catch(e => {
+      console.warn('Failed to resume audio context:', e)
+    })
+  }
+}
+
 // --- Master Volume Control Functions ---
 export function setMasterVolume(volume) {
   masterVolume = Math.max(0, Math.min(1, volume)) // Clamp between 0 and 1
@@ -618,4 +651,7 @@ export function clearSoundCache() {
   console.log('Sound cache cleared, background music reset')
 }
 
+// Export the audio context for other modules that need direct access
+// Pause/resume helpers are already exported above with their function
+// declarations, so exporting them again would cause a duplicate export error.
 export { audioContext }

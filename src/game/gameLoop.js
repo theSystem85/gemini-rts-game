@@ -9,6 +9,7 @@ import { updateEnergyBar } from '../ui/energyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
 import { logPerformance } from '../performanceUtils.js'
+import { pauseAllSounds, resumeAllSounds } from '../sound.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -37,6 +38,9 @@ export class GameLoop {
 
     // Set the production controller reference in milestone system
     milestoneSystem.setProductionController(productionController)
+
+    // Track pause state to manage audio playback
+    this.wasPaused = gameState.gamePaused
   }
 
   setAssetsLoaded(loaded) {
@@ -69,6 +73,16 @@ export class GameLoop {
 
     // Always update FPS tracking
     this.fpsDisplay.updateFPS(now)
+
+    // Pause or resume sounds when game pause state changes
+    if (gameState.gamePaused !== this.wasPaused) {
+      this.wasPaused = gameState.gamePaused
+      if (gameState.gamePaused) {
+        pauseAllSounds()
+      } else {
+        resumeAllSounds()
+      }
+    }
 
     if (!gameState.gameStarted || gameState.gamePaused) {
       // When paused, still render FPS overlay but skip game updates
