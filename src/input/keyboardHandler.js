@@ -182,44 +182,60 @@ export class KeyboardHandler {
         e.preventDefault()
         this.handlePerformanceToggle()
       }
-      // Arrow keys and Space for remote control feature
+      // Arrow keys and Space for remote control or map scrolling
       else if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
         e.preventDefault()
-        if (!gameState.remoteControl.forward) {
-          console.log('Remote control: up key down')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (!gameState.remoteControl.forward) {
+            console.log('Remote control: up key down')
+          }
+          gameState.remoteControl.forward = true
+        } else {
+          gameState.keyScroll.up = true
         }
-        gameState.remoteControl.forward = true
       } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
         e.preventDefault()
-        if (!gameState.remoteControl.backward) {
-          console.log('Remote control: down key down')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (!gameState.remoteControl.backward) {
+            console.log('Remote control: down key down')
+          }
+          gameState.remoteControl.backward = true
+        } else {
+          gameState.keyScroll.down = true
         }
-        gameState.remoteControl.backward = true
       } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
         e.preventDefault()
-        if (gameState.shiftKeyDown) {
-          if (!gameState.remoteControl.turretLeft) {
-            console.log('Remote control: turret left key down')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.shiftKeyDown) {
+            if (!gameState.remoteControl.turretLeft) {
+              console.log('Remote control: turret left key down')
+            }
+            gameState.remoteControl.turretLeft = true
+          } else {
+            if (!gameState.remoteControl.turnLeft) {
+              console.log('Remote control: left key down')
+            }
+            gameState.remoteControl.turnLeft = true
           }
-          gameState.remoteControl.turretLeft = true
         } else {
-          if (!gameState.remoteControl.turnLeft) {
-            console.log('Remote control: left key down')
-          }
-          gameState.remoteControl.turnLeft = true
+          gameState.keyScroll.left = true
         }
       } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
         e.preventDefault()
-        if (gameState.shiftKeyDown) {
-          if (!gameState.remoteControl.turretRight) {
-            console.log('Remote control: turret right key down')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.shiftKeyDown) {
+            if (!gameState.remoteControl.turretRight) {
+              console.log('Remote control: turret right key down')
+            }
+            gameState.remoteControl.turretRight = true
+          } else {
+            if (!gameState.remoteControl.turnRight) {
+              console.log('Remote control: right key down')
+            }
+            gameState.remoteControl.turnRight = true
           }
-          gameState.remoteControl.turretRight = true
         } else {
-          if (!gameState.remoteControl.turnRight) {
-            console.log('Remote control: right key down')
-          }
-          gameState.remoteControl.turnRight = true
+          gameState.keyScroll.right = true
         }
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         e.preventDefault()
@@ -244,27 +260,43 @@ export class KeyboardHandler {
         handleAltKeyRelease() // Check if waypoints were added and play sound
       }
       if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
-        if (gameState.remoteControl.forward) {
-          console.log('Remote control: up key up')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.remoteControl.forward) {
+            console.log('Remote control: up key up')
+          }
+          gameState.remoteControl.forward = false
+        } else {
+          gameState.keyScroll.up = false
         }
-        gameState.remoteControl.forward = false
       } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
-        if (gameState.remoteControl.backward) {
-          console.log('Remote control: down key up')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.remoteControl.backward) {
+            console.log('Remote control: down key up')
+          }
+          gameState.remoteControl.backward = false
+        } else {
+          gameState.keyScroll.down = false
         }
-        gameState.remoteControl.backward = false
       } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
-        if (gameState.remoteControl.turnLeft || gameState.remoteControl.turretLeft) {
-          console.log('Remote control: left key up')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.remoteControl.turnLeft || gameState.remoteControl.turretLeft) {
+            console.log('Remote control: left key up')
+          }
+          gameState.remoteControl.turnLeft = false
+          gameState.remoteControl.turretLeft = false
+        } else {
+          gameState.keyScroll.left = false
         }
-        gameState.remoteControl.turnLeft = false
-        gameState.remoteControl.turretLeft = false
       } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
-        if (gameState.remoteControl.turnRight || gameState.remoteControl.turretRight) {
-          console.log('Remote control: right key up')
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (gameState.remoteControl.turnRight || gameState.remoteControl.turretRight) {
+            console.log('Remote control: right key up')
+          }
+          gameState.remoteControl.turnRight = false
+          gameState.remoteControl.turretRight = false
+        } else {
+          gameState.keyScroll.right = false
         }
-        gameState.remoteControl.turnRight = false
-        gameState.remoteControl.turretRight = false
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         if (gameState.remoteControl.fire) {
           console.log('Remote control: space released')

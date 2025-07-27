@@ -89,6 +89,8 @@ export const GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
 export const GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
 export const INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
+// Scroll speed when using arrow keys (pixels per frame)
+export const KEYBOARD_SCROLL_SPEED = 8
 
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9

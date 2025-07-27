@@ -19,6 +19,8 @@ export const gameState = {
   totalMoneyEarned: 0,
   scrollOffset: { x: 0, y: 0 },
   dragVelocity: { x: 0, y: 0 },
+  // Arrow key scrolling state
+  keyScroll: { up: false, down: false, left: false, right: false },
   // ID of the unit the camera should follow when auto-focus is enabled
   cameraFollowUnitId: null,
   isRightDragging: false,
