@@ -1,8 +1,9 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
 import { INERTIA_DECAY, TILE_SIZE, KEYBOARD_SCROLL_SPEED, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
-import { explosions } from '../logic.js'
+import { explosions, triggerExplosion } from '../logic.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
+import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 
@@ -169,6 +170,29 @@ export function cleanupDestroyedUnits(units, gameState) {
   for (let i = units.length - 1; i >= 0; i--) {
     if (units[i].health <= 0) {
       const unit = units[i]
+
+      // Special explosion logic for tanker trucks based on remaining supply gas
+      if (unit.type === 'tankerTruck') {
+        const fillRatio = Math.max(0, Math.min(1, (unit.supplyGas || 0) / (unit.maxSupplyGas || 1)))
+        const radius = TILE_SIZE * 3 * fillRatio
+        const explosionX = unit.x + TILE_SIZE / 2
+        const explosionY = unit.y + TILE_SIZE / 2
+        if (radius > 0) {
+          triggerExplosion(
+            explosionX,
+            explosionY,
+            95,
+            units,
+            gameState.factories || [],
+            null,
+            performance.now(),
+            undefined,
+            radius,
+            true
+          )
+          triggerDistortionEffect(explosionX, explosionY, radius, gameState)
+        }
+      }
       
       if (unit.owner === gameState.humanPlayer) {
         gameState.playerUnitsDestroyed++

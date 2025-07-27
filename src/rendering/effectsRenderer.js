@@ -150,10 +150,22 @@ export class EffectsRenderer {
         const progress = (currentTime - exp.startTime) / exp.duration
         const currentRadius = exp.maxRadius * progress
         const alpha = Math.max(0, 1 - progress)
+        const centerX = exp.x - scrollOffset.x
+        const centerY = exp.y - scrollOffset.y
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, currentRadius)
+        gradient.addColorStop(0, `rgba(255,150,0,${alpha})`)
+        gradient.addColorStop(0.4, `rgba(255,90,0,${alpha * 0.8})`)
+        gradient.addColorStop(1, 'rgba(255,50,0,0)')
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI)
+        ctx.fill()
+
         ctx.strokeStyle = `rgba(255,165,0,${alpha})`
         ctx.lineWidth = 2
         ctx.beginPath()
-        ctx.arc(exp.x - scrollOffset.x, exp.y - scrollOffset.y, currentRadius, 0, 2 * Math.PI)
+        ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI)
         ctx.stroke()
       })
     }

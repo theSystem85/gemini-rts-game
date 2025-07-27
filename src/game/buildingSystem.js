@@ -3,6 +3,7 @@ import { TILE_SIZE, TANK_TURRET_ROT, BUILDING_SELL_DURATION } from '../config.js
 import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
+import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
@@ -93,8 +94,25 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
         // Play explosion sound with reduced volume (0.5)
         playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.5)
 
-        // Add explosion effect
-        triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now)
+        if (building.type === 'gasStation') {
+          const radius = TILE_SIZE * 5
+          triggerExplosion(
+            buildingCenterX,
+            buildingCenterY,
+            95 * 5,
+            units,
+            factories,
+            null,
+            now,
+            undefined,
+            radius,
+            true
+          )
+          triggerDistortionEffect(buildingCenterX, buildingCenterY, radius, gameState)
+        } else {
+          // Add standard explosion effect
+          triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now)
+        }
 
         // Check for game end conditions after a building is destroyed
         checkGameEndConditions(factories, gameState)
