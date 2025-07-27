@@ -1,6 +1,7 @@
 import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
+import { stopUnitMovement } from './unifiedMovement.js'
 
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
@@ -63,6 +64,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           // Start emergency refueling
           tanker.refuelTarget = emergencyUnit
           tanker.refuelTimer = 0
+          stopUnitMovement(tanker)
+          tanker.moveTarget = null
           tanker.emergencyTarget = null // Clear emergency flag once refueling starts
         }
         // Skip normal logic while on emergency mission
@@ -94,11 +97,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         if (tanker.supplyGas > 0) {
           tanker.refuelTarget = target
           tanker.refuelTimer = 0
-          // Clear movement when starting to refuel adjacent units (for player-controlled tankers)
-          if (tanker.owner === gameState.humanPlayer) {
-            tanker.path = []
-            tanker.moveTarget = null
-          }
+          stopUnitMovement(tanker)
+          tanker.moveTarget = null
           console.log(`Tanker ${tanker.id} starting to refuel ${target.type} ${target.id} (${Math.round(target.gas)}/${target.maxGas} gas, ${Math.round((target.gas / target.maxGas) * 100)}%)`)
         } else {
           console.log(`Tanker ${tanker.id} found target but cannot refuel - supplyGas: ${tanker.supplyGas}`)
@@ -207,9 +207,9 @@ function handleEmergencyFuelRequests(tankers, units, gameState) {
   Object.entries(playerGroups).forEach(([_, group]) => {
     const { units: playerUnits, tankers: playerTankers } = group
 
-    // Find units completely out of gas (critical emergency) or very low on fuel
+    // Find units that have triggered an emergency fuel request and are stopped
     const criticalUnits = playerUnits.filter(u =>
-      u.gas <= 0 || u.needsEmergencyFuel || u.gas < (u.maxGas * 0.1) // Emergency if 0 gas or less than 10%
+      (u.needsEmergencyFuel && u.emergencyFuelRequestTime && (!u.movement || !u.movement.isMoving))
     )
 
     if (criticalUnits.length === 0 || playerTankers.length === 0) return
@@ -218,7 +218,8 @@ function handleEmergencyFuelRequests(tankers, units, gameState) {
     criticalUnits.forEach(criticalUnit => {
       // Skip if unit already has a tanker assigned or on the way
       const alreadyAssigned = playerTankers.some(tanker =>
-        tanker.emergencyTarget && tanker.emergencyTarget.id === criticalUnit.id
+        (tanker.emergencyTarget && tanker.emergencyTarget.id === criticalUnit.id) ||
+        (tanker.refuelTarget && tanker.refuelTarget.id === criticalUnit.id)
       )
       if (alreadyAssigned) return
 
@@ -265,6 +266,7 @@ function handleEmergencyFuelRequests(tankers, units, gameState) {
         // Assign emergency mission
         bestTanker.emergencyTarget = criticalUnit
         assignTankerToEmergencyUnit(bestTanker, criticalUnit, gameState)
+        criticalUnit.emergencyFuelRequestTime = null
       }
     })
   })
