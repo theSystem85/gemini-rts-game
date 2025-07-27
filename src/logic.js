@@ -14,7 +14,18 @@ export let explosions = [] // Global explosion effects for rocket impacts
 // --- Helper Functions ---
 
 // Trigger explosion effect and apply area damage
-export function triggerExplosion(x, y, baseDamage, units, factories, shooter, now, _mapGrid, radius = TILE_SIZE * 2) {
+export function triggerExplosion(
+  x,
+  y,
+  baseDamage,
+  units,
+  factories,
+  shooter,
+  now,
+  _mapGrid,
+  radius = TILE_SIZE * 2,
+  constantDamage = false
+) {
   const explosionRadius = radius
 
   // Add explosion visual effect
@@ -36,16 +47,21 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
     // Skip the shooter if this was their own bullet
     if (distance < explosionRadius) {
       if (shooter && unit.id === shooter.id) return
-      const falloff = 1 - (distance / explosionRadius)
-      let damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
+      let damage
+      if (constantDamage) {
+        damage = baseDamage
+      } else {
+        const falloff = 1 - distance / explosionRadius
+        damage = Math.round(baseDamage * falloff * 0.5) // Half damage with falloff
+      }
       
-      // Apply hit zone damage multiplier for tanks (simulate explosion hitting from all directions)
-      // For explosions, we'll create a mock bullet object at explosion center for calculation
-      if (shooter) {
+      if (!constantDamage && shooter) {
+        // Apply hit zone damage multiplier for tanks (simulate explosion hitting from all directions)
+        // For explosions, we'll create a mock bullet object at explosion center for calculation
         const mockBullet = { x: x, y: y, shooter: shooter }
         const hitZoneResult = calculateHitZoneDamageMultiplier(mockBullet, unit)
         damage = Math.round(damage * hitZoneResult.multiplier)
-        
+
         // Play critical damage sound only when player's units are hit from behind (with cooldown)
         if (
           hitZoneResult.isRearHit &&
@@ -97,8 +113,13 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
     const distance = Math.hypot(dx, dy)
 
     if (distance < explosionRadius) {
-      const falloff = 1 - (distance / explosionRadius)
-      let damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+      let damage
+      if (constantDamage) {
+        damage = baseDamage
+      } else {
+        const falloff = 1 - distance / explosionRadius
+        damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+      }
       
       // Check for god mode protection for player factories
       if (window.cheatSystem && factory.id === gameState.humanPlayer) {
@@ -136,8 +157,13 @@ export function triggerExplosion(x, y, baseDamage, units, factories, shooter, no
       const distance = Math.hypot(dx, dy)
 
       if (distance < explosionRadius) {
-        const falloff = 1 - (distance / explosionRadius)
-        let damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+        let damage
+        if (constantDamage) {
+          damage = baseDamage
+        } else {
+          const falloff = 1 - distance / explosionRadius
+          damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+        }
         
         // Check for god mode protection for player buildings
         if (window.cheatSystem && building.owner === gameState.humanPlayer) {
