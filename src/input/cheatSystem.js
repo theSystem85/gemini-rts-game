@@ -204,6 +204,7 @@ export class CheatSystem {
           <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
           <li><code>status</code> - Show current cheat status</li>
           <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
+          <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
           <li><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
@@ -337,6 +338,14 @@ export class CheatSystem {
         const spawn = this.parseSpawnCommand(code)
         if (spawn) {
           this.spawnUnitsAroundCursor(spawn.unitType, spawn.count, spawn.owner)
+        } else if (normalizedCode.startsWith('party ')) {
+          const target = normalizedCode.substring(6).trim()
+          const owner = this.resolvePartyAlias(target)
+          if (owner) {
+            this.setSelectedParty(owner)
+          } else {
+            this.showError('Invalid party. Use: party [green|red|blue|yellow|player1|player2|player3|player4]')
+          }
         } else if (normalizedCode === 'enemycontrol on') {
           this.enableEnemyControl()
         } else if (normalizedCode === 'enemycontrol off') {
@@ -660,6 +669,32 @@ export class CheatSystem {
     if (appliedCount > 0) {
       const label = isPercent ? `${amount}%` : `${amount}`
       showNotification(`❤ Set HP to ${label} for ${appliedCount} unit(s)`, 3000)
+    }
+  }
+
+  setSelectedParty(owner) {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let changed = 0
+    this.selectedUnits.forEach(unit => {
+      if (!unit || unit.owner === undefined) return
+      unit.owner = owner
+      // Update god mode tracking when ownership changes
+      if (this.godModeEnabled && unit.id) {
+        if (owner === gameState.humanPlayer) {
+          this.godModeUnits.add(unit.id)
+        } else {
+          this.godModeUnits.delete(unit.id)
+        }
+      }
+      changed++
+    })
+
+    if (changed > 0) {
+      showNotification(`🎨 Changed party to ${owner} for ${changed} item(s)`, 3000)
     }
   }
 
