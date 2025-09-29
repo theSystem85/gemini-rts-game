@@ -13,6 +13,7 @@ import {
   UNIT_PROPERTIES
 } from '../config.js'
 import { createUnit, updateUnitOccupancy } from '../units.js'
+import { updatePowerSupply } from '../buildings.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 
 export class CheatSystem {
@@ -694,6 +695,9 @@ export class CheatSystem {
     })
 
     if (changed > 0) {
+      if (Array.isArray(gameState.buildings) && gameState.buildings.length > 0) {
+        updatePowerSupply(gameState.buildings, gameState)
+      }
       showNotification(`🎨 Changed party to ${owner} for ${changed} item(s)`, 3000)
     }
   }
