@@ -914,6 +914,30 @@ export class MouseHandler {
     }
 
     if (clickedBuilding) {
+      const hasFriendlyUnitsSelected = selectedUnits.some(unit =>
+        selectionManager.isHumanPlayerUnit(unit) && unit.isBuilding !== true
+      )
+
+      if (hasFriendlyUnitsSelected) {
+        // When combat units are selected we should issue commands instead of selecting the building
+        if (!gameState.buildingPlacementMode && !gameState.repairMode && !gameState.sellMode) {
+          const commandableUnits = selectedUnits.filter(unit =>
+            selectionManager.isHumanPlayerUnit(unit) && unit.isBuilding !== true
+          )
+
+          if (commandableUnits.length > 0) {
+            if (e.shiftKey) {
+              initiateRetreat(commandableUnits, worldX, worldY, mapGrid)
+            } else if (e.altKey) {
+              this.handleStandardCommands(worldX, worldY, commandableUnits, unitCommands, mapGrid, true)
+            } else if (!isForceAttackModifierActive(e)) {
+              this.handleStandardCommands(worldX, worldY, commandableUnits, unitCommands, mapGrid, false)
+            }
+          }
+        }
+        return
+      }
+
       // Handle building selection (including unit-producing factories)
       selectionManager.handleBuildingSelection(clickedBuilding, e, units, selectedUnits)
       // Update AGF capability after building selection
