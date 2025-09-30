@@ -26,6 +26,10 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 - **Command**: `fuel [amount|percent%]`
 - **Function**: Sets the fuel level of the currently selected unit. Use a plain number for an absolute value or append `%` to set a percentage of the unit's maximum fuel. The applied value is clamped between `0` and the unit's capacity.
 
+### 🎨 Party Command
+- **Command**: `party [color|player]`
+- **Function**: Changes the party/owner of all currently selected units and buildings. Accepts color names (e.g., `red`, `green`, `blue`, `yellow`) or player identifiers (`player1`-`player4`).
+
 ### 🎮 Enemy Control
 - **Command**: `enemycontrol on` / `enemycontrol off`
 - **Function**: Allows selecting and issuing commands to enemy units
@@ -79,6 +83,9 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 
 > fuel 50%
 ⛽ Fuel set to 50% for 1 unit
+
+> party red
+🎨 Changed party to player2 for 1 item(s)
 
 > status
 💰 Money: $35,000
