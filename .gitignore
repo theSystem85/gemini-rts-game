@@ -13,9 +13,6 @@ dist-ssr
 *.local
 TODO-Temporary.md
 
-# Auto-generated files
-src/version.js
-
 # Editor directories and files
 !.vscode/extensions.json
 .idea

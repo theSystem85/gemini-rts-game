@@ -8,7 +8,17 @@ This project uses an automated version management system that bumps the version 
 
 ### 1. Commit Message-Based Version Bumping
 
-When you make a commit, the system analyzes your commit message and automatically bumps the version:
+When you make a commit, the system automatically analyzes your commit message **before the commit is finalized** and bumps the version. The version changes are included in the same commit.
+
+**Process:**
+1. You write your commit message
+2. Git runs the `prepare-commit-msg` hook
+3. The hook analyzes your message and bumps the version if it matches patterns
+4. Updates `package.json` and regenerates `src/version.js`
+5. Stages both files automatically
+6. Your commit includes all changes + version bump in one atomic commit
+
+**Version bumping rules:**
 
 - **Patch version** (x.x.X): Bumped when commit message starts with:
   - `FIX` - Bug fixes
@@ -62,11 +72,16 @@ The version number is displayed in the game's **Map Settings** menu:
 
 ### Git Hook
 
-- **`.git/hooks/post-commit`**: Automatically runs after each commit to bump version
+- **`.git/hooks/prepare-commit-msg`**: Runs BEFORE commit is finalized, bumps version and includes changes in the same commit
+
+**Why prepare-commit-msg and not post-commit?**
+- `post-commit` runs AFTER the commit, requiring amendment which can cause recursion
+- `prepare-commit-msg` runs BEFORE, allowing us to add files to the current commit atomically
+- This prevents infinite loops and keeps version changes in a single commit
 
 ### Generated Files
 
-- **`src/version.js`**: Auto-generated file (ignored by Git) containing `APP_VERSION` constant
+- **`src/version.js`**: Auto-generated file containing `APP_VERSION` constant (now tracked in Git since it's part of commits)
 
 ## Manual Version Management
 
@@ -139,13 +154,31 @@ if (versionElement) {
 
 1. Check that the Git hook is executable:
    ```bash
-   chmod +x .git/hooks/post-commit
+   chmod +x .git/hooks/prepare-commit-msg
    ```
 
 2. Verify the hook file exists:
    ```bash
-   ls -la .git/hooks/post-commit
+   ls -la .git/hooks/prepare-commit-msg
    ```
+
+3. Make sure your commit message starts with the correct prefix (FIX, FEAT, REFACTOR, IMPROVE)
+
+### Recursion / Infinite Loop Issues
+
+The original implementation used `post-commit` which caused recursion. The current implementation uses `prepare-commit-msg` which:
+- Runs BEFORE the commit is finalized
+- Adds version changes to the SAME commit
+- Never causes recursion or infinite loops
+
+If you experience issues:
+```bash
+# Remove any old hooks
+rm -f .git/hooks/post-commit
+
+# Ensure only prepare-commit-msg exists
+ls -la .git/hooks/prepare-commit-msg
+```
 
 ### Version not displaying in UI
 
@@ -171,9 +204,17 @@ git commit -m "FEAT: Your message"  # Hook runs here
 This system follows the project's conventions:
 - ✅ ES6 modules with `.js` extensions
 - ✅ Named exports (no default exports)
-- ✅ Auto-generated files are gitignored
-- ✅ Build-time generation (not runtime)
+- ✅ Uses `prepare-commit-msg` hook to prevent recursion
+- ✅ Version files are tracked in Git (part of atomic commits)
+- ✅ Build-time generation also available for development
 - ✅ No external dependencies required
+
+**Key Design Decision:**
+Using `prepare-commit-msg` instead of `post-commit` ensures:
+- Single atomic commit with all changes
+- No recursive hook triggers
+- No git amendment needed
+- Cleaner git history
 
 ## Future Enhancements
 

@@ -3,23 +3,10 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { execSync } from 'child_process'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const packageJsonPath = join(__dirname, '..', 'package.json')
-
-/**
- * Get the last commit message
- */
-function getLastCommitMessage() {
-  try {
-    return execSync('git log -1 --pretty=%B', { encoding: 'utf-8' }).trim()
-  } catch (error) {
-    console.error('Error getting commit message:', error.message)
-    return ''
-  }
-}
 
 /**
  * Parse version string and bump according to commit type
@@ -54,19 +41,20 @@ function bumpVersion(version, commitMessage) {
 }
 
 /**
- * Main function
+ * Main function - expects commit message as argument
  */
 function main() {
+  // Get commit message from command line argument (passed from prepare-commit-msg hook)
+  const commitMessage = process.argv[2]
+  
+  if (!commitMessage || commitMessage.trim() === '') {
+    console.log('No commit message provided, skipping version bump')
+    return
+  }
+
   // Read package.json
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
   const currentVersion = packageJson.version
-  
-  // Get commit message
-  const commitMessage = getLastCommitMessage()
-  if (!commitMessage) {
-    console.log('No commit message found, skipping version bump')
-    return
-  }
 
   // Calculate new version
   const newVersion = bumpVersion(currentVersion, commitMessage)
@@ -81,14 +69,6 @@ function main() {
   writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n')
   
   console.log(`✅ Version bumped: ${currentVersion} → ${newVersion}`)
-  
-  // Stage the updated package.json
-  try {
-    execSync('git add package.json', { stdio: 'inherit' })
-    console.log('📝 Staged package.json')
-  } catch (error) {
-    console.error('Error staging package.json:', error.message)
-  }
 }
 
 main()
