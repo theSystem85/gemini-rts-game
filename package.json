@@ -1,11 +1,11 @@
 {
   "name": "vite-starter",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.585.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/generate-version.js && vite",
+    "build": "node scripts/generate-version.js && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ *.js",
     "lint:fix": "eslint src/ *.js --fix",

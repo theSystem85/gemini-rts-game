@@ -15,6 +15,7 @@ import { resetAttackDirections } from './ai/enemyStrategies.js'
 import { getTextureManager, preloadTileTextures } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
+import { APP_VERSION } from './version.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -318,8 +319,14 @@ class Game {
     const settingsBtn = document.getElementById('mapSettingsBtn')
     const settingsMenu = document.getElementById('mapSettingsMenu')
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+    const versionElement = document.getElementById('appVersion')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox) return
+
+    // Display version number
+    if (versionElement) {
+      versionElement.textContent = APP_VERSION
+    }
 
     oreCheckbox.checked = ORE_SPREAD_ENABLED
     settingsBtn.addEventListener('click', () => {
