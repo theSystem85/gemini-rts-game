@@ -8,6 +8,17 @@ const ENABLE_DODGING = false
 const lastPositionCheckTimeDelay = 3000
 const dodgeTimeDelay = 3000
 const useSafeAttackDistance = false
+const HARVESTER_REMOTE_DISTANCE = 8 * TILE_SIZE // Harvesters 8+ tiles from base are considered remote
+const PLAYER_DEFENSE_RADIUS = 10 * TILE_SIZE
+const PLAYER_DEFENSE_BUILDINGS = new Set([
+  'turretGunV1',
+  'turretGunV2',
+  'turretGunV3',
+  'rocketTurret',
+  'teslaCoil',
+  'artilleryTurret'
+])
+const HARVESTER_HUNTER_PATH_REFRESH = 2000
 
 function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targetedOreTiles, bullets) {
   // Reset being attacked flag if enough time has passed since last damage
@@ -34,7 +45,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)
 
   // Apply strategies on decision intervals OR when just got attacked (immediate response)
-  if (allowDecision || justGotAttacked) {
+  if ((allowDecision || justGotAttacked) && !unit.harvesterHunter) {
     applyEnemyStrategies(unit, units, gameState, mapGrid, now)
   }
 
@@ -105,6 +116,16 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   if (unit.type === 'ambulance') {
     updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId)
     return // Ambulances don't engage in combat
+  }
+
+  if (unit.harvesterHunter) {
+    // Release from factory hold immediately
+    if (unit.holdInFactory || unit.spawnedInFactory) {
+      unit.holdInFactory = false
+      unit.spawnedInFactory = false
+    }
+    updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlayerId)
+    return
   }
 
   // Combat unit behavior
@@ -786,6 +807,399 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     unit.moveTarget = null
     unit.path = []
   }
+}
+
+function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlayerId) {
+  unit.defendingBase = false
+
+  const playerBaseCenter = findPlayerBaseCenter(gameState)
+  const remoteHarvesters = findRemotePlayerHarvesters(units, gameState, playerBaseCenter)
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  // SELF-DEFENSE: If being attacked by enemy tanks, prioritize fighting back
+  // Check for nearby enemy tanks that might be attacking us
+  const nearbyEnemyTanks = units.filter(u => {
+    if (u.owner === unit.owner || u.type === 'harvester' || u.health <= 0) return false
+    
+    const dist = Math.hypot(
+      (u.x + TILE_SIZE / 2) - unitCenterX,
+      (u.y + TILE_SIZE / 2) - unitCenterY
+    )
+    
+    // Consider tanks within fire range as threats
+    return dist <= TANK_FIRE_RANGE * TILE_SIZE * 1.5
+  })
+  
+  // If there are enemy tanks nearby, fight them instead of pursuing harvesters
+  if (nearbyEnemyTanks.length > 0) {
+    // Target the closest enemy tank
+    nearbyEnemyTanks.sort((a, b) => {
+      const aDist = Math.hypot((a.x + TILE_SIZE / 2) - unitCenterX, (a.y + TILE_SIZE / 2) - unitCenterY)
+      const bDist = Math.hypot((b.x + TILE_SIZE / 2) - unitCenterX, (b.y + TILE_SIZE / 2) - unitCenterY)
+      return aDist - bDist
+    })
+    
+    const threatTank = nearbyEnemyTanks[0]
+    unit.target = threatTank
+    unit.allowedToAttack = true
+    
+    // Stop moving and engage in combat
+    unit.path = []
+    unit.moveTarget = null
+    unit.lastDecisionTime = now
+    return
+  }
+  
+  const nearDefense = isNearPlayerDefense(unitCenterX, unitCenterY, gameState)
+
+  if (!nearDefense) {
+    unit.retreatingFromDefense = false
+    unit.harvesterHunterRetreatTarget = null
+    if (!unit.lastSafeTile || unit.lastSafeTile.x !== unit.tileX || unit.lastSafeTile.y !== unit.tileY) {
+      unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
+    }
+  }
+
+  if (nearDefense) {
+    // Calculate retreat position: move away from nearest defense to just outside its range
+    const nearestDefense = findNearestPlayerDefense(unitCenterX, unitCenterY, gameState)
+    let retreatTile = null
+
+    if (nearestDefense) {
+      // Calculate direction away from the defense
+      const dx = unitCenterX - nearestDefense.centerX
+      const dy = unitCenterY - nearestDefense.centerY
+      const distance = Math.hypot(dx, dy)
+      
+      if (distance > 0) {
+        // Normalize direction and move to safe distance (defense radius + 3 tiles buffer)
+        const safeDistance = (PLAYER_DEFENSE_RADIUS + 3 * TILE_SIZE) / TILE_SIZE
+        const retreatX = Math.floor(nearestDefense.centerX / TILE_SIZE + (dx / distance) * safeDistance)
+        const retreatY = Math.floor(nearestDefense.centerY / TILE_SIZE + (dy / distance) * safeDistance)
+        
+        // Clamp to map bounds
+        retreatTile = {
+          x: Math.max(0, Math.min(mapGrid[0].length - 1, retreatX)),
+          y: Math.max(0, Math.min(mapGrid.length - 1, retreatY))
+        }
+      }
+    }
+
+    // Fallback to last safe tile if calculation failed
+    if (!retreatTile) {
+      retreatTile = unit.lastSafeTile || findNearestAIBuildingTile(unit, gameState, aiPlayerId)
+    }
+
+    if (retreatTile) {
+      if (
+        !unit.harvesterHunterRetreatTarget ||
+        unit.harvesterHunterRetreatTarget.x !== retreatTile.x ||
+        unit.harvesterHunterRetreatTarget.y !== retreatTile.y ||
+        !unit.path ||
+        unit.path.length === 0 ||
+        (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
+      ) {
+        const path = getCachedPath(
+          { x: unit.tileX, y: unit.tileY },
+          retreatTile,
+          mapGrid,
+          gameState.occupancyMap
+        )
+        unit.path = path.length > 1 ? path.slice(1) : []
+        unit.lastPathCalcTime = now
+      }
+      unit.harvesterHunterRetreatTarget = retreatTile
+      unit.moveTarget = {
+        x: (retreatTile.x + 0.5) * TILE_SIZE,
+        y: (retreatTile.y + 0.5) * TILE_SIZE
+      }
+    } else {
+      unit.path = []
+      unit.moveTarget = null
+    }
+
+    unit.target = null
+    unit.retreatingFromDefense = true
+    unit.harvesterHunterPathTarget = null
+    unit.lastDecisionTime = now
+    return
+  }
+
+  if (unit.retreatingFromDefense && unit.harvesterHunterRetreatTarget) {
+    const retreatTarget = unit.harvesterHunterRetreatTarget
+    const distanceToRetreatTarget = Math.hypot(
+      (retreatTarget.x + 0.5) * TILE_SIZE - unitCenterX,
+      (retreatTarget.y + 0.5) * TILE_SIZE - unitCenterY
+    )
+    
+    // Reached retreat position (within 1.5 tiles)
+    if (distanceToRetreatTarget < 1.5 * TILE_SIZE) {
+      unit.retreatingFromDefense = false
+      unit.harvesterHunterRetreatTarget = null
+      unit.path = [] // Stop moving
+      unit.moveTarget = null
+      
+      // Update last safe tile to current position
+      unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
+    }
+    
+    // While retreating, still check for harvesters in range and attack them
+    if (remoteHarvesters.length > 0) {
+      // Find closest harvester within attack range
+      const harvesterInRange = remoteHarvesters.find(h => {
+        const dist = Math.hypot(
+          (h.x + TILE_SIZE / 2) - unitCenterX,
+          (h.y + TILE_SIZE / 2) - unitCenterY
+        )
+        return dist <= TANK_FIRE_RANGE * TILE_SIZE
+      })
+      
+      if (harvesterInRange) {
+        // Stop retreating and engage the harvester
+        unit.target = harvesterInRange
+        unit.allowedToAttack = true
+        unit.retreatingFromDefense = false
+        unit.harvesterHunterRetreatTarget = null
+        unit.path = []
+        unit.moveTarget = null
+        unit.lastDecisionTime = now
+        return
+      }
+    }
+    
+    // Continue retreating
+    return
+  }
+
+  if (remoteHarvesters.length > 0) {
+    // Sort by distance to find closest harvester
+    remoteHarvesters.sort((a, b) => {
+      const aDist = Math.hypot(
+        (a.x + TILE_SIZE / 2) - unitCenterX,
+        (a.y + TILE_SIZE / 2) - unitCenterY
+      )
+      const bDist = Math.hypot(
+        (b.x + TILE_SIZE / 2) - unitCenterX,
+        (b.y + TILE_SIZE / 2) - unitCenterY
+      )
+      return aDist - bDist
+    })
+
+    const targetHarvester = remoteHarvesters[0]
+    const distanceToHarvester = Math.hypot(
+      (targetHarvester.x + TILE_SIZE / 2) - unitCenterX,
+      (targetHarvester.y + TILE_SIZE / 2) - unitCenterY
+    )
+    
+    // Set as target for shooting
+    if (!unit.target || unit.target.id !== targetHarvester.id) {
+      unit.target = targetHarvester
+      unit.lastTargetChangeTime = now
+    }
+    
+    // Enable attacking so the combat system allows firing
+    unit.allowedToAttack = true
+
+    // Always pursue remote harvesters - move to intercept them
+    const desiredTile = { x: targetHarvester.tileX, y: targetHarvester.tileY }
+    if (
+      !unit.harvesterHunterPathTarget ||
+      unit.harvesterHunterPathTarget.x !== desiredTile.x ||
+      unit.harvesterHunterPathTarget.y !== desiredTile.y ||
+      !unit.path ||
+      unit.path.length === 0 ||
+      (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
+    ) {
+      const path = getCachedPath(
+        { x: unit.tileX, y: unit.tileY },
+        desiredTile,
+        mapGrid,
+        gameState.occupancyMap
+      )
+      unit.path = path.length > 1 ? path.slice(1) : []
+      unit.lastPathCalcTime = now
+      unit.harvesterHunterPathTarget = desiredTile
+    }
+
+    unit.moveTarget = {
+      x: targetHarvester.x + TILE_SIZE / 2,
+      y: targetHarvester.y + TILE_SIZE / 2
+    }
+    
+    unit.harvesterHunterRetreatTarget = null
+    unit.lastDecisionTime = now
+    return
+  }
+
+  // No remote harvesters found and not retreating - hold position at last safe tile
+  unit.target = null
+  unit.harvesterHunterPathTarget = null
+  
+  // If we don't have a last safe tile yet, or we're too far from it, move there
+  if (!unit.lastSafeTile) {
+    unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
+  }
+  
+  const distanceToSafeTile = Math.hypot(
+    (unit.lastSafeTile.x + 0.5) * TILE_SIZE - unitCenterX,
+    (unit.lastSafeTile.y + 0.5) * TILE_SIZE - unitCenterY
+  )
+  
+  // Only move back to safe tile if we're more than 5 tiles away from it
+  if (distanceToSafeTile > 5 * TILE_SIZE) {
+    if (
+      !unit.harvesterHunterRetreatTarget ||
+      unit.harvesterHunterRetreatTarget.x !== unit.lastSafeTile.x ||
+      unit.harvesterHunterRetreatTarget.y !== unit.lastSafeTile.y ||
+      !unit.path ||
+      unit.path.length === 0 ||
+      (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
+    ) {
+      const path = getCachedPath(
+        { x: unit.tileX, y: unit.tileY },
+        unit.lastSafeTile,
+        mapGrid,
+        gameState.occupancyMap
+      )
+      unit.path = path.length > 1 ? path.slice(1) : []
+      unit.lastPathCalcTime = now
+      unit.harvesterHunterRetreatTarget = unit.lastSafeTile
+    }
+    unit.moveTarget = {
+      x: (unit.lastSafeTile.x + 0.5) * TILE_SIZE,
+      y: (unit.lastSafeTile.y + 0.5) * TILE_SIZE
+    }
+  } else {
+    // Close enough to safe position - hold position and wait
+    unit.path = []
+    unit.moveTarget = null
+    unit.harvesterHunterRetreatTarget = null
+  }
+
+  unit.lastDecisionTime = now
+}
+
+function findPlayerBaseCenter(gameState) {
+  if (!gameState?.buildings || !gameState.humanPlayer) {
+    return null
+  }
+
+  const playerBuildings = gameState.buildings.filter(
+    b => b.owner === gameState.humanPlayer && b.health > 0
+  )
+
+  if (playerBuildings.length === 0) return null
+
+  const baseBuilding =
+    playerBuildings.find(b => b.type === 'constructionYard') || playerBuildings[0]
+
+  return {
+    x: (baseBuilding.x + (baseBuilding.width || 1) / 2) * TILE_SIZE,
+    y: (baseBuilding.y + (baseBuilding.height || 1) / 2) * TILE_SIZE
+  }
+}
+
+function getPlayerDefensiveBuildings(gameState) {
+  if (!gameState?.buildings || !gameState.humanPlayer) {
+    return []
+  }
+
+  return gameState.buildings.filter(
+    b => b.owner === gameState.humanPlayer && PLAYER_DEFENSE_BUILDINGS.has(b.type)
+  )
+}
+
+function isNearPlayerDefense(x, y, gameState) {
+  const defenses = getPlayerDefensiveBuildings(gameState)
+  if (defenses.length === 0) return false
+
+  return defenses.some(defense => {
+    const centerX = (defense.x + (defense.width || 1) / 2) * TILE_SIZE
+    const centerY = (defense.y + (defense.height || 1) / 2) * TILE_SIZE
+    return Math.hypot(x - centerX, y - centerY) < PLAYER_DEFENSE_RADIUS
+  })
+}
+
+function findNearestPlayerDefense(x, y, gameState) {
+  const defenses = getPlayerDefensiveBuildings(gameState)
+  if (defenses.length === 0) return null
+
+  let nearest = null
+  let nearestDist = Infinity
+
+  defenses.forEach(defense => {
+    const centerX = (defense.x + (defense.width || 1) / 2) * TILE_SIZE
+    const centerY = (defense.y + (defense.height || 1) / 2) * TILE_SIZE
+    const dist = Math.hypot(x - centerX, y - centerY)
+    
+    if (dist < nearestDist) {
+      nearestDist = dist
+      nearest = { defense, centerX, centerY, distance: dist }
+    }
+  })
+
+  return nearest
+}
+
+function findRemotePlayerHarvesters(units, gameState, baseCenter) {
+  if (!gameState?.humanPlayer) return []
+
+  return units.filter(unit => {
+    if (unit.owner !== gameState.humanPlayer) return false
+    if (unit.type !== 'harvester' || unit.health <= 0) return false
+    return isHarvesterRemote(unit, baseCenter, gameState)
+  })
+}
+
+function isHarvesterRemote(harvester, baseCenter, gameState) {
+  const centerX = harvester.x + TILE_SIZE / 2
+  const centerY = harvester.y + TILE_SIZE / 2
+
+  // Main requirement: harvester must NOT be near player defenses
+  if (isNearPlayerDefense(centerX, centerY, gameState)) {
+    return false
+  }
+
+  // Secondary requirement: harvester must be actively working (harvesting or carrying ore)
+  if (!harvester.harvesting && harvester.oreCarried <= 0) {
+    return false
+  }
+
+  // If not near defenses and actively working, it's a valid target
+  // Distance from base is less important than whether it's protected by defenses
+  return true
+}
+
+function findNearestAIBuildingTile(unit, gameState, aiPlayerId) {
+  if (!gameState?.buildings) return null
+
+  const aiBuildings = gameState.buildings.filter(
+    b => b.owner === aiPlayerId && b.health > 0
+  )
+  if (aiBuildings.length === 0) return null
+
+  let closestTile = null
+  let closestDistance = Infinity
+
+  aiBuildings.forEach(building => {
+    const centerTile = {
+      x: Math.floor(building.x + (building.width || 1) / 2),
+      y: Math.floor(building.y + (building.height || 1) / 2)
+    }
+
+    const distance = Math.hypot(
+      (centerTile.x + 0.5) * TILE_SIZE - (unit.x + TILE_SIZE / 2),
+      (centerTile.y + 0.5) * TILE_SIZE - (unit.y + TILE_SIZE / 2)
+    )
+
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestTile = centerTile
+    }
+  })
+
+  return closestTile
 }
 
 export { updateAIUnit }

@@ -27,6 +27,14 @@ export const productionQueue = {
   unitPaid: 0,
   buildingPaid: 0,
 
+  // Reference to production controller for updating button states
+  productionController: null,
+
+  // Set production controller reference
+  setProductionController: function(pc) {
+    this.productionController = pc
+  },
+
   // Utility function to update batch counter display
   updateBatchCounter: function(button, count) {
     const batchCounter = button.querySelector('.batch-counter')
@@ -497,6 +505,11 @@ export const productionQueue = {
         updatePowerSupply(gameState.buildings, gameState)
         playSound('buildingPlaced')
         showNotification(`${buildingData[this.currentBuilding.type].displayName} constructed`)
+
+        // Update building button states after construction
+        if (this.productionController) {
+          this.productionController.updateBuildingButtonStates()
+        }
       } else {
         this.completedBuildings.push({ type: this.currentBuilding.type, button: this.currentBuilding.button })
         this.currentBuilding.button.classList.add('ready-for-placement')
