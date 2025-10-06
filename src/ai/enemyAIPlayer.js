@@ -150,6 +150,8 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+    const harvestersInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
+    const totalHarvesters = aiHarvesters.length + harvestersInProduction
     const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
     const aiTanks = units.filter(
       u =>
@@ -185,21 +187,24 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.vehicleFactory.cost
     } else if (
       vehicleFactories.length > 0 &&
-      aiHarvesters.length > 0 &&
+      totalHarvesters >= 4 &&
       gasStations.length === 0 &&
       aiFactory.budget >= buildingData.gasStation.cost
     ) {
-      // Build gas station only after the first harvester is produced
+      // Build gas station only after a strong harvester economy is established
       buildingType = 'gasStation'
       cost = buildingData.gasStation.cost
-    } else if (aiBuildings.filter(b => b.type === 'vehicleWorkshop').length === 0) {
+    } else if (
+      aiBuildings.filter(b => b.type === 'vehicleWorkshop').length === 0 &&
+      totalHarvesters >= 4
+    ) {
       // Build a vehicle workshop once a factory exists
       buildingType = 'vehicleWorkshop'
       cost = buildingData.vehicleWorkshop.cost
     } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
       buildingType = 'hospital'
       cost = buildingData.hospital.cost
-    } else if (turrets.length < 3) {
+    } else if (totalHarvesters >= 4 && turrets.length < 3) {
       // Basic defense: choose turret based on budget
       const allowTurretGun = turretGunCount < 2 || totalTanks >= 4
       if (aiFactory.budget >= buildingData.rocketTurret.cost) {
@@ -219,14 +224,28 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       // Radar station for advanced defense and map control
       buildingType = 'radarStation'
       cost = buildingData.radarStation.cost
-    } else if (rocketTurrets.length === 0 && radarStations.length > 0 && aiFactory.budget >= 4000) {
+    } else if (
+      totalHarvesters >= 4 &&
+      rocketTurrets.length === 0 &&
+      radarStations.length > 0 &&
+      aiFactory.budget >= 4000
+    ) {
       // Early special defenses - build at least one of each before expansion
       buildingType = 'rocketTurret'
       cost = buildingData.rocketTurret.cost
-    } else if (teslaCoils.length === 0 && radarStations.length > 0 && aiFactory.budget >= buildingData.teslaCoil.cost) {
+    } else if (
+      totalHarvesters >= 4 &&
+      teslaCoils.length === 0 &&
+      radarStations.length > 0 &&
+      aiFactory.budget >= buildingData.teslaCoil.cost
+    ) {
       buildingType = 'teslaCoil'
       cost = buildingData.teslaCoil.cost
-    } else if (artilleryTurrets.length === 0 && aiFactory.budget >= buildingData.artilleryTurret.cost) {
+    } else if (
+      totalHarvesters >= 4 &&
+      artilleryTurrets.length === 0 &&
+      aiFactory.budget >= buildingData.artilleryTurret.cost
+    ) {
       buildingType = 'artilleryTurret'
       cost = buildingData.artilleryTurret.cost
     } else if (oreRefineries.length === 1 && aiHarvesters.length >= 4 && aiFactory.budget >= buildingData.oreRefinery.cost) {
@@ -253,7 +272,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
       }
-    } else if (turrets.length < 6) {
+    } else if (totalHarvesters >= 4 && turrets.length < 6) {
       // Advanced defense: tesla coils, then rocket turrets, then V3 turrets
       if (aiFactory.budget >= buildingData.teslaCoil.cost && teslaCoils.length < 3 && radarStations.length > 0) {
         buildingType = 'teslaCoil'
