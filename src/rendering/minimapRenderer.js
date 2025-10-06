@@ -3,6 +3,25 @@ import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
 
 export class MinimapRenderer {
+  constructor() {
+    // Cache for static minimap content (terrain/ore) so we don't redraw every frame
+    this.mapCacheCanvas = document.createElement('canvas')
+    this.mapCacheCtx = this.mapCacheCanvas.getContext('2d')
+    this.cachedMapWidth = 0
+    this.cachedMapHeight = 0
+    this.cacheDirty = true
+
+    // Cache for the "radar offline" noise to avoid regenerating it each frame
+    this.radarOfflineCanvas = document.createElement('canvas')
+    this.radarOfflineCtx = this.radarOfflineCanvas.getContext('2d')
+    this.cachedOfflineWidth = 0
+    this.cachedOfflineHeight = 0
+  }
+
+  invalidateCache() {
+    this.cacheDirty = true
+  }
+
   render(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState) {
     // Get the pixel ratio and CSS dimensions
     const pixelRatio = window.devicePixelRatio || 1
@@ -20,7 +39,7 @@ export class MinimapRenderer {
     const scaleY = minimapLogicalHeight / (mapGrid.length * TILE_SIZE)
 
     // Apply pixel ratio scaling
-    minimapCtx.scale(pixelRatio, pixelRatio)
+    minimapCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
 
     // Check if there's a video overlay playing
     if (videoOverlay.isVideoPlaying()) {
@@ -33,50 +52,24 @@ export class MinimapRenderer {
     // Only draw the minimap if we have radar capability
     if (gameState && gameState.radarActive === false) {
       // If radar is disabled, draw a static/noise pattern instead of the actual map
-      minimapCtx.fillStyle = '#333'
-      minimapCtx.fillRect(0, 0, minimapLogicalWidth, minimapLogicalHeight)
-
-      // Draw "No signal" text
-      minimapCtx.fillStyle = '#f00'
-      minimapCtx.font = '16px Arial'
-      minimapCtx.textAlign = 'center'
-      minimapCtx.fillText('RADAR OFFLINE', minimapLogicalWidth / 2, minimapLogicalHeight / 2)
-
-      // Draw some static noise pattern
-      for (let i = 0; i < 300; i++) {
-        const x = Math.random() * minimapLogicalWidth
-        const y = Math.random() * minimapLogicalHeight
-        const size = Math.random() * 3 + 1
-        minimapCtx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`
-        minimapCtx.fillRect(x, y, size, size)
-      }
+      this.renderRadarOffline(minimapCtx, minimapLogicalWidth, minimapLogicalHeight)
 
       return // Skip the rest of the rendering
     }
 
-    // Draw map tiles
-    for (let y = 0; y < mapGrid.length; y++) {
-      for (let x = 0; x < mapGrid[0].length; x++) {
-        // For minimap, always use color for simplicity and performance
-        minimapCtx.fillStyle = TILE_COLORS[mapGrid[y][x].type]
-        minimapCtx.fillRect(
-          x * TILE_SIZE * scaleX,
-          y * TILE_SIZE * scaleY,
-          TILE_SIZE * scaleX,
-          TILE_SIZE * scaleY
-        )
-        // Overlay ore tiles with semi-transparent orange
-        if (mapGrid[y][x].ore) {
-          minimapCtx.fillStyle = 'rgba(255,165,0,0.5)'
-          minimapCtx.fillRect(
-            x * TILE_SIZE * scaleX,
-            y * TILE_SIZE * scaleY,
-            TILE_SIZE * scaleX,
-            TILE_SIZE * scaleY
-          )
-        }
-      }
-    }
+    // Draw cached map tiles (terrain + ore overlay)
+    this.ensureMapCache(mapGrid)
+    minimapCtx.drawImage(
+      this.mapCacheCanvas,
+      0,
+      0,
+      this.mapCacheCanvas.width,
+      this.mapCacheCanvas.height,
+      0,
+      0,
+      minimapLogicalWidth,
+      minimapLogicalHeight
+    )
 
     // Draw units with party colors
     units.forEach(unit => {
@@ -180,5 +173,125 @@ export class MinimapRenderer {
     }
 
     // Draw the video without additional borders or progress bars
+  }
+
+  ensureMapCache(mapGrid) {
+    const width = mapGrid[0].length
+    const height = mapGrid.length
+
+    this.installTileWatchers(mapGrid)
+
+    if (!this.cacheDirty && width === this.cachedMapWidth && height === this.cachedMapHeight) {
+      return
+    }
+
+    this.cachedMapWidth = width
+    this.cachedMapHeight = height
+    this.mapCacheCanvas.width = width
+    this.mapCacheCanvas.height = height
+
+    const ctx = this.mapCacheCtx
+    ctx.imageSmoothingEnabled = false
+    ctx.clearRect(0, 0, width, height)
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const tile = mapGrid[y][x]
+        ctx.fillStyle = TILE_COLORS[tile.type]
+        ctx.fillRect(x, y, 1, 1)
+
+        if (tile.ore) {
+          ctx.fillStyle = 'rgba(255,165,0,0.5)'
+          ctx.fillRect(x, y, 1, 1)
+        }
+      }
+    }
+
+    this.cacheDirty = false
+  }
+
+  renderRadarOffline(minimapCtx, minimapWidth, minimapHeight) {
+    if (this.cachedOfflineWidth !== minimapWidth || this.cachedOfflineHeight !== minimapHeight) {
+      this.cachedOfflineWidth = minimapWidth
+      this.cachedOfflineHeight = minimapHeight
+      this.radarOfflineCanvas.width = minimapWidth
+      this.radarOfflineCanvas.height = minimapHeight
+
+      const ctx = this.radarOfflineCtx
+      ctx.fillStyle = '#333'
+      ctx.fillRect(0, 0, minimapWidth, minimapHeight)
+
+      ctx.fillStyle = '#f00'
+      ctx.font = '16px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('RADAR OFFLINE', minimapWidth / 2, minimapHeight / 2)
+
+      ctx.fillStyle = '#ffffff'
+      for (let i = 0; i < 300; i++) {
+        const x = Math.random() * minimapWidth
+        const y = Math.random() * minimapHeight
+        const size = Math.random() * 3 + 1
+        const opacity = Math.random() * 0.3
+        ctx.fillStyle = `rgba(255,255,255,${opacity})`
+        ctx.fillRect(x, y, size, size)
+      }
+    }
+
+    minimapCtx.drawImage(this.radarOfflineCanvas, 0, 0)
+  }
+
+  installTileWatchers(mapGrid) {
+    if (mapGrid.__minimapWatchersInstalled) {
+      return
+    }
+
+    const invalidate = () => {
+      this.cacheDirty = true
+    }
+
+    for (let y = 0; y < mapGrid.length; y++) {
+      for (let x = 0; x < mapGrid[0].length; x++) {
+        const tile = mapGrid[y][x]
+        if (tile.__minimapWatchersInstalled) {
+          continue
+        }
+
+        let oreValue = tile.ore
+        Object.defineProperty(tile, 'ore', {
+          get() {
+            return oreValue
+          },
+          set(newValue) {
+            if (oreValue !== newValue) {
+              oreValue = newValue
+              invalidate()
+            }
+          },
+          configurable: true,
+          enumerable: true
+        })
+
+        let typeValue = tile.type
+        Object.defineProperty(tile, 'type', {
+          get() {
+            return typeValue
+          },
+          set(newValue) {
+            if (typeValue !== newValue) {
+              typeValue = newValue
+              invalidate()
+            }
+          },
+          configurable: true,
+          enumerable: true
+        })
+
+        tile.__minimapWatchersInstalled = true
+      }
+    }
+
+    mapGrid.__minimapWatchersInstalled = true
+    this.cacheDirty = true
   }
 }
