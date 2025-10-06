@@ -37,17 +37,48 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   const factoryX = factory.x + Math.floor(factory.width / 2)
   const factoryY = factory.y + Math.floor(factory.height / 2)
 
+  const playerBaseCenter = humanPlayerFactory
+    ? {
+        x: humanPlayerFactory.x + Math.floor(humanPlayerFactory.width / 2),
+        y: humanPlayerFactory.y + Math.floor(humanPlayerFactory.height / 2)
+      }
+    : null
+
   // Direction toward human player (for defensive buildings)
   const playerDirection = { x: 0, y: 0 }
-  if (humanPlayerFactory) {
-    const playerX = humanPlayerFactory.x + Math.floor(humanPlayerFactory.width / 2)
-    const playerY = humanPlayerFactory.y + Math.floor(humanPlayerFactory.height / 2)
-    playerDirection.x = playerX - factoryX
-    playerDirection.y = playerY - factoryY
+  if (playerBaseCenter) {
+    playerDirection.x = playerBaseCenter.x - factoryX
+    playerDirection.y = playerBaseCenter.y - factoryY
     const mag = Math.hypot(playerDirection.x, playerDirection.y)
     if (mag > 0) {
       playerDirection.x /= mag
       playerDirection.y /= mag
+    }
+  }
+
+  let defenseAnchor = null
+  if (isDefensiveBuilding && playerBaseCenter) {
+    const candidateStructures = []
+
+    // Consider all existing AI buildings as potential anchors
+    if (Array.isArray(buildings)) {
+      candidateStructures.push(
+        ...buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
+      )
+    }
+
+    // Include the AI factories as possible anchors as well
+    const aiFactories = factories.filter(f => f.id === aiPlayerId)
+    candidateStructures.push(...aiFactories)
+
+    let closestDist = Infinity
+    for (const structure of candidateStructures) {
+      const center = getStructureCenter(structure)
+      const dist = Math.hypot(center.x - playerBaseCenter.x, center.y - playerBaseCenter.y)
+      if (dist < closestDist) {
+        closestDist = dist
+        defenseAnchor = structure
+      }
     }
   }
 
@@ -76,7 +107,17 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     buildingType === 'teslaCoil' ||
     buildingType === 'artilleryTurret'
 
-  if (isDefensiveBuilding && closestOrePos) {
+  if (isDefensiveBuilding && playerBaseCenter) {
+    const anchor = defenseAnchor || factory
+    const anchorCenter = getStructureCenter(anchor)
+    directionVector.x = playerBaseCenter.x - anchorCenter.x
+    directionVector.y = playerBaseCenter.y - anchorCenter.y
+    const mag = Math.hypot(directionVector.x, directionVector.y)
+    if (mag > 0) {
+      directionVector.x /= mag
+      directionVector.y /= mag
+    }
+  } else if (isDefensiveBuilding && closestOrePos) {
     // Face defenses towards the closest ore field to protect harvesters
     directionVector.x = closestOrePos.x - factoryX
     directionVector.y = closestOrePos.y - factoryY
@@ -128,7 +169,56 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     : [3, 4, 5, 2]
 
   // First try placing along the line from the factory to the closest ore field
-  if (isDefensiveBuilding && closestOrePos) {
+  if (isDefensiveBuilding && playerBaseCenter) {
+    const anchor = defenseAnchor || factory
+    const lineDistances = preferredDistances.concat([6, 7])
+    for (const distance of lineDistances) {
+      const { x, y } = getPlacementFromAnchor(
+        anchor,
+        directionVector,
+        distance,
+        buildingWidth,
+        buildingHeight
+      )
+
+      if (
+        x >= 0 &&
+        y >= 0 &&
+        x + buildingWidth <= mapGrid[0].length &&
+        y + buildingHeight <= mapGrid.length
+      ) {
+        let valid = true
+
+        for (let cy = y; cy < y + buildingHeight && valid; cy++) {
+          for (let cx = x; cx < x + buildingWidth && valid; cx++) {
+            if (
+              !isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)
+            ) {
+              valid = false
+            }
+          }
+        }
+
+        if (!valid) continue
+
+        const hasClearPaths = ensurePathsAroundBuilding(
+          x,
+          y,
+          buildingWidth,
+          buildingHeight,
+          mapGrid,
+          buildings,
+          factories,
+          minSpaceBetweenBuildings,
+          aiPlayerId
+        )
+
+        if (hasClearPaths) {
+          return { x, y }
+        }
+      }
+    }
+  } else if (isDefensiveBuilding && closestOrePos) {
     const lineDistances = preferredDistances.concat([6, 7])
     for (const distance of lineDistances) {
       const x = factory.x + Math.round(directionVector.x * distance)
@@ -189,8 +279,18 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       const dx = Math.round(Math.cos(angleRad) * distance)
       const dy = Math.round(Math.sin(angleRad) * distance)
 
-      const x = factory.x + dx
-      const y = factory.y + dy
+      let x
+      let y
+
+      if (isDefensiveBuilding && playerBaseCenter) {
+        const anchor = defenseAnchor || factory
+        const anchorCenter = getStructureCenter(anchor)
+        x = Math.round(anchorCenter.x + dx - buildingWidth / 2)
+        y = Math.round(anchorCenter.y + dy - buildingHeight / 2)
+      } else {
+        x = factory.x + dx
+        y = factory.y + dy
+      }
 
       // Skip if out of bounds
       if (x < 0 || y < 0 ||
@@ -407,6 +507,31 @@ function checkSimplePath(start, end, mapGrid, maxSteps) {
   return false
 }
 
+function getStructureCenter(structure) {
+  if (!structure) {
+    return { x: 0, y: 0 }
+  }
+
+  const width = typeof structure.width === 'number' ? structure.width : 1
+  const height = typeof structure.height === 'number' ? structure.height : 1
+
+  return {
+    x: structure.x + Math.floor(width / 2),
+    y: structure.y + Math.floor(height / 2)
+  }
+}
+
+function getPlacementFromAnchor(anchor, direction, distance, buildingWidth, buildingHeight) {
+  const anchorCenter = getStructureCenter(anchor)
+  const targetCenterX = anchorCenter.x + direction.x * distance
+  const targetCenterY = anchorCenter.y + direction.y * distance
+
+  return {
+    x: Math.round(targetCenterX - buildingWidth / 2),
+    y: Math.round(targetCenterY - buildingHeight / 2)
+  }
+}
+
 // Calculate direction to the closest ore field from a given position
 function directionToClosestOre(x, y, mapGrid) {
   let closest = Infinity
@@ -470,29 +595,39 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
     buildingType === 'teslaCoil' ||
     buildingType === 'artilleryTurret'
 
-  // Calculate player direction for fallback
-  let playerDirection = null
-  if (playerFactory && isDefensiveBuilding) {
-    const factoryX = factory.x + Math.floor(factory.width / 2)
-    const factoryY = factory.y + Math.floor(factory.height / 2)
-    const playerX = playerFactory.x + Math.floor(playerFactory.width / 2)
-    const playerY = playerFactory.y + Math.floor(playerFactory.height / 2)
+  const playerBaseCenter = playerFactory
+    ? {
+        x: playerFactory.x + Math.floor(playerFactory.width / 2),
+        y: playerFactory.y + Math.floor(playerFactory.height / 2)
+      }
+    : null
 
-    playerDirection = {
-      x: playerX - factoryX,
-      y: playerY - factoryY
+  let defenseAnchor = null
+  if (isDefensiveBuilding && playerBaseCenter) {
+    const candidateStructures = []
+    if (Array.isArray(buildings)) {
+      candidateStructures.push(
+        ...buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
+      )
     }
 
-    const mag = Math.hypot(playerDirection.x, playerDirection.y)
-    if (mag > 0) {
-      playerDirection.x /= mag
-      playerDirection.y /= mag
+    const aiFactories = factories.filter(f => f.id === aiPlayerId)
+    candidateStructures.push(...aiFactories)
+
+    let closestDist = Infinity
+    for (const structure of candidateStructures) {
+      const center = getStructureCenter(structure)
+      const dist = Math.hypot(center.x - playerBaseCenter.x, center.y - playerBaseCenter.y)
+      if (dist < closestDist) {
+        closestDist = dist
+        defenseAnchor = structure
+      }
     }
   }
 
-  // Determine direction towards closest ore field for defensive buildings
+  // Determine direction towards closest ore field for defensive buildings as fallback
   let oreDirection = null
-  if (isDefensiveBuilding) {
+  if (isDefensiveBuilding && !playerBaseCenter) {
     const fx = factory.x + Math.floor(factory.width / 2)
     const fy = factory.y + Math.floor(factory.height / 2)
     let closestDist = Infinity
@@ -516,13 +651,34 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
     }
   }
 
-  const defendDirection = oreDirection || playerDirection
+  let defendDirection = null
+  if (isDefensiveBuilding && playerBaseCenter) {
+    const anchor = defenseAnchor || factory
+    const anchorCenter = getStructureCenter(anchor)
+    defendDirection = {
+      x: playerBaseCenter.x - anchorCenter.x,
+      y: playerBaseCenter.y - anchorCenter.y
+    }
+    const mag = Math.hypot(defendDirection.x, defendDirection.y)
+    if (mag > 0) {
+      defendDirection.x /= mag
+      defendDirection.y /= mag
+    }
+  } else if (oreDirection) {
+    defendDirection = oreDirection
+  }
 
-  if (isDefensiveBuilding && oreDirection) {
+  if (isDefensiveBuilding && defendDirection) {
+    const anchor = defenseAnchor || factory
     const lineDistances = preferredDistances.concat([6, 7])
     for (const distance of lineDistances) {
-      const x = factory.x + Math.round(oreDirection.x * distance)
-      const y = factory.y + Math.round(oreDirection.y * distance)
+      const { x, y } = getPlacementFromAnchor(
+        anchor,
+        defendDirection,
+        distance,
+        buildingWidth,
+        buildingHeight
+      )
 
       if (
         x < 0 ||
@@ -587,8 +743,20 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         const dx = Math.round(Math.cos(angleRad) * distance)
         const dy = Math.round(Math.sin(angleRad) * distance)
 
-        const x = factory.x + dx
-        const y = factory.y + dy
+        let x
+        let y
+
+        if (isDefensiveBuilding && defendDirection) {
+          const anchor = defenseAnchor || factory
+          const anchorCenter = getStructureCenter(anchor)
+          x = Math.round(anchorCenter.x + dx - buildingWidth / 2)
+          y = Math.round(anchorCenter.y + dy - buildingHeight / 2)
+        } else {
+          const baseX = factory.x + dx
+          const baseY = factory.y + dy
+          x = baseX
+          y = baseY
+        }
 
         // Skip if out of bounds
         if (x < 0 || y < 0 ||
@@ -653,8 +821,18 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         // Skip positions not on the perimeter
         if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
 
-        const x = factory.x + dx
-        const y = factory.y + dy
+        let x
+        let y
+
+        if (isDefensiveBuilding && defendDirection) {
+          const anchor = defenseAnchor || factory
+          const anchorCenter = getStructureCenter(anchor)
+          x = Math.round(anchorCenter.x + dx - buildingWidth / 2)
+          y = Math.round(anchorCenter.y + dy - buildingHeight / 2)
+        } else {
+          x = factory.x + dx
+          y = factory.y + dy
+        }
 
         // Skip if out of bounds
         if (x < 0 || y < 0 ||
