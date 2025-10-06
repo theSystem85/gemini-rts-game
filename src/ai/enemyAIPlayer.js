@@ -152,6 +152,22 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
     const harvestersInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
     const totalHarvesters = aiHarvesters.length + harvestersInProduction
+    const harvesterGateActive = totalHarvesters < 4
+    const canBuildDuringHarvesterGate = buildingType => {
+      if (!harvesterGateActive) {
+        return true
+      }
+
+      if (buildingType === 'vehicleFactory') {
+        return vehicleFactories.length === 0
+      }
+
+      if (buildingType === 'oreRefinery') {
+        return oreRefineries.length === 0
+      }
+
+      return false
+    }
     const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
     const aiTanks = units.filter(
       u =>
@@ -174,15 +190,27 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     let cost = 0
 
     // Early economy - Power Plant and first Ore Refinery
-    if (powerPlants.length === 0 && aiFactory.budget >= buildingData.powerPlant.cost) {
+    if (
+      powerPlants.length === 0 &&
+      aiFactory.budget >= buildingData.powerPlant.cost &&
+      canBuildDuringHarvesterGate('powerPlant')
+    ) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
 
-    } else if (oreRefineries.length === 0 && aiFactory.budget >= buildingData.oreRefinery.cost) {
+    } else if (
+      oreRefineries.length === 0 &&
+      aiFactory.budget >= buildingData.oreRefinery.cost &&
+      canBuildDuringHarvesterGate('oreRefinery')
+    ) {
       buildingType = 'oreRefinery'
       cost = buildingData.oreRefinery.cost
     // Production - Vehicle Factory for unit production
-    } else if (vehicleFactories.length === 0 && aiFactory.budget >= buildingData.vehicleFactory.cost) {
+    } else if (
+      vehicleFactories.length === 0 &&
+      aiFactory.budget >= buildingData.vehicleFactory.cost &&
+      canBuildDuringHarvesterGate('vehicleFactory')
+    ) {
       buildingType = 'vehicleFactory'
       cost = buildingData.vehicleFactory.cost
     } else if (
@@ -294,6 +322,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
+    }
+
+    if (buildingType && !canBuildDuringHarvesterGate(buildingType)) {
+      buildingType = null
+      cost = 0
     }
 
     // Attempt to start building construction (don't place immediately)
