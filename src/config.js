@@ -2,10 +2,33 @@
 export const XP_MULTIPLIER = 3
 // config.js
 export const TILE_SIZE = 32
-export const MAP_TILES_X = 100
-export const MAP_TILES_Y = 100
-export const MAP_WIDTH = MAP_TILES_X * TILE_SIZE
-export const MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE
+export const MIN_MAP_TILES = 32
+export const DEFAULT_MAP_TILES_X = 100
+export const DEFAULT_MAP_TILES_Y = 100
+export let MAP_TILES_X = DEFAULT_MAP_TILES_X
+export let MAP_TILES_Y = DEFAULT_MAP_TILES_Y
+
+export function setMapDimensions(widthTiles, heightTiles) {
+  const normalizedWidth = Number.isFinite(widthTiles) ? Math.floor(widthTiles) : DEFAULT_MAP_TILES_X
+  const normalizedHeight = Number.isFinite(heightTiles) ? Math.floor(heightTiles) : DEFAULT_MAP_TILES_Y
+
+  MAP_TILES_X = Math.max(MIN_MAP_TILES, normalizedWidth)
+  MAP_TILES_Y = Math.max(MIN_MAP_TILES, normalizedHeight)
+
+  return { width: MAP_TILES_X, height: MAP_TILES_Y }
+}
+
+export function getMapDimensions() {
+  return { width: MAP_TILES_X, height: MAP_TILES_Y }
+}
+
+export function getMapWidth() {
+  return MAP_TILES_X * TILE_SIZE
+}
+
+export function getMapHeight() {
+  return MAP_TILES_Y * TILE_SIZE
+}
 // Approximate real world length of one tile in meters
 export const TILE_LENGTH_METERS = 1000
 export const SAFE_RANGE_ENABLED = false

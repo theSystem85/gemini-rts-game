@@ -6,7 +6,17 @@ import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } fr
 import { gameState } from './gameState.js'
 import { buildingData, updatePowerSupply } from './buildings.js'
 import { productionQueue } from './productionQueue.js'
-import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from './config.js'
+import {
+  TILE_SIZE,
+  MAP_TILES_X,
+  MAP_TILES_Y,
+  MIN_MAP_TILES,
+  DEFAULT_MAP_TILES_X,
+  DEFAULT_MAP_TILES_Y,
+  ORE_SPREAD_ENABLED,
+  setOreSpreadEnabled,
+  setMapDimensions
+} from './config.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
@@ -27,6 +37,16 @@ import { addPowerIndicator } from './ui/energyBar.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
+const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
+const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
+
+function sanitizeMapDimension(value, fallback) {
+  const parsed = parseInt(value, 10)
+  if (Number.isFinite(parsed)) {
+    return Math.max(MIN_MAP_TILES, parsed)
+  }
+  return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
+}
 
 function loadPersistedSettings() {
   try {
@@ -37,6 +57,52 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     console.warn('Failed to load map seed from localStorage:', e)
+  }
+
+  const widthInput = document.getElementById('mapWidthTiles')
+  const heightInput = document.getElementById('mapHeightTiles')
+  let widthTiles = DEFAULT_MAP_TILES_X
+  let heightTiles = DEFAULT_MAP_TILES_Y
+
+  try {
+    const storedWidth = localStorage.getItem(MAP_WIDTH_TILES_STORAGE_KEY)
+    if (storedWidth !== null) {
+      widthTiles = sanitizeMapDimension(storedWidth, DEFAULT_MAP_TILES_X)
+    }
+  } catch (e) {
+    console.warn('Failed to load map width from localStorage:', e)
+  }
+
+  try {
+    const storedHeight = localStorage.getItem(MAP_HEIGHT_TILES_STORAGE_KEY)
+    if (storedHeight !== null) {
+      heightTiles = sanitizeMapDimension(storedHeight, DEFAULT_MAP_TILES_Y)
+    }
+  } catch (e) {
+    console.warn('Failed to load map height from localStorage:', e)
+  }
+
+  if (widthInput) {
+    widthInput.value = widthTiles
+  }
+  if (heightInput) {
+    heightInput.value = heightTiles
+  }
+
+  const { width, height } = setMapDimensions(widthTiles, heightTiles)
+  gameState.mapTilesX = width
+  gameState.mapTilesY = height
+
+  try {
+    localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
+  } catch (e) {
+    console.warn('Failed to save map width to localStorage:', e)
+  }
+
+  try {
+    localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
+  } catch (e) {
+    console.warn('Failed to save map height to localStorage:', e)
   }
 
   try {
@@ -114,6 +180,9 @@ class Game {
     const seed = document.getElementById('mapSeed').value || '1'
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+
+    gameState.mapTilesX = MAP_TILES_X
+    gameState.mapTilesY = MAP_TILES_Y
 
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
@@ -294,6 +363,8 @@ class Game {
 
   setupMapShuffle() {
     const seedInput = document.getElementById('mapSeed')
+    const mapWidthInput = document.getElementById('mapWidthTiles')
+    const mapHeightInput = document.getElementById('mapHeightTiles')
     if (seedInput) {
       seedInput.addEventListener('change', (e) => {
         try {
@@ -304,6 +375,23 @@ class Game {
       })
     }
 
+    const persistDimension = (input, storageKey) => {
+      if (!input) return
+      input.addEventListener('change', () => {
+        const fallback = storageKey === MAP_WIDTH_TILES_STORAGE_KEY ? MAP_TILES_X : MAP_TILES_Y
+        const sanitized = sanitizeMapDimension(input.value, fallback)
+        input.value = sanitized
+        try {
+          localStorage.setItem(storageKey, sanitized.toString())
+        } catch (err) {
+          console.warn('Failed to save map dimension to localStorage:', err)
+        }
+      })
+    }
+
+    persistDimension(mapWidthInput, MAP_WIDTH_TILES_STORAGE_KEY)
+    persistDimension(mapHeightInput, MAP_HEIGHT_TILES_STORAGE_KEY)
+
     document.getElementById('shuffleMapBtn').addEventListener('click', () => {
       const seed = seedInput ? seedInput.value || '1' : '1'
       try {
@@ -311,6 +399,33 @@ class Game {
       } catch (err) {
         console.warn('Failed to save map seed to localStorage:', err)
       }
+
+      const widthTiles = mapWidthInput ? sanitizeMapDimension(mapWidthInput.value, MAP_TILES_X) : MAP_TILES_X
+      const heightTiles = mapHeightInput ? sanitizeMapDimension(mapHeightInput.value, MAP_TILES_Y) : MAP_TILES_Y
+
+      if (mapWidthInput) {
+        mapWidthInput.value = widthTiles
+      }
+      if (mapHeightInput) {
+        mapHeightInput.value = heightTiles
+      }
+
+      try {
+        localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, widthTiles.toString())
+      } catch (err) {
+        console.warn('Failed to save map width to localStorage:', err)
+      }
+
+      try {
+        localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, heightTiles.toString())
+      } catch (err) {
+        console.warn('Failed to save map height to localStorage:', err)
+      }
+
+      const { width, height } = setMapDimensions(widthTiles, heightTiles)
+      gameState.mapTilesX = width
+      gameState.mapTilesY = height
+
       this.resetGameWithNewMap(seed)
     })
   }
@@ -355,6 +470,9 @@ class Game {
     // Remember the seed so further restarts use the same map
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+
+    gameState.mapTilesX = MAP_TILES_X
+    gameState.mapTilesY = MAP_TILES_Y
 
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
@@ -454,6 +572,9 @@ class Game {
     const seed = gameState.mapSeed || document.getElementById('mapSeed').value || '1'
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+
+    gameState.mapTilesX = MAP_TILES_X
+    gameState.mapTilesY = MAP_TILES_Y
 
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0

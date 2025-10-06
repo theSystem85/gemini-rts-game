@@ -1,5 +1,13 @@
 // unitMovement.js - Handles all unit movement logic
-import { TILE_SIZE, PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
+import {
+  TILE_SIZE,
+  PATH_CALC_INTERVAL,
+  PATHFINDING_THRESHOLD,
+  ATTACK_PATH_CALC_INTERVAL,
+  MOVE_TARGET_REACHED_THRESHOLD,
+  MAP_TILES_X,
+  MAP_TILES_Y
+} from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath, removeUnitOccupancy } from '../units.js'
 import { getCachedPath } from './pathfinding.js'
@@ -258,7 +266,7 @@ function updateUnitRotation(unit, now) {
   } else if (unit.path && unit.path.length > 0) {
     // For normal movement, face the next tile in the path.
     const nextTile = unit.path[0]
-    if (nextTile && !(nextTile.x < 0 || nextTile.x >= 100 || nextTile.y < 0 || nextTile.y >= 100)) {
+    if (nextTile && !(nextTile.x < 0 || nextTile.x >= MAP_TILES_X || nextTile.y < 0 || nextTile.y >= MAP_TILES_Y)) {
       const targetPos = { x: nextTile.x * TILE_SIZE, y: nextTile.y * TILE_SIZE }
       const dx = targetPos.x - unit.x
       const dy = targetPos.y - unit.y
