@@ -43,6 +43,19 @@ export class EventHandlers {
     const restartBtn = document.getElementById('restartBtn')
     const musicControlButton = document.getElementById('musicControl')
 
+    const isHostPlayer = !!(gameState.multiplayer?.isHost)
+    if (!isHostPlayer) {
+      if (pauseBtn) {
+        pauseBtn.disabled = true
+        pauseBtn.title = 'Only the host can start or pause the game'
+      }
+      if (restartBtn) {
+        restartBtn.disabled = true
+        restartBtn.title = 'Only the host can restart the game'
+      }
+      return
+    }
+
     // Pause/resume functionality
     pauseBtn.addEventListener('click', () => {
       gameState.gamePaused = !gameState.gamePaused

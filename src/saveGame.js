@@ -156,6 +156,7 @@ export function saveGame(label) {
       refineryStatus: gameState.refineryStatus,
       playerCount: gameState.playerCount,
       humanPlayer: gameState.humanPlayer,
+      humanPlayers: Array.from(gameState.humanPlayers || []),
       availableUnitTypes: Array.from(gameState.availableUnitTypes || []),
       availableBuildingTypes: Array.from(gameState.availableBuildingTypes || []),
       newUnitTypes: Array.from(gameState.newUnitTypes || []),
@@ -196,6 +197,9 @@ export function loadGame(key) {
     }
 
     // Rehydrate other Set properties
+    if (Array.isArray(loaded.gameState.humanPlayers)) {
+      gameState.humanPlayers = new Set(loaded.gameState.humanPlayers)
+    }
     if (Array.isArray(loaded.gameState.availableUnitTypes)) {
       gameState.availableUnitTypes = new Set(loaded.gameState.availableUnitTypes)
     }
@@ -207,6 +211,17 @@ export function loadGame(key) {
     }
     if (Array.isArray(loaded.gameState.newBuildingTypes)) {
       gameState.newBuildingTypes = new Set(loaded.gameState.newBuildingTypes)
+    }
+
+    gameState.multiplayer = {
+      ...(gameState.multiplayer || {}),
+      isHost: true,
+      sessionId: null,
+      hostPlayerId: (gameState.multiplayer && gameState.multiplayer.hostPlayerId) || loaded.gameState.humanPlayer || 'player1',
+      invites: {},
+      partyAliases: (gameState.multiplayer && gameState.multiplayer.partyAliases) || {},
+      partyAssignments: (gameState.multiplayer && gameState.multiplayer.partyAssignments) || {},
+      connections: {}
     }
 
     // Ensure smokeParticles is properly initialized and clean up any invalid particles

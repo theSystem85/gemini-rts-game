@@ -336,6 +336,7 @@
             Players:
             <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
           </label>
+          <div id="multiplayerParties" class="party-list"></div>
         </div>
         
         <!-- Master Volume Control -->
@@ -359,7 +360,22 @@
       <div id="frameTimeMax">Max: -- ms</div>
     </div>
     <div id="performanceDialog" class="performance-dialog"></div>
-    
+
+    <div id="joinOverlay" class="join-overlay" hidden>
+      <div class="join-overlay__content">
+        <h2 class="join-overlay__title">Join Game</h2>
+        <p id="joinOverlayDescription" class="join-overlay__description"></p>
+        <label class="join-overlay__label">
+          <span>Alias</span>
+          <input id="joinOverlayName" class="join-overlay__input" maxlength="24" autocomplete="off" placeholder="Your name" />
+        </label>
+        <div class="join-overlay__actions">
+          <button id="joinOverlayConfirm" class="join-overlay__button">Join</button>
+          <button id="joinOverlayCancel" class="join-overlay__button join-overlay__button--secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/src/main.js" type="module"></script>
     <script type="module">
       import { UNIT_COSTS } from '/src/config.js'

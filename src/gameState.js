@@ -142,7 +142,17 @@ export const gameState = {
 
   // Multiplayer settings
   playerCount: 2,  // Number of players (2-4)
-  humanPlayer: 'player1',  // Which player is controlled by human
+  humanPlayer: 'player1',  // Legacy primary human player identifier
+  humanPlayers: new Set(['player1']), // Track all parties with human control
+  multiplayer: {
+    isHost: true,
+    sessionId: null,
+    hostPlayerId: 'player1',
+    invites: {},
+    partyAliases: {},
+    partyAssignments: {},
+    connections: {}
+  },
 
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),
