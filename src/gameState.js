@@ -1,4 +1,6 @@
 // gameState.js
+import { DEFAULT_MAP_TILES_X, DEFAULT_MAP_TILES_Y } from './config.js'
+
 export const gameState = {
   money: 12000,
   gameTime: 0,
@@ -19,6 +21,8 @@ export const gameState = {
   totalMoneyEarned: 0,
   scrollOffset: { x: 0, y: 0 },
   dragVelocity: { x: 0, y: 0 },
+  mapTilesX: DEFAULT_MAP_TILES_X,
+  mapTilesY: DEFAULT_MAP_TILES_Y,
   // Arrow key scrolling state
   keyScroll: { up: false, down: false, left: false, right: false },
   // ID of the unit the camera should follow when auto-focus is enabled
