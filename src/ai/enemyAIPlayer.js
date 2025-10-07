@@ -151,9 +151,14 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
     const operationalHarvesterCount = aiHarvesters.length
+    const enemyPowerSupply = gameState.enemyPowerSupply ?? 0
     const harvesterGateActive = operationalHarvesterCount < 4
     const canBuildDuringHarvesterGate = buildingType => {
       if (!harvesterGateActive) {
+        return true
+      }
+
+      if (buildingType === 'powerPlant') {
         return true
       }
 
@@ -166,6 +171,28 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       }
 
       return false
+    }
+    const ensureSufficientPowerFor = (desiredType, desiredCost) => {
+      if (!desiredType || desiredType === 'powerPlant') {
+        return { type: desiredType, cost: desiredCost }
+      }
+
+      const buildingInfo = buildingData[desiredType]
+      if (!buildingInfo) {
+        return { type: desiredType, cost: desiredCost }
+      }
+
+      const projectedPower = enemyPowerSupply + (buildingInfo.power ?? 0)
+      if ((buildingInfo.power ?? 0) >= 0 || projectedPower >= 0) {
+        return { type: desiredType, cost: desiredCost }
+      }
+
+      const powerPlantCost = buildingData.powerPlant.cost
+      if (aiFactory.budget >= powerPlantCost && canBuildDuringHarvesterGate('powerPlant')) {
+        return { type: 'powerPlant', cost: powerPlantCost }
+      }
+
+      return { type: null, cost: 0 }
     }
     const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
     const aiTanks = units.filter(
@@ -321,6 +348,12 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
+    }
+
+    if (buildingType) {
+      const adjusted = ensureSufficientPowerFor(buildingType, cost)
+      buildingType = adjusted.type
+      cost = adjusted.cost
     }
 
     if (buildingType && !canBuildDuringHarvesterGate(buildingType)) {
