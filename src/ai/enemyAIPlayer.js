@@ -132,7 +132,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
   // Building construction runs independently from unit production
   if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 &&
       gameState.buildings && !aiFactory.currentlyBuilding) {
-    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+    const aiBuildings = gameState.buildings.filter(
+      b => b.owner === aiPlayerId && b.health > 0
+    )
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
     const oreRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
@@ -149,7 +151,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
-    const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+    const aiHarvesters = units.filter(
+      u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
+    )
     const operationalHarvesterCount = aiHarvesters.length
     const enemyPowerSupply = gameState.enemyPowerSupply ?? 0
     const harvesterGateActive = operationalHarvesterCount < 4
@@ -526,10 +530,14 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
     // Don't produce units if already producing a unit
     if ( aiFactory && !aiFactory.currentlyProducingUnit && now - (gameState[lastProductionKey] || 0) >= 8000 ) {
-      const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+      const aiHarvesters = units.filter(
+        u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
+      )
       const aiAmbulances = units.filter(u => u.owner === aiPlayerId && u.type === 'ambulance')
       const aiTankers = units.filter(u => u.owner === aiPlayerId && u.type === 'tankerTruck')
-      const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+      const aiBuildings = gameState.buildings.filter(
+        b => b.owner === aiPlayerId && b.health > 0
+      )
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
