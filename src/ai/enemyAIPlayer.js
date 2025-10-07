@@ -150,9 +150,8 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
-    const harvestersInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
-    const totalHarvesters = aiHarvesters.length + harvestersInProduction
-    const harvesterGateActive = totalHarvesters < 4
+    const operationalHarvesterCount = aiHarvesters.length
+    const harvesterGateActive = operationalHarvesterCount < 4
     const canBuildDuringHarvesterGate = buildingType => {
       if (!harvesterGateActive) {
         return true
@@ -215,7 +214,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.vehicleFactory.cost
     } else if (
       vehicleFactories.length > 0 &&
-      totalHarvesters >= 4 &&
+      operationalHarvesterCount >= 4 &&
       gasStations.length === 0 &&
       aiFactory.budget >= buildingData.gasStation.cost
     ) {
@@ -224,7 +223,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.gasStation.cost
     } else if (
       aiBuildings.filter(b => b.type === 'vehicleWorkshop').length === 0 &&
-      totalHarvesters >= 4
+      operationalHarvesterCount >= 4
     ) {
       // Build a vehicle workshop once a factory exists
       buildingType = 'vehicleWorkshop'
@@ -232,7 +231,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
       buildingType = 'hospital'
       cost = buildingData.hospital.cost
-    } else if (totalHarvesters >= 4 && turrets.length < 3) {
+    } else if (operationalHarvesterCount >= 4 && turrets.length < 3) {
       // Basic defense: choose turret based on budget
       const allowTurretGun = turretGunCount < 2 || totalTanks >= 4
       if (aiFactory.budget >= buildingData.rocketTurret.cost) {
@@ -253,7 +252,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       buildingType = 'radarStation'
       cost = buildingData.radarStation.cost
     } else if (
-      totalHarvesters >= 4 &&
+      operationalHarvesterCount >= 4 &&
       rocketTurrets.length === 0 &&
       radarStations.length > 0 &&
       aiFactory.budget >= 4000
@@ -262,7 +261,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       buildingType = 'rocketTurret'
       cost = buildingData.rocketTurret.cost
     } else if (
-      totalHarvesters >= 4 &&
+      operationalHarvesterCount >= 4 &&
       teslaCoils.length === 0 &&
       radarStations.length > 0 &&
       aiFactory.budget >= buildingData.teslaCoil.cost
@@ -270,7 +269,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       buildingType = 'teslaCoil'
       cost = buildingData.teslaCoil.cost
     } else if (
-      totalHarvesters >= 4 &&
+      operationalHarvesterCount >= 4 &&
       artilleryTurrets.length === 0 &&
       aiFactory.budget >= buildingData.artilleryTurret.cost
     ) {
@@ -300,7 +299,7 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
         buildingType = 'oreRefinery'
         cost = buildingData.oreRefinery.cost
       }
-    } else if (totalHarvesters >= 4 && turrets.length < 6) {
+    } else if (operationalHarvesterCount >= 4 && turrets.length < 6) {
       // Advanced defense: tesla coils, then rocket turrets, then V3 turrets
       if (aiFactory.budget >= buildingData.teslaCoil.cost && teslaCoils.length < 3 && radarStations.length > 0) {
         buildingType = 'teslaCoil'
