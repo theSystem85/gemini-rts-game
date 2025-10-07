@@ -112,6 +112,46 @@ function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId
   return null
 }
 
+function calculateAIPowerState(aiPlayerId, aiBuildings, aiFactory) {
+  let totalPower = 0
+  let totalProduction = 0
+  let totalConsumption = 0
+
+  aiBuildings.forEach(building => {
+    const power = building.power || 0
+    totalPower += power
+
+    if (power > 0) {
+      totalProduction += power
+    } else if (power < 0) {
+      totalConsumption += Math.abs(power)
+    }
+  })
+
+  if (aiFactory && aiFactory.owner === aiPlayerId && aiFactory.health > 0) {
+    const factoryAlreadyCounted = aiBuildings.some(building => {
+      if (building.type !== 'constructionYard') return false
+      if (building === aiFactory) return true
+      if (building.id && aiFactory.id && building.id === aiFactory.id) return true
+      return building.x === aiFactory.x && building.y === aiFactory.y
+    })
+
+    if (!factoryAlreadyCounted) {
+      const factoryPower = buildingData.constructionYard?.power || 0
+      totalPower += factoryPower
+      if (factoryPower > 0) {
+        totalProduction += factoryPower
+      }
+    }
+  }
+
+  return {
+    totalPower,
+    totalProduction,
+    totalConsumption
+  }
+}
+
 const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameState, occupancyMap, now, targetedOreTiles) {
   const aiFactory = factories.find(
     f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0
@@ -168,14 +208,24 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       console.log(`AI ${aiPlayerId} building check: Power=${powerPlants.length}, VF=${vehicleFactories.length}, Refinery=${oreRefineries.length}, Budget=${aiFactory.budget}`)
     }
 
+    const { totalPower: currentPower } = calculateAIPowerState(aiPlayerId, aiBuildings, aiFactory)
+    const canAffordPowerPlant = aiFactory.budget >= buildingData.powerPlant.cost
+    const hasPowerPlant = powerPlants.length > 0
+
     let buildingType = null
     let cost = 0
 
-    // Early economy - Power Plant and first Ore Refinery
-    if (powerPlants.length === 0 && aiFactory.budget >= buildingData.powerPlant.cost) {
+    // Always prioritise power plants if the AI has none or is out of power
+    if (!hasPowerPlant) {
+      if (canAffordPowerPlant) {
+        buildingType = 'powerPlant'
+        cost = buildingData.powerPlant.cost
+      }
+    } else if (currentPower <= 0 && canAffordPowerPlant) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
 
+    // Early economy - first Ore Refinery once power is secured
     } else if (oreRefineries.length === 0 && aiFactory.budget >= buildingData.oreRefinery.cost) {
       buildingType = 'oreRefinery'
       cost = buildingData.oreRefinery.cost
@@ -275,6 +325,25 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     } else if (powerPlants.length < 3 && aiFactory.budget >= buildingData.powerPlant.cost) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
+    }
+
+    if (!buildingType && currentPower <= 0 && canAffordPowerPlant) {
+      buildingType = 'powerPlant'
+      cost = buildingData.powerPlant.cost
+    }
+
+    if (buildingType && buildingType !== 'powerPlant') {
+      const buildingPowerImpact = buildingData[buildingType]?.power || 0
+
+      if (buildingPowerImpact < 0 && currentPower + buildingPowerImpact < 0) {
+        if (canAffordPowerPlant) {
+          buildingType = 'powerPlant'
+          cost = buildingData.powerPlant.cost
+        } else {
+          buildingType = null
+          cost = 0
+        }
+      }
     }
 
     // Attempt to start building construction (don't place immediately)

@@ -84,19 +84,15 @@ export class ProductionController {
 
   // Update enabled/disabled state of building production buttons
   updateBuildingButtonStates() {
-    const hasRadar = gameState.buildings.some(
-      b =>
-        b.type === 'radarStation' &&
-        b.owner === gameState.humanPlayer &&
-        b.health > 0
+    const playerBuildings = gameState.buildings.filter(
+      b => b.owner === gameState.humanPlayer && b.health > 0
     )
 
-    const hasConstructionYard = gameState.buildings.some(
-      b =>
-        b.type === 'constructionYard' &&
-        b.owner === gameState.humanPlayer &&
-        b.health > 0
-    )
+    const hasRadar = playerBuildings.some(b => b.type === 'radarStation')
+    const hasConstructionYard = playerBuildings.some(b => b.type === 'constructionYard')
+    const hasPowerPlant = playerBuildings.some(b => b.type === 'powerPlant')
+    const hasRefinery = playerBuildings.some(b => b.type === 'oreRefinery')
+    const hasVehicleFactory = playerBuildings.some(b => b.type === 'vehicleFactory')
 
     const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
 
@@ -105,7 +101,12 @@ export class ProductionController {
       let disable = false
       const req = []
 
-      if (!hasConstructionYard) {
+      const isPowerPlant = type === 'powerPlant'
+      const isOreRefinery = type === 'oreRefinery'
+      const isVehicleFactory = type === 'vehicleFactory'
+      const isConstructionYardButton = type === 'constructionYard'
+
+      if (!hasConstructionYard && !isConstructionYardButton) {
         disable = true
         req.push('Construction Yard')
       }
@@ -113,6 +114,26 @@ export class ProductionController {
       if (buildingData[type]?.requiresRadar && !hasRadar) {
         disable = true
         req.push('Radar Station')
+      }
+
+      if (!hasPowerPlant && !isPowerPlant && !isConstructionYardButton) {
+        disable = true
+        if (!req.includes('Power Plant')) req.push('Power Plant')
+      }
+
+      if (hasPowerPlant && !hasRefinery && !isPowerPlant && !isOreRefinery && !isConstructionYardButton) {
+        disable = true
+        if (!req.includes('Ore Refinery')) req.push('Ore Refinery')
+      }
+
+      if (hasPowerPlant && hasRefinery && !hasVehicleFactory && !isPowerPlant && !isOreRefinery && !isVehicleFactory && !isConstructionYardButton) {
+        disable = true
+        if (!req.includes('Vehicle Factory')) req.push('Vehicle Factory')
+      }
+
+      if (isVehicleFactory && hasPowerPlant && !hasRefinery) {
+        disable = true
+        if (!req.includes('Ore Refinery')) req.push('Ore Refinery')
       }
 
       if (disable) {
