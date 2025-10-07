@@ -189,7 +189,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
-    const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
+    const aiHarvesters = units.filter(
+      u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
+    )
     const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
     const aiTanks = units.filter(
       u =>
@@ -203,6 +205,11 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       : 0
     const totalTanks = aiTanks.length + tanksInProduction
 
+    const REQUIRED_HARVESTERS = 4
+    const harvesterGoalMet = aiHarvesters.length >= REQUIRED_HARVESTERS
+    const hasVehicleFactory = vehicleFactories.length > 0
+    const hasOreRefinery = oreRefineries.length > 0
+
     // Debug logging (enable temporarily to debug building issues)
     if (DEBUG_AI_BUILDING) {
       console.log(`AI ${aiPlayerId} building check: Power=${powerPlants.length}, VF=${vehicleFactories.length}, Refinery=${oreRefineries.length}, Budget=${aiFactory.budget}`)
@@ -214,6 +221,9 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
 
     let buildingType = null
     let cost = 0
+
+    // Prevent the AI from pursuing optional buildings until the early economy is established
+    const allowAdditionalBuildings = harvesterGoalMet
 
     // Always prioritise power plants if the AI has none or is out of power
     if (!hasPowerPlant) {
@@ -327,9 +337,41 @@ const updateAIPlayer = logPerformance(function updateAIPlayer(aiPlayerId, units,
       cost = buildingData.powerPlant.cost
     }
 
+    if (!allowAdditionalBuildings) {
+      // Before the AI has four active harvesters, only allow essential economic structures
+      const isPowerPlant = buildingType === 'powerPlant'
+      const isRefinery = buildingType === 'oreRefinery'
+      const isVehicleFactory = buildingType === 'vehicleFactory'
+
+      const allowPowerPlant = isPowerPlant && (!powerPlants.length || currentPower <= 0)
+      const allowRefinery = isRefinery && !hasOreRefinery
+      const allowVehicleFactory = isVehicleFactory && !hasVehicleFactory
+
+      if (!(allowPowerPlant || allowRefinery || allowVehicleFactory)) {
+        buildingType = null
+        cost = 0
+      }
+    }
+
     if (!buildingType && currentPower <= 0 && canAffordPowerPlant) {
       buildingType = 'powerPlant'
       cost = buildingData.powerPlant.cost
+    }
+
+    if (!allowAdditionalBuildings && buildingType) {
+      // Re-validate after any fallback logic assigns a building
+      const isPowerPlant = buildingType === 'powerPlant'
+      const isRefinery = buildingType === 'oreRefinery'
+      const isVehicleFactory = buildingType === 'vehicleFactory'
+
+      const allowPowerPlant = isPowerPlant && (!powerPlants.length || currentPower <= 0)
+      const allowRefinery = isRefinery && !hasOreRefinery
+      const allowVehicleFactory = isVehicleFactory && !hasVehicleFactory
+
+      if (!(allowPowerPlant || allowRefinery || allowVehicleFactory)) {
+        buildingType = null
+        cost = 0
+      }
     }
 
     if (buildingType && buildingType !== 'powerPlant') {
