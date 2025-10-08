@@ -30,6 +30,7 @@ export class GameLoop {
     this.running = false
     this.animationId = null
     this.fpsDisplay = new FPSDisplay()
+    this.forceRender = false
 
     // Track last UI update values to avoid unnecessary DOM writes
     this.lastMoneyDisplayed = null
@@ -51,6 +52,7 @@ export class GameLoop {
   start() {
     this.running = true
     this.lastFrameTime = null
+    this.forceRender = true
     this.scheduleNextFrame()
   }
 
@@ -108,7 +110,7 @@ export class GameLoop {
     }
 
     const offsetChanged = prevOffsetX !== gameState.scrollOffset.x || prevOffsetY !== gameState.scrollOffset.y
-    const shouldRenderFrame = pauseStateChanged || offsetChanged || gameState.isRightDragging
+    const shouldRenderFrame = this.forceRender || pauseStateChanged || offsetChanged || gameState.isRightDragging
 
     if (shouldRenderFrame) {
       renderGame(
@@ -139,6 +141,8 @@ export class GameLoop {
     }
 
     this.fpsDisplay.render(gameCtx, gameCanvas)
+
+    this.forceRender = false
 
     if (this.hasActiveScrollActivity()) {
       this.scheduleNextFrame()
@@ -241,6 +245,8 @@ export class GameLoop {
 
     // Render FPS overlay on top of everything when game is running
     this.fpsDisplay.render(gameCtx, gameCanvas)
+
+    this.forceRender = false
 
     // Update money display at most every 333ms and only when the value changes
     const currentMoney = Math.floor(gameState.money)
