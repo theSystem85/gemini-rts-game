@@ -201,6 +201,7 @@ export const buildingData = {
     health: 300,
     smokeSpots: [],
     fireRange: 36,
+    minFireRange: 5, // Units closer than 5 tiles cannot be attacked
     fireCooldown: 7000, // 7 seconds between shots
     damage: 100, // 500% of a tank's base damage
     armor: 2,
@@ -248,6 +249,7 @@ export function createBuilding(type, x, y) {
   // Add combat properties for defensive buildings (including teslaCoil)
   if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil' || type === 'artilleryTurret') {
     building.fireRange = data.fireRange
+    building.minFireRange = data.minFireRange || 0
     building.fireCooldown = data.fireCooldown
     building.damage = data.damage
     building.armor = data.armor || 1

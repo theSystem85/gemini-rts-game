@@ -360,6 +360,7 @@ export function loadGame(key) {
         const data = buildingData[building.type]
         // Set all runtime properties if missing
         building.fireRange = data.fireRange
+        building.minFireRange = data.minFireRange || 0
         building.fireCooldown = data.fireCooldown
         building.damage = data.damage
         building.armor = data.armor || 1
