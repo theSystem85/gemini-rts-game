@@ -45,6 +45,7 @@ import {
 import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
 import { updateRemoteControlledUnits } from './game/remoteControl.js'
+import { updateShadowOfWar } from './game/shadowOfWar.js'
 
 export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
@@ -210,6 +211,9 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
 
     // Cleanup destroyed factories
     cleanupDestroyedFactories(factories, mapGrid, gameState)
+
+    // Update fog of war visibility after unit and building changes
+    updateShadowOfWar(gameState, units, mapGrid, factories)
 
     // Cleanup sound cooldowns for destroyed units
     cleanupSoundCooldowns(units)

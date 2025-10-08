@@ -480,7 +480,7 @@ export class UnitRenderer {
   }
 
   renderUnitBase(ctx, unit, scrollOffset) {
-    if (unit.health <= 0) return
+    if (!this.shouldRenderUnit(unit)) return
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
@@ -555,7 +555,7 @@ export class UnitRenderer {
   }
 
   renderUnitOverlay(ctx, unit, scrollOffset) {
-    if (unit.health <= 0) return
+    if (!this.shouldRenderUnit(unit)) return
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
@@ -580,6 +580,43 @@ export class UnitRenderer {
     units.forEach(unit => {
       this.renderUnitOverlay(ctx, unit, scrollOffset)
     })
+  }
+
+  shouldRenderUnit(unit) {
+    if (!unit || unit.health <= 0) return false
+
+    if (!gameState.shadowOfWarEnabled) {
+      return true
+    }
+
+    const visibilityMap = gameState.visibilityMap
+    if (!visibilityMap || !visibilityMap.length) {
+      return true
+    }
+
+    const friendlyOwners = new Set([gameState.humanPlayer, 'player'])
+    if (gameState.humanPlayer === 'player1') {
+      friendlyOwners.add('player1')
+    }
+
+    if (friendlyOwners.has(unit.owner)) {
+      return true
+    }
+
+    const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (
+      tileY < 0 ||
+      tileY >= visibilityMap.length ||
+      tileX < 0 ||
+      tileX >= (visibilityMap[tileY]?.length || 0)
+    ) {
+      return false
+    }
+
+    const visibility = visibilityMap[tileY]?.[tileX]
+    return Boolean(visibility && visibility.visible)
   }
 
   renderRocketTubes(ctx, unit, centerX, centerY, now) {

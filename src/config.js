@@ -118,6 +118,9 @@ export const KEYBOARD_SCROLL_SPEED = 8
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9
 
+// Maximum Manhattan distance for new buildings to stay connected
+export const BUILDING_PROXIMITY_RANGE = 2
+
 // Tank constants
 export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame

@@ -3,7 +3,7 @@ import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { logPerformance } from './performanceUtils.js'
-import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y } from './config.js'
+import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y, BUILDING_PROXIMITY_RANGE } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // Building dimensions and costs
@@ -328,8 +328,8 @@ function calculateInitialTurretDirection(buildingX, buildingY, owner) {
   return targetDirection
 }
 
-// Helper function to check if a position is within 3 tiles of any existing player building
-export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = 3, owner = 'player') {
+// Helper function to check if a position is within the configured proximity range of any existing player building
+export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = BUILDING_PROXIMITY_RANGE, owner = 'player') {
   // First check factories
   if (factories && factories.length > 0) {
     for (const factory of factories) {
@@ -401,7 +401,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   let isAnyTileInRange = false
   for (let y = tileY; y < tileY + height; y++) {
     for (let x = tileX; x < tileX + width; x++) {
-      if (isNearExistingBuilding(x, y, buildings, factories, 3, owner)) {
+      if (isNearExistingBuilding(x, y, buildings, factories, BUILDING_PROXIMITY_RANGE, owner)) {
         isAnyTileInRange = true
         break
       }
