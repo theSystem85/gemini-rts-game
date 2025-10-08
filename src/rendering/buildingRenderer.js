@@ -264,9 +264,18 @@ export class BuildingRenderer {
           ctx.save()
           ctx.strokeStyle = 'rgba(255, 0, 0, 0.25)'
           ctx.lineWidth = 2
+          const maxRange = building.fireRange * TILE_SIZE
+          const minRange = (building.minFireRange || 0) * TILE_SIZE
           ctx.beginPath()
-          ctx.arc(centerX, centerY, building.fireRange * TILE_SIZE, 0, Math.PI * 2)
+          ctx.arc(centerX, centerY, maxRange, 0, Math.PI * 2)
           ctx.stroke()
+          if (minRange > 0) {
+            ctx.setLineDash([6, 6])
+            ctx.beginPath()
+            ctx.arc(centerX, centerY, minRange, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.setLineDash([])
+          }
           ctx.restore()
         }
       }

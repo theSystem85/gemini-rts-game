@@ -22,6 +22,7 @@ export function generateDangerZoneMapForPlayer(playerId, mapGrid, buildings, gam
     const cx = b.x + (b.width || 1) / 2
     const cy = b.y + (b.height || 1) / 2
     const r = b.fireRange
+    const minR = b.minFireRange || 0
     const minY = Math.max(0, Math.floor(cy - r))
     const maxY = Math.min(h - 1, Math.ceil(cy + r))
     const minX = Math.max(0, Math.floor(cx - r))
@@ -30,7 +31,8 @@ export function generateDangerZoneMapForPlayer(playerId, mapGrid, buildings, gam
       for (let x = minX; x <= maxX; x++) {
         const dx = (x + 0.5) - cx
         const dy = (y + 0.5) - cy
-        if (Math.hypot(dx, dy) <= r) {
+        const dist = Math.hypot(dx, dy)
+        if (dist <= r && dist >= minR) {
           map[y][x] += dps
         }
       }

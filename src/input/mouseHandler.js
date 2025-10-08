@@ -298,8 +298,9 @@ export class MouseHandler {
           const turretCenterY = (turret.y + turret.height / 2) * TILE_SIZE
           const distance = Math.hypot(worldX - turretCenterX, worldY - turretCenterY)
           const maxRange = turret.fireRange * TILE_SIZE
+          const minRange = (turret.minFireRange || 0) * TILE_SIZE
 
-          if (distance <= maxRange) {
+          if (distance <= maxRange && distance >= minRange) {
             enemyInRange = true
           } else {
             enemyOutOfRange = true
