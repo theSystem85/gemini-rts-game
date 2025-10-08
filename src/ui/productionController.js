@@ -131,10 +131,7 @@ export class ProductionController {
         if (!req.includes('Vehicle Factory')) req.push('Vehicle Factory')
       }
 
-      if (isVehicleFactory && hasPowerPlant && !hasRefinery) {
-        disable = true
-        if (!req.includes('Ore Refinery')) req.push('Ore Refinery')
-      }
+      // Vehicle Factory now only requires Power Plant (removed refinery requirement)
 
       if (disable) {
         button.classList.add('disabled')

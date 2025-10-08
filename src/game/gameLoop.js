@@ -41,6 +41,9 @@ export class GameLoop {
     // Set the production controller reference in milestone system
     milestoneSystem.setProductionController(productionController)
 
+    // Set the production controller reference in production queue
+    productionQueue.setProductionController(productionController)
+
     // Track pause state to manage audio playback
     this.wasPaused = gameState.gamePaused
   }

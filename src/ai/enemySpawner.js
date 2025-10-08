@@ -172,6 +172,15 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
 
   initializeUnitMovement(unit)
 
+  if (unitType === 'tank_v1' && gameState) {
+    const harvesterHunterQueuedKey = `${aiPlayerId}HarvesterHunterQueued`
+    if (gameState[harvesterHunterQueuedKey]) {
+      unit.harvesterHunter = true
+      unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
+      gameState[harvesterHunterQueuedKey] = false
+    }
+  }
+
   // Update occupancy map for the newly spawned unit
   if (gameState.occupancyMap) {
     const centerTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)

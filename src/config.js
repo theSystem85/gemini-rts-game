@@ -200,6 +200,7 @@ export const STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets i
 // Unit costs
 export const UNIT_COSTS = {
   tank: 1000,
+  tank_v1: 1000, // Alias for tank (used by AI)
   rocketTank: 2000,
   harvester: 1500,
   'tank-v2': 2000,
