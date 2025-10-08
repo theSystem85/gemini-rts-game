@@ -22,6 +22,7 @@ export class KeyboardHandler {
     this.playerFactory = null
     this.cheatSystem = new CheatSystem()
     this.unitCommands = null
+    this.requestRenderFrame = null
   }
 
   setPlayerFactory(factory) {
@@ -30,6 +31,10 @@ export class KeyboardHandler {
 
   setUnitCommands(unitCommands) {
     this.unitCommands = unitCommands
+  }
+
+  setRenderScheduler(callback) {
+    this.requestRenderFrame = callback
   }
 
   setupKeyboardEvents(units, selectedUnits, mapGrid, factories) {
@@ -192,6 +197,9 @@ export class KeyboardHandler {
           gameState.remoteControl.forward = true
         } else {
           gameState.keyScroll.up = true
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
         e.preventDefault()
@@ -202,6 +210,9 @@ export class KeyboardHandler {
           gameState.remoteControl.backward = true
         } else {
           gameState.keyScroll.down = true
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
         e.preventDefault()
@@ -219,6 +230,9 @@ export class KeyboardHandler {
           }
         } else {
           gameState.keyScroll.left = true
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
         e.preventDefault()
@@ -236,6 +250,9 @@ export class KeyboardHandler {
           }
         } else {
           gameState.keyScroll.right = true
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         e.preventDefault()
@@ -267,6 +284,9 @@ export class KeyboardHandler {
           gameState.remoteControl.forward = false
         } else {
           gameState.keyScroll.up = false
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
@@ -276,6 +296,9 @@ export class KeyboardHandler {
           gameState.remoteControl.backward = false
         } else {
           gameState.keyScroll.down = false
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
@@ -286,6 +309,9 @@ export class KeyboardHandler {
           gameState.remoteControl.turretLeft = false
         } else {
           gameState.keyScroll.left = false
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
@@ -296,6 +322,9 @@ export class KeyboardHandler {
           gameState.remoteControl.turretRight = false
         } else {
           gameState.keyScroll.right = false
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         if (gameState.remoteControl.fire) {
@@ -612,6 +641,9 @@ export class KeyboardHandler {
         mapGrid.length * TILE_SIZE - gameCanvas.height))
       gameState.dragVelocity = { x: 0, y: 0 }
       playSound('unitSelection')
+      if (this.requestRenderFrame) {
+        this.requestRenderFrame()
+      }
     }
   }
 
@@ -651,6 +683,9 @@ export class KeyboardHandler {
     gameState.dragVelocity = { x: 0, y: 0 }
 
     playSound('confirmed')
+    if (this.requestRenderFrame) {
+      this.requestRenderFrame()
+    }
   }
 
   toggleAutoFocus(selectedUnits, mapGrid) {
@@ -751,6 +786,9 @@ export class KeyboardHandler {
 
           // Play a sound for feedback on focus action
           playSound('confirmed')
+          if (this.requestRenderFrame) {
+            this.requestRenderFrame()
+          }
         }
 
         // Update the last key press time and key

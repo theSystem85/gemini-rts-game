@@ -10,6 +10,7 @@ import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
 import { logPerformance } from '../performanceUtils.js'
 import { pauseAllSounds, resumeAllSounds } from '../sound.js'
+import { updateMapScrolling } from './gameStateManager.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -49,7 +50,8 @@ export class GameLoop {
 
   start() {
     this.running = true
-    this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+    this.lastFrameTime = null
+    this.scheduleNextFrame()
   }
 
   stop() {
@@ -60,11 +62,96 @@ export class GameLoop {
     }
   }
 
+  requestRender() {
+    if (!this.running) {
+      return
+    }
+    this.scheduleNextFrame()
+  }
+
+  scheduleNextFrame() {
+    if (!this.running || this.animationId) {
+      return
+    }
+    this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+  }
+
+  hasActiveScrollActivity() {
+    const velocityThreshold = 0.02
+    const velocityX = Math.abs(gameState.dragVelocity.x)
+    const velocityY = Math.abs(gameState.dragVelocity.y)
+    const keyScrollActive = gameState.keyScroll.up || gameState.keyScroll.down || gameState.keyScroll.left || gameState.keyScroll.right
+    const velocityActive = velocityX > velocityThreshold || velocityY > velocityThreshold
+
+    return gameState.isRightDragging || keyScrollActive || velocityActive
+  }
+
+  handlePausedFrame(now, gameCtx, gameCanvas, pauseStateChanged) {
+    this.lastFrameTime = null
+
+    const minimapCtx = this.canvasManager.getMinimapContext()
+    const minimapCanvas = this.canvasManager.getMinimapCanvas()
+
+    const prevOffsetX = gameState.scrollOffset.x
+    const prevOffsetY = gameState.scrollOffset.y
+
+    if (!gameState.isRightDragging) {
+      updateMapScrolling(gameState, this.mapGrid)
+
+      const velocitySnapThreshold = 0.02
+      if (Math.abs(gameState.dragVelocity.x) < velocitySnapThreshold) {
+        gameState.dragVelocity.x = 0
+      }
+      if (Math.abs(gameState.dragVelocity.y) < velocitySnapThreshold) {
+        gameState.dragVelocity.y = 0
+      }
+    }
+
+    const offsetChanged = prevOffsetX !== gameState.scrollOffset.x || prevOffsetY !== gameState.scrollOffset.y
+    const shouldRenderFrame = pauseStateChanged || offsetChanged || gameState.isRightDragging
+
+    if (shouldRenderFrame) {
+      renderGame(
+        gameCtx,
+        gameCanvas,
+        this.mapGrid,
+        this.factories,
+        this.units,
+        this.bullets,
+        gameState.buildings,
+        gameState.scrollOffset,
+        gameState.selectionActive,
+        gameState.selectionStart,
+        gameState.selectionEnd,
+        gameState
+      )
+
+      renderMinimap(
+        minimapCtx,
+        minimapCanvas,
+        this.mapGrid,
+        gameState.scrollOffset,
+        gameCanvas,
+        this.units,
+        gameState.buildings,
+        gameState
+      )
+    }
+
+    this.fpsDisplay.render(gameCtx, gameCanvas)
+
+    if (this.hasActiveScrollActivity()) {
+      this.scheduleNextFrame()
+    }
+  }
+
   animate = logPerformance((timestamp) => {
     // Stop if the loop has been stopped
     if (!this.running) {
       return
     }
+
+    this.animationId = null
 
     // Get current time and canvas contexts (used throughout the function)
     const now = timestamp || performance.now()
@@ -74,20 +161,26 @@ export class GameLoop {
     // Always update FPS tracking
     this.fpsDisplay.updateFPS(now)
 
+    const pauseStateChanged = gameState.gamePaused !== this.wasPaused
     // Pause or resume sounds when game pause state changes
-    if (gameState.gamePaused !== this.wasPaused) {
+    if (pauseStateChanged) {
       this.wasPaused = gameState.gamePaused
       if (gameState.gamePaused) {
         pauseAllSounds()
       } else {
         resumeAllSounds()
+        this.lastFrameTime = now
       }
     }
 
-    if (!gameState.gameStarted || gameState.gamePaused) {
-      // When paused, still render FPS overlay but skip game updates
+    if (!gameState.gameStarted) {
       this.fpsDisplay.render(gameCtx, gameCanvas)
-      this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+      this.scheduleNextFrame()
+      return
+    }
+
+    if (gameState.gamePaused) {
+      this.handlePausedFrame(now, gameCtx, gameCanvas, pauseStateChanged)
       return
     }
 
@@ -174,11 +267,11 @@ export class GameLoop {
       // For large number of units, use setTimeout to give browser breathing room
       setTimeout(() => {
         if (this.running) {
-          this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+          this.scheduleNextFrame()
         }
       }, 5)
     } else {
-      this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+      this.scheduleNextFrame()
     }
   }, false, 'animate')
 
