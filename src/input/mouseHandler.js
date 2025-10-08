@@ -30,6 +30,11 @@ export class MouseHandler {
     // Track if a guard click started while Meta was held
     this.guardClick = false
 
+    this.requestRenderFrame = null
+  }
+
+  setRenderScheduler(callback) {
+    this.requestRenderFrame = callback
   }
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -109,6 +114,9 @@ export class MouseHandler {
     this.rightWasDragging = false
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
     gameCanvas.style.cursor = 'grabbing'
+    if (this.requestRenderFrame) {
+      this.requestRenderFrame()
+    }
   }
 
   handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager) {
@@ -353,6 +361,10 @@ export class MouseHandler {
     gameState.dragVelocity = { x: dx * scrollSpeed, y: dy * scrollSpeed }
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
 
+    if (this.requestRenderFrame) {
+      this.requestRenderFrame()
+    }
+
     // Check if right-drag exceeds threshold
     if (!this.rightWasDragging && Math.hypot(e.clientX - this.rightDragStart.x, e.clientY - this.rightDragStart.y) > 3) {
       this.rightWasDragging = true
@@ -405,11 +417,17 @@ export class MouseHandler {
         this.wasDragging = true
       }
     }
-  }  handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager) {
+  }
+
+  handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager) {
     // End right-click drag
     gameState.isRightDragging = false
     const gameCanvas = document.getElementById('gameCanvas')
     gameCanvas.style.cursor = 'grab'
+
+    if (this.requestRenderFrame) {
+      this.requestRenderFrame()
+    }
 
     // Check if any unit-producing factory/building is selected BEFORE deselecting
     const rect = gameCanvas.getBoundingClientRect()

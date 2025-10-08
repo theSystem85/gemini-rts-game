@@ -20,6 +20,11 @@ const selectionManager = new SelectionManager()
 const unitCommands = new UnitCommandsHandler()
 keyboardHandler.setUnitCommands(unitCommands)
 
+export function setRenderScheduler(callback) {
+  mouseHandler.setRenderScheduler(callback)
+  keyboardHandler.setRenderScheduler(callback)
+}
+
 export function setupInputHandlers(units, factories, mapGrid) {
   // Store human player factory reference for later use
   const humanPlayer = gameState.humanPlayer || 'player1'

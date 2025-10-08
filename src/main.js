@@ -1,7 +1,7 @@
 // main.js
 // Refactored main game orchestrator
 
-import { setupInputHandlers, selectedUnits } from './inputHandler.js'
+import { setupInputHandlers, selectedUnits, setRenderScheduler } from './inputHandler.js'
 import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } from './units.js'
 import { gameState } from './gameState.js'
 import { buildingData, updatePowerSupply } from './buildings.js'
@@ -705,6 +705,8 @@ class Game {
       document.getElementById('money'),
       document.getElementById('gameTime')
     )
+
+    setRenderScheduler(() => this.gameLoop.requestRender())
 
     this.gameLoop.setAssetsLoaded(allAssetsLoaded)
     this.gameLoop.start()
