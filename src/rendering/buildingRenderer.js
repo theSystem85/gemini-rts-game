@@ -834,6 +834,7 @@ export class BuildingRenderer {
   renderBases(ctx, buildings, mapGrid, scrollOffset) {
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
+        if (!this.shouldRenderBuilding(building)) return
         this.renderBuildingBase(ctx, building, mapGrid, scrollOffset)
       })
     }
@@ -842,8 +843,87 @@ export class BuildingRenderer {
   renderOverlays(ctx, buildings, scrollOffset) {
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
+        if (!this.shouldRenderBuilding(building)) return
         this.renderBuildingOverlays(ctx, building, scrollOffset)
       })
     }
+  }
+
+  shouldRenderBuilding(building) {
+    if (!building || building.health <= 0) {
+      return false
+    }
+
+    if (!gameState.shadowOfWarEnabled) {
+      return true
+    }
+
+    const visibilityMap = gameState.visibilityMap
+    if (!visibilityMap || !visibilityMap.length) {
+      return true
+    }
+
+    const friendlyOwners = new Set([gameState.humanPlayer, 'player'])
+    if (gameState.humanPlayer === 'player1') {
+      friendlyOwners.add('player1')
+    }
+
+    if (friendlyOwners.has(building.owner)) {
+      return true
+    }
+
+    const width = Math.max(1, Math.round(building.width || 1))
+    const height = Math.max(1, Math.round(building.height || 1))
+    const startTileX = Math.floor(building.x)
+    const startTileY = Math.floor(building.y)
+
+    let discovered = false
+    let visible = false
+
+    for (let offsetY = 0; offsetY < height; offsetY++) {
+      const tileY = startTileY + offsetY
+      if (tileY < 0 || tileY >= visibilityMap.length) {
+        continue
+      }
+
+      const row = visibilityMap[tileY]
+      if (!row || !row.length) {
+        continue
+      }
+
+      for (let offsetX = 0; offsetX < width; offsetX++) {
+        const tileX = startTileX + offsetX
+        if (tileX < 0 || tileX >= row.length) {
+          continue
+        }
+
+        const cell = row[tileX]
+        if (!cell) {
+          continue
+        }
+
+        if (cell.discovered) {
+          discovered = true
+        }
+
+        if (cell.visible) {
+          visible = true
+        }
+
+        if (discovered && visible) {
+          break
+        }
+      }
+
+      if (discovered && visible) {
+        break
+      }
+    }
+
+    if (!discovered) {
+      return false
+    }
+
+    return visible
   }
 }

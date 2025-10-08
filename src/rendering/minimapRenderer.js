@@ -85,6 +85,46 @@ export class MinimapRenderer {
       return Boolean(cell && cell.discovered)
     }
 
+    const isStructureDiscovered = structure => {
+      if (!structure) return false
+      const width = Math.max(1, Math.round(structure.width || 1))
+      const height = Math.max(1, Math.round(structure.height || 1))
+      const startX = Math.floor(structure.x)
+      const startY = Math.floor(structure.y)
+
+      for (let offsetY = 0; offsetY < height; offsetY++) {
+        for (let offsetX = 0; offsetX < width; offsetX++) {
+          const tileX = startX + offsetX
+          const tileY = startY + offsetY
+          if (isTileDiscovered(tileX, tileY)) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
+    const isStructureVisible = structure => {
+      if (!structure) return false
+      const width = Math.max(1, Math.round(structure.width || 1))
+      const height = Math.max(1, Math.round(structure.height || 1))
+      const startX = Math.floor(structure.x)
+      const startY = Math.floor(structure.y)
+
+      for (let offsetY = 0; offsetY < height; offsetY++) {
+        for (let offsetX = 0; offsetX < width; offsetX++) {
+          const tileX = startX + offsetX
+          const tileY = startY + offsetY
+          if (isTileVisible(tileX, tileY)) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
     // Draw cached map tiles (terrain + ore overlay)
     this.ensureMapCache(mapGrid)
     minimapCtx.drawImage(
@@ -144,6 +184,14 @@ export class MinimapRenderer {
     // Draw buildings if they exist with party colors
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
+        if (
+          shadowEnabled &&
+          !friendlyOwners.has(building.owner) &&
+          (!isStructureDiscovered(building) || !isStructureVisible(building))
+        ) {
+          return
+        }
+
         const partyColor = PARTY_COLORS[building.owner]
         minimapCtx.fillStyle = partyColor || '#888' // Gray for unknown players
         minimapCtx.fillRect(
