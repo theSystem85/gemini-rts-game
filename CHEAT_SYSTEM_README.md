@@ -12,10 +12,11 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 - **Integration**: Hooks into all damage systems (bullets, explosions, Tesla coils)
 
 ### 💰 Money Commands
-- **Give Money**: `give [amount]` - Adds money to current total
+- **Give Money**: `give [amount]` or `give [party] [amount]` - Adds money to the specified party (defaults to the player)
 - **Set Money**: `money [amount]` - Sets money to specific amount
 - **Examples**:
-  - `give 10000` - Adds $10,000
+  - `give 10000` - Adds $10,000 to the player
+  - `give red 5000` - Adds $5,000 to the red party (Player 2)
   - `money 50000` - Sets money to $50,000
 
 ### ❤️ HP Command
@@ -74,6 +75,9 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
 
 > give 25000
 💰 Added $25,000 (Total: $35,000)
+
+> give red 5000
+💰 Added $5,000 to Red (Player 2) (Total: $17,000)
 
 > hp 75%
 ❤ Set HP to 75% for 1 unit(s)
