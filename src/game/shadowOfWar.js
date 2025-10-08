@@ -3,6 +3,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE } from '../config.
 const DEFAULT_NON_COMBAT_RANGE = 2
 const ROCKET_RANGE_MULTIPLIER = 1.5
 const TILE_PADDING = 0.5
+const INITIAL_BASE_DISCOVERY_RADIUS = 10
 
 function createVisibilityRow(width) {
   const row = new Array(width)
@@ -26,6 +27,8 @@ export function initializeShadowOfWar(gameState, mapGrid) {
   for (let y = 0; y < height; y++) {
     gameState.visibilityMap[y] = createVisibilityRow(width)
   }
+
+  markInitialBaseDiscovery(gameState)
 }
 
 function ensureVisibilityMap(gameState, mapGrid) {
@@ -115,6 +118,57 @@ function applyVisibility(visibilityMap, centerX, centerY, rangeTiles) {
       }
     }
   }
+}
+
+function markDiscoveredArea(visibilityMap, centerX, centerY, rangeTiles) {
+  if (!visibilityMap || visibilityMap.length === 0) return
+
+  const height = visibilityMap.length
+  const width = visibilityMap[0]?.length || 0
+  if (width === 0) return
+
+  const radius = Math.max(0, rangeTiles)
+  const radiusCeil = Math.ceil(radius)
+  const limitSq = (radius + TILE_PADDING) * (radius + TILE_PADDING)
+
+  const minY = Math.max(0, Math.floor(centerY - radiusCeil))
+  const maxY = Math.min(height - 1, Math.ceil(centerY + radiusCeil))
+  const minX = Math.max(0, Math.floor(centerX - radiusCeil))
+  const maxX = Math.min(width - 1, Math.ceil(centerX + radiusCeil))
+
+  for (let y = minY; y <= maxY; y++) {
+    const row = visibilityMap[y]
+    if (!row) continue
+    for (let x = minX; x <= maxX; x++) {
+      const cell = row[x]
+      if (!cell) continue
+      const dx = (x + 0.5) - centerX
+      const dy = (y + 0.5) - centerY
+      const distSq = dx * dx + dy * dy
+      if (distSq <= limitSq) {
+        cell.discovered = true
+      }
+    }
+  }
+}
+
+function markInitialBaseDiscovery(gameState) {
+  if (!gameState || !Array.isArray(gameState.visibilityMap) || !gameState.visibilityMap.length) return
+
+  const buildings = Array.isArray(gameState.buildings) ? gameState.buildings : []
+  if (!buildings.length) return
+
+  buildings.forEach(building => {
+    if (!building) return
+    if (building.type !== 'constructionYard') return
+
+    const owner = building.owner || building.id
+    if (!isFriendlyOwner(owner, gameState)) return
+
+    const centerX = building.x + building.width / 2
+    const centerY = building.y + building.height / 2
+    markDiscoveredArea(gameState.visibilityMap, centerX, centerY, INITIAL_BASE_DISCOVERY_RADIUS)
+  })
 }
 
 export function updateShadowOfWar(gameState, units = [], mapGrid = gameState?.mapGrid, additionalStructures = []) {
