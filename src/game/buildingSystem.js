@@ -150,7 +150,10 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
       }
 
       const centerX = (building.x + building.width / 2) * TILE_SIZE
-      const centerY = (building.y + building.height / 2) * TILE_SIZE      // Find closest enemy for all defensive buildings
+      const centerY = (building.y + building.height / 2) * TILE_SIZE
+      // Find closest enemy for all defensive buildings
+      const maxRange = building.fireRange * TILE_SIZE
+      const minRange = (building.minFireRange || 0) * TILE_SIZE
       let closestEnemy = null
       let closestDistance = Infinity
 
@@ -160,10 +163,10 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           const tx = t.x + (t.width ? t.width * TILE_SIZE / 2 : 0)
           const ty = t.y + (t.height ? t.height * TILE_SIZE / 2 : 0)
           const dist = Math.hypot(tx - centerX, ty - centerY)
-          if (dist <= building.fireRange * TILE_SIZE) {
+          if (dist <= maxRange && dist >= minRange) {
             closestEnemy = t
             closestDistance = dist
-          } else {
+          } else if (dist > maxRange) {
             building.forcedAttackTarget = null
           }
         } else {
@@ -179,7 +182,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             const dx = unitCenterX - centerX
             const dy = unitCenterY - centerY
             const distance = Math.hypot(dx, dy)
-            if (distance <= building.fireRange * TILE_SIZE && distance < closestDistance) {
+            if (distance <= maxRange && distance >= minRange && distance < closestDistance) {
               closestEnemy = unit
               closestDistance = distance
             }
@@ -335,6 +338,14 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
               // For gun turrets, target angle is already calculated in continuous tracking above
               const targetX = firingTarget.x + (firingTarget.width ? firingTarget.width * TILE_SIZE / 2 : TILE_SIZE / 2)
               const targetY = firingTarget.y + (firingTarget.height ? firingTarget.height * TILE_SIZE / 2 : TILE_SIZE / 2)
+              const targetDistance = Math.hypot(targetX - centerX, targetY - centerY)
+
+              if (targetDistance < minRange || targetDistance > maxRange) {
+                if (targetDistance > maxRange && building.forcedAttackTarget === firingTarget) {
+                  building.forcedAttackTarget = null
+                }
+                return
+              }
               const targetAngle = Math.atan2(targetY - centerY, targetX - centerX)
 
               // Only fire if turret is aligned with target (within tolerance)
