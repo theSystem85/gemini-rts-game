@@ -26,6 +26,7 @@ import { getTextureManager, preloadTileTextures } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
+import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -39,6 +40,7 @@ const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
 const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
 const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
+const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -117,6 +119,15 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     console.warn('Failed to load player count from localStorage:', e)
+  }
+
+  try {
+    const storedShadowSetting = localStorage.getItem(SHADOW_OF_WAR_STORAGE_KEY)
+    if (storedShadowSetting !== null) {
+      gameState.shadowOfWarEnabled = storedShadowSetting === 'true'
+    }
+  } catch (e) {
+    console.warn('Failed to load shadow of war setting from localStorage:', e)
   }
 }
 
@@ -197,6 +208,10 @@ class Game {
     // Treat initial factories as standard buildings
     gameState.buildings.push(...factories)
 
+    // Initialize shadow of war visibility for the freshly generated map
+    initializeShadowOfWar(gameState, mapGrid)
+    updateShadowOfWar(gameState, units, mapGrid, factories)
+
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     updatePowerSupply(gameState.buildings, gameState)
@@ -242,6 +257,7 @@ class Game {
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
     updateDangerZoneMaps(gameState)
     updateDangerZoneMaps(gameState)
+    updateShadowOfWar(gameState, units, mapGrid, factories)
   }
 
   centerOnPlayerFactory() {
@@ -434,9 +450,10 @@ class Game {
     const settingsBtn = document.getElementById('mapSettingsBtn')
     const settingsMenu = document.getElementById('mapSettingsMenu')
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+    const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
 
-    if (!settingsBtn || !settingsMenu || !oreCheckbox) return
+    if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
     // Display version number
     if (versionElement) {
@@ -444,12 +461,24 @@ class Game {
     }
 
     oreCheckbox.checked = ORE_SPREAD_ENABLED
+    shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
     settingsBtn.addEventListener('click', () => {
       settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
     })
 
     oreCheckbox.addEventListener('change', (e) => {
       setOreSpreadEnabled(e.target.checked)
+    })
+
+    shadowCheckbox.addEventListener('change', (e) => {
+      const enabled = e.target.checked
+      gameState.shadowOfWarEnabled = enabled
+      try {
+        localStorage.setItem(SHADOW_OF_WAR_STORAGE_KEY, enabled.toString())
+      } catch (err) {
+        console.warn('Failed to save shadow of war setting to localStorage:', err)
+      }
+      updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
     })
   }
 
@@ -495,6 +524,9 @@ class Game {
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
     updateDangerZoneMaps(gameState)
+
+    initializeShadowOfWar(gameState, mapGrid)
+    updateShadowOfWar(gameState, units, mapGrid, factories)
 
     this.centerOnPlayerFactory()
 
@@ -597,6 +629,9 @@ class Game {
 
     // Reinitialize occupancy map for the fresh map
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+
+    initializeShadowOfWar(gameState, mapGrid)
+    updateShadowOfWar(gameState, units, mapGrid, factories)
 
     // Reset production queue and clear all pending items
     if (typeof productionQueue !== 'undefined') {

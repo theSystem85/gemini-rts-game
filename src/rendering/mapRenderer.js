@@ -1,22 +1,25 @@
 // rendering/mapRenderer.js
 import { TILE_SIZE, TILE_COLORS, USE_TEXTURES } from '../config.js'
 
+const UNDISCOVERED_COLOR = '#111111'
+const FOG_OVERLAY_STYLE = 'rgba(30, 30, 30, 0.6)'
+const SHADOW_GRADIENT_SIZE = 6
+
 export class MapRenderer {
   constructor(textureManager) {
     this.textureManager = textureManager
   }
 
-  renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
+  renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState) {
     // Disable image smoothing to prevent antialiasing gaps between tiles
     ctx.imageSmoothingEnabled = false
 
     const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
     const sotApplied = new Set()
+    const visibilityMap = gameState?.visibilityMap
+    const shadowEnabled = Boolean(gameState?.shadowOfWarEnabled && visibilityMap && visibilityMap.length)
 
-    const drawTile = (x, y, type) => {
-      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
-
+    const drawTile = (x, y, type, screenX, screenY) => {
       if (type === 'water' && this.textureManager.waterFrames.length) {
         const frame = this.textureManager.getCurrentWaterFrame()
         if (frame) {
@@ -40,19 +43,15 @@ export class MapRenderer {
             TILE_SIZE + 1,
             TILE_SIZE + 1
           )
-        } else {
-          ctx.fillStyle = TILE_COLORS[type]
-          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          return
         }
-      } else {
-        ctx.fillStyle = TILE_COLORS[type]
-        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
       }
+
+      ctx.fillStyle = TILE_COLORS[type]
+      ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
     }
 
-    const drawOreOverlay = (x, y) => {
-      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+    const drawOreOverlay = (x, y, screenX, screenY) => {
       if (useTexture && this.textureManager.tileTextureCache.ore) {
         const idx = this.textureManager.getTileVariation('ore', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.ore.length) {
@@ -68,19 +67,15 @@ export class MapRenderer {
             TILE_SIZE + 1,
             TILE_SIZE + 1
           )
-        } else {
-          ctx.fillStyle = TILE_COLORS.ore
-          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          return
         }
-      } else {
-        ctx.fillStyle = TILE_COLORS.ore
-        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
       }
+
+      ctx.fillStyle = TILE_COLORS.ore
+      ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
     }
 
-    const drawSeedOverlay = (x, y) => {
-      const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-      const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+    const drawSeedOverlay = (x, y, screenX, screenY) => {
       if (useTexture && this.textureManager.tileTextureCache.seedCrystal) {
         const idx = this.textureManager.getTileVariation('seedCrystal', x, y)
         if (idx >= 0 && idx < this.textureManager.tileTextureCache.seedCrystal.length) {
@@ -96,23 +91,88 @@ export class MapRenderer {
             TILE_SIZE + 1,
             TILE_SIZE + 1
           )
-        } else {
-          ctx.fillStyle = TILE_COLORS.seedCrystal
-          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+          return
         }
-      } else {
-        ctx.fillStyle = TILE_COLORS.seedCrystal
-        ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
       }
+
+      ctx.fillStyle = TILE_COLORS.seedCrystal
+      ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
     }
 
     // Single pass rendering: process all layers for each tile in one iteration
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
+        const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+        const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+        const tileVisibility = shadowEnabled && visibilityMap[y] ? visibilityMap[y][x] : null
+
+        if (shadowEnabled && (!tileVisibility || !tileVisibility.discovered)) {
+          // Draw the base tile first so gradients reveal a subtle hint of terrain near the fog border
+          drawTile(x, y, tile.type, screenX, screenY)
+
+          const tilePixelSize = TILE_SIZE + 1
+          ctx.fillStyle = UNDISCOVERED_COLOR
+          ctx.fillRect(screenX, screenY, tilePixelSize, tilePixelSize)
+
+          if (SHADOW_GRADIENT_SIZE > 0) {
+            const gradientWidth = Math.min(SHADOW_GRADIENT_SIZE, Math.floor(tilePixelSize / 2))
+            const mapHeight = visibilityMap.length
+            const mapWidth = visibilityMap[0]?.length || 0
+            if (gradientWidth > 0 && mapHeight && mapWidth) {
+              const neighborDiscovered = {
+                left: x > 0 && Boolean(visibilityMap[y]?.[x - 1]?.discovered),
+                right: x < mapWidth - 1 && Boolean(visibilityMap[y]?.[x + 1]?.discovered),
+                top: y > 0 && Boolean(visibilityMap[y - 1]?.[x]?.discovered),
+                bottom: y < mapHeight - 1 && Boolean(visibilityMap[y + 1]?.[x]?.discovered)
+              }
+
+              if (neighborDiscovered.left || neighborDiscovered.right || neighborDiscovered.top || neighborDiscovered.bottom) {
+                ctx.save()
+                ctx.globalCompositeOperation = 'destination-out'
+
+                if (neighborDiscovered.left) {
+                  const gradient = ctx.createLinearGradient(screenX, screenY, screenX + gradientWidth, screenY)
+                  gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+                  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+                  ctx.fillStyle = gradient
+                  ctx.fillRect(screenX, screenY, gradientWidth, tilePixelSize)
+                }
+
+                if (neighborDiscovered.right) {
+                  const gradient = ctx.createLinearGradient(screenX + tilePixelSize, screenY, screenX + tilePixelSize - gradientWidth, screenY)
+                  gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+                  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+                  ctx.fillStyle = gradient
+                  ctx.fillRect(screenX + tilePixelSize - gradientWidth, screenY, gradientWidth, tilePixelSize)
+                }
+
+                if (neighborDiscovered.top) {
+                  const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + gradientWidth)
+                  gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+                  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+                  ctx.fillStyle = gradient
+                  ctx.fillRect(screenX, screenY, tilePixelSize, gradientWidth)
+                }
+
+                if (neighborDiscovered.bottom) {
+                  const gradient = ctx.createLinearGradient(screenX, screenY + tilePixelSize, screenX, screenY + tilePixelSize - gradientWidth)
+                  gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+                  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+                  ctx.fillStyle = gradient
+                  ctx.fillRect(screenX, screenY + tilePixelSize - gradientWidth, tilePixelSize, gradientWidth)
+                }
+
+                ctx.restore()
+              }
+            }
+          }
+
+          continue
+        }
 
         // Render base tile layer
-        drawTile(x, y, tile.type)
+        drawTile(x, y, tile.type, screenX, screenY)
 
         // Process SOT (Smoothening Overlay Textures) for land tiles adjacent to streets or water
         if (tile.type === 'land') {
@@ -157,9 +217,14 @@ export class MapRenderer {
 
         // Render ore or seed overlays if present
         if (tile.seedCrystal) {
-          drawSeedOverlay(x, y)
+          drawSeedOverlay(x, y, screenX, screenY)
         } else if (tile.ore) {
-          drawOreOverlay(x, y)
+          drawOreOverlay(x, y, screenX, screenY)
+        }
+
+        if (shadowEnabled && tileVisibility && !tileVisibility.visible) {
+          ctx.fillStyle = FOG_OVERLAY_STYLE
+          ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
         }
       }
     }
@@ -298,7 +363,7 @@ export class MapRenderer {
     const endTileX = Math.min(mapGrid[0].length, startTileX + tilesX)
     const endTileY = Math.min(mapGrid.length, startTileY + tilesY)
 
-    this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
+    this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
   }

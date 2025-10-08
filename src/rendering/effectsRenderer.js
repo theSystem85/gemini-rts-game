@@ -99,8 +99,40 @@ export class EffectsRenderer {
   }
 
   renderSmoke(ctx, gameState, scrollOffset) {
+    const visibilityMap = gameState?.visibilityMap
+    const shadowEnabled = Boolean(gameState?.shadowOfWarEnabled && visibilityMap && visibilityMap.length)
+
+    const isParticleVisible = particle => {
+      if (!shadowEnabled) {
+        return true
+      }
+
+      if (!particle) {
+        return false
+      }
+
+      const tileX = Math.floor(particle.x / TILE_SIZE)
+      const tileY = Math.floor(particle.y / TILE_SIZE)
+
+      if (!visibilityMap || tileY < 0 || tileY >= visibilityMap.length) {
+        return false
+      }
+
+      const row = visibilityMap[tileY]
+      if (!row || tileX < 0 || tileX >= row.length) {
+        return false
+      }
+
+      const cell = row[tileX]
+      return Boolean(cell && cell.visible)
+    }
+
     if (gameState?.smokeParticles && gameState.smokeParticles.length > 0) {
       gameState.smokeParticles.forEach(p => {
+        if (!isParticleVisible(p)) {
+          return
+        }
+
         // Safety check: ensure particle size is valid and positive
         if (!p.size || p.size <= 0) {
           return // Skip invalid particles

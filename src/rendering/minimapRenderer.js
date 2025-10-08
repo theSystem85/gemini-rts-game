@@ -2,6 +2,9 @@
 import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
 
+const MINIMAP_UNDISCOVERED_COLOR = '#111111'
+const MINIMAP_FOG_COLOR = 'rgba(30, 30, 30, 0.6)'
+
 export class MinimapRenderer {
   constructor() {
     // Cache for static minimap content (terrain/ore) so we don't redraw every frame
@@ -57,6 +60,71 @@ export class MinimapRenderer {
       return // Skip the rest of the rendering
     }
 
+    const visibilityMap = gameState?.visibilityMap
+    const shadowEnabled = Boolean(gameState?.shadowOfWarEnabled && visibilityMap && visibilityMap.length)
+    const friendlyOwners = new Set([gameState?.humanPlayer, 'player'])
+    if (gameState?.humanPlayer === 'player1') {
+      friendlyOwners.add('player1')
+    }
+
+    const isTileVisible = (tileX, tileY) => {
+      if (!shadowEnabled) return true
+      if (!visibilityMap || tileY < 0 || tileY >= visibilityMap.length) return false
+      const row = visibilityMap[tileY]
+      if (!row || tileX < 0 || tileX >= row.length) return false
+      const cell = row[tileX]
+      return Boolean(cell && cell.visible)
+    }
+
+    const isTileDiscovered = (tileX, tileY) => {
+      if (!shadowEnabled) return true
+      if (!visibilityMap || tileY < 0 || tileY >= visibilityMap.length) return false
+      const row = visibilityMap[tileY]
+      if (!row || tileX < 0 || tileX >= row.length) return false
+      const cell = row[tileX]
+      return Boolean(cell && cell.discovered)
+    }
+
+    const isStructureDiscovered = structure => {
+      if (!structure) return false
+      const width = Math.max(1, Math.round(structure.width || 1))
+      const height = Math.max(1, Math.round(structure.height || 1))
+      const startX = Math.floor(structure.x)
+      const startY = Math.floor(structure.y)
+
+      for (let offsetY = 0; offsetY < height; offsetY++) {
+        for (let offsetX = 0; offsetX < width; offsetX++) {
+          const tileX = startX + offsetX
+          const tileY = startY + offsetY
+          if (isTileDiscovered(tileX, tileY)) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
+    const isStructureVisible = structure => {
+      if (!structure) return false
+      const width = Math.max(1, Math.round(structure.width || 1))
+      const height = Math.max(1, Math.round(structure.height || 1))
+      const startX = Math.floor(structure.x)
+      const startY = Math.floor(structure.y)
+
+      for (let offsetY = 0; offsetY < height; offsetY++) {
+        for (let offsetX = 0; offsetX < width; offsetX++) {
+          const tileX = startX + offsetX
+          const tileY = startY + offsetY
+          if (isTileVisible(tileX, tileY)) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
     // Draw cached map tiles (terrain + ore overlay)
     this.ensureMapCache(mapGrid)
     minimapCtx.drawImage(
@@ -71,8 +139,39 @@ export class MinimapRenderer {
       minimapLogicalHeight
     )
 
+    if (shadowEnabled) {
+      const tileWidth = minimapLogicalWidth / mapGrid[0].length
+      const tileHeight = minimapLogicalHeight / mapGrid.length
+
+      for (let y = 0; y < mapGrid.length; y++) {
+        const row = visibilityMap[y]
+        for (let x = 0; x < mapGrid[0].length; x++) {
+          const cell = row ? row[x] : null
+          const destX = x * tileWidth
+          const destY = y * tileHeight
+          if (!cell || !cell.discovered) {
+            minimapCtx.fillStyle = MINIMAP_UNDISCOVERED_COLOR
+            minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+          } else if (!cell.visible) {
+            minimapCtx.fillStyle = MINIMAP_FOG_COLOR
+            minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+          }
+        }
+      }
+    }
+
     // Draw units with party colors
     units.forEach(unit => {
+      const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+      if (
+        shadowEnabled &&
+        !friendlyOwners.has(unit.owner) &&
+        (!isTileDiscovered(tileX, tileY) || !isTileVisible(tileX, tileY))
+      ) {
+        return
+      }
+
       const partyColor = PARTY_COLORS[unit.owner]
       minimapCtx.fillStyle = partyColor || '#888' // Gray for unknown players
       const unitX = (unit.x + TILE_SIZE / 2) * scaleX
@@ -85,6 +184,14 @@ export class MinimapRenderer {
     // Draw buildings if they exist with party colors
     if (buildings && buildings.length > 0) {
       buildings.forEach(building => {
+        if (
+          shadowEnabled &&
+          !friendlyOwners.has(building.owner) &&
+          (!isStructureDiscovered(building) || !isStructureVisible(building))
+        ) {
+          return
+        }
+
         const partyColor = PARTY_COLORS[building.owner]
         minimapCtx.fillStyle = partyColor || '#888' // Gray for unknown players
         minimapCtx.fillRect(
