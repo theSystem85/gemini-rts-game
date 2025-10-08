@@ -200,7 +200,7 @@ export class CheatSystem {
         <h3>Available Cheat Codes:</h3>
         <ul>
           <li><code>godmode on</code> / <code>godmode off</code> - Toggle invincibility for all units</li>
-          <li><code>give [amount]</code> - Add money (e.g., <code>give 10000</code>)</li>
+          <li><code>give [amount]</code> or <code>give [party] [amount]</code> - Add money (e.g., <code>give 10000</code>, <code>give red 5000</code>)</li>
           <li><code>money [amount]</code> - Set money to specific amount</li>
           <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
           <li><code>status</code> - Show current cheat status</li>
@@ -302,11 +302,32 @@ export class CheatSystem {
       }
       // Money commands
       else if (normalizedCode.startsWith('give ')) {
-        const amount = this.parseAmount(normalizedCode.substring(5))
-        if (amount !== null) {
-          this.addMoney(amount)
+        const args = normalizedCode.substring(5).trim()
+        if (!args) {
+          this.showError('Invalid amount. Use: give [number] or give [party] [number]')
+          return
+        }
+
+        const tokens = args.split(/\s+/)
+        let owner = gameState.humanPlayer
+        let amountTokens = tokens
+
+        const potentialOwner = this.resolvePartyAlias(tokens[0])
+        if (potentialOwner) {
+          owner = potentialOwner
+          amountTokens = tokens.slice(1)
+        }
+
+        const amountStr = amountTokens.join(' ')
+        const amount = this.parseAmount(amountStr)
+
+        if (amount !== null && amountTokens.length > 0) {
+          const success = this.addMoney(amount, owner)
+          if (!success) {
+            this.showError('Unable to find the specified party for give command')
+          }
         } else {
-          this.showError('Invalid amount. Use: give [number]')
+          this.showError('Invalid amount. Use: give [number] or give [party] [number]')
         }
       } else if (normalizedCode.startsWith('money ')) {
         const amount = this.parseAmount(normalizedCode.substring(6))
@@ -432,6 +453,18 @@ export class CheatSystem {
       enemy: 'player2'
     }
     return map[alias.toLowerCase()] || null
+  }
+
+  getPartyDisplayName(owner) {
+    const displayNames = {
+      player1: 'Green (Player 1)',
+      player2: 'Red (Player 2)',
+      player3: 'Blue (Player 3)',
+      player4: 'Yellow (Player 4)',
+      player: 'Green (Player 1)',
+      enemy: 'Red (Player 2)'
+    }
+    return displayNames[owner] || owner
   }
 
   isValidSpawnPosition(x, y) {
@@ -561,15 +594,36 @@ export class CheatSystem {
     showNotification('🛡️ God mode DISABLED - Units are now vulnerable', 4000)
   }
 
-  addMoney(amount) {
-    gameState.money += amount
-    gameState.totalMoneyEarned += amount
+  addMoney(amount, owner = gameState.humanPlayer) {
+    if (!owner || owner === gameState.humanPlayer) {
+      gameState.money += amount
+      gameState.totalMoneyEarned += amount
 
-    showNotification(`💰 Added $${amount.toLocaleString()} (Total: $${gameState.money.toLocaleString()})`, 3000)
-    playSound('deposit', 0.8)
-    if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
-      productionQueue.tryResumeProduction()
+      showNotification(`💰 Added $${amount.toLocaleString()} (Total: $${gameState.money.toLocaleString()})`, 3000)
+      playSound('deposit', 0.8)
+      if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
+        productionQueue.tryResumeProduction()
+      }
+      return true
     }
+
+    const targetFactory = Array.isArray(gameState.factories)
+      ? gameState.factories.find(factory => (factory.owner || factory.id) === owner)
+      : null
+
+    if (targetFactory && typeof targetFactory.budget === 'number') {
+      targetFactory.budget += amount
+
+      showNotification(
+        `💰 Added $${amount.toLocaleString()} to ${this.getPartyDisplayName(owner)} ` +
+        `(Total: $${Math.round(targetFactory.budget).toLocaleString()})`,
+        3000
+      )
+      playSound('deposit', 0.8)
+      return true
+    }
+
+    return false
   }
 
   setMoney(amount) {
