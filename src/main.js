@@ -26,6 +26,7 @@ import { getTextureManager, preloadTileTextures } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
+import { buildCheckpointNetwork } from './game/checkpointNetwork.js'
 
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
@@ -199,6 +200,8 @@ class Game {
 
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 
     // Initialize rally points as null
@@ -488,6 +491,8 @@ class Game {
 
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 
     units.length = 0
@@ -590,6 +595,8 @@ class Game {
 
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 
     units.length = 0

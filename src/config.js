@@ -183,6 +183,9 @@ export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export const PATHFINDING_THRESHOLD = 10
 
+// Minimum distance (in tiles) before units switch to the checkpoint network
+export const CHECKPOINT_ROUTE_MIN_DISTANCE = 15
+
 // How close a unit needs to be (in tiles) to consider a move target reached
 export const MOVE_TARGET_REACHED_THRESHOLD = 1.5
 

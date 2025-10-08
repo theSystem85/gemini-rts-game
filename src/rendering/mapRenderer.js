@@ -289,6 +289,34 @@ export class MapRenderer {
     }
   }
 
+  renderCheckpointNetwork(ctx, scrollOffset, gameState) {
+    if (!gameState.checkpointTracksVisible) return
+    const network = gameState.checkpointNetwork
+    if (!network || !network.edges || network.edges.length === 0) return
+
+    ctx.save()
+    ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(0, 122, 255, 0.8)'
+
+    network.edges.forEach(edge => {
+      const path = edge.path
+      if (!path || path.length < 2) return
+      ctx.beginPath()
+      path.forEach((point, index) => {
+        const screenX = point.x * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.x
+        const screenY = point.y * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.y
+        if (index === 0) {
+          ctx.moveTo(screenX, screenY)
+        } else {
+          ctx.lineTo(screenX, screenY)
+        }
+      })
+      ctx.stroke()
+    })
+
+    ctx.restore()
+  }
+
   render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null) {
     // Calculate visible tile range - improved for better performance
     const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE))
@@ -301,5 +329,6 @@ export class MapRenderer {
     this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
+    this.renderCheckpointNetwork(ctx, scrollOffset, gameState)
   }
 }

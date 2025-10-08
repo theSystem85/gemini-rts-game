@@ -16,6 +16,7 @@ import { productionQueue } from './productionQueue.js'
 import { getCurrentGame } from './main.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
+import { buildCheckpointNetwork } from './game/checkpointNetwork.js'
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -148,6 +149,7 @@ export function saveGame(label) {
       enemyLastBuildingTime: gameState.enemyLastBuildingTime,
       radarActive: gameState.radarActive,
       gridVisible: gameState.gridVisible,
+      checkpointTracksVisible: gameState.checkpointTracksVisible,
       occupancyVisible: gameState.occupancyVisible,
       fpsVisible: gameState.fpsVisible,
       useTankImages: gameState.useTankImages,
@@ -449,6 +451,10 @@ export function loadGame(key) {
 
     // Ensure no ore overlaps with buildings or factories after loading
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+    gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    if (typeof gameState.checkpointTracksVisible !== 'boolean') {
+      gameState.checkpointTracksVisible = false
+    }
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
     updateDangerZoneMaps(gameState)

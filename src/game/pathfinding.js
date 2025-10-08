@@ -1,7 +1,8 @@
 // Path Finding Module - Handles unit pathfinding and formation management
-import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
+import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD, CHECKPOINT_ROUTE_MIN_DISTANCE } from '../config.js'
 import { findPath } from '../units.js'
 import { logPerformance } from '../performanceUtils.js'
+import { planPathWithCheckpoints } from './checkpointNetwork.js'
 
 // Simple in-memory cache for sharing A* paths between units
 const pathCache = new Map()
@@ -151,9 +152,29 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
           // For regular movement commands, use occupancy map for close range, ignore for long distance
           const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
           const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
-          const newPath = useOccupancyMap
-            ? getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
-            : getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+          const shouldUseCheckpointNetwork = !isAttackMode &&
+            gameState.checkpointNetwork &&
+            gameState.checkpointNetwork.nodes &&
+            gameState.checkpointNetwork.nodes.length >= 2 &&
+            distance >= CHECKPOINT_ROUTE_MIN_DISTANCE
+
+          let newPath = []
+
+          if (shouldUseCheckpointNetwork) {
+            newPath = planPathWithCheckpoints(
+              { x: unit.tileX, y: unit.tileY },
+              adjustedTarget,
+              mapGrid,
+              occupancyMap,
+              gameState.checkpointNetwork
+            )
+          }
+
+          if (!newPath || newPath.length <= 1) {
+            newPath = useOccupancyMap
+              ? getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
+              : getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+          }
 
           if (newPath.length > 1) {
             unit.path = newPath.slice(1)

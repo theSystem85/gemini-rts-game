@@ -160,7 +160,7 @@ export class KeyboardHandler {
       // T key to toggle tank image rendering
       else if (e.key.toLowerCase() === 't') {
         e.preventDefault()
-        this.handleTankImageToggle()
+        this.handleCheckpointNetworkToggle()
       }
       // R key to toggle turret image rendering
       else if (e.key.toLowerCase() === 'r') {
@@ -794,6 +794,13 @@ export class KeyboardHandler {
     // Toggle grid visibility
     gameState.gridVisible = !gameState.gridVisible
     // Play a sound for feedback
+    playSound('confirmed', 0.5)
+  }
+
+  handleCheckpointNetworkToggle() {
+    gameState.checkpointTracksVisible = !gameState.checkpointTracksVisible
+    const status = gameState.checkpointTracksVisible ? 'ON' : 'OFF'
+    this.showNotification(`Checkpoint tracks: ${status}`, 2000)
     playSound('confirmed', 0.5)
   }
 

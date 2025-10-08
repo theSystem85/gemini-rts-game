@@ -97,6 +97,9 @@ export const gameState = {
   // Grid visibility toggle - initialize to false (grid hidden by default)
   gridVisible: false,
 
+  // Checkpoint network visibility toggle
+  checkpointTracksVisible: false,
+
   // Occupancy map visibility toggle
   occupancyVisible: false,
 
@@ -161,5 +164,8 @@ export const gameState = {
   pendingButtonUpdate: false,
 
   // Store current map seed so map generation stays consistent across restarts
-  mapSeed: '1'
+  mapSeed: '1',
+
+  // Static checkpoint network baked from the current map
+  checkpointNetwork: null
 }
