@@ -340,8 +340,15 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
               const targetY = firingTarget.y + (firingTarget.height ? firingTarget.height * TILE_SIZE / 2 : TILE_SIZE / 2)
               const targetDistance = Math.hypot(targetX - centerX, targetY - centerY)
 
-              if (targetDistance < minRange || targetDistance > maxRange) {
-                if (targetDistance > maxRange && building.forcedAttackTarget === firingTarget) {
+              if (targetDistance < minRange) {
+                if (building.forcedAttackTarget === firingTarget) {
+                  building.forcedAttackTarget = null
+                }
+                return
+              }
+
+              if (targetDistance > maxRange) {
+                if (building.forcedAttackTarget === firingTarget) {
                   building.forcedAttackTarget = null
                 }
                 return
