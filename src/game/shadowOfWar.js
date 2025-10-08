@@ -1,9 +1,24 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE } from '../config.js'
+import { buildingData } from '../buildings.js'
 
 const DEFAULT_NON_COMBAT_RANGE = 2
 const ROCKET_RANGE_MULTIPLIER = 1.5
 const TILE_PADDING = 0.5
 const INITIAL_BASE_DISCOVERY_RADIUS = 10
+const BASE_VISIBILITY_BORDER = 4
+
+const DEFENSIVE_BUILDING_TYPES = new Set([
+  'turretGunV1',
+  'turretGunV2',
+  'turretGunV3',
+  'rocketTurret',
+  'teslaCoil',
+  'artilleryTurret'
+])
+
+const BASE_BUILDING_TYPES = new Set(
+  Object.keys(buildingData).filter(type => type !== 'concreteWall' && !DEFENSIVE_BUILDING_TYPES.has(type))
+)
 
 function createVisibilityRow(width) {
   const row = new Array(width)
@@ -64,6 +79,62 @@ function isFriendlyOwner(owner, gameState) {
     friendlyOwners.add('player1')
   }
   return friendlyOwners.has(owner)
+}
+
+function isDefensiveStructure(structure) {
+  const type = structure?.type
+  if (!type) return false
+  if (DEFENSIVE_BUILDING_TYPES.has(type)) return true
+  return Boolean(structure.fireRange && structure.fireRange > 0)
+}
+
+function isBaseStructure(structure) {
+  const type = structure?.type
+  if (!type) return false
+  if (DEFENSIVE_BUILDING_TYPES.has(type)) return false
+  if (type === 'concreteWall') return false
+  return BASE_BUILDING_TYPES.has(type)
+}
+
+function getStructureFireRange(structure) {
+  if (!structure) return 0
+  if (typeof structure.fireRange === 'number') {
+    return structure.fireRange
+  }
+  const type = structure.type
+  if (!type) {
+    return 0
+  }
+  const data = buildingData[type]
+  if (data && typeof data.fireRange === 'number') {
+    return data.fireRange
+  }
+  return 0
+}
+
+function applyRectVisibility(visibilityMap, startX, startY, width, height, borderTiles = 0) {
+  if (!visibilityMap || visibilityMap.length === 0) return
+
+  const mapHeight = visibilityMap.length
+  const mapWidth = visibilityMap[0]?.length || 0
+  if (mapWidth === 0) return
+
+  const padding = Math.max(0, Math.floor(borderTiles))
+  const minX = Math.max(0, Math.floor(startX) - padding)
+  const minY = Math.max(0, Math.floor(startY) - padding)
+  const maxX = Math.min(mapWidth - 1, Math.ceil(startX + width) + padding - 1)
+  const maxY = Math.min(mapHeight - 1, Math.ceil(startY + height) + padding - 1)
+
+  for (let y = minY; y <= maxY; y++) {
+    const row = visibilityMap[y]
+    if (!row) continue
+    for (let x = minX; x <= maxX; x++) {
+      const cell = row[x]
+      if (!cell) continue
+      cell.visible = true
+      cell.discovered = true
+    }
+  }
 }
 
 function getUnitVisionRange(unit) {
@@ -190,9 +261,25 @@ export function updateShadowOfWar(gameState, units = [], mapGrid = gameState?.ma
     if (!structure) return
     const owner = structure.owner || structure.id
     if (!isFriendlyOwner(owner, gameState)) return
-    const centerX = structure.x + structure.width / 2
-    const centerY = structure.y + structure.height / 2
-    applyVisibility(visibilityMap, centerX, centerY, BUILDING_PROXIMITY_RANGE)
+    const rawX = typeof structure.x === 'number' ? structure.x : 0
+    const rawY = typeof structure.y === 'number' ? structure.y : 0
+    const width = Math.max(1, Math.round(structure.width || 1))
+    const height = Math.max(1, Math.round(structure.height || 1))
+    const startX = Math.floor(rawX)
+    const startY = Math.floor(rawY)
+    const centerX = rawX + width / 2
+    const centerY = rawY + height / 2
+
+    if (isDefensiveStructure(structure)) {
+      const range = Math.max(BUILDING_PROXIMITY_RANGE, getStructureFireRange(structure))
+      applyVisibility(visibilityMap, centerX, centerY, range)
+      applyRectVisibility(visibilityMap, startX, startY, width, height)
+    } else if (isBaseStructure(structure)) {
+      applyRectVisibility(visibilityMap, startX, startY, width, height, BASE_VISIBILITY_BORDER)
+    } else {
+      applyVisibility(visibilityMap, centerX, centerY, BUILDING_PROXIMITY_RANGE)
+      applyRectVisibility(visibilityMap, startX, startY, width, height)
+    }
   })
 
   if (Array.isArray(units)) {
