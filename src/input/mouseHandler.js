@@ -76,8 +76,6 @@ export class MouseHandler {
       if (gameState.isRightDragging) {
         this.handleRightDragScrolling(e, mapGrid, gameCanvas)
         return
-      } else if (!this.isSelecting && !this.attackGroupHandler.isAttackGroupSelecting) {
-        gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
       }
 
       // Update selection rectangle if we're actively selecting
@@ -424,7 +422,6 @@ export class MouseHandler {
     // End right-click drag
     gameState.isRightDragging = false
     const gameCanvas = document.getElementById('gameCanvas')
-    gameCanvas.style.cursor = 'grab'
 
     if (this.requestRenderFrame) {
       this.requestRenderFrame()
