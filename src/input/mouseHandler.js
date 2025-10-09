@@ -5,6 +5,7 @@ import { units } from '../main.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
+import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
@@ -578,6 +579,7 @@ export class MouseHandler {
     if (commandableUnits.length === 0) {
       return false
     }
+    selectionManager.clearWreckSelection()
     // Only process Force Attack if units or defensive buildings are selected, not factories
     if (commandableUnits[0].type !== 'factory') {
       let forceAttackTarget = null
@@ -616,11 +618,18 @@ export class MouseHandler {
         }
       }
 
+      const targetTileX = Math.floor(worldX / TILE_SIZE)
+      const targetTileY = Math.floor(worldY / TILE_SIZE)
+
+      if (!forceAttackTarget) {
+        const wreckTarget = findWreckAtTile(gameState, targetTileX, targetTileY)
+        if (wreckTarget) {
+          forceAttackTarget = wreckTarget
+        }
+      }
+
       // If no specific target found, create a ground target for force attacking empty ground
       if (!forceAttackTarget) {
-        const targetTileX = Math.floor(worldX / TILE_SIZE)
-        const targetTileY = Math.floor(worldY / TILE_SIZE)
-
         // Create a synthetic ground target object
         forceAttackTarget = {
           id: `ground_${targetTileX}_${targetTileY}_${Date.now()}`,
@@ -713,10 +722,49 @@ export class MouseHandler {
     }
 
     // Priority 2: Check other buildings (including vehicle factories)
+    const hasCommandableUnits = selectedUnits.some(unit => selectionManager.isCommandableUnit(unit))
+    if (!hasCommandableUnits) {
+      const tileX = Math.floor(worldX / TILE_SIZE)
+      const tileY = Math.floor(worldY / TILE_SIZE)
+      const wreck = findWreckAtTile(gameState, tileX, tileY)
+      if (wreck) {
+        this.selectWreck(wreck, selectedUnits, factories, selectionManager)
+        this.updateAGFCapability(selectedUnits)
+        return
+      }
+    }
+
     this.handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid)
   }
 
+  selectWreck(wreck, selectedUnits, factories, selectionManager) {
+    if (!wreck || !selectionManager) {
+      return
+    }
+
+    selectedUnits.forEach(unit => {
+      if (unit && typeof unit === 'object') {
+        unit.selected = false
+      }
+    })
+    selectedUnits.length = 0
+
+    if (factories) {
+      factories.forEach(factory => { factory.selected = false })
+    }
+
+    if (gameState.buildings && Array.isArray(gameState.buildings)) {
+      gameState.buildings.forEach(building => { building.selected = false })
+    }
+
+    selectionManager.clearAttackGroupTargets()
+    gameState.selectedWreckId = wreck.id
+    gameState.attackGroupMode = false
+    gameState.disableAGFRendering = false
+  }
+
   handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
+    selectionManager.clearWreckSelection()
     // Check for AGF capability first - if units are AGF capable, prioritize normal AGF behavior
     const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
     const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
@@ -818,6 +866,16 @@ export class MouseHandler {
       const hasSelectedRecoveryTanks = commandableUnits.some(unit => unit.type === 'recoveryTank')
 
       if (hasSelectedRecoveryTanks) {
+        const wreck = findWreckAtTile(gameState, tileX, tileY)
+        if (wreck) {
+          if (gameState.shiftKeyDown) {
+            unitCommands.handleRecoveryWreckRecycleCommand(commandableUnits, wreck, mapGrid)
+          } else {
+            unitCommands.handleRecoveryWreckTowCommand(commandableUnits, wreck, mapGrid)
+          }
+          return
+        }
+
         // Check if clicking on a friendly unit that needs repair
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer &&

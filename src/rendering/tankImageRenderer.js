@@ -124,6 +124,22 @@ function getTankVariant(tankType) {
   }
 }
 
+export function getTankVariantForType(tankType) {
+  return getTankVariant(tankType)
+}
+
+export function getTankImageAssets(tankType = 'tank_v1') {
+  if (!areTankImagesLoaded(tankType)) {
+    return null
+  }
+  const variant = getTankVariant(tankType)
+  const assets = tankImageCache[variant]
+  if (!assets || !assets.wagon || !assets.turret || !assets.barrel) {
+    return null
+  }
+  return assets
+}
+
 /**
  * Render a tank using 3 separate image assets
  * @param {CanvasRenderingContext2D} ctx - Canvas context
@@ -131,14 +147,23 @@ function getTankVariant(tankType) {
  * @param {number} centerX - Center X position in screen coordinates
  * @param {number} centerY - Center Y position in screen coordinates
  */
-export function renderTankWithImages(ctx, unit, centerX, centerY) {
-  if (!areTankImagesLoaded(unit.type)) {
+export function renderTankWithImages(ctx, unit, centerX, centerY, options = {}) {
+  const overrideImages = options.images || null
+  if (!overrideImages && !areTankImagesLoaded(unit.type)) {
     return false // Images not ready, caller should fall back to original rendering
   }
 
   const now = performance.now()
   const variant = getTankVariant(unit.type)
   const variantConfig = tankImageConfig[variant]
+
+  const wagonImg = overrideImages?.wagon || (tankImageCache[variant] && tankImageCache[variant].wagon)
+  const turretImg = overrideImages?.turret || (tankImageCache[variant] && tankImageCache[variant].turret)
+  const barrelImg = overrideImages?.barrel || (tankImageCache[variant] && tankImageCache[variant].barrel)
+
+  if (!wagonImg || !turretImg || !barrelImg) {
+    return false
+  }
 
   // Save context state
   ctx.save()
@@ -160,7 +185,6 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
 
   // Don't change aspect ratio - use original image dimensions scaled proportionally
   // Keep original size relationships - scale wagon to fit tile, others maintain relative size
-  const wagonImg = tankImageCache[variant].wagon
   const wagonScale = TILE_SIZE / Math.max(wagonImg.width, wagonImg.height)
   const wagonWidth = wagonImg.width * wagonScale
   const wagonHeight = wagonImg.height * wagonScale
@@ -182,7 +206,7 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
 
   // 2. Calculate recoil offset for turret/barrel
   let recoilOffset = 0
-  if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
+  if (!options.disableRecoil && unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
     const progress = (now - unit.recoilStartTime) / RECOIL_DURATION
     const easedProgress = 1 - Math.pow(1 - progress, 3)
     recoilOffset = RECOIL_DISTANCE * (1 - easedProgress)
@@ -214,7 +238,6 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   ctx.rotate(turretRotation)
 
   // Don't change aspect ratio for turret - maintain original size relationship to wagon
-  const turretImg = tankImageCache[variant].turret
   const turretScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const turretWidth = turretImg.width * turretScale
   const turretHeight = turretImg.height * turretScale
@@ -240,7 +263,6 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   const recoilLocalY = -recoilOffset * Math.sin(recoilOffsetRadians)
 
   // Don't change aspect ratio for barrel - barrel can extend beyond tile (this is OK)
-  const barrelImg = tankImageCache[variant].barrel
   const barrelScale = wagonScale // Use same scale as wagon to maintain original size relationships
   const barrelWidth = barrelImg.width * barrelScale
   const barrelHeight = barrelImg.height * barrelScale
@@ -255,7 +277,7 @@ export function renderTankWithImages(ctx, unit, centerX, centerY) {
   )
 
   // 7. Render muzzle flash if active
-  if (unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
+  if (!options.disableMuzzleFlash && unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
     const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
     const flashAlpha = 1 - flashProgress
     const flashSize = MUZZLE_FLASH_SIZE * (1 - flashProgress * 0.5)

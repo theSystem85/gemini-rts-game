@@ -32,3 +32,7 @@ export function renderTankerTruckWithImage(ctx, unit, centerX, centerY) {
   ctx.restore()
   return true
 }
+
+export function getTankerTruckBaseImage() {
+  return isTankerTruckImageLoaded() ? tankerImg : null
+}

@@ -62,6 +62,10 @@ export function renderHarvesterWithImage(ctx, unit, centerX, centerY) {
   return true
 }
 
+export function getHarvesterBaseImage() {
+  return isHarvesterImageLoaded() ? harvesterImg : null
+}
+
 function renderHarvestingSparks(ctx, width, height) {
   const now = performance.now()
   const startX = (14 - harvesterImg.width / 2) * (width / harvesterImg.width)

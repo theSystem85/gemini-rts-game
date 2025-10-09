@@ -7,6 +7,12 @@ import { cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
 import { showNotification } from '../ui/notifications.js'
 import { units } from '../main.js'
+import {
+  getWreckById,
+  findNearestWorkshop,
+  releaseWreckAssignment,
+  getRecycleDurationForWreck
+} from '../game/unitWreckManager.js'
 
 export class UnitCommandsHandler {
 
@@ -22,6 +28,26 @@ export class UnitCommandsHandler {
     // Only clear attack group targets when explicitly requested (not based on attack queue status)
     // This allows the indicators to persist until user performs a different action
     gameState.attackGroupTargets = []
+  }
+
+  cancelRecoveryTask(unit) {
+    if (!unit || unit.type !== 'recoveryTank' || !unit.recoveryTask) {
+      return
+    }
+
+    const wreck = getWreckById(gameState, unit.recoveryTask.wreckId)
+    if (wreck) {
+      if (wreck.assignedTankId === unit.id) {
+        releaseWreckAssignment(wreck)
+      }
+      if (wreck.towedBy === unit.id) {
+        wreck.towedBy = null
+      }
+    }
+
+    unit.recoveryTask = null
+    unit.towedWreck = null
+    unit.recoveryProgress = 0
   }
 
   handleMovementCommand(selectedUnits, targetX, targetY, mapGrid, skipQueueClear = false) {
@@ -52,6 +78,7 @@ export class UnitCommandsHandler {
 
     if (!skipQueueClear) {
       unitsToCommand.forEach(unit => {
+        this.cancelRecoveryTask(unit)
         unit.commandQueue = []
         unit.currentCommand = null
       })
@@ -180,6 +207,7 @@ export class UnitCommandsHandler {
 
     if (!skipQueueClear) {
       selectedUnits.forEach(unit => {
+        this.cancelRecoveryTask(unit)
         unit.commandQueue = []
         unit.currentCommand = null
       })
@@ -684,6 +712,148 @@ export class UnitCommandsHandler {
       }
     })
 
+    playSound('movement', 0.5)
+  }
+
+  handleRecoveryWreckTowCommand(selectedUnits, wreck, mapGrid) {
+    if (!wreck) return
+    const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
+    if (recoveryTanks.length === 0) return
+
+    if (wreck.assignedTankId) {
+      const assignedTankAlive = units.some(
+        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
+      )
+      if (!assignedTankAlive) {
+        releaseWreckAssignment(wreck)
+      }
+    }
+
+    if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
+      showNotification('Wreck already assigned to another recovery tank.', 2000)
+      return
+    }
+
+    const availableTank = recoveryTanks.find(tank => !tank.recoveryTask || tank.recoveryTask.wreckId === wreck.id)
+    if (!availableTank) {
+      showNotification('All selected recovery tanks are busy.', 2000)
+      return
+    }
+
+    const nearestWorkshop = findNearestWorkshop(gameState, availableTank.owner, { x: availableTank.tileX, y: availableTank.tileY })
+    if (!nearestWorkshop) {
+      showNotification('No workshop available for recovery!', 2000)
+      return
+    }
+
+    const candidatePositions = [
+      { x: wreck.tileX, y: wreck.tileY },
+      { x: wreck.tileX + 1, y: wreck.tileY },
+      { x: wreck.tileX - 1, y: wreck.tileY },
+      { x: wreck.tileX, y: wreck.tileY + 1 },
+      { x: wreck.tileX, y: wreck.tileY - 1 }
+    ]
+
+    let assignedPath = null
+    let destination = null
+    for (const pos of candidatePositions) {
+      if (pos.x < 0 || pos.y < 0 || pos.x >= mapGrid[0].length || pos.y >= mapGrid.length) {
+        continue
+      }
+      const path = findPath({ x: availableTank.tileX, y: availableTank.tileY }, pos, mapGrid, gameState.occupancyMap)
+      if (path && path.length > 0) {
+        assignedPath = path
+        destination = pos
+        break
+      }
+    }
+
+    if (!assignedPath || !destination) {
+      showNotification('Cannot reach wreck location.', 2000)
+      return
+    }
+
+    this.cancelRecoveryTask(availableTank)
+    availableTank.guardMode = false
+    availableTank.guardTarget = null
+    availableTank.path = assignedPath.slice(1)
+    availableTank.moveTarget = { x: destination.x, y: destination.y }
+    availableTank.recoveryTask = {
+      mode: 'tow',
+      wreckId: wreck.id,
+      state: 'movingToWreck',
+      workshopId: nearestWorkshop.workshop.id,
+      workshopEntry: nearestWorkshop.entryTile
+    }
+    wreck.assignedTankId = availableTank.id
+    playSound('movement', 0.5)
+  }
+
+  handleRecoveryWreckRecycleCommand(selectedUnits, wreck, mapGrid) {
+    if (!wreck) return
+    const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
+    if (recoveryTanks.length === 0) return
+
+    if (wreck.assignedTankId) {
+      const assignedTankAlive = units.some(
+        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
+      )
+      if (!assignedTankAlive) {
+        releaseWreckAssignment(wreck)
+      }
+    }
+
+    if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
+      showNotification('Wreck already being processed.', 2000)
+      return
+    }
+
+    const availableTank = recoveryTanks.find(tank => !tank.recoveryTask || tank.recoveryTask.wreckId === wreck.id)
+    if (!availableTank) {
+      showNotification('All selected recovery tanks are busy.', 2000)
+      return
+    }
+
+    const candidatePositions = [
+      { x: wreck.tileX, y: wreck.tileY },
+      { x: wreck.tileX + 1, y: wreck.tileY },
+      { x: wreck.tileX - 1, y: wreck.tileY },
+      { x: wreck.tileX, y: wreck.tileY + 1 },
+      { x: wreck.tileX, y: wreck.tileY - 1 }
+    ]
+
+    let assignedPath = null
+    let destination = null
+    for (const pos of candidatePositions) {
+      if (pos.x < 0 || pos.y < 0 || pos.x >= mapGrid[0].length || pos.y >= mapGrid.length) {
+        continue
+      }
+      const path = findPath({ x: availableTank.tileX, y: availableTank.tileY }, pos, mapGrid, gameState.occupancyMap)
+      if (path && path.length > 0) {
+        assignedPath = path
+        destination = pos
+        break
+      }
+    }
+
+    if (!assignedPath || !destination) {
+      showNotification('Cannot reach wreck location.', 2000)
+      return
+    }
+
+    this.cancelRecoveryTask(availableTank)
+    availableTank.guardMode = false
+    availableTank.guardTarget = null
+    availableTank.path = assignedPath.slice(1)
+    availableTank.moveTarget = { x: destination.x, y: destination.y }
+    const recycleDuration = getRecycleDurationForWreck(wreck)
+    availableTank.recoveryTask = {
+      mode: 'recycle',
+      wreckId: wreck.id,
+      state: 'movingToWreck',
+      recycleDuration
+    }
+    wreck.assignedTankId = availableTank.id
     playSound('movement', 0.5)
   }
 

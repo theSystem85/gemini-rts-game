@@ -8,6 +8,7 @@ import { calculateHitZoneDamageMultiplier } from './game/hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './game/soundCooldownManager.js'
 import { updateUnitSpeedModifier, awardExperience } from './utils.js'
 import { markBuildingForRepairPause } from './buildings.js'
+import { applyDamageToWreck } from './game/unitWreckManager.js'
 
 export const explosions = [] // Global explosion effects for rocket impacts
 
@@ -101,6 +102,31 @@ export function triggerExplosion(
       }
     }
   })
+
+  if (Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
+    for (let i = gameState.unitWrecks.length - 1; i >= 0; i--) {
+      const wreck = gameState.unitWrecks[i]
+      if (!wreck || wreck.health <= 0) continue
+
+      const dx = (wreck.x + TILE_SIZE / 2) - x
+      const dy = (wreck.y + TILE_SIZE / 2) - y
+      const distance = Math.hypot(dx, dy)
+
+      if (distance < explosionRadius) {
+        let damage
+        if (constantDamage) {
+          damage = baseDamage
+        } else {
+          const falloff = 1 - distance / explosionRadius
+          damage = Math.round(baseDamage * falloff * 0.5)
+        }
+
+        if (damage > 0) {
+          applyDamageToWreck(wreck, damage, gameState)
+        }
+      }
+    }
+  }
 
   // Apply damage to nearby factories
   factories.forEach(factory => {

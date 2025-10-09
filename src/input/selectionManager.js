@@ -11,6 +11,10 @@ export class SelectionManager {
     this.doubleClickThreshold = 300 // milliseconds
   }
 
+  clearWreckSelection() {
+    gameState.selectedWreckId = null
+  }
+
   // Helper method to clear attack group targets when selection changes
   clearAttackGroupTargets() {
     if (gameState.attackGroupTargets && gameState.attackGroupTargets.length > 0) {
@@ -52,6 +56,7 @@ export class SelectionManager {
   }
 
   handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
+    this.clearWreckSelection()
     const currentTime = performance.now()
     const isDoubleClick = this.lastClickedUnit === clickedUnit &&
                           (currentTime - this.lastClickTime) < this.doubleClickThreshold
@@ -140,6 +145,7 @@ export class SelectionManager {
   }
 
   handleFactorySelection(selectedFactory, e, units, selectedUnits) {
+    this.clearWreckSelection()
     if (e.shiftKey) {
       // Shift+click on factory: Add/remove factory to/from current selection
       if (selectedFactory.selected) {
@@ -175,6 +181,7 @@ export class SelectionManager {
   }
 
   handleBuildingSelection(selectedBuilding, e, units, selectedUnits) {
+    this.clearWreckSelection()
     if (e.shiftKey) {
       // Shift+click on building: Add/remove building to/from current selection
       if (selectedBuilding.selected) {
@@ -216,6 +223,7 @@ export class SelectionManager {
 
   handleBoundingBoxSelection(units, factories, selectedUnits, selectionStart, selectionEnd) {
     try {
+      this.clearWreckSelection()
       const x1 = Math.min(selectionStart.x, selectionEnd.x)
       const y1 = Math.min(selectionStart.y, selectionEnd.y)
       const x2 = Math.max(selectionStart.x, selectionEnd.x)

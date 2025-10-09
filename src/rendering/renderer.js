@@ -18,6 +18,7 @@ import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
 import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
 import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
 import { preloadRecoveryTankImage } from './recoveryTankImageRenderer.js'
+import { WreckRenderer } from './wreckRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -34,6 +35,7 @@ export class Renderer {
     this.pathPlanningRenderer = new PathPlanningRenderer()
     this.harvesterHUD = new HarvesterHUD()
     this.dangerZoneRenderer = new DangerZoneRenderer()
+    this.wreckRenderer = new WreckRenderer()
   }
 
   // Initialize texture loading
@@ -144,6 +146,7 @@ export class Renderer {
     this.buildingRenderer.renderBases(gameCtx, buildings, mapGrid, scrollOffset)
     // Render initial construction yards using the same renderer
     this.buildingRenderer.renderBases(gameCtx, factories, mapGrid, scrollOffset)
+    this.wreckRenderer.render(gameCtx, gameState.unitWrecks || [], scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
 
