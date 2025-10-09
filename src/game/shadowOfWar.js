@@ -1,11 +1,14 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG } from '../config.js'
 import { buildingData } from '../buildings.js'
 
-const DEFAULT_NON_COMBAT_RANGE = 2
-const ROCKET_RANGE_MULTIPLIER = 1.5
-const TILE_PADDING = 0.5
-const INITIAL_BASE_DISCOVERY_RADIUS = 10
-const BASE_VISIBILITY_BORDER = 4
+const {
+  defaultNonCombatRange = 2,
+  rocketRangeMultiplier = 1.5,
+  tilePadding = 0.5,
+  initialBaseDiscoveryRadius = 10,
+  baseVisibilityBorder = 4,
+  harvesterRange = 5
+} = SHADOW_OF_WAR_CONFIG
 
 const DEFENSIVE_BUILDING_TYPES = new Set([
   'turretGunV1',
@@ -96,6 +99,28 @@ function isBaseStructure(structure) {
   return BASE_BUILDING_TYPES.has(type)
 }
 
+function getBuildingPassiveDiscoveryRange(structure, width, height) {
+  if (!structure) return BUILDING_PROXIMITY_RANGE
+
+  const directRadius = [
+    structure.passiveDiscoveryRadius,
+    structure.discoveryRadius,
+    structure.visibilityRadius,
+    structure.visionRadius
+  ].find(value => typeof value === 'number' && value >= 0)
+
+  if (typeof directRadius === 'number') {
+    return directRadius
+  }
+
+  if (isBaseStructure(structure)) {
+    const footprintRadius = Math.max(width, height) / 2
+    return footprintRadius + baseVisibilityBorder
+  }
+
+  return BUILDING_PROXIMITY_RANGE
+}
+
 function getStructureFireRange(structure) {
   if (!structure) return 0
   if (typeof structure.fireRange === 'number') {
@@ -141,7 +166,7 @@ function getUnitVisionRange(unit) {
   if (!unit) return 0
   switch (unit.type) {
     case 'rocketTank':
-      return Math.ceil(TANK_FIRE_RANGE * ROCKET_RANGE_MULTIPLIER)
+      return Math.ceil(TANK_FIRE_RANGE * rocketRangeMultiplier)
     case 'tank':
     case 'tank_v1':
     case 'tank-v2':
@@ -151,9 +176,10 @@ function getUnitVisionRange(unit) {
     case 'recoveryTank':
       return TANK_FIRE_RANGE
     case 'harvester':
+      return harvesterRange
     case 'ambulance':
     case 'tankerTruck':
-      return DEFAULT_NON_COMBAT_RANGE
+      return defaultNonCombatRange
     default:
       return TANK_FIRE_RANGE
   }
@@ -167,7 +193,7 @@ function applyVisibility(visibilityMap, centerX, centerY, rangeTiles) {
 
   const radius = Math.max(0, rangeTiles)
   const radiusCeil = Math.ceil(radius)
-  const limitSq = (radius + TILE_PADDING) * (radius + TILE_PADDING)
+  const limitSq = (radius + tilePadding) * (radius + tilePadding)
 
   const minY = Math.max(0, Math.floor(centerY - radiusCeil))
   const maxY = Math.min(height - 1, Math.ceil(centerY + radiusCeil))
@@ -200,7 +226,7 @@ function markDiscoveredArea(visibilityMap, centerX, centerY, rangeTiles) {
 
   const radius = Math.max(0, rangeTiles)
   const radiusCeil = Math.ceil(radius)
-  const limitSq = (radius + TILE_PADDING) * (radius + TILE_PADDING)
+  const limitSq = (radius + tilePadding) * (radius + tilePadding)
 
   const minY = Math.max(0, Math.floor(centerY - radiusCeil))
   const maxY = Math.min(height - 1, Math.ceil(centerY + radiusCeil))
@@ -238,7 +264,7 @@ function markInitialBaseDiscovery(gameState) {
 
     const centerX = building.x + building.width / 2
     const centerY = building.y + building.height / 2
-    markDiscoveredArea(gameState.visibilityMap, centerX, centerY, INITIAL_BASE_DISCOVERY_RADIUS)
+    markDiscoveredArea(gameState.visibilityMap, centerX, centerY, initialBaseDiscoveryRadius)
   })
 }
 
@@ -270,14 +296,17 @@ export function updateShadowOfWar(gameState, units = [], mapGrid = gameState?.ma
     const centerX = rawX + width / 2
     const centerY = rawY + height / 2
 
+    const passiveRange = getBuildingPassiveDiscoveryRange(structure, width, height)
+
     if (isDefensiveStructure(structure)) {
       const range = Math.max(BUILDING_PROXIMITY_RANGE, getStructureFireRange(structure))
       applyVisibility(visibilityMap, centerX, centerY, range)
+      markDiscoveredArea(visibilityMap, centerX, centerY, range)
       applyRectVisibility(visibilityMap, startX, startY, width, height)
-    } else if (isBaseStructure(structure)) {
-      applyRectVisibility(visibilityMap, startX, startY, width, height, BASE_VISIBILITY_BORDER)
     } else {
-      applyVisibility(visibilityMap, centerX, centerY, BUILDING_PROXIMITY_RANGE)
+      const visibilityRange = Math.max(passiveRange, BUILDING_PROXIMITY_RANGE)
+      applyVisibility(visibilityMap, centerX, centerY, visibilityRange)
+      markDiscoveredArea(visibilityMap, centerX, centerY, visibilityRange)
       applyRectVisibility(visibilityMap, startX, startY, width, height)
     }
   })

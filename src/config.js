@@ -121,6 +121,16 @@ export const TANK_FIRE_RANGE = 9
 // Maximum Manhattan distance for new buildings to stay connected
 export const BUILDING_PROXIMITY_RANGE = 2
 
+// Shadow of War configuration
+export const SHADOW_OF_WAR_CONFIG = {
+  tilePadding: 0.5,
+  rocketRangeMultiplier: 1.5,
+  defaultNonCombatRange: 2,
+  harvesterRange: 5,
+  initialBaseDiscoveryRadius: 10,
+  baseVisibilityBorder: 4
+}
+
 // Tank constants
 export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
 export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
