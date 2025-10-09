@@ -2,6 +2,19 @@
 import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 
+const CURSOR_CLASS_NAMES = [
+  'repair-mode',
+  'repair-blocked-mode',
+  'sell-mode',
+  'sell-blocked-mode',
+  'move-mode',
+  'move-into-mode',
+  'move-blocked-mode',
+  'attack-mode',
+  'attack-blocked-mode',
+  'guard-mode'
+]
+
 export class CursorManager {
   constructor() {
     this.isOverGameCanvas = false
@@ -23,6 +36,32 @@ export class CursorManager {
     this.isOverEnemyOutOfRange = false
     this.isInArtilleryRange = false
     this.isOutOfArtilleryRange = false
+    this.activeCursorStyle = ''
+    this.activeCursorClasses = new Set()
+  }
+
+  applyCursor(gameCanvas, cursorStyle, classNames = []) {
+    const desiredClasses = new Set(
+      classNames.filter((className) => CURSOR_CLASS_NAMES.includes(className))
+    )
+
+    for (const className of CURSOR_CLASS_NAMES) {
+      const shouldHave = desiredClasses.has(className)
+      const hasClass = this.activeCursorClasses.has(className)
+
+      if (shouldHave && !hasClass) {
+        gameCanvas.classList.add(className)
+        this.activeCursorClasses.add(className)
+      } else if (!shouldHave && hasClass) {
+        gameCanvas.classList.remove(className)
+        this.activeCursorClasses.delete(className)
+      }
+    }
+
+    if (this.activeCursorStyle !== cursorStyle) {
+      gameCanvas.style.cursor = cursorStyle
+      this.activeCursorStyle = cursorStyle
+    }
   }
 
   // Function to check if a location is a blocked tile (water, rock, building)
@@ -71,6 +110,11 @@ export class CursorManager {
     const x = e.clientX
     const y = e.clientY
 
+    const setCursor = (style, classes = []) => {
+      const classList = Array.isArray(classes) ? classes.filter(Boolean) : [classes].filter(Boolean)
+      this.applyCursor(gameCanvas, style, classList)
+    }
+
     // Check if cursor is over the game canvas
     this.isOverGameCanvas = (
       x >= rect.left &&
@@ -109,25 +153,9 @@ export class CursorManager {
     this.isOverRecoveryTank = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
-      // Calculate AGF capability early to check if recovery tank interactions should be disabled
-      const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
-      const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
-        unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
-      )
-      const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit =>
-        (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
-        (unit.id && (unit.id === gameState.humanPlayer))
-      )
-      const isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
-                          !gameState.buildingPlacementMode &&
-                          !gameState.repairMode &&
-                          !gameState.sellMode &&
-                          !gameState.attackGroupMode
-
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
-      const hasSelectedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance')
       const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics >= 4)
       const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
       // Check for recovery tank interactions
@@ -339,39 +367,23 @@ export class CursorManager {
 
     // If not over the game canvas, just use default cursor
     if (!this.isOverGameCanvas) {
-      gameCanvas.style.cursor = 'default'
-      // Remove all cursor classes
-      gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode')
+      setCursor('default')
       return
     }
-
-    // Apply CSS classes for cursor styles (will work with external SVG files)
-    // Clear all cursor classes first
-    gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode', 'sell-mode', 'sell-blocked-mode')
 
     // REPAIR MODE TAKES PRIORITY
     if (gameState.repairMode) {
       // Use CSS class for cursors and hide system cursor
-      gameCanvas.style.cursor = 'none'
-
-      if (this.isOverRepairableBuilding) {
-        gameCanvas.classList.add('repair-mode')
-      } else {
-        gameCanvas.classList.add('repair-blocked-mode')
-      }
+      const cursorClass = this.isOverRepairableBuilding ? 'repair-mode' : 'repair-blocked-mode'
+      setCursor('none', cursorClass)
       return // Exit early to prevent other cursors from showing
     }
 
     // SELL MODE TAKES SECOND PRIORITY
     if (gameState.sellMode) {
       // Use CSS class for cursors and hide system cursor
-      gameCanvas.style.cursor = 'none'
-
-      if (this.isOverSellableBuilding) {
-        gameCanvas.classList.add('sell-mode')
-      } else {
-        gameCanvas.classList.add('sell-blocked-mode')
-      }
+      const cursorClass = this.isOverSellableBuilding ? 'sell-mode' : 'sell-blocked-mode'
+      setCursor('none', cursorClass)
       return // Exit early to prevent other cursors from showing
     }
 
@@ -379,9 +391,6 @@ export class CursorManager {
     if (selectedUnits.length > 0) {
       const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
-
-      // Clear all cursor classes first
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
 
       // CHECK FOR AGF MODE CAPABILITY FIRST - but allow recovery tank interactions to override
       const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
@@ -401,18 +410,15 @@ export class CursorManager {
       // Check for recovery tank interactions first - these take priority over AGF
       if (this.isOverRepairableUnit) {
         // Over repairable unit with recovery tanks selected - show move into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
         return // Exit early - recovery tank interaction takes priority
       } else if (this.isOverRecoveryTank) {
         // Over recovery tank with damaged units selected - show move into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
         return // Exit early - recovery tank interaction takes priority
       } else if (this.isOverPlayerWorkshop) {
         // Damaged units or tankers over workshop - highest priority move-into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
         return
       }
 
@@ -420,19 +426,16 @@ export class CursorManager {
       if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
         if (this.isOverEnemy) {
           // Over enemy - use attack cursor
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('attack-mode')
+          setCursor('none', 'attack-mode')
         } else if (this.isOverBlockedTerrain) {
           // Over blocked terrain - use move-blocked cursor
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('move-blocked-mode')
+          setCursor('none', 'move-blocked-mode')
         } else if (!gameState.isRightDragging) {
           // Normal move cursor for AGF-capable units
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('move-mode')
+          setCursor('none', 'move-mode')
         } else {
           // Right-drag scrolling
-          gameCanvas.style.cursor = 'grabbing'
+          setCursor('grabbing')
         }
         return // Exit early to prevent other interactions
       }
@@ -445,13 +448,11 @@ export class CursorManager {
         if (isVehicleFactory) {
           // Vehicle factory uses move cursor for rally point placement
           if (this.isOverBlockedTerrain) {
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-blocked-mode')
+            setCursor('none', 'move-blocked-mode')
           } else if (!gameState.isRightDragging) {
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-mode')
+            setCursor('none', 'move-mode')
           } else {
-            gameCanvas.style.cursor = 'grabbing'
+            setCursor('grabbing')
           }
         } else {
           // Other buildings: check if artillery turret is selected for range-based cursor
@@ -474,28 +475,24 @@ export class CursorManager {
             // Artillery turret selected - show range-based cursor
             if (this.isOverEnemyInRange) {
               // Enemy within range - show attack cursor
-              gameCanvas.style.cursor = 'none'
-              gameCanvas.classList.add('attack-mode')
+              setCursor('none', 'attack-mode')
             } else if (this.isOverEnemyOutOfRange) {
               // Enemy out of range - show blocked attack cursor
-              gameCanvas.style.cursor = 'none'
-              gameCanvas.classList.add('attack-blocked-mode')
+              setCursor('none', 'attack-blocked-mode')
             } else if (this.isOverEnemy) {
               // Over enemy but range logic didn't trigger - fallback to attack cursor for now
-              gameCanvas.style.cursor = 'none'
-              gameCanvas.classList.add('attack-mode')
+              setCursor('none', 'attack-mode')
             } else {
-              gameCanvas.style.cursor = 'default'
+              setCursor('default')
             }
           } else {
             // Other buildings: always show default cursor
-            gameCanvas.style.cursor = 'default'
+            setCursor('default')
           }
         }
       } else if (this.isGuardMode) {
         // Guard mode - show guard cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('guard-mode')
+        setCursor('none', 'guard-mode')
       } else if (this.isForceAttackMode) {
         // Force attack mode - check if artillery turret is selected for range-based cursor
         const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
@@ -518,59 +515,46 @@ export class CursorManager {
           // Artillery turret selected in force attack mode - use range-based cursor
           if (this.isInArtilleryRange) {
             // Within artillery range - show attack cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           } else if (this.isOutOfArtilleryRange) {
             // Out of artillery range - show blocked attack cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-blocked-mode')
+            setCursor('none', 'attack-blocked-mode')
           } else {
             // Default force attack cursor when range not calculated
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           }
         } else {
           // Regular force attack mode - use standard attack cursor
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('attack-mode')
+          setCursor('none', 'attack-mode')
         }
       } else if (this.isOverRefuelableUnit) {
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverFriendlyUnit) {
         // Over friendly unit - use normal arrow cursor
-        gameCanvas.style.cursor = 'default'
+        setCursor('default')
       } else if (this.isOverEnemy) {
         // Over enemy - use attack cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        setCursor('none', 'attack-mode')
       } else if (this.isOverHealableUnit) {
         // Over healable unit with ambulances selected - show move into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverPlayerHospital) {
         // Over hospital with not fully loaded ambulances selected - show move into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverPlayerGasStation) {
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverPlayerRefinery) {
         // Over player refinery with harvesters selected - show move into cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-into-mode')
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverOreTile) {
         // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('attack-mode')
+        setCursor('none', 'attack-mode')
       } else if (this.isOverBlockedTerrain) {
         // Over blocked terrain - use move-blocked cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-blocked-mode')
+        setCursor('none', 'move-blocked-mode')
       } else if (!gameState.isRightDragging) {
         // Normal move cursor
-        gameCanvas.style.cursor = 'none'
-        gameCanvas.classList.add('move-mode')
+        setCursor('none', 'move-mode')
       } else {
         // Check if artillery turret is selected and handle special cursor logic
         const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
@@ -593,79 +577,62 @@ export class CursorManager {
           // Artillery turret is selected - apply range-based cursor logic
           if (this.isOverEnemyInRange) {
             // Enemy within range - show attack cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           } else if (this.isOverEnemyOutOfRange) {
             // Enemy out of range - show blocked attack cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-blocked-mode')
+            setCursor('none', 'attack-blocked-mode')
           } else if (this.isOverEnemy) {
             // Over enemy but range logic didn't trigger - fallback to attack cursor for now
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           } else if (this.isOverPlayerRefinery) {
             // Over player refinery with harvesters selected - use attack cursor to indicate force unload
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           } else if (this.isOverOreTile) {
             // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('attack-mode')
+            setCursor('none', 'attack-mode')
           } else if (this.isOverBlockedTerrain) {
             // Over blocked terrain - use move-blocked cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-blocked-mode')
+            setCursor('none', 'move-blocked-mode')
           } else if (!gameState.isRightDragging) {
             // Normal move cursor
-            gameCanvas.style.cursor = 'none'
-            gameCanvas.classList.add('move-mode')
+            setCursor('none', 'move-mode')
           } else {
             // Right-drag scrolling
-            gameCanvas.style.cursor = 'grabbing'
-            gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+            setCursor('grabbing')
           }
         } else if (this.isOverEnemy) {
           // Over enemy - use attack cursor (normal units logic)
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('attack-mode')
+          setCursor('none', 'attack-mode')
         } else if (this.isOverPlayerRefinery) {
           // Over player refinery with harvesters selected - use attack cursor to indicate force unload
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('attack-mode')
+          setCursor('none', 'attack-mode')
         } else if (this.isOverOreTile) {
           // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('attack-mode')
+          setCursor('none', 'attack-mode')
         } else if (this.isOverBlockedTerrain) {
           // Over blocked terrain - use move-blocked cursor
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('move-blocked-mode')
+          setCursor('none', 'move-blocked-mode')
         } else if (!gameState.isRightDragging) {
           // Normal move cursor
-          gameCanvas.style.cursor = 'none'
-          gameCanvas.classList.add('move-mode')
+          setCursor('none', 'move-mode')
         } else {
           // Right-drag scrolling
-          gameCanvas.style.cursor = 'grabbing'
-          gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'attack-mode', 'attack-blocked-mode')
+          setCursor('grabbing')
         }
       }
     } else {
       // No units selected - use default cursor
-      gameCanvas.style.cursor = 'default'
-      gameCanvas.classList.remove('move-mode', 'move-blocked-mode', 'move-into-mode', 'attack-mode', 'attack-blocked-mode', 'guard-mode')
+      setCursor('default')
     }
   }
 
   updateForceAttackMode(isActive) {
-    const prev = this.isForceAttackMode
     this.isForceAttackMode = isActive
   }
 
   updateGuardMode(isActive) {
-    const prev = this.isGuardMode
-    this.isGuardMode = isActive
-    if (prev !== isActive) {
+    if (this.isGuardMode !== isActive) {
+      this.isGuardMode = isActive
       console.log(`[GMF] Guard mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
     }
   }
