@@ -2,7 +2,7 @@
 import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD, CHECKPOINT_ROUTE_MIN_DISTANCE } from '../config.js'
 import { findPath } from '../units.js'
 import { logPerformance } from '../performanceUtils.js'
-import { planPathWithCheckpoints } from './checkpointNetwork.js'
+import { planPathWithCheckpoints, buildCheckpointNetwork } from './checkpointNetwork.js'
 
 // Simple in-memory cache for sharing A* paths between units
 const pathCache = new Map()
@@ -58,6 +58,14 @@ function getCachedPath(start, end, mapGrid, occupancyMap) {
 export const updateGlobalPathfinding = logPerformance(_updateGlobalPathfinding, false)
 function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
   const now = performance.now()
+
+  if (gameState.checkpointNetworkDirty) {
+    const sourceGrid = Array.isArray(mapGrid) && mapGrid.length > 0 ? mapGrid : gameState.mapGrid
+    if (sourceGrid && sourceGrid.length > 0 && sourceGrid[0].length > 0) {
+      gameState.checkpointNetwork = buildCheckpointNetwork(sourceGrid, gameState.factories || [])
+      gameState.checkpointNetworkDirty = false
+    }
+  }
 
   if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
     gameState.lastGlobalPathCalc = now

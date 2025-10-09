@@ -201,6 +201,7 @@ class Game {
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointNetworkDirty = false
     gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 
@@ -492,6 +493,7 @@ class Game {
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointNetworkDirty = false
     gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 
@@ -596,6 +598,7 @@ class Game {
     // Ensure no ore overlaps with buildings or factories
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointNetworkDirty = false
     gameState.checkpointTracksVisible = false
     updatePowerSupply(gameState.buildings, gameState)
 

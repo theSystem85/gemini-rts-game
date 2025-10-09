@@ -576,6 +576,8 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
       }
     }
   }
+
+  gameState.checkpointNetworkDirty = true
 }
 
 // Remove building from the map grid: restore original tiles and clear building flag
@@ -644,6 +646,8 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
       }
     }
   }
+
+  gameState.checkpointNetworkDirty = true
 }
 
 // Update the game's power supply

@@ -452,6 +452,7 @@ export function loadGame(key) {
     // Ensure no ore overlaps with buildings or factories after loading
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
     gameState.checkpointNetwork = buildCheckpointNetwork(mapGrid, factories)
+    gameState.checkpointNetworkDirty = false
     if (typeof gameState.checkpointTracksVisible !== 'boolean') {
       gameState.checkpointTracksVisible = false
     }

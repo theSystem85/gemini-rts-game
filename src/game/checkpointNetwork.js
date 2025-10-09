@@ -1,5 +1,20 @@
 import { findPath } from '../units.js'
 
+const MAX_EDGE_DISTANCE = 40
+const MAX_EDGES_PER_NODE = 6
+const EXTRA_EDGE_DISTANCE = 80
+
+function getDistance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+function ensureAdjacencyEntry(adjacency, nodeId) {
+  if (!adjacency.has(nodeId)) {
+    adjacency.set(nodeId, [])
+  }
+  return adjacency.get(nodeId)
+}
+
 const ORTHOGONAL_DIRS = [
   { x: 1, y: 0 },
   { x: -1, y: 0 },
@@ -9,6 +24,160 @@ const ORTHOGONAL_DIRS = [
 
 function isPassable(tile) {
   return tile && tile.type !== 'water' && tile.type !== 'rock' && !tile.building && !tile.seedCrystal
+}
+
+function connectNodes(mapGrid, start, end, edges, paths, adjacency, existingEdges, maxDistance) {
+  const key = [start.id, end.id].sort().join('-')
+  if (existingEdges.has(key)) return false
+
+  const distance = getDistance(start, end)
+  if (distance > maxDistance) return false
+
+  const path = findPath({ x: start.x, y: start.y }, { x: end.x, y: end.y }, mapGrid, null)
+  if (!path || path.length < 2) {
+    return false
+  }
+
+  existingEdges.add(key)
+
+  const forwardKey = `${start.id}-${end.id}`
+  const reverseKey = `${end.id}-${start.id}`
+  paths[forwardKey] = path
+  paths[reverseKey] = path.slice().reverse()
+
+  const cost = path.length
+
+  ensureAdjacencyEntry(adjacency, start.id).push({ id: end.id, cost, edgeKey: forwardKey })
+  ensureAdjacencyEntry(adjacency, end.id).push({ id: start.id, cost, edgeKey: reverseKey })
+
+  edges.push({ from: start.id, to: end.id, path, cost })
+  return true
+}
+
+function buildConnectivity(mapGrid, nodes, edges, paths, adjacency, existingEdges) {
+  if (nodes.length === 0) return
+  const visited = new Set()
+  const queue = [nodes[0].id]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (visited.has(current)) continue
+    visited.add(current)
+    const neighbors = adjacency.get(current) || []
+    neighbors.forEach(neighbor => {
+      if (!visited.has(neighbor.id)) {
+        queue.push(neighbor.id)
+      }
+    })
+  }
+
+  if (visited.size === nodes.length) {
+    return
+  }
+
+  const visitedNodes = nodes.filter(node => visited.has(node.id))
+  const unvisitedNodes = nodes.filter(node => !visited.has(node.id))
+
+  unvisitedNodes.forEach(unvisited => {
+    const candidates = visitedNodes
+      .map(candidate => ({ candidate, distance: getDistance(unvisited, candidate) }))
+      .sort((a, b) => a.distance - b.distance)
+
+    for (const { candidate } of candidates) {
+      let connected = connectNodes(
+        mapGrid,
+        unvisited,
+        candidate,
+        edges,
+        paths,
+        adjacency,
+        existingEdges,
+        EXTRA_EDGE_DISTANCE
+      )
+
+      if (!connected) {
+        connected = connectNodes(
+          mapGrid,
+          unvisited,
+          candidate,
+          edges,
+          paths,
+          adjacency,
+          existingEdges,
+          Infinity
+        )
+      }
+
+      if (connected) {
+        visited.add(unvisited.id)
+        visitedNodes.push(unvisited)
+        break
+      }
+    }
+  })
+}
+
+function findNetworkRoute(network, startId, endId) {
+  if (!network || !network.adjacency) return null
+  const adjacency = network.adjacency
+  const hasNode = (id) => {
+    if (typeof adjacency.has === 'function') {
+      return adjacency.has(id)
+    }
+    return Array.isArray(adjacency[id])
+  }
+  const getNeighbors = (id) => {
+    if (typeof adjacency.get === 'function') {
+      return adjacency.get(id) || []
+    }
+    return adjacency[id] || []
+  }
+
+  if (!hasNode(startId) || !hasNode(endId)) return null
+
+  const distances = new Map()
+  const previous = new Map()
+  const queue = []
+
+  distances.set(startId, 0)
+  queue.push({ id: startId, cost: 0 })
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.cost - b.cost)
+    const current = queue.shift()
+    if (!current) break
+    if (current.id === endId) break
+
+    const neighbors = getNeighbors(current.id)
+    neighbors.forEach(neighbor => {
+      const nextCost = current.cost + neighbor.cost
+      const best = distances.has(neighbor.id) ? distances.get(neighbor.id) : Infinity
+      if (nextCost < best) {
+        distances.set(neighbor.id, nextCost)
+        previous.set(neighbor.id, { id: current.id, edgeKey: neighbor.edgeKey })
+        queue.push({ id: neighbor.id, cost: nextCost })
+      }
+    })
+  }
+
+  if (!previous.has(endId) && startId !== endId) {
+    return null
+  }
+
+  const segments = []
+  let currentId = endId
+
+  while (currentId !== startId) {
+    const prev = previous.get(currentId)
+    if (!prev) {
+      return null
+    }
+    segments.push({ from: prev.id, to: currentId, edgeKey: prev.edgeKey })
+    currentId = prev.id
+  }
+
+  segments.reverse()
+  return segments
 }
 
 function addNode(nodes, x, y, type, label) {
@@ -168,21 +337,47 @@ function collectStreetIntersections(mapGrid) {
 function buildEdgeMap(mapGrid, nodes) {
   const edges = []
   const paths = {}
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const start = nodes[i]
-      const end = nodes[j]
-      const path = findPath({ x: start.x, y: start.y }, { x: end.x, y: end.y }, mapGrid, null)
-      if (path && path.length > 1) {
-        const key = `${start.id}-${end.id}`
-        const reverseKey = `${end.id}-${start.id}`
-        paths[key] = path
-        paths[reverseKey] = path.slice().reverse()
-        edges.push({ from: start.id, to: end.id, path })
+  const adjacency = new Map()
+  const existingEdges = new Set()
+
+  nodes.forEach((node, index) => {
+    ensureAdjacencyEntry(adjacency, node.id)
+
+    const candidates = nodes
+      .filter((candidate, candidateIndex) => candidateIndex !== index)
+      .map(candidate => ({
+        node: candidate,
+        distance: getDistance(node, candidate)
+      }))
+      .sort((a, b) => a.distance - b.distance)
+
+    let edgesAdded = 0
+
+    for (const candidate of candidates) {
+      const connected = connectNodes(
+        mapGrid,
+        node,
+        candidate.node,
+        edges,
+        paths,
+        adjacency,
+        existingEdges,
+        MAX_EDGE_DISTANCE
+      )
+
+      if (connected) {
+        edgesAdded++
+      }
+
+      if (edgesAdded >= MAX_EDGES_PER_NODE) {
+        break
       }
     }
-  }
-  return { edges, paths }
+  })
+
+  buildConnectivity(mapGrid, nodes, edges, paths, adjacency, existingEdges)
+
+  return { edges, paths, adjacency }
 }
 
 export function buildCheckpointNetwork(mapGrid, factories = []) {
@@ -196,11 +391,11 @@ export function buildCheckpointNetwork(mapGrid, factories = []) {
   collectStreetIntersections(mapGrid).forEach(node => addNode(nodes, node.x, node.y, node.type, node.label))
 
   if (nodes.length < 2) {
-    return { nodes, edges: [], paths: {} }
+    return { nodes, edges: [], paths: {}, adjacency: new Map(), routeCache: new Map() }
   }
 
-  const { edges, paths } = buildEdgeMap(mapGrid, nodes)
-  return { nodes, edges, paths }
+  const { edges, paths, adjacency } = buildEdgeMap(mapGrid, nodes)
+  return { nodes, edges, paths, adjacency, routeCache: new Map() }
 }
 
 function findClosestNode(point, nodes) {
@@ -253,10 +448,34 @@ export function planPathWithCheckpoints(start, target, mapGrid, occupancyMap, ne
     return []
   }
 
-  const pathKey = `${startNode.id}-${endNode.id}`
-  const networkPath = network.paths[pathKey]
-  if (!networkPath || networkPath.length === 0) {
-    return []
+  const routeKey = `${startNode.id}-${endNode.id}`
+  const routeCache = network.routeCache
+  let route = null
+
+  if (routeCache && typeof routeCache.get === 'function') {
+    const cached = routeCache.get(routeKey)
+    if (cached && cached.length > 0) {
+      route = cached.map(segment => ({ ...segment }))
+    }
+  }
+
+  if (!route) {
+    const computedRoute = findNetworkRoute(network, startNode.id, endNode.id)
+    if (!computedRoute || computedRoute.length === 0) {
+      return []
+    }
+    route = computedRoute
+
+    if (routeCache && typeof routeCache.set === 'function') {
+      const storedRoute = computedRoute.map(segment => ({ ...segment }))
+      routeCache.set(routeKey, storedRoute)
+      const reverseRoute = storedRoute.slice().reverse().map(segment => ({
+        from: segment.to,
+        to: segment.from,
+        edgeKey: `${segment.to}-${segment.from}`
+      }))
+      routeCache.set(`${endNode.id}-${startNode.id}`, reverseRoute)
+    }
   }
 
   let startSegment = []
@@ -269,11 +488,23 @@ export function planPathWithCheckpoints(start, target, mapGrid, occupancyMap, ne
     }
   }
 
+  const segments = []
+  route.forEach(segment => {
+    const edgePath = network.paths[segment.edgeKey]
+    if (edgePath && edgePath.length > 0) {
+      segments.push(edgePath)
+    }
+  })
+
+  if (segments.length === 0) {
+    return []
+  }
+
   const endSegment = findPath({ x: endNode.x, y: endNode.y }, target, mapGrid, occupancyMap)
   if (!endSegment || endSegment.length === 0) {
     return []
   }
 
-  const combined = combineSegments([startSegment, networkPath, endSegment])
+  const combined = combineSegments([startSegment, ...segments, endSegment])
   return combined
 }

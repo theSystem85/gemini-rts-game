@@ -167,5 +167,6 @@ export const gameState = {
   mapSeed: '1',
 
   // Static checkpoint network baked from the current map
-  checkpointNetwork: null
+  checkpointNetwork: null,
+  checkpointNetworkDirty: false
 }
