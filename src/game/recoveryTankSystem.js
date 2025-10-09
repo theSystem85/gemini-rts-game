@@ -2,13 +2,184 @@ import { TILE_SIZE } from '../config.js'
 import { playSound } from '../sound.js'
 import { getUnitCost } from '../utils.js'
 import { logPerformance } from '../performanceUtils.js'
+import { findPath, createUnit } from '../units.js'
+import {
+  getWreckById,
+  removeWreckById,
+  updateWreckPositionFromTank,
+  releaseWreckAssignment
+} from './unitWreckManager.js'
+
+const TOW_DISTANCE_THRESHOLD = TILE_SIZE * 0.6
+
+function distanceBetweenPoints(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by)
+}
+
+function handleTowTask(tank, task, wreck, units, gameState) {
+  const mapGrid = gameState.mapGrid
+  const occupancyMap = gameState.occupancyMap
+
+  if (task.state === 'movingToWreck') {
+    const tankCenterX = tank.x + TILE_SIZE / 2
+    const tankCenterY = tank.y + TILE_SIZE / 2
+    const wreckCenterX = wreck.x + TILE_SIZE / 2
+    const wreckCenterY = wreck.y + TILE_SIZE / 2
+    const dist = distanceBetweenPoints(tankCenterX, tankCenterY, wreckCenterX, wreckCenterY)
+
+    if (dist <= TOW_DISTANCE_THRESHOLD) {
+      tank.path = []
+      tank.moveTarget = null
+      tank.towedWreck = wreck
+      wreck.towedBy = tank.id
+      task.state = 'towingToWorkshop'
+
+      const path = findPath(
+        { x: tank.tileX, y: tank.tileY },
+        task.workshopEntry,
+        mapGrid,
+        occupancyMap
+      )
+
+      if (path && path.length > 0) {
+        tank.path = path.slice(1)
+        tank.moveTarget = { x: task.workshopEntry.x, y: task.workshopEntry.y }
+      } else {
+        releaseWreckAssignment(wreck)
+        tank.recoveryTask = null
+        tank.towedWreck = null
+        playSound('repairCancelled', 0.6)
+      }
+    }
+  } else if (task.state === 'towingToWorkshop') {
+    if (!tank.towedWreck) {
+      tank.towedWreck = wreck
+    }
+    updateWreckPositionFromTank(wreck, tank)
+
+    const workshop = (gameState.buildings || []).find(b => b.id === task.workshopId)
+    if (!workshop || workshop.health <= 0) {
+      releaseWreckAssignment(wreck)
+      tank.recoveryTask = null
+      tank.towedWreck = null
+      playSound('repairCancelled', 0.6)
+      return
+    }
+
+    const entryCenterX = (task.workshopEntry.x + 0.5) * TILE_SIZE
+    const entryCenterY = (task.workshopEntry.y + 0.5) * TILE_SIZE
+    const tankCenterX = tank.x + TILE_SIZE / 2
+    const tankCenterY = tank.y + TILE_SIZE / 2
+    const dist = distanceBetweenPoints(tankCenterX, tankCenterY, entryCenterX, entryCenterY)
+
+    if (dist <= TOW_DISTANCE_THRESHOLD) {
+      task.state = 'restoring'
+      finalizeRestoration(tank, wreck, units, gameState)
+    }
+  }
+}
+
+function finalizeRestoration(tank, wreck, units, gameState) {
+  if (!wreck) return
+  const dropTileX = tank.tileX
+  const dropTileY = tank.tileY
+
+  const restored = createUnit({ owner: tank.owner }, wreck.unitType, dropTileX, dropTileY, {
+    buildDuration: wreck.buildDuration
+  })
+
+  if (restored.crew) {
+    Object.keys(restored.crew).forEach(role => {
+      restored.crew[role] = false
+    })
+  }
+
+  restored.health = restored.maxHealth
+  restored.x = dropTileX * TILE_SIZE
+  restored.y = dropTileY * TILE_SIZE
+  restored.tileX = dropTileX
+  restored.tileY = dropTileY
+
+  units.push(restored)
+
+  const occupancyMap = gameState.occupancyMap
+  if (occupancyMap) {
+    const centerTileX = Math.floor((restored.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((restored.y + TILE_SIZE / 2) / TILE_SIZE)
+    if (
+      centerTileY >= 0 &&
+      centerTileY < occupancyMap.length &&
+      centerTileX >= 0 &&
+      centerTileX < occupancyMap[0].length
+    ) {
+      occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+    }
+  }
+
+  removeWreckById(gameState, wreck.id)
+  releaseWreckAssignment(wreck)
+  tank.recoveryTask = null
+  tank.towedWreck = null
+  tank.recoveryProgress = 0
+  playSound('repairFinished', 0.8)
+}
+
+function handleRecycleTask(tank, task, wreck, gameState, delta) {
+  if (task.state === 'movingToWreck') {
+    const tankCenterX = tank.x + TILE_SIZE / 2
+    const tankCenterY = tank.y + TILE_SIZE / 2
+    const wreckCenterX = wreck.x + TILE_SIZE / 2
+    const wreckCenterY = wreck.y + TILE_SIZE / 2
+    const dist = distanceBetweenPoints(tankCenterX, tankCenterY, wreckCenterX, wreckCenterY)
+
+    if (dist <= TOW_DISTANCE_THRESHOLD) {
+      tank.path = []
+      tank.moveTarget = null
+      task.state = 'recycling'
+      task.elapsed = 0
+      wreck.isBeingRecycled = true
+      wreck.recycleStartedAt = performance.now()
+      tank.recoveryProgress = 0
+    }
+  } else if (task.state === 'recycling') {
+    task.elapsed = (task.elapsed || 0) + delta
+    const progress = Math.min(task.elapsed / (task.recycleDuration || 1), 1)
+    tank.recoveryProgress = progress
+    if (progress >= 1) {
+      const removed = removeWreckById(gameState, wreck.id)
+      const valueSource = removed?.cost || getUnitCost(wreck.unitType)
+      const refund = Math.floor((valueSource || 0) * 0.33)
+      gameState.money += refund
+      if (typeof gameState.totalMoneyEarned === 'number') {
+        gameState.totalMoneyEarned += refund
+      }
+      releaseWreckAssignment(wreck)
+      tank.recoveryTask = null
+      tank.recoveryProgress = 0
+      playSound('deposit', 0.7)
+    }
+  }
+}
 
 export const updateRecoveryTankLogic = logPerformance(function(units, gameState, delta) {
   const tanks = units.filter(u => u.type === 'recoveryTank')
   if (tanks.length === 0) return
 
   tanks.forEach(tank => {
-    // Update towed unit position
+    if (tank.recoveryTask) {
+      const wreck = getWreckById(gameState, tank.recoveryTask.wreckId)
+      if (!wreck) {
+        tank.recoveryTask = null
+        tank.towedWreck = null
+        tank.recoveryProgress = 0
+      } else if (tank.recoveryTask.mode === 'tow') {
+        handleTowTask(tank, tank.recoveryTask, wreck, units, gameState)
+      } else if (tank.recoveryTask.mode === 'recycle') {
+        handleRecycleTask(tank, tank.recoveryTask, wreck, gameState, delta)
+      }
+    }
+
+    // Update towed unit position or wreck if applicable
     if (tank.towedUnit) {
       const t = tank.towedUnit
       t.x = tank.x
@@ -19,10 +190,20 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       // Update speed when towing
       const unitProps = tank.loadedSpeed || 0.33
       tank.speed = unitProps
+    } else if (tank.towedWreck) {
+      updateWreckPositionFromTank(tank.towedWreck, tank)
+      tank.speed = tank.loadedSpeed || 0.33
     } else {
       // Update speed when not towing
       const unitProps = tank.currentSpeed || 0.525
       tank.speed = unitProps
+    }
+
+    if (tank.recoveryTask) {
+      tank.repairTarget = null
+      tank.repairData = null
+      tank.repairStarted = false
+      return
     }
 
     const hasLoader = !(tank.crew && typeof tank.crew === 'object' && !tank.crew.loader)
@@ -107,7 +288,6 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
 
         if (gameState.money >= spend) {
           gameState.money -= spend
-          const oldHealth = target.health
           target.health = Math.min(target.health + heal, target.maxHealth)
 
           // console.log(`Repairing ${target.type}: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)} (+${heal.toFixed(1)} HP) cost: ${spend.toFixed(2)}`)

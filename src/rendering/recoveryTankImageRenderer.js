@@ -33,3 +33,7 @@ export function renderRecoveryTankWithImage(ctx, unit, centerX, centerY) {
   return true
 }
 
+export function getRecoveryTankBaseImage() {
+  return isRecoveryTankImageLoaded() ? image : null
+}
+

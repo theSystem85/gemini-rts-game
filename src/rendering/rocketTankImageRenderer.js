@@ -83,6 +83,10 @@ export function renderRocketTankWithImage(ctx, unit, centerX, centerY) {
   return true
 }
 
+export function getRocketTankBaseImage() {
+  return isRocketTankImageLoaded() ? rocketTankImg : null
+}
+
 export function getRocketSpawnPoint(unit, centerX, centerY) {
   if (!isRocketTankImageLoaded()) {
     const muzzleOffset = TILE_SIZE * 0.4

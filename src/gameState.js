@@ -33,6 +33,7 @@ export const gameState = {
   lastOreUpdate: performance.now(),
   explosions: [],  // Initialized empty explosions array for visual effects.
   smokeParticles: [], // Smoke particles emitted by damaged units
+  unitWrecks: [], // Destroyed unit remnants that can be recovered or recycled
   speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],

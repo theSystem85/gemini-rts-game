@@ -11,7 +11,7 @@ import {
   TANKER_SUPPLY_CAPACITY
 } from './config.js'
 import { logPerformance } from './performanceUtils.js'
-import { getUniqueId, updateUnitSpeedModifier } from './utils.js'
+import { getUniqueId, updateUnitSpeedModifier, getUnitCost } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { gameState } from './gameState.js'
 
@@ -552,7 +552,7 @@ function smoothPath(path, mapGrid, occupancyMap) {
 
 // Spawns a unit near the specified factory.
 // Accepts an optional rallyPointTarget from the specific spawning factory.
-export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null, occupancyMap = gameState.occupancyMap) {
+export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null, occupancyMap = gameState.occupancyMap, options = {}) {
   // Default spawn position is the center below the factory
   const spawnX = factory.x + Math.floor(factory.width / 2)
   const spawnY = factory.y + factory.height
@@ -584,7 +584,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     return null // Return null if no position is available
   }
 
-  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y)
+  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y, options)
   if (occupancyMap) {
     // Use center coordinates for occupancy map consistency
     const centerTileX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -629,8 +629,16 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   return newUnit
 }
 
+function determineBuildDuration(unitType, providedDuration) {
+  if (providedDuration && providedDuration > 0) {
+    return providedDuration
+  }
+  const cost = getUnitCost(unitType) || 500
+  return Math.max(1000, 3000 * (cost / 500))
+}
+
 // Helper to create the actual unit object
-export function createUnit(factory, unitType, x, y) {
+export function createUnit(factory, unitType, x, y, options = {}) {
   // Get base unit properties
   const baseProps = UNIT_PROPERTIES.base
 
@@ -671,7 +679,8 @@ export function createUnit(factory, unitType, x, y) {
     guardTarget: null,
     // Command queue for path planning feature
     commandQueue: [],
-    currentCommand: null
+    currentCommand: null,
+    buildDuration: determineBuildDuration(actualType, options.buildDuration || null)
   }
 
   // Gas system

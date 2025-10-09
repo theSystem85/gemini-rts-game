@@ -6,6 +6,7 @@ import { playSound, playPositionalSound, audioContext } from '../sound.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
+import { registerUnitWreck } from './unitWreckManager.js'
 
 /**
  * Updates map scrolling with inertia
@@ -170,6 +171,9 @@ export function cleanupDestroyedUnits(units, gameState) {
   for (let i = units.length - 1; i >= 0; i--) {
     if (units[i].health <= 0) {
       const unit = units[i]
+
+      // Register a wreck so the destroyed unit leaves recoverable remnants
+      registerUnitWreck(unit, gameState)
 
       // Special explosion logic for tanker trucks based on remaining supply gas
       if (unit.type === 'tankerTruck') {

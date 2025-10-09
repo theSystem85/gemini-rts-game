@@ -568,6 +568,7 @@ export class UnitRenderer {
     this.renderGroupNumber(ctx, unit, scrollOffset)
     this.renderCrewStatus(ctx, unit, scrollOffset)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
+    this.renderRecoveryProgressBar(ctx, unit, scrollOffset)
   }
 
   renderBases(ctx, units, scrollOffset) {
@@ -578,8 +579,49 @@ export class UnitRenderer {
 
   renderOverlays(ctx, units, scrollOffset) {
     units.forEach(unit => {
+      this.renderTowCable(ctx, unit, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
     })
+  }
+
+  renderTowCable(ctx, unit, scrollOffset) {
+    if (!unit || !unit.towedWreck) return
+    const wreck = unit.towedWreck
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const startY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const endX = wreck.x + TILE_SIZE / 2 - scrollOffset.x
+    const endY = wreck.y + TILE_SIZE / 2 - scrollOffset.y
+
+    ctx.save()
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  renderRecoveryProgressBar(ctx, unit, scrollOffset) {
+    if (!unit || !unit.recoveryTask || unit.recoveryTask.mode !== 'recycle' || unit.recoveryTask.state !== 'recycling') {
+      return
+    }
+
+    const progress = Math.max(0, Math.min(1, unit.recoveryProgress || 0))
+    const barWidth = TILE_SIZE
+    const barHeight = 4
+    const x = unit.x - scrollOffset.x
+    const y = unit.y - scrollOffset.y - 6
+
+    ctx.save()
+    ctx.fillStyle = 'rgba(30, 70, 140, 0.35)'
+    ctx.fillRect(x, y, barWidth, barHeight)
+    ctx.fillStyle = '#4BA6FF'
+    ctx.fillRect(x, y, barWidth * progress, barHeight)
+    ctx.strokeStyle = '#0D2A57'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x, y, barWidth, barHeight)
+    ctx.restore()
   }
 
   shouldRenderUnit(unit) {

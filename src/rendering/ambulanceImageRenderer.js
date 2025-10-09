@@ -51,3 +51,7 @@ export function renderAmbulanceWithImage(ctx, unit, centerX, centerY) {
   ctx.restore()
   return true
 }
+
+export function getAmbulanceBaseImage() {
+  return isAmbulanceImageLoaded() ? ambulanceImg : null
+}

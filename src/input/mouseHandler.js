@@ -5,6 +5,7 @@ import { units } from '../main.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from '../utils/inputUtils.js'
+import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
@@ -818,6 +819,16 @@ export class MouseHandler {
       const hasSelectedRecoveryTanks = commandableUnits.some(unit => unit.type === 'recoveryTank')
 
       if (hasSelectedRecoveryTanks) {
+        const wreck = findWreckAtTile(gameState, tileX, tileY)
+        if (wreck) {
+          if (gameState.shiftKeyDown) {
+            unitCommands.handleRecoveryWreckRecycleCommand(commandableUnits, wreck, mapGrid)
+          } else {
+            unitCommands.handleRecoveryWreckTowCommand(commandableUnits, wreck, mapGrid)
+          }
+          return
+        }
+
         // Check if clicking on a friendly unit that needs repair
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer &&
