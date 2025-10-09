@@ -87,6 +87,35 @@ export function saveGame(label) {
     // Add more fields if needed
   }))
 
+  const allWrecks = Array.isArray(gameState.unitWrecks)
+    ? gameState.unitWrecks.map(wreck => ({
+        id: wreck.id,
+        sourceUnitId: wreck.sourceUnitId,
+        unitType: wreck.unitType,
+        owner: wreck.owner,
+        x: wreck.x,
+        y: wreck.y,
+        tileX: wreck.tileX,
+        tileY: wreck.tileY,
+        direction: wreck.direction,
+        turretDirection: wreck.turretDirection,
+        createdAt: wreck.createdAt,
+        cost: wreck.cost,
+        buildDuration: wreck.buildDuration,
+        assignedTankId: wreck.assignedTankId,
+        towedBy: wreck.towedBy,
+        isBeingRecycled: wreck.isBeingRecycled,
+        recycleStartedAt: wreck.recycleStartedAt,
+        recycleDuration: wreck.recycleDuration,
+        noiseSeed: wreck.noiseSeed,
+        spriteCacheKey: wreck.spriteCacheKey,
+        maxHealth: wreck.maxHealth,
+        health: wreck.health,
+        occupancyTileX: wreck.occupancyTileX,
+        occupancyTileY: wreck.occupancyTileY
+      }))
+    : []
+
   // Gather all buildings (player and enemy)
   const allBuildings = gameState.buildings.map(b => ({
     type: b.type,
@@ -162,10 +191,12 @@ export function saveGame(label) {
       newBuildingTypes: Array.from(gameState.newBuildingTypes || []),
       defeatedPlayers: gameState.defeatedPlayers instanceof Set ?
         Array.from(gameState.defeatedPlayers) :
-        (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : [])
+        (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : []),
+      selectedWreckId: gameState.selectedWreckId || null
     },
     aiFactoryBudgets, // Save AI player budgets
     units: allUnits,
+    unitWrecks: allWrecks,
     buildings: allBuildings,
     factoryRallyPoints, // Save factory rally points
     orePositions,
@@ -207,6 +238,67 @@ export function loadGame(key) {
     }
     if (Array.isArray(loaded.gameState.newBuildingTypes)) {
       gameState.newBuildingTypes = new Set(loaded.gameState.newBuildingTypes)
+    }
+
+    const loadedWrecks = Array.isArray(loaded.unitWrecks) ? loaded.unitWrecks : []
+    gameState.unitWrecks = loadedWrecks.map(wreck => {
+      const baseX = typeof wreck.x === 'number' ? wreck.x : 0
+      const baseY = typeof wreck.y === 'number' ? wreck.y : 0
+      const computedTileX = Number.isFinite(wreck.tileX)
+        ? wreck.tileX
+        : Math.floor((baseX + TILE_SIZE / 2) / TILE_SIZE)
+      const computedTileY = Number.isFinite(wreck.tileY)
+        ? wreck.tileY
+        : Math.floor((baseY + TILE_SIZE / 2) / TILE_SIZE)
+      const computedMaxHealth = Math.max(1, wreck.maxHealth ?? wreck.health ?? 1)
+      const computedHealth = Math.min(
+        computedMaxHealth,
+        Math.max(0, wreck.health ?? computedMaxHealth)
+      )
+
+      const perfNow = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now()
+
+      return {
+        id: wreck.id || `${wreck.sourceUnitId || 'wreck'}-${computedTileX}-${computedTileY}`,
+        sourceUnitId: wreck.sourceUnitId || null,
+        unitType: wreck.unitType || 'unknown',
+        owner: wreck.owner || null,
+        x: baseX,
+        y: baseY,
+        tileX: computedTileX,
+        tileY: computedTileY,
+        direction: typeof wreck.direction === 'number' ? wreck.direction : 0,
+        turretDirection: typeof wreck.turretDirection === 'number'
+          ? wreck.turretDirection
+          : (typeof wreck.direction === 'number' ? wreck.direction : 0),
+        createdAt: typeof wreck.createdAt === 'number' ? wreck.createdAt : perfNow,
+        cost: typeof wreck.cost === 'number' ? wreck.cost : 0,
+        buildDuration: typeof wreck.buildDuration === 'number' ? wreck.buildDuration : null,
+        assignedTankId: typeof wreck.assignedTankId === 'string' ? wreck.assignedTankId : null,
+        towedBy: typeof wreck.towedBy === 'string' ? wreck.towedBy : null,
+        isBeingRecycled: Boolean(wreck.isBeingRecycled),
+        recycleStartedAt: typeof wreck.recycleStartedAt === 'number' ? wreck.recycleStartedAt : null,
+        recycleDuration: typeof wreck.recycleDuration === 'number' ? wreck.recycleDuration : null,
+        noiseSeed: typeof wreck.noiseSeed === 'number' ? wreck.noiseSeed : Math.random(),
+        spriteCacheKey: wreck.spriteCacheKey || wreck.unitType || 'default',
+        maxHealth: computedMaxHealth,
+        health: computedHealth,
+        occupancyTileX: Number.isFinite(wreck.occupancyTileX) ? wreck.occupancyTileX : computedTileX,
+        occupancyTileY: Number.isFinite(wreck.occupancyTileY) ? wreck.occupancyTileY : computedTileY
+      }
+    })
+
+    if (!Array.isArray(gameState.unitWrecks)) {
+      gameState.unitWrecks = []
+    }
+
+    if (gameState.selectedWreckId) {
+      const selectedExists = gameState.unitWrecks.some(w => w.id === gameState.selectedWreckId)
+      if (!selectedExists) {
+        gameState.selectedWreckId = null
+      }
     }
 
     // Ensure smokeParticles is properly initialized and clean up any invalid particles
@@ -316,6 +408,18 @@ export function loadGame(key) {
 
       units.push(hydrated)
     })
+
+    if (Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
+      const validUnitIds = new Set(units.map(unit => unit.id))
+      gameState.unitWrecks.forEach(wreck => {
+        if (wreck.assignedTankId && !validUnitIds.has(wreck.assignedTankId)) {
+          wreck.assignedTankId = null
+        }
+        if (wreck.towedBy && !validUnitIds.has(wreck.towedBy)) {
+          wreck.towedBy = null
+        }
+      })
+    }
 
     // Restore target references after all units and buildings are loaded
     units.forEach(unit => {
