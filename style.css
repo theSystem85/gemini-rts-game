@@ -749,3 +749,139 @@ html, body {
   color: #fff;
   padding: 10px;
 }
+
+.party-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.party-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.party-row__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.party-row__title {
+  font-weight: 600;
+  color: #fff;
+}
+
+.party-row__subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.party-row__button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.party-row__button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.party-row__button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.join-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 16, 24, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.join-overlay[hidden] {
+  display: none;
+}
+
+.join-overlay__content {
+  background: rgba(16, 20, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 24px;
+  width: min(320px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #fff;
+}
+
+.join-overlay__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.join-overlay__description {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.join-overlay__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.join-overlay__input {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(12, 16, 24, 0.85);
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.join-overlay__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.join-overlay__button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.join-overlay__button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.join-overlay__button--secondary {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+}

@@ -35,6 +35,7 @@ import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator } from './ui/energyBar.js'
+import { initializeMultiplayerUI } from './multiplayer/ui.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -48,6 +49,12 @@ function sanitizeMapDimension(value, fallback) {
     return Math.max(MIN_MAP_TILES, parsed)
   }
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
+}
+
+const urlParams = new URLSearchParams(window.location.search)
+if (urlParams.has('session') && urlParams.has('party') && urlParams.has('token')) {
+  gameState.multiplayer = gameState.multiplayer || {}
+  gameState.multiplayer.isHost = false
 }
 
 function loadPersistedSettings() {
@@ -334,6 +341,11 @@ class Game {
 
     // Initialize save game system
     initSaveGameSystem()
+
+    // Setup multiplayer controls
+    initializeMultiplayerUI().catch(err => {
+      console.warn('Failed to initialize multiplayer UI', err)
+    })
 
     // Set game state
     gameState.gameStarted = true
