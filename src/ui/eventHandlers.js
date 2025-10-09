@@ -59,11 +59,7 @@ export class EventHandlers {
       }
     })
 
-    // Set initial button state
-    const playPauseIcon = document.querySelector('.play-pause-icon')
-    if (playPauseIcon) {
-      playPauseIcon.textContent = gameState.gamePaused ? '▶' : '⏸'
-    }
+    // Note: Initial button state is set in main.js setupUI() after gameState is initialized
 
     // Restart functionality
     restartBtn.addEventListener('click', async() => {

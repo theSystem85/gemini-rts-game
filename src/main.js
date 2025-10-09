@@ -337,6 +337,14 @@ class Game {
 
     // Set game state
     gameState.gameStarted = true
+    gameState.gamePaused = false  // Start the game immediately
+
+    // Update pause button to show pause icon since game is now running
+    const pauseBtn = document.getElementById('pauseBtn')
+    const playPauseIcon = pauseBtn.querySelector('.play-pause-icon')
+    if (playPauseIcon) {
+      playPauseIcon.textContent = '⏸'
+    }
 
     // Background music is loaded on demand via the music control button
   }
