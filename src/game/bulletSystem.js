@@ -3,7 +3,12 @@ import { TILE_SIZE, BULLET_DAMAGES, CREW_KILL_CHANCE } from '../config.js'
 import { triggerExplosion } from '../logic.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { awardExperience } from '../utils.js'
-import { checkUnitCollision, checkBuildingCollision, checkFactoryCollision } from './bulletCollision.js'
+import {
+  checkUnitCollision,
+  checkBuildingCollision,
+  checkFactoryCollision,
+  checkWreckCollision
+} from './bulletCollision.js'
 import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
 import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './soundCooldownManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
@@ -13,6 +18,7 @@ import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { applyDamageToWreck } from './unitWreckManager.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -255,6 +261,40 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             bullets.splice(i, 1)
             continue
           }
+        }
+      }
+
+      if (bullet.active && Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
+        let wreckHit = false
+        for (let j = gameState.unitWrecks.length - 1; j >= 0; j--) {
+          const wreck = gameState.unitWrecks[j]
+          if (checkWreckCollision(bullet, wreck)) {
+            const damageMultiplier = 0.8 + Math.random() * 0.4
+            const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+            if (actualDamage > 0) {
+              applyDamageToWreck(wreck, actualDamage, gameState)
+            }
+
+            playPositionalSound('bulletHit', bullet.x, bullet.y, 0.5)
+            triggerExplosion(
+              bullet.x,
+              bullet.y,
+              bullet.baseDamage,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              bullet.explosionRadius
+            )
+            bullets.splice(i, 1)
+            wreckHit = true
+            break
+          }
+        }
+
+        if (wreckHit) {
+          continue
         }
       }
 

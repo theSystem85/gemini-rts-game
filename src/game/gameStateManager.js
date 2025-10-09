@@ -6,7 +6,7 @@ import { playSound, playPositionalSound, audioContext } from '../sound.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
-import { registerUnitWreck } from './unitWreckManager.js'
+import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
 
 /**
  * Updates map scrolling with inertia
@@ -171,6 +171,16 @@ export function cleanupDestroyedUnits(units, gameState) {
   for (let i = units.length - 1; i >= 0; i--) {
     if (units[i].health <= 0) {
       const unit = units[i]
+
+      // Release any wreck assignments if a recovery tank is destroyed
+      if (unit.type === 'recoveryTank' && Array.isArray(gameState.unitWrecks)) {
+        gameState.unitWrecks.forEach(wreck => {
+          if (!wreck) return
+          if (wreck.assignedTankId === unit.id || wreck.towedBy === unit.id) {
+            releaseWreckAssignment(wreck)
+          }
+        })
+      }
 
       // Register a wreck so the destroyed unit leaves recoverable remnants
       registerUnitWreck(unit, gameState)

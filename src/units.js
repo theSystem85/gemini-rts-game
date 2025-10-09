@@ -64,6 +64,21 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
       occupancy[tileY][tileX] += 1
     }
   })
+
+  if (gameState && Array.isArray(gameState.unitWrecks)) {
+    gameState.unitWrecks.forEach(wreck => {
+      const tileX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
+      const tileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+      if (
+        tileY >= 0 &&
+        tileY < mapGrid.length &&
+        tileX >= 0 &&
+        tileX < mapGrid[0].length
+      ) {
+        occupancy[tileY][tileX] = (occupancy[tileY][tileX] || 0) + 1
+      }
+    })
+  }
   return occupancy
 }
 

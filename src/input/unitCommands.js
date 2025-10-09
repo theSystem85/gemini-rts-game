@@ -720,6 +720,15 @@ export class UnitCommandsHandler {
     const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
     if (recoveryTanks.length === 0) return
 
+    if (wreck.assignedTankId) {
+      const assignedTankAlive = units.some(
+        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
+      )
+      if (!assignedTankAlive) {
+        releaseWreckAssignment(wreck)
+      }
+    }
+
     if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
       showNotification('Wreck already assigned to another recovery tank.', 2000)
       return
@@ -784,6 +793,15 @@ export class UnitCommandsHandler {
     if (!wreck) return
     const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
     if (recoveryTanks.length === 0) return
+
+    if (wreck.assignedTankId) {
+      const assignedTankAlive = units.some(
+        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
+      )
+      if (!assignedTankAlive) {
+        releaseWreckAssignment(wreck)
+      }
+    }
 
     if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
       showNotification('Wreck already being processed.', 2000)

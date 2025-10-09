@@ -55,7 +55,7 @@ function handleTowTask(tank, task, wreck, units, gameState) {
     if (!tank.towedWreck) {
       tank.towedWreck = wreck
     }
-    updateWreckPositionFromTank(wreck, tank)
+    updateWreckPositionFromTank(wreck, tank, occupancyMap)
 
     const workshop = (gameState.buildings || []).find(b => b.id === task.workshopId)
     if (!workshop || workshop.health <= 0) {
@@ -191,7 +191,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       const unitProps = tank.loadedSpeed || 0.33
       tank.speed = unitProps
     } else if (tank.towedWreck) {
-      updateWreckPositionFromTank(tank.towedWreck, tank)
+      updateWreckPositionFromTank(tank.towedWreck, tank, gameState.occupancyMap)
       tank.speed = tank.loadedSpeed || 0.33
     } else {
       // Update speed when not towing

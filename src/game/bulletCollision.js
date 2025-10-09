@@ -43,6 +43,28 @@ export function checkUnitCollision(bullet, unit) {
 }
 
 /**
+ * Checks if a bullet collides with a wreck
+ * @param {Object} bullet - The bullet object
+ * @param {Object} wreck - The wreck to check collision with
+ * @returns {boolean} - Whether the bullet collides with the wreck
+ */
+export function checkWreckCollision(bullet, wreck) {
+  try {
+    if (!bullet || !wreck || wreck.health <= 0) return false
+
+    const wreckCenterX = wreck.x + TILE_SIZE / 2
+    const wreckCenterY = wreck.y + TILE_SIZE / 2
+    const dx = wreckCenterX - bullet.x
+    const dy = wreckCenterY - bullet.y
+
+    return Math.hypot(dx, dy) < 12
+  } catch (error) {
+    console.error('Error in checkWreckCollision:', error)
+    return false
+  }
+}
+
+/**
  * Checks if a bullet collides with a building
  * @param {Object} bullet - The bullet object
  * @param {Object} building - The building to check collision with

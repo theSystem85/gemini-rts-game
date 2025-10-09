@@ -123,6 +123,7 @@ export class WreckRenderer {
     }
 
     this.renderNoiseOverlay(ctx, wreck, centerX, centerY)
+    this.renderHealthBar(ctx, wreck, scrollOffset)
   }
 
   renderFallback(ctx, wreck, centerX, centerY) {
@@ -145,6 +146,25 @@ export class WreckRenderer {
     ctx.translate(centerX - size / 2, centerY - size / 2)
     ctx.drawImage(noiseCanvas, 0, 0, size, size)
     ctx.restore()
+  }
+
+  renderHealthBar(ctx, wreck, scrollOffset) {
+    if (!wreck || gameState.selectedWreckId !== wreck.id) {
+      return
+    }
+
+    const maxHealth = Math.max(1, wreck.maxHealth || 1)
+    const ratio = Math.max(0, Math.min(1, wreck.health / maxHealth))
+    const healthBarWidth = TILE_SIZE * 0.8
+    const healthBarHeight = 3
+    const healthBarX = wreck.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
+    const healthBarY = wreck.y - 6 - scrollOffset.y
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+
+    ctx.fillStyle = '#FFD700'
+    ctx.fillRect(healthBarX, healthBarY, healthBarWidth * ratio, healthBarHeight)
   }
 }
 

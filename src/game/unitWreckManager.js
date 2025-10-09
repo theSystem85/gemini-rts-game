@@ -1,6 +1,57 @@
 import { TILE_SIZE } from '../config.js'
 import { getUnitCost } from '../utils.js'
 
+function adjustWreckOccupancy(wreck, occupancyMap, tileX, tileY) {
+  if (!occupancyMap || occupancyMap.length === 0) {
+    wreck.occupancyTileX = Number.isInteger(tileX) ? tileX : null
+    wreck.occupancyTileY = Number.isInteger(tileY) ? tileY : null
+    return
+  }
+
+  const prevX = wreck.occupancyTileX
+  const prevY = wreck.occupancyTileY
+
+  if (
+    Number.isInteger(prevX) &&
+    Number.isInteger(prevY) &&
+    prevY >= 0 &&
+    prevY < occupancyMap.length &&
+    prevX >= 0 &&
+    prevX < occupancyMap[prevY].length
+  ) {
+    occupancyMap[prevY][prevX] = Math.max(0, (occupancyMap[prevY][prevX] || 0) - 1)
+  }
+
+  if (
+    Number.isInteger(tileX) &&
+    Number.isInteger(tileY) &&
+    tileY >= 0 &&
+    tileY < occupancyMap.length &&
+    tileX >= 0 &&
+    tileX < occupancyMap[tileY].length
+  ) {
+    occupancyMap[tileY][tileX] = (occupancyMap[tileY][tileX] || 0) + 1
+    wreck.occupancyTileX = tileX
+    wreck.occupancyTileY = tileY
+  } else {
+    wreck.occupancyTileX = null
+    wreck.occupancyTileY = null
+  }
+}
+
+function cleanupWreck(wreck, gameState) {
+  if (!wreck || !gameState) {
+    return
+  }
+  if (gameState.occupancyMap) {
+    adjustWreckOccupancy(wreck, gameState.occupancyMap, null, null)
+  }
+  if (gameState.selectedWreckId === wreck.id) {
+    gameState.selectedWreckId = null
+  }
+  releaseWreckAssignment(wreck)
+}
+
 const DEFAULT_BUILD_DURATION_BASE = 3000
 const MIN_BUILD_DURATION = 1000
 
@@ -28,6 +79,8 @@ export function registerUnitWreck(unit, gameState) {
     return existing
   }
 
+  const baseHealth = Math.max(1, unit.maxHealth || unit.health || 100)
+
   const wreck = {
     id: `${unit.id}-wreck`,
     sourceUnitId: unit.id,
@@ -48,10 +101,17 @@ export function registerUnitWreck(unit, gameState) {
     recycleStartedAt: null,
     recycleDuration: null,
     noiseSeed: Math.random(),
-    spriteCacheKey: unit.type
+    spriteCacheKey: unit.type,
+    maxHealth: baseHealth,
+    health: baseHealth,
+    occupancyTileX: null,
+    occupancyTileY: null
   }
 
   gameState.unitWrecks.push(wreck)
+  if (gameState.occupancyMap) {
+    adjustWreckOccupancy(wreck, gameState.occupancyMap, wreck.tileX, wreck.tileY)
+  }
   return wreck
 }
 
@@ -65,6 +125,7 @@ export function removeWreckById(gameState, wreckId) {
   const index = gameState.unitWrecks.findIndex(wreck => wreck.id === wreckId)
   if (index !== -1) {
     const [removed] = gameState.unitWrecks.splice(index, 1)
+    cleanupWreck(removed, gameState)
     return removed
   }
   return null
@@ -88,7 +149,7 @@ export function releaseWreckAssignment(wreck) {
   wreck.recycleDuration = null
 }
 
-export function updateWreckPositionFromTank(wreck, tank) {
+export function updateWreckPositionFromTank(wreck, tank, occupancyMap) {
   if (!wreck || !tank) return
   const offsetDistance = TILE_SIZE * 0.8
   const angle = tank.direction || 0
@@ -98,6 +159,9 @@ export function updateWreckPositionFromTank(wreck, tank) {
   wreck.y = tank.y + offsetY
   wreck.tileX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
   wreck.tileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (occupancyMap) {
+    adjustWreckOccupancy(wreck, occupancyMap, wreck.tileX, wreck.tileY)
+  }
 }
 
 export function findNearestWorkshop(gameState, owner, fromTile) {
@@ -154,5 +218,22 @@ function getWorkshopEntryTiles(workshop) {
 export function getRecycleDurationForWreck(wreck) {
   if (!wreck) return MIN_BUILD_DURATION
   return clamp(estimateBuildDuration(wreck.unitType, wreck.buildDuration), MIN_BUILD_DURATION, 600000)
+}
+
+export function applyDamageToWreck(wreck, damage, gameState) {
+  if (!wreck || !gameState) return false
+  const actualDamage = Math.max(0, damage)
+  if (actualDamage === 0 || wreck.health <= 0) {
+    return false
+  }
+
+  wreck.health = Math.max(0, wreck.health - actualDamage)
+
+  if (wreck.health === 0) {
+    removeWreckById(gameState, wreck.id)
+    return true
+  }
+
+  return false
 }
 
