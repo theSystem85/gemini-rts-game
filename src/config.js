@@ -118,8 +118,10 @@ export const KEYBOARD_SCROLL_SPEED = 8
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9
 
-// Maximum Manhattan distance for new buildings to stay connected
-export const BUILDING_PROXIMITY_RANGE = 2
+// Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
+export const MAX_BUILDING_GAP_TILES = 2
+// Backwards-compatible export for systems that still consume the old name
+export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
 // Shadow of War configuration
 export const SHADOW_OF_WAR_CONFIG = {
