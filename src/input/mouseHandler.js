@@ -55,7 +55,7 @@ export class MouseHandler {
 
       if (e.button === 2) {
         // Right-click: start scrolling
-        this.handleRightMouseDown(e, gameCanvas)
+        this.handleRightMouseDown(e, gameCanvas, cursorManager)
       } else if (e.button === 0) {
         // Left-click: start selection or force attack
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
@@ -77,8 +77,6 @@ export class MouseHandler {
       if (gameState.isRightDragging) {
         this.handleRightDragScrolling(e, mapGrid, gameCanvas)
         return
-      } else if (!this.isSelecting && !this.attackGroupHandler.isAttackGroupSelecting) {
-        gameCanvas.style.cursor = selectedUnits.length > 0 ? 'grab' : 'default'
       }
 
       // Update selection rectangle if we're actively selecting
@@ -107,14 +105,31 @@ export class MouseHandler {
     gameCanvas.addEventListener('contextmenu', (e) => {
       this.handleContextMenu(e, gameCanvas)
     })
+
+    document.addEventListener('mouseup', (e) => {
+      if (e.button === 2 && gameState.isRightDragging) {
+        this.handleRightMouseUp(
+          e,
+          units,
+          factories,
+          selectedUnits,
+          selectionManager,
+          cursorManager
+        )
+      }
+    })
   }
 
-  handleRightMouseDown(e, gameCanvas) {
+  handleRightMouseDown(e, gameCanvas, cursorManager) {
     gameState.isRightDragging = true
     this.rightDragStart = { x: e.clientX, y: e.clientY }
     this.rightWasDragging = false
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
-    gameCanvas.style.cursor = 'grabbing'
+    if (cursorManager) {
+      cursorManager.applyCursor(gameCanvas, 'grabbing')
+    } else {
+      gameCanvas.style.cursor = 'grabbing'
+    }
     if (this.requestRenderFrame) {
       this.requestRenderFrame()
     }
@@ -425,7 +440,6 @@ export class MouseHandler {
     // End right-click drag
     gameState.isRightDragging = false
     const gameCanvas = document.getElementById('gameCanvas')
-    gameCanvas.style.cursor = 'grab'
 
     if (this.requestRenderFrame) {
       this.requestRenderFrame()
