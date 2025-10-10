@@ -122,7 +122,7 @@ export function triggerExplosion(
         }
 
         if (damage > 0) {
-          applyDamageToWreck(wreck, damage, gameState)
+          applyDamageToWreck(wreck, damage, gameState, { x, y })
         }
       }
     }

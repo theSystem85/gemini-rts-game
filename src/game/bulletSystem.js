@@ -272,7 +272,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             const damageMultiplier = 0.8 + Math.random() * 0.4
             const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
             if (actualDamage > 0) {
-              applyDamageToWreck(wreck, actualDamage, gameState)
+              applyDamageToWreck(wreck, actualDamage, gameState, { x: bullet.x, y: bullet.y })
             }
 
             playPositionalSound('bulletHit', bullet.x, bullet.y, 0.5)
