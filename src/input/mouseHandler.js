@@ -54,7 +54,7 @@ export class MouseHandler {
 
       if (e.button === 2) {
         // Right-click: start scrolling
-        this.handleRightMouseDown(e, gameCanvas)
+        this.handleRightMouseDown(e, gameCanvas, cursorManager)
       } else if (e.button === 0) {
         // Left-click: start selection or force attack
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
@@ -106,12 +106,16 @@ export class MouseHandler {
     })
   }
 
-  handleRightMouseDown(e, gameCanvas) {
+  handleRightMouseDown(e, gameCanvas, cursorManager) {
     gameState.isRightDragging = true
     this.rightDragStart = { x: e.clientX, y: e.clientY }
     this.rightWasDragging = false
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
-    gameCanvas.style.cursor = 'grabbing'
+    if (cursorManager) {
+      cursorManager.applyCursor(gameCanvas, 'grabbing')
+    } else {
+      gameCanvas.style.cursor = 'grabbing'
+    }
     if (this.requestRenderFrame) {
       this.requestRenderFrame()
     }
