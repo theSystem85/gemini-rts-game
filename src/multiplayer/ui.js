@@ -1,5 +1,17 @@
-import { listPartyIds, getPartyDisplayName, isHost, markPartyAsAI, markPartyAsHuman } from './partyRegistry.js'
-import { generateInviteLink, getInviteState, initializeHostNetworking, maybeJoinFromInvite, notifyParty } from './webrtcManager.js'
+import {
+  listPartyIds,
+  getPartyDisplayName,
+  isHost,
+  markPartyAsAI,
+  markPartyAsHuman
+} from './partyRegistry.js'
+import {
+  generateInviteLink,
+  getInviteState,
+  initializeHostNetworking,
+  maybeJoinFromInvite,
+  notifyParty
+} from './webrtcManager.js'
 import { showNotification } from '../ui/notifications.js'
 
 function createPartyRow(partyId) {
@@ -54,8 +66,9 @@ function syncPartyRow(row, state) {
     button.textContent = 'Invite'
     button.disabled = false
     button.onclick = async function handleInviteClick() {
+      let link
       try {
-        const link = generateInviteLink(partyId)
+        link = await generateInviteLink(partyId)
         await navigator.clipboard.writeText(link)
         subtitle.textContent = 'Invite copied to clipboard'
         button.disabled = true
@@ -64,9 +77,17 @@ function syncPartyRow(row, state) {
           syncPartyRow(row)
         }, 4000)
       } catch (err) {
-        subtitle.textContent = 'Copy failed, link in console'
+        subtitle.textContent = 'Invite link unavailable, see console'
         console.warn('Failed to copy invite link', err)
-        console.log('Invite link:', generateInviteLink(partyId))
+        showNotification('Unable to create invite link. Please try again in a moment.')
+        try {
+          if (!link) {
+            link = await generateInviteLink(partyId)
+          }
+          console.log('Invite link:', link)
+        } catch (linkErr) {
+          console.warn('Unable to generate invite link for logging', linkErr)
+        }
       }
     }
   }

@@ -30,7 +30,7 @@ const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
 
 const urlParams = new URLSearchParams(window.location.search)
-if (urlParams.has('session') && urlParams.has('party') && urlParams.has('token')) {
+if (urlParams.has('invite')) {
   gameState.multiplayer = gameState.multiplayer || {}
   gameState.multiplayer.isHost = false
 }

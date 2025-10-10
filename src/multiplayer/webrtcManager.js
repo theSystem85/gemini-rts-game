@@ -15,7 +15,7 @@ import {
   isHost,
   normalizePartyId
 } from './partyRegistry.js'
-import { createSignalingChannel, postSignal } from './signalingChannel.js'
+import { createSignalingChannel, postSignal, signalService } from './signalingChannel.js'
 import { showNotification } from '../ui/notifications.js'
 
 const ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302'] }]
@@ -30,14 +30,32 @@ function notifyUIUpdate() {
   }
 }
 
-function getSessionFromUrl() {
+async function getInviteFromUrl() {
+  if (typeof window === 'undefined') return null
   const params = new URLSearchParams(window.location.search)
-  const sessionId = params.get('session')
-  const partyId = params.get('party')
-  const token = params.get('token')
-  return sessionId && partyId && token
-    ? { sessionId, partyId: normalizePartyId(partyId), token }
-    : null
+  const inviteId = params.get('invite')
+  if (!inviteId) return null
+  try {
+    const response = await fetch(`${signalService.http}/api/invites/${inviteId}`)
+    if (!response.ok) {
+      showNotification('Invite is no longer available.')
+      return null
+    }
+    const details = await response.json()
+    if (!details.sessionId || !details.partyId) {
+      showNotification('Invite is invalid.')
+      return null
+    }
+    return {
+      sessionId: details.sessionId,
+      partyId: normalizePartyId(details.partyId),
+      inviteId
+    }
+  } catch (err) {
+    console.warn('Failed to read invite details', err)
+    showNotification('Unable to reach multiplayer service.')
+    return null
+  }
 }
 
 function ensureMultiplayerState() {
@@ -63,21 +81,35 @@ function ensureSession() {
   return sessionId
 }
 
-function createInviteToken(partyId) {
+async function createInvite(partyId) {
   ensureMultiplayerState()
-  const token = generateId()
-  gameState.multiplayer.invites[partyId] = {
-    token,
+  const sessionId = ensureSession()
+  const url = `${signalService.http}/api/invites`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, partyId })
+  })
+  if (!response.ok) {
+    throw new Error('Failed to create invite on server')
+  }
+  const payload = await response.json()
+  if (!payload || !payload.inviteId) {
+    throw new Error('Server did not return invite identifier')
+  }
+  const invite = {
+    inviteId: payload.inviteId,
     createdAt: Date.now()
   }
-  return token
+  gameState.multiplayer.invites[partyId] = invite
+  return { inviteId: payload.inviteId, sessionId }
 }
 
-function validateInvite(partyId, token) {
+function validateInvite(partyId, inviteId) {
   ensureMultiplayerState()
   const invite = gameState.multiplayer.invites[partyId]
   if (!invite) return false
-  return invite.token === token
+  return invite.inviteId === inviteId
 }
 
 function makePeerConnection(connectionId, partyId, isClient) {
@@ -129,9 +161,9 @@ function handleIncomingChannel(event) {
 }
 
 async function hostHandleJoinRequest(sessionId, payload) {
-  const { partyId, token, alias, connectionId } = payload
-  if (!validateInvite(partyId, token)) {
-    postSignal(sessionId, { type: 'invite-invalid', partyId, connectionId })
+  const { partyId, inviteId, alias, connectionId } = payload
+  if (!validateInvite(partyId, inviteId)) {
+    postSignal(sessionId, { type: 'invite-invalid', partyId, inviteId, connectionId })
     return
   }
 
@@ -157,7 +189,7 @@ async function hostHandleJoinRequest(sessionId, payload) {
     type: 'offer',
     partyId,
     alias,
-    token,
+    inviteId,
     connectionId,
     sdp: offer.sdp
   })
@@ -207,6 +239,7 @@ async function clientHandleOffer(sessionId, payload, joinInfo) {
   postSignal(sessionId, {
     type: 'answer',
     partyId,
+    inviteId: joinInfo.inviteId,
     connectionId,
     sdp: answer.sdp,
     alias: joinInfo.alias
@@ -268,17 +301,16 @@ export function initializeHostNetworking() {
   return { sessionId, channel }
 }
 
-export function generateInviteLink(partyId) {
-  const sessionId = ensureSession()
-  const token = createInviteToken(partyId)
+export async function generateInviteLink(partyId) {
+  const { inviteId } = await createInvite(partyId)
   const url = new URL(window.location.href)
-  url.searchParams.set('session', sessionId)
-  url.searchParams.set('party', partyId)
-  url.searchParams.set('token', token)
+  url.search = ''
+  url.hash = ''
+  url.searchParams.set('invite', inviteId)
   return url.toString()
 }
 
-function showJoinOverlay({ partyId, sessionId, token: _token }) {
+function showJoinOverlay({ partyId, sessionId }) {
   return new Promise((resolve, reject) => {
     const overlay = document.getElementById('joinOverlay')
     const description = document.getElementById('joinOverlayDescription')
@@ -322,7 +354,7 @@ function showJoinOverlay({ partyId, sessionId, token: _token }) {
 }
 
 export async function maybeJoinFromInvite(onConnected) {
-  const joinInfo = getSessionFromUrl()
+  const joinInfo = await getInviteFromUrl()
   if (!joinInfo) return null
   gameState.multiplayer = gameState.multiplayer || {}
   gameState.multiplayer.isHost = false
@@ -332,13 +364,13 @@ export async function maybeJoinFromInvite(onConnected) {
   createSignalingChannel(joinInfo.sessionId, async function onClientSignal({ data }) {
     if (!data) return
     if (data.type === 'offer' && data.connectionId === joinInfo.connectionId) return
-    if (data.type === 'offer' && data.token === joinInfo.token && data.partyId === joinInfo.partyId) {
+    if (data.type === 'offer' && data.inviteId === joinInfo.inviteId && data.partyId === joinInfo.partyId) {
       joinInfo.connectionId = data.connectionId
       await clientHandleOffer(joinInfo.sessionId, data, joinInfo)
       if (typeof onConnected === 'function') {
         onConnected(joinInfo)
       }
-    } else if (data.type === 'invite-invalid' && data.connectionId === joinInfo.connectionId) {
+    } else if (data.type === 'invite-invalid' && data.inviteId === joinInfo.inviteId) {
       showNotification('Invite is no longer valid.')
     } else if (data.type === 'ice-candidate' && joinInfo.peer) {
       clientHandleIceCandidate(joinInfo.peer, data.candidate)
@@ -349,7 +381,7 @@ export async function maybeJoinFromInvite(onConnected) {
   postSignal(joinInfo.sessionId, {
     type: 'join-request',
     partyId: joinInfo.partyId,
-    token: joinInfo.token,
+    inviteId: joinInfo.inviteId,
     alias,
     connectionId
   })
