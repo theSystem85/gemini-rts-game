@@ -3,7 +3,7 @@ import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { logPerformance } from './performanceUtils.js'
-import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y, BUILDING_PROXIMITY_RANGE } from './config.js'
+import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y, MAX_BUILDING_GAP_TILES } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // Building dimensions and costs
@@ -331,7 +331,8 @@ function calculateInitialTurretDirection(buildingX, buildingY, owner) {
 }
 
 // Helper function to check if a position is within the configured proximity range of any existing player building
-export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = BUILDING_PROXIMITY_RANGE, owner = 'player') {
+// Uses Chebyshev distance so diagonal gaps respect the same maximum spacing as orthogonal gaps
+export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDistance = MAX_BUILDING_GAP_TILES, owner = 'player') {
   // First check factories
   if (factories && factories.length > 0) {
     for (const factory of factories) {
@@ -340,10 +341,12 @@ export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDi
         // Calculate the shortest distance from the new position to any tile of the factory
         for (let bY = factory.y; bY < factory.y + factory.height; bY++) {
           for (let bX = factory.x; bX < factory.x + factory.width; bX++) {
-            // Calculate Manhattan distance
-            const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY)
+            const chebyshevDistance = Math.max(
+              Math.abs(tileX - bX),
+              Math.abs(tileY - bY)
+            )
 
-            if (distance <= maxDistance) {
+            if (chebyshevDistance <= maxDistance) {
               return true
             }
           }
@@ -363,10 +366,12 @@ export function isNearExistingBuilding(tileX, tileY, buildings, factories, maxDi
       // Calculate the shortest distance from the new position to any tile of the existing building
       for (let bY = building.y; bY < building.y + building.height; bY++) {
         for (let bX = building.x; bX < building.x + building.width; bX++) {
-          // Calculate Manhattan distance
-          const distance = Math.abs(tileX - bX) + Math.abs(tileY - bY)
+          const chebyshevDistance = Math.max(
+            Math.abs(tileX - bX),
+            Math.abs(tileY - bY)
+          )
 
-          if (distance <= maxDistance) {
+          if (chebyshevDistance <= maxDistance) {
             return true
           }
         }
@@ -403,7 +408,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   let isAnyTileInRange = false
   for (let y = tileY; y < tileY + height; y++) {
     for (let x = tileX; x < tileX + width; x++) {
-      if (isNearExistingBuilding(x, y, buildings, factories, BUILDING_PROXIMITY_RANGE, owner)) {
+      if (isNearExistingBuilding(x, y, buildings, factories, MAX_BUILDING_GAP_TILES, owner)) {
         isAnyTileInRange = true
         break
       }
