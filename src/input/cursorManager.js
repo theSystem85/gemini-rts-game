@@ -41,27 +41,32 @@ export class CursorManager {
   }
 
   applyCursor(gameCanvas, cursorStyle, classNames = []) {
+    if (!gameCanvas) {
+      return
+    }
+
     const desiredClasses = new Set(
       classNames.filter((className) => CURSOR_CLASS_NAMES.includes(className))
     )
 
     for (const className of CURSOR_CLASS_NAMES) {
       const shouldHave = desiredClasses.has(className)
-      const hasClass = this.activeCursorClasses.has(className)
+      const hasClass = gameCanvas.classList.contains(className)
 
       if (shouldHave && !hasClass) {
         gameCanvas.classList.add(className)
-        this.activeCursorClasses.add(className)
       } else if (!shouldHave && hasClass) {
         gameCanvas.classList.remove(className)
-        this.activeCursorClasses.delete(className)
       }
     }
 
-    if (this.activeCursorStyle !== cursorStyle) {
+    this.activeCursorClasses = new Set(desiredClasses)
+
+    const currentCursorStyle = gameCanvas.style.cursor || ''
+    if (currentCursorStyle !== cursorStyle) {
       gameCanvas.style.cursor = cursorStyle
-      this.activeCursorStyle = cursorStyle
     }
+    this.activeCursorStyle = cursorStyle
   }
 
   // Function to check if a location is a blocked tile (water, rock, building)

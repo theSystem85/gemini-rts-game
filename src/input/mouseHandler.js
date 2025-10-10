@@ -104,6 +104,19 @@ export class MouseHandler {
     gameCanvas.addEventListener('contextmenu', (e) => {
       this.handleContextMenu(e, gameCanvas)
     })
+
+    document.addEventListener('mouseup', (e) => {
+      if (e.button === 2 && gameState.isRightDragging) {
+        this.handleRightMouseUp(
+          e,
+          units,
+          factories,
+          selectedUnits,
+          selectionManager,
+          cursorManager
+        )
+      }
+    })
   }
 
   handleRightMouseDown(e, gameCanvas, cursorManager) {
