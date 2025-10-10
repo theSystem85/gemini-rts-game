@@ -119,7 +119,7 @@ export const KEYBOARD_SCROLL_SPEED = 8
 export const TANK_FIRE_RANGE = 9
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
-export const MAX_BUILDING_GAP_TILES = 2
+export const MAX_BUILDING_GAP_TILES = 3
 // Backwards-compatible export for systems that still consume the old name
 export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
