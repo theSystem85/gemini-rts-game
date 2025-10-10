@@ -1,4 +1,10 @@
-import { TILE_SIZE } from '../config.js'
+import {
+  TILE_SIZE,
+  WRECK_IMPACT_FORCE_MULTIPLIER,
+  WRECK_INERTIA_DECAY,
+  DEFAULT_MAP_TILES_X,
+  DEFAULT_MAP_TILES_Y
+} from '../config.js'
 import { getUnitCost } from '../utils.js'
 
 function adjustWreckOccupancy(wreck, occupancyMap, tileX, tileY) {
@@ -104,6 +110,8 @@ export function registerUnitWreck(unit, gameState) {
     spriteCacheKey: unit.type,
     maxHealth: baseHealth,
     health: baseHealth,
+    velocityX: 0,
+    velocityY: 0,
     occupancyTileX: null,
     occupancyTileY: null
   }
@@ -220,7 +228,7 @@ export function getRecycleDurationForWreck(wreck) {
   return clamp(estimateBuildDuration(wreck.unitType, wreck.buildDuration), MIN_BUILD_DURATION, 600000)
 }
 
-export function applyDamageToWreck(wreck, damage, gameState) {
+export function applyDamageToWreck(wreck, damage, gameState, impactPosition = null) {
   if (!wreck || !gameState) return false
   const actualDamage = Math.max(0, damage)
   if (actualDamage === 0 || wreck.health <= 0) {
@@ -234,6 +242,117 @@ export function applyDamageToWreck(wreck, damage, gameState) {
     return true
   }
 
+  if (
+    impactPosition &&
+    Number.isFinite(impactPosition.x) &&
+    Number.isFinite(impactPosition.y)
+  ) {
+    const centerX = wreck.x + TILE_SIZE / 2
+    const centerY = wreck.y + TILE_SIZE / 2
+    let dx = centerX - impactPosition.x
+    let dy = centerY - impactPosition.y
+    let distance = Math.hypot(dx, dy)
+
+    if (distance === 0) {
+      const randomAngle = Math.random() * Math.PI * 2
+      dx = Math.cos(randomAngle)
+      dy = Math.sin(randomAngle)
+      distance = 1
+    }
+
+    const normX = dx / distance
+    const normY = dy / distance
+    const impulse = actualDamage * WRECK_IMPACT_FORCE_MULTIPLIER
+
+    wreck.velocityX = (wreck.velocityX || 0) + normX * impulse
+    wreck.velocityY = (wreck.velocityY || 0) + normY * impulse
+  }
+
   return false
+}
+
+const BASE_FRAME_TIME = 1000 / 60
+
+export function updateWreckPhysics(gameState, delta) {
+  if (!gameState || !Array.isArray(gameState.unitWrecks) || gameState.unitWrecks.length === 0) {
+    return
+  }
+
+  const effectiveDelta = Number.isFinite(delta) && delta > 0 ? delta : BASE_FRAME_TIME
+  const frameFactor = effectiveDelta / BASE_FRAME_TIME
+  const inertiaFactor = Math.pow(WRECK_INERTIA_DECAY, frameFactor)
+
+  const gridRows = Array.isArray(gameState.mapGrid) ? gameState.mapGrid.length : 0
+  const gridCols = gridRows > 0 && Array.isArray(gameState.mapGrid[0]) ? gameState.mapGrid[0].length : 0
+
+  const mapTilesX = Number.isFinite(gameState.mapTilesX) && gameState.mapTilesX > 0
+    ? gameState.mapTilesX
+    : (gridCols || DEFAULT_MAP_TILES_X)
+
+  const mapTilesY = Number.isFinite(gameState.mapTilesY) && gameState.mapTilesY > 0
+    ? gameState.mapTilesY
+    : (gridRows || DEFAULT_MAP_TILES_Y)
+
+  const mapWidth = Math.max(TILE_SIZE, mapTilesX * TILE_SIZE)
+  const mapHeight = Math.max(TILE_SIZE, mapTilesY * TILE_SIZE)
+  const maxX = Math.max(0, mapWidth - TILE_SIZE)
+  const maxY = Math.max(0, mapHeight - TILE_SIZE)
+
+  const occupancyMap = gameState.occupancyMap
+
+  gameState.unitWrecks.forEach(wreck => {
+    if (!wreck || wreck.health <= 0) {
+      return
+    }
+
+    if (wreck.towedBy) {
+      wreck.velocityX = 0
+      wreck.velocityY = 0
+      return
+    }
+
+    const velocityX = wreck.velocityX || 0
+    const velocityY = wreck.velocityY || 0
+
+    if (Math.abs(velocityX) < 0.0001 && Math.abs(velocityY) < 0.0001) {
+      wreck.velocityX = 0
+      wreck.velocityY = 0
+      return
+    }
+
+    const deltaX = velocityX * frameFactor
+    const deltaY = velocityY * frameFactor
+
+    if (deltaX === 0 && deltaY === 0) {
+      wreck.velocityX = velocityX * inertiaFactor
+      wreck.velocityY = velocityY * inertiaFactor
+      return
+    }
+
+    const targetX = wreck.x + deltaX
+    const targetY = wreck.y + deltaY
+    const newX = clamp(targetX, 0, maxX)
+    const newY = clamp(targetY, 0, maxY)
+
+    wreck.x = newX
+    wreck.y = newY
+
+    const newTileX = Math.floor((newX + TILE_SIZE / 2) / TILE_SIZE)
+    const newTileY = Math.floor((newY + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (newTileX !== wreck.tileX || newTileY !== wreck.tileY) {
+      wreck.tileX = newTileX
+      wreck.tileY = newTileY
+      if (occupancyMap) {
+        adjustWreckOccupancy(wreck, occupancyMap, newTileX, newTileY)
+      }
+    }
+
+    const clampedVelocityX = newX !== targetX ? 0 : velocityX * inertiaFactor
+    const clampedVelocityY = newY !== targetY ? 0 : velocityY * inertiaFactor
+
+    wreck.velocityX = Math.abs(clampedVelocityX) < 0.001 ? 0 : clampedVelocityX
+    wreck.velocityY = Math.abs(clampedVelocityY) < 0.001 ? 0 : clampedVelocityY
+  })
 }
 

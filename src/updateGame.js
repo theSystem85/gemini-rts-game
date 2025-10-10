@@ -21,6 +21,7 @@ import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.j
 import { updateHarvesterLogic } from './game/harvesterLogic.js'
 import { updateWorkshopLogic } from './game/workshopLogic.js'
 import { updateBullets } from './game/bulletSystem.js'
+import { updateWreckPhysics } from './game/unitWreckManager.js'
 import { updateHospitalLogic } from './game/hospitalLogic.js'
 import { updateAmbulanceLogic } from './game/ambulanceSystem.js'
 import { updateGasStationLogic } from './game/gasStationLogic.js'
@@ -189,6 +190,9 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
 
     // Bullet system updates
     updateBullets(bullets, units, factories, gameState, mapGrid)
+
+    // Update wreck inertia and drift after impacts
+    updateWreckPhysics(gameState, delta)
 
     // Building system updates
     updateBuildings(gameState, units, bullets, factories, mapGrid, delta)
