@@ -344,6 +344,15 @@ export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation f
 export const MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
 export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
 
+// Utility vehicle service visualization constants
+export const UTILITY_SERVICE_RANGES = {
+  recoveryTank: Math.SQRT2,
+  ambulance: Math.SQRT2,
+  tankerTruck: Math.SQRT2
+}
+export const UTILITY_SERVICE_INDICATOR_SIZE = 8
+export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
+
 // Unit type colors (same for all players/enemies of same type)
 export const UNIT_TYPE_COLORS = {
   tank: '#0000FF',        // Blue
