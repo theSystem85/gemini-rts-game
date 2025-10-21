@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_RANGES, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -187,6 +187,25 @@ export class UnitRenderer {
       ctx.lineTo(right, bottom - cornerSize)
       ctx.stroke()
     }
+  }
+
+  renderUtilityServiceRange(ctx, unit, centerX, centerY) {
+    if (!unit?.selected) return
+
+    const rangeInTiles = UTILITY_SERVICE_RANGES[unit.type]
+    if (!rangeInTiles) return
+
+    const radius = rangeInTiles * TILE_SIZE
+
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)'
+    ctx.lineWidth = 2
+    ctx.setLineDash([6, 6])
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
   }
 
   renderAlertMode(ctx, unit, centerX, centerY) {
@@ -432,6 +451,65 @@ export class UnitRenderer {
     }
   }
 
+  isUtilityServingUnit(selectedUnit, targetUnit) {
+    if (!selectedUnit || !targetUnit || selectedUnit.id === targetUnit.id) {
+      return false
+    }
+
+    switch (selectedUnit.type) {
+      case 'recoveryTank':
+        if (selectedUnit.repairTarget?.id === targetUnit.id) return true
+        if (selectedUnit.repairTargetUnit?.id === targetUnit.id) return true
+        if (selectedUnit.towedUnit?.id === targetUnit.id) return true
+        return false
+      case 'ambulance':
+        return selectedUnit.healingTarget?.id === targetUnit.id
+      case 'tankerTruck':
+        if (selectedUnit.refuelTarget?.id === targetUnit.id) return true
+        if (selectedUnit.emergencyTarget?.id === targetUnit.id) return true
+        return false
+      default:
+        return false
+    }
+  }
+
+  renderUtilityServiceIndicator(ctx, unit, centerX, centerY) {
+    if (!selectedUnits || selectedUnits.length === 0) {
+      return
+    }
+
+    const isServedBySelectedUtility = selectedUnits.some(selectedUnit => {
+      if (!selectedUnit?.selected) return false
+      return this.isUtilityServingUnit(selectedUnit, unit)
+    })
+
+    if (!isServedBySelectedUtility) {
+      return
+    }
+
+    const now = performance.now()
+    const bounceOffset = Math.sin(now * UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED) * 3
+    const baseIndicatorY = centerY - TILE_SIZE / 2 - 15 + bounceOffset
+    const indicatorX = centerX
+    const indicatorY = baseIndicatorY - UTILITY_SERVICE_INDICATOR_SIZE - 4
+    const halfSize = UTILITY_SERVICE_INDICATOR_SIZE / 2
+
+    ctx.save()
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.45)'
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)'
+    ctx.lineWidth = 1
+
+    ctx.beginPath()
+    ctx.moveTo(indicatorX, indicatorY + halfSize)
+    ctx.lineTo(indicatorX - halfSize, indicatorY - halfSize)
+    ctx.lineTo(indicatorX + halfSize, indicatorY - halfSize)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    ctx.restore()
+  }
+
   renderLevelStars(ctx, unit, scrollOffset) {
     // Only render stars for combat units with levels > 0
     if (unit.type === 'harvester' || !unit.level || unit.level <= 0) {
@@ -492,6 +570,7 @@ export class UnitRenderer {
     if (unit.type === 'harvester' && isHarvesterImageLoaded()) {
       const ok = renderHarvesterWithImage(ctx, unit, centerX, centerY)
       if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -501,6 +580,7 @@ export class UnitRenderer {
     if (unit.type === 'rocketTank' && isRocketTankImageLoaded()) {
       const ok = renderRocketTankWithImage(ctx, unit, centerX, centerY)
       if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -510,6 +590,7 @@ export class UnitRenderer {
     if (unit.type === 'recoveryTank' && isRecoveryTankImageLoaded()) {
       const ok = renderRecoveryTankWithImage(ctx, unit, centerX, centerY)
       if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -519,6 +600,7 @@ export class UnitRenderer {
     if (unit.type === 'ambulance' && isAmbulanceImageLoaded()) {
       const ok = renderAmbulanceWithImage(ctx, unit, centerX, centerY)
       if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -528,6 +610,7 @@ export class UnitRenderer {
     if (unit.type === 'tankerTruck' && isTankerTruckImageLoaded()) {
       const ok = renderTankerTruckWithImage(ctx, unit, centerX, centerY)
       if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -540,6 +623,7 @@ export class UnitRenderer {
 
       if (imageRenderSuccess) {
         // Image rendering successful, still render other components
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
@@ -549,6 +633,7 @@ export class UnitRenderer {
 
     // Original rendering method (for non-tanks or when image rendering is disabled/failed)
     this.renderUnitBody(ctx, unit, centerX, centerY)
+    this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
     this.renderSelection(ctx, unit, centerX, centerY)
     this.renderAlertMode(ctx, unit, centerX, centerY)
     this.renderTurret(ctx, unit, centerX, centerY)
@@ -568,6 +653,7 @@ export class UnitRenderer {
     this.renderGroupNumber(ctx, unit, scrollOffset)
     this.renderCrewStatus(ctx, unit, scrollOffset)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
+    this.renderUtilityServiceIndicator(ctx, unit, centerX, centerY)
     this.renderRecoveryProgressBar(ctx, unit, scrollOffset)
   }
 
