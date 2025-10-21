@@ -7,11 +7,54 @@ import {
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
-import { normalizeAngle } from '../logic.js'
+import { normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 
 function getFireRateForUnit(unit) {
   if (unit.type === 'rocketTank') return 12000
   return 4000
+}
+
+function getTargetCenter(target) {
+  if (!target) return null
+
+  if (target.tileX !== undefined) {
+    return {
+      x: target.x + TILE_SIZE / 2,
+      y: target.y + TILE_SIZE / 2
+    }
+  }
+
+  if (target.width !== undefined && target.height !== undefined) {
+    return {
+      x: target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2,
+      y: target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
+    }
+  }
+
+  return null
+}
+
+function aimTurretAtTarget(unit, target) {
+  if (!target) return
+  if (target.health !== undefined && target.health <= 0) return
+
+  const targetCenter = getTargetCenter(target)
+  if (!targetCenter) return
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const desiredAngle = Math.atan2(targetCenter.y - unitCenterY, targetCenter.x - unitCenterX)
+
+  if (unit.crew && typeof unit.crew === 'object' && !unit.crew.gunner) {
+    unit.turretDirection = unit.direction || 0
+    return
+  }
+
+  const currentAngle =
+    unit.turretDirection !== undefined ? unit.turretDirection : unit.direction || 0
+  const rotationSpeed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+  unit.turretDirection = smoothRotateTowardsAngle(currentAngle, desiredAngle, rotationSpeed)
+  unit.turretShouldFollowMovement = false
 }
 
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
@@ -59,6 +102,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
       unit.turretDirection = normalizeAngle(current - speed)
       unit.turretShouldFollowMovement = false
+      unit.manualTurretOverrideUntil = now + 150
     }
     if (rc.turretRight) {
       const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
@@ -66,7 +110,15 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
       unit.turretDirection = normalizeAngle(current + speed)
       unit.turretShouldFollowMovement = false
+      unit.manualTurretOverrideUntil = now + 150
     }
+    const manualTurretInput = rc.turretLeft || rc.turretRight
+    if (!manualTurretInput && unit.manualTurretOverrideUntil && now >= unit.manualTurretOverrideUntil) {
+      unit.manualTurretOverrideUntil = null
+    }
+
+    const manualOverrideActive =
+      manualTurretInput || (unit.manualTurretOverrideUntil && now < unit.manualTurretOverrideUntil)
     // Keep movement rotation in sync with wagon direction
     unit.movement.rotation = unit.direction
     unit.movement.targetRotation = unit.direction
@@ -116,6 +168,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       unit.movement.targetVelocity.x = 0
       unit.movement.targetVelocity.y = 0
       unit.movement.isMoving = false
+    }
+
+    if (unit.target && !manualOverrideActive) {
+      aimTurretAtTarget(unit, unit.target)
     }
 
     // Fire forward when requested
