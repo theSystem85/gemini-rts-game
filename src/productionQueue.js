@@ -851,5 +851,333 @@ export const productionQueue = {
     } else {
       readyCounter.style.display = 'none'
     }
+  },
+
+  getSerializableState: function() {
+    const serializeRallyPoint = (rallyPoint) => {
+      if (!rallyPoint || typeof rallyPoint !== 'object') return null
+      const { x, y } = rallyPoint
+      return {
+        x: Number.isFinite(x) ? x : 0,
+        y: Number.isFinite(y) ? y : 0
+      }
+    }
+
+    const serializeBlueprint = (blueprint) => {
+      if (!blueprint || typeof blueprint !== 'object') return null
+      return {
+        type: blueprint.type,
+        x: Number.isFinite(blueprint.x) ? blueprint.x : 0,
+        y: Number.isFinite(blueprint.y) ? blueprint.y : 0
+      }
+    }
+
+    const clampProgress = (item) => {
+      if (!item) return 0
+      if (typeof item.progress === 'number') {
+        return Math.max(0, Math.min(1, item.progress))
+      }
+      if (Number.isFinite(item.startTime) && Number.isFinite(item.duration) && item.duration > 0) {
+        const elapsed = (performance.now() - item.startTime) * (gameState.speedMultiplier || 1)
+        return Math.max(0, Math.min(1, elapsed / item.duration))
+      }
+      return 0
+    }
+
+    const serializeQueueItem = (item) => ({
+      type: item.type,
+      rallyPoint: serializeRallyPoint(item.rallyPoint),
+      blueprint: serializeBlueprint(item.blueprint)
+    })
+
+    return {
+      unitItems: this.unitItems.map(serializeQueueItem),
+      buildingItems: this.buildingItems.map(serializeQueueItem),
+      currentUnit: this.currentUnit
+        ? {
+            type: this.currentUnit.type,
+            progress: clampProgress(this.currentUnit),
+            duration: Number.isFinite(this.currentUnit.duration) ? this.currentUnit.duration : 0,
+            rallyPoint: serializeRallyPoint(this.currentUnit.rallyPoint)
+          }
+        : null,
+      currentBuilding: this.currentBuilding
+        ? {
+            type: this.currentBuilding.type,
+            progress: clampProgress(this.currentBuilding),
+            duration: Number.isFinite(this.currentBuilding.duration) ? this.currentBuilding.duration : 0,
+            blueprint: serializeBlueprint(this.currentBuilding.blueprint)
+          }
+        : null,
+      pausedUnit: Boolean(this.pausedUnit),
+      pausedBuilding: Boolean(this.pausedBuilding),
+      unitPaid: Number.isFinite(this.unitPaid) ? this.unitPaid : 0,
+      buildingPaid: Number.isFinite(this.buildingPaid) ? this.buildingPaid : 0,
+      completedBuildings: this.completedBuildings.map(item => ({ type: item.type }))
+    }
+  },
+
+  restoreFromSerializableState: function(state) {
+    const resetButtonState = (button) => {
+      if (!button) return
+      button.classList.remove('active', 'paused', 'ready-for-placement')
+      const progressBar = button.querySelector('.production-progress')
+      if (progressBar) {
+        progressBar.style.width = '0%'
+      }
+      const batchCounter = button.querySelector('.batch-counter')
+      if (batchCounter) {
+        batchCounter.style.display = 'none'
+      }
+      const readyCounter = button.querySelector('.ready-counter')
+      if (readyCounter) {
+        readyCounter.style.display = 'none'
+      }
+    }
+
+    // Reset existing queue state
+    this.unitItems = []
+    this.buildingItems = []
+    this.completedBuildings = []
+    this.currentUnit = null
+    this.currentBuilding = null
+    this.unitPaid = 0
+    this.buildingPaid = 0
+    this.pausedUnit = false
+    this.pausedBuilding = false
+
+    if (this.productionController) {
+      if (this.productionController.unitButtons instanceof Map) {
+        this.productionController.unitButtons.forEach(resetButtonState)
+      }
+      if (this.productionController.buildingButtons instanceof Map) {
+        this.productionController.buildingButtons.forEach(resetButtonState)
+      }
+    }
+
+    if (!state || typeof state !== 'object') {
+      return
+    }
+
+    const getUnitButton = (type) => {
+      if (!type) return null
+      if (this.productionController && this.productionController.unitButtons instanceof Map) {
+        const button = this.productionController.unitButtons.get(type)
+        if (button) return button
+      }
+      if (typeof document !== 'undefined') {
+        return document.querySelector(`.production-button[data-unit-type="${type}"]`)
+      }
+      return null
+    }
+
+    const getBuildingButton = (type) => {
+      if (!type) return null
+      if (this.productionController && this.productionController.buildingButtons instanceof Map) {
+        const button = this.productionController.buildingButtons.get(type)
+        if (button) return button
+      }
+      if (typeof document !== 'undefined') {
+        return document.querySelector(`.production-button[data-building-type="${type}"]`)
+      }
+      return null
+    }
+
+    const cloneRallyPoint = (rallyPoint) => {
+      if (!rallyPoint || typeof rallyPoint !== 'object') return null
+      const { x, y } = rallyPoint
+      return {
+        x: Number.isFinite(x) ? x : 0,
+        y: Number.isFinite(y) ? y : 0
+      }
+    }
+
+    const blueprintLookup = new Map()
+    if (!Array.isArray(gameState.blueprints)) {
+      gameState.blueprints = []
+    }
+    gameState.blueprints.forEach(bp => {
+      if (!bp || typeof bp !== 'object') return
+      const key = `${bp.type}:${bp.x}:${bp.y}`
+      blueprintLookup.set(key, bp)
+    })
+
+    const getBlueprintReference = (blueprint) => {
+      if (!blueprint || typeof blueprint !== 'object') return null
+      const key = `${blueprint.type}:${blueprint.x}:${blueprint.y}`
+      if (blueprintLookup.has(key)) {
+        return blueprintLookup.get(key)
+      }
+      const bp = {
+        type: blueprint.type,
+        x: Number.isFinite(blueprint.x) ? blueprint.x : 0,
+        y: Number.isFinite(blueprint.y) ? blueprint.y : 0
+      }
+      blueprintLookup.set(key, bp)
+      gameState.blueprints.push(bp)
+      return bp
+    }
+
+    if (Array.isArray(state.unitItems)) {
+      state.unitItems.forEach(item => {
+        const button = getUnitButton(item.type)
+        if (!button) return
+        const rallyPoint = cloneRallyPoint(item.rallyPoint)
+        this.unitItems.push({
+          type: item.type,
+          button,
+          isBuilding: false,
+          rallyPoint
+        })
+      })
+    }
+
+    if (Array.isArray(state.buildingItems)) {
+      state.buildingItems.forEach(item => {
+        const button = getBuildingButton(item.type)
+        if (!button) return
+        const blueprint = getBlueprintReference(item.blueprint)
+        this.buildingItems.push({
+          type: item.type,
+          button,
+          isBuilding: true,
+          blueprint
+        })
+      })
+    }
+
+    this.unitPaid = Number.isFinite(state.unitPaid) ? state.unitPaid : 0
+    this.buildingPaid = Number.isFinite(state.buildingPaid) ? state.buildingPaid : 0
+    this.pausedUnit = Boolean(state.pausedUnit)
+    this.pausedBuilding = Boolean(state.pausedBuilding)
+
+    const clamp = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+    const now = performance.now()
+    const speedMultiplier = gameState.speedMultiplier || 1
+
+    const reorderToFront = (items, predicate) => {
+      if (!Array.isArray(items) || items.length === 0) return null
+      const index = items.findIndex(predicate)
+      if (index === -1) {
+        return items[0]
+      }
+      if (index > 0) {
+        const [item] = items.splice(index, 1)
+        items.unshift(item)
+        return item
+      }
+      return items[0]
+    }
+
+    const rallyPointsMatch = (a, b) => {
+      if (!a && !b) return true
+      if (!a || !b) return false
+      return a.x === b.x && a.y === b.y
+    }
+
+    const blueprintsMatch = (a, b) => {
+      if (!a && !b) return true
+      if (!a || !b) return false
+      return a.type === b.type && a.x === b.x && a.y === b.y
+    }
+
+    if (state.currentUnit && this.unitItems.length > 0) {
+      const match = reorderToFront(this.unitItems, item =>
+        item.type === state.currentUnit.type && rallyPointsMatch(item.rallyPoint, state.currentUnit.rallyPoint)
+      )
+      if (match) {
+        const duration = Number.isFinite(state.currentUnit.duration) ? state.currentUnit.duration : 0
+        const progress = clamp(state.currentUnit.progress)
+        const rallyPoint = state.currentUnit.rallyPoint ? cloneRallyPoint(state.currentUnit.rallyPoint) : match.rallyPoint
+        match.rallyPoint = rallyPoint
+        this.currentUnit = {
+          type: match.type,
+          button: match.button,
+          progress,
+          startTime: duration > 0
+            ? now - (progress * duration) / (speedMultiplier || 1)
+            : now,
+          duration,
+          isBuilding: false,
+          rallyPoint
+        }
+        match.button.classList.add('active')
+        if (this.pausedUnit) {
+          match.button.classList.add('paused')
+        }
+        const progressBar = match.button.querySelector('.production-progress')
+        if (progressBar) {
+          progressBar.style.width = `${progress * 100}%`
+        }
+      }
+    } else {
+      this.pausedUnit = false
+    }
+
+    if (state.currentBuilding && this.buildingItems.length > 0) {
+      const match = reorderToFront(this.buildingItems, item =>
+        item.type === state.currentBuilding.type && blueprintsMatch(item.blueprint, state.currentBuilding.blueprint)
+      )
+      if (match) {
+        const duration = Number.isFinite(state.currentBuilding.duration) ? state.currentBuilding.duration : 0
+        const progress = clamp(state.currentBuilding.progress)
+        const blueprint = getBlueprintReference(state.currentBuilding.blueprint) || match.blueprint
+        match.blueprint = blueprint
+        this.currentBuilding = {
+          type: match.type,
+          button: match.button,
+          progress,
+          startTime: duration > 0
+            ? now - (progress * duration) / (speedMultiplier || 1)
+            : now,
+          duration,
+          isBuilding: true,
+          blueprint
+        }
+        match.button.classList.add('active')
+        if (this.pausedBuilding) {
+          match.button.classList.add('paused')
+        }
+        const progressBar = match.button.querySelector('.production-progress')
+        if (progressBar) {
+          progressBar.style.width = `${progress * 100}%`
+        }
+      }
+    } else {
+      this.pausedBuilding = false
+    }
+
+    const updateCountersFor = (items) => {
+      const counts = new Map()
+      items.forEach(item => {
+        if (!item.button) return
+        counts.set(item.button, (counts.get(item.button) || 0) + 1)
+      })
+      counts.forEach((count, button) => {
+        this.updateBatchCounter(button, count)
+      })
+    }
+
+    updateCountersFor(this.unitItems)
+    updateCountersFor(this.buildingItems)
+
+    if (Array.isArray(state.completedBuildings)) {
+      state.completedBuildings.forEach(item => {
+        const button = getBuildingButton(item.type)
+        if (!button) return
+        this.completedBuildings.push({ type: item.type, button })
+      })
+
+      const processedButtons = new Set()
+      this.completedBuildings.forEach(entry => {
+        const button = entry.button
+        if (!button) return
+        if (!processedButtons.has(button)) {
+          button.classList.add('ready-for-placement')
+          processedButtons.add(button)
+        }
+        this.updateReadyBuildingCounter(button)
+      })
+    }
   }
 }
