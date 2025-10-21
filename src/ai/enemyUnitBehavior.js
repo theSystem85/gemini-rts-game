@@ -821,16 +821,16 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
   // Check for nearby enemy tanks that might be attacking us
   const nearbyEnemyTanks = units.filter(u => {
     if (u.owner === unit.owner || u.type === 'harvester' || u.health <= 0) return false
-    
+
     const dist = Math.hypot(
       (u.x + TILE_SIZE / 2) - unitCenterX,
       (u.y + TILE_SIZE / 2) - unitCenterY
     )
-    
+
     // Consider tanks within fire range as threats
     return dist <= TANK_FIRE_RANGE * TILE_SIZE * 1.5
   })
-  
+
   // If there are enemy tanks nearby, fight them instead of pursuing harvesters
   if (nearbyEnemyTanks.length > 0) {
     // Target the closest enemy tank
@@ -839,18 +839,18 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       const bDist = Math.hypot((b.x + TILE_SIZE / 2) - unitCenterX, (b.y + TILE_SIZE / 2) - unitCenterY)
       return aDist - bDist
     })
-    
+
     const threatTank = nearbyEnemyTanks[0]
     unit.target = threatTank
     unit.allowedToAttack = true
-    
+
     // Stop moving and engage in combat
     unit.path = []
     unit.moveTarget = null
     unit.lastDecisionTime = now
     return
   }
-  
+
   const nearDefense = isNearPlayerDefense(unitCenterX, unitCenterY, gameState)
 
   if (!nearDefense) {
@@ -871,13 +871,13 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       const dx = unitCenterX - nearestDefense.centerX
       const dy = unitCenterY - nearestDefense.centerY
       const distance = Math.hypot(dx, dy)
-      
+
       if (distance > 0) {
         // Normalize direction and move to safe distance (defense radius + 3 tiles buffer)
         const safeDistance = (PLAYER_DEFENSE_RADIUS + 3 * TILE_SIZE) / TILE_SIZE
         const retreatX = Math.floor(nearestDefense.centerX / TILE_SIZE + (dx / distance) * safeDistance)
         const retreatY = Math.floor(nearestDefense.centerY / TILE_SIZE + (dy / distance) * safeDistance)
-        
+
         // Clamp to map bounds
         retreatTile = {
           x: Math.max(0, Math.min(mapGrid[0].length - 1, retreatX)),
@@ -932,18 +932,18 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       (retreatTarget.x + 0.5) * TILE_SIZE - unitCenterX,
       (retreatTarget.y + 0.5) * TILE_SIZE - unitCenterY
     )
-    
+
     // Reached retreat position (within 1.5 tiles)
     if (distanceToRetreatTarget < 1.5 * TILE_SIZE) {
       unit.retreatingFromDefense = false
       unit.harvesterHunterRetreatTarget = null
       unit.path = [] // Stop moving
       unit.moveTarget = null
-      
+
       // Update last safe tile to current position
       unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
     }
-    
+
     // While retreating, still check for harvesters in range and attack them
     if (remoteHarvesters.length > 0) {
       // Find closest harvester within attack range
@@ -954,7 +954,7 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
         )
         return dist <= TANK_FIRE_RANGE * TILE_SIZE
       })
-      
+
       if (harvesterInRange) {
         // Stop retreating and engage the harvester
         unit.target = harvesterInRange
@@ -967,7 +967,7 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
         return
       }
     }
-    
+
     // Continue retreating
     return
   }
@@ -991,13 +991,13 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       (targetHarvester.x + TILE_SIZE / 2) - unitCenterX,
       (targetHarvester.y + TILE_SIZE / 2) - unitCenterY
     )
-    
+
     // Set as target for shooting
     if (!unit.target || unit.target.id !== targetHarvester.id) {
       unit.target = targetHarvester
       unit.lastTargetChangeTime = now
     }
-    
+
     // Enable attacking so the combat system allows firing
     unit.allowedToAttack = true
 
@@ -1026,7 +1026,7 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       x: targetHarvester.x + TILE_SIZE / 2,
       y: targetHarvester.y + TILE_SIZE / 2
     }
-    
+
     unit.harvesterHunterRetreatTarget = null
     unit.lastDecisionTime = now
     return
@@ -1035,17 +1035,17 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
   // No remote harvesters found and not retreating - hold position at last safe tile
   unit.target = null
   unit.harvesterHunterPathTarget = null
-  
+
   // If we don't have a last safe tile yet, or we're too far from it, move there
   if (!unit.lastSafeTile) {
     unit.lastSafeTile = { x: unit.tileX, y: unit.tileY }
   }
-  
+
   const distanceToSafeTile = Math.hypot(
     (unit.lastSafeTile.x + 0.5) * TILE_SIZE - unitCenterX,
     (unit.lastSafeTile.y + 0.5) * TILE_SIZE - unitCenterY
   )
-  
+
   // Only move back to safe tile if we're more than 5 tiles away from it
   if (distanceToSafeTile > 5 * TILE_SIZE) {
     if (
@@ -1132,7 +1132,7 @@ function findNearestPlayerDefense(x, y, gameState) {
     const centerX = (defense.x + (defense.width || 1) / 2) * TILE_SIZE
     const centerY = (defense.y + (defense.height || 1) / 2) * TILE_SIZE
     const dist = Math.hypot(x - centerX, y - centerY)
-    
+
     if (dist < nearestDist) {
       nearestDist = dist
       nearest = { defense, centerX, centerY, distance: dist }

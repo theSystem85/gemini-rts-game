@@ -1,9 +1,10 @@
 import { TILE_SIZE } from '../config.js'
-import { findPath } from '../units.js'
+import { findPath, createUnit } from '../units.js'
 import { updateUnitSpeedModifier, getUnitCost } from '../utils.js'
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
+import { getWreckById, removeWreckById } from './unitWreckManager.js'
 
 function initWorkshop(workshop) {
   if (!workshop.repairSlots) {
@@ -77,11 +78,168 @@ function assignUnitsToSlots(workshop, mapGrid) {
   }
 }
 
+function processWorkshopRestoration(workshop, units, mapGrid, delta) {
+  // Initialize restoration queue if not present
+  if (!workshop.restorationQueue) {
+    workshop.restorationQueue = []
+  }
+
+  // Check if workshop is currently restoring something
+  if (workshop.currentRestoration) {
+    const restoration = workshop.currentRestoration
+
+    // Check if wreck still exists
+    const wreck = getWreckById(gameState, restoration.wreckId)
+    if (!wreck) {
+      // Wreck was destroyed, cancel restoration
+      workshop.currentRestoration = null
+      workshop.restorationProgress = 0
+      playSound('repairCancelled', 0.6)
+      return
+    }
+
+    // Update restoration progress
+    restoration.elapsed = (restoration.elapsed || 0) + delta
+    const progress = Math.min(restoration.elapsed / restoration.buildDuration, 1)
+    workshop.restorationProgress = progress
+
+    // Position wreck on workshop center during restoration
+    const centerTileX = Math.floor(workshop.x + workshop.width / 2)
+    const centerTileY = Math.floor(workshop.y + workshop.height / 2)
+    wreck.x = centerTileX * TILE_SIZE
+    wreck.y = centerTileY * TILE_SIZE
+    wreck.tileX = centerTileX
+    wreck.tileY = centerTileY
+    wreck.isBeingRestored = true
+
+    // Check if restoration is complete
+    if (progress >= 1) {
+      // Create restored unit
+      const rallyPoint = workshop.rallyPoint || { x: centerTileX, y: centerTileY }
+      const restored = createUnit(
+        { owner: workshop.owner },
+        restoration.unitType,
+        rallyPoint.x,
+        rallyPoint.y,
+        { buildDuration: restoration.buildDuration }
+      )
+
+      // Reset crew to alive state
+      if (restored.crew) {
+        Object.keys(restored.crew).forEach(role => {
+          restored.crew[role] = true
+        })
+      }
+
+      // Set unit to full health
+      restored.health = restored.maxHealth
+      restored.x = rallyPoint.x * TILE_SIZE
+      restored.y = rallyPoint.y * TILE_SIZE
+      restored.tileX = rallyPoint.x
+      restored.tileY = rallyPoint.y
+
+      // Face southwest
+      restored.direction = Math.PI * 5 / 4 // 225 degrees
+      if (restored.turretDirection !== undefined) {
+        restored.turretDirection = Math.PI * 5 / 4
+      }
+
+      units.push(restored)
+
+      // Update occupancy
+      const occupancyMap = gameState.occupancyMap
+      if (occupancyMap) {
+        const centerTileX = Math.floor((restored.x + TILE_SIZE / 2) / TILE_SIZE)
+        const centerTileY = Math.floor((restored.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (
+          centerTileY >= 0 &&
+          centerTileY < occupancyMap.length &&
+          centerTileX >= 0 &&
+          centerTileX < occupancyMap[0].length
+        ) {
+          occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+        }
+      }
+
+      // Remove wreck
+      removeWreckById(gameState, wreck.id)
+
+      // Clear restoration state
+      workshop.currentRestoration = null
+      workshop.restorationProgress = 0
+
+      // Play completion sound
+      playSound('repairFinished', 0.8)
+    }
+  } else if (workshop.restorationQueue.length > 0) {
+    // Start next restoration
+    const nextInQueue = workshop.restorationQueue.shift()
+    const wreck = getWreckById(gameState, nextInQueue.wreckId)
+
+    if (wreck) {
+      // Start restoration
+      workshop.currentRestoration = {
+        wreckId: nextInQueue.wreckId,
+        unitType: nextInQueue.unitType,
+        buildDuration: nextInQueue.buildDuration,
+        elapsed: 0,
+        startedAt: performance.now()
+      }
+      workshop.restorationProgress = 0
+
+      // Position wreck on workshop center
+      const centerTileX = Math.floor(workshop.x + workshop.width / 2)
+      const centerTileY = Math.floor(workshop.y + workshop.height / 2)
+      wreck.x = centerTileX * TILE_SIZE
+      wreck.y = centerTileY * TILE_SIZE
+      wreck.tileX = centerTileX
+      wreck.tileY = centerTileY
+      wreck.isBeingRestored = true
+
+      // Update occupancy for wreck
+      const occupancyMap = gameState.occupancyMap
+      if (occupancyMap) {
+        const centerX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
+        const centerY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (
+          centerY >= 0 &&
+          centerY < occupancyMap.length &&
+          centerX >= 0 &&
+          centerX < occupancyMap[0].length
+        ) {
+          // Note: We should use adjustWreckOccupancy from unitWreckManager but it's not exported
+          // For now, we'll handle it directly
+          if (wreck.occupancyTileX !== null && wreck.occupancyTileY !== null) {
+            const prevY = wreck.occupancyTileY
+            const prevX = wreck.occupancyTileX
+            if (
+              prevY >= 0 &&
+              prevY < occupancyMap.length &&
+              prevX >= 0 &&
+              prevX < occupancyMap[prevY].length
+            ) {
+              occupancyMap[prevY][prevX] = Math.max(0, (occupancyMap[prevY][prevX] || 0) - 1)
+            }
+          }
+          occupancyMap[centerY][centerX] = (occupancyMap[centerY][centerX] || 0) + 1
+          wreck.occupancyTileX = centerX
+          wreck.occupancyTileY = centerY
+        }
+      }
+
+      playSound('unit_is_being_repaired', 0.7)
+    }
+  }
+}
+
 export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(units, buildings, mapGrid, delta) {
   const workshops = buildings.filter(b => b.type === 'vehicleWorkshop')
-  const now = performance.now()
   workshops.forEach(workshop => {
     initWorkshop(workshop)
+
+    // Process workshop restoration queue
+    processWorkshopRestoration(workshop, units, mapGrid, delta)
+
     assignUnitsToSlots(workshop, mapGrid)
     workshop.repairSlots.forEach(slot => {
       const unit = slot.unit
