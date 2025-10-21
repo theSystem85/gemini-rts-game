@@ -15,7 +15,9 @@ import {
   DEFAULT_MAP_TILES_Y,
   ORE_SPREAD_ENABLED,
   setOreSpreadEnabled,
-  setMapDimensions
+  setMapDimensions,
+  listConfigVariables,
+  updateConfigValue
 } from './config.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -460,6 +462,13 @@ class Game {
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
+    const configSettingsBtn = document.getElementById('configSettingsBtn')
+    const configModal = document.getElementById('configSettingsModal')
+    const configModalCloseBtn = document.getElementById('configModalCloseBtn')
+    const configSelect = document.getElementById('configVariableSelect')
+    const configInput = document.getElementById('configValueInput')
+    const configNote = document.getElementById('configValueNote')
+    const configMessage = document.getElementById('configValueMessage')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
@@ -488,6 +497,134 @@ class Game {
       }
       updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
     })
+
+    if (
+      configSettingsBtn &&
+      configModal &&
+      configModalCloseBtn &&
+      configSelect &&
+      configInput &&
+      configNote &&
+      configMessage
+    ) {
+      let cachedEntries = []
+      let currentEntry = null
+
+      const setModalVisibility = (visible) => {
+        configModal.classList.toggle('config-modal--open', visible)
+        configModal.setAttribute('aria-hidden', visible ? 'false' : 'true')
+        if (visible) {
+          document.body.classList.add('config-modal-open')
+        } else {
+          document.body.classList.remove('config-modal-open')
+        }
+      }
+
+      const setMessage = (text, type = 'info') => {
+        configMessage.textContent = text
+        configMessage.classList.remove('config-modal__message--error', 'config-modal__message--success')
+        if (type === 'error') {
+          configMessage.classList.add('config-modal__message--error')
+        } else if (type === 'success') {
+          configMessage.classList.add('config-modal__message--success')
+        }
+      }
+
+      const syncSelection = () => {
+        const selectedName = configSelect.value
+        currentEntry = cachedEntries.find((entry) => entry.name === selectedName) || null
+        setMessage('')
+
+        if (!currentEntry) {
+          configInput.value = ''
+          configInput.disabled = true
+          configNote.textContent = 'Select a configuration value to edit.'
+          return
+        }
+
+        if (currentEntry.type === 'number') {
+          configInput.disabled = false
+          configInput.value = currentEntry.value
+          configInput.focus()
+          configNote.textContent = ''
+        } else {
+          configInput.disabled = true
+          configInput.value = ''
+          configNote.textContent = `Editing ${currentEntry.type} values is not supported yet.`
+        }
+      }
+
+      const populateOptions = (preserveSelection = true) => {
+        const previousSelection = preserveSelection ? configSelect.value : null
+        cachedEntries = listConfigVariables().sort((a, b) => a.name.localeCompare(b.name))
+        configSelect.innerHTML = ''
+
+        cachedEntries.forEach((entry) => {
+          const option = document.createElement('option')
+          option.value = entry.name
+          option.textContent = entry.name
+          configSelect.appendChild(option)
+        })
+
+        const fallback = cachedEntries.find((entry) => entry.name === previousSelection) || cachedEntries[0]
+        if (fallback) {
+          configSelect.value = fallback.name
+        }
+
+        syncSelection()
+      }
+
+      const closeModal = () => {
+        setModalVisibility(false)
+      }
+
+      configSettingsBtn.addEventListener('click', () => {
+        populateOptions(false)
+        setModalVisibility(true)
+      })
+
+      configModalCloseBtn.addEventListener('click', closeModal)
+
+      configModal.addEventListener('click', (event) => {
+        if (event.target === configModal) {
+          closeModal()
+        }
+      })
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && configModal.classList.contains('config-modal--open')) {
+          closeModal()
+        }
+      })
+
+      configSelect.addEventListener('change', () => {
+        populateOptions()
+      })
+
+      configInput.addEventListener('input', (event) => {
+        if (!currentEntry || currentEntry.type !== 'number') {
+          return
+        }
+
+        const { value } = event.target
+        if (value === '') {
+          setMessage('Enter a numeric value to apply changes.')
+          return
+        }
+
+        try {
+          const updatedValue = updateConfigValue(currentEntry.name, value)
+          currentEntry.value = updatedValue
+          cachedEntries = cachedEntries.map((entry) =>
+            entry.name === currentEntry.name ? { ...entry, value: updatedValue } : entry
+          )
+          configInput.value = `${updatedValue}`
+          setMessage(`Updated ${currentEntry.name} to ${updatedValue}`, 'success')
+        } catch (err) {
+          setMessage(err.message, 'error')
+        }
+      })
+    }
   }
 
   resetGameWithNewMap(seed) {

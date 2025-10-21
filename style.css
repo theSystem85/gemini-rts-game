@@ -749,3 +749,125 @@ html, body {
   color: #fff;
   padding: 10px;
 }
+
+body.config-modal-open {
+  overflow: hidden;
+}
+
+.config-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1500;
+  padding: 20px;
+}
+
+.config-modal--open {
+  display: flex;
+}
+
+.config-modal__dialog {
+  background: #1b1f24;
+  border: 1px solid #2d3640;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  color: #e5e5e5;
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.config-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #2d3640;
+  background: linear-gradient(90deg, rgba(45, 65, 90, 0.6), rgba(25, 33, 46, 0.6));
+}
+
+.config-modal__header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.config-modal__close {
+  background: transparent;
+  border: none;
+  color: #e5e5e5;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.config-modal__close:hover,
+.config-modal__close:focus {
+  color: #ffcc66;
+}
+
+.config-modal__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.config-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.config-modal__field select,
+.config-modal__field input {
+  background: #11161e;
+  border: 1px solid #2d3640;
+  border-radius: 4px;
+  color: #e5e5e5;
+  padding: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.config-modal__field select:focus,
+.config-modal__field input:focus {
+  border-color: #4da3ff;
+  box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.2);
+}
+
+.config-modal__field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.config-modal__note {
+  font-size: 13px;
+  color: #ffcc66;
+  min-height: 18px;
+}
+
+.config-modal__message {
+  font-size: 13px;
+  min-height: 18px;
+  color: #9fb3c8;
+}
+
+.config-modal__message--error {
+  color: #ff8080;
+}
+
+.config-modal__message--success {
+  color: #7dffb0;
+}

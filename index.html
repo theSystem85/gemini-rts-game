@@ -357,6 +357,9 @@
             <span>Version:</span>
             <span id="appVersion">-</span>
           </div>
+          <button id="configSettingsBtn" class="action-button" style="width: 100%; margin: 10px 0;">
+            Runtime Config Settings
+          </button>
         </div>
         
         <div id="playerCountControl">
@@ -387,7 +390,28 @@
       <div id="frameTimeMax">Max: -- ms</div>
     </div>
     <div id="performanceDialog" class="performance-dialog"></div>
-    
+
+    <div id="configSettingsModal" class="config-modal" aria-hidden="true">
+      <div class="config-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+        <div class="config-modal__header">
+          <h2 id="configModalTitle">Runtime Config</h2>
+          <button id="configModalCloseBtn" class="config-modal__close" aria-label="Close runtime config settings">×</button>
+        </div>
+        <div class="config-modal__body">
+          <label class="config-modal__field">
+            <span>Config entry</span>
+            <select id="configVariableSelect"></select>
+          </label>
+          <label class="config-modal__field">
+            <span>Value</span>
+            <input type="number" id="configValueInput" step="any" autocomplete="off">
+          </label>
+          <div id="configValueNote" class="config-modal__note"></div>
+          <div id="configValueMessage" class="config-modal__message"></div>
+        </div>
+      </div>
+    </div>
+
     <script src="/src/main.js" type="module"></script>
     <script type="module">
       import { UNIT_COSTS } from '/src/config.js'
