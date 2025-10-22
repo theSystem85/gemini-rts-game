@@ -1277,11 +1277,12 @@ export class MouseHandler {
         touchState.longPressTimer = null
         touchState.longPressFired = true
         touchState.rightActive = true
-        const lastEvent = touchState.lastEvent || {
-          clientX: touchState.startX,
-          clientY: touchState.startY
+        let synthetic;
+        if (touchState.lastEvent) {
+          synthetic = this.createSyntheticMouseEvent(touchState.lastEvent, gameCanvas, 2);
+        } else {
+          synthetic = this.createSyntheticMouseEventFromCoords(gameCanvas, touchState.startX, touchState.startY, 2);
         }
-        const synthetic = this.createSyntheticMouseEvent(lastEvent, gameCanvas, 2)
         this.handleRightMouseDown(synthetic, gameCanvas, cursorManager)
       }, this.longPressDuration)
     }
