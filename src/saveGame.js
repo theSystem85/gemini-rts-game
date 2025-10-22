@@ -585,6 +585,17 @@ export function loadGame(key) {
       })
     }
 
+    // Clear stale building references before re-placing buildings from the save
+    for (let y = 0; y < mapGrid.length; y++) {
+      if (!mapGrid[y]) continue
+      for (let x = 0; x < mapGrid[y].length; x++) {
+        const tile = mapGrid[y][x]
+        if (tile && tile.building) {
+          delete tile.building
+        }
+      }
+    }
+
     // Re-place all buildings on the map to set building properties correctly
     gameState.buildings.forEach(building => {
       for (let y = building.y; y < building.y + building.height; y++) {
