@@ -28,6 +28,29 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('Service worker registration failed', err)
+    })
+  })
+}
+
+function updateTouchClass() {
+  const isTouch = window.matchMedia('(pointer: coarse)').matches
+  if (document.body) {
+    document.body.classList.toggle('is-touch', isTouch)
+  }
+}
+
+const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
+updateTouchClass()
+if (typeof coarsePointerQuery.addEventListener === 'function') {
+  coarsePointerQuery.addEventListener('change', updateTouchClass)
+} else if (typeof coarsePointerQuery.addListener === 'function') {
+  coarsePointerQuery.addListener(updateTouchClass)
+}
+
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
 import { ProductionController } from './ui/productionController.js'
