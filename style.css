@@ -6,6 +6,10 @@ html, body {
   overflow: hidden;
 }
 
+:root {
+  --sidebar-width: 250px;
+}
+
 /* Disable default drag ghost images for production buttons */
 .production-button img {
   -webkit-user-drag: none;
@@ -24,7 +28,7 @@ html, body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 250px;
+  width: var(--sidebar-width);
   height: 100%;
   background: #333;
   color: #fff;
@@ -42,6 +46,7 @@ html, body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-input {
@@ -87,11 +92,12 @@ html, body {
 #gameCanvas {
   position: absolute;
   top: 0;
-  left: 250px;
-  width: calc(100% - 250px);
+  left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
   height: 100%;
   background: #000;
   cursor: default;
+  touch-action: none;
 }
 
 #minimap {
@@ -752,4 +758,65 @@ html, body {
   background-color: #333;
   color: #fff;
   padding: 10px;
+}
+
+body.is-touch #sidebar {
+  padding: 8px;
+}
+
+body.is-touch .action-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+body.is-touch #actions {
+  gap: 4px;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: min(220px, 32vw);
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: min(200px, 36vw);
+  }
+
+  #sidebar {
+    font-size: 13px;
+  }
+
+  .tab-content.active {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --sidebar-width: min(180px, 42vw);
+  }
+
+  #sidebar {
+    padding: 6px;
+  }
+
+  #minimap {
+    margin-bottom: 6px;
+  }
+
+  #actions {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .is-touch .tab-content.active {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .is-touch #actions {
+    gap: 2px;
+  }
 }

@@ -14,6 +14,8 @@ export class ProductionController {
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
+    this.mobileDragState = null
+    this.suppressNextClick = false
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
@@ -407,6 +409,8 @@ export class ProductionController {
         gameState.draggedUnitType = null
         gameState.draggedUnitButton = null
       })
+
+      this.attachMobileDragHandlers(button, { kind: 'unit', type: unitType })
     })
   }
 
@@ -480,6 +484,8 @@ export class ProductionController {
         gameState.buildingPlacementMode = false
         gameState.currentBuildingType = null
       })
+
+      this.attachMobileDragHandlers(button, { kind: 'building', type: buildingType })
 
       button.addEventListener('click', () => {
         const buildingType = button.getAttribute('data-building-type')
@@ -988,6 +994,134 @@ export class ProductionController {
           tabContent.classList.add('active')
         }
       }
+    }
+  }
+
+  attachMobileDragHandlers(button, detail) {
+    if (!window.PointerEvent) {
+      return
+    }
+
+    button.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      if (gameState.gamePaused || button.classList.contains('disabled')) {
+        return
+      }
+
+      this.suppressNextClick = false
+
+      const state = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        active: false,
+        detail,
+        button
+      }
+
+      this.mobileDragState = state
+
+      const handleMove = (moveEvent) => {
+        if (moveEvent.pointerId !== state.pointerId) {
+          return
+        }
+
+        const distance = Math.hypot(moveEvent.clientX - state.startX, moveEvent.clientY - state.startY)
+        if (!state.active && distance > 10) {
+          state.active = true
+          this.suppressNextClick = true
+          if (detail.kind === 'building') {
+            gameState.draggedBuildingType = detail.type
+            gameState.draggedBuildingButton = button
+            gameState.buildingPlacementMode = true
+            gameState.currentBuildingType = detail.type
+          } else if (detail.kind === 'unit') {
+            gameState.draggedUnitType = detail.type
+            gameState.draggedUnitButton = button
+          }
+        }
+
+        if (state.active) {
+          moveEvent.preventDefault()
+          this.updateMobileDragHover(moveEvent, detail)
+        }
+      }
+
+      const handleEnd = (endEvent) => {
+        if (endEvent.pointerId !== state.pointerId) {
+          return
+        }
+
+        window.removeEventListener('pointermove', handleMove, true)
+        window.removeEventListener('pointerup', handleEnd, true)
+        window.removeEventListener('pointercancel', handleEnd, true)
+
+        if (state.active) {
+          document.dispatchEvent(new CustomEvent('mobile-production-drop', {
+            detail: {
+              kind: detail.kind,
+              type: detail.type,
+              button,
+              clientX: endEvent.clientX,
+              clientY: endEvent.clientY
+            }
+          }))
+        } else {
+          this.suppressNextClick = false
+        }
+
+        if (detail.kind === 'building' && gameState.draggedBuildingType === detail.type) {
+          gameState.draggedBuildingType = null
+          gameState.draggedBuildingButton = null
+          gameState.buildingPlacementMode = false
+          gameState.currentBuildingType = null
+        } else if (detail.kind === 'unit' && gameState.draggedUnitType === detail.type) {
+          gameState.draggedUnitType = null
+          gameState.draggedUnitButton = null
+        }
+
+        this.mobileDragState = null
+      }
+
+      window.addEventListener('pointermove', handleMove, { passive: false, capture: true })
+      window.addEventListener('pointerup', handleEnd, { passive: false, capture: true })
+      window.addEventListener('pointercancel', handleEnd, { passive: false, capture: true })
+    })
+
+    button.addEventListener('click', (event) => {
+      if (this.suppressNextClick) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        this.suppressNextClick = false
+      }
+    })
+  }
+
+  updateMobileDragHover(event, detail) {
+    const gameCanvas = document.getElementById('gameCanvas')
+    if (!gameCanvas) return
+
+    const rect = gameCanvas.getBoundingClientRect()
+    const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
+      event.clientY >= rect.top && event.clientY <= rect.bottom
+
+    if (detail.kind === 'building') {
+      if (inside) {
+        gameState.buildingPlacementMode = true
+        gameState.currentBuildingType = detail.type
+        gameState.cursorX = event.clientX - rect.left + gameState.scrollOffset.x
+        gameState.cursorY = event.clientY - rect.top + gameState.scrollOffset.y
+      } else if (
+        gameState.currentBuildingType === detail.type &&
+        gameState.draggedBuildingType === detail.type
+      ) {
+        gameState.buildingPlacementMode = false
+      }
+    } else if (detail.kind === 'unit' && inside) {
+      gameState.cursorX = event.clientX - rect.left + gameState.scrollOffset.x
+      gameState.cursorY = event.clientY - rect.top + gameState.scrollOffset.y
     }
   }
 }

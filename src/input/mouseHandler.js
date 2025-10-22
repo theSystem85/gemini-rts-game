@@ -32,6 +32,11 @@ export class MouseHandler {
     this.guardClick = false
 
     this.requestRenderFrame = null
+
+    // Touch support state
+    this.activeTouchPointers = new Map()
+    this.twoFingerPan = null
+    this.longPressDuration = 450
   }
 
   setRenderScheduler(callback) {
@@ -136,6 +141,17 @@ export class MouseHandler {
         )
       }
     })
+
+    this.setupTouchEvents(
+      gameCanvas,
+      units,
+      factories,
+      mapGrid,
+      selectedUnits,
+      selectionManager,
+      unitCommands,
+      cursorManager
+    )
   }
 
   handleRightMouseDown(e, gameCanvas, cursorManager) {
@@ -378,8 +394,8 @@ export class MouseHandler {
     const dy = e.clientY - gameState.lastDragPos.y
 
     // Get logical dimensions accounting for pixel ratio
-    const logicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-    const logicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+    const logicalWidth = gameCanvas.clientWidth || parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
+    const logicalHeight = gameCanvas.clientHeight || parseInt(gameCanvas.style.height, 10) || window.innerHeight
 
     // Multiply by 2 to make scrolling 2x faster
     const scrollSpeed = 2
@@ -1269,6 +1285,238 @@ export class MouseHandler {
     }
 
     return null
+  }
+
+  setupTouchEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
+    if (!window.PointerEvent) {
+      return
+    }
+
+    const activePointers = this.activeTouchPointers
+    const getWorldPosition = (evt) => {
+      const rect = gameCanvas.getBoundingClientRect()
+      return {
+        worldX: evt.clientX - rect.left + gameState.scrollOffset.x,
+        worldY: evt.clientY - rect.top + gameState.scrollOffset.y
+      }
+    }
+
+    const startLongPress = (touchState) => {
+      if (touchState.longPressTimer) {
+        clearTimeout(touchState.longPressTimer)
+      }
+      touchState.longPressTimer = window.setTimeout(() => {
+        touchState.longPressTimer = null
+        touchState.longPressFired = true
+        touchState.rightActive = true
+        let synthetic;
+        if (touchState.lastEvent) {
+          synthetic = this.createSyntheticMouseEvent(touchState.lastEvent, gameCanvas, 2);
+        } else {
+          synthetic = this.createSyntheticMouseEventFromCoords(gameCanvas, touchState.startX, touchState.startY, 2);
+        }
+        this.handleRightMouseDown(synthetic, gameCanvas, cursorManager)
+      }, this.longPressDuration)
+    }
+
+    const cancelLongPress = (touchState) => {
+      if (touchState && touchState.longPressTimer) {
+        clearTimeout(touchState.longPressTimer)
+        touchState.longPressTimer = null
+      }
+    }
+
+    const beginTwoFingerPan = () => {
+      if (this.twoFingerPan || activePointers.size < 2) {
+        return
+      }
+      const pointerIds = Array.from(activePointers.keys()).slice(0, 2)
+      const center = this.getTouchCenter(pointerIds, activePointers)
+      this.twoFingerPan = {
+        pointerIds,
+        lastCenter: center
+      }
+      activePointers.forEach(cancelLongPress)
+      const synthetic = this.createSyntheticMouseEventFromCoords(gameCanvas, center.x, center.y, 2)
+      this.handleRightMouseDown(synthetic, gameCanvas, cursorManager)
+    }
+
+    const updateTwoFingerPan = () => {
+      if (!this.twoFingerPan) return
+      const { pointerIds } = this.twoFingerPan
+      if (!pointerIds.every(id => activePointers.has(id))) {
+        return
+      }
+      const center = this.getTouchCenter(pointerIds, activePointers)
+      this.twoFingerPan.lastCenter = center
+      const synthetic = this.createSyntheticMouseEventFromCoords(gameCanvas, center.x, center.y, 2)
+      this.handleRightDragScrolling(synthetic, mapGrid, gameCanvas)
+    }
+
+    const endTwoFingerPan = (event) => {
+      if (!this.twoFingerPan) return
+      const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 2)
+      this.handleRightMouseUp(synthetic, units, factories, selectedUnits, selectionManager, cursorManager)
+      const remainingPointerId = this.twoFingerPan.pointerIds.find(id => id !== event.pointerId && activePointers.has(id))
+      this.twoFingerPan = null
+      if (remainingPointerId) {
+        const remaining = activePointers.get(remainingPointerId)
+        if (remaining) {
+          remaining.startX = remaining.lastEvent?.clientX ?? remaining.startX
+          remaining.startY = remaining.lastEvent?.clientY ?? remaining.startY
+          remaining.leftActive = false
+          remaining.rightActive = false
+          remaining.longPressFired = false
+          startLongPress(remaining)
+        }
+      }
+    }
+
+    gameCanvas.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      event.preventDefault()
+      const touchState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastEvent: event,
+        leftActive: false,
+        rightActive: false,
+        longPressFired: false,
+        longPressTimer: null
+      }
+      activePointers.set(event.pointerId, touchState)
+      startLongPress(touchState)
+      if (activePointers.size >= 2) {
+        beginTwoFingerPan()
+      }
+    }, { passive: false })
+
+    gameCanvas.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      const touchState = activePointers.get(event.pointerId)
+      if (!touchState) {
+        return
+      }
+      event.preventDefault()
+      touchState.lastEvent = event
+
+      if (this.twoFingerPan && this.twoFingerPan.pointerIds.includes(event.pointerId)) {
+        updateTwoFingerPan()
+        return
+      }
+
+      const movement = Math.hypot(event.clientX - touchState.startX, event.clientY - touchState.startY)
+      if (!touchState.longPressFired && !touchState.leftActive && movement > 8) {
+        cancelLongPress(touchState)
+        touchState.leftActive = true
+        const { worldX, worldY } = getWorldPosition(event)
+        const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 0)
+        this.handleLeftMouseDown(synthetic, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
+      }
+
+      const { worldX, worldY } = getWorldPosition(event)
+      this.updateEnemyHover(worldX, worldY, units, factories, selectedUnits, cursorManager)
+
+      if (touchState.leftActive) {
+        this.updateSelectionRectangle(worldX, worldY, cursorManager)
+      } else if (touchState.longPressFired && gameState.isRightDragging) {
+        const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 2)
+        this.handleRightDragScrolling(synthetic, mapGrid, gameCanvas)
+      }
+
+      cursorManager.updateCustomCursor(event, mapGrid, factories, selectedUnits, units)
+    }, { passive: false })
+
+    const handlePointerEnd = (event) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      const touchState = activePointers.get(event.pointerId)
+      if (!touchState) {
+        return
+      }
+      event.preventDefault()
+      cancelLongPress(touchState)
+
+      const wasPanPointer = this.twoFingerPan && this.twoFingerPan.pointerIds.includes(event.pointerId)
+      if (wasPanPointer) {
+        endTwoFingerPan(event)
+      } else if (touchState.longPressFired) {
+        const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 2)
+        this.handleRightMouseUp(synthetic, units, factories, selectedUnits, selectionManager, cursorManager)
+      } else {
+        const { worldX, worldY } = getWorldPosition(event)
+        const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 0)
+        if (!touchState.leftActive) {
+          this.handleLeftMouseDown(synthetic, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
+        }
+        this.handleLeftMouseUp(synthetic, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
+      }
+
+      activePointers.delete(event.pointerId)
+    }
+
+    gameCanvas.addEventListener('pointerup', handlePointerEnd, { passive: false })
+    gameCanvas.addEventListener('pointercancel', handlePointerEnd, { passive: false })
+  }
+
+  createSyntheticMouseEvent(event, target, button = 0) {
+    return {
+      button,
+      buttons: button === 2 ? 2 : 1,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      ctrlKey: event.ctrlKey || false,
+      metaKey: event.metaKey || false,
+      shiftKey: event.shiftKey || false,
+      altKey: event.altKey || false,
+      target,
+      currentTarget: target,
+      preventDefault: () => event.preventDefault(),
+      stopPropagation: () => event.stopPropagation && event.stopPropagation()
+    }
+  }
+
+  createSyntheticMouseEventFromCoords(target, x, y, button = 0) {
+    return {
+      button,
+      buttons: button === 2 ? 2 : 1,
+      clientX: x,
+      clientY: y,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      target,
+      currentTarget: target,
+      preventDefault: () => {},
+      stopPropagation: () => {}
+    }
+  }
+
+  getTouchCenter(pointerIds, activePointers) {
+    if (!pointerIds || pointerIds.length === 0) {
+      return { x: 0, y: 0 }
+    }
+    const sum = pointerIds.reduce((acc, id) => {
+      const state = activePointers.get(id)
+      if (!state) {
+        return acc
+      }
+      const evt = state.lastEvent
+      acc.x += evt?.clientX ?? state.startX
+      acc.y += evt?.clientY ?? state.startY
+      return acc
+    }, { x: 0, y: 0 })
+    return {
+      x: sum.x / pointerIds.length,
+      y: sum.y / pointerIds.length
+    }
   }
 
   handleContextMenu(e, gameCanvas) {
