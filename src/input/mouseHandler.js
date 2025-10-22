@@ -38,6 +38,24 @@ export class MouseHandler {
     this.requestRenderFrame = callback
   }
 
+  isRallyPointTileBlocked(tileX, tileY) {
+    const occupancyMap = gameState.occupancyMap
+    if (!occupancyMap || occupancyMap.length === 0) {
+      return false
+    }
+
+    if (tileY < 0 || tileY >= occupancyMap.length) {
+      return true
+    }
+
+    const row = occupancyMap[tileY]
+    if (!row || tileX < 0 || tileX >= row.length) {
+      return true
+    }
+
+    return Boolean(row[tileX])
+  }
+
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
     this.gameFactories = factories // Store the passed factories list
     this.gameUnits = units // Store the passed units list for recovery tank detection
@@ -478,13 +496,21 @@ export class MouseHandler {
     const rect = e.target.getBoundingClientRect()
     const worldX = e.clientX - rect.left + gameState.scrollOffset.x
     const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    const rallyTileX = Math.floor(worldX / TILE_SIZE)
+    const rallyTileY = Math.floor(worldY / TILE_SIZE)
 
     // Check if a player factory or workshop is selected to place a rally point
     const selectedFactory = factories.find(f => f.selected && f.id === gameState.humanPlayer)
     if (selectedFactory && !this.wasDragging && !gameState.repairMode) {
+      if (this.isRallyPointTileBlocked(rallyTileX, rallyTileY)) {
+        showNotification('Cannot set rally point on occupied tile', 1500)
+        cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+        return
+      }
+
       selectedFactory.rallyPoint = {
-        x: Math.floor(worldX / TILE_SIZE),
-        y: Math.floor(worldY / TILE_SIZE)
+        x: rallyTileX,
+        y: rallyTileY
       }
       playPositionalSound('movement', worldX, worldY, 0.5)
 
@@ -505,9 +531,15 @@ export class MouseHandler {
       (building.type === 'vehicleFactory' || building.type === 'vehicleWorkshop')
     )
     if (selectedBuilding && !this.wasDragging && !gameState.repairMode) {
+      if (this.isRallyPointTileBlocked(rallyTileX, rallyTileY)) {
+        showNotification('Cannot set rally point on occupied tile', 1500)
+        cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+        return
+      }
+
       selectedBuilding.rallyPoint = {
-        x: Math.floor(worldX / TILE_SIZE),
-        y: Math.floor(worldY / TILE_SIZE)
+        x: rallyTileX,
+        y: rallyTileY
       }
       playPositionalSound('movement', worldX, worldY, 0.5)
 
