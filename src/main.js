@@ -28,6 +28,80 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('Service worker registration failed', err)
+    })
+  })
+}
+
+function updateTouchClass() {
+  const isTouch = window.matchMedia('(pointer: coarse)').matches
+  if (document.body) {
+    document.body.classList.toggle('is-touch', isTouch)
+  }
+}
+
+function isEditableElement(element) {
+  if (!element || typeof element !== 'object') {
+    return false
+  }
+
+  if (element.nodeType !== 1) {
+    return false
+  }
+
+  if (element.matches && element.matches('input, textarea, select')) {
+    return true
+  }
+
+  if (element.isContentEditable) {
+    return true
+  }
+
+  if (element.closest) {
+    return Boolean(element.closest('[contenteditable="true"]'))
+  }
+
+  return false
+}
+
+function setupTouchInteractionGuards() {
+  if (!('ontouchstart' in window)) {
+    return
+  }
+
+  let lastTouchEnd = 0
+  let lastTouchWasSingle = false
+  const DOUBLE_TAP_THRESHOLD_MS = 350
+
+  document.addEventListener('touchend', (event) => {
+    const now = Date.now()
+    const isSingleTouch = event.changedTouches && event.changedTouches.length === 1 && event.touches.length === 0
+
+    if (
+      isSingleTouch &&
+      lastTouchWasSingle &&
+      (now - lastTouchEnd) <= DOUBLE_TAP_THRESHOLD_MS &&
+      !isEditableElement(event.target)
+    ) {
+      event.preventDefault()
+    }
+
+    lastTouchWasSingle = isSingleTouch
+    lastTouchEnd = now
+  }, { passive: false })
+}
+
+const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
+updateTouchClass()
+if (typeof coarsePointerQuery.addEventListener === 'function') {
+  coarsePointerQuery.addEventListener('change', updateTouchClass)
+} else if (typeof coarsePointerQuery.addListener === 'function') {
+  coarsePointerQuery.addListener(updateTouchClass)
+}
+
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
 import { ProductionController } from './ui/productionController.js'
@@ -788,6 +862,7 @@ export { showNotification }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+  setupTouchInteractionGuards()
   loadPersistedSettings()
   gameInstance = new Game()
 
