@@ -911,6 +911,27 @@ export class ProductionController {
         const tabContent = document.getElementById(`${tabName}TabContent`)
         tabContent.classList.add('active')
 
+        // Scroll sidebar to bring the first production button back into view
+        const sidebarScroll = document.getElementById('sidebarScroll')
+        if (sidebarScroll) {
+          const productionTabs = document.getElementById('productionTabs')
+          const firstProductionButton = tabContent.querySelector('.production-button')
+
+          if (productionTabs && firstProductionButton) {
+            const containerRect = sidebarScroll.getBoundingClientRect()
+            const buttonRect = firstProductionButton.getBoundingClientRect()
+            const tabsHeight = productionTabs.getBoundingClientRect().height
+            const offset = buttonRect.top - containerRect.top + sidebarScroll.scrollTop - tabsHeight
+
+            sidebarScroll.scrollTo({
+              top: Math.max(offset, 0),
+              behavior: 'smooth'
+            })
+          } else {
+            sidebarScroll.scrollTo({ top: 0, behavior: 'smooth' })
+          }
+        }
+
         // Force image loading in the newly activated tab
         tabContent.querySelectorAll('img').forEach(img => {
           // Trick to force browser to load/reload image if it failed before
