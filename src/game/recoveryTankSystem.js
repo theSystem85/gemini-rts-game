@@ -10,7 +10,7 @@ import {
   releaseWreckAssignment
 } from './unitWreckManager.js'
 
-const TOW_DISTANCE_THRESHOLD = TILE_SIZE * 0.9 // Increased by 50% from 0.6
+const TOW_DISTANCE_THRESHOLD = TILE_SIZE * 1.8 // Doubled hook-up range for easier towing
 
 function distanceBetweenPoints(ax, ay, bx, by) {
   return Math.hypot(ax - bx, ay - by)
