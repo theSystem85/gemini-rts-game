@@ -48,7 +48,7 @@ function updateMobileLayoutClasses() {
 
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
-  const shouldMoveSidebar = isTouch && isPortrait
+  const shouldMoveSidebar = isTouch && !isPortrait
   const applied = document.body.classList.toggle('mobile-sidebar-right', shouldMoveSidebar)
 
   if (lastSidebarRightApplied !== applied) {

@@ -800,6 +800,11 @@ body.is-touch {
 body.is-touch #sidebar {
   padding-top: calc(8px + var(--safe-area-top));
   padding-bottom: calc(8px + var(--safe-area-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 body.is-touch:not(.mobile-sidebar-right) #sidebar {
@@ -818,6 +823,11 @@ body.is-touch.mobile-sidebar-right #sidebar {
 
 body.mobile-sidebar-right #gameCanvas {
   left: 0;
+}
+
+body.is-touch #sidebarScroll {
+  flex: 0 0 auto;
+  overflow-y: visible;
 }
 
 body.is-touch .action-button {

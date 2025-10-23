@@ -1021,17 +1021,30 @@ export class ProductionController {
         button
       }
 
+      const lockables = []
       const sidebarScroll = document.getElementById('sidebarScroll')
-      if (sidebarScroll) {
-        state.scrollLock = {
-          element: sidebarScroll,
-          previousTouchAction: sidebarScroll.style.touchAction,
-          previousOverflowY: sidebarScroll.style.overflowY,
-          previousWebkitOverflowScrolling: sidebarScroll.style.webkitOverflowScrolling
+      const sidebar = document.getElementById('sidebar')
+
+      const captureLockState = (element) => {
+        if (!element) {
+          return
         }
-        sidebarScroll.style.touchAction = 'none'
-        sidebarScroll.style.overflowY = 'hidden'
-        sidebarScroll.style.webkitOverflowScrolling = 'auto'
+        lockables.push({
+          element,
+          previousTouchAction: element.style.touchAction,
+          previousOverflowY: element.style.overflowY,
+          previousWebkitOverflowScrolling: element.style.webkitOverflowScrolling
+        })
+        element.style.touchAction = 'none'
+        element.style.overflowY = 'hidden'
+        element.style.webkitOverflowScrolling = 'auto'
+      }
+
+      captureLockState(sidebarScroll)
+      captureLockState(sidebar)
+
+      if (lockables.length > 0) {
+        state.scrollLocks = lockables
       }
 
       this.mobileDragState = state
@@ -1095,12 +1108,19 @@ export class ProductionController {
           gameState.draggedUnitButton = null
         }
 
-        if (state.scrollLock && state.scrollLock.element) {
-          const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = state.scrollLock
-          element.style.touchAction = previousTouchAction || ''
-          element.style.overflowY = previousOverflowY || ''
-          element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
+        if (Array.isArray(state.scrollLocks)) {
+          state.scrollLocks.forEach(lock => {
+            if (!lock.element) {
+              return
+            }
+            const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = lock
+            element.style.touchAction = previousTouchAction || ''
+            element.style.overflowY = previousOverflowY || ''
+            element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
+          })
         }
+
+        state.scrollLocks = null
 
         this.mobileDragState = null
       }
