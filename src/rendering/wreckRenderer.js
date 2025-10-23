@@ -82,18 +82,24 @@ export class WreckRenderer {
     const tankTypes = new Set(['tank_v1', 'tank-v2', 'tank_v2', 'tank-v3', 'tank_v3'])
     const isTank = wreck.unitType && tankTypes.has(wreck.unitType)
 
+    // Check if wreck is being restored (show as unit preview)
+    const isBeingRestored = wreck.isBeingRestored || false
+
     if (isTank) {
-      const images = getTankWreckCanvases(wreck.unitType)
+      const images = isBeingRestored ? null : getTankWreckCanvases(wreck.unitType)
       const pseudoUnit = {
         type: wreck.unitType,
-        direction: wreck.direction || 0,
-        turretDirection: wreck.turretDirection || wreck.direction || 0,
+        direction: isBeingRestored ? Math.PI * 5 / 4 : (wreck.direction || 0), // Southwest during restoration
+        turretDirection: isBeingRestored ? Math.PI * 5 / 4 : (wreck.turretDirection || wreck.direction || 0),
         recoilStartTime: null,
         muzzleFlashStartTime: null
       }
       ctx.save()
-      if (!images) {
+      if (!images && !isBeingRestored) {
         ctx.filter = 'grayscale(1) saturate(0) brightness(0.75)'
+      } else if (isBeingRestored) {
+        // Show unit preview with slight transparency during restoration
+        ctx.globalAlpha = 0.8
       }
       const rendered = renderTankWithImages(ctx, pseudoUnit, centerX, centerY, {
         images: images || undefined,
@@ -105,7 +111,7 @@ export class WreckRenderer {
         this.renderFallback(ctx, wreck, centerX, centerY)
       }
     } else {
-      const sprite = getSingleImageWreckSprite(wreck.unitType)
+      const sprite = isBeingRestored ? null : getSingleImageWreckSprite(wreck.unitType)
       if (sprite) {
         ctx.save()
         ctx.translate(centerX, centerY)
@@ -122,7 +128,9 @@ export class WreckRenderer {
       }
     }
 
-    this.renderNoiseOverlay(ctx, wreck, centerX, centerY)
+    if (!isBeingRestored) {
+      this.renderNoiseOverlay(ctx, wreck, centerX, centerY)
+    }
     this.renderHealthBar(ctx, wreck, scrollOffset)
   }
 

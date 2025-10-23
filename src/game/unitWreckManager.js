@@ -118,7 +118,10 @@ export function registerUnitWreck(unit, gameState) {
 
   gameState.unitWrecks.push(wreck)
   if (gameState.occupancyMap) {
-    adjustWreckOccupancy(wreck, gameState.occupancyMap, wreck.tileX, wreck.tileY)
+    // Calculate center-based tile position for occupancy
+    const centerTileX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+    adjustWreckOccupancy(wreck, gameState.occupancyMap, centerTileX, centerTileY)
   }
   return wreck
 }

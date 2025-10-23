@@ -89,31 +89,31 @@ export function saveGame(label) {
 
   const allWrecks = Array.isArray(gameState.unitWrecks)
     ? gameState.unitWrecks.map(wreck => ({
-        id: wreck.id,
-        sourceUnitId: wreck.sourceUnitId,
-        unitType: wreck.unitType,
-        owner: wreck.owner,
-        x: wreck.x,
-        y: wreck.y,
-        tileX: wreck.tileX,
-        tileY: wreck.tileY,
-        direction: wreck.direction,
-        turretDirection: wreck.turretDirection,
-        createdAt: wreck.createdAt,
-        cost: wreck.cost,
-        buildDuration: wreck.buildDuration,
-        assignedTankId: wreck.assignedTankId,
-        towedBy: wreck.towedBy,
-        isBeingRecycled: wreck.isBeingRecycled,
-        recycleStartedAt: wreck.recycleStartedAt,
-        recycleDuration: wreck.recycleDuration,
-        noiseSeed: wreck.noiseSeed,
-        spriteCacheKey: wreck.spriteCacheKey,
-        maxHealth: wreck.maxHealth,
-        health: wreck.health,
-        occupancyTileX: wreck.occupancyTileX,
-        occupancyTileY: wreck.occupancyTileY
-      }))
+      id: wreck.id,
+      sourceUnitId: wreck.sourceUnitId,
+      unitType: wreck.unitType,
+      owner: wreck.owner,
+      x: wreck.x,
+      y: wreck.y,
+      tileX: wreck.tileX,
+      tileY: wreck.tileY,
+      direction: wreck.direction,
+      turretDirection: wreck.turretDirection,
+      createdAt: wreck.createdAt,
+      cost: wreck.cost,
+      buildDuration: wreck.buildDuration,
+      assignedTankId: wreck.assignedTankId,
+      towedBy: wreck.towedBy,
+      isBeingRecycled: wreck.isBeingRecycled,
+      recycleStartedAt: wreck.recycleStartedAt,
+      recycleDuration: wreck.recycleDuration,
+      noiseSeed: wreck.noiseSeed,
+      spriteCacheKey: wreck.spriteCacheKey,
+      maxHealth: wreck.maxHealth,
+      health: wreck.health,
+      occupancyTileX: wreck.occupancyTileX,
+      occupancyTileY: wreck.occupancyTileY
+    }))
     : []
 
   // Gather all buildings (player and enemy)

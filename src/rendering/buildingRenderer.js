@@ -148,6 +148,7 @@ export class BuildingRenderer {
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
+    this.renderWorkshopRestoration(ctx, building, screenX, screenY, width, height)
     this.renderFactoryBudget(ctx, building, screenX, screenY, width, height)
     this.renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height)
   }
@@ -787,6 +788,43 @@ export class BuildingRenderer {
       ctx.strokeText(displayName, screenX + width / 2, screenY - 18)
       ctx.fillText(displayName, screenX + width / 2, screenY - 18)
     }
+
+    ctx.restore()
+  }
+
+  renderWorkshopRestoration(ctx, building, screenX, screenY, width, height) {
+    // Only render for vehicle workshops
+    if (building.type !== 'vehicleWorkshop') {
+      return
+    }
+
+    // Check if workshop is currently restoring something
+    if (!building.currentRestoration || !building.restorationProgress) {
+      return
+    }
+
+    const progress = building.restorationProgress
+
+    // Render progress bar below the building (small bar, always visible)
+    const progressBarWidth = width * 0.8
+    const progressBarHeight = 3
+    const progressBarX = screenX + (width - progressBarWidth) / 2
+    const progressBarY = screenY + height + 2 // Just below the building
+
+    ctx.save()
+
+    // Background bar
+    ctx.fillStyle = '#333'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+
+    // Progress fill (gold color for restoration)
+    ctx.fillStyle = '#FFD700'
+    ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+
+    // Border
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 1
+    ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
 
     ctx.restore()
   }
