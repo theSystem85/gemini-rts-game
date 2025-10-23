@@ -1,10 +1,11 @@
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, MAX_BUILDING_GAP_TILES } from '../config.js'
 import { findPath, createUnit } from '../units.js'
 import { updateUnitSpeedModifier, getUnitCost } from '../utils.js'
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getWreckById, removeWreckById } from './unitWreckManager.js'
+import { getBaseStructures, isWithinBaseRange } from '../utils/baseUtils.js'
 
 function initWorkshop(workshop) {
   if (!workshop.repairSlots) {
@@ -20,6 +21,122 @@ function initWorkshop(workshop) {
     }
     workshop.repairQueue = []
   }
+}
+
+function isTilePassable(tileX, tileY, mapGrid) {
+  const row = mapGrid?.[tileY]
+  if (!row) return false
+  const tile = row[tileX]
+  if (!tile) return false
+  if (tile.type === 'water' || tile.type === 'rock') return false
+  if (tile.seedCrystal) return false
+  if (tile.building) return false
+  return true
+}
+
+function isTileOccupied(tileX, tileY, occupancyMap, units) {
+  if (occupancyMap && occupancyMap[tileY] && occupancyMap[tileY][tileX]) {
+    if (occupancyMap[tileY][tileX] > 0) return true
+  }
+
+  if (Array.isArray(units)) {
+    const occupiedByUnit = units.some(unit => {
+      const centerTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const centerTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+      return centerTileX === tileX && centerTileY === tileY
+    })
+    if (occupiedByUnit) return true
+  }
+
+  if (Array.isArray(gameState.unitWrecks)) {
+    const occupiedByWreck = gameState.unitWrecks.some(wreck => {
+      const centerTileX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
+      const centerTileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+      return centerTileX === tileX && centerTileY === tileY
+    })
+    if (occupiedByWreck) return true
+  }
+
+  return false
+}
+
+function findNearestFreeTile(originX, originY, mapGrid, occupancyMap, units, maxDistance = 8, predicate = () => true, allowOccupied = false) {
+  for (let distance = 0; distance <= maxDistance; distance++) {
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        if (Math.abs(dx) !== distance && Math.abs(dy) !== distance) continue
+
+        const tileX = originX + dx
+        const tileY = originY + dy
+
+        if (!predicate(tileX, tileY)) continue
+        if (!isTilePassable(tileX, tileY, mapGrid)) continue
+        if (!allowOccupied && isTileOccupied(tileX, tileY, occupancyMap, units)) continue
+
+        return { x: tileX, y: tileY }
+      }
+    }
+  }
+
+  return null
+}
+
+function getWorkshopSpawnOrigin(workshop, mapGrid) {
+  const maxY = Math.max(0, mapGrid.length - 1)
+  const maxX = Math.max(0, mapGrid[0]?.length - 1 || 0)
+  const centerX = Math.min(maxX, Math.max(0, Math.floor(workshop.x + workshop.width / 2)))
+  const spawnY = Math.min(maxY, Math.max(0, workshop.y + workshop.height))
+  return { x: centerX, y: spawnY }
+}
+
+function findWorkshopSpawnTile(workshop, mapGrid, occupancyMap, units) {
+  const origin = getWorkshopSpawnOrigin(workshop, mapGrid)
+  const spawnTile = findNearestFreeTile(origin.x, origin.y, mapGrid, occupancyMap, units, 12)
+  return spawnTile || origin
+}
+
+function validateWorkshopRallyPoint(workshop, mapGrid, occupancyMap, units) {
+  const owner = workshop.owner || gameState.humanPlayer
+  const spawnOrigin = getWorkshopSpawnOrigin(workshop, mapGrid)
+  const current = workshop.rallyPoint
+
+  if (current && isWithinBaseRange(current.x, current.y, owner) && isTilePassable(current.x, current.y, mapGrid)) {
+    return current
+  }
+
+  const baseStructures = getBaseStructures(owner)
+  if (baseStructures.length === 0) {
+    return current && isTilePassable(current.x, current.y, mapGrid) ? current : spawnOrigin
+  }
+
+  for (const base of baseStructures) {
+    const centerX = Math.floor(base.x + base.width / 2)
+    const centerY = Math.floor(base.y + base.height / 2)
+    const startPositions = [
+      { x: centerX, y: base.y + base.height },
+      { x: centerX, y: base.y - 1 },
+      { x: base.x - 1, y: centerY },
+      { x: base.x + base.width, y: centerY }
+    ]
+
+    for (const pos of startPositions) {
+      const fallback = findNearestFreeTile(
+        pos.x,
+        pos.y,
+        mapGrid,
+        occupancyMap,
+        units,
+        MAX_BUILDING_GAP_TILES,
+        (tileX, tileY) => isWithinBaseRange(tileX, tileY, owner),
+        true
+      )
+      if (fallback) {
+        return fallback
+      }
+    }
+  }
+
+  return spawnOrigin
 }
 
 function assignUnitsToSlots(workshop, mapGrid) {
@@ -114,50 +231,88 @@ function processWorkshopRestoration(workshop, units, mapGrid, delta) {
 
     // Check if restoration is complete
     if (progress >= 1) {
-      // Create restored unit
-      const rallyPoint = workshop.rallyPoint || { x: centerTileX, y: centerTileY }
+      const occupancyMap = gameState.occupancyMap
+      const spawnTile = findWorkshopSpawnTile(workshop, mapGrid, occupancyMap, units)
+      const rallyPoint = validateWorkshopRallyPoint(workshop, mapGrid, occupancyMap, units)
+      if (rallyPoint) {
+        workshop.rallyPoint = { x: rallyPoint.x, y: rallyPoint.y }
+      }
+
       const restored = createUnit(
         { owner: workshop.owner },
         restoration.unitType,
-        rallyPoint.x,
-        rallyPoint.y,
+        spawnTile.x,
+        spawnTile.y,
         { buildDuration: restoration.buildDuration }
       )
 
-      // Reset crew to alive state
+      // Remove crew and fuel for freshly restored units
       if (restored.crew) {
         Object.keys(restored.crew).forEach(role => {
-          restored.crew[role] = true
+          restored.crew[role] = false
         })
       }
 
-      // Set unit to full health
-      restored.health = restored.maxHealth
-      restored.x = rallyPoint.x * TILE_SIZE
-      restored.y = rallyPoint.y * TILE_SIZE
-      restored.tileX = rallyPoint.x
-      restored.tileY = rallyPoint.y
+      if (typeof restored.gas === 'number') {
+        restored.gas = 0
+        restored.outOfGasPlayed = false
+        restored.needsEmergencyFuel = true
+        restored.emergencyFuelRequestTime = performance.now()
+      }
 
-      // Face southwest
-      restored.direction = Math.PI * 5 / 4 // 225 degrees
+      restored.health = restored.maxHealth
+      restored.x = spawnTile.x * TILE_SIZE
+      restored.y = spawnTile.y * TILE_SIZE
+      restored.tileX = spawnTile.x
+      restored.tileY = spawnTile.y
+
+      // Face south as units leave the workshop
+      restored.direction = Math.PI / 2
       if (restored.turretDirection !== undefined) {
-        restored.turretDirection = Math.PI * 5 / 4
+        restored.turretDirection = Math.PI / 2
+      }
+
+      const moveTarget = rallyPoint && (rallyPoint.x !== spawnTile.x || rallyPoint.y !== spawnTile.y)
+        ? { x: rallyPoint.x, y: rallyPoint.y }
+        : null
+
+      if (moveTarget) {
+        const path = findPath(
+          { x: spawnTile.x, y: spawnTile.y },
+          moveTarget,
+          mapGrid,
+          occupancyMap
+        )
+
+        if (path && path.length > 1) {
+          restored.path = path.slice(1)
+          restored.moveTarget = { x: moveTarget.x, y: moveTarget.y }
+        } else if (path && path.length === 1) {
+          restored.path = []
+          restored.moveTarget = { x: moveTarget.x, y: moveTarget.y }
+        }
+      }
+
+      if (restored.moveTarget) {
+        restored.restorationMoveOverride = true
+        restored.restorationMoveTarget = { x: restored.moveTarget.x, y: restored.moveTarget.y }
+      } else {
+        restored.restorationMoveOverride = false
+        restored.restorationMoveTarget = null
       }
 
       units.push(restored)
 
-      // Update occupancy
-      const occupancyMap = gameState.occupancyMap
       if (occupancyMap) {
-        const centerTileX = Math.floor((restored.x + TILE_SIZE / 2) / TILE_SIZE)
-        const centerTileY = Math.floor((restored.y + TILE_SIZE / 2) / TILE_SIZE)
+        const centerX = Math.floor((restored.x + TILE_SIZE / 2) / TILE_SIZE)
+        const centerY = Math.floor((restored.y + TILE_SIZE / 2) / TILE_SIZE)
         if (
-          centerTileY >= 0 &&
-          centerTileY < occupancyMap.length &&
-          centerTileX >= 0 &&
-          centerTileX < occupancyMap[0].length
+          centerY >= 0 &&
+          centerY < occupancyMap.length &&
+          centerX >= 0 &&
+          centerX < occupancyMap[0].length
         ) {
-          occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+          occupancyMap[centerY][centerX] = (occupancyMap[centerY][centerX] || 0) + 1
         }
       }
 

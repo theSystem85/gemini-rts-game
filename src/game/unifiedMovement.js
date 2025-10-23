@@ -58,7 +58,9 @@ export function initializeUnitMovement(unit) {
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit)
 
-  if (typeof unit.gas === 'number' && unit.gas <= 0) {
+  const hasRestorationOverride = Boolean(unit.restorationMoveOverride)
+
+  if (!hasRestorationOverride && typeof unit.gas === 'number' && unit.gas <= 0) {
     if (!unit.outOfGasPlayed) {
       playSound('outOfGas')
       unit.outOfGasPlayed = true
@@ -102,7 +104,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // **CREW MOVEMENT RESTRICTIONS** - Check crew status (exclude ambulance for AI)
-  if (unit.crew && typeof unit.crew === 'object' && !unit.crew.driver && unit.type !== 'ambulance') {
+  if (!hasRestorationOverride && unit.crew && typeof unit.crew === 'object' && !unit.crew.driver && unit.type !== 'ambulance') {
     // Tank cannot move without driver
     unit.path = [] // Clear any pending movement
     unit.moveTarget = null
@@ -372,6 +374,35 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
 
   if ((prevTileX !== currentTileX || prevTileY !== currentTileY) && occupancyMap) {
     updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap)
+  }
+
+  if (unit.restorationMoveOverride) {
+    const target = unit.restorationMoveTarget || unit.moveTarget
+    const noPathRemaining = !unit.path || unit.path.length === 0
+    let reachedTarget = false
+
+    if (!target) {
+      reachedTarget = noPathRemaining
+    } else {
+      const targetCenterX = (target.x + 0.5) * TILE_SIZE
+      const targetCenterY = (target.y + 0.5) * TILE_SIZE
+      const distanceToTarget = Math.hypot((unit.x + TILE_SIZE / 2) - targetCenterX, (unit.y + TILE_SIZE / 2) - targetCenterY)
+      const tileDistance = Math.max(Math.abs(currentTileX - target.x), Math.abs(currentTileY - target.y))
+      reachedTarget = noPathRemaining && (tileDistance === 0 || distanceToTarget <= TILE_SIZE / 2)
+    }
+
+    if (reachedTarget) {
+      unit.restorationMoveOverride = false
+      unit.restorationMoveTarget = null
+      if (target && unit.moveTarget && unit.moveTarget.x === target.x && unit.moveTarget.y === target.y) {
+        unit.moveTarget = null
+      }
+      unit.path = []
+      unit.movement.velocity = { x: 0, y: 0 }
+      unit.movement.targetVelocity = { x: 0, y: 0 }
+      unit.movement.isMoving = false
+      unit.movement.currentSpeed = 0
+    }
   }
 
   // Handle stuck unit detection and recovery for all units (as requested)

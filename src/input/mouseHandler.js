@@ -9,6 +9,7 @@ import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
+import { isWithinBaseRange } from '../utils/baseUtils.js'
 
 export class MouseHandler {
   constructor() {
@@ -551,6 +552,15 @@ export class MouseHandler {
         showNotification('Cannot set rally point on occupied tile', 1500)
         cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
         return
+      }
+
+      if (selectedBuilding.type === 'vehicleWorkshop') {
+        const owner = selectedBuilding.owner || gameState.humanPlayer
+        if (!isWithinBaseRange(rallyTileX, rallyTileY, owner)) {
+          showNotification('Workshop rally point must stay near your base', 2000)
+          cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+          return
+        }
       }
 
       selectedBuilding.rallyPoint = {
