@@ -1021,6 +1021,32 @@ export class ProductionController {
         button
       }
 
+      const lockables = []
+      const sidebarScroll = document.getElementById('sidebarScroll')
+      const sidebar = document.getElementById('sidebar')
+
+      const captureLockState = (element) => {
+        if (!element) {
+          return
+        }
+        lockables.push({
+          element,
+          previousTouchAction: element.style.touchAction,
+          previousOverflowY: element.style.overflowY,
+          previousWebkitOverflowScrolling: element.style.webkitOverflowScrolling
+        })
+        element.style.touchAction = 'none'
+        element.style.overflowY = 'hidden'
+        element.style.webkitOverflowScrolling = 'auto'
+      }
+
+      captureLockState(sidebarScroll)
+      captureLockState(sidebar)
+
+      if (lockables.length > 0) {
+        state.scrollLocks = lockables
+      }
+
       this.mobileDragState = state
 
       const handleMove = (moveEvent) => {
@@ -1081,6 +1107,20 @@ export class ProductionController {
           gameState.draggedUnitType = null
           gameState.draggedUnitButton = null
         }
+
+        if (Array.isArray(state.scrollLocks)) {
+          state.scrollLocks.forEach(lock => {
+            if (!lock.element) {
+              return
+            }
+            const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = lock
+            element.style.touchAction = previousTouchAction || ''
+            element.style.overflowY = previousOverflowY || ''
+            element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
+          })
+        }
+
+        state.scrollLocks = null
 
         this.mobileDragState = null
       }
