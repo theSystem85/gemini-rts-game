@@ -121,8 +121,10 @@ export const KEYBOARD_SCROLL_SPEED = 8
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export const TANK_FIRE_RANGE = 9
 
-// Maximum Manhattan distance for new buildings to stay connected
-export const BUILDING_PROXIMITY_RANGE = 2
+// Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
+export const MAX_BUILDING_GAP_TILES = 3
+// Backwards-compatible export for systems that still consume the old name
+export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
 // Shadow of War configuration
 export const SHADOW_OF_WAR_CONFIG = {
@@ -344,6 +346,15 @@ export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation f
 // Movement target indicator constants
 export const MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
 export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
+
+// Utility vehicle service visualization constants
+export const UTILITY_SERVICE_RANGES = {
+  recoveryTank: Math.SQRT2,
+  ambulance: Math.SQRT2,
+  tankerTruck: Math.SQRT2
+}
+export const UTILITY_SERVICE_INDICATOR_SIZE = 8
+export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
 
 // Unit type colors (same for all players/enemies of same type)
 export const UNIT_TYPE_COLORS = {

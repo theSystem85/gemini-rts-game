@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Gemini RTS Game</title>
     <meta name="description" content="A 2D tile-based Real-Time Strategy game built with vanilla JavaScript">
     
@@ -65,14 +71,15 @@
       </div>
 
       <div id="sidebarScroll">
-      
-      <div id="production">
-        <div id="productionContainer">
-          <div id="productionTabs">
-            <button class="tab-button" data-tab="units">Units</button>
-            <button class="tab-button active" data-tab="buildings">Buildings</button>
-          </div>
-          <div id="productionTabContent">
+
+        <div id="productionTabs">
+          <button class="tab-button" data-tab="units">Units</button>
+          <button class="tab-button active" data-tab="buildings">Buildings</button>
+        </div>
+
+        <div id="production">
+          <div id="productionContainer">
+            <div id="productionTabContent">
             <div id="unitsTabContent" class="tab-content">
               <button class="production-button" data-unit-type="tank">
                 <img src="images/sidebar/tank.webp" onerror="this.style.display='none'">

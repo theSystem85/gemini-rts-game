@@ -36,6 +36,7 @@ export class EventHandlers {
     this.setupBuildingPlacement()
     this.setupRepairAndSellModes()
     this.setupVolumeControl()
+    this.setupMobileDropListeners()
   }
 
   setupGameControls() {
@@ -166,43 +167,22 @@ export class EventHandlers {
     gameCanvas.addEventListener('drop', (e) => {
       if (gameState.draggedBuildingType) {
         e.preventDefault()
-        const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
-        const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
-        const tileX = Math.floor(mouseX / TILE_SIZE)
-        const tileY = Math.floor(mouseY / TILE_SIZE)
-        const type = gameState.draggedBuildingType
-        const button = gameState.draggedBuildingButton
-        if (canPlaceBuilding(type, tileX, tileY, gameState.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
-          const blueprint = { type, x: tileX, y: tileY }
-          gameState.blueprints.push(blueprint)
-          productionQueue.addItem(type, button, true, blueprint)
-          showNotification(`Blueprint placed for ${buildingData[type].displayName}`)
-
-          if (gameState.chainBuildPrimed && gameState.shiftKeyDown) {
-            gameState.chainBuildMode = true
-            gameState.chainStartX = tileX
-            gameState.chainStartY = tileY
-            gameState.chainBuildingType = type
-            gameState.chainBuildingButton = button
-            gameState.chainBuildPrimed = false
-          }
-        } else {
-          showNotification('Invalid blueprint location')
-        }
-        gameState.buildingPlacementMode = false
-        gameState.currentBuildingType = null
-        gameState.draggedBuildingType = null
-        gameState.draggedBuildingButton = null
+        this.handleDragDropPlacement({
+          kind: 'building',
+          type: gameState.draggedBuildingType,
+          button: gameState.draggedBuildingButton,
+          clientX: e.clientX,
+          clientY: e.clientY
+        })
       } else if (gameState.draggedUnitType) {
         e.preventDefault()
-        const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
-        const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
-        const tileX = Math.floor(mouseX / TILE_SIZE)
-        const tileY = Math.floor(mouseY / TILE_SIZE)
-        productionQueue.addItem(gameState.draggedUnitType, gameState.draggedUnitButton, false, null, { x: tileX, y: tileY })
-        showNotification(`Queued ${gameState.draggedUnitType} with rally point`)
-        gameState.draggedUnitType = null
-        gameState.draggedUnitButton = null
+        this.handleDragDropPlacement({
+          kind: 'unit',
+          type: gameState.draggedUnitType,
+          button: gameState.draggedUnitButton,
+          clientX: e.clientX,
+          clientY: e.clientY
+        })
       }
     })
 
@@ -220,6 +200,74 @@ export class EventHandlers {
         this.productionController.updateBuildingButtonStates()
       }
     })
+  }
+
+  setupMobileDropListeners() {
+    document.addEventListener('mobile-production-drop', (event) => {
+      if (!event || !event.detail) {
+        return
+      }
+      this.handleDragDropPlacement(event.detail)
+    })
+  }
+
+  handleDragDropPlacement(detail) {
+    if (!detail || !detail.type || !detail.button) {
+      return
+    }
+
+    const { kind, type, button, clientX, clientY } = detail
+    const gameCanvas = this.canvasManager.getGameCanvas()
+    if (!gameCanvas) {
+      return
+    }
+
+    const rect = gameCanvas.getBoundingClientRect()
+    const insideCanvas = clientX >= rect.left && clientX <= rect.right &&
+      clientY >= rect.top && clientY <= rect.bottom
+
+    if (!insideCanvas) {
+      return
+    }
+
+    const mouseX = clientX - rect.left + gameState.scrollOffset.x
+    const mouseY = clientY - rect.top + gameState.scrollOffset.y
+    const tileX = Math.floor(mouseX / TILE_SIZE)
+    const tileY = Math.floor(mouseY / TILE_SIZE)
+
+    if (kind === 'building') {
+      if (canPlaceBuilding(type, tileX, tileY, gameState.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
+        const blueprint = { type, x: tileX, y: tileY }
+        if (!gameState.blueprints) {
+          gameState.blueprints = []
+        }
+        gameState.blueprints.push(blueprint)
+        productionQueue.addItem(type, button, true, blueprint)
+        showNotification(`Blueprint placed for ${buildingData[type].displayName}`)
+
+        if (gameState.chainBuildPrimed && gameState.shiftKeyDown) {
+          gameState.chainBuildMode = true
+          gameState.chainStartX = tileX
+          gameState.chainStartY = tileY
+          gameState.chainBuildingType = type
+          gameState.chainBuildingButton = button
+          gameState.chainBuildPrimed = false
+        }
+      } else {
+        showNotification('Invalid blueprint location')
+      }
+
+      gameState.buildingPlacementMode = false
+      gameState.currentBuildingType = null
+      gameState.draggedBuildingType = null
+      gameState.draggedBuildingButton = null
+      gameState.chainBuildPrimed = false
+    } else if (kind === 'unit') {
+      productionQueue.addItem(type, button, false, null, { x: tileX, y: tileY })
+      showNotification(`Queued ${type} with rally point`)
+      gameState.draggedUnitType = null
+      gameState.draggedUnitButton = null
+    }
   }
 
   handleBuildingPlacement(e) {

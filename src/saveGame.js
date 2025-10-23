@@ -192,7 +192,21 @@ export function saveGame(label) {
       defeatedPlayers: gameState.defeatedPlayers instanceof Set ?
         Array.from(gameState.defeatedPlayers) :
         (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : []),
-      selectedWreckId: gameState.selectedWreckId || null
+      selectedWreckId: gameState.selectedWreckId || null,
+      buildingPlacementMode: Boolean(gameState.buildingPlacementMode),
+      currentBuildingType: gameState.currentBuildingType || null,
+      chainBuildPrimed: Boolean(gameState.chainBuildPrimed),
+      chainBuildMode: Boolean(gameState.chainBuildMode),
+      chainStartX: Number.isFinite(gameState.chainStartX) ? gameState.chainStartX : 0,
+      chainStartY: Number.isFinite(gameState.chainStartY) ? gameState.chainStartY : 0,
+      chainBuildingType: gameState.chainBuildingType || null,
+      blueprints: Array.isArray(gameState.blueprints)
+        ? gameState.blueprints.map(bp => ({
+            type: bp.type,
+            x: Number.isFinite(bp.x) ? bp.x : 0,
+            y: Number.isFinite(bp.y) ? bp.y : 0
+          }))
+        : []
     },
     aiFactoryBudgets, // Save AI player budgets
     units: allUnits,
@@ -202,7 +216,8 @@ export function saveGame(label) {
     orePositions,
     mapGridTypes, // ADDED: save mapGrid tile types
     targetedOreTiles: gameState.targetedOreTiles || {}, // Save targeted ore tiles for harvesters
-    achievedMilestones: milestoneSystem.getAchievedMilestones() // Save milestone progress
+    achievedMilestones: milestoneSystem.getAchievedMilestones(), // Save milestone progress
+    productionQueueState: productionQueue.getSerializableState()
   }
 
   const saveObj = {
@@ -218,6 +233,35 @@ export function loadGame(key) {
   if (saveObj && saveObj.state) {
     const loaded = JSON.parse(saveObj.state)
     Object.assign(gameState, loaded.gameState)
+
+    if (Array.isArray(loaded.gameState?.blueprints)) {
+      gameState.blueprints = loaded.gameState.blueprints.map(bp => ({
+        type: bp.type,
+        x: Number.isFinite(bp.x) ? bp.x : 0,
+        y: Number.isFinite(bp.y) ? bp.y : 0
+      }))
+    } else {
+      gameState.blueprints = []
+    }
+
+    gameState.buildingPlacementMode = Boolean(loaded.gameState?.buildingPlacementMode)
+    gameState.currentBuildingType = typeof loaded.gameState?.currentBuildingType === 'string'
+      ? loaded.gameState.currentBuildingType
+      : null
+
+    gameState.chainBuildPrimed = Boolean(loaded.gameState?.chainBuildPrimed)
+    gameState.chainBuildMode = Boolean(loaded.gameState?.chainBuildMode)
+    gameState.chainStartX = Number.isFinite(loaded.gameState?.chainStartX) ? loaded.gameState.chainStartX : 0
+    gameState.chainStartY = Number.isFinite(loaded.gameState?.chainStartY) ? loaded.gameState.chainStartY : 0
+    gameState.chainBuildingType = typeof loaded.gameState?.chainBuildingType === 'string'
+      ? loaded.gameState.chainBuildingType
+      : null
+
+    gameState.draggedBuildingType = null
+    gameState.draggedBuildingButton = null
+    gameState.draggedUnitType = null
+    gameState.draggedUnitButton = null
+    gameState.chainBuildingButton = null
 
     // Rehydrate Set from saved array
     if (Array.isArray(loaded.gameState.defeatedPlayers)) {
@@ -541,6 +585,17 @@ export function loadGame(key) {
       })
     }
 
+    // Clear stale building references before re-placing buildings from the save
+    for (let y = 0; y < mapGrid.length; y++) {
+      if (!mapGrid[y]) continue
+      for (let x = 0; x < mapGrid[y].length; x++) {
+        const tile = mapGrid[y][x]
+        if (tile && tile.building) {
+          delete tile.building
+        }
+      }
+    }
+
     // Re-place all buildings on the map to set building properties correctly
     gameState.buildings.forEach(building => {
       for (let y = building.y; y < building.y + building.height; y++) {
@@ -586,8 +641,14 @@ export function loadGame(key) {
     // Sync tech tree with player's existing buildings to enable correct build options
     const gameInstance = getCurrentGame()
     if (gameInstance && gameInstance.productionController) {
+      productionQueue.setProductionController(gameInstance.productionController)
+      if (typeof gameInstance.productionController.setupAllProductionButtons === 'function') {
+        gameInstance.productionController.setupAllProductionButtons()
+      }
       gameInstance.productionController.syncTechTreeWithBuildings()
     }
+
+    productionQueue.restoreFromSerializableState(loaded.productionQueueState || null)
 
     // Auto-start the game after loading
     gameState.gamePaused = false
