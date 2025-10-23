@@ -1,6 +1,7 @@
 // cursorManager.js
 import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
+import { findWreckAtTile } from '../game/unitWreckManager.js'
 
 const CURSOR_CLASS_NAMES = [
   'repair-mode',
@@ -156,6 +157,8 @@ export class CursorManager {
     this.isOverRepairableUnit = false
     // Check if mouse is over a recovery tank when damaged units are selected
     this.isOverRecoveryTank = false
+    // Check if mouse is over a wreck when recovery tanks are selected
+    this.isOverWreck = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show refinery cursor if harvesters are selected
@@ -273,6 +276,14 @@ export class CursorManager {
               break
             }
           }
+        }
+      }
+
+      // Check for wrecks when recovery tanks are selected
+      if (hasSelectedRecoveryTanks) {
+        const wreck = findWreckAtTile(gameState, tileX, tileY)
+        if (wreck && wreck.owner === gameState.humanPlayer) {
+          this.isOverWreck = true
         }
       }
     }
@@ -413,7 +424,11 @@ export class CursorManager {
                           !gameState.attackGroupMode
 
       // Check for recovery tank interactions first - these take priority over AGF
-      if (this.isOverRepairableUnit) {
+      if (this.isOverWreck) {
+        // Over wreck with recovery tanks selected - show move into cursor
+        setCursor('none', 'move-into-mode')
+        return // Exit early - recovery tank interaction takes priority
+      } else if (this.isOverRepairableUnit) {
         // Over repairable unit with recovery tanks selected - show move into cursor
         setCursor('none', 'move-into-mode')
         return // Exit early - recovery tank interaction takes priority

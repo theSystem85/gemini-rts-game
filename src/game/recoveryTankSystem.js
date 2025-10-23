@@ -2,7 +2,7 @@ import { TILE_SIZE } from '../config.js'
 import { playSound } from '../sound.js'
 import { getUnitCost } from '../utils.js'
 import { logPerformance } from '../performanceUtils.js'
-import { findPath, createUnit } from '../units.js'
+import { findPath } from '../units.js'
 import {
   getWreckById,
   removeWreckById,
@@ -10,7 +10,7 @@ import {
   releaseWreckAssignment
 } from './unitWreckManager.js'
 
-const TOW_DISTANCE_THRESHOLD = TILE_SIZE * 0.6
+const TOW_DISTANCE_THRESHOLD = TILE_SIZE * 0.9 // Increased by 50% from 0.6
 
 function distanceBetweenPoints(ax, ay, bx, by) {
   return Math.hypot(ax - bx, ay - by)
@@ -81,47 +81,73 @@ function handleTowTask(tank, task, wreck, units, gameState) {
 
 function finalizeRestoration(tank, wreck, units, gameState) {
   if (!wreck) return
+
+  // Find the workshop this wreck is being delivered to
+  const workshop = (gameState.buildings || []).find(b =>
+    b.id === tank.recoveryTask?.workshopId && b.type === 'vehicleWorkshop'
+  )
+
+  if (!workshop) {
+    // Workshop no longer exists, release wreck
+    removeWreckById(gameState, wreck.id)
+    releaseWreckAssignment(wreck)
+    tank.recoveryTask = null
+    tank.towedWreck = null
+    tank.recoveryProgress = 0
+    playSound('repairCancelled', 0.6)
+    return
+  }
+
+  // Store tank's original position before starting recovery task
+  if (!tank.recoveryTask.originalPosition) {
+    tank.recoveryTask.originalPosition = { x: tank.tileX, y: tank.tileY }
+  }
+
+  // Position wreck near workshop perimeter
   const dropTileX = tank.tileX
   const dropTileY = tank.tileY
+  wreck.x = dropTileX * TILE_SIZE
+  wreck.y = dropTileY * TILE_SIZE
+  wreck.tileX = dropTileX
+  wreck.tileY = dropTileY
 
-  const restored = createUnit({ owner: tank.owner }, wreck.unitType, dropTileX, dropTileY, {
-    buildDuration: wreck.buildDuration
+  // Add wreck to workshop restoration queue
+  if (!workshop.restorationQueue) {
+    workshop.restorationQueue = []
+  }
+  workshop.restorationQueue.push({
+    wreckId: wreck.id,
+    unitType: wreck.unitType,
+    buildDuration: wreck.buildDuration,
+    addedAt: performance.now()
   })
 
-  if (restored.crew) {
-    Object.keys(restored.crew).forEach(role => {
-      restored.crew[role] = false
-    })
-  }
-
-  restored.health = restored.maxHealth
-  restored.x = dropTileX * TILE_SIZE
-  restored.y = dropTileY * TILE_SIZE
-  restored.tileX = dropTileX
-  restored.tileY = dropTileY
-
-  units.push(restored)
-
-  const occupancyMap = gameState.occupancyMap
-  if (occupancyMap) {
-    const centerTileX = Math.floor((restored.x + TILE_SIZE / 2) / TILE_SIZE)
-    const centerTileY = Math.floor((restored.y + TILE_SIZE / 2) / TILE_SIZE)
-    if (
-      centerTileY >= 0 &&
-      centerTileY < occupancyMap.length &&
-      centerTileX >= 0 &&
-      centerTileX < occupancyMap[0].length
-    ) {
-      occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
-    }
-  }
-
-  removeWreckById(gameState, wreck.id)
-  releaseWreckAssignment(wreck)
-  tank.recoveryTask = null
+  // Release wreck from tank
+  wreck.towedBy = null
+  wreck.assignedTankId = null
   tank.towedWreck = null
+
+  // Store original position if not already stored
+  const originalPos = tank.recoveryTask.originalPosition || { x: tank.tileX, y: tank.tileY }
+
+  // Clear recovery task
+  tank.recoveryTask = null
   tank.recoveryProgress = 0
-  playSound('repairFinished', 0.8)
+
+  // Return tank to original position
+  const path = findPath(
+    { x: tank.tileX, y: tank.tileY },
+    originalPos,
+    gameState.mapGrid,
+    gameState.occupancyMap
+  )
+
+  if (path && path.length > 1) {
+    tank.path = path.slice(1)
+    tank.moveTarget = { x: originalPos.x, y: originalPos.y }
+  }
+
+  playSound('deposit', 0.7)
 }
 
 function handleRecycleTask(tank, task, wreck, gameState, delta) {
