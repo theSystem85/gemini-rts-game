@@ -53,6 +53,10 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
   }
 
   if (now - gameState.lastOreUpdate >= ORE_SPREAD_INTERVAL) {
+    const occupancyMap = Array.isArray(gameState.occupancyMap) ? gameState.occupancyMap : null
+    const buildings = Array.isArray(gameState.buildings) ? gameState.buildings : []
+    const factoryList = Array.isArray(factories) ? factories : []
+
     const directions = [
       { x: 1, y: 0 },
       { x: -1, y: 0 },
@@ -67,15 +71,18 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
           directions.forEach(dir => {
             const nx = x + dir.x, ny = y + dir.y
             if (nx >= 0 && nx < mapGrid[0].length && ny >= 0 && ny < mapGrid.length) {
+              if ((occupancyMap?.[ny]?.[nx] || 0) > 0) {
+                return
+              }
               // Check if there's a building on this tile
-              const hasBuilding = gameState.buildings && gameState.buildings.some(building => {
+              const hasBuilding = buildings.some(building => {
                 const bx = building.x, by = building.y
                 const bw = building.width || 1, bh = building.height || 1
                 return nx >= bx && nx < bx + bw && ny >= by && ny < by + bh
               })
 
               // Check if there's a factory on this tile
-              const hasFactory = factories.some(factory => {
+              const hasFactory = factoryList.some(factory => {
                 return nx >= factory.x && nx < factory.x + factory.width &&
                        ny >= factory.y && ny < factory.y + factory.height
               })
