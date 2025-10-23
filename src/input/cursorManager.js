@@ -164,7 +164,9 @@ export class CursorManager {
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
-      const hasSelectedFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics >= 4)
+      const hasSelectedAmbulancesWithMedics = selectedUnits.some(
+        unit => unit.type === 'ambulance' && unit.medics > 0
+      )
       const hasSelectedNotFullyLoadedAmbulances = selectedUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
       // Check for recovery tank interactions
       const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
@@ -214,7 +216,7 @@ export class CursorManager {
       }
 
       // Check for healable units when fully loaded ambulances are selected
-      if (hasSelectedFullyLoadedAmbulances && units && Array.isArray(units)) {
+      if (hasSelectedAmbulancesWithMedics && units && Array.isArray(units)) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer &&
               unit.crew && typeof unit.crew === 'object') {
@@ -251,8 +253,10 @@ export class CursorManager {
       // Check for repairable units when recovery tanks are selected
       if (hasSelectedRecoveryTanks && units && Array.isArray(units)) {
         for (const unit of units) {
-          if (unit.owner === gameState.humanPlayer && unit.type !== 'recoveryTank' &&
-              unit.health < unit.maxHealth) {
+          if (unit.owner === gameState.humanPlayer && unit.type !== 'recoveryTank') {
+            const needsRepair = unit.health < unit.maxHealth
+            const needsTow = unit.crew && (!unit.crew.driver || !unit.crew.commander)
+            if (!needsRepair && !needsTow) continue
             const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
 

@@ -2,20 +2,31 @@
 import { TILE_SIZE } from '../config.js'
 import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
+import { getUnitCommandsHandler } from '../inputHandler.js'
 
 export const updateAmbulanceLogic = logPerformance(function(units, gameState, delta) {
   const ambulances = units.filter(u => u.type === 'ambulance')
   if (ambulances.length === 0) return
 
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+
   ambulances.forEach(ambulance => {
+    const queueState = ambulance.utilityQueue
+    const queueActive = queueState && queueState.mode === 'heal' && (
+      (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
+    )
+
     // Ambulances require a loader to tend to wounded units
     if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
       ambulance.healingTarget = null
       ambulance.healingTimer = 0
+      if (unitCommands) {
+        unitCommands.clearUtilityQueueState(ambulance)
+      }
       return
     }
     // Auto-acquire healing target if none set
-    if (!ambulance.healingTarget) {
+    if (!ambulance.healingTarget && !queueActive) {
       const potential = units.find(u =>
         u.id !== ambulance.id &&
         u.owner === ambulance.owner &&
@@ -107,6 +118,17 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
           // Play sound effect
           // playSound('crewRestored')
         }
+      }
+    }
+
+    if (queueState && queueState.mode === 'heal') {
+      if (!ambulance.healingTarget) {
+        queueState.currentTargetId = null
+        if (unitCommands) {
+          unitCommands.advanceUtilityQueue(ambulance, gameState.mapGrid, true)
+        }
+      } else if (queueState.currentTargetId !== ambulance.healingTarget.id) {
+        queueState.currentTargetId = ambulance.healingTarget.id
       }
     }
   })

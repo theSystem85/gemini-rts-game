@@ -2,6 +2,7 @@ import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
+import { getUnitCommandsHandler } from '../inputHandler.js'
 
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
@@ -10,12 +11,22 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
   // IMMEDIATE RESPONSE: Check for units that just ran out of gas completely
   handleEmergencyFuelRequests(tankers, units, gameState)
 
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+
   tankers.forEach(tanker => {
+    const queueState = tanker.utilityQueue
+    const queueActive = queueState && queueState.mode === 'refuel' && (
+      (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
+    )
+
     // Tankers need a loader to operate the refueling equipment
     if (tanker.crew && typeof tanker.crew === 'object' && !tanker.crew.loader) {
       tanker.refuelTarget = null
       tanker.emergencyTarget = null
       tanker.refuelTimer = 0
+      if (unitCommands) {
+        unitCommands.clearUtilityQueueState(tanker)
+      }
       return
     }
     // Ensure tanker has proper gas properties initialized
@@ -44,7 +55,11 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     }
 
     // Handle emergency refueling missions first
-    if (tanker.emergencyTarget) {
+    if (queueActive) {
+      tanker.emergencyTarget = null
+      tanker.emergencyMode = false
+      tanker.emergencyStartTime = null
+    } else if (tanker.emergencyTarget) {
       const emergencyUnit = units.find(u => u.id === tanker.emergencyTarget.id)
 
       // Clear emergency mission if target is gone, healthy, or has sufficient fuel
@@ -70,7 +85,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       }
     }
 
-    if (!tanker.refuelTarget) {
+    if (!tanker.refuelTarget && !queueActive) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
       const target = units.find(u =>
@@ -158,6 +173,17 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
+      }
+    }
+
+    if (queueState && queueState.mode === 'refuel') {
+      if (!tanker.refuelTarget) {
+        queueState.currentTargetId = null
+        if (unitCommands) {
+          unitCommands.advanceUtilityQueue(tanker, gameState.mapGrid, true)
+        }
+      } else if (queueState.currentTargetId !== tanker.refuelTarget.id) {
+        queueState.currentTargetId = tanker.refuelTarget.id
       }
     }
   })

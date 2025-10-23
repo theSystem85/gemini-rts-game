@@ -451,25 +451,38 @@ export class UnitRenderer {
     }
   }
 
-  isUtilityServingUnit(selectedUnit, targetUnit) {
+  getUtilityQueuePosition(selectedUnit, targetUnit) {
     if (!selectedUnit || !targetUnit || selectedUnit.id === targetUnit.id) {
-      return false
+      return null
+    }
+
+    const queue = selectedUnit.utilityQueue
+    if (queue) {
+      if (queue.currentTargetId === targetUnit.id) {
+        return 1
+      }
+      if (Array.isArray(queue.targets)) {
+        const index = queue.targets.indexOf(targetUnit.id)
+        if (index !== -1) {
+          return (queue.currentTargetId ? 2 : 1) + index
+        }
+      }
     }
 
     switch (selectedUnit.type) {
       case 'recoveryTank':
-        if (selectedUnit.repairTarget?.id === targetUnit.id) return true
-        if (selectedUnit.repairTargetUnit?.id === targetUnit.id) return true
-        if (selectedUnit.towedUnit?.id === targetUnit.id) return true
-        return false
+        if (selectedUnit.repairTarget?.id === targetUnit.id) return 1
+        if (selectedUnit.repairTargetUnit?.id === targetUnit.id) return 1
+        if (selectedUnit.towedUnit?.id === targetUnit.id) return 1
+        return null
       case 'ambulance':
-        return selectedUnit.healingTarget?.id === targetUnit.id
+        return selectedUnit.healingTarget?.id === targetUnit.id ? 1 : null
       case 'tankerTruck':
-        if (selectedUnit.refuelTarget?.id === targetUnit.id) return true
-        if (selectedUnit.emergencyTarget?.id === targetUnit.id) return true
-        return false
+        if (selectedUnit.refuelTarget?.id === targetUnit.id) return 1
+        if (selectedUnit.emergencyTarget?.id === targetUnit.id) return 1
+        return null
       default:
-        return false
+        return null
     }
   }
 
@@ -478,12 +491,19 @@ export class UnitRenderer {
       return
     }
 
-    const isServedBySelectedUtility = selectedUnits.some(selectedUnit => {
-      if (!selectedUnit?.selected) return false
-      return this.isUtilityServingUnit(selectedUnit, unit)
+    let queuePosition = null
+    selectedUnits.forEach(selectedUnit => {
+      if (!selectedUnit?.selected) return
+      if (!selectedUnit.type || (selectedUnit.type !== 'ambulance' && selectedUnit.type !== 'tankerTruck' && selectedUnit.type !== 'recoveryTank')) {
+        return
+      }
+      const position = this.getUtilityQueuePosition(selectedUnit, unit)
+      if (position !== null) {
+        queuePosition = queuePosition === null ? position : Math.min(queuePosition, position)
+      }
     })
 
-    if (!isServedBySelectedUtility) {
+    if (queuePosition === null) {
       return
     }
 
@@ -506,6 +526,12 @@ export class UnitRenderer {
     ctx.closePath()
     ctx.fill()
     ctx.stroke()
+
+    ctx.fillStyle = '#000'
+    ctx.font = '10px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3)
 
     ctx.restore()
   }

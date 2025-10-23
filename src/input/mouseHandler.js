@@ -38,6 +38,7 @@ export class MouseHandler {
     this.activeTouchPointers = new Map()
     this.twoFingerPan = null
     this.longPressDuration = 450
+    this.utilityQueueCandidate = false
   }
 
   setRenderScheduler(callback) {
@@ -60,6 +61,79 @@ export class MouseHandler {
     }
 
     return Boolean(row[tileX])
+  }
+
+  isUtilityUnit(unit) {
+    if (!unit) return false
+    return unit.type === 'ambulance' || unit.type === 'tankerTruck' || unit.type === 'recoveryTank'
+  }
+
+  shouldStartUtilityQueueMode(selectedUnits) {
+    if (!selectedUnits || selectedUnits.length === 0) {
+      return false
+    }
+    const utilityUnits = selectedUnits.filter(unit => this.isUtilityUnit(unit))
+    return utilityUnits.length > 0 && utilityUnits.length === selectedUnits.length
+  }
+
+  processUtilityQueueSelection(units, mapGrid, selectedUnits, selectionManager, unitCommands) {
+    if (!unitCommands) {
+      return false
+    }
+
+    const x1 = Math.min(this.selectionStart.x, this.selectionEnd.x)
+    const y1 = Math.min(this.selectionStart.y, this.selectionEnd.y)
+    const x2 = Math.max(this.selectionStart.x, this.selectionEnd.x)
+    const y2 = Math.max(this.selectionStart.y, this.selectionEnd.y)
+
+    const selectedIds = new Set(selectedUnits.map(unit => unit.id))
+    const healTargets = []
+    const refuelTargets = []
+    const repairTargets = []
+
+    units.forEach(unit => {
+      if (!unit || selectedIds.has(unit.id)) return
+      if (!selectionManager.isHumanPlayerUnit(unit)) return
+      if (unit.health <= 0) return
+
+      const centerX = unit.x + TILE_SIZE / 2
+      const centerY = unit.y + TILE_SIZE / 2
+      if (centerX < x1 || centerX > x2 || centerY < y1 || centerY > y2) return
+
+      if (unit.crew && typeof unit.crew === 'object' && Object.values(unit.crew).some(alive => !alive)) {
+        healTargets.push(unit)
+      }
+      if (typeof unit.maxGas === 'number' && unit.gas < unit.maxGas) {
+        refuelTargets.push(unit)
+      }
+      if (unit.health < unit.maxHealth) {
+        repairTargets.push(unit)
+      }
+    })
+
+    let anyQueued = false
+    const ambulances = selectedUnits.filter(unit => unit.type === 'ambulance')
+    if (ambulances.length > 0 && healTargets.length > 0) {
+      if (unitCommands.queueUtilityTargets(ambulances, healTargets, 'heal', mapGrid)) {
+        anyQueued = true
+      }
+    }
+
+    const tankers = selectedUnits.filter(unit => unit.type === 'tankerTruck')
+    if (tankers.length > 0 && refuelTargets.length > 0) {
+      if (unitCommands.queueUtilityTargets(tankers, refuelTargets, 'refuel', mapGrid)) {
+        anyQueued = true
+      }
+    }
+
+    const recoveryTanks = selectedUnits.filter(unit => unit.type === 'recoveryTank')
+    if (recoveryTanks.length > 0 && repairTargets.length > 0) {
+      if (unitCommands.queueUtilityTargets(recoveryTanks, repairTargets, 'repair', mapGrid)) {
+        anyQueued = true
+      }
+    }
+
+    return anyQueued
   }
 
   setupMouseEvents(gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -199,6 +273,8 @@ export class MouseHandler {
 
     // Allow normal selection for recovery tank interactions (but AGF will be disabled)
     this.isSelecting = !this.forceAttackClick && !this.guardClick
+
+    this.utilityQueueCandidate = !this.forceAttackClick && !this.guardClick && this.shouldStartUtilityQueueMode(selectedUnits)
 
     // Prevent selection box from appearing when assigning rally points
     if (selectedUnits.length === 1 && selectedUnits[0].isBuilding &&
@@ -587,6 +663,23 @@ export class MouseHandler {
     }
 
     // Handle attack group mode (only if it was actually activated during dragging)
+    let handledUtilityQueue = false
+    if (this.utilityQueueCandidate && this.wasDragging) {
+      handledUtilityQueue = this.processUtilityQueueSelection(units, mapGrid, selectedUnits, selectionManager, unitCommands)
+    }
+
+    if (handledUtilityQueue) {
+      this.isSelecting = false
+      gameState.selectionActive = false
+      this.wasDragging = false
+      this.attackGroupHandler.hasSelectedCombatUnits = false
+      this.utilityQueueCandidate = false
+      if (cursorManager) {
+        cursorManager.updateCustomCursor(e, gameState.mapGrid || [], factories, selectedUnits, units)
+      }
+      return
+    }
+
     if (this.attackGroupHandler.isAttackGroupSelecting && gameState.attackGroupMode) {
       this.attackGroupHandler.handleMouseUp(worldX, worldY, units, selectedUnits, unitCommands, mapGrid,
         this.handleStandardCommands.bind(this))
@@ -635,6 +728,7 @@ export class MouseHandler {
 
     // Reset recovery tank interaction state
     this.isRecoveryTankInteraction = false
+    this.utilityQueueCandidate = false
 
     // Clear any remaining AGF state if not handled above
     if (!this.attackGroupHandler.isAttackGroupSelecting) {
