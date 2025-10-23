@@ -871,3 +871,59 @@ body.config-modal-open {
 .config-modal__message--success {
   color: #7dffb0;
 }
+
+.config-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.config-modal__button {
+  background: #2d3640;
+  border: 1px solid #3c4a58;
+  border-radius: 4px;
+  color: #e5e5e5;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.config-modal__button:hover,
+.config-modal__button:focus {
+  background: #3a4a5c;
+  border-color: #4da3ff;
+  color: #ffffff;
+}
+
+.config-modal__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.config-modal__hint {
+  font-size: 12px;
+  color: #9fb3c8;
+  line-height: 1.5;
+}
+
+.config-modal__hint code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.config-modal__field select option:disabled {
+  color: #5f6a79;
+}
+
+.config-modal__option--disabled {
+  color: #5f6a79;
+}
+
+.config-modal__field select option[data-overridden='true'] {
+  color: #7dffb0;
+  font-weight: 600;
+}

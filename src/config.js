@@ -1,51 +1,232 @@
 const configRegistry = new Map()
+const activeOverrides = new Map()
+
+export const CONFIG_OVERRIDE_FILENAME = 'config-overrides.json'
+
+const CONFIG_OVERRIDE_STORAGE_KEY = 'rts-config-overrides'
+const EXTERNAL_OVERRIDE_PATH = `/${CONFIG_OVERRIDE_FILENAME}`
+
+let overridesLoaded = false
+let overridesLoadPromise = null
 
 function registerConfigVariable(name) {
+  const defaultValue = eval(name)
   configRegistry.set(name, {
     name,
     get value() {
       return eval(name)
     },
-    get type() {
-      return typeof eval(name)
-    }
+    type: typeof defaultValue,
+    defaultValue
   })
 }
 
-function assertKnownConfig(name) {
-  if (!configRegistry.has(name)) {
+function getConfigEntry(name) {
+  const entry = configRegistry.get(name)
+  if (!entry) {
     throw new Error(`Unknown config value: ${name}`)
   }
+  return entry
+}
+
+function assertNumericEntry(entry) {
+  if (entry.type !== 'number') {
+    throw new Error(`Config value ${entry.name} is not numeric and cannot be updated`)
+  }
+}
+
+function serializeForEval(value) {
+  if (typeof value === 'number') {
+    if (Object.is(value, -0)) {
+      return '-0'
+    }
+    return String(value)
+  }
+  return JSON.stringify(value)
+}
+
+function assignConfigValue(name, value) {
+  const serialized = serializeForEval(value)
+  eval(`${name} = ${serialized}`)
+}
+
+function setNumericConfigValue(entry, numericValue, { persistLocal = false } = {}) {
+  assertNumericEntry(entry)
+
+  if (!Number.isFinite(numericValue)) {
+    throw new Error(`Value for ${entry.name} must be a finite number`)
+  }
+
+  assignConfigValue(entry.name, numericValue)
+
+  const updatedValue = entry.value
+  if (Object.is(updatedValue, entry.defaultValue)) {
+    activeOverrides.delete(entry.name)
+  } else {
+    activeOverrides.set(entry.name, updatedValue)
+  }
+
+  if (persistLocal) {
+    saveOverridesToLocalStorage()
+  }
+
+  return updatedValue
 }
 
 export function listConfigVariables() {
   return Array.from(configRegistry.values()).map((entry) => ({
     name: entry.name,
     type: entry.type,
-    value: entry.value
+    value: entry.value,
+    defaultValue: entry.defaultValue,
+    editable: entry.type === 'number',
+    overridden: entry.type === 'number' && activeOverrides.has(entry.name)
   }))
 }
 
 export function getConfigValue(name) {
-  assertKnownConfig(name)
-  return configRegistry.get(name).value
+  return getConfigEntry(name).value
 }
 
 export function updateConfigValue(name, rawValue) {
-  assertKnownConfig(name)
-  const entry = configRegistry.get(name)
-
-  if (entry.type !== 'number') {
-    throw new Error(`Config value ${name} is not numeric and cannot be updated`)
-  }
-
+  const entry = getConfigEntry(name)
   const numericValue = Number(rawValue)
-  if (!Number.isFinite(numericValue)) {
-    throw new Error(`Value for ${name} must be a finite number`)
+  return setNumericConfigValue(entry, numericValue, { persistLocal: true })
+}
+
+export function isConfigValueOverridden(name) {
+  const entry = getConfigEntry(name)
+  return entry.type === 'number' && activeOverrides.has(entry.name)
+}
+
+export function getConfigOverrides() {
+  const overrides = {}
+  activeOverrides.forEach((value, key) => {
+    const entry = configRegistry.get(key)
+    if (!entry || entry.type !== 'number') {
+      activeOverrides.delete(key)
+      return
+    }
+
+    const currentValue = entry.value
+    if (Object.is(currentValue, entry.defaultValue)) {
+      activeOverrides.delete(key)
+      return
+    }
+
+    overrides[key] = currentValue
+
+    if (!Object.is(currentValue, value)) {
+      activeOverrides.set(key, currentValue)
+    }
+  })
+  return overrides
+}
+
+export async function ensureConfigOverridesLoaded() {
+  if (overridesLoaded) {
+    return
   }
 
-  eval(`${name} = ${numericValue}`)
-  return numericValue
+  if (!overridesLoadPromise) {
+    overridesLoadPromise = (async () => {
+      await loadOverridesFromFile()
+      loadOverridesFromLocalStorage()
+      overridesLoaded = true
+    })()
+  }
+
+  return overridesLoadPromise
+}
+
+function applyOverridesFromObject(overrides, { persistLocal = false } = {}) {
+  if (!overrides || typeof overrides !== 'object') {
+    return
+  }
+
+  Object.entries(overrides).forEach(([name, value]) => {
+    if (!configRegistry.has(name)) {
+      console.warn(`Ignoring unknown config override: ${name}`)
+      return
+    }
+
+    const entry = configRegistry.get(name)
+    if (entry.type !== 'number') {
+      console.warn(`Ignoring override for non-numeric config value: ${name}`)
+      return
+    }
+
+    const numericValue = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numericValue)) {
+      console.warn(`Ignoring non-finite override for ${name}`)
+      return
+    }
+
+    setNumericConfigValue(entry, numericValue, { persistLocal })
+  })
+}
+
+function saveOverridesToLocalStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  try {
+    if (activeOverrides.size === 0) {
+      window.localStorage.removeItem(CONFIG_OVERRIDE_STORAGE_KEY)
+      return
+    }
+
+    window.localStorage.setItem(
+      CONFIG_OVERRIDE_STORAGE_KEY,
+      JSON.stringify(getConfigOverrides())
+    )
+  } catch (err) {
+    console.warn('Failed to persist config overrides to localStorage:', err)
+  }
+}
+
+function loadOverridesFromLocalStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  let raw
+  try {
+    raw = window.localStorage.getItem(CONFIG_OVERRIDE_STORAGE_KEY)
+  } catch (err) {
+    console.warn('Failed to read config overrides from localStorage:', err)
+    return
+  }
+
+  if (!raw) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    applyOverridesFromObject(parsed)
+  } catch (err) {
+    console.warn('Failed to parse config overrides from localStorage:', err)
+  }
+}
+
+async function loadOverridesFromFile() {
+  if (typeof fetch !== 'function') {
+    return
+  }
+
+  try {
+    const response = await fetch(EXTERNAL_OVERRIDE_PATH, { cache: 'no-store' })
+    if (!response.ok) {
+      return
+    }
+
+    const data = await response.json()
+    applyOverridesFromObject(data)
+  } catch (err) {
+    console.warn('Failed to load config overrides file:', err)
+  }
 }
 
 // Experience system multiplier (adjusts how quickly units gain XP)

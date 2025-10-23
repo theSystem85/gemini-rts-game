@@ -407,6 +407,16 @@
             <input type="number" id="configValueInput" step="any" autocomplete="off">
           </label>
           <div id="configValueNote" class="config-modal__note"></div>
+          <div class="config-modal__actions">
+            <button id="configExportBtn" class="config-modal__button" type="button">
+              Download Overrides
+            </button>
+          </div>
+          <p class="config-modal__hint">
+            Overrides are saved to your browser automatically. Place
+            <code><span id="configOverridesFilename">config-overrides.json</span></code>
+            in the project root to preload them on startup.
+          </p>
           <div id="configValueMessage" class="config-modal__message"></div>
         </div>
       </div>

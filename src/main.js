@@ -17,7 +17,10 @@ import {
   setOreSpreadEnabled,
   setMapDimensions,
   listConfigVariables,
-  updateConfigValue
+  updateConfigValue,
+  getConfigOverrides,
+  ensureConfigOverridesLoaded,
+  CONFIG_OVERRIDE_FILENAME
 } from './config.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -469,6 +472,8 @@ class Game {
     const configInput = document.getElementById('configValueInput')
     const configNote = document.getElementById('configValueNote')
     const configMessage = document.getElementById('configValueMessage')
+    const configExportBtn = document.getElementById('configExportBtn')
+    const configOverridesFilename = document.getElementById('configOverridesFilename')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
@@ -505,10 +510,51 @@ class Game {
       configSelect &&
       configInput &&
       configNote &&
-      configMessage
+      configMessage &&
+      configExportBtn
     ) {
       let cachedEntries = []
       let currentEntry = null
+
+      if (configOverridesFilename) {
+        configOverridesFilename.textContent = CONFIG_OVERRIDE_FILENAME
+      }
+      configExportBtn.textContent = `Download ${CONFIG_OVERRIDE_FILENAME}`
+
+      const formatOptionLabel = (entry) =>
+        entry.overridden ? `${entry.name} (override)` : entry.name
+
+      const updateNoteForCurrentEntry = () => {
+        if (!currentEntry) {
+          configNote.textContent = cachedEntries.some((entry) => entry.editable)
+            ? 'Select a numeric configuration value to edit.'
+            : 'No numeric configuration values can be edited at this time.'
+          return
+        }
+
+        if (!currentEntry.editable) {
+          configNote.textContent = `Editing ${currentEntry.type} values is not supported yet.`
+          return
+        }
+
+        const noteParts = [`Default value: ${currentEntry.defaultValue}`]
+        noteParts.push(
+          currentEntry.overridden
+            ? 'Override active (saved to browser storage).'
+            : 'Override not set.'
+        )
+        configNote.textContent = noteParts.join(' ')
+      }
+
+      const refreshExportButtonState = () => {
+        if (!configExportBtn) {
+          return
+        }
+        const hasOverrides = Object.keys(getConfigOverrides()).length > 0
+        configExportBtn.disabled = !hasOverrides
+      }
+
+      refreshExportButtonState()
 
       const setModalVisibility = (visible) => {
         configModal.classList.toggle('config-modal--open', visible)
@@ -535,23 +581,17 @@ class Game {
         currentEntry = cachedEntries.find((entry) => entry.name === selectedName) || null
         setMessage('')
 
-        if (!currentEntry) {
+        if (!currentEntry || !currentEntry.editable) {
           configInput.value = ''
           configInput.disabled = true
-          configNote.textContent = 'Select a configuration value to edit.'
+          updateNoteForCurrentEntry()
           return
         }
 
-        if (currentEntry.type === 'number') {
-          configInput.disabled = false
-          configInput.value = currentEntry.value
-          configInput.focus()
-          configNote.textContent = ''
-        } else {
-          configInput.disabled = true
-          configInput.value = ''
-          configNote.textContent = `Editing ${currentEntry.type} values is not supported yet.`
-        }
+        configInput.disabled = false
+        configInput.value = currentEntry.value
+        configInput.focus()
+        updateNoteForCurrentEntry()
       }
 
       const populateOptions = (preserveSelection = true) => {
@@ -562,20 +602,61 @@ class Game {
         cachedEntries.forEach((entry) => {
           const option = document.createElement('option')
           option.value = entry.name
-          option.textContent = entry.name
+          option.textContent = formatOptionLabel(entry)
+          option.disabled = !entry.editable
+          if (!entry.editable) {
+            option.classList.add('config-modal__option--disabled')
+          }
+          if (entry.overridden) {
+            option.dataset.overridden = 'true'
+          }
           configSelect.appendChild(option)
         })
 
-        const fallback = cachedEntries.find((entry) => entry.name === previousSelection) || cachedEntries[0]
+        const fallback = cachedEntries.find((entry) => entry.name === previousSelection && entry.editable)
+          || cachedEntries.find((entry) => entry.editable)
+
         if (fallback) {
           configSelect.value = fallback.name
+        } else {
+          configSelect.value = ''
         }
 
+        configSelect.disabled = cachedEntries.length === 0 || cachedEntries.every((entry) => !entry.editable)
         syncSelection()
+        refreshExportButtonState()
       }
 
       const closeModal = () => {
         setModalVisibility(false)
+      }
+
+      const exportOverrides = () => {
+        const overrides = getConfigOverrides()
+        const entries = Object.entries(overrides)
+        if (entries.length === 0) {
+          setMessage('There are no overrides to export yet.')
+          return
+        }
+
+        try {
+          const blob = new Blob([JSON.stringify(overrides, null, 2)], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = CONFIG_OVERRIDE_FILENAME
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          setTimeout(() => URL.revokeObjectURL(url), 0)
+          const message = entries.length === 1
+            ? `Downloaded override for ${entries[0][0]} to ${CONFIG_OVERRIDE_FILENAME}.`
+            : `Downloaded ${entries.length} overrides to ${CONFIG_OVERRIDE_FILENAME}.`
+          setMessage(message, 'success')
+        } catch (err) {
+          console.error('Failed to export config overrides:', err)
+          setMessage('Unable to export overrides. Check console for details.', 'error')
+        }
       }
 
       configSettingsBtn.addEventListener('click', () => {
@@ -598,11 +679,11 @@ class Game {
       })
 
       configSelect.addEventListener('change', () => {
-        populateOptions()
+        syncSelection()
       })
 
       configInput.addEventListener('input', (event) => {
-        if (!currentEntry || currentEntry.type !== 'number') {
+        if (!currentEntry || !currentEntry.editable) {
           return
         }
 
@@ -614,16 +695,41 @@ class Game {
 
         try {
           const updatedValue = updateConfigValue(currentEntry.name, value)
-          currentEntry.value = updatedValue
+          const isOverridden = !Object.is(updatedValue, currentEntry.defaultValue)
+          const updatedEntry = {
+            ...currentEntry,
+            value: updatedValue,
+            overridden: isOverridden
+          }
+          currentEntry = updatedEntry
           cachedEntries = cachedEntries.map((entry) =>
-            entry.name === currentEntry.name ? { ...entry, value: updatedValue } : entry
+            entry.name === updatedEntry.name ? updatedEntry : entry
           )
+
+          const selectedOption = configSelect.querySelector(`option[value="${updatedEntry.name}"]`)
+          if (selectedOption) {
+            selectedOption.textContent = formatOptionLabel(updatedEntry)
+            if (isOverridden) {
+              selectedOption.dataset.overridden = 'true'
+            } else {
+              selectedOption.removeAttribute('data-overridden')
+            }
+          }
+
           configInput.value = `${updatedValue}`
-          setMessage(`Updated ${currentEntry.name} to ${updatedValue}`, 'success')
+          updateNoteForCurrentEntry()
+          refreshExportButtonState()
+
+          const message = isOverridden
+            ? `Saved override for ${updatedEntry.name}.`
+            : `Cleared override for ${updatedEntry.name}.`
+          setMessage(message, 'success')
         } catch (err) {
           setMessage(err.message, 'error')
         }
       })
+
+      configExportBtn.addEventListener('click', exportOverrides)
     }
   }
 
@@ -924,7 +1030,13 @@ export { unitCosts }
 export { showNotification }
 
 // Initialize the game when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await ensureConfigOverridesLoaded()
+  } catch (err) {
+    console.warn('Failed to load config overrides before startup:', err)
+  }
+
   loadPersistedSettings()
   gameInstance = new Game()
 
