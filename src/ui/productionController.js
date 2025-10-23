@@ -1021,6 +1021,19 @@ export class ProductionController {
         button
       }
 
+      const sidebarScroll = document.getElementById('sidebarScroll')
+      if (sidebarScroll) {
+        state.scrollLock = {
+          element: sidebarScroll,
+          previousTouchAction: sidebarScroll.style.touchAction,
+          previousOverflowY: sidebarScroll.style.overflowY,
+          previousWebkitOverflowScrolling: sidebarScroll.style.webkitOverflowScrolling
+        }
+        sidebarScroll.style.touchAction = 'none'
+        sidebarScroll.style.overflowY = 'hidden'
+        sidebarScroll.style.webkitOverflowScrolling = 'auto'
+      }
+
       this.mobileDragState = state
 
       const handleMove = (moveEvent) => {
@@ -1080,6 +1093,13 @@ export class ProductionController {
         } else if (detail.kind === 'unit' && gameState.draggedUnitType === detail.type) {
           gameState.draggedUnitType = null
           gameState.draggedUnitButton = null
+        }
+
+        if (state.scrollLock && state.scrollLock.element) {
+          const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = state.scrollLock
+          element.style.touchAction = previousTouchAction || ''
+          element.style.overflowY = previousOverflowY || ''
+          element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
         }
 
         this.mobileDragState = null

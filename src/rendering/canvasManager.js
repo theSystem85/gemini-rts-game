@@ -18,20 +18,57 @@ export class CanvasManager {
 
   resizeCanvases() {
     const pixelRatio = window.devicePixelRatio || 1
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+    const body = document.body
+    const bodyStyle = body ? window.getComputedStyle(body) : null
+    const parseSafeInset = (value) => {
+      if (!value) return 0
+      const parsed = parseFloat(value)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    const safeLeft = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-left')) : 0
+    const safeRight = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-right')) : 0
+
+    const isTouchLayout = body ? body.classList.contains('is-touch') : false
+
+    const widthCandidates = []
+    widthCandidates.push(window.innerWidth + safeLeft + safeRight)
+    if (window.visualViewport && window.visualViewport.width) {
+      widthCandidates.push(window.visualViewport.width + safeLeft + safeRight)
+    }
+    if (isTouchLayout && window.screen && window.screen.width) {
+      widthCandidates.push(window.screen.width / pixelRatio)
+    }
+
+    const viewportWidth = Math.max(...widthCandidates.filter(v => Number.isFinite(v) && v > 0))
+
+    const heightCandidates = []
+    heightCandidates.push(window.innerHeight)
+    if (window.visualViewport && window.visualViewport.height) {
+      heightCandidates.push(window.visualViewport.height)
+    }
+
+    const viewportHeight = Math.max(...heightCandidates.filter(v => Number.isFinite(v) && v > 0))
     const sidebar = document.getElementById('sidebar')
-    const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
+    const rawSidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
+    const moveSidebarRight = body ? body.classList.contains('mobile-sidebar-right') : false
+    const safeAdjustment = moveSidebarRight ? safeRight : safeLeft
+    const sidebarBaseWidth = Math.max(0, rawSidebarWidth - safeAdjustment)
 
     if (document.documentElement) {
-      document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`)
+      document.documentElement.style.setProperty('--sidebar-width', `${sidebarBaseWidth}px`)
     }
 
     // Set canvas display size (CSS)
-    const availableWidth = Math.max(0, viewportWidth - sidebarWidth)
+    const availableWidth = Math.max(0, viewportWidth - rawSidebarWidth)
     const logicalHeight = viewportHeight
 
-    this.gameCanvas.style.left = `${sidebarWidth}px`
+    if (moveSidebarRight) {
+      this.gameCanvas.style.left = '0px'
+    } else {
+      this.gameCanvas.style.left = `${rawSidebarWidth}px`
+    }
+    this.gameCanvas.style.right = 'auto'
     this.gameCanvas.style.width = `${availableWidth}px`
     this.gameCanvas.style.height = `${logicalHeight}px`
 
@@ -48,7 +85,7 @@ export class CanvasManager {
     this.gameCtx.imageSmoothingQuality = 'high'
 
     // Set minimap size - make it fit entirely in the sidebar
-    const minimapWidth = Math.max(140, Math.round(sidebarWidth - 20))
+    const minimapWidth = Math.max(140, Math.round(rawSidebarWidth - 20))
     const minimapHeight = Math.round(minimapWidth * 0.6)
     this.minimapCanvas.style.width = `${minimapWidth}px`
     this.minimapCanvas.style.height = `${minimapHeight}px`

@@ -36,10 +36,41 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+let gameInstance = null
+let lastIsTouchState = null
+let lastSidebarRightApplied = null
+let portraitQuery = null
+
+function updateMobileLayoutClasses() {
+  if (!document.body) {
+    return
+  }
+
+  const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
+  const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
+  const shouldMoveSidebar = isTouch && isPortrait
+  const applied = document.body.classList.toggle('mobile-sidebar-right', shouldMoveSidebar)
+
+  if (lastSidebarRightApplied !== applied) {
+    lastSidebarRightApplied = applied
+    if (gameInstance && gameInstance.canvasManager) {
+      gameInstance.canvasManager.resizeCanvases()
+    }
+  }
+}
+
 function updateTouchClass() {
   const isTouch = window.matchMedia('(pointer: coarse)').matches
   if (document.body) {
+    const previous = lastIsTouchState
     document.body.classList.toggle('is-touch', isTouch)
+    lastIsTouchState = isTouch
+    updateMobileLayoutClasses()
+    if (previous !== null && previous !== isTouch && gameInstance && gameInstance.canvasManager) {
+      gameInstance.canvasManager.resizeCanvases()
+    }
+  } else {
+    lastIsTouchState = isTouch
   }
 }
 
@@ -49,6 +80,47 @@ if (typeof coarsePointerQuery.addEventListener === 'function') {
   coarsePointerQuery.addEventListener('change', updateTouchClass)
 } else if (typeof coarsePointerQuery.addListener === 'function') {
   coarsePointerQuery.addListener(updateTouchClass)
+}
+
+portraitQuery = window.matchMedia('(orientation: portrait)')
+updateMobileLayoutClasses()
+if (typeof portraitQuery.addEventListener === 'function') {
+  portraitQuery.addEventListener('change', updateMobileLayoutClasses)
+} else if (typeof portraitQuery.addListener === 'function') {
+  portraitQuery.addListener(updateMobileLayoutClasses)
+}
+
+window.addEventListener('resize', updateMobileLayoutClasses)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateMobileLayoutClasses)
+}
+
+function setupDoubleTapPrevention() {
+  let lastTouchEnd = 0
+
+  document.addEventListener('touchend', (event) => {
+    if (!document.body || !document.body.classList.contains('is-touch')) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    if (event.touches && event.touches.length > 0) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    const target = event.target
+    if (target && typeof target.closest === 'function' && target.closest('input, textarea, select')) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    const now = Date.now()
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault()
+    }
+    lastTouchEnd = now
+  }, { passive: false })
 }
 
 // Import new modules
@@ -156,9 +228,6 @@ function loadPersistedSettings() {
 
 // Initialize loading states
 let allAssetsLoaded = false
-
-// Global game instance for save/load system
-let gameInstance = null
 
 // Export function to get current game instance
 export function getCurrentGame() {
@@ -811,6 +880,10 @@ export { showNotification }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+  updateTouchClass()
+  updateMobileLayoutClasses()
+  setupDoubleTapPrevention()
+
   loadPersistedSettings()
   gameInstance = new Game()
 
