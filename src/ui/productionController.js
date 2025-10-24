@@ -16,7 +16,6 @@ export class ProductionController {
     this.isSetup = false // Flag to prevent duplicate event listeners
     this.mobileDragState = null
     this.suppressNextClick = false
-    this.mobileTapData = new WeakMap()
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
@@ -184,7 +183,20 @@ export class ProductionController {
         if (label) label.style.display = 'block'
       }
 
-      button.addEventListener('click', () => {
+      button.addEventListener('click', (event) => {
+        if (this.suppressNextClick) {
+          this.suppressNextClick = false
+          return
+        }
+
+        const isUpperHalf = this.isUpperHalfClick(event, button)
+        this.showStackDirectionIndicator(button, isUpperHalf ? 'increase' : 'decrease')
+
+        if (!isUpperHalf) {
+          this.removeQueuedUnit(button)
+          return
+        }
+
         // Prevent action if game is paused or button is disabled
         if (gameState.gamePaused || button.classList.contains('disabled')) {
           // Optionally show a notification if disabled
@@ -488,9 +500,22 @@ export class ProductionController {
 
       this.attachMobileDragHandlers(button, { kind: 'building', type: buildingType })
 
-      button.addEventListener('click', () => {
+      button.addEventListener('click', (event) => {
+        if (this.suppressNextClick) {
+          this.suppressNextClick = false
+          return
+        }
+
         const buildingType = button.getAttribute('data-building-type')
         const currentTime = performance.now()
+        const isUpperHalf = this.isUpperHalfClick(event, button)
+
+        this.showStackDirectionIndicator(button, isUpperHalf ? 'increase' : 'decrease')
+
+        if (!isUpperHalf) {
+          this.removeQueuedBuilding(button)
+          return
+        }
 
         // Prevent action if game is paused or button is disabled
         if (gameState.gamePaused || button.classList.contains('disabled')) {
@@ -1013,8 +1038,6 @@ export class ProductionController {
 
       this.suppressNextClick = false
 
-      const doubleTapReady = detail.kind === 'unit' && this.consumeMobileDoubleTap(button)
-
       const state = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -1022,10 +1045,7 @@ export class ProductionController {
         active: false,
         mode: null,
         detail,
-        button,
-        lastStackStep: 0,
-        initialCount: detail.kind === 'unit' ? this.getUnitQueueCount(button) : 0,
-        doubleTapReady
+        button
       }
 
       const lockables = []
@@ -1062,31 +1082,7 @@ export class ProductionController {
         }
 
         const deltaX = moveEvent.clientX - state.startX
-        const deltaY = moveEvent.clientY - state.startY
-        const distance = Math.hypot(deltaX, deltaY)
-
-        if (!state.active && detail.kind === 'unit' && state.doubleTapReady) {
-          const absY = Math.abs(deltaY)
-          const absX = Math.abs(deltaX)
-          const VERTICAL_ACTIVATION = 16
-          const HORIZONTAL_TOLERANCE = 80
-          const DIRECTION_RATIO = 1.2
-
-          if (
-            absY > VERTICAL_ACTIVATION &&
-            absY > absX * DIRECTION_RATIO &&
-            absX < HORIZONTAL_TOLERANCE
-          ) {
-            state.active = true
-            state.mode = 'stack'
-            this.suppressNextClick = true
-            state.initialCount = this.getUnitQueueCount(button)
-            state.lastStackStep = 0
-            moveEvent.preventDefault()
-            this.updateMobileStackAdjustment(state, moveEvent, detail)
-            return
-          }
-        }
+        const distance = Math.hypot(deltaX, moveEvent.clientY - state.startY)
 
         if (!state.active && distance > 10) {
           state.active = true
@@ -1103,12 +1099,7 @@ export class ProductionController {
           }
         }
 
-        if (state.active) {
-          if (state.mode === 'stack') {
-            moveEvent.preventDefault()
-            this.updateMobileStackAdjustment(state, moveEvent, detail)
-            return
-          }
+        if (state.active && state.mode === 'drag') {
           moveEvent.preventDefault()
           this.updateMobileDragHover(moveEvent, detail)
         }
@@ -1123,18 +1114,16 @@ export class ProductionController {
         window.removeEventListener('pointerup', handleEnd, true)
         window.removeEventListener('pointercancel', handleEnd, true)
 
-        if (state.active) {
-          if (state.mode === 'drag') {
-            document.dispatchEvent(new CustomEvent('mobile-production-drop', {
-              detail: {
-                kind: detail.kind,
-                type: detail.type,
-                button,
-                clientX: endEvent.clientX,
-                clientY: endEvent.clientY
-              }
-            }))
-          }
+        if (state.active && state.mode === 'drag') {
+          document.dispatchEvent(new CustomEvent('mobile-production-drop', {
+            detail: {
+              kind: detail.kind,
+              type: detail.type,
+              button,
+              clientX: endEvent.clientX,
+              clientY: endEvent.clientY
+            }
+          }))
         } else {
           this.suppressNextClick = false
         }
@@ -1180,19 +1169,15 @@ export class ProductionController {
     })
   }
 
-  getUnitQueueCount(button) {
+  getUnitProductionCount(button) {
     if (!button) return 0
 
-    const queued = productionQueue.unitItems.filter(item => item.button === button).length
-    if (queued > 0) {
-      return queued
-    }
-
+    let count = productionQueue.unitItems.filter(item => item.button === button).length
     if (productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
-      return 1
+      count += 1
     }
 
-    return 0
+    return count
   }
 
   removeQueuedUnit(button) {
@@ -1203,116 +1188,129 @@ export class ProductionController {
       if (queued.button === button) {
         if (i === 0 && productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
           productionQueue.cancelUnitProduction()
-          return true
+        } else {
+          productionQueue.tryResumeProduction()
+          productionQueue.unitItems.splice(i, 1)
         }
 
-        productionQueue.tryResumeProduction()
-        productionQueue.unitItems.splice(i, 1)
-        const remainingCount = productionQueue.unitItems.filter(item => item.button === button).length
-        productionQueue.updateBatchCounter(button, remainingCount)
+        productionQueue.updateBatchCounter(button, this.getUnitProductionCount(button))
         return true
       }
     }
 
     if (productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
       productionQueue.cancelUnitProduction()
+      productionQueue.updateBatchCounter(button, this.getUnitProductionCount(button))
       return true
     }
 
     return false
   }
 
-  updateMobileStackAdjustment(state, event, detail) {
-    if (!state || !detail || detail.kind !== 'unit') {
-      return
+  getBuildingProductionCount(button) {
+    if (!button) return 0
+
+    let count = productionQueue.buildingItems.filter(item => item.button === button).length
+    if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+      count += 1
     }
 
-    const STACK_STEP_SIZE = 35
-    const deltaY = event.clientY - state.startY
-    if (!Number.isFinite(deltaY)) {
-      return
-    }
-
-    let targetChange = Math.trunc(-deltaY / STACK_STEP_SIZE)
-    if (!Number.isFinite(targetChange)) {
-      targetChange = 0
-    }
-
-    const minChange = -state.initialCount
-    if (targetChange < minChange) {
-      targetChange = minChange
-    }
-
-    if (targetChange === state.lastStackStep) {
-      return
-    }
-
-    if (targetChange > state.lastStackStep) {
-      const toAdd = targetChange - state.lastStackStep
-      let added = 0
-      while (added < toAdd) {
-        if (gameState.gamePaused || state.button.classList.contains('disabled')) {
-          break
-        }
-        productionQueue.addItem(detail.type, state.button, false)
-        added++
-      }
-      state.lastStackStep += added
-    } else if (targetChange < state.lastStackStep) {
-      const toRemove = state.lastStackStep - targetChange
-      let removed = 0
-      while (removed < toRemove) {
-        if (!this.removeQueuedUnit(state.button)) {
-          break
-        }
-        removed++
-      }
-      state.lastStackStep -= removed
-    }
-
-    const finalCount = this.getUnitQueueCount(state.button)
-    productionQueue.updateBatchCounter(state.button, finalCount)
+    return count
   }
 
-  consumeMobileDoubleTap(button) {
+  removeQueuedBuilding(button) {
+    if (!button) return false
+
+    for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
+      const queued = productionQueue.buildingItems[i]
+      if (queued.button === button) {
+        if (i === 0 && productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+          productionQueue.cancelBuildingProduction()
+        } else {
+          productionQueue.tryResumeProduction()
+          productionQueue.buildingItems.splice(i, 1)
+          productionQueue.removeBlueprint(queued)
+        }
+
+        productionQueue.updateBatchCounter(button, this.getBuildingProductionCount(button))
+        return true
+      }
+    }
+
+    if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+      productionQueue.cancelBuildingProduction()
+      productionQueue.updateBatchCounter(button, this.getBuildingProductionCount(button))
+      return true
+    }
+
+    if (button.classList.contains('ready-for-placement')) {
+      const buildingType = button.getAttribute('data-building-type')
+      productionQueue.cancelReadyBuilding(buildingType, button)
+      productionQueue.updateBatchCounter(button, this.getBuildingProductionCount(button))
+      return true
+    }
+
+    return false
+  }
+
+  isUpperHalfClick(event, button) {
     if (!button) {
-      return false
-    }
-
-    const DOUBLE_TAP_WINDOW = 300
-    const now = performance.now()
-    let tapInfo = this.mobileTapData.get(button)
-
-    if (!tapInfo) {
-      tapInfo = {
-        pending: false,
-        lastTapTime: 0,
-        timeoutId: null
-      }
-      this.mobileTapData.set(button, tapInfo)
-    }
-
-    if (tapInfo.pending && now - tapInfo.lastTapTime <= DOUBLE_TAP_WINDOW) {
-      tapInfo.pending = false
-      tapInfo.lastTapTime = 0
-      if (tapInfo.timeoutId) {
-        clearTimeout(tapInfo.timeoutId)
-        tapInfo.timeoutId = null
-      }
       return true
     }
 
-    tapInfo.pending = true
-    tapInfo.lastTapTime = now
-    if (tapInfo.timeoutId) {
-      clearTimeout(tapInfo.timeoutId)
+    const rect = button.getBoundingClientRect()
+    if (!rect || rect.height === 0) {
+      return true
     }
-    tapInfo.timeoutId = setTimeout(() => {
-      tapInfo.pending = false
-      tapInfo.timeoutId = null
-    }, DOUBLE_TAP_WINDOW)
 
-    return false
+    let clientY = typeof event?.clientY === 'number' ? event.clientY : NaN
+
+    if (!Number.isFinite(clientY)) {
+      const touch = event?.changedTouches?.[0] || event?.touches?.[0]
+      if (touch && typeof touch.clientY === 'number') {
+        clientY = touch.clientY
+      }
+    }
+
+    if (!Number.isFinite(clientY)) {
+      return true
+    }
+
+    const relativeY = clientY - rect.top
+    if (!Number.isFinite(relativeY)) {
+      return true
+    }
+
+    return relativeY <= rect.height / 2
+  }
+
+  showStackDirectionIndicator(button, direction) {
+    if (!button) {
+      return
+    }
+
+    let indicator = button.querySelector('.stack-direction-indicator')
+    if (!indicator) {
+      indicator = document.createElement('div')
+      indicator.className = 'stack-direction-indicator align-top'
+      const arrow = document.createElement('div')
+      arrow.className = 'arrow-shape'
+      indicator.appendChild(arrow)
+      button.appendChild(indicator)
+    }
+
+    indicator.classList.remove('align-top', 'align-bottom')
+    indicator.classList.add(direction === 'increase' ? 'align-top' : 'align-bottom')
+    indicator.classList.add('visible')
+
+    if (indicator._hideTimer) {
+      clearTimeout(indicator._hideTimer)
+    }
+
+    indicator._hideTimer = setTimeout(() => {
+      indicator.classList.remove('visible')
+      indicator._hideTimer = null
+    }, 500)
   }
 
   updateMobileDragHover(event, detail) {
