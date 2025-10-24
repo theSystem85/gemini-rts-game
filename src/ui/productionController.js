@@ -1129,6 +1129,8 @@ export class ProductionController {
       const lockables = []
       const sidebarScroll = document.getElementById('sidebarScroll')
       const sidebar = document.getElementById('sidebar')
+      const mobileBuildMenu = document.getElementById('mobileBuildMenuContainer')
+      const mobileProductionScroll = document.querySelector('#mobileBuildMenuContainer #production')
 
       const captureLockState = (element) => {
         if (!element) {
@@ -1145,8 +1147,14 @@ export class ProductionController {
         element.style.webkitOverflowScrolling = 'auto'
       }
 
-      captureLockState(sidebarScroll)
-      captureLockState(sidebar)
+      const isMobileLandscape = document.body && document.body.classList.contains('mobile-landscape')
+      if (isMobileLandscape) {
+        captureLockState(mobileProductionScroll)
+        captureLockState(mobileBuildMenu)
+      } else {
+        captureLockState(sidebarScroll)
+        captureLockState(sidebar)
+      }
 
       if (lockables.length > 0) {
         state.scrollLocks = lockables

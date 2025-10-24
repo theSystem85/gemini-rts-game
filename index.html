@@ -41,6 +41,20 @@
     </style>
   </head>
   <body>
+    <div id="mobileSidebarControls" aria-hidden="true">
+      <button
+        id="sidebarToggle"
+        type="button"
+        class="sidebar-toggle"
+        aria-controls="sidebar"
+        aria-expanded="true"
+        aria-label="Collapse sidebar"
+      >
+        <span class="sidebar-toggle-icon">☰</span>
+      </button>
+      <div id="mobileActionsContainer"></div>
+    </div>
+
     <div id="sidebar">
       <!-- Energy bar will be inserted here by JS at the very top -->
       <div id="energyBarContainer"></div>
@@ -395,17 +409,7 @@
         </div>
       </div>
       </div>
-      <button
-        id="sidebarToggle"
-        type="button"
-        class="sidebar-toggle"
-        aria-controls="sidebar"
-        aria-expanded="true"
-        aria-label="Collapse sidebar"
-      >
-        <span class="sidebar-toggle-icon">☰</span>
-        <span class="sidebar-toggle-text">Hide</span>
-      </button>
+      
       <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
       <canvas id="gameCanvas"></canvas>
     

@@ -48,7 +48,12 @@ const mobileLayoutState = {
   mobileContainer: null,
   sidebarToggle: null,
   isSidebarCollapsed: true,
-  sidebarToggleListenerAttached: false
+  sidebarToggleListenerAttached: false,
+  actions: null,
+  actionsOriginalParent: null,
+  actionsOriginalNextSibling: null,
+  mobileActionsContainer: null,
+  mobileControls: null
 }
 
 function ensureMobileLayoutElements() {
@@ -69,6 +74,25 @@ function ensureMobileLayoutElements() {
 
   if (!mobileLayoutState.mobileContainer || !mobileLayoutState.mobileContainer.isConnected) {
     mobileLayoutState.mobileContainer = document.getElementById('mobileBuildMenuContainer')
+  }
+
+  if (!mobileLayoutState.actions || !mobileLayoutState.actions.isConnected) {
+    const actions = document.getElementById('actions')
+    if (actions) {
+      mobileLayoutState.actions = actions
+      if (!mobileLayoutState.actionsOriginalParent) {
+        mobileLayoutState.actionsOriginalParent = actions.parentNode || null
+        mobileLayoutState.actionsOriginalNextSibling = actions.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.mobileActionsContainer || !mobileLayoutState.mobileActionsContainer.isConnected) {
+    mobileLayoutState.mobileActionsContainer = document.getElementById('mobileActionsContainer')
+  }
+
+  if (!mobileLayoutState.mobileControls || !mobileLayoutState.mobileControls.isConnected) {
+    mobileLayoutState.mobileControls = document.getElementById('mobileSidebarControls')
   }
 
   if (!mobileLayoutState.sidebarToggle || !mobileLayoutState.sidebarToggle.isConnected) {
@@ -100,10 +124,6 @@ function setSidebarCollapsed(collapsed) {
   if (toggleButton) {
     toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
     toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
-    const textSpan = toggleButton.querySelector('.sidebar-toggle-text')
-    if (textSpan) {
-      textSpan.textContent = collapsed ? 'Menu' : 'Hide'
-    }
   }
 }
 
@@ -122,10 +142,32 @@ function restoreProductionArea() {
   }
 }
 
+function restoreActions() {
+  const { actions, actionsOriginalParent, actionsOriginalNextSibling } = mobileLayoutState
+  if (!actions || !actionsOriginalParent) {
+    return
+  }
+
+  if (actions.parentNode !== actionsOriginalParent) {
+    if (actionsOriginalNextSibling && actionsOriginalNextSibling.parentNode === actionsOriginalParent) {
+      actionsOriginalParent.insertBefore(actions, actionsOriginalNextSibling)
+    } else {
+      actionsOriginalParent.appendChild(actions)
+    }
+  }
+}
+
 function applyMobileLandscapeLayout(enabled) {
   ensureMobileLayoutElements()
 
-  const { productionArea, mobileContainer } = mobileLayoutState
+  const {
+    productionArea,
+    mobileContainer,
+    actions,
+    mobileActionsContainer,
+    mobileControls
+  } = mobileLayoutState
+
   if (!productionArea || !mobileContainer || !document.body) {
     return
   }
@@ -135,21 +177,27 @@ function applyMobileLandscapeLayout(enabled) {
       mobileContainer.appendChild(productionArea)
     }
     mobileContainer.setAttribute('aria-hidden', 'false')
+    if (mobileControls) {
+      mobileControls.setAttribute('aria-hidden', 'false')
+    }
+    if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
+      mobileActionsContainer.appendChild(actions)
+    }
     const shouldCollapse = typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
   } else {
     restoreProductionArea()
+    restoreActions()
     mobileContainer.setAttribute('aria-hidden', 'true')
+    if (mobileControls) {
+      mobileControls.setAttribute('aria-hidden', 'true')
+    }
     document.body.classList.remove('sidebar-collapsed')
     if (mobileLayoutState.sidebarToggle) {
       mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
       mobileLayoutState.sidebarToggle.setAttribute('aria-label', 'Collapse sidebar')
-      const textSpan = mobileLayoutState.sidebarToggle.querySelector('.sidebar-toggle-text')
-      if (textSpan) {
-        textSpan.textContent = 'Hide'
-      }
     }
   }
 }
