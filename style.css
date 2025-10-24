@@ -359,6 +359,7 @@ body.is-touch {
   font-size: 10px;
   font-weight: bold;
   z-index: 5; /* Ensure counter appears above NEW label */
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */
@@ -378,6 +379,7 @@ body.is-touch {
   font-weight: bold;
   z-index: 2;
   border: 1px solid #4CAF50;
+  pointer-events: none;
 }
 
 /* New label shown when a unit or building type becomes available */
@@ -393,6 +395,7 @@ body.is-touch {
   font-weight: bold;
   z-index: 4;
   display: none;
+  pointer-events: none;
 }
 
 /* Building labels styling */
@@ -545,6 +548,7 @@ body.is-touch {
   font-size: 12px;
   font-weight: bold;
   z-index: 5;
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */
