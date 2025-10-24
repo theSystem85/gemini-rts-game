@@ -321,6 +321,45 @@ body.is-touch {
   text-overflow: ellipsis;
 }
 
+.production-button .stack-direction-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  transition: opacity 80ms ease-out;
+}
+
+.production-button .stack-direction-indicator.align-top {
+  top: 0;
+  bottom: 50%;
+}
+
+.production-button .stack-direction-indicator.align-bottom {
+  top: 50%;
+  bottom: 0;
+}
+
+.production-button .stack-direction-indicator.visible {
+  opacity: 1;
+}
+
+.production-button .stack-direction-indicator .arrow-shape {
+  width: 42px;
+  height: 42px;
+  background-color: rgba(255, 255, 255, 0.3);
+  clip-path: polygon(50% 0%, 100% 40%, 72% 40%, 72% 100%, 28% 100%, 28% 40%, 0% 40%);
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.45));
+}
+
+.production-button .stack-direction-indicator.align-bottom .arrow-shape {
+  transform: rotate(180deg);
+}
+
 .production-button:hover {
   background-color: #444;
 }
@@ -359,6 +398,7 @@ body.is-touch {
   font-size: 10px;
   font-weight: bold;
   z-index: 5; /* Ensure counter appears above NEW label */
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */
@@ -378,6 +418,7 @@ body.is-touch {
   font-weight: bold;
   z-index: 2;
   border: 1px solid #4CAF50;
+  pointer-events: none;
 }
 
 /* New label shown when a unit or building type becomes available */
@@ -393,6 +434,7 @@ body.is-touch {
   font-weight: bold;
   z-index: 4;
   display: none;
+  pointer-events: none;
 }
 
 /* Building labels styling */
@@ -545,6 +587,7 @@ body.is-touch {
   font-size: 12px;
   font-weight: bold;
   z-index: 5;
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */
