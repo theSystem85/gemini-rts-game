@@ -10,6 +10,7 @@ import { toggleUnitLogging } from '../utils/logger.js'
 import { cancelUnitMovement } from '../game/unifiedMovement.js'
 import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
 import { performanceDialog } from '../ui/performanceDialog.js'
+import { runtimeConfigDialog } from '../ui/runtimeConfigDialog.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -79,8 +80,16 @@ export class KeyboardHandler {
         return
       }
 
-      // Don't process other inputs if game is paused or cheat dialog is open
-      if (gameState.paused || gameState.cheatDialogOpen) return
+      // K key for runtime config dialog (works even when paused)
+      if (e.key.toLowerCase() === 'k' && !gameState.runtimeConfigDialogOpen) {
+        e.preventDefault()
+        e.stopPropagation()
+        runtimeConfigDialog.openDialog()
+        return
+      }
+
+      // Don't process other inputs if game is paused, cheat dialog is open, or runtime config dialog is open
+      if (gameState.paused || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen) return
 
       // ESC key to cancel attack group mode
       if (e.key === 'Escape') {

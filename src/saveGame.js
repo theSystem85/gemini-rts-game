@@ -202,10 +202,10 @@ export function saveGame(label) {
       chainBuildingType: gameState.chainBuildingType || null,
       blueprints: Array.isArray(gameState.blueprints)
         ? gameState.blueprints.map(bp => ({
-            type: bp.type,
-            x: Number.isFinite(bp.x) ? bp.x : 0,
-            y: Number.isFinite(bp.y) ? bp.y : 0
-          }))
+          type: bp.type,
+          x: Number.isFinite(bp.x) ? bp.x : 0,
+          y: Number.isFinite(bp.y) ? bp.y : 0
+        }))
         : []
     },
     aiFactoryBudgets, // Save AI player budgets

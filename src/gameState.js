@@ -133,6 +133,9 @@ export const gameState = {
   // Cheat dialog state
   cheatDialogOpen: false,
 
+  // Runtime config dialog state
+  runtimeConfigDialogOpen: false,
+
   // Index for round-robin vehicle spawning
   nextVehicleFactoryIndex: 0,
 

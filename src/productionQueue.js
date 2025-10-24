@@ -895,19 +895,19 @@ export const productionQueue = {
       buildingItems: this.buildingItems.map(serializeQueueItem),
       currentUnit: this.currentUnit
         ? {
-            type: this.currentUnit.type,
-            progress: clampProgress(this.currentUnit),
-            duration: Number.isFinite(this.currentUnit.duration) ? this.currentUnit.duration : 0,
-            rallyPoint: serializeRallyPoint(this.currentUnit.rallyPoint)
-          }
+          type: this.currentUnit.type,
+          progress: clampProgress(this.currentUnit),
+          duration: Number.isFinite(this.currentUnit.duration) ? this.currentUnit.duration : 0,
+          rallyPoint: serializeRallyPoint(this.currentUnit.rallyPoint)
+        }
         : null,
       currentBuilding: this.currentBuilding
         ? {
-            type: this.currentBuilding.type,
-            progress: clampProgress(this.currentBuilding),
-            duration: Number.isFinite(this.currentBuilding.duration) ? this.currentBuilding.duration : 0,
-            blueprint: serializeBlueprint(this.currentBuilding.blueprint)
-          }
+          type: this.currentBuilding.type,
+          progress: clampProgress(this.currentBuilding),
+          duration: Number.isFinite(this.currentBuilding.duration) ? this.currentBuilding.duration : 0,
+          blueprint: serializeBlueprint(this.currentBuilding.blueprint)
+        }
         : null,
       pausedUnit: Boolean(this.pausedUnit),
       pausedBuilding: Boolean(this.pausedBuilding),
