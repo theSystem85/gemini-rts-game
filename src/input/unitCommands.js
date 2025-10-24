@@ -16,6 +16,12 @@ import {
 
 export class UnitCommandsHandler {
 
+  // Helper function to clear restoration override for a unit
+  clearRestorationOverride(unit) {
+    unit.restorationMoveOverride = false
+    unit.restorationMoveTarget = null
+  }
+
   // Helper function to clear attack group feature state for units
   clearAttackGroupState(units) {
     units.forEach(unit => {
@@ -171,8 +177,7 @@ export class UnitCommandsHandler {
         unit.originalTarget = null
 
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
 
         // Flag that turret should rotate to movement direction for tanks
         if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
@@ -265,8 +270,7 @@ export class UnitCommandsHandler {
         unit.moveTarget = desiredTile // Store movement target for green indicator
         unit.forcedAttack = isForceAttack
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
       } else {
         // If already at position, just set the target
         unit.path = []
@@ -274,8 +278,7 @@ export class UnitCommandsHandler {
         unit.moveTarget = null // No movement needed
         unit.forcedAttack = isForceAttack
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
       }
     })
 
@@ -320,8 +323,7 @@ export class UnitCommandsHandler {
               y: refinery.y + Math.floor(refinery.height / 2) }
             unit.forcedAttack = false
             // Clear restoration override when new orders are issued
-            unit.restorationMoveOverride = false
-            unit.restorationMoveTarget = null
+            this.clearRestorationOverride(unit)
           }
         }
 
@@ -361,8 +363,7 @@ export class UnitCommandsHandler {
           unit.moveTarget = oreTarget
           unit.forcedAttack = false
           // Clear restoration override when new orders are issued
-          unit.restorationMoveOverride = false
-          unit.restorationMoveTarget = null
+          this.clearRestorationOverride(unit)
           anyAssigned = true
         }
       }
@@ -399,8 +400,7 @@ export class UnitCommandsHandler {
         unit.path = path.length > 1 ? path.slice(1) : path
         unit.moveTarget = targetTile
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
       } else {
         unit.x = targetTile.x * TILE_SIZE
         unit.y = targetTile.y * TILE_SIZE
@@ -408,8 +408,7 @@ export class UnitCommandsHandler {
         unit.tileY = targetTile.y
         unit.moveTarget = null
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
       }
     })
     playSound('movement', 0.5)
@@ -458,8 +457,7 @@ export class UnitCommandsHandler {
           unit.path = path.slice(1)
           unit.moveTarget = targetTile
           // Clear restoration override when new orders are issued
-          unit.restorationMoveOverride = false
-          unit.restorationMoveTarget = null
+          this.clearRestorationOverride(unit)
         } else {
           unit.x = targetTile.x * TILE_SIZE
           unit.y = targetTile.y * TILE_SIZE
@@ -467,8 +465,7 @@ export class UnitCommandsHandler {
           unit.tileY = targetTile.y
           unit.moveTarget = null
           // Clear restoration override when new orders are issued
-          unit.restorationMoveOverride = false
-          unit.restorationMoveTarget = null
+          this.clearRestorationOverride(unit)
         }
         if (!fromQueue) playSound('movement', 0.5)
       }
@@ -533,8 +530,7 @@ export class UnitCommandsHandler {
             ambulance.path = path.slice(1)
             ambulance.moveTarget = { x: destX, y: destY }
             // Clear restoration override when new orders are issued
-            ambulance.restorationMoveOverride = false
-            ambulance.restorationMoveTarget = null
+            this.clearRestorationOverride(ambulance)
             destinationFound = true
             break
           }
@@ -576,8 +572,7 @@ export class UnitCommandsHandler {
             tanker.path = path.slice(1)
             tanker.moveTarget = { x: destX, y: destY }
             // Clear restoration override when new orders are issued
-            tanker.restorationMoveOverride = false
-            tanker.restorationMoveTarget = null
+            this.clearRestorationOverride(tanker)
             break
           }
         }
@@ -632,8 +627,7 @@ export class UnitCommandsHandler {
             ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
             ambulance.target = null // Clear any attack target
             // Clear restoration override when new orders are issued
-            ambulance.restorationMoveOverride = false
-            ambulance.restorationMoveTarget = null
+            this.clearRestorationOverride(ambulance)
             destinationFound = true
             break
           }
@@ -683,8 +677,7 @@ export class UnitCommandsHandler {
         unit.path = path
         unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
         // Clear restoration override when new orders are issued
-        unit.restorationMoveOverride = false
-        unit.restorationMoveTarget = null
+        this.clearRestorationOverride(unit)
       }
     })
     playSound('movement', 0.5)
@@ -742,8 +735,7 @@ export class UnitCommandsHandler {
             tank.target = null // Clear any attack target
             tank.repairTargetUnit = targetUnit // Mark the unit to repair when in range
             // Clear restoration override when new orders are issued
-            tank.restorationMoveOverride = false
-            tank.restorationMoveTarget = null
+            this.clearRestorationOverride(tank)
             destinationFound = true
             break
           }
@@ -822,8 +814,7 @@ export class UnitCommandsHandler {
     availableTank.path = assignedPath.slice(1)
     availableTank.moveTarget = { x: destination.x, y: destination.y }
     // Clear restoration override when new orders are issued
-    availableTank.restorationMoveOverride = false
-    availableTank.restorationMoveTarget = null
+    this.clearRestorationOverride(availableTank)
     availableTank.recoveryTask = {
       mode: 'tow',
       wreckId: wreck.id,
@@ -894,8 +885,7 @@ export class UnitCommandsHandler {
     availableTank.path = assignedPath.slice(1)
     availableTank.moveTarget = { x: destination.x, y: destination.y }
     // Clear restoration override when new orders are issued
-    availableTank.restorationMoveOverride = false
-    availableTank.restorationMoveTarget = null
+    this.clearRestorationOverride(availableTank)
     const recycleDuration = getRecycleDurationForWreck(wreck)
     availableTank.recoveryTask = {
       mode: 'recycle',
@@ -942,8 +932,7 @@ export class UnitCommandsHandler {
             unit.guardMode = true
             unit.guardTarget = recoveryTank
             // Clear restoration override when new orders are issued
-            unit.restorationMoveOverride = false
-            unit.restorationMoveTarget = null
+            this.clearRestorationOverride(unit)
             destinationFound = true
             break
           }
