@@ -129,7 +129,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
   // Combat movement logic - stop and attack if in range
   // Exception: Don't stop movement if unit is retreating
   const effectiveRange = getEffectiveFireRange(unit)
-  if (distance <= effectiveRange && !unit.isRetreating) {
+  if (distance <= effectiveRange && !unit.isRetreating && !unit.remoteControlActive) {
     // In firing range - stop all movement and clear path
     if (unit.path && unit.path.length > 0) {
       unit.path = [] // Clear path to stop movement when in range

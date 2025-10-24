@@ -33,6 +33,278 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('Service worker registration failed', err)
+    })
+  })
+}
+
+let gameInstance = null
+let lastIsTouchState = null
+let lastMobileLandscapeApplied = null
+let portraitQuery = null
+
+const mobileLayoutState = {
+  productionArea: null,
+  originalParent: null,
+  originalNextSibling: null,
+  mobileContainer: null,
+  sidebarToggle: null,
+  isSidebarCollapsed: true,
+  sidebarToggleListenerAttached: false,
+  actions: null,
+  actionsOriginalParent: null,
+  actionsOriginalNextSibling: null,
+  mobileActionsContainer: null,
+  mobileControls: null
+}
+
+function ensureMobileLayoutElements() {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  if (!mobileLayoutState.productionArea || !mobileLayoutState.productionArea.isConnected) {
+    const productionArea = document.getElementById('productionArea')
+    if (productionArea) {
+      mobileLayoutState.productionArea = productionArea
+      if (!mobileLayoutState.originalParent) {
+        mobileLayoutState.originalParent = productionArea.parentNode || null
+        mobileLayoutState.originalNextSibling = productionArea.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.mobileContainer || !mobileLayoutState.mobileContainer.isConnected) {
+    mobileLayoutState.mobileContainer = document.getElementById('mobileBuildMenuContainer')
+  }
+
+  if (!mobileLayoutState.actions || !mobileLayoutState.actions.isConnected) {
+    const actions = document.getElementById('actions')
+    if (actions) {
+      mobileLayoutState.actions = actions
+      if (!mobileLayoutState.actionsOriginalParent) {
+        mobileLayoutState.actionsOriginalParent = actions.parentNode || null
+        mobileLayoutState.actionsOriginalNextSibling = actions.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.mobileActionsContainer || !mobileLayoutState.mobileActionsContainer.isConnected) {
+    mobileLayoutState.mobileActionsContainer = document.getElementById('mobileActionsContainer')
+  }
+
+  if (!mobileLayoutState.mobileControls || !mobileLayoutState.mobileControls.isConnected) {
+    mobileLayoutState.mobileControls = document.getElementById('mobileSidebarControls')
+  }
+
+  if (!mobileLayoutState.sidebarToggle || !mobileLayoutState.sidebarToggle.isConnected) {
+    mobileLayoutState.sidebarToggle = document.getElementById('sidebarToggle')
+    mobileLayoutState.sidebarToggleListenerAttached = false
+  }
+
+  if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
+    mobileLayoutState.sidebarToggle.addEventListener('click', () => {
+      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+        return
+      }
+      const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
+      setSidebarCollapsed(!currentlyCollapsed)
+    })
+    mobileLayoutState.sidebarToggleListenerAttached = true
+  }
+}
+
+function setSidebarCollapsed(collapsed) {
+  if (!document.body) {
+    return
+  }
+
+  document.body.classList.toggle('sidebar-collapsed', collapsed)
+  mobileLayoutState.isSidebarCollapsed = collapsed
+
+  const toggleButton = mobileLayoutState.sidebarToggle
+  if (toggleButton) {
+    toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
+    toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
+  }
+}
+
+function restoreProductionArea() {
+  const { productionArea, originalParent, originalNextSibling } = mobileLayoutState
+  if (!productionArea || !originalParent) {
+    return
+  }
+
+  if (productionArea.parentNode !== originalParent) {
+    if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+      originalParent.insertBefore(productionArea, originalNextSibling)
+    } else {
+      originalParent.appendChild(productionArea)
+    }
+  }
+}
+
+function restoreActions() {
+  const { actions, actionsOriginalParent, actionsOriginalNextSibling } = mobileLayoutState
+  if (!actions || !actionsOriginalParent) {
+    return
+  }
+
+  if (actions.parentNode !== actionsOriginalParent) {
+    if (actionsOriginalNextSibling && actionsOriginalNextSibling.parentNode === actionsOriginalParent) {
+      actionsOriginalParent.insertBefore(actions, actionsOriginalNextSibling)
+    } else {
+      actionsOriginalParent.appendChild(actions)
+    }
+  }
+}
+
+function applyMobileLandscapeLayout(enabled) {
+  ensureMobileLayoutElements()
+
+  const {
+    productionArea,
+    mobileContainer,
+    actions,
+    mobileActionsContainer,
+    mobileControls
+  } = mobileLayoutState
+
+  if (!productionArea || !mobileContainer || !document.body) {
+    return
+  }
+
+  if (enabled) {
+    if (productionArea.parentNode !== mobileContainer) {
+      mobileContainer.appendChild(productionArea)
+    }
+    mobileContainer.setAttribute('aria-hidden', 'false')
+    if (mobileControls) {
+      mobileControls.setAttribute('aria-hidden', 'false')
+    }
+    if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
+      mobileActionsContainer.appendChild(actions)
+    }
+    const shouldCollapse = typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
+      ? mobileLayoutState.isSidebarCollapsed
+      : true
+    setSidebarCollapsed(shouldCollapse)
+  } else {
+    restoreProductionArea()
+    restoreActions()
+    mobileContainer.setAttribute('aria-hidden', 'true')
+    if (mobileControls) {
+      mobileControls.setAttribute('aria-hidden', 'true')
+    }
+    document.body.classList.remove('sidebar-collapsed')
+    if (mobileLayoutState.sidebarToggle) {
+      mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
+      mobileLayoutState.sidebarToggle.setAttribute('aria-label', 'Collapse sidebar')
+    }
+  }
+}
+
+function updateMobileLayoutClasses() {
+  if (!document.body) {
+    return
+  }
+
+  const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
+  const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
+  const shouldApplyMobileLandscape = isTouch && !isPortrait
+
+  if (document.body.classList.contains('mobile-sidebar-right')) {
+    document.body.classList.remove('mobile-sidebar-right')
+  }
+
+  if (shouldApplyMobileLandscape) {
+    document.body.classList.add('mobile-landscape')
+  } else {
+    document.body.classList.remove('mobile-landscape')
+  }
+
+  const applied = document.body.classList.contains('mobile-landscape')
+  applyMobileLandscapeLayout(applied)
+
+  if (lastMobileLandscapeApplied !== applied) {
+    lastMobileLandscapeApplied = applied
+    if (gameInstance && gameInstance.canvasManager) {
+      gameInstance.canvasManager.resizeCanvases()
+    }
+  }
+
+  document.dispatchEvent(new CustomEvent('mobile-landscape-layout-changed', {
+    detail: { enabled: applied }
+  }))
+}
+
+function updateTouchClass() {
+  const isTouch = window.matchMedia('(pointer: coarse)').matches
+  if (document.body) {
+    const previous = lastIsTouchState
+    document.body.classList.toggle('is-touch', isTouch)
+    lastIsTouchState = isTouch
+    updateMobileLayoutClasses()
+    if (previous !== null && previous !== isTouch && gameInstance && gameInstance.canvasManager) {
+      gameInstance.canvasManager.resizeCanvases()
+    }
+  } else {
+    lastIsTouchState = isTouch
+  }
+}
+
+const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
+updateTouchClass()
+if (typeof coarsePointerQuery.addEventListener === 'function') {
+  coarsePointerQuery.addEventListener('change', updateTouchClass)
+} else if (typeof coarsePointerQuery.addListener === 'function') {
+  coarsePointerQuery.addListener(updateTouchClass)
+}
+
+portraitQuery = window.matchMedia('(orientation: portrait)')
+updateMobileLayoutClasses()
+if (typeof portraitQuery.addEventListener === 'function') {
+  portraitQuery.addEventListener('change', updateMobileLayoutClasses)
+} else if (typeof portraitQuery.addListener === 'function') {
+  portraitQuery.addListener(updateMobileLayoutClasses)
+}
+
+window.addEventListener('resize', updateMobileLayoutClasses)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateMobileLayoutClasses)
+}
+
+function setupDoubleTapPrevention() {
+  let lastTouchEnd = 0
+
+  document.addEventListener('touchend', (event) => {
+    if (!document.body || !document.body.classList.contains('is-touch')) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    if (event.touches && event.touches.length > 0) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    const target = event.target
+    if (target && typeof target.closest === 'function' && target.closest('input, textarea, select')) {
+      lastTouchEnd = Date.now()
+      return
+    }
+
+    const now = Date.now()
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault()
+    }
+    lastTouchEnd = now
+  }, { passive: false })
+}
+
 // Import new modules
 import { CanvasManager } from './rendering/canvasManager.js'
 import { ProductionController } from './ui/productionController.js'
@@ -138,9 +410,6 @@ function loadPersistedSettings() {
 
 // Initialize loading states
 let allAssetsLoaded = false
-
-// Global game instance for save/load system
-let gameInstance = null
 
 // Export function to get current game instance
 export function getCurrentGame() {
@@ -1036,7 +1305,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.warn('Failed to load config overrides before startup:', err)
   }
-
+ 
+  updateTouchClass()
+  updateMobileLayoutClasses()
+  setupDoubleTapPrevention()
   loadPersistedSettings()
   gameInstance = new Game()
 

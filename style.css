@@ -3,7 +3,27 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  width: 100vw;
   overflow: hidden;
+  background-color: #000;
+}
+
+:root {
+  --sidebar-width: 250px;
+}
+
+body {
+  --safe-area-top: 0px;
+  --safe-area-right: 0px;
+  --safe-area-bottom: 0px;
+  --safe-area-left: 0px;
+}
+
+body.is-touch {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 /* Disable default drag ghost images for production buttons */
@@ -24,7 +44,7 @@ html, body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 250px;
+  width: var(--sidebar-width);
   height: 100%;
   background: #333;
   color: #fff;
@@ -36,12 +56,31 @@ html, body {
   flex-direction: column;
   scrollbar-width: none; /* Hide scrollbar for Firefox */
   -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+  -webkit-touch-callout: none;
 }
 
 #sidebarScroll {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+#sidebar,
+#sidebar * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#sidebar input,
+#sidebar textarea,
+#sidebar .sidebar-input {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .sidebar-input {
@@ -87,11 +126,97 @@ html, body {
 #gameCanvas {
   position: absolute;
   top: 0;
-  left: 250px;
-  width: calc(100% - 250px);
+  left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
   height: 100%;
   background: #000;
   cursor: default;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#mobileBuildMenuContainer {
+  display: none;
+}
+
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background-color: rgba(34, 34, 34, 0.92);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.96);
+}
+
+.sidebar-toggle:hover {
+  background-color: rgba(60, 60, 60, 0.96);
+}
+
+.sidebar-toggle-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+#mobileCategoryToggle {
+  display: none;
+  padding: 10px 12px;
+  background-color: #333;
+  color: #ccc;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+#mobileCategoryToggle:hover {
+  background-color: #3d3d3d;
+  color: #fff;
+}
+
+#mobileSidebarControls {
+  position: fixed;
+  top: calc(12px + var(--safe-area-top));
+  left: calc(12px + var(--safe-area-left));
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 56px;
+  z-index: 1600;
+  pointer-events: none;
+}
+
+#mobileSidebarControls .sidebar-toggle,
+#mobileSidebarControls #actions {
+  pointer-events: auto;
+}
+
+#mobileCategoryToggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+#mobileCategoryToggle[aria-pressed="true"] {
+  background-color: #444;
+  color: #fff;
+  border-bottom: 2px solid #4f9cff;
 }
 
 #minimap {
@@ -278,6 +403,45 @@ html, body {
   text-overflow: ellipsis;
 }
 
+.production-button .stack-direction-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  transition: opacity 80ms ease-out;
+}
+
+.production-button .stack-direction-indicator.align-top {
+  top: 0;
+  bottom: 50%;
+}
+
+.production-button .stack-direction-indicator.align-bottom {
+  top: 50%;
+  bottom: 0;
+}
+
+.production-button .stack-direction-indicator.visible {
+  opacity: 1;
+}
+
+.production-button .stack-direction-indicator .arrow-shape {
+  width: 42px;
+  height: 42px;
+  background-color: rgba(255, 255, 255, 0.3);
+  clip-path: polygon(50% 0%, 100% 40%, 72% 40%, 72% 100%, 28% 100%, 28% 40%, 0% 40%);
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.45));
+}
+
+.production-button .stack-direction-indicator.align-bottom .arrow-shape {
+  transform: rotate(180deg);
+}
+
 .production-button:hover {
   background-color: #444;
 }
@@ -316,6 +480,7 @@ html, body {
   font-size: 10px;
   font-weight: bold;
   z-index: 5; /* Ensure counter appears above NEW label */
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */
@@ -335,6 +500,7 @@ html, body {
   font-weight: bold;
   z-index: 2;
   border: 1px solid #4CAF50;
+  pointer-events: none;
 }
 
 /* New label shown when a unit or building type becomes available */
@@ -350,6 +516,7 @@ html, body {
   font-weight: bold;
   z-index: 4;
   display: none;
+  pointer-events: none;
 }
 
 /* Building labels styling */
@@ -418,6 +585,10 @@ html, body {
   display: flex;
   width: 100%;
   background-color: #222;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .tab-button {
@@ -461,7 +632,7 @@ html, body {
 
 .tab-content.active {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -498,6 +669,7 @@ html, body {
   font-size: 12px;
   font-weight: bold;
   z-index: 5;
+  pointer-events: none;
 }
 
 /* Ready building counter for production buttons */

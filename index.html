@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Gemini RTS Game</title>
     <meta name="description" content="A 2D tile-based Real-Time Strategy game built with vanilla JavaScript">
     
@@ -35,6 +41,20 @@
     </style>
   </head>
   <body>
+    <div id="mobileSidebarControls" aria-hidden="true">
+      <button
+        id="sidebarToggle"
+        type="button"
+        class="sidebar-toggle"
+        aria-controls="sidebar"
+        aria-expanded="true"
+        aria-label="Collapse sidebar"
+      >
+        <span class="sidebar-toggle-icon">☰</span>
+      </button>
+      <div id="mobileActionsContainer"></div>
+    </div>
+
     <div id="sidebar">
       <!-- Energy bar will be inserted here by JS at the very top -->
       <div id="energyBarContainer"></div>
@@ -65,15 +85,26 @@
       </div>
 
       <div id="sidebarScroll">
-      
-      <div id="production">
-        <div id="productionContainer">
+
+        <div id="productionArea">
           <div id="productionTabs">
             <button class="tab-button" data-tab="units">Units</button>
             <button class="tab-button active" data-tab="buildings">Buildings</button>
+            <button
+              id="mobileCategoryToggle"
+              class="tab-toggle-button"
+              type="button"
+              aria-pressed="false"
+              aria-label="Switch to Units build options"
+            >
+              Buildings
+            </button>
           </div>
-          <div id="productionTabContent">
-            <div id="unitsTabContent" class="tab-content">
+
+          <div id="production">
+            <div id="productionContainer">
+              <div id="productionTabContent">
+                <div id="unitsTabContent" class="tab-content">
               <button class="production-button" data-unit-type="tank">
                 <img src="images/sidebar/tank.webp" onerror="this.style.display='none'">
                 <span class="unit-name">Tank V1</span>
@@ -139,7 +170,7 @@
                 <div class="new-label" style="display:none">NEW</div>
               </button>
             </div>
-            <div id="buildingsTabContent" class="tab-content active">
+                <div id="buildingsTabContent" class="tab-content active">
               <button class="production-button" data-building-type="constructionYard">
                 <img draggable="true" src="images/sidebar/construction_yard.png" onerror="this.style.display='none'">
                 <span class="building-name">Construction Yard</span>
@@ -277,6 +308,7 @@
               </button>
             </div>
           </div>
+          </div>
         </div>
         <div id="productionProgress"></div>
       </div>
@@ -380,6 +412,8 @@
         </div>
       </div>
       </div>
+      
+      <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
       <canvas id="gameCanvas"></canvas>
     
     <!-- FPS Display Overlay -->

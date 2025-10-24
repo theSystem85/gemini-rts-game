@@ -343,6 +343,9 @@ export let GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
 export let GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
 export let INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
+// Wreck impact physics tuning
+export let WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
+export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
 // Scroll speed when using arrow keys (pixels per frame)
 export let KEYBOARD_SCROLL_SPEED = 8
 
@@ -574,6 +577,15 @@ export let ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for
 // Movement target indicator constants
 export let MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
 export let MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
+
+// Utility vehicle service visualization constants
+export const UTILITY_SERVICE_RANGES = {
+  recoveryTank: Math.SQRT2,
+  ambulance: Math.SQRT2,
+  tankerTruck: Math.SQRT2
+}
+export const UTILITY_SERVICE_INDICATOR_SIZE = 8
+export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
 
 // Unit type colors (same for all players/enemies of same type)
 export let UNIT_TYPE_COLORS = {

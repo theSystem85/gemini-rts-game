@@ -783,7 +783,8 @@ export class UnitCommandsHandler {
       wreckId: wreck.id,
       state: 'movingToWreck',
       workshopId: nearestWorkshop.workshop.id,
-      workshopEntry: nearestWorkshop.entryTile
+      workshopEntry: nearestWorkshop.entryTile,
+      originalPosition: { x: availableTank.tileX, y: availableTank.tileY }
     }
     wreck.assignedTankId = availableTank.id
     playSound('movement', 0.5)
