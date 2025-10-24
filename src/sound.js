@@ -2,6 +2,7 @@
 import { MASTER_VOLUME } from './config.js'
 import { videoOverlay } from './ui/videoOverlay.js'
 import { gameState } from './gameState.js'
+import { getVisibleCanvasDimensions } from './utils/canvasUtils.js'
 
 let audioContext = null
 try {
@@ -251,17 +252,14 @@ function getCachedAudioElement(soundPath) {
 const soundElementCache = new Map()
 
 function calculatePositionalAudio(x, y) {
-  const canvas = document.getElementById('gameCanvas')
-  if (!canvas) {
-    return { pan: 0, volumeFactor: 1 }
-  }
-  const centerX = gameState.scrollOffset.x + canvas.width / 2
-  const centerY = gameState.scrollOffset.y + canvas.height / 2
+  const visibleCanvas = getVisibleCanvasDimensions()
+  const centerX = gameState.scrollOffset.x + visibleCanvas.offsetX + visibleCanvas.width / 2
+  const centerY = gameState.scrollOffset.y + visibleCanvas.offsetY + visibleCanvas.height / 2
   const dx = x - centerX
   const dy = y - centerY
   const distance = Math.hypot(dx, dy)
   // Increase positional sound range by 50%
-  const maxDistance = Math.max(canvas.width, canvas.height) * 1.125
+  const maxDistance = Math.max(visibleCanvas.width, visibleCanvas.height) * 1.125
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }

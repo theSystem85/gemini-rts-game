@@ -74,6 +74,26 @@ export class CanvasManager {
     this.gameCanvas.width = Math.max(1, Math.round(availableWidth * pixelRatio))
     this.gameCanvas.height = Math.max(1, Math.round(logicalHeight * pixelRatio))
 
+    // Calculate visible canvas dimensions (accounting for overlaying panels in mobile landscape)
+    if (mobileLandscape) {
+      const mobileBuildMenu = document.getElementById('mobileBuildMenuContainer')
+      const buildMenuWidth = mobileBuildMenu ? mobileBuildMenu.getBoundingClientRect().width : 0
+      const sidebarCollapsed = body ? body.classList.contains('sidebar-collapsed') : true
+      const effectiveSidebarWidth = sidebarCollapsed ? 0 : rawSidebarWidth
+      
+      // Store visible dimensions for use by game logic
+      this.visibleWidth = Math.max(0, availableWidth - effectiveSidebarWidth - buildMenuWidth)
+      this.visibleHeight = logicalHeight
+      this.visibleOffsetX = effectiveSidebarWidth
+      this.visibleOffsetY = 0
+    } else {
+      // In desktop mode, the entire canvas is visible
+      this.visibleWidth = availableWidth
+      this.visibleHeight = logicalHeight
+      this.visibleOffsetX = 0
+      this.visibleOffsetY = 0
+    }
+
     // Scale the drawing context to counter the device pixel ratio
     this.gameCtx.setTransform(1, 0, 0, 1, 0, 0)
     this.gameCtx.scale(pixelRatio, pixelRatio)
@@ -111,5 +131,21 @@ export class CanvasManager {
 
   getMinimapContext() {
     return this.minimapCtx
+  }
+
+  getVisibleCanvasWidth() {
+    return this.visibleWidth !== undefined ? this.visibleWidth : this.gameCanvas.width
+  }
+
+  getVisibleCanvasHeight() {
+    return this.visibleHeight !== undefined ? this.visibleHeight : this.gameCanvas.height
+  }
+
+  getVisibleCanvasOffsetX() {
+    return this.visibleOffsetX !== undefined ? this.visibleOffsetX : 0
+  }
+
+  getVisibleCanvasOffsetY() {
+    return this.visibleOffsetY !== undefined ? this.visibleOffsetY : 0
   }
 }

@@ -27,6 +27,7 @@ import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
+import { getVisibleCanvasDimensions } from './utils/canvasUtils.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -536,17 +537,15 @@ class Game {
       const factoryPixelX = playerFactory.x * TILE_SIZE
       const factoryPixelY = playerFactory.y * TILE_SIZE
 
-      const gameCanvas = this.canvasManager.getGameCanvas()
-      const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || gameCanvas.width
-      const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || gameCanvas.height
+      const visibleCanvas = getVisibleCanvasDimensions()
 
       gameState.scrollOffset.x = Math.max(0, Math.min(
-        factoryPixelX - logicalCanvasWidth / 2,
-        MAP_TILES_X * TILE_SIZE - logicalCanvasWidth
+        factoryPixelX - visibleCanvas.width / 2,
+        MAP_TILES_X * TILE_SIZE - visibleCanvas.width
       ))
       gameState.scrollOffset.y = Math.max(0, Math.min(
-        factoryPixelY - logicalCanvasHeight / 2,
-        MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight
+        factoryPixelY - visibleCanvas.height / 2,
+        MAP_TILES_Y * TILE_SIZE - visibleCanvas.height
       ))
     }
   }
