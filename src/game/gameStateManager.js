@@ -7,6 +7,7 @@ import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
+import { getVisibleCanvasDimensions } from '../utils/canvasUtils.js'
 
 /**
  * Updates map scrolling with inertia
@@ -15,8 +16,9 @@ import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js
  */
 export function updateMapScrolling(gameState, mapGrid) {
   if (!gameState.isRightDragging) {
-    const maxScrollX = mapGrid[0].length * TILE_SIZE - (window.innerWidth - 250)
-    const maxScrollY = mapGrid.length * TILE_SIZE - window.innerHeight
+    const visibleCanvas = getVisibleCanvasDimensions()
+    const maxScrollX = mapGrid[0].length * TILE_SIZE - visibleCanvas.width
+    const maxScrollY = mapGrid.length * TILE_SIZE - visibleCanvas.height
     // Update velocity based on arrow key input
     if (gameState.keyScroll.left) {
       gameState.dragVelocity.x = KEYBOARD_SCROLL_SPEED
@@ -432,16 +434,12 @@ export function updateCameraFollow(gameState, units, mapGrid) {
     return
   }
 
-  const gameCanvas = document.getElementById('gameCanvas')
-  if (!gameCanvas) return
-  const pixelRatio = window.devicePixelRatio || 1
-  const logicalWidth = gameCanvas.width / pixelRatio
-  const logicalHeight = gameCanvas.height / pixelRatio
+  const visibleCanvas = getVisibleCanvasDimensions()
 
-  const maxScrollX = mapGrid[0].length * TILE_SIZE - logicalWidth
-  const maxScrollY = mapGrid.length * TILE_SIZE - logicalHeight
+  const maxScrollX = mapGrid[0].length * TILE_SIZE - visibleCanvas.width
+  const maxScrollY = mapGrid.length * TILE_SIZE - visibleCanvas.height
 
-  gameState.scrollOffset.x = Math.max(0, Math.min(followUnit.x - logicalWidth / 2, maxScrollX))
-  gameState.scrollOffset.y = Math.max(0, Math.min(followUnit.y - logicalHeight / 2, maxScrollY))
+  gameState.scrollOffset.x = Math.max(0, Math.min(followUnit.x - visibleCanvas.width / 2, maxScrollX))
+  gameState.scrollOffset.y = Math.max(0, Math.min(followUnit.y - visibleCanvas.height / 2, maxScrollY))
   gameState.dragVelocity = { x: 0, y: 0 }
 }

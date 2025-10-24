@@ -10,6 +10,7 @@ import { toggleUnitLogging } from '../utils/logger.js'
 import { cancelUnitMovement } from '../game/unifiedMovement.js'
 import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
 import { performanceDialog } from '../ui/performanceDialog.js'
+import { getVisibleCanvasDimensions } from '../utils/canvasUtils.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -629,16 +630,16 @@ export class KeyboardHandler {
 
   handleFactoryFocus(mapGrid) {
     if (this.playerFactory) {
-      const gameCanvas = document.getElementById('gameCanvas')
+      const visibleCanvas = getVisibleCanvasDimensions()
       // Calculate factory center
       const factoryX = (this.playerFactory.x + this.playerFactory.width / 2) * TILE_SIZE
       const factoryY = (this.playerFactory.y + this.playerFactory.height / 2) * TILE_SIZE
 
-      // Center the view on the factory
-      gameState.scrollOffset.x = Math.max(0, Math.min(factoryX - gameCanvas.width / 2,
-        mapGrid[0].length * TILE_SIZE - gameCanvas.width))
-      gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - gameCanvas.height / 2,
-        mapGrid.length * TILE_SIZE - gameCanvas.height))
+      // Center the view on the factory using visible canvas dimensions
+      gameState.scrollOffset.x = Math.max(0, Math.min(factoryX - visibleCanvas.width / 2,
+        mapGrid[0].length * TILE_SIZE - visibleCanvas.width))
+      gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - visibleCanvas.height / 2,
+        mapGrid.length * TILE_SIZE - visibleCanvas.height))
       gameState.dragVelocity = { x: 0, y: 0 }
       playSound('unitSelection')
       if (this.requestRenderFrame) {
@@ -650,14 +651,7 @@ export class KeyboardHandler {
   handleSelectedUnitFocus(selectedUnits, mapGrid) {
     if (!selectedUnits || selectedUnits.length === 0) return
 
-    const gameCanvas = document.getElementById('gameCanvas')
-
-    // Get device pixel ratio to account for Retina displays
-    const pixelRatio = window.devicePixelRatio || 1
-
-    // Calculate logical canvas dimensions
-    const logicalCanvasWidth = gameCanvas.width / pixelRatio
-    const logicalCanvasHeight = gameCanvas.height / pixelRatio
+    const visibleCanvas = getVisibleCanvasDimensions()
 
     let focusX, focusY
 
@@ -671,13 +665,13 @@ export class KeyboardHandler {
     }
 
     gameState.scrollOffset.x = Math.max(0, Math.min(
-      focusX - logicalCanvasWidth / 2,
-      mapGrid[0].length * TILE_SIZE - logicalCanvasWidth
+      focusX - visibleCanvas.width / 2,
+      mapGrid[0].length * TILE_SIZE - visibleCanvas.width
     ))
 
     gameState.scrollOffset.y = Math.max(0, Math.min(
-      focusY - logicalCanvasHeight / 2,
-      mapGrid.length * TILE_SIZE - logicalCanvasHeight
+      focusY - visibleCanvas.height / 2,
+      mapGrid.length * TILE_SIZE - visibleCanvas.height
     ))
 
     gameState.dragVelocity = { x: 0, y: 0 }
@@ -762,26 +756,19 @@ export class KeyboardHandler {
 
         // Only center view on double press, not on single press
         if (isDoublePress) {
-          // Center view on the middle unit of the group with fix for Retina displays
+          // Center view on the middle unit of the group
           const middleUnit = aliveUnits[Math.floor(aliveUnits.length / 2)]
-          const gameCanvas = document.getElementById('gameCanvas')
+          const visibleCanvas = getVisibleCanvasDimensions()
 
-          // Get device pixel ratio to account for Retina displays
-          const pixelRatio = window.devicePixelRatio || 1
-
-          // Calculate logical canvas dimensions (not physical pixels)
-          const logicalCanvasWidth = gameCanvas.width / pixelRatio
-          const logicalCanvasHeight = gameCanvas.height / pixelRatio
-
-          // Center properly accounting for the device pixel ratio
+          // Center properly using visible canvas dimensions
           gameState.scrollOffset.x = Math.max(0, Math.min(
-            middleUnit.x - (logicalCanvasWidth / 2),
-            mapGrid[0].length * TILE_SIZE - logicalCanvasWidth
+            middleUnit.x - (visibleCanvas.width / 2),
+            mapGrid[0].length * TILE_SIZE - visibleCanvas.width
           ))
 
           gameState.scrollOffset.y = Math.max(0, Math.min(
-            middleUnit.y - (logicalCanvasHeight / 2),
-            mapGrid.length * TILE_SIZE - logicalCanvasHeight
+            middleUnit.y - (visibleCanvas.height / 2),
+            mapGrid.length * TILE_SIZE - visibleCanvas.height
           ))
 
           // Play a sound for feedback on focus action
