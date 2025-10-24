@@ -137,6 +137,79 @@ body.is-touch {
   -webkit-touch-callout: none;
 }
 
+#mobileBuildMenuContainer {
+  display: none;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  top: calc(12px + var(--safe-area-top));
+  left: calc(12px + var(--safe-area-left));
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: rgba(34, 34, 34, 0.9);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.97);
+}
+
+.sidebar-toggle:hover {
+  background-color: rgba(48, 48, 48, 0.95);
+}
+
+.sidebar-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sidebar-toggle-text {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+#mobileCategoryToggle {
+  display: none;
+  padding: 10px 12px;
+  background-color: #333;
+  color: #ccc;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+#mobileCategoryToggle:hover {
+  background-color: #3d3d3d;
+  color: #fff;
+}
+
+#mobileCategoryToggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+#mobileCategoryToggle[aria-pressed="true"] {
+  background-color: #444;
+  color: #fff;
+  border-bottom: 2px solid #4f9cff;
+}
+
 #minimap {
   width: 100%;
   height: 150px;
@@ -807,22 +880,15 @@ body.is-touch #sidebar {
   touch-action: pan-y;
 }
 
-body.is-touch:not(.mobile-sidebar-right) #sidebar {
+body.is-touch:not(.mobile-landscape) #sidebar {
   width: calc(var(--sidebar-width) + var(--safe-area-left));
   padding-left: calc(10px + var(--safe-area-left));
   padding-right: 10px;
 }
 
-body.is-touch.mobile-sidebar-right #sidebar {
-  left: auto;
-  right: 0;
-  width: calc(var(--sidebar-width) + var(--safe-area-right));
-  padding-right: calc(10px + var(--safe-area-right));
-  padding-left: 10px;
-}
-
-body.mobile-sidebar-right #gameCanvas {
+body.mobile-landscape #gameCanvas {
   left: 0;
+  width: 100%;
 }
 
 body.is-touch #sidebarScroll {
@@ -837,6 +903,95 @@ body.is-touch .action-button {
 
 body.is-touch #actions {
   gap: 4px;
+}
+
+body.mobile-landscape #sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  height: 100vh;
+  width: min(280px, 70vw);
+  padding-top: calc(12px + var(--safe-area-top));
+  padding-bottom: calc(12px + var(--safe-area-bottom));
+  padding-left: calc(16px + var(--safe-area-left));
+  padding-right: 16px;
+  box-shadow: 4px 0 14px rgba(0, 0, 0, 0.45);
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+  z-index: 1500;
+}
+
+body.mobile-landscape.sidebar-collapsed #sidebar {
+  transform: translateX(calc(-100% - var(--safe-area-left)));
+}
+
+body.mobile-landscape .sidebar-toggle {
+  display: flex;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer {
+  display: flex;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(230px, 40vw);
+  max-width: 280px;
+  height: 100vh;
+  padding: calc(12px + var(--safe-area-top)) calc(16px + var(--safe-area-right)) calc(16px + var(--safe-area-bottom)) 16px;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(28, 28, 28, 0.94);
+  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.45);
+  z-index: 1400;
+  overflow: hidden;
+}
+
+body.mobile-landscape.sidebar-collapsed #mobileBuildMenuContainer {
+  right: calc(0px + var(--safe-area-right));
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #productionArea {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #production {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(28, 28, 28, 0.94);
+  padding-bottom: 4px;
+  box-shadow: none;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-button {
+  display: none;
+}
+
+body.mobile-landscape #mobileCategoryToggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-content.active {
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 @media (max-width: 1024px) {

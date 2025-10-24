@@ -51,8 +51,8 @@ export class CanvasManager {
     const viewportHeight = Math.max(...heightCandidates.filter(v => Number.isFinite(v) && v > 0))
     const sidebar = document.getElementById('sidebar')
     const rawSidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
-    const moveSidebarRight = body ? body.classList.contains('mobile-sidebar-right') : false
-    const safeAdjustment = moveSidebarRight ? safeRight : safeLeft
+    const mobileLandscape = body ? body.classList.contains('mobile-landscape') : false
+    const safeAdjustment = mobileLandscape ? safeLeft : safeLeft
     const sidebarBaseWidth = Math.max(0, rawSidebarWidth - safeAdjustment)
 
     if (document.documentElement) {
@@ -60,14 +60,12 @@ export class CanvasManager {
     }
 
     // Set canvas display size (CSS)
-    const availableWidth = Math.max(0, viewportWidth - rawSidebarWidth)
+    const availableWidth = mobileLandscape
+      ? Math.max(0, viewportWidth)
+      : Math.max(0, viewportWidth - rawSidebarWidth)
     const logicalHeight = viewportHeight
 
-    if (moveSidebarRight) {
-      this.gameCanvas.style.left = '0px'
-    } else {
-      this.gameCanvas.style.left = `${rawSidebarWidth}px`
-    }
+    this.gameCanvas.style.left = mobileLandscape ? '0px' : `${rawSidebarWidth}px`
     this.gameCanvas.style.right = 'auto'
     this.gameCanvas.style.width = `${availableWidth}px`
     this.gameCanvas.style.height = `${logicalHeight}px`

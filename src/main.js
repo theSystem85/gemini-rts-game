@@ -38,8 +38,121 @@ if ('serviceWorker' in navigator) {
 
 let gameInstance = null
 let lastIsTouchState = null
-let lastSidebarRightApplied = null
+let lastMobileLandscapeApplied = null
 let portraitQuery = null
+
+const mobileLayoutState = {
+  productionArea: null,
+  originalParent: null,
+  originalNextSibling: null,
+  mobileContainer: null,
+  sidebarToggle: null,
+  isSidebarCollapsed: true,
+  sidebarToggleListenerAttached: false
+}
+
+function ensureMobileLayoutElements() {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  if (!mobileLayoutState.productionArea || !mobileLayoutState.productionArea.isConnected) {
+    const productionArea = document.getElementById('productionArea')
+    if (productionArea) {
+      mobileLayoutState.productionArea = productionArea
+      if (!mobileLayoutState.originalParent) {
+        mobileLayoutState.originalParent = productionArea.parentNode || null
+        mobileLayoutState.originalNextSibling = productionArea.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.mobileContainer || !mobileLayoutState.mobileContainer.isConnected) {
+    mobileLayoutState.mobileContainer = document.getElementById('mobileBuildMenuContainer')
+  }
+
+  if (!mobileLayoutState.sidebarToggle || !mobileLayoutState.sidebarToggle.isConnected) {
+    mobileLayoutState.sidebarToggle = document.getElementById('sidebarToggle')
+    mobileLayoutState.sidebarToggleListenerAttached = false
+  }
+
+  if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
+    mobileLayoutState.sidebarToggle.addEventListener('click', () => {
+      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+        return
+      }
+      const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
+      setSidebarCollapsed(!currentlyCollapsed)
+    })
+    mobileLayoutState.sidebarToggleListenerAttached = true
+  }
+}
+
+function setSidebarCollapsed(collapsed) {
+  if (!document.body) {
+    return
+  }
+
+  document.body.classList.toggle('sidebar-collapsed', collapsed)
+  mobileLayoutState.isSidebarCollapsed = collapsed
+
+  const toggleButton = mobileLayoutState.sidebarToggle
+  if (toggleButton) {
+    toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
+    toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
+    const textSpan = toggleButton.querySelector('.sidebar-toggle-text')
+    if (textSpan) {
+      textSpan.textContent = collapsed ? 'Menu' : 'Hide'
+    }
+  }
+}
+
+function restoreProductionArea() {
+  const { productionArea, originalParent, originalNextSibling } = mobileLayoutState
+  if (!productionArea || !originalParent) {
+    return
+  }
+
+  if (productionArea.parentNode !== originalParent) {
+    if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+      originalParent.insertBefore(productionArea, originalNextSibling)
+    } else {
+      originalParent.appendChild(productionArea)
+    }
+  }
+}
+
+function applyMobileLandscapeLayout(enabled) {
+  ensureMobileLayoutElements()
+
+  const { productionArea, mobileContainer } = mobileLayoutState
+  if (!productionArea || !mobileContainer || !document.body) {
+    return
+  }
+
+  if (enabled) {
+    if (productionArea.parentNode !== mobileContainer) {
+      mobileContainer.appendChild(productionArea)
+    }
+    mobileContainer.setAttribute('aria-hidden', 'false')
+    const shouldCollapse = typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
+      ? mobileLayoutState.isSidebarCollapsed
+      : true
+    setSidebarCollapsed(shouldCollapse)
+  } else {
+    restoreProductionArea()
+    mobileContainer.setAttribute('aria-hidden', 'true')
+    document.body.classList.remove('sidebar-collapsed')
+    if (mobileLayoutState.sidebarToggle) {
+      mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
+      mobileLayoutState.sidebarToggle.setAttribute('aria-label', 'Collapse sidebar')
+      const textSpan = mobileLayoutState.sidebarToggle.querySelector('.sidebar-toggle-text')
+      if (textSpan) {
+        textSpan.textContent = 'Hide'
+      }
+    }
+  }
+}
 
 function updateMobileLayoutClasses() {
   if (!document.body) {
@@ -48,15 +161,31 @@ function updateMobileLayoutClasses() {
 
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
-  const shouldMoveSidebar = isTouch && !isPortrait
-  const applied = document.body.classList.toggle('mobile-sidebar-right', shouldMoveSidebar)
+  const shouldApplyMobileLandscape = isTouch && !isPortrait
 
-  if (lastSidebarRightApplied !== applied) {
-    lastSidebarRightApplied = applied
+  if (document.body.classList.contains('mobile-sidebar-right')) {
+    document.body.classList.remove('mobile-sidebar-right')
+  }
+
+  if (shouldApplyMobileLandscape) {
+    document.body.classList.add('mobile-landscape')
+  } else {
+    document.body.classList.remove('mobile-landscape')
+  }
+
+  const applied = document.body.classList.contains('mobile-landscape')
+  applyMobileLandscapeLayout(applied)
+
+  if (lastMobileLandscapeApplied !== applied) {
+    lastMobileLandscapeApplied = applied
     if (gameInstance && gameInstance.canvasManager) {
       gameInstance.canvasManager.resizeCanvases()
     }
   }
+
+  document.dispatchEvent(new CustomEvent('mobile-landscape-layout-changed', {
+    detail: { enabled: applied }
+  }))
 }
 
 function updateTouchClass() {
