@@ -16,6 +16,7 @@ export class ProductionController {
     this.isSetup = false // Flag to prevent duplicate event listeners
     this.mobileDragState = null
     this.suppressNextClick = false
+    this.mobileTapData = new WeakMap()
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
@@ -1012,6 +1013,8 @@ export class ProductionController {
 
       this.suppressNextClick = false
 
+      const doubleTapReady = detail.kind === 'unit' && this.consumeMobileDoubleTap(button)
+
       const state = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -1021,7 +1024,8 @@ export class ProductionController {
         detail,
         button,
         lastStackStep: 0,
-        initialCount: detail.kind === 'unit' ? this.getUnitQueueCount(button) : 0
+        initialCount: detail.kind === 'unit' ? this.getUnitQueueCount(button) : 0,
+        doubleTapReady
       }
 
       const lockables = []
@@ -1061,7 +1065,7 @@ export class ProductionController {
         const deltaY = moveEvent.clientY - state.startY
         const distance = Math.hypot(deltaX, deltaY)
 
-        if (!state.active && detail.kind === 'unit') {
+        if (!state.active && detail.kind === 'unit' && state.doubleTapReady) {
           const absY = Math.abs(deltaY)
           const absX = Math.abs(deltaX)
           const VERTICAL_ACTIVATION = 16
@@ -1265,6 +1269,50 @@ export class ProductionController {
       }
       state.lastStackStep -= removed
     }
+
+    const finalCount = this.getUnitQueueCount(state.button)
+    productionQueue.updateBatchCounter(state.button, finalCount)
+  }
+
+  consumeMobileDoubleTap(button) {
+    if (!button) {
+      return false
+    }
+
+    const DOUBLE_TAP_WINDOW = 300
+    const now = performance.now()
+    let tapInfo = this.mobileTapData.get(button)
+
+    if (!tapInfo) {
+      tapInfo = {
+        pending: false,
+        lastTapTime: 0,
+        timeoutId: null
+      }
+      this.mobileTapData.set(button, tapInfo)
+    }
+
+    if (tapInfo.pending && now - tapInfo.lastTapTime <= DOUBLE_TAP_WINDOW) {
+      tapInfo.pending = false
+      tapInfo.lastTapTime = 0
+      if (tapInfo.timeoutId) {
+        clearTimeout(tapInfo.timeoutId)
+        tapInfo.timeoutId = null
+      }
+      return true
+    }
+
+    tapInfo.pending = true
+    tapInfo.lastTapTime = now
+    if (tapInfo.timeoutId) {
+      clearTimeout(tapInfo.timeoutId)
+    }
+    tapInfo.timeoutId = setTimeout(() => {
+      tapInfo.pending = false
+      tapInfo.timeoutId = null
+    }, DOUBLE_TAP_WINDOW)
+
+    return false
   }
 
   updateMobileDragHover(event, detail) {
