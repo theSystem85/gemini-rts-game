@@ -357,6 +357,10 @@ setConfigValue('oreSpreadEnabled', '<script>alert("XSS")</script>')
 - Boolean configs only accept boolean values
 - Number configs only accept numbers
 - No code execution from config values
+- HTML5 input validation prevents type mismatches
+- Type conversion (parseFloat, Boolean) sanitizes input
+
+**Note:** The implementation uses typed HTML inputs (type="number", type="checkbox") and proper type conversion, providing defense against injection attacks.
 
 **Status:** ⬜ Not Tested
 

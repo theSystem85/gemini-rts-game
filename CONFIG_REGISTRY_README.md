@@ -186,6 +186,7 @@ Potential improvements for the config system:
 1. **Persistence**: Save modified values to localStorage
 2. **Profiles**: Multiple config profiles (e.g., "Easy", "Normal", "Hard")
 3. **Reset**: Reset individual or all configs to defaults
-4. **Export/Import**: Share config profiles between users
+4. **Export/Import**: Share config profiles between users (with validation and sanitization)
 5. **Search**: Filter configs by name or description
 6. **Advanced**: Formula-based dependencies between configs
+7. **Validation**: Enhanced input validation and type checking for imported profiles to prevent injection attacks
