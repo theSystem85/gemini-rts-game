@@ -1,10 +1,241 @@
+const configRegistry = new Map()
+const activeOverrides = new Map()
+
+export const CONFIG_OVERRIDE_FILENAME = 'config-overrides.json'
+
+const CONFIG_OVERRIDE_STORAGE_KEY = 'rts-config-overrides'
+const EXTERNAL_OVERRIDE_PATH = `/${CONFIG_OVERRIDE_FILENAME}`
+
+let overridesLoaded = false
+let overridesLoadPromise = null
+
+function registerConfigVariable(name) {
+  const defaultValue = eval(name)
+  configRegistry.set(name, {
+    name,
+    get value() {
+      return eval(name)
+    },
+    type: typeof defaultValue,
+    defaultValue
+  })
+}
+
+function getConfigEntry(name) {
+  const entry = configRegistry.get(name)
+  if (!entry) {
+    throw new Error(`Unknown config value: ${name}`)
+  }
+  return entry
+}
+
+function assertNumericEntry(entry) {
+  if (entry.type !== 'number') {
+    throw new Error(`Config value ${entry.name} is not numeric and cannot be updated`)
+  }
+}
+
+function serializeForEval(value) {
+  if (typeof value === 'number') {
+    if (Object.is(value, -0)) {
+      return '-0'
+    }
+    return String(value)
+  }
+  return JSON.stringify(value)
+}
+
+function assignConfigValue(name, value) {
+  const serialized = serializeForEval(value)
+  eval(`${name} = ${serialized}`)
+}
+
+function setNumericConfigValue(entry, numericValue, { persistLocal = false } = {}) {
+  assertNumericEntry(entry)
+
+  if (!Number.isFinite(numericValue)) {
+    throw new Error(`Value for ${entry.name} must be a finite number`)
+  }
+
+  assignConfigValue(entry.name, numericValue)
+
+  const updatedValue = entry.value
+  if (Object.is(updatedValue, entry.defaultValue)) {
+    activeOverrides.delete(entry.name)
+  } else {
+    activeOverrides.set(entry.name, updatedValue)
+  }
+
+  if (persistLocal) {
+    saveOverridesToLocalStorage()
+  }
+
+  return updatedValue
+}
+
+export function listConfigVariables() {
+  return Array.from(configRegistry.values()).map((entry) => ({
+    name: entry.name,
+    type: entry.type,
+    value: entry.value,
+    defaultValue: entry.defaultValue,
+    editable: entry.type === 'number',
+    overridden: entry.type === 'number' && activeOverrides.has(entry.name)
+  }))
+}
+
+export function getConfigValue(name) {
+  return getConfigEntry(name).value
+}
+
+export function updateConfigValue(name, rawValue) {
+  const entry = getConfigEntry(name)
+  const numericValue = Number(rawValue)
+  return setNumericConfigValue(entry, numericValue, { persistLocal: true })
+}
+
+export function isConfigValueOverridden(name) {
+  const entry = getConfigEntry(name)
+  return entry.type === 'number' && activeOverrides.has(entry.name)
+}
+
+export function getConfigOverrides() {
+  const overrides = {}
+  activeOverrides.forEach((value, key) => {
+    const entry = configRegistry.get(key)
+    if (!entry || entry.type !== 'number') {
+      activeOverrides.delete(key)
+      return
+    }
+
+    const currentValue = entry.value
+    if (Object.is(currentValue, entry.defaultValue)) {
+      activeOverrides.delete(key)
+      return
+    }
+
+    overrides[key] = currentValue
+
+    if (!Object.is(currentValue, value)) {
+      activeOverrides.set(key, currentValue)
+    }
+  })
+  return overrides
+}
+
+export async function ensureConfigOverridesLoaded() {
+  if (overridesLoaded) {
+    return
+  }
+
+  if (!overridesLoadPromise) {
+    overridesLoadPromise = (async () => {
+      await loadOverridesFromFile()
+      loadOverridesFromLocalStorage()
+      overridesLoaded = true
+    })()
+  }
+
+  return overridesLoadPromise
+}
+
+function applyOverridesFromObject(overrides, { persistLocal = false } = {}) {
+  if (!overrides || typeof overrides !== 'object') {
+    return
+  }
+
+  Object.entries(overrides).forEach(([name, value]) => {
+    if (!configRegistry.has(name)) {
+      console.warn(`Ignoring unknown config override: ${name}`)
+      return
+    }
+
+    const entry = configRegistry.get(name)
+    if (entry.type !== 'number') {
+      console.warn(`Ignoring override for non-numeric config value: ${name}`)
+      return
+    }
+
+    const numericValue = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numericValue)) {
+      console.warn(`Ignoring non-finite override for ${name}`)
+      return
+    }
+
+    setNumericConfigValue(entry, numericValue, { persistLocal })
+  })
+}
+
+function saveOverridesToLocalStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  try {
+    if (activeOverrides.size === 0) {
+      window.localStorage.removeItem(CONFIG_OVERRIDE_STORAGE_KEY)
+      return
+    }
+
+    window.localStorage.setItem(
+      CONFIG_OVERRIDE_STORAGE_KEY,
+      JSON.stringify(getConfigOverrides())
+    )
+  } catch (err) {
+    console.warn('Failed to persist config overrides to localStorage:', err)
+  }
+}
+
+function loadOverridesFromLocalStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  let raw
+  try {
+    raw = window.localStorage.getItem(CONFIG_OVERRIDE_STORAGE_KEY)
+  } catch (err) {
+    console.warn('Failed to read config overrides from localStorage:', err)
+    return
+  }
+
+  if (!raw) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    applyOverridesFromObject(parsed)
+  } catch (err) {
+    console.warn('Failed to parse config overrides from localStorage:', err)
+  }
+}
+
+async function loadOverridesFromFile() {
+  if (typeof fetch !== 'function') {
+    return
+  }
+
+  try {
+    const response = await fetch(EXTERNAL_OVERRIDE_PATH, { cache: 'no-store' })
+    if (!response.ok) {
+      return
+    }
+
+    const data = await response.json()
+    applyOverridesFromObject(data)
+  } catch (err) {
+    console.warn('Failed to load config overrides file:', err)
+  }
+}
+
 // Experience system multiplier (adjusts how quickly units gain XP)
-export const XP_MULTIPLIER = 3
+export let XP_MULTIPLIER = 3
 // config.js
-export const TILE_SIZE = 32
-export const MIN_MAP_TILES = 32
-export const DEFAULT_MAP_TILES_X = 100
-export const DEFAULT_MAP_TILES_Y = 100
+export let TILE_SIZE = 32
+export let MIN_MAP_TILES = 32
+export let DEFAULT_MAP_TILES_X = 100
+export let DEFAULT_MAP_TILES_Y = 100
 export let MAP_TILES_X = DEFAULT_MAP_TILES_X
 export let MAP_TILES_Y = DEFAULT_MAP_TILES_Y
 
@@ -30,9 +261,9 @@ export function getMapHeight() {
   return MAP_TILES_Y * TILE_SIZE
 }
 // Approximate real world length of one tile in meters
-export const TILE_LENGTH_METERS = 1000
-export const SAFE_RANGE_ENABLED = false
-export const CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
+export let TILE_LENGTH_METERS = 1000
+export let SAFE_RANGE_ENABLED = false
+export let CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
 // Toggle to allow selecting enemy units to view their HUD only
 export let ENABLE_ENEMY_SELECTION = true
@@ -49,21 +280,21 @@ export function setEnemyControlEnabled(value) {
 }
 
 // Sound configuration
-export const MASTER_VOLUME = 0.25  // Default to 50% volume
+export let MASTER_VOLUME = 0.25  // Default to 50% volume
 
 // Targeting spread for tanks and turrets (in pixels, about 3/4 of a tile for more noticeable inaccuracy)
-export const TARGETING_SPREAD = TILE_SIZE * 0.75
+export let TARGETING_SPREAD = TILE_SIZE * 0.75
 
 // HARVESTER_CAPPACITY is now 1 (so a harvester unloads as soon as it harvests one unit)
-export const HARVESTER_CAPPACITY = 1
+export let HARVESTER_CAPPACITY = 1
 
 // Harvester unload time (in milliseconds)
-export const HARVESTER_UNLOAD_TIME = 5000  // 5 seconds (2x faster than before)
+export let HARVESTER_UNLOAD_TIME = 5000  // 5 seconds (2x faster than before)
 // Capacity of tanker truck supply tank
-export const TANKER_SUPPLY_CAPACITY = 40000
+export let TANKER_SUPPLY_CAPACITY = 40000
 
 // Fallback colors for tiles when images aren't available
-export const TILE_COLORS = {
+export let TILE_COLORS = {
   land: '#A0522D',
   water: '#1E90FF',
   rock: '#808080',
@@ -74,7 +305,7 @@ export const TILE_COLORS = {
 }
 
 // Image paths for tile types
-export const TILE_IMAGES = {
+export let TILE_IMAGES = {
   land: {
     // Use programmatic discovery for grass tiles
     useGrassTileDiscovery: true
@@ -97,37 +328,37 @@ export const TILE_IMAGES = {
 }
 
 // Sprite sheet and mapping for map tiles
-export const TILE_SPRITE_SHEET = 'images/map/map_sprites.webp'
-export const TILE_SPRITE_MAP = 'images/map/map_sprites.json'
+export let TILE_SPRITE_SHEET = 'images/map/map_sprites.webp'
+export let TILE_SPRITE_MAP = 'images/map/map_sprites.json'
 
 // Enable/disable texture usage (for performance testing/fallback)
-export const USE_TEXTURES = true
+export let USE_TEXTURES = true
 
 // Enable/disable tank image-based rendering (T key to toggle during gameplay)
-export const USE_TANK_IMAGES = true
+export let USE_TANK_IMAGES = true
 
 // Grass tile ratio configuration (higher numbers = rarer)
 // 1 out of X tiles will be decorative/impassable
-export const GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
-export const GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
+export let GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
+export let GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
-export const INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
+export let INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
 // Wreck impact physics tuning
-export const WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
-export const WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
+export let WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
+export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
 // Scroll speed when using arrow keys (pixels per frame)
-export const KEYBOARD_SCROLL_SPEED = 8
+export let KEYBOARD_SCROLL_SPEED = 8
 
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
-export const TANK_FIRE_RANGE = 9
+export let TANK_FIRE_RANGE = 9
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
-export const MAX_BUILDING_GAP_TILES = 3
+export let MAX_BUILDING_GAP_TILES = 3
 // Backwards-compatible export for systems that still consume the old name
-export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
+export let BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
 // Shadow of War configuration
-export const SHADOW_OF_WAR_CONFIG = {
+export let SHADOW_OF_WAR_CONFIG = {
   tilePadding: 0.5,
   rocketRangeMultiplier: 1.5,
   defaultNonCombatRange: 2,
@@ -137,48 +368,48 @@ export const SHADOW_OF_WAR_CONFIG = {
 }
 
 // Tank constants
-export const DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
-export const FAST_ROTATION_SPEED = 0.1 // Radians per frame
-export const TANK_BULLET_SPEED = 8 // Radians per frame
+export let DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
+export let FAST_ROTATION_SPEED = 0.1 // Radians per frame
+export let TANK_BULLET_SPEED = 8 // Radians per frame
 
 // Hit zone damage multipliers for tanks
-export const HIT_ZONE_DAMAGE_MULTIPLIERS = {
+export let HIT_ZONE_DAMAGE_MULTIPLIERS = {
   FRONT: 1.0,   // Normal damage from front
   SIDE: 1.25,    // 30% more damage from sides
   REAR: 1.5     // 100% more damage from behind (critical hit)
 }
 
 // Critical damage sound cooldown (30 seconds)
-export const CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
+export let CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
 
 // Separate rotation rates for tank components
-export const TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
+export let TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
 // Reduced turret rotation speed to make artillery tracking more deliberate
 // 70% slower than before (was 0.08)
-export const TANK_TURRET_ROT = 0.024 // Radians per frame for turret aiming
+export let TANK_TURRET_ROT = 0.024 // Radians per frame for turret aiming
 
 // Aiming precision threshold (in radians) - turret must be within this angle to fire
-export const TURRET_AIMING_THRESHOLD = 0.1 // About 5.7 degrees
+export let TURRET_AIMING_THRESHOLD = 0.1 // About 5.7 degrees
 
 // Recoil and muzzle flash animation constants
-export const RECOIL_DISTANCE = 8 // pixels to move back during recoil
-export const RECOIL_DURATION = 300 // milliseconds
-export const MUZZLE_FLASH_DURATION = 150 // milliseconds
-export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
-export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
-export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
-export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
-export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
+export let RECOIL_DISTANCE = 8 // pixels to move back during recoil
+export let RECOIL_DURATION = 300 // milliseconds
+export let MUZZLE_FLASH_DURATION = 150 // milliseconds
+export let MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
+export let TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
+export let SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
+export let SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
+export let SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
 
 // Duration of the building sell animation (in milliseconds)
-export const BUILDING_SELL_DURATION = 3000
+export let BUILDING_SELL_DURATION = 3000
 
 // Wind effects for smoke particles
-export const WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
-export const WIND_STRENGTH = 0.008 // How much wind affects particle movement
+export let WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
+export let WIND_STRENGTH = 0.008 // How much wind affects particle movement
 
-export const ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
-export const ORE_SPREAD_PROBABILITY = 0.06
+export let ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
+export let ORE_SPREAD_PROBABILITY = 0.06
 // Toggle ore spreading to improve performance when disabled
 export let ORE_SPREAD_ENABLED = true
 
@@ -187,36 +418,36 @@ export function setOreSpreadEnabled(value) {
 }
 
 // New: Path recalculation interval (in milliseconds)
-export const PATH_CALC_INTERVAL = 2000
+export let PATH_CALC_INTERVAL = 2000
 
 // Attack/chase pathfinding interval - throttled to prevent excessive recalculation (in milliseconds)
-export const ATTACK_PATH_CALC_INTERVAL = 3000
+export let ATTACK_PATH_CALC_INTERVAL = 3000
 
 // General AI decision interval for heavy logic like target selection (in milliseconds)
-export const AI_DECISION_INTERVAL = 5000  // Reduced from 200ms to 5s to prevent wiggling
+export let AI_DECISION_INTERVAL = 5000  // Reduced from 200ms to 5s to prevent wiggling
 
 // Smoke emission for buildings
-export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
+export let BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 
 // Distance threshold for using occupancy map in pathfinding (in tiles)
-export const PATHFINDING_THRESHOLD = 10
+export let PATHFINDING_THRESHOLD = 10
 
 // How close a unit needs to be (in tiles) to consider a move target reached
-export const MOVE_TARGET_REACHED_THRESHOLD = 1.5
+export let MOVE_TARGET_REACHED_THRESHOLD = 1.5
 
 // Unit stuck detection and productivity check intervals (in milliseconds)
-export const STUCK_CHECK_INTERVAL = 500  // Check every 0.5 seconds for stuck units
-export const HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
-export const STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
-export const STUCK_HANDLING_COOLDOWN = 1250  // Cooldown between stuck handling attempts
-export const DODGE_ATTEMPT_COOLDOWN = 500  // Cooldown between dodge attempts
+export let STUCK_CHECK_INTERVAL = 500  // Check every 0.5 seconds for stuck units
+export let HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
+export let STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
+export let STUCK_HANDLING_COOLDOWN = 1250  // Cooldown between stuck handling attempts
+export let DODGE_ATTEMPT_COOLDOWN = 500  // Cooldown between dodge attempts
 
 // Street movement and pathfinding modifiers
-export const STREET_SPEED_MULTIPLIER = 1.5  // Units move 50% faster on streets
-export const STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
+export let STREET_SPEED_MULTIPLIER = 1.5  // Units move 50% faster on streets
+export let STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
 
 // Unit costs
-export const UNIT_COSTS = {
+export let UNIT_COSTS = {
   tank: 1000,
   tank_v1: 1000, // Alias for tank (used by AI)
   rocketTank: 2000,
@@ -229,7 +460,7 @@ export const UNIT_COSTS = {
 }
 
 // Unit properties
-export const UNIT_PROPERTIES = {
+export let UNIT_PROPERTIES = {
   // Base properties
   base: {
     health: 100,
@@ -309,16 +540,16 @@ export const UNIT_PROPERTIES = {
 }
 
 // Tank V3 burst fire configuration
-export const TANK_V3_BURST = {
+export let TANK_V3_BURST = {
   COUNT: 2,     // Number of bullets per burst
   DELAY: 300    // Delay between bullets in milliseconds
 }
 
 // Pathfinding constants
-export const PATHFINDING_LIMIT = 1000
+export let PATHFINDING_LIMIT = 1000
 
 // Movement directions for pathfinding and position search
-export const DIRECTIONS = [
+export let DIRECTIONS = [
   { x: 0, y: -1 },  // north
   { x: 1, y: 0 },   // east
   { x: 0, y: 1 },   // south
@@ -330,9 +561,9 @@ export const DIRECTIONS = [
 ]
 
 // Maximum search distance for spawn positions
-export const MAX_SPAWN_SEARCH_DISTANCE = 10
+export let MAX_SPAWN_SEARCH_DISTANCE = 10
 
-export const BULLET_DAMAGES = {
+export let BULLET_DAMAGES = {
   tank_v1: 20,
   tank_v2: 24,
   tank_v3: 30,
@@ -340,12 +571,12 @@ export const BULLET_DAMAGES = {
 }
 
 // Attack Group Feature (AGF) constants
-export const ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
-export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
+export let ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
+export let ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
 
 // Movement target indicator constants
-export const MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
-export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
+export let MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
+export let MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
 
 // Utility vehicle service visualization constants
 export const UTILITY_SERVICE_RANGES = {
@@ -357,7 +588,7 @@ export const UTILITY_SERVICE_INDICATOR_SIZE = 8
 export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
 
 // Unit type colors (same for all players/enemies of same type)
-export const UNIT_TYPE_COLORS = {
+export let UNIT_TYPE_COLORS = {
   tank: '#0000FF',        // Blue
   tank_v1: '#0000FF',     // Blue
   'tank-v2': '#FFFFFF',   // White
@@ -370,7 +601,7 @@ export const UNIT_TYPE_COLORS = {
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
-export const PARTY_COLORS = {
+export let PARTY_COLORS = {
   player1: '#00FF00',     // Green (Human player by default)
   player2: '#FF0000',     // Red
   player3: '#0080FF',     // Blue
@@ -381,7 +612,7 @@ export const PARTY_COLORS = {
 }
 
 // Player position constants for 4-corner setup
-export const PLAYER_POSITIONS = {
+export let PLAYER_POSITIONS = {
   player1: { x: 0.1, y: 0.9 },   // Bottom-left (current player position)
   player2: { x: 0.9, y: 0.1 },   // Top-right (current enemy position)
   player3: { x: 0.1, y: 0.1 },   // Top-left
@@ -389,13 +620,13 @@ export const PLAYER_POSITIONS = {
 }
 
 // Default number of players
-export const DEFAULT_PLAYER_COUNT = 2
+export let DEFAULT_PLAYER_COUNT = 2
 
 // Gas system configuration
-export const GAS_REFILL_TIME = 7000 // ms to fully refill at station
-export const GAS_REFILL_COST = 50
+export let GAS_REFILL_TIME = 7000 // ms to fully refill at station
+export let GAS_REFILL_COST = 50
 
-export const UNIT_GAS_PROPERTIES = {
+export let UNIT_GAS_PROPERTIES = {
   tank_v1: { tankSize: 1900, consumption: 450 },
   'tank-v2': { tankSize: 1900, consumption: 450 },
   'tank-v3': { tankSize: 1900, consumption: 450 },
@@ -406,3 +637,94 @@ export const UNIT_GAS_PROPERTIES = {
   ambulance: { tankSize: 75, consumption: 25 },
   tankerTruck: { tankSize: 700, consumption: 150 }
 }
+
+const EXPORTED_CONFIG_VARIABLES = [
+  'XP_MULTIPLIER',
+  'TILE_SIZE',
+  'MIN_MAP_TILES',
+  'DEFAULT_MAP_TILES_X',
+  'DEFAULT_MAP_TILES_Y',
+  'MAP_TILES_X',
+  'MAP_TILES_Y',
+  'TILE_LENGTH_METERS',
+  'SAFE_RANGE_ENABLED',
+  'CREW_KILL_CHANCE',
+  'ENABLE_ENEMY_SELECTION',
+  'ENABLE_ENEMY_CONTROL',
+  'MASTER_VOLUME',
+  'TARGETING_SPREAD',
+  'HARVESTER_CAPPACITY',
+  'HARVESTER_UNLOAD_TIME',
+  'TANKER_SUPPLY_CAPACITY',
+  'TILE_COLORS',
+  'TILE_IMAGES',
+  'TILE_SPRITE_SHEET',
+  'TILE_SPRITE_MAP',
+  'USE_TEXTURES',
+  'USE_TANK_IMAGES',
+  'GRASS_DECORATIVE_RATIO',
+  'GRASS_IMPASSABLE_RATIO',
+  'INERTIA_DECAY',
+  'KEYBOARD_SCROLL_SPEED',
+  'TANK_FIRE_RANGE',
+  'MAX_BUILDING_GAP_TILES',
+  'BUILDING_PROXIMITY_RANGE',
+  'SHADOW_OF_WAR_CONFIG',
+  'DEFAULT_ROTATION_SPEED',
+  'FAST_ROTATION_SPEED',
+  'TANK_BULLET_SPEED',
+  'HIT_ZONE_DAMAGE_MULTIPLIERS',
+  'CRITICAL_DAMAGE_SOUND_COOLDOWN',
+  'TANK_WAGON_ROT',
+  'TANK_TURRET_ROT',
+  'TURRET_AIMING_THRESHOLD',
+  'RECOIL_DISTANCE',
+  'RECOIL_DURATION',
+  'MUZZLE_FLASH_DURATION',
+  'MUZZLE_FLASH_SIZE',
+  'TURRET_RECOIL_DISTANCE',
+  'SMOKE_PARTICLE_LIFETIME',
+  'SMOKE_EMIT_INTERVAL',
+  'SMOKE_PARTICLE_SIZE',
+  'BUILDING_SELL_DURATION',
+  'WIND_DIRECTION',
+  'WIND_STRENGTH',
+  'ORE_SPREAD_INTERVAL',
+  'ORE_SPREAD_PROBABILITY',
+  'ORE_SPREAD_ENABLED',
+  'PATH_CALC_INTERVAL',
+  'ATTACK_PATH_CALC_INTERVAL',
+  'AI_DECISION_INTERVAL',
+  'BUILDING_SMOKE_EMIT_INTERVAL',
+  'PATHFINDING_THRESHOLD',
+  'MOVE_TARGET_REACHED_THRESHOLD',
+  'STUCK_CHECK_INTERVAL',
+  'HARVESTER_PRODUCTIVITY_CHECK_INTERVAL',
+  'STUCK_THRESHOLD',
+  'STUCK_HANDLING_COOLDOWN',
+  'DODGE_ATTEMPT_COOLDOWN',
+  'STREET_SPEED_MULTIPLIER',
+  'STREET_PATH_COST',
+  'UNIT_COSTS',
+  'UNIT_PROPERTIES',
+  'TANK_V3_BURST',
+  'PATHFINDING_LIMIT',
+  'DIRECTIONS',
+  'MAX_SPAWN_SEARCH_DISTANCE',
+  'BULLET_DAMAGES',
+  'ATTACK_TARGET_INDICATOR_SIZE',
+  'ATTACK_TARGET_BOUNCE_SPEED',
+  'MOVE_TARGET_INDICATOR_SIZE',
+  'MOVE_TARGET_BOUNCE_SPEED',
+  'UNIT_TYPE_COLORS',
+  'PARTY_COLORS',
+  'PLAYER_POSITIONS',
+  'DEFAULT_PLAYER_COUNT',
+  'GAS_REFILL_TIME',
+  'GAS_REFILL_COST',
+  'UNIT_GAS_PROPERTIES'
+]
+
+EXPORTED_CONFIG_VARIABLES.forEach(registerConfigVariable)
+
+export const CONFIG_VARIABLE_NAMES = [...EXPORTED_CONFIG_VARIABLES]
