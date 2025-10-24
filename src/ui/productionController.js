@@ -16,6 +16,22 @@ export class ProductionController {
     this.isSetup = false // Flag to prevent duplicate event listeners
     this.mobileDragState = null
     this.suppressNextClick = false
+    this.mobileCategoryToggle = document.getElementById('mobileCategoryToggle')
+    this.mobileCategoryToggleListenerAdded = false
+
+    document.addEventListener('mobile-landscape-layout-changed', (event) => {
+      this.ensureMobileToggle()
+      this.updateMobileCategoryToggle()
+      if (event?.detail?.enabled && this.isSetup) {
+        const activeButton = document.querySelector('.tab-button.active')
+        const tabName = activeButton ? activeButton.getAttribute('data-tab') : null
+        if (tabName) {
+          this.activateTab(tabName, { scrollIntoView: false })
+        }
+      }
+    })
+
+    this.ensureMobileToggle()
   }
 
   // Function to update the enabled/disabled state of vehicle production buttons
@@ -145,6 +161,134 @@ export class ProductionController {
     })
   }
 
+  ensureMobileToggle() {
+    if (!this.mobileCategoryToggle || !this.mobileCategoryToggle.isConnected) {
+      this.mobileCategoryToggle = document.getElementById('mobileCategoryToggle')
+      this.mobileCategoryToggleListenerAdded = false
+    }
+
+    if (this.mobileCategoryToggle && !this.mobileCategoryToggleListenerAdded) {
+      this.mobileCategoryToggle.addEventListener('click', () => this.handleMobileCategoryToggle())
+      this.mobileCategoryToggleListenerAdded = true
+    }
+  }
+
+  handleMobileCategoryToggle() {
+    const activeButton = document.querySelector('.tab-button.active')
+    const currentTab = activeButton ? activeButton.getAttribute('data-tab') : null
+    if (!currentTab) {
+      return
+    }
+
+    const nextTab = currentTab === 'units' ? 'buildings' : 'units'
+    this.activateTab(nextTab, { scrollIntoView: true })
+  }
+
+  scrollTabIntoView(tabContent) {
+    if (!tabContent) {
+      return
+    }
+
+    const body = document.body
+    if (body && body.classList.contains('mobile-landscape')) {
+      const productionScroll = document.querySelector('#mobileBuildMenuContainer #production')
+      if (productionScroll) {
+        productionScroll.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      return
+    }
+
+    const sidebarScroll = document.getElementById('sidebarScroll')
+    if (!sidebarScroll) {
+      return
+    }
+
+    const productionTabs = document.getElementById('productionTabs')
+    const firstProductionButton = tabContent.querySelector('.production-button')
+
+    if (productionTabs && firstProductionButton) {
+      const containerRect = sidebarScroll.getBoundingClientRect()
+      const buttonRect = firstProductionButton.getBoundingClientRect()
+      const tabsHeight = productionTabs.getBoundingClientRect().height
+      const offset = buttonRect.top - containerRect.top + sidebarScroll.scrollTop - tabsHeight
+
+      sidebarScroll.scrollTo({
+        top: Math.max(offset, 0),
+        behavior: 'smooth'
+      })
+    } else {
+      sidebarScroll.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  forceLoadTabImages(tabContent) {
+    if (!tabContent) {
+      return
+    }
+
+    tabContent.querySelectorAll('img').forEach(img => {
+      if (!img.complete || img.naturalHeight === 0) {
+        const originalSrc = img.src
+        img.src = ''
+        setTimeout(() => { img.src = originalSrc }, 10)
+      }
+    })
+  }
+
+  activateTab(tabName, options = {}) {
+    const targetButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`)
+    if (!targetButton || targetButton.classList.contains('disabled')) {
+      return false
+    }
+
+    const tabButtons = document.querySelectorAll('.tab-button')
+    const tabContents = document.querySelectorAll('.tab-content')
+
+    tabButtons.forEach(btn => btn.classList.remove('active'))
+    tabContents.forEach(content => content.classList.remove('active'))
+
+    targetButton.classList.add('active')
+    const tabContent = document.getElementById(`${tabName}TabContent`)
+    if (tabContent) {
+      tabContent.classList.add('active')
+      if (options.scrollIntoView) {
+        this.scrollTabIntoView(tabContent)
+      }
+      this.forceLoadTabImages(tabContent)
+    }
+
+    this.updateMobileCategoryToggle(tabName)
+    return true
+  }
+
+  updateMobileCategoryToggle(activeTabName) {
+    this.ensureMobileToggle()
+
+    if (!this.mobileCategoryToggle) {
+      return
+    }
+
+    const activeTab = activeTabName
+      || (document.querySelector('.tab-button.active')?.getAttribute('data-tab'))
+      || 'buildings'
+
+    const otherTab = activeTab === 'units' ? 'buildings' : 'units'
+    const otherButton = document.querySelector(`.tab-button[data-tab="${otherTab}"]`)
+    const otherDisabled = otherButton ? otherButton.classList.contains('disabled') : true
+
+    const currentLabel = activeTab === 'units' ? 'Units' : 'Buildings'
+    const otherLabel = otherTab === 'units' ? 'Units' : 'Buildings'
+
+    this.mobileCategoryToggle.disabled = otherDisabled
+    this.mobileCategoryToggle.tabIndex = otherDisabled ? -1 : 0
+    this.mobileCategoryToggle.textContent = currentLabel
+    this.mobileCategoryToggle.setAttribute('aria-pressed', activeTab === 'buildings' ? 'true' : 'false')
+    this.mobileCategoryToggle.setAttribute(
+      'aria-label',
+      otherDisabled ? `${currentLabel} build options` : `Switch to ${otherLabel} build options`
+    )
+  }
+
   // Combined production button setup function that handles both unit and building buttons
   setupAllProductionButtons() {
     // Only setup once to prevent duplicate event listeners
@@ -152,6 +296,7 @@ export class ProductionController {
       // Just update button states if already set up
       this.updateVehicleButtonStates()
       this.updateBuildingButtonStates()
+      this.updateMobileCategoryToggle()
       return
     }
 
@@ -165,6 +310,7 @@ export class ProductionController {
     // Initial update of button states when setting up
     this.updateVehicleButtonStates()
     this.updateBuildingButtonStates()
+    this.updateMobileCategoryToggle()
 
     this.isSetup = true
   }
@@ -922,61 +1068,27 @@ export class ProductionController {
   // Initialize production tabs without setting up buttons again
   initProductionTabs() {
     const tabButtons = document.querySelectorAll('.tab-button')
-    const tabContents = document.querySelectorAll('.tab-content')
 
     tabButtons.forEach(button => {
       button.addEventListener('click', () => {
-        // Don't allow clicking on disabled tabs
         if (button.classList.contains('disabled')) {
           return
         }
 
-        // Remove active class from all buttons and contents
-        tabButtons.forEach(btn => btn.classList.remove('active'))
-        tabContents.forEach(content => content.classList.remove('active'))
-
-        // Add active class to clicked button
-        button.classList.add('active')
-
-        // Show corresponding content
         const tabName = button.getAttribute('data-tab')
-        const tabContent = document.getElementById(`${tabName}TabContent`)
-        tabContent.classList.add('active')
-
-        // Scroll sidebar to bring the first production button back into view
-        const sidebarScroll = document.getElementById('sidebarScroll')
-        if (sidebarScroll) {
-          const productionTabs = document.getElementById('productionTabs')
-          const firstProductionButton = tabContent.querySelector('.production-button')
-
-          if (productionTabs && firstProductionButton) {
-            const containerRect = sidebarScroll.getBoundingClientRect()
-            const buttonRect = firstProductionButton.getBoundingClientRect()
-            const tabsHeight = productionTabs.getBoundingClientRect().height
-            const offset = buttonRect.top - containerRect.top + sidebarScroll.scrollTop - tabsHeight
-
-            sidebarScroll.scrollTo({
-              top: Math.max(offset, 0),
-              behavior: 'smooth'
-            })
-          } else {
-            sidebarScroll.scrollTo({ top: 0, behavior: 'smooth' })
-          }
-        }
-
-        // Force image loading in the newly activated tab
-        tabContent.querySelectorAll('img').forEach(img => {
-          // Trick to force browser to load/reload image if it failed before
-          if (!img.complete || img.naturalHeight === 0) {
-            const originalSrc = img.src
-            img.src = ''
-            setTimeout(() => { img.src = originalSrc }, 10)
-          }
-        })
+        this.activateTab(tabName, { scrollIntoView: true })
       })
     })
 
-    // Initial tab state update
+    const activeButton = document.querySelector('.tab-button.active')
+    if (activeButton) {
+      this.activateTab(activeButton.getAttribute('data-tab'), { scrollIntoView: false })
+    } else if (tabButtons.length > 0) {
+      const firstTab = tabButtons[0].getAttribute('data-tab')
+      this.activateTab(firstTab, { scrollIntoView: false })
+    }
+
+    this.ensureMobileToggle()
     this.updateTabStates()
   }
 
@@ -1009,18 +1121,11 @@ export class ProductionController {
       // Find the first non-disabled tab and activate it
       const enabledTab = document.querySelector('.tab-button:not(.disabled)')
       if (enabledTab) {
-        activeTab.classList.remove('active')
-        enabledTab.classList.add('active')
-
-        // Update content visibility
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'))
-        const tabName = enabledTab.getAttribute('data-tab')
-        const tabContent = document.getElementById(`${tabName}TabContent`)
-        if (tabContent) {
-          tabContent.classList.add('active')
-        }
+        this.activateTab(enabledTab.getAttribute('data-tab'), { scrollIntoView: false })
       }
     }
+
+    this.updateMobileCategoryToggle()
   }
 
   attachMobileDragHandlers(button, detail) {
@@ -1051,6 +1156,8 @@ export class ProductionController {
       const lockables = []
       const sidebarScroll = document.getElementById('sidebarScroll')
       const sidebar = document.getElementById('sidebar')
+      const mobileBuildMenu = document.getElementById('mobileBuildMenuContainer')
+      const mobileProductionScroll = document.querySelector('#mobileBuildMenuContainer #production')
 
       const captureLockState = (element) => {
         if (!element) {
@@ -1067,8 +1174,14 @@ export class ProductionController {
         element.style.webkitOverflowScrolling = 'auto'
       }
 
-      captureLockState(sidebarScroll)
-      captureLockState(sidebar)
+      const isMobileLandscape = document.body && document.body.classList.contains('mobile-landscape')
+      if (isMobileLandscape) {
+        captureLockState(mobileProductionScroll)
+        captureLockState(mobileBuildMenu)
+      } else {
+        captureLockState(sidebarScroll)
+        captureLockState(sidebar)
+      }
 
       if (lockables.length > 0) {
         state.scrollLocks = lockables

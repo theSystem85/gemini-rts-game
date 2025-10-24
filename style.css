@@ -137,6 +137,88 @@ body.is-touch {
   -webkit-touch-callout: none;
 }
 
+#mobileBuildMenuContainer {
+  display: none;
+}
+
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background-color: rgba(34, 34, 34, 0.92);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.96);
+}
+
+.sidebar-toggle:hover {
+  background-color: rgba(60, 60, 60, 0.96);
+}
+
+.sidebar-toggle-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+#mobileCategoryToggle {
+  display: none;
+  padding: 10px 12px;
+  background-color: #333;
+  color: #ccc;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+#mobileCategoryToggle:hover {
+  background-color: #3d3d3d;
+  color: #fff;
+}
+
+#mobileSidebarControls {
+  position: fixed;
+  top: calc(12px + var(--safe-area-top));
+  left: calc(12px + var(--safe-area-left));
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 56px;
+  z-index: 1600;
+  pointer-events: none;
+}
+
+#mobileSidebarControls .sidebar-toggle,
+#mobileSidebarControls #actions {
+  pointer-events: auto;
+}
+
+#mobileCategoryToggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+#mobileCategoryToggle[aria-pressed="true"] {
+  background-color: #444;
+  color: #fff;
+  border-bottom: 2px solid #4f9cff;
+}
+
 #minimap {
   width: 100%;
   height: 150px;
@@ -850,22 +932,15 @@ body.is-touch #sidebar {
   touch-action: pan-y;
 }
 
-body.is-touch:not(.mobile-sidebar-right) #sidebar {
+body.is-touch:not(.mobile-landscape) #sidebar {
   width: calc(var(--sidebar-width) + var(--safe-area-left));
   padding-left: calc(10px + var(--safe-area-left));
   padding-right: 10px;
 }
 
-body.is-touch.mobile-sidebar-right #sidebar {
-  left: auto;
-  right: 0;
-  width: calc(var(--sidebar-width) + var(--safe-area-right));
-  padding-right: calc(10px + var(--safe-area-right));
-  padding-left: 10px;
-}
-
-body.mobile-sidebar-right #gameCanvas {
+body.mobile-landscape #gameCanvas {
   left: 0;
+  width: 100%;
 }
 
 body.is-touch #sidebarScroll {
@@ -880,6 +955,144 @@ body.is-touch .action-button {
 
 body.is-touch #actions {
   gap: 4px;
+}
+
+body.mobile-landscape #sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  height: 100vh;
+  width: min(280px, 70vw);
+  padding-top: calc(12px + var(--safe-area-top));
+  padding-bottom: calc(12px + var(--safe-area-bottom));
+  padding-left: calc(16px + var(--safe-area-left));
+  padding-right: 16px;
+  box-shadow: 4px 0 14px rgba(0, 0, 0, 0.45);
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+  z-index: 1500;
+}
+
+body.mobile-landscape.sidebar-collapsed #sidebar {
+  transform: translateX(calc(-100% - var(--safe-area-left)));
+}
+
+body.mobile-landscape #mobileSidebarControls {
+  display: flex;
+}
+
+body.mobile-landscape .sidebar-toggle {
+  display: flex;
+}
+
+body.mobile-landscape #actions {
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+body.mobile-landscape #actions .action-button {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 18px;
+  background-color: rgba(34, 34, 34, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+body.mobile-landscape #actions .action-button:hover {
+  background-color: rgba(60, 60, 60, 0.96);
+}
+
+body.mobile-landscape #actions .action-button:active {
+  transform: scale(0.96);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.mobile-landscape #actions .button-icon {
+  width: 26px;
+  height: 26px;
+  font-size: 22px;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer {
+  display: flex;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(115px, 20vw);
+  max-width: 150px;
+  height: 100vh;
+  padding: calc(10px + var(--safe-area-top)) calc(var(--safe-area-right)) calc(14px + var(--safe-area-bottom)) 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(24, 24, 24, 0.95);
+  box-shadow: -6px 0 18px rgba(0, 0, 0, 0.5);
+  z-index: 1400;
+  overflow: hidden;
+}
+
+body.mobile-landscape.sidebar-collapsed #mobileBuildMenuContainer {
+  right: calc(0px + var(--safe-area-right));
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #productionArea {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #production {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-gutter: stable both-edges;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(24, 24, 24, 0.95);
+  padding-bottom: 4px;
+  box-shadow: none;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-button {
+  display: none;
+}
+
+body.mobile-landscape #mobileCategoryToggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-content.active {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .production-button {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  background-color: #2f2f2f;
 }
 
 @media (max-width: 1024px) {
