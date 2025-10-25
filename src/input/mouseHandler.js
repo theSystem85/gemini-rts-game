@@ -90,6 +90,12 @@ export class MouseHandler {
     const healTargets = []
     const refuelTargets = []
     const repairTargets = []
+    const wreckTargets = []
+
+    const friendlyOwners = new Set(selectedUnits.map(unit => unit.owner))
+    if (friendlyOwners.size === 0) {
+      friendlyOwners.add(gameState.humanPlayer)
+    }
 
     units.forEach(unit => {
       if (!unit || selectedIds.has(unit.id)) return
@@ -111,6 +117,21 @@ export class MouseHandler {
       }
     })
 
+    const wrecks = (gameState.unitWrecks || []).filter(wreck => friendlyOwners.has(wreck.owner))
+    wrecks.forEach(wreck => {
+      const centerX = wreck.x + TILE_SIZE / 2
+      const centerY = wreck.y + TILE_SIZE / 2
+      if (centerX < x1 || centerX > x2 || centerY < y1 || centerY > y2) return
+      if (wreck.isBeingRestored || wreck.towedBy || wreck.isBeingRecycled) return
+      wreckTargets.push({
+        id: wreck.id,
+        owner: wreck.owner,
+        tileX: wreck.tileX,
+        tileY: wreck.tileY,
+        isWreckTarget: true
+      })
+    })
+
     let anyQueued = false
     const ambulances = selectedUnits.filter(unit => unit.type === 'ambulance')
     if (ambulances.length > 0 && healTargets.length > 0) {
@@ -127,8 +148,9 @@ export class MouseHandler {
     }
 
     const recoveryTanks = selectedUnits.filter(unit => unit.type === 'recoveryTank')
-    if (recoveryTanks.length > 0 && repairTargets.length > 0) {
-      if (unitCommands.queueUtilityTargets(recoveryTanks, repairTargets, 'repair', mapGrid)) {
+    if (recoveryTanks.length > 0) {
+      const combinedRepairTargets = [...repairTargets, ...wreckTargets]
+      if (combinedRepairTargets.length > 0 && unitCommands.queueUtilityTargets(recoveryTanks, combinedRepairTargets, 'repair', mapGrid)) {
         anyQueued = true
       }
     }

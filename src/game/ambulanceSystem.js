@@ -123,12 +123,16 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
 
     if (queueState && queueState.mode === 'heal') {
       if (!ambulance.healingTarget) {
-        queueState.currentTargetId = null
+        if (queueState.currentTargetId || queueState.currentTargetType) {
+          queueState.currentTargetId = null
+          queueState.currentTargetType = null
+        }
         if (unitCommands) {
           unitCommands.advanceUtilityQueue(ambulance, gameState.mapGrid, true)
         }
-      } else if (queueState.currentTargetId !== ambulance.healingTarget.id) {
+      } else if (queueState.currentTargetId !== ambulance.healingTarget.id || queueState.currentTargetType !== 'unit') {
         queueState.currentTargetId = ambulance.healingTarget.id
+        queueState.currentTargetType = 'unit'
       }
     }
   })

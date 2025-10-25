@@ -451,18 +451,27 @@ export class UnitRenderer {
     }
   }
 
-  getUtilityQueuePosition(selectedUnit, targetUnit) {
+  getUtilityQueuePosition(selectedUnit, targetUnit, overrideType = null) {
     if (!selectedUnit || !targetUnit || selectedUnit.id === targetUnit.id) {
       return null
     }
 
     const queue = selectedUnit.utilityQueue
     if (queue) {
-      if (queue.currentTargetId === targetUnit.id) {
+      const targetType = overrideType || 'unit'
+      const currentType = queue.currentTargetType || 'unit'
+      if (queue.currentTargetId === targetUnit.id && currentType === targetType) {
         return 1
       }
       if (Array.isArray(queue.targets)) {
-        const index = queue.targets.indexOf(targetUnit.id)
+        const index = queue.targets.findIndex(entry => {
+          if (!entry) return false
+          if (typeof entry === 'object') {
+            const entryType = entry.type || 'unit'
+            return entry.id === targetUnit.id && entryType === targetType
+          }
+          return entry === targetUnit.id && targetType === 'unit'
+        })
         if (index !== -1) {
           return (queue.currentTargetId ? 2 : 1) + index
         }
@@ -531,7 +540,7 @@ export class UnitRenderer {
     ctx.font = '10px Arial'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3)
+    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 3)
 
     ctx.restore()
   }

@@ -178,12 +178,16 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
     if (queueState && queueState.mode === 'refuel') {
       if (!tanker.refuelTarget) {
-        queueState.currentTargetId = null
+        if (queueState.currentTargetId || queueState.currentTargetType) {
+          queueState.currentTargetId = null
+          queueState.currentTargetType = null
+        }
         if (unitCommands) {
           unitCommands.advanceUtilityQueue(tanker, gameState.mapGrid, true)
         }
-      } else if (queueState.currentTargetId !== tanker.refuelTarget.id) {
+      } else if (queueState.currentTargetId !== tanker.refuelTarget.id || queueState.currentTargetType !== 'unit') {
         queueState.currentTargetId = tanker.refuelTarget.id
+        queueState.currentTargetType = 'unit'
       }
     }
   })

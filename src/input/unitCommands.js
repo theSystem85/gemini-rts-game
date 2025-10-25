@@ -76,12 +76,13 @@ export class UnitCommandsHandler {
   ensureUtilityQueueState(unit, mode = null) {
     if (!unit) return null
     if (!unit.utilityQueue) {
-      unit.utilityQueue = { mode: null, targets: [], currentTargetId: null }
+      unit.utilityQueue = { mode: null, targets: [], currentTargetId: null, currentTargetType: null }
     }
     if (mode && unit.utilityQueue.mode !== mode) {
       unit.utilityQueue.mode = mode
       unit.utilityQueue.targets = []
       unit.utilityQueue.currentTargetId = null
+      unit.utilityQueue.currentTargetType = null
     }
     return unit.utilityQueue
   }
@@ -91,12 +92,14 @@ export class UnitCommandsHandler {
     unit.utilityQueue.mode = null
     unit.utilityQueue.targets = []
     unit.utilityQueue.currentTargetId = null
+    unit.utilityQueue.currentTargetType = null
   }
 
   cancelCurrentUtilityTask(unit) {
     if (!unit) return
     if (unit.utilityQueue) {
       unit.utilityQueue.currentTargetId = null
+      unit.utilityQueue.currentTargetType = null
     }
 
     if (unit.type === 'ambulance') {
@@ -155,24 +158,51 @@ export class UnitCommandsHandler {
   }
 
   isUtilityTargetValid(mode, serviceUnit, target) {
-    if (!serviceUnit || !target || target.health <= 0) {
+    if (!serviceUnit || !target) {
       return false
     }
-    if (target.id === serviceUnit.id) {
+
+    const isWreckTarget = target.isWreckTarget === true
+
+    if (isWreckTarget) {
+      if (mode !== UTILITY_QUEUE_MODES.REPAIR) {
+        return false
+      }
+      const wreck = getWreckById(gameState, target.id)
+      if (!wreck) {
+        return false
+      }
+      if (wreck.owner !== serviceUnit.owner) {
+        return false
+      }
+      if (wreck.isBeingRestored || wreck.towedBy || wreck.isBeingRecycled) {
+        return false
+      }
+      if (wreck.assignedTankId && wreck.assignedTankId !== serviceUnit.id) {
+        return false
+      }
+      return true
+    }
+
+    const actualTarget = target.type ? target : this.findUnitById(target.id)
+    if (!actualTarget || actualTarget.health <= 0) {
       return false
     }
-    if (target.owner !== serviceUnit.owner) {
+    if (actualTarget.id === serviceUnit.id) {
+      return false
+    }
+    if (actualTarget.owner !== serviceUnit.owner) {
       return false
     }
 
     if (mode === UTILITY_QUEUE_MODES.HEAL) {
-      return !!(target.crew && Object.values(target.crew).some(alive => !alive))
+      return !!(actualTarget.crew && Object.values(actualTarget.crew).some(alive => !alive))
     }
     if (mode === UTILITY_QUEUE_MODES.REFUEL) {
-      return typeof target.maxGas === 'number' && target.gas < target.maxGas
+      return typeof actualTarget.maxGas === 'number' && actualTarget.gas < actualTarget.maxGas
     }
     if (mode === UTILITY_QUEUE_MODES.REPAIR) {
-      return target.health < target.maxHealth
+      return actualTarget.health < actualTarget.maxHealth
     }
     return false
   }
@@ -313,6 +343,115 @@ export class UnitCommandsHandler {
     return false
   }
 
+  assignRecoveryTankToWreck(tank, wreck, mapGrid, { mode = 'tow', suppressNotifications = false } = {}) {
+    if (!tank || tank.type !== 'recoveryTank' || tank.health <= 0) {
+      return false
+    }
+    if (!wreck || wreck.owner !== tank.owner) {
+      if (!suppressNotifications) {
+        showNotification('Recovery tanks can only recover your own wrecks.', 2000)
+      }
+      return false
+    }
+    if (wreck.isBeingRestored || wreck.isBeingRecycled || wreck.towedBy) {
+      if (!suppressNotifications) {
+        showNotification('This wreck is already being processed.', 2000)
+      }
+      return false
+    }
+
+    if (wreck.assignedTankId && wreck.assignedTankId !== tank.id) {
+      const assignedTankAlive = units.some(
+        candidate => candidate.id === wreck.assignedTankId && candidate.type === 'recoveryTank' && candidate.health > 0
+      )
+      if (assignedTankAlive) {
+        if (!suppressNotifications) {
+          showNotification('Another recovery tank is already assigned to this wreck.', 2000)
+        }
+        return false
+      }
+      releaseWreckAssignment(wreck)
+    }
+
+    if (!this.canRecoveryTankRepair(tank)) {
+      if (!suppressNotifications) {
+        showNotification('Recovery tank cannot recover right now!', 2000)
+      }
+      return false
+    }
+
+    if (!mapGrid || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+      return false
+    }
+
+    const candidatePositions = [
+      { x: wreck.tileX, y: wreck.tileY },
+      { x: wreck.tileX + 1, y: wreck.tileY },
+      { x: wreck.tileX - 1, y: wreck.tileY },
+      { x: wreck.tileX, y: wreck.tileY + 1 },
+      { x: wreck.tileX, y: wreck.tileY - 1 }
+    ]
+
+    let assignedPath = null
+    let destination = null
+    for (const pos of candidatePositions) {
+      if (pos.x < 0 || pos.y < 0 || pos.y >= mapGrid.length || pos.x >= mapGrid[0].length) {
+        continue
+      }
+      const path = findPath({ x: tank.tileX, y: tank.tileY }, pos, mapGrid, gameState.occupancyMap)
+      if (path && path.length > 0) {
+        assignedPath = path
+        destination = pos
+        break
+      }
+    }
+
+    if (!assignedPath || !destination) {
+      if (!suppressNotifications) {
+        showNotification('Cannot reach wreck location.', 2000)
+      }
+      return false
+    }
+
+    const task = { wreckId: wreck.id }
+
+    if (mode === 'tow') {
+      const nearestWorkshop = findNearestWorkshop(gameState, tank.owner, { x: tank.tileX, y: tank.tileY })
+      if (!nearestWorkshop) {
+        if (!suppressNotifications) {
+          showNotification('No workshop available for recovery!', 2000)
+        }
+        return false
+      }
+      task.mode = 'tow'
+      task.state = 'movingToWreck'
+      task.workshopId = nearestWorkshop.workshop.id
+      task.workshopEntry = nearestWorkshop.entryTile
+      task.originalPosition = { x: tank.tileX, y: tank.tileY }
+    } else if (mode === 'recycle') {
+      const recycleDuration = getRecycleDurationForWreck(wreck)
+      task.mode = 'recycle'
+      task.state = 'movingToWreck'
+      task.recycleDuration = recycleDuration
+    } else {
+      return false
+    }
+
+    this.cancelRecoveryTask(tank)
+    tank.guardMode = false
+    tank.guardTarget = null
+    tank.path = assignedPath.slice(1)
+    tank.moveTarget = { x: destination.x, y: destination.y }
+    tank.recoveryTask = task
+    wreck.assignedTankId = tank.id
+
+    if (!suppressNotifications) {
+      playSound('movement', 0.5)
+    }
+
+    return true
+  }
+
   startUtilityTaskForMode(unit, targetUnit, mode, mapGrid, suppressNotifications = false) {
     if (mode === UTILITY_QUEUE_MODES.HEAL) {
       return this.assignAmbulanceToTarget(unit, targetUnit, mapGrid, { suppressNotifications })
@@ -333,20 +472,45 @@ export class UnitCommandsHandler {
     }
 
     while (queue.targets.length > 0) {
-      const targetId = queue.targets.shift()
-      const target = this.findUnitById(targetId)
-      if (!target || !this.isUtilityTargetValid(queue.mode, unit, target)) {
+      const entry = queue.targets.shift()
+      if (!entry) continue
+      const entryInfo = typeof entry === 'object' ? entry : { id: entry, type: 'unit' }
+      if (!entryInfo.id) {
         continue
       }
-      const started = this.startUtilityTaskForMode(unit, target, queue.mode, mapGrid, suppressNotifications)
-      if (started) {
-        queue.currentTargetId = target.id
-        return true
+
+      if (entryInfo.type === 'wreck') {
+        const descriptor = { id: entryInfo.id, isWreckTarget: true }
+        if (!this.isUtilityTargetValid(queue.mode, unit, descriptor)) {
+          continue
+        }
+        const wreck = getWreckById(gameState, entryInfo.id)
+        if (!wreck) {
+          continue
+        }
+        const started = this.assignRecoveryTankToWreck(unit, wreck, mapGrid, { suppressNotifications: true })
+        if (started) {
+          queue.currentTargetId = entryInfo.id
+          queue.currentTargetType = 'wreck'
+          return true
+        }
+      } else {
+        const target = this.findUnitById(entryInfo.id)
+        if (!target || !this.isUtilityTargetValid(queue.mode, unit, target)) {
+          continue
+        }
+        const started = this.startUtilityTaskForMode(unit, target, queue.mode, mapGrid, suppressNotifications)
+        if (started) {
+          queue.currentTargetId = target.id
+          queue.currentTargetType = 'unit'
+          return true
+        }
       }
     }
 
     if (!queue.targets.length) {
       queue.mode = null
+      queue.currentTargetType = null
     }
     return false
   }
@@ -363,21 +527,32 @@ export class UnitCommandsHandler {
       this.cancelCurrentUtilityTask(unit)
       queue.targets = []
       queue.currentTargetId = null
+      queue.currentTargetType = null
       queue.mode = mode
     }
 
-    const existing = new Set(queue.targets)
+    const existing = new Set()
+    queue.targets.forEach(entry => {
+      if (!entry) return
+      if (typeof entry === 'object') {
+        existing.add(`${entry.type || 'unit'}:${entry.id}`)
+      } else {
+        existing.add(`unit:${entry}`)
+      }
+    })
     if (queue.currentTargetId) {
-      existing.add(queue.currentTargetId)
+      existing.add(`${queue.currentTargetType || 'unit'}:${queue.currentTargetId}`)
     }
 
     const addedTargets = []
     targets.forEach(target => {
       if (!target) return
       if (!this.isUtilityTargetValid(mode, unit, target)) return
-      if (existing.has(target.id)) return
-      queue.targets.push(target.id)
-      existing.add(target.id)
+      const targetType = target.isWreckTarget ? 'wreck' : 'unit'
+      const key = `${targetType}:${target.id}`
+      if (existing.has(key)) return
+      queue.targets.push({ id: target.id, type: targetType })
+      existing.add(key)
       addedTargets.push(target)
     })
 
@@ -398,9 +573,11 @@ export class UnitCommandsHandler {
       return false
     }
     unit.utilityQueue.currentTargetId = null
+    unit.utilityQueue.currentTargetType = null
     const started = this.startNextUtilityTask(unit, mapGrid, suppressNotifications)
     if (!started && unit.utilityQueue.targets.length === 0) {
       unit.utilityQueue.mode = null
+      unit.utilityQueue.currentTargetType = null
     }
     return started
   }
@@ -456,15 +633,31 @@ export class UnitCommandsHandler {
     return anyQueued
   }
 
-  getUtilityQueuePosition(unit, targetUnit) {
-    if (!unit || !unit.utilityQueue || !targetUnit) {
+  getUtilityQueuePosition(unit, target, overrideType = null) {
+    if (!unit || !unit.utilityQueue || !target) {
       return null
     }
     const queue = unit.utilityQueue
-    if (queue.currentTargetId === targetUnit.id) {
+    const targetId = target.id
+    if (!targetId) {
+      return null
+    }
+    const targetType = overrideType || (target.isWreckTarget ? 'wreck' : 'unit')
+    const currentType = queue.currentTargetType || 'unit'
+    if (queue.currentTargetId === targetId && currentType === targetType) {
       return 1
     }
-    const index = queue.targets.indexOf(targetUnit.id)
+    if (!Array.isArray(queue.targets)) {
+      return null
+    }
+    const index = queue.targets.findIndex(entry => {
+      if (!entry) return false
+      if (typeof entry === 'object') {
+        const entryType = entry.type || 'unit'
+        return entry.id === targetId && entryType === targetType
+      }
+      return entry === targetId && targetType === 'unit'
+    })
     if (index === -1) {
       return null
     }
@@ -1063,145 +1256,28 @@ export class UnitCommandsHandler {
 
   handleRecoveryWreckTowCommand(selectedUnits, wreck, mapGrid) {
     if (!wreck) return
-    const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
+    const recoveryTanks = selectedUnits.filter(u => this.canRecoveryTankRepair(u))
     if (recoveryTanks.length === 0) return
-
-    if (wreck.assignedTankId) {
-      const assignedTankAlive = units.some(
-        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
-      )
-      if (!assignedTankAlive) {
-        releaseWreckAssignment(wreck)
-      }
-    }
-
-    if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
-      showNotification('Wreck already assigned to another recovery tank.', 2000)
-      return
-    }
-
     const availableTank = recoveryTanks.find(tank => !tank.recoveryTask || tank.recoveryTask.wreckId === wreck.id)
     if (!availableTank) {
       showNotification('All selected recovery tanks are busy.', 2000)
       return
     }
 
-    const nearestWorkshop = findNearestWorkshop(gameState, availableTank.owner, { x: availableTank.tileX, y: availableTank.tileY })
-    if (!nearestWorkshop) {
-      showNotification('No workshop available for recovery!', 2000)
-      return
-    }
-
-    const candidatePositions = [
-      { x: wreck.tileX, y: wreck.tileY },
-      { x: wreck.tileX + 1, y: wreck.tileY },
-      { x: wreck.tileX - 1, y: wreck.tileY },
-      { x: wreck.tileX, y: wreck.tileY + 1 },
-      { x: wreck.tileX, y: wreck.tileY - 1 }
-    ]
-
-    let assignedPath = null
-    let destination = null
-    for (const pos of candidatePositions) {
-      if (pos.x < 0 || pos.y < 0 || pos.x >= mapGrid[0].length || pos.y >= mapGrid.length) {
-        continue
-      }
-      const path = findPath({ x: availableTank.tileX, y: availableTank.tileY }, pos, mapGrid, gameState.occupancyMap)
-      if (path && path.length > 0) {
-        assignedPath = path
-        destination = pos
-        break
-      }
-    }
-
-    if (!assignedPath || !destination) {
-      showNotification('Cannot reach wreck location.', 2000)
-      return
-    }
-
-    this.cancelRecoveryTask(availableTank)
-    availableTank.guardMode = false
-    availableTank.guardTarget = null
-    availableTank.path = assignedPath.slice(1)
-    availableTank.moveTarget = { x: destination.x, y: destination.y }
-    availableTank.recoveryTask = {
-      mode: 'tow',
-      wreckId: wreck.id,
-      state: 'movingToWreck',
-      workshopId: nearestWorkshop.workshop.id,
-      workshopEntry: nearestWorkshop.entryTile,
-      originalPosition: { x: availableTank.tileX, y: availableTank.tileY }
-    }
-    wreck.assignedTankId = availableTank.id
-    playSound('movement', 0.5)
+    this.assignRecoveryTankToWreck(availableTank, wreck, mapGrid, { mode: 'tow', suppressNotifications: false })
   }
 
   handleRecoveryWreckRecycleCommand(selectedUnits, wreck, mapGrid) {
     if (!wreck) return
-    const recoveryTanks = selectedUnits.filter(u => u.type === 'recoveryTank')
+    const recoveryTanks = selectedUnits.filter(u => this.canRecoveryTankRepair(u))
     if (recoveryTanks.length === 0) return
-
-    if (wreck.assignedTankId) {
-      const assignedTankAlive = units.some(
-        tank => tank.id === wreck.assignedTankId && tank.type === 'recoveryTank' && tank.health > 0
-      )
-      if (!assignedTankAlive) {
-        releaseWreckAssignment(wreck)
-      }
-    }
-
-    if (wreck.assignedTankId && !recoveryTanks.some(t => t.id === wreck.assignedTankId)) {
-      showNotification('Wreck already being processed.', 2000)
-      return
-    }
-
     const availableTank = recoveryTanks.find(tank => !tank.recoveryTask || tank.recoveryTask.wreckId === wreck.id)
     if (!availableTank) {
       showNotification('All selected recovery tanks are busy.', 2000)
       return
     }
 
-    const candidatePositions = [
-      { x: wreck.tileX, y: wreck.tileY },
-      { x: wreck.tileX + 1, y: wreck.tileY },
-      { x: wreck.tileX - 1, y: wreck.tileY },
-      { x: wreck.tileX, y: wreck.tileY + 1 },
-      { x: wreck.tileX, y: wreck.tileY - 1 }
-    ]
-
-    let assignedPath = null
-    let destination = null
-    for (const pos of candidatePositions) {
-      if (pos.x < 0 || pos.y < 0 || pos.x >= mapGrid[0].length || pos.y >= mapGrid.length) {
-        continue
-      }
-      const path = findPath({ x: availableTank.tileX, y: availableTank.tileY }, pos, mapGrid, gameState.occupancyMap)
-      if (path && path.length > 0) {
-        assignedPath = path
-        destination = pos
-        break
-      }
-    }
-
-    if (!assignedPath || !destination) {
-      showNotification('Cannot reach wreck location.', 2000)
-      return
-    }
-
-    this.cancelRecoveryTask(availableTank)
-    availableTank.guardMode = false
-    availableTank.guardTarget = null
-    availableTank.path = assignedPath.slice(1)
-    availableTank.moveTarget = { x: destination.x, y: destination.y }
-    const recycleDuration = getRecycleDurationForWreck(wreck)
-    availableTank.recoveryTask = {
-      mode: 'recycle',
-      wreckId: wreck.id,
-      state: 'movingToWreck',
-      recycleDuration
-    }
-    wreck.assignedTankId = availableTank.id
-    playSound('movement', 0.5)
+    this.assignRecoveryTankToWreck(availableTank, wreck, mapGrid, { mode: 'recycle', suppressNotifications: false })
   }
 
   handleDamagedUnitToRecoveryTankCommand(selectedUnits, recoveryTank, mapGrid) {

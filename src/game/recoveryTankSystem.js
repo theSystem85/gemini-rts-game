@@ -373,6 +373,27 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
     }
 
     if (queueState && queueState.mode === 'repair') {
+      const trackingWreck = queueState.currentTargetType === 'wreck' || (
+        !queueState.currentTargetType && queueState.currentTargetId &&
+        tank.recoveryTask && tank.recoveryTask.wreckId === queueState.currentTargetId
+      )
+
+      if (trackingWreck) {
+        if (tank.recoveryTask && tank.recoveryTask.wreckId) {
+          if (queueState.currentTargetId !== tank.recoveryTask.wreckId) {
+            queueState.currentTargetId = tank.recoveryTask.wreckId
+          }
+          queueState.currentTargetType = 'wreck'
+        } else {
+          queueState.currentTargetId = null
+          queueState.currentTargetType = null
+          if (unitCommands) {
+            unitCommands.advanceUtilityQueue(tank, gameState.mapGrid, true)
+          }
+        }
+        return
+      }
+
       const activeTargetId = tank.repairTarget
         ? tank.repairTarget.id
         : (tank.repairTargetUnit && tank.repairTargetUnit.health < tank.repairTargetUnit.maxHealth
@@ -383,12 +404,14 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
         tank.repairTargetUnit = null
         if (queueState.currentTargetId) {
           queueState.currentTargetId = null
+          queueState.currentTargetType = null
         }
         if (unitCommands) {
           unitCommands.advanceUtilityQueue(tank, gameState.mapGrid, true)
         }
-      } else if (queueState.currentTargetId !== activeTargetId) {
+      } else if (queueState.currentTargetId !== activeTargetId || queueState.currentTargetType !== 'unit') {
         queueState.currentTargetId = activeTargetId
+        queueState.currentTargetType = 'unit'
       }
     }
   })

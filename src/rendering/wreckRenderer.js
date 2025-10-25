@@ -1,7 +1,8 @@
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED } from '../config.js'
 import { gameState } from '../gameState.js'
 import { renderTankWithImages } from './tankImageRenderer.js'
 import { getTankWreckCanvases, getSingleImageWreckSprite } from './wreckSpriteCache.js'
+import { selectedUnits } from '../inputHandler.js'
 
 const noiseCanvasCache = new Map()
 
@@ -131,7 +132,89 @@ export class WreckRenderer {
     if (!isBeingRestored) {
       this.renderNoiseOverlay(ctx, wreck, centerX, centerY)
     }
+    this.renderUtilityQueueIndicator(ctx, wreck, centerX, centerY)
     this.renderHealthBar(ctx, wreck, scrollOffset)
+  }
+
+  getUtilityQueuePosition(selectedUnit, wreck) {
+    if (!selectedUnit || !wreck || selectedUnit.type !== 'recoveryTank') {
+      return null
+    }
+    const queue = selectedUnit.utilityQueue
+    if (!queue) {
+      return null
+    }
+    const currentType = queue.currentTargetType || 'unit'
+    if (queue.currentTargetId === wreck.id && currentType === 'wreck') {
+      return 1
+    }
+    if (!Array.isArray(queue.targets)) {
+      return null
+    }
+    const index = queue.targets.findIndex(entry => {
+      if (!entry) return false
+      if (typeof entry === 'object') {
+        const entryType = entry.type || 'unit'
+        return entry.id === wreck.id && entryType === 'wreck'
+      }
+      return false
+    })
+    if (index === -1) {
+      return null
+    }
+    return (queue.currentTargetId ? 2 : 1) + index
+  }
+
+  renderUtilityQueueIndicator(ctx, wreck, centerX, centerY) {
+    if (!selectedUnits || selectedUnits.length === 0) {
+      return
+    }
+
+    let queuePosition = null
+    selectedUnits.forEach(selectedUnit => {
+      if (!selectedUnit?.selected) {
+        return
+      }
+      if (selectedUnit.type !== 'recoveryTank') {
+        return
+      }
+      const position = this.getUtilityQueuePosition(selectedUnit, wreck)
+      if (position !== null) {
+        queuePosition = queuePosition === null ? position : Math.min(queuePosition, position)
+      }
+    })
+
+    if (queuePosition === null) {
+      return
+    }
+
+    const now = performance.now()
+    const bounceOffset = Math.sin(now * UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED) * 3
+    const baseIndicatorY = centerY - TILE_SIZE / 2 - 15 + bounceOffset
+    const indicatorX = centerX
+    const indicatorY = baseIndicatorY - UTILITY_SERVICE_INDICATOR_SIZE - 4
+    const halfSize = UTILITY_SERVICE_INDICATOR_SIZE / 2
+
+    ctx.save()
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.45)'
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)'
+    ctx.lineWidth = 1
+
+    ctx.beginPath()
+    ctx.moveTo(indicatorX, indicatorY + halfSize)
+    ctx.lineTo(indicatorX - halfSize, indicatorY - halfSize)
+    ctx.lineTo(indicatorX + halfSize, indicatorY - halfSize)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    ctx.fillStyle = '#000'
+    ctx.font = '10px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 3)
+
+    ctx.restore()
   }
 
   renderFallback(ctx, wreck, centerX, centerY) {
