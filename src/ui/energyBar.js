@@ -67,6 +67,8 @@ export function addPowerIndicator() {
 export function updateEnergyBar() {
   const energyBar = document.getElementById('energyBar')
   const energyText = document.getElementById('energyText')
+  const mobileEnergyBar = document.getElementById('mobileEnergyBar')
+  const mobileEnergyText = document.getElementById('mobileEnergyText')
 
   if (!energyBar || !energyText) {
     // Try to recreate the energy bar if not found
@@ -80,6 +82,9 @@ export function updateEnergyBar() {
 
   // Display energy production value
   energyText.textContent = `Energy: ${totalProduction - totalConsumption}`
+  if (mobileEnergyText) {
+    mobileEnergyText.textContent = `Energy: ${totalProduction - totalConsumption}`
+  }
 
   // Calculate percentage of energy remaining
   let energyPercentage = 100
@@ -92,20 +97,35 @@ export function updateEnergyBar() {
 
   // Update bar width
   energyBar.style.width = `${energyPercentage}%`
+  if (mobileEnergyBar) {
+    mobileEnergyBar.style.width = `${energyPercentage}%`
+  }
 
   // Update bar color based on percentage thresholds
   if (energyPercentage <= 10) {
     // Below 10% - Red
     energyBar.style.backgroundColor = '#F44336'
+    if (mobileEnergyBar) {
+      mobileEnergyBar.style.backgroundColor = '#F44336'
+    }
   } else if (energyPercentage <= 25) {
     // Below 25% - Orange
     energyBar.style.backgroundColor = '#FF9800'
+    if (mobileEnergyBar) {
+      mobileEnergyBar.style.backgroundColor = '#FF9800'
+    }
   } else if (energyPercentage <= 50) {
     // Below 50% - Yellow
     energyBar.style.backgroundColor = '#FFEB3B'
+    if (mobileEnergyBar) {
+      mobileEnergyBar.style.backgroundColor = '#FFEB3B'
+    }
   } else {
     // Above 50% - Green
     energyBar.style.backgroundColor = '#4CAF50'
+    if (mobileEnergyBar) {
+      mobileEnergyBar.style.backgroundColor = '#4CAF50'
+    }
   }
 
   // Check if energy is below 10% for production slowdown only (not game speed)

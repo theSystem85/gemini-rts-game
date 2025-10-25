@@ -12,18 +12,26 @@ export function setupMinimapHandlers(gameCanvas) {
 
   // Handle minimap dragging state
   let isMinimapDragging = false
+  let activeTouchId = null
+
+  const handlePointerNavigation = (point) => {
+    if (!point) {
+      return
+    }
+    handleMinimapClick({ target: minimapElement, clientX: point.clientX, clientY: point.clientY }, gameCanvas)
+  }
 
   minimapElement.addEventListener('mousedown', (e) => {
     if (e.button === 0 || e.button === 2) {
       e.preventDefault()
       isMinimapDragging = true
-      handleMinimapClick(e, gameCanvas)
+      handlePointerNavigation(e)
     }
   })
 
   minimapElement.addEventListener('mousemove', (e) => {
     if (isMinimapDragging) {
-      handleMinimapClick(e, gameCanvas)
+      handlePointerNavigation(e)
     }
   })
 
@@ -33,11 +41,51 @@ export function setupMinimapHandlers(gameCanvas) {
       // This is important - process one last time with the final cursor position
       // when it's still in drag mode before ending the drag
       if (e.target === minimapElement) {
-        handleMinimapClick(e, gameCanvas)
+        handlePointerNavigation(e)
       }
       isMinimapDragging = false
     }
   })
+
+  minimapElement.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length === 0) {
+      return
+    }
+    const touch = e.touches[0]
+    activeTouchId = touch.identifier
+    isMinimapDragging = true
+    e.preventDefault()
+    handlePointerNavigation(touch)
+  }, { passive: false })
+
+  minimapElement.addEventListener('touchmove', (e) => {
+    if (!isMinimapDragging) {
+      return
+    }
+    const touches = Array.from(e.touches || [])
+    const touch = touches.find(t => t.identifier === activeTouchId) || touches[0]
+    if (touch) {
+      e.preventDefault()
+      handlePointerNavigation(touch)
+    }
+  }, { passive: false })
+
+  const endTouchDrag = (e) => {
+    if (!isMinimapDragging) {
+      return
+    }
+    const changedTouches = Array.from(e.changedTouches || [])
+    const touch = changedTouches.find(t => t.identifier === activeTouchId) || changedTouches[0]
+    if (touch) {
+      handlePointerNavigation(touch)
+    }
+    isMinimapDragging = false
+    activeTouchId = null
+    e.preventDefault()
+  }
+
+  minimapElement.addEventListener('touchend', endTouchDrag, { passive: false })
+  minimapElement.addEventListener('touchcancel', endTouchDrag, { passive: false })
 
   // Prevent context menu on minimap
   minimapElement.addEventListener('contextmenu', (e) => {

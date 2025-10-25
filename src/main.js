@@ -58,7 +58,11 @@ const mobileLayoutState = {
   actionsOriginalParent: null,
   actionsOriginalNextSibling: null,
   mobileActionsContainer: null,
-  mobileControls: null
+  mobileControls: null,
+  mobileStatusBar: null,
+  mobileMoneyValue: null,
+  mobileEnergyBar: null,
+  mobileEnergyText: null
 }
 
 function ensureMobileLayoutElements() {
@@ -114,6 +118,77 @@ function ensureMobileLayoutElements() {
       setSidebarCollapsed(!currentlyCollapsed)
     })
     mobileLayoutState.sidebarToggleListenerAttached = true
+  }
+}
+
+function ensureMobileStatusBar(container) {
+  if (!container) {
+    return
+  }
+
+  let statusBar = mobileLayoutState.mobileStatusBar
+  if (!statusBar || !statusBar.isConnected) {
+    statusBar = document.getElementById('mobileStatusBar')
+    if (statusBar) {
+      mobileLayoutState.mobileStatusBar = statusBar
+    }
+  }
+
+  if (!statusBar) {
+    statusBar = document.createElement('div')
+    statusBar.id = 'mobileStatusBar'
+
+    const moneyDisplay = document.createElement('div')
+    moneyDisplay.id = 'mobileMoneyDisplay'
+
+    const moneyLabel = document.createElement('span')
+    moneyLabel.id = 'mobileMoneyLabel'
+    moneyLabel.textContent = 'Money'
+
+    const moneyValue = document.createElement('span')
+    moneyValue.id = 'mobileMoneyValue'
+    moneyValue.textContent = '$0'
+
+    moneyDisplay.appendChild(moneyLabel)
+    moneyDisplay.appendChild(moneyValue)
+
+    const energyContainer = document.createElement('div')
+    energyContainer.id = 'mobileEnergyBarContainer'
+
+    const energyBar = document.createElement('div')
+    energyBar.id = 'mobileEnergyBar'
+
+    const energyText = document.createElement('div')
+    energyText.id = 'mobileEnergyText'
+    energyText.textContent = 'Energy: 0'
+
+    energyContainer.appendChild(energyBar)
+    energyContainer.appendChild(energyText)
+
+    statusBar.appendChild(moneyDisplay)
+    statusBar.appendChild(energyContainer)
+
+    mobileLayoutState.mobileStatusBar = statusBar
+    mobileLayoutState.mobileMoneyValue = moneyValue
+    mobileLayoutState.mobileEnergyBar = energyBar
+    mobileLayoutState.mobileEnergyText = energyText
+  } else {
+    mobileLayoutState.mobileMoneyValue = document.getElementById('mobileMoneyValue')
+    mobileLayoutState.mobileEnergyBar = document.getElementById('mobileEnergyBar')
+    mobileLayoutState.mobileEnergyText = document.getElementById('mobileEnergyText')
+  }
+
+  if (statusBar.parentNode !== container) {
+    container.insertBefore(statusBar, container.firstChild || null)
+  }
+
+  if (mobileLayoutState.mobileMoneyValue) {
+    const currentMoney = Math.max(0, Math.floor(gameState.money || 0))
+    mobileLayoutState.mobileMoneyValue.textContent = `$${currentMoney}`
+  }
+
+  if (typeof updateEnergyBar === 'function') {
+    updateEnergyBar()
   }
 }
 
@@ -178,6 +253,7 @@ function applyMobileLandscapeLayout(enabled) {
   }
 
   if (enabled) {
+    ensureMobileStatusBar(mobileContainer)
     if (productionArea.parentNode !== mobileContainer) {
       mobileContainer.appendChild(productionArea)
     }
@@ -311,7 +387,7 @@ import { ProductionController } from './ui/productionController.js'
 import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
-import { addPowerIndicator } from './ui/energyBar.js'
+import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
