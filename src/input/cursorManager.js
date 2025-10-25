@@ -287,17 +287,10 @@ export class CursorManager {
       if (hasSelectedRecoveryTanks) {
         const wreck = findWreckAtTile(gameState, tileX, tileY)
         if (wreck) {
-          const friendlyOwners = new Set([gameState.humanPlayer, 'player'])
-          if (gameState.humanPlayer === 'player1') {
-            friendlyOwners.add('player1')
-          }
-          if (gameState.humanPlayer === 'player2') {
-            friendlyOwners.add('player2')
-          }
           const assignedTankSelected = wreck.assignedTankId && selectedUnits.some(unit => unit.id === wreck.assignedTankId)
           const isRecoverable = !wreck.isBeingRestored && !wreck.towedBy && !wreck.isBeingRecycled &&
             (!wreck.assignedTankId || assignedTankSelected)
-          if (friendlyOwners.has(wreck.owner) && isRecoverable) {
+          if (isRecoverable) {
             this.isOverWreck = true
           }
         }

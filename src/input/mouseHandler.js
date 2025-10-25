@@ -92,11 +92,6 @@ export class MouseHandler {
     const repairTargets = []
     const wreckTargets = []
 
-    const friendlyOwners = new Set(selectedUnits.map(unit => unit.owner))
-    if (friendlyOwners.size === 0) {
-      friendlyOwners.add(gameState.humanPlayer)
-    }
-
     units.forEach(unit => {
       if (!unit || selectedIds.has(unit.id)) return
       if (!selectionManager.isHumanPlayerUnit(unit)) return
@@ -117,7 +112,7 @@ export class MouseHandler {
       }
     })
 
-    const wrecks = (gameState.unitWrecks || []).filter(wreck => friendlyOwners.has(wreck.owner))
+    const wrecks = gameState.unitWrecks || []
     wrecks.forEach(wreck => {
       const centerX = wreck.x + TILE_SIZE / 2
       const centerY = wreck.y + TILE_SIZE / 2

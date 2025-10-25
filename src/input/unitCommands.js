@@ -172,9 +172,6 @@ export class UnitCommandsHandler {
       if (!wreck) {
         return false
       }
-      if (wreck.owner !== serviceUnit.owner) {
-        return false
-      }
       if (wreck.isBeingRestored || wreck.towedBy || wreck.isBeingRecycled) {
         return false
       }
@@ -347,9 +344,9 @@ export class UnitCommandsHandler {
     if (!tank || tank.type !== 'recoveryTank' || tank.health <= 0) {
       return false
     }
-    if (!wreck || wreck.owner !== tank.owner) {
+    if (!wreck) {
       if (!suppressNotifications) {
-        showNotification('Recovery tanks can only recover your own wrecks.', 2000)
+        showNotification('Recovery tank cannot find that wreck.', 2000)
       }
       return false
     }
