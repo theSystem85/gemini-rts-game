@@ -39,8 +39,8 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-dialog {
-          background: linear-gradient(135deg, #2c3e50, #34495e);
-          border: 2px solid #3498db;
+          background: linear-gradient(135deg, #2a2a2a, #333333);
+          border: 2px solid #555555;
           border-radius: 8px;
           padding: 20px;
           min-width: 600px;
@@ -89,9 +89,9 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-category-btn {
-          background: #34495e;
+          background: #444444;
           color: #ecf0f1;
-          border: 1px solid #5d6d7e;
+          border: 1px solid #666666;
           border-radius: 4px;
           padding: 6px 12px;
           cursor: pointer;
@@ -100,19 +100,19 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-category-btn:hover {
-          background: #445566;
+          background: #555555;
         }
 
         .runtime-config-category-btn.active {
-          background: #3498db;
-          border-color: #2980b9;
+          background: #666666;
+          border-color: #888888;
         }
 
         .runtime-config-content {
           flex: 1;
           overflow-y: auto;
           padding: 10px;
-          background: rgba(52, 73, 94, 0.3);
+          background: rgba(40, 40, 40, 0.5);
           border-radius: 4px;
           margin-bottom: 15px;
         }
@@ -120,9 +120,9 @@ export class RuntimeConfigDialog {
         .runtime-config-item {
           margin-bottom: 15px;
           padding: 10px;
-          background: rgba(44, 62, 80, 0.5);
+          background: rgba(50, 50, 50, 0.5);
           border-radius: 4px;
-          border-left: 3px solid #3498db;
+          border-left: 3px solid #777777;
         }
 
         .runtime-config-item-header {
@@ -133,7 +133,7 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-item-name {
-          color: #3498db;
+          color: #aaaaaa;
           font-weight: bold;
           font-size: 14px;
         }
@@ -160,9 +160,9 @@ export class RuntimeConfigDialog {
           flex: 1;
           padding: 6px 10px;
           font-size: 13px;
-          border: 1px solid #5d6d7e;
+          border: 1px solid #666666;
           border-radius: 4px;
-          background: #34495e;
+          background: #444444;
           color: #ecf0f1;
           font-family: 'Courier New', monospace;
         }
@@ -173,9 +173,9 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-input:focus {
-          border-color: #3498db;
+          border-color: #888888;
           outline: none;
-          box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+          box-shadow: 0 0 5px rgba(136, 136, 136, 0.5);
         }
 
         .runtime-config-checkbox {

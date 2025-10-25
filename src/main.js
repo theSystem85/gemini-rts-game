@@ -15,13 +15,9 @@ import {
   DEFAULT_MAP_TILES_Y,
   ORE_SPREAD_ENABLED,
   setOreSpreadEnabled,
-  setMapDimensions,
-  listConfigVariables,
-  updateConfigValue,
-  getConfigOverrides,
-  ensureConfigOverridesLoaded,
-  CONFIG_OVERRIDE_FILENAME
+  setMapDimensions
 } from './config.js'
+import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
@@ -735,14 +731,6 @@ class Game {
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
     const configSettingsBtn = document.getElementById('configSettingsBtn')
-    const configModal = document.getElementById('configSettingsModal')
-    const configModalCloseBtn = document.getElementById('configModalCloseBtn')
-    const configSelect = document.getElementById('configVariableSelect')
-    const configInput = document.getElementById('configValueInput')
-    const configNote = document.getElementById('configValueNote')
-    const configMessage = document.getElementById('configValueMessage')
-    const configExportBtn = document.getElementById('configExportBtn')
-    const configOverridesFilename = document.getElementById('configOverridesFilename')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
@@ -772,233 +760,11 @@ class Game {
       updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
     })
 
-    if (
-      configSettingsBtn &&
-      configModal &&
-      configModalCloseBtn &&
-      configSelect &&
-      configInput &&
-      configNote &&
-      configMessage &&
-      configExportBtn
-    ) {
-      let cachedEntries = []
-      let currentEntry = null
-
-      if (configOverridesFilename) {
-        configOverridesFilename.textContent = CONFIG_OVERRIDE_FILENAME
-      }
-      configExportBtn.textContent = `Download ${CONFIG_OVERRIDE_FILENAME}`
-
-      const formatOptionLabel = (entry) =>
-        entry.overridden ? `${entry.name} (override)` : entry.name
-
-      const updateNoteForCurrentEntry = () => {
-        if (!currentEntry) {
-          configNote.textContent = cachedEntries.some((entry) => entry.editable)
-            ? 'Select a numeric configuration value to edit.'
-            : 'No numeric configuration values can be edited at this time.'
-          return
-        }
-
-        if (!currentEntry.editable) {
-          configNote.textContent = `Editing ${currentEntry.type} values is not supported yet.`
-          return
-        }
-
-        const noteParts = [`Default value: ${currentEntry.defaultValue}`]
-        noteParts.push(
-          currentEntry.overridden
-            ? 'Override active (saved to browser storage).'
-            : 'Override not set.'
-        )
-        configNote.textContent = noteParts.join(' ')
-      }
-
-      const refreshExportButtonState = () => {
-        if (!configExportBtn) {
-          return
-        }
-        const hasOverrides = Object.keys(getConfigOverrides()).length > 0
-        configExportBtn.disabled = !hasOverrides
-      }
-
-      refreshExportButtonState()
-
-      const setModalVisibility = (visible) => {
-        configModal.classList.toggle('config-modal--open', visible)
-        configModal.setAttribute('aria-hidden', visible ? 'false' : 'true')
-        if (visible) {
-          document.body.classList.add('config-modal-open')
-        } else {
-          document.body.classList.remove('config-modal-open')
-        }
-      }
-
-      const setMessage = (text, type = 'info') => {
-        configMessage.textContent = text
-        configMessage.classList.remove('config-modal__message--error', 'config-modal__message--success')
-        if (type === 'error') {
-          configMessage.classList.add('config-modal__message--error')
-        } else if (type === 'success') {
-          configMessage.classList.add('config-modal__message--success')
-        }
-      }
-
-      const syncSelection = () => {
-        const selectedName = configSelect.value
-        currentEntry = cachedEntries.find((entry) => entry.name === selectedName) || null
-        setMessage('')
-
-        if (!currentEntry || !currentEntry.editable) {
-          configInput.value = ''
-          configInput.disabled = true
-          updateNoteForCurrentEntry()
-          return
-        }
-
-        configInput.disabled = false
-        configInput.value = currentEntry.value
-        configInput.focus()
-        updateNoteForCurrentEntry()
-      }
-
-      const populateOptions = (preserveSelection = true) => {
-        const previousSelection = preserveSelection ? configSelect.value : null
-        cachedEntries = listConfigVariables().sort((a, b) => a.name.localeCompare(b.name))
-        configSelect.innerHTML = ''
-
-        cachedEntries.forEach((entry) => {
-          const option = document.createElement('option')
-          option.value = entry.name
-          option.textContent = formatOptionLabel(entry)
-          option.disabled = !entry.editable
-          if (!entry.editable) {
-            option.classList.add('config-modal__option--disabled')
-          }
-          if (entry.overridden) {
-            option.dataset.overridden = 'true'
-          }
-          configSelect.appendChild(option)
-        })
-
-        const fallback = cachedEntries.find((entry) => entry.name === previousSelection && entry.editable)
-          || cachedEntries.find((entry) => entry.editable)
-
-        if (fallback) {
-          configSelect.value = fallback.name
-        } else {
-          configSelect.value = ''
-        }
-
-        configSelect.disabled = cachedEntries.length === 0 || cachedEntries.every((entry) => !entry.editable)
-        syncSelection()
-        refreshExportButtonState()
-      }
-
-      const closeModal = () => {
-        setModalVisibility(false)
-      }
-
-      const exportOverrides = () => {
-        const overrides = getConfigOverrides()
-        const entries = Object.entries(overrides)
-        if (entries.length === 0) {
-          setMessage('There are no overrides to export yet.')
-          return
-        }
-
-        try {
-          const blob = new Blob([JSON.stringify(overrides, null, 2)], { type: 'application/json' })
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = CONFIG_OVERRIDE_FILENAME
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          setTimeout(() => URL.revokeObjectURL(url), 0)
-          const message = entries.length === 1
-            ? `Downloaded override for ${entries[0][0]} to ${CONFIG_OVERRIDE_FILENAME}.`
-            : `Downloaded ${entries.length} overrides to ${CONFIG_OVERRIDE_FILENAME}.`
-          setMessage(message, 'success')
-        } catch (err) {
-          console.error('Failed to export config overrides:', err)
-          setMessage('Unable to export overrides. Check console for details.', 'error')
-        }
-      }
-
+    // Use the new runtime config dialog instead of the old eval-based modal
+    if (configSettingsBtn) {
       configSettingsBtn.addEventListener('click', () => {
-        populateOptions(false)
-        setModalVisibility(true)
+        runtimeConfigDialog.openDialog()
       })
-
-      configModalCloseBtn.addEventListener('click', closeModal)
-
-      configModal.addEventListener('click', (event) => {
-        if (event.target === configModal) {
-          closeModal()
-        }
-      })
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && configModal.classList.contains('config-modal--open')) {
-          closeModal()
-        }
-      })
-
-      configSelect.addEventListener('change', () => {
-        syncSelection()
-      })
-
-      configInput.addEventListener('input', (event) => {
-        if (!currentEntry || !currentEntry.editable) {
-          return
-        }
-
-        const { value } = event.target
-        if (value === '') {
-          setMessage('Enter a numeric value to apply changes.')
-          return
-        }
-
-        try {
-          const updatedValue = updateConfigValue(currentEntry.name, value)
-          const isOverridden = !Object.is(updatedValue, currentEntry.defaultValue)
-          const updatedEntry = {
-            ...currentEntry,
-            value: updatedValue,
-            overridden: isOverridden
-          }
-          currentEntry = updatedEntry
-          cachedEntries = cachedEntries.map((entry) =>
-            entry.name === updatedEntry.name ? updatedEntry : entry
-          )
-
-          const selectedOption = configSelect.querySelector(`option[value="${updatedEntry.name}"]`)
-          if (selectedOption) {
-            selectedOption.textContent = formatOptionLabel(updatedEntry)
-            if (isOverridden) {
-              selectedOption.dataset.overridden = 'true'
-            } else {
-              selectedOption.removeAttribute('data-overridden')
-            }
-          }
-
-          configInput.value = `${updatedValue}`
-          updateNoteForCurrentEntry()
-          refreshExportButtonState()
-
-          const message = isOverridden
-            ? `Saved override for ${updatedEntry.name}.`
-            : `Cleared override for ${updatedEntry.name}.`
-          setMessage(message, 'success')
-        } catch (err) {
-          setMessage(err.message, 'error')
-        }
-      })
-
-      configExportBtn.addEventListener('click', exportOverrides)
     }
   }
 
@@ -1300,11 +1066,10 @@ export { showNotification }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await ensureConfigOverridesLoaded()
-  } catch (err) {
-    console.warn('Failed to load config overrides before startup:', err)
-  }
+  // NOTE: The old eval-based config override system has been removed and replaced with
+  // the new configRegistry.js system. Config overrides from localStorage and external
+  // files are no longer automatically loaded on startup. The new runtime config dialog
+  // (press K) now handles config changes using direct function references instead of eval.
  
   updateTouchClass()
   updateMobileLayoutClasses()

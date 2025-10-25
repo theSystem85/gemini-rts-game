@@ -231,6 +231,11 @@ async function loadOverridesFromFile() {
 
 // Experience system multiplier (adjusts how quickly units gain XP)
 export let XP_MULTIPLIER = 3
+
+export function setXpMultiplier(value) {
+  XP_MULTIPLIER = value
+}
+
 // config.js
 export let TILE_SIZE = 32
 export let MIN_MAP_TILES = 32
@@ -265,6 +270,10 @@ export let TILE_LENGTH_METERS = 1000
 export let SAFE_RANGE_ENABLED = false
 export let CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
+export function setCrewKillChance(value) {
+  CREW_KILL_CHANCE = value
+}
+
 // Toggle to allow selecting enemy units to view their HUD only
 export let ENABLE_ENEMY_SELECTION = true
 
@@ -285,13 +294,30 @@ export let MASTER_VOLUME = 0.25  // Default to 50% volume
 // Targeting spread for tanks and turrets (in pixels, about 3/4 of a tile for more noticeable inaccuracy)
 export let TARGETING_SPREAD = TILE_SIZE * 0.75
 
+export function setTargetingSpread(value) {
+  TARGETING_SPREAD = value
+}
+
 // HARVESTER_CAPPACITY is now 1 (so a harvester unloads as soon as it harvests one unit)
 export let HARVESTER_CAPPACITY = 1
 
+export function setHarvesterCapacity(value) {
+  HARVESTER_CAPPACITY = value
+}
+
 // Harvester unload time (in milliseconds)
 export let HARVESTER_UNLOAD_TIME = 5000  // 5 seconds (2x faster than before)
+
+export function setHarvesterUnloadTime(value) {
+  HARVESTER_UNLOAD_TIME = value
+}
+
 // Capacity of tanker truck supply tank
 export let TANKER_SUPPLY_CAPACITY = 40000
+
+export function setTankerSupplyCapacity(value) {
+  TANKER_SUPPLY_CAPACITY = value
+}
 
 // Fallback colors for tiles when images aren't available
 export let TILE_COLORS = {
@@ -349,8 +375,16 @@ export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow
 // Scroll speed when using arrow keys (pixels per frame)
 export let KEYBOARD_SCROLL_SPEED = 8
 
+export function setKeyboardScrollSpeed(value) {
+  KEYBOARD_SCROLL_SPEED = value
+}
+
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export let TANK_FIRE_RANGE = 9
+
+export function setTankFireRange(value) {
+  TANK_FIRE_RANGE = value
+}
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
 export let MAX_BUILDING_GAP_TILES = 3
@@ -369,8 +403,22 @@ export let SHADOW_OF_WAR_CONFIG = {
 
 // Tank constants
 export let DEFAULT_ROTATION_SPEED = 0.05 // Radians per frame
+
+export function setDefaultRotationSpeed(value) {
+  DEFAULT_ROTATION_SPEED = value
+}
+
 export let FAST_ROTATION_SPEED = 0.1 // Radians per frame
+
+export function setFastRotationSpeed(value) {
+  FAST_ROTATION_SPEED = value
+}
+
 export let TANK_BULLET_SPEED = 8 // Radians per frame
+
+export function setTankBulletSpeed(value) {
+  TANK_BULLET_SPEED = value
+}
 
 // Hit zone damage multipliers for tanks
 export let HIT_ZONE_DAMAGE_MULTIPLIERS = {
@@ -384,12 +432,25 @@ export let CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
 
 // Separate rotation rates for tank components
 export let TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
+
+export function setTankWagonRot(value) {
+  TANK_WAGON_ROT = value
+}
+
 // Reduced turret rotation speed to make artillery tracking more deliberate
 // 70% slower than before (was 0.08)
 export let TANK_TURRET_ROT = 0.024 // Radians per frame for turret aiming
 
+export function setTankTurretRot(value) {
+  TANK_TURRET_ROT = value
+}
+
 // Aiming precision threshold (in radians) - turret must be within this angle to fire
 export let TURRET_AIMING_THRESHOLD = 0.1 // About 5.7 degrees
+
+export function setTurretAimingThreshold(value) {
+  TURRET_AIMING_THRESHOLD = value
+}
 
 // Recoil and muzzle flash animation constants
 export let RECOIL_DISTANCE = 8 // pixels to move back during recoil
@@ -409,7 +470,17 @@ export let WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wi
 export let WIND_STRENGTH = 0.008 // How much wind affects particle movement
 
 export let ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
+
+export function setOreSpreadInterval(value) {
+  ORE_SPREAD_INTERVAL = value
+}
+
 export let ORE_SPREAD_PROBABILITY = 0.06
+
+export function setOreSpreadProbability(value) {
+  ORE_SPREAD_PROBABILITY = value
+}
+
 // Toggle ore spreading to improve performance when disabled
 export let ORE_SPREAD_ENABLED = true
 
@@ -420,11 +491,23 @@ export function setOreSpreadEnabled(value) {
 // New: Path recalculation interval (in milliseconds)
 export let PATH_CALC_INTERVAL = 2000
 
+export function setPathCalcInterval(value) {
+  PATH_CALC_INTERVAL = value
+}
+
 // Attack/chase pathfinding interval - throttled to prevent excessive recalculation (in milliseconds)
 export let ATTACK_PATH_CALC_INTERVAL = 3000
 
+export function setAttackPathCalcInterval(value) {
+  ATTACK_PATH_CALC_INTERVAL = value
+}
+
 // General AI decision interval for heavy logic like target selection (in milliseconds)
 export let AI_DECISION_INTERVAL = 5000  // Reduced from 200ms to 5s to prevent wiggling
+
+export function setAiDecisionInterval(value) {
+  AI_DECISION_INTERVAL = value
+}
 
 // Smoke emission for buildings
 export let BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
@@ -432,18 +515,50 @@ export let BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export let PATHFINDING_THRESHOLD = 10
 
+export function setPathfindingThreshold(value) {
+  PATHFINDING_THRESHOLD = value
+}
+
 // How close a unit needs to be (in tiles) to consider a move target reached
 export let MOVE_TARGET_REACHED_THRESHOLD = 1.5
 
+export function setMoveTargetReachedThreshold(value) {
+  MOVE_TARGET_REACHED_THRESHOLD = value
+}
+
 // Unit stuck detection and productivity check intervals (in milliseconds)
 export let STUCK_CHECK_INTERVAL = 500  // Check every 0.5 seconds for stuck units
+
+export function setStuckCheckInterval(value) {
+  STUCK_CHECK_INTERVAL = value
+}
+
 export let HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
 export let STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
+
+export function setStuckThreshold(value) {
+  STUCK_THRESHOLD = value
+}
+
 export let STUCK_HANDLING_COOLDOWN = 1250  // Cooldown between stuck handling attempts
+
+export function setStuckHandlingCooldown(value) {
+  STUCK_HANDLING_COOLDOWN = value
+}
+
 export let DODGE_ATTEMPT_COOLDOWN = 500  // Cooldown between dodge attempts
+
+export function setDodgeAttemptCooldown(value) {
+  DODGE_ATTEMPT_COOLDOWN = value
+}
 
 // Street movement and pathfinding modifiers
 export let STREET_SPEED_MULTIPLIER = 1.5  // Units move 50% faster on streets
+
+export function setStreetSpeedMultiplier(value) {
+  STREET_SPEED_MULTIPLIER = value
+}
+
 export let STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
 
 // Unit costs
@@ -624,7 +739,16 @@ export let DEFAULT_PLAYER_COUNT = 2
 
 // Gas system configuration
 export let GAS_REFILL_TIME = 7000 // ms to fully refill at station
+
+export function setGasRefillTime(value) {
+  GAS_REFILL_TIME = value
+}
+
 export let GAS_REFILL_COST = 50
+
+export function setGasRefillCost(value) {
+  GAS_REFILL_COST = value
+}
 
 export let UNIT_GAS_PROPERTIES = {
   tank_v1: { tankSize: 1900, consumption: 450 },
@@ -725,6 +849,8 @@ const EXPORTED_CONFIG_VARIABLES = [
   'UNIT_GAS_PROPERTIES'
 ]
 
-EXPORTED_CONFIG_VARIABLES.forEach(registerConfigVariable)
+// The old eval-based config system has been removed because it cannot work in production
+// builds where variable names get minified. Use configRegistry.js instead, which uses
+// direct function references that work correctly with minification.
 
 export const CONFIG_VARIABLE_NAMES = [...EXPORTED_CONFIG_VARIABLES]
