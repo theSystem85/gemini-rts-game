@@ -118,13 +118,7 @@ export class MouseHandler {
       const centerY = wreck.y + TILE_SIZE / 2
       if (centerX < x1 || centerX > x2 || centerY < y1 || centerY > y2) return
       if (wreck.isBeingRestored || wreck.towedBy || wreck.isBeingRecycled) return
-      wreckTargets.push({
-        id: wreck.id,
-        owner: wreck.owner,
-        tileX: wreck.tileX,
-        tileY: wreck.tileY,
-        isWreckTarget: true
-      })
+      wreckTargets.push({ ...wreck, isWreckTarget: true })
     })
 
     let anyQueued = false

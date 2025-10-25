@@ -199,6 +199,9 @@ export class UnitCommandsHandler {
       return typeof actualTarget.maxGas === 'number' && actualTarget.gas < actualTarget.maxGas
     }
     if (mode === UTILITY_QUEUE_MODES.REPAIR) {
+      if (actualTarget.restorationProtectedFromRecovery) {
+        return false
+      }
       return actualTarget.health < actualTarget.maxHealth
     }
     return false
@@ -304,6 +307,12 @@ export class UnitCommandsHandler {
     if (!this.canRecoveryTankRepair(tank)) {
       if (!suppressNotifications) {
         showNotification('Recovery tank cannot repair right now!', 2000)
+      }
+      return false
+    }
+    if (targetUnit?.restorationProtectedFromRecovery) {
+      if (!suppressNotifications) {
+        showNotification('Target unit is leaving the workshop!', 2000)
       }
       return false
     }
@@ -1213,6 +1222,10 @@ export class UnitCommandsHandler {
   handleRecoveryTowCommand(selectedUnits, targetUnit) {
     const tanks = selectedUnits.filter(u => u.type === 'recoveryTank')
     if (tanks.length === 0) return
+    if (targetUnit?.restorationProtectedFromRecovery) {
+      showNotification('Cannot tow units leaving the workshop.', 2000)
+      return
+    }
 
     tanks.forEach(tank => {
       if (tank.towedUnit && tank.towedUnit.id === targetUnit.id) {
