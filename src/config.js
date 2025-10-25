@@ -725,6 +725,9 @@ const EXPORTED_CONFIG_VARIABLES = [
   'UNIT_GAS_PROPERTIES'
 ]
 
-EXPORTED_CONFIG_VARIABLES.forEach(registerConfigVariable)
+// NOTE: The old eval-based config system has been deprecated in favor of configRegistry.js
+// which uses direct function references instead of eval(). The eval-based system cannot
+// work in production builds because variable names get minified.
+// EXPORTED_CONFIG_VARIABLES.forEach(registerConfigVariable)
 
 export const CONFIG_VARIABLE_NAMES = [...EXPORTED_CONFIG_VARIABLES]

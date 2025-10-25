@@ -36,7 +36,8 @@ import {
   STREET_SPEED_MULTIPLIER,
   KEYBOARD_SCROLL_SPEED,
   GAS_REFILL_TIME,
-  GAS_REFILL_COST
+  GAS_REFILL_COST,
+  SAFE_RANGE_ENABLED
 } from './config.js'
 
 /**
@@ -93,6 +94,15 @@ export const configRegistry = {
     max: 20,
     step: 1,
     category: 'Game Balance'
+  },
+
+  safeRangeEnabled: {
+    name: 'Safe Range Enabled',
+    description: 'Enable safe range mode for units',
+    type: 'boolean',
+    get: () => SAFE_RANGE_ENABLED,
+    set: null, // Read-only const
+    category: 'Gameplay'
   },
 
   // Enemy Control
