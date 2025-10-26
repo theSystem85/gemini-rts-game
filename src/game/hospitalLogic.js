@@ -32,8 +32,27 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
             gameState.money -= 100
           }
         }
+        if (unit.type === 'ambulance' && typeof unit.medics === 'number') {
+          const maxMedics = typeof unit.maxMedics === 'number' ? unit.maxMedics : unit.medics
+          if (unit.medics < maxMedics) {
+            unit.medicRefillTimer = (unit.medicRefillTimer || 0) + delta
+            const restockInterval = 2000
+            while (unit.medics < maxMedics && unit.medicRefillTimer >= restockInterval) {
+              unit.medics += 1
+              unit.medicRefillTimer -= restockInterval
+            }
+            if (unit.medics > maxMedics) {
+              unit.medics = maxMedics
+            }
+          } else {
+            unit.medicRefillTimer = 0
+          }
+        }
       } else {
         unit.healTimer = 0
+        if (unit.type === 'ambulance') {
+          unit.medicRefillTimer = 0
+        }
       }
     })
   })
