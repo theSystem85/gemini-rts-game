@@ -143,12 +143,7 @@ function ensureMobileLayoutElements() {
 
   if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
     mobileLayoutState.sidebarToggle.addEventListener('click', () => {
-      if (
-        !document.body || (
-          !document.body.classList.contains('mobile-landscape') &&
-          !document.body.classList.contains('mobile-portrait')
-        )
-      ) {
+      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
         return
       }
       const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
@@ -179,46 +174,33 @@ function ensureMobileStatusBar(container, orientation) {
     moneyRow.id = 'mobileMoneyDisplay'
     moneyRow.className = 'mobile-resource-row'
 
-    const moneyLabel = document.createElement('span')
-    moneyLabel.id = 'mobileMoneyLabel'
-    moneyLabel.className = 'mobile-resource-label'
-    moneyLabel.textContent = 'Money'
-
     const moneyValue = document.createElement('span')
     moneyValue.id = 'mobileMoneyValue'
     moneyValue.className = 'mobile-resource-value'
     moneyValue.textContent = '$0'
 
-    moneyRow.appendChild(moneyLabel)
     moneyRow.appendChild(moneyValue)
-
-    const energyRow = document.createElement('div')
-    energyRow.id = 'mobileEnergyDisplay'
-    energyRow.className = 'mobile-resource-row'
-
-    const energyLabel = document.createElement('span')
-    energyLabel.id = 'mobileEnergyLabel'
-    energyLabel.className = 'mobile-resource-label'
-    energyLabel.textContent = 'Energy'
-
-    const energyValue = document.createElement('span')
-    energyValue.id = 'mobileEnergyValue'
-    energyValue.className = 'mobile-resource-value'
-    energyValue.textContent = '0 MW'
-
-    energyRow.appendChild(energyLabel)
-    energyRow.appendChild(energyValue)
 
     const energyContainer = document.createElement('div')
     energyContainer.id = 'mobileEnergyBarContainer'
+    energyContainer.className = 'mobile-resource-row'
+
+    const energyTrack = document.createElement('div')
+    energyTrack.id = 'mobileEnergyTrack'
 
     const energyBar = document.createElement('div')
     energyBar.id = 'mobileEnergyBar'
 
-    energyContainer.appendChild(energyBar)
+    const energyValue = document.createElement('span')
+    energyValue.id = 'mobileEnergyValue'
+    energyValue.className = 'mobile-resource-value energy-bar-value'
+    energyValue.textContent = '0 MW'
+
+    energyTrack.appendChild(energyBar)
+    energyTrack.appendChild(energyValue)
+    energyContainer.appendChild(energyTrack)
 
     statusBar.appendChild(moneyRow)
-    statusBar.appendChild(energyRow)
     statusBar.appendChild(energyContainer)
 
     mobileLayoutState.mobileStatusBar = statusBar
@@ -289,7 +271,7 @@ function ensureSidebarSwipeHandlers(enable) {
   }
 
   const handleTouchStart = (event) => {
-    if (!document.body || !document.body.classList.contains('mobile-portrait')) {
+    if (!document.body || !document.body.classList.contains('mobile-landscape')) {
       mobileLayoutState.sidebarSwipeState = null
       return
     }
@@ -492,7 +474,7 @@ function applyMobileSidebarLayout(mode) {
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
-    ensureSidebarSwipeHandlers(mode === 'portrait')
+    ensureSidebarSwipeHandlers(mode === 'landscape')
   } else {
     restoreProductionArea()
     restoreActions()
@@ -535,15 +517,14 @@ function updateMobileLayoutClasses() {
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
   const shouldApplyMobileLandscape = isTouch && !isPortrait
-  const shouldApplyMobilePortrait = isTouch && isPortrait
-  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : (shouldApplyMobilePortrait ? 'portrait' : null)
+  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : null
 
   if (document.body.classList.contains('mobile-sidebar-right')) {
     document.body.classList.remove('mobile-sidebar-right')
   }
 
   document.body.classList.toggle('mobile-landscape', mobileMode === 'landscape')
-  document.body.classList.toggle('mobile-portrait', mobileMode === 'portrait')
+  document.body.classList.remove('mobile-portrait')
 
   applyMobileSidebarLayout(mobileMode)
 

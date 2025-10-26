@@ -195,68 +195,54 @@ body.is-touch {
   display: none;
 }
 
-body.mobile-landscape #mobileSidebarControls[aria-hidden="false"],
-body.mobile-portrait #mobileSidebarControls[aria-hidden="false"] {
+body.mobile-landscape #mobileSidebarControls[aria-hidden="false"] {
   display: flex;
 }
 
-body.mobile-landscape #mobileSidebarControls,
-body.mobile-portrait #mobileSidebarControls {
-  gap: 0;
-  background: rgba(10, 10, 10, 0.82);
-  border-radius: 0 14px 14px 0;
-  padding: 6px;
-  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
-  box-sizing: border-box;
-}
-
-body.mobile-portrait #mobileSidebarControls {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
+body.mobile-landscape #mobileSidebarControls {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 10px;
   align-items: center;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  width: var(--mobile-action-size);
+  z-index: 2000;
 }
 
-body.mobile-landscape #mobileSidebarControls .sidebar-toggle,
-body.mobile-portrait #mobileSidebarControls .sidebar-toggle {
+body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   width: var(--mobile-action-size);
   height: var(--mobile-action-size);
   margin: 0;
   border-radius: 12px;
+  position: relative;
+  z-index: 2;
 }
 
-body.mobile-portrait #mobileSidebarControls .sidebar-toggle {
-  margin-bottom: 6px;
-}
-
-body.mobile-landscape #mobileActionsContainer,
-body.mobile-portrait #mobileActionsContainer {
-  display: none;
-  width: var(--mobile-action-size);
+body.mobile-landscape #mobileActionsContainer {
+  display: flex;
+  width: 100%;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   padding: 0;
 }
 
-body.mobile-landscape.sidebar-collapsed #mobileActionsContainer,
-body.mobile-portrait.sidebar-collapsed #mobileActionsContainer {
-  display: flex;
-}
-
-body.mobile-landscape #actions,
-body.mobile-portrait #actions {
+body.mobile-landscape #actions {
   flex-direction: column;
-  gap: 0;
+  gap: 6px;
   margin: 0;
   width: 100%;
   justify-content: flex-start;
+  align-items: center;
 }
 
-body.mobile-landscape #actions .action-button,
-body.mobile-portrait #actions .action-button {
+body.mobile-landscape #actions .action-button {
   width: 100%;
   height: var(--mobile-action-size);
   padding: 0;
@@ -264,48 +250,49 @@ body.mobile-portrait #actions .action-button {
   background-color: transparent;
   border: none;
   box-shadow: none;
-  opacity: 0.5;
+  opacity: 1;
   transition: opacity 0.2s ease;
   border-radius: 0;
 }
 
 body.mobile-landscape #actions .action-button:hover,
-body.mobile-landscape #actions .action-button:focus,
-body.mobile-portrait #actions .action-button:hover,
-body.mobile-portrait #actions .action-button:focus {
+body.mobile-landscape #actions .action-button:focus {
   background-color: transparent;
-  opacity: 0.85;
+  opacity: 1;
   transform: none;
 }
 
-body.mobile-landscape #actions .action-button:active,
-body.mobile-portrait #actions .action-button:active {
+body.mobile-landscape #actions .action-button:active {
   transform: none;
   box-shadow: none;
 }
 
-body.mobile-landscape #actions .action-button.active,
-body.mobile-portrait #actions .action-button.active {
+body.mobile-landscape #actions .action-button.active {
   background-color: transparent;
   opacity: 1;
 }
 
 body.mobile-landscape #actions .action-button .button-icon,
-body.mobile-landscape #actions .action-button img,
-body.mobile-portrait #actions .action-button .button-icon,
-body.mobile-portrait #actions .action-button img {
+body.mobile-landscape #actions .action-button img {
   opacity: 1;
 }
 
-body.mobile-landscape #actions .action-button.icon-button,
-body.mobile-portrait #actions .action-button.icon-button {
+body.mobile-landscape #actions .action-button img {
+  filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+body.mobile-landscape #actions .action-button .button-icon {
+  color: #f5f5f5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+body.mobile-landscape #actions .action-button.icon-button {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"],
-body.mobile-portrait #mobileBuildMenuContainer[aria-hidden="false"] {
+body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -321,39 +308,29 @@ body.mobile-portrait #mobileBuildMenuContainer[aria-hidden="false"] {
 }
 
 body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
-  width: min(260px, 45vw);
-}
-
-body.mobile-portrait #mobileBuildMenuContainer[aria-hidden="false"] {
   width: 80px;
-  box-shadow: none;
-  border-left: none;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #productionArea,
-body.mobile-portrait #mobileBuildMenuContainer #productionArea {
+body.mobile-landscape #mobileBuildMenuContainer #productionArea {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #productionTabs,
-body.mobile-portrait #mobileBuildMenuContainer #productionTabs {
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs {
   margin: 0;
   padding: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #productionContainer,
-body.mobile-portrait #mobileBuildMenuContainer #productionContainer {
+body.mobile-landscape #mobileBuildMenuContainer #productionContainer {
   flex: 1;
   display: flex;
   flex-direction: column;
   margin: 0;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #production,
-body.mobile-portrait #mobileBuildMenuContainer #production {
+body.mobile-landscape #mobileBuildMenuContainer #production {
   flex: 1;
   overflow-y: auto;
   margin: 0;
@@ -361,205 +338,132 @@ body.mobile-portrait #mobileBuildMenuContainer #production {
   scrollbar-width: none;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #production::-webkit-scrollbar,
-body.mobile-portrait #mobileBuildMenuContainer #production::-webkit-scrollbar {
+body.mobile-landscape #mobileBuildMenuContainer #production::-webkit-scrollbar {
   display: none;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #productionTabs,
-body.mobile-portrait #mobileBuildMenuContainer #productionTabs {
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs {
   gap: 0;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #productionTabs .tab-button,
-body.mobile-portrait #mobileBuildMenuContainer #productionTabs .tab-button {
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs .tab-button {
   display: none;
 }
 
-body.mobile-landscape #mobileCategoryToggle,
-body.mobile-portrait #mobileCategoryToggle {
+body.mobile-landscape #mobileCategoryToggle {
   display: block;
   width: 100%;
   margin: 0;
   border-radius: 0;
-  padding: 10px 12px;
+  padding: 6px 8px;
   background-color: #1f1f1f;
   color: #f0f0f0;
   text-align: left;
   letter-spacing: 0.02em;
+  font-size: 14px;
+  text-align: center;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar,
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar {
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row,
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin: 0;
-  padding: 0 12px;
+  padding: 0 6px;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-label,
-body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value,
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-label,
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
+  font-family: sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: #f2f2f2;
-  letter-spacing: 0.01em;
 }
 
-body.mobile-landscape #mobileMoneyValue,
-body.mobile-portrait #mobileMoneyValue {
-  text-align: right;
+#mobileMoneyDisplay {
+  justify-content: center!important;
 }
 
-body.mobile-landscape #mobileEnergyBarContainer,
-body.mobile-portrait #mobileEnergyBarContainer {
+body.mobile-landscape #moneyDisplay .resource-label,
+body.mobile-landscape #moneyLabel {
+  display: none;
+}
+
+body.mobile-landscape #mobileEnergyBarContainer {
   position: relative;
   width: 100%;
-  height: 12px;
-  background: rgba(12, 12, 12, 0.85);
-  border-radius: 0;
-  overflow: hidden;
+  height: 18px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
   margin: 0;
+  padding: 0;
 }
 
-body.mobile-landscape #mobileEnergyBar,
-body.mobile-portrait #mobileEnergyBar {
+body.mobile-landscape #mobileEnergyTrack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 8, 8, 0.8);
+  border-radius: 0;
+  overflow: hidden;
+  flex: 1;
+}
+
+body.mobile-landscape #mobileEnergyBar {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  height: 100%;
   width: 100%;
   background-color: #4CAF50;
   transition: width 0.3s ease, background-color 0.3s ease;
   border-radius: 0;
+  z-index: 1;
 }
 
-body.mobile-landscape #energyBarContainer,
-body.mobile-portrait #energyBarContainer {
+body.mobile-landscape #mobileEnergyValue {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: #f4f4f4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+body.mobile-landscape #energyBarContainer {
   display: none;
 }
 
-body.mobile-landscape #gameCanvas,
-body.mobile-portrait #gameCanvas {
+body.mobile-landscape #gameCanvas {
   left: 0;
   width: 100%;
   transition: left 0.25s ease, width 0.25s ease;
 }
 
-body.mobile-landscape #sidebar,
-body.mobile-portrait #sidebar {
+body.mobile-landscape #sidebar {
   transition: transform 0.25s ease;
 }
 
-body.mobile-landscape.sidebar-collapsed #sidebar,
-body.mobile-portrait.sidebar-collapsed #sidebar {
+body.mobile-landscape.sidebar-collapsed #sidebar {
   transform: translateX(-100%);
-}
-
-body.mobile-portrait #mobileBuildMenuContainer[aria-hidden="false"] {
-  background: rgba(24, 24, 24, 0.96);
-}
-
-body.mobile-portrait #mobileBuildMenuContainer #productionTabs {
-  border-bottom: none;
-}
-
-body.mobile-portrait #mobileCategoryToggle {
-  padding: 8px 4px;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  text-align: center;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer .tab-content.active {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer .tab-content.active .production-button {
-  aspect-ratio: auto;
-  min-height: 80px;
-  border-radius: 0;
-  margin: 0;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer .tab-content.active .production-button + .production-button {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar {
-  gap: 2px;
-  padding: 4px 0;
-  background: transparent;
-  align-items: center;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
-  justify-content: center;
-  padding: 0;
-  width: 100%;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row + .mobile-resource-row {
-  margin-top: 0;
-}
-
-body.mobile-portrait #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
-  text-align: center;
-  font-weight: 600;
-}
-
-body.mobile-portrait #mobileMoneyLabel {
-  display: none;
-}
-
-body.mobile-portrait #mobileMoneyDisplay {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-body.mobile-portrait #mobileMoneyValue {
-  text-align: center;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-body.mobile-portrait #mobileEnergyDisplay {
-  display: none;
-}
-
-body.mobile-portrait #mobileEnergyBarContainer {
-  height: 14px;
-}
-
-body.mobile-portrait #mobileSidebarControls {
-  width: var(--mobile-action-size);
-}
-
-body.mobile-portrait #sidebarUtilityButtons {
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-}
-
-body.mobile-portrait #sidebarUtilityButtons .action-button {
-  width: var(--mobile-action-size);
 }
 
 #mobileSidebarControls {
@@ -590,20 +494,17 @@ body.mobile-portrait #sidebarUtilityButtons .action-button {
   display: none;
 }
 
-body.mobile-landscape #sidebarUtilityButtons[aria-hidden="false"],
-body.mobile-portrait #sidebarUtilityButtons[aria-hidden="false"] {
+body.mobile-landscape #sidebarUtilityButtons[aria-hidden="false"] {
   display: flex;
 }
 
-body.mobile-landscape #sidebarUtilityButtons,
-body.mobile-portrait #sidebarUtilityButtons {
+body.mobile-landscape #sidebarUtilityButtons {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
 }
 
-body.mobile-landscape #sidebarUtilityButtons .action-button,
-body.mobile-portrait #sidebarUtilityButtons .action-button {
+body.mobile-landscape #sidebarUtilityButtons .action-button {
   opacity: 1;
   width: 100%;
   height: var(--mobile-action-size);
@@ -617,9 +518,7 @@ body.mobile-portrait #sidebarUtilityButtons .action-button {
 }
 
 body.mobile-landscape #sidebarUtilityButtons .action-button:hover,
-body.mobile-landscape #sidebarUtilityButtons .action-button:focus,
-body.mobile-portrait #sidebarUtilityButtons .action-button:hover,
-body.mobile-portrait #sidebarUtilityButtons .action-button:focus {
+body.mobile-landscape #sidebarUtilityButtons .action-button:focus {
   background-color: rgba(54, 54, 54, 0.95);
 }
 
@@ -652,7 +551,7 @@ body.mobile-portrait #sidebarUtilityButtons .action-button:focus {
   font-size: 16px;
 }
 
-#moneyLabel::after {
+body.mobile-landscape #moneyLabel::after {
   content: ':';
   margin-right: 4px;
 }
@@ -660,30 +559,58 @@ body.mobile-portrait #sidebarUtilityButtons .action-button:focus {
 /* Energy bar positioned at the top, no padding */
 #energyBarContainer {
   width: 100%;
-  height: 26px;
-  background: transparent;
+  height: 20px;
+  background-color: #333;
   border: none;
   position: relative;
-  overflow: visible;
-  margin: 0 0 10px 0;
+  overflow: hidden;
+  margin-bottom: 10px;
   display: block !important;
   visibility: visible !important;
+  min-height: 20px !important;
 }
 
-#energyBarLabel,
-.energy-bar-label {
+#energyBar {
+  width: 100%;
+  height: 100%;
+  background-color: #4CAF50;
   position: absolute;
-  top: 0;
-  left: 0;
+  transition: width 0.3s, background-color 0.5s;
+}
+
+#energyBarLabel {
+  position: absolute;
   width: 100%;
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
+  color: #fff;
+  line-height: 20px;
+  z-index: 1;
+  text-shadow: 0 0 3px #000;
+}
+
+#energyText {
+  font-weight: 600;
+}
+
+body.mobile-landscape #energyBarContainer {
+  height: 26px;
+  background: transparent;
+  overflow: visible;
+  margin: 0 0 10px 0;
+}
+
+body.mobile-landscape #energyBarLabel,
+body.mobile-landscape .energy-bar-label {
+  top: 0;
+  left: 0;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-size: 10px;
   color: #f2f2f2;
 }
 
-#energyBarTrack {
+body.mobile-landscape #energyBarTrack {
   position: absolute;
   left: 0;
   bottom: 0;
@@ -694,19 +621,17 @@ body.mobile-portrait #sidebarUtilityButtons .action-button:focus {
   overflow: hidden;
 }
 
-#energyBar {
-  position: absolute;
+body.mobile-landscape #energyBar {
   top: 0;
   left: 0;
   height: 100%;
   width: 100%;
-  background-color: #4CAF50;
-  transition: width 0.3s ease, background-color 0.5s ease;
   border-radius: 0;
+  transition: width 0.3s ease, background-color 0.5s ease;
 }
 
-#energyText,
-.energy-bar-value {
+body.mobile-landscape #energyText,
+body.mobile-landscape .energy-bar-value {
   position: absolute;
   top: 0;
   left: 0;
