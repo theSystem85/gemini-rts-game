@@ -5,6 +5,7 @@ import { gameState } from './gameState.js'
 import { logPerformance } from './performanceUtils.js'
 import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y, MAX_BUILDING_GAP_TILES } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
+import { ensureServiceRadius } from './utils/serviceRadius.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -245,6 +246,9 @@ export function createBuilding(type, x, y) {
   if (type === 'vehicleFactory' || type === 'vehicleWorkshop') {
     building.rallyPoint = null
   }
+
+  // Initialize service radius for support buildings
+  ensureServiceRadius(building)
 
   // Add combat properties for defensive buildings (including teslaCoil)
   if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil' || type === 'artilleryTurret') {
