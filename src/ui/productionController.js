@@ -1167,11 +1167,9 @@ export class ProductionController {
           element,
           previousTouchAction: element.style.touchAction,
           previousOverflowY: element.style.overflowY,
-          previousWebkitOverflowScrolling: element.style.webkitOverflowScrolling
+          previousWebkitOverflowScrolling: element.style.webkitOverflowScrolling,
+          applied: false
         })
-        element.style.touchAction = 'none'
-        element.style.overflowY = 'hidden'
-        element.style.webkitOverflowScrolling = 'auto'
       }
 
       const isMobileLandscape = document.body && document.body.classList.contains('mobile-landscape')
@@ -1185,7 +1183,42 @@ export class ProductionController {
 
       if (lockables.length > 0) {
         state.scrollLocks = lockables
+        state.applyScrollLocks = () => {
+          if (state.scrollLocksApplied) {
+            return
+          }
+          lockables.forEach(lock => {
+            if (!lock.element) {
+              return
+            }
+            lock.element.style.touchAction = 'none'
+            lock.element.style.overflowY = 'hidden'
+            lock.element.style.webkitOverflowScrolling = 'auto'
+            lock.applied = true
+          })
+          state.scrollLocksApplied = true
+        }
+        state.releaseScrollLocks = () => {
+          lockables.forEach(lock => {
+            if (!lock.element || !lock.applied) {
+              return
+            }
+            const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = lock
+            element.style.touchAction = previousTouchAction || ''
+            element.style.overflowY = previousOverflowY || ''
+            element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
+            lock.applied = false
+          })
+        }
       }
+
+      state.scrollLocksApplied = false
+
+      const primaryScrollContainer = isMobileLandscape
+        ? (mobileProductionScroll || mobileBuildMenu)
+        : (sidebarScroll || sidebar)
+
+      state.interactionElement = primaryScrollContainer || button
 
       this.mobileDragState = state
 
@@ -1195,9 +1228,29 @@ export class ProductionController {
         }
 
         const deltaX = moveEvent.clientX - state.startX
-        const distance = Math.hypot(deltaX, moveEvent.clientY - state.startY)
+        const deltaY = moveEvent.clientY - state.startY
+        const absDeltaX = Math.abs(deltaX)
+        const absDeltaY = Math.abs(deltaY)
+        const pointerOutsideBar = (() => {
+          if (!state.interactionElement) {
+            return false
+          }
+          const bounds = state.interactionElement.getBoundingClientRect()
+          return (
+            moveEvent.clientX < bounds.left ||
+            moveEvent.clientX > bounds.right ||
+            moveEvent.clientY < bounds.top ||
+            moveEvent.clientY > bounds.bottom
+          )
+        })()
 
-        if (!state.active && distance > 10) {
+        const activateDrag = () => {
+          if (state.mode === 'drag') {
+            return
+          }
+          if (typeof state.applyScrollLocks === 'function') {
+            state.applyScrollLocks()
+          }
           state.active = true
           state.mode = 'drag'
           this.suppressNextClick = true
@@ -1210,6 +1263,20 @@ export class ProductionController {
             gameState.draggedUnitType = detail.type
             gameState.draggedUnitButton = button
           }
+        }
+
+        if (!state.mode) {
+          if (pointerOutsideBar) {
+            activateDrag()
+          } else if (absDeltaX >= 8 || absDeltaY >= 8) {
+            if (absDeltaY > absDeltaX) {
+              state.mode = 'scroll'
+            } else {
+              activateDrag()
+            }
+          }
+        } else if (state.mode === 'scroll' && pointerOutsideBar) {
+          activateDrag()
         }
 
         if (state.active && state.mode === 'drag') {
@@ -1251,19 +1318,14 @@ export class ProductionController {
           gameState.draggedUnitButton = null
         }
 
-        if (Array.isArray(state.scrollLocks)) {
-          state.scrollLocks.forEach(lock => {
-            if (!lock.element) {
-              return
-            }
-            const { element, previousTouchAction, previousOverflowY, previousWebkitOverflowScrolling } = lock
-            element.style.touchAction = previousTouchAction || ''
-            element.style.overflowY = previousOverflowY || ''
-            element.style.webkitOverflowScrolling = previousWebkitOverflowScrolling || ''
-          })
+        if (typeof state.releaseScrollLocks === 'function') {
+          state.releaseScrollLocks()
         }
 
         state.scrollLocks = null
+        state.applyScrollLocks = null
+        state.releaseScrollLocks = null
+        state.scrollLocksApplied = false
 
         this.mobileDragState = null
       }
