@@ -1,6 +1,11 @@
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
 import { spawnEnemyUnit } from './enemySpawner.js'
-import { resetAttackDirections, manageAICrewHealing, manageAITankerTrucks } from './enemyStrategies.js'
+import {
+  resetAttackDirections,
+  manageAICrewHealing,
+  manageAITankerTrucks,
+  manageAIRecoveryTanks
+} from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
@@ -686,6 +691,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   if (aiUnits.length > 0) {
     manageAICrewHealing(units, gameState, now)
     manageAITankerTrucks(units, gameState, mapGrid)
+    manageAIRecoveryTanks(units, gameState, mapGrid, now)
   }
 }
 

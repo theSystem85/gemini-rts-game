@@ -3,6 +3,7 @@ import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config
 import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
+import { getUnitCommandsHandler } from '../inputHandler.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -23,6 +24,8 @@ const UNIT_DPS = {
   'tank-v3': 30 / (4000 / 1000),
   rocketTank: 120 / (12000 / 1000)
 }
+
+const RECOVERY_COMMAND_COOLDOWN = 2000
 
 function getUnitDps(unit) {
   const type = unit.type === 'tank' ? 'tank_v1' : unit.type
@@ -1039,6 +1042,233 @@ function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
     ambulance.path = path
     ambulance.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
   }
+}
+
+function getTargetTilePosition(target) {
+  if (!target) return null
+  if (Number.isFinite(target.tileX) && Number.isFinite(target.tileY)) {
+    return { x: target.tileX, y: target.tileY }
+  }
+  if (typeof target.x === 'number' && typeof target.y === 'number') {
+    return {
+      x: Math.floor((target.x + TILE_SIZE / 2) / TILE_SIZE),
+      y: Math.floor((target.y + TILE_SIZE / 2) / TILE_SIZE)
+    }
+  }
+  return null
+}
+
+function tileDistance(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by)
+}
+
+function getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile) {
+  if (!targetTile) return []
+
+  return candidateTanks
+    .filter(tank => !usedTankIds.has(tank.id))
+    .map(tank => {
+      const tankTile = getTargetTilePosition(tank)
+      if (!tankTile) return null
+      return {
+        tank,
+        distance: tileDistance(tankTile.x, tankTile.y, targetTile.x, targetTile.y)
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.distance - b.distance)
+}
+
+function isRecoveryTankAvailable(tank) {
+  if (!tank || tank.health <= 0) return false
+  if (tank.recoveryTask || tank.towedWreck) return false
+  if (tank.repairTarget || tank.repairTargetUnit) return false
+  if (tank.returningToHospital || tank.repairingAtWorkshop || tank.returningToWorkshop) return false
+  if (tank.crew && typeof tank.crew === 'object' && !tank.crew.loader) return false
+
+  const queue = tank.utilityQueue
+  if (queue && queue.mode === 'repair') {
+    if (queue.currentTargetId) return false
+    if (Array.isArray(queue.targets) && queue.targets.length > 0) return false
+  }
+
+  return true
+}
+
+function hasRecentRecoveryCommand(tank, now) {
+  if (!tank || !tank.lastRecoveryCommandTime) return false
+  return now - tank.lastRecoveryCommandTime < RECOVERY_COMMAND_COOLDOWN
+}
+
+function isUnitAlreadyAssignedToRecovery(recoveryTanks, targetUnit) {
+  if (!targetUnit || !targetUnit.id) return false
+
+  return recoveryTanks.some(tank => {
+    if (!tank || tank.health <= 0) return false
+    if (tank.repairTarget && tank.repairTarget.id === targetUnit.id) return true
+    if (tank.repairTargetUnit && tank.repairTargetUnit.id === targetUnit.id) return true
+
+    const queue = tank.utilityQueue
+    if (!queue || queue.mode !== 'repair') return false
+
+    if (queue.currentTargetId === targetUnit.id && (queue.currentTargetType || 'unit') === 'unit') {
+      return true
+    }
+
+    if (!Array.isArray(queue.targets)) return false
+    return queue.targets.some(entry => {
+      if (!entry) return false
+      if (typeof entry === 'object') {
+        const entryId = entry.id
+        const entryType = entry.type || 'unit'
+        return entryId === targetUnit.id && entryType === 'unit'
+      }
+      return entry === targetUnit.id
+    })
+  })
+}
+
+function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, now) {
+  if (!tank || !wreck || !unitCommands) return false
+
+  const descriptor = { id: wreck.id, isWreckTarget: true, queueAction: 'tow' }
+  const result = unitCommands.setUtilityQueue(tank, [descriptor], 'repair', mapGrid, {
+    suppressNotifications: true
+  })
+
+  tank.lastRecoveryCommandTime = now
+
+  if (tank.recoveryTask && tank.recoveryTask.wreckId === wreck.id) {
+    return true
+  }
+
+  if (result?.started) {
+    return true
+  }
+
+  const queue = tank.utilityQueue
+  return !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
+}
+
+function attemptAssignRecoveryTankToUnit(tank, targetUnit, mapGrid, unitCommands, now) {
+  if (!tank || !targetUnit || !unitCommands) return false
+
+  const result = unitCommands.setUtilityQueue(tank, [targetUnit], 'repair', mapGrid, {
+    suppressNotifications: true
+  })
+
+  tank.lastRecoveryCommandTime = now
+
+  if (tank.repairTargetUnit && tank.repairTargetUnit.id === targetUnit.id) {
+    return true
+  }
+
+  if (result?.started) {
+    return true
+  }
+
+  const queue = tank.utilityQueue
+  if (!queue || queue.mode !== 'repair') return false
+
+  if (queue.currentTargetId === targetUnit.id && (queue.currentTargetType || 'unit') === 'unit') {
+    return true
+  }
+
+  if (!Array.isArray(queue.targets)) return false
+  return queue.targets.some(entry => {
+    if (!entry) return false
+    if (typeof entry === 'object') {
+      const entryId = entry.id
+      const entryType = entry.type || 'unit'
+      return entryId === targetUnit.id && entryType === 'unit'
+    }
+    return entry === targetUnit.id
+  })
+}
+
+export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+  if (!unitCommands) return
+
+  const timeNow = typeof now === 'number'
+    ? now
+    : (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now())
+
+  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId && u.health > 0)
+    if (aiUnits.length === 0) return
+
+    const recoveryTanks = aiUnits.filter(u => u.type === 'recoveryTank')
+    if (recoveryTanks.length === 0) return
+
+    const candidateTanks = recoveryTanks.filter(tank =>
+      isRecoveryTankAvailable(tank) && !hasRecentRecoveryCommand(tank, timeNow)
+    )
+
+    if (candidateTanks.length === 0) return
+
+    const usedTankIds = new Set()
+
+    if (Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
+      const friendlyWrecks = gameState.unitWrecks.filter(wreck =>
+        wreck.owner === aiPlayerId &&
+        !wreck.assignedTankId &&
+        !wreck.towedBy &&
+        !wreck.isBeingRecycled
+      )
+
+      friendlyWrecks.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+
+      friendlyWrecks.forEach(wreck => {
+        if (usedTankIds.size === candidateTanks.length) return
+
+        const targetTile = getTargetTilePosition(wreck)
+        if (!targetTile) return
+
+        const sortedTanks = getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile)
+
+        for (const entry of sortedTanks) {
+          const success = attemptAssignRecoveryTankToWreck(entry.tank, wreck, mapGrid, unitCommands, timeNow)
+          if (success) {
+            usedTankIds.add(entry.tank.id)
+            break
+          }
+        }
+      })
+    }
+
+    if (usedTankIds.size === candidateTanks.length) return
+
+    const damagedUnits = aiUnits.filter(u => {
+      if (!u || u.type === 'recoveryTank' || u.health <= 0) return false
+      if (typeof u.maxHealth !== 'number' || u.maxHealth <= 0) return false
+      if (u.health / u.maxHealth >= 0.5) return false
+      if (u.restorationProtectedFromRecovery) return false
+      return true
+    })
+
+    damagedUnits.sort((a, b) => (a.health / a.maxHealth) - (b.health / b.maxHealth))
+
+    damagedUnits.forEach(targetUnit => {
+      if (usedTankIds.size === candidateTanks.length) return
+      if (isUnitAlreadyAssignedToRecovery(recoveryTanks, targetUnit)) return
+
+      const targetTile = getTargetTilePosition(targetUnit)
+      if (!targetTile) return
+
+      const sortedTanks = getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile)
+
+      for (const entry of sortedTanks) {
+        const success = attemptAssignRecoveryTankToUnit(entry.tank, targetUnit, mapGrid, unitCommands, timeNow)
+        if (success) {
+          usedTankIds.add(entry.tank.id)
+          break
+        }
+      }
+    })
+  })
 }
 
 /**
