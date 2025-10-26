@@ -31,9 +31,36 @@ import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.warn('Service worker registration failed', err)
+    if (import.meta.env.PROD) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service worker registration failed', err)
+      })
+      return
+    }
+
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(registration => {
+        registration.unregister().catch(err => {
+          console.warn('Service worker unregistration failed', err)
+        })
+      })
+    }).catch(err => {
+      console.warn('Service worker lookup failed', err)
     })
+
+    if (typeof caches !== 'undefined' && caches?.keys) {
+      caches.keys().then(cacheNames => {
+        cacheNames
+          .filter(name => name.startsWith('gemini-rts-cache-'))
+          .forEach(name => {
+            caches.delete(name).catch(err => {
+              console.warn('Failed to delete service worker cache', name, err)
+            })
+          })
+      }).catch(err => {
+        console.warn('Failed to enumerate service worker caches', err)
+      })
+    }
   })
 }
 
