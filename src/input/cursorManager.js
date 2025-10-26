@@ -556,7 +556,11 @@ export class CursorManager {
           // Regular force attack mode - use standard attack cursor
           setCursor('none', 'attack-mode')
         }
+      } else if (this.isOverHealableUnit) {
+        // Over healable unit with ambulances selected - show move into cursor
+        setCursor('none', 'move-into-mode')
       } else if (this.isOverRefuelableUnit) {
+        // Over refuelable unit with tanker trucks selected - show move into cursor
         setCursor('none', 'move-into-mode')
       } else if (this.isOverFriendlyUnit) {
         // Over friendly unit - use normal arrow cursor
@@ -564,9 +568,6 @@ export class CursorManager {
       } else if (this.isOverEnemy) {
         // Over enemy - use attack cursor
         setCursor('none', 'attack-mode')
-      } else if (this.isOverHealableUnit) {
-        // Over healable unit with ambulances selected - show move into cursor
-        setCursor('none', 'move-into-mode')
       } else if (this.isOverPlayerHospital) {
         // Over hospital with not fully loaded ambulances selected - show move into cursor
         setCursor('none', 'move-into-mode')
