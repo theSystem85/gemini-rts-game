@@ -453,12 +453,24 @@ export class CursorManager {
 
       // If AGF capable and no recovery tank interactions, use AGF behavior
       if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
-        if (this.isOverEnemy) {
+        if (
+          this.isOverHealableUnit ||
+          this.isOverRefuelableUnit ||
+          this.isOverPlayerHospital ||
+          this.isOverPlayerGasStation ||
+          this.isOverPlayerWorkshop
+        ) {
+          // Support interactions should override AGF logic
+          setCursor('none', 'move-into-mode')
+        } else if (this.isOverEnemy) {
           // Over enemy - use attack cursor
           setCursor('none', 'attack-mode')
         } else if (this.isOverBlockedTerrain) {
           // Over blocked terrain - use move-blocked cursor
           setCursor('none', 'move-blocked-mode')
+        } else if (this.isOverFriendlyUnit) {
+          // Over friendly unit - use normal arrow cursor
+          setCursor('default')
         } else if (!gameState.isRightDragging) {
           // Normal move cursor for AGF-capable units
           setCursor('none', 'move-mode')
