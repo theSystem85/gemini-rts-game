@@ -6,6 +6,7 @@ import { KeyboardHandler } from './input/keyboardHandler.js'
 import { SelectionManager } from './input/selectionManager.js'
 import { UnitCommandsHandler } from './input/unitCommands.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from './utils/inputUtils.js'
+import { GAME_DEFAULT_CURSOR } from './input/cursorStyles.js'
 
 export const selectedUnits = []
 export const selectionActive = false
@@ -70,7 +71,7 @@ export function setupInputHandlers(units, factories, mapGrid) {
 
       // Always hide custom cursor over sidebar
       if (isOverSidebar) {
-        document.body.style.cursor = 'default'
+        document.body.style.cursor = GAME_DEFAULT_CURSOR
       }
     }
   })

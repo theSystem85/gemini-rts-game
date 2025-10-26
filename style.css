@@ -131,7 +131,7 @@ body.is-touch {
   width: calc(100% - var(--sidebar-width));
   height: 100%;
   background: #000;
-  cursor: default;
+  cursor: url('/cursors/default.svg') 6 4, auto;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;

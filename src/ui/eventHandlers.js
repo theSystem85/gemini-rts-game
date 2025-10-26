@@ -22,6 +22,7 @@ import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { playSound } from '../sound.js'
 import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
 import { TILE_SIZE } from '../config.js'
+import { GAME_DEFAULT_CURSOR } from '../input/cursorStyles.js'
 
 export class EventHandlers {
   constructor(canvasManager, factories, units, mapGrid, moneyEl, gameInstance = null) {
@@ -508,7 +509,7 @@ export class EventHandlers {
         gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode')
 
         // Reset cursor to default
-        gameCanvas.style.cursor = 'default'
+        gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
       }
       // Exit building placement mode if active (don't cancel the building)
       if (gameState.buildingPlacementMode) {
@@ -541,7 +542,7 @@ export class EventHandlers {
         gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode')
 
         // Reset cursor to default
-        gameCanvas.style.cursor = 'default'
+        gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
       }
       // Exit building placement mode if active (don't cancel the building)
       if (gameState.buildingPlacementMode) {
