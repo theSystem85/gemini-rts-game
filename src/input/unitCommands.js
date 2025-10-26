@@ -1,5 +1,5 @@
 // unitCommands.js
-import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, UNIT_PROPERTIES } from '../config.js'
 import { findPath } from '../units.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { gameState } from '../gameState.js'
@@ -13,6 +13,7 @@ import {
   releaseWreckAssignment,
   getRecycleDurationForWreck
 } from '../game/unitWreckManager.js'
+import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
@@ -1148,63 +1149,99 @@ export class UnitCommandsHandler {
   }
 
   handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
-    // Filter for ambulances that need refilling
-    const ambulances = selectedUnits.filter(unit =>
-      unit.type === 'ambulance' && unit.medics < 4
-    )
+    const defaultMaxMedics = UNIT_PROPERTIES?.ambulance?.maxMedics ?? 10
+    const ambulances = selectedUnits.filter(unit => {
+      if (unit.type !== 'ambulance') {
+        return false
+      }
+
+      let maxMedics = defaultMaxMedics
+      if (typeof unit.maxMedics === 'number' && unit.maxMedics > 0) {
+        maxMedics = unit.maxMedics
+      } else {
+        unit.maxMedics = maxMedics
+      }
+
+      return typeof unit.medics === 'number' && unit.medics < maxMedics
+    })
 
     if (ambulances.length === 0) {
       showNotification('No ambulances need refilling!', 2000)
       return
     }
 
-    // Assign ambulances to refill at the hospital
+    const serviceRadiusTiles = getServiceRadiusPixels(hospital) / TILE_SIZE
+    const centerX = hospital.x + hospital.width / 2
+    const centerY = hospital.y + hospital.height / 2
+    const maxTileRadius = Math.max(1, Math.ceil(serviceRadiusTiles))
+
+    const candidatePositions = []
+    for (let y = hospital.y - maxTileRadius; y <= hospital.y + hospital.height + maxTileRadius; y++) {
+      if (y < 0 || y >= mapGrid.length) continue
+      for (let x = hospital.x - maxTileRadius; x <= hospital.x + hospital.width + maxTileRadius; x++) {
+        if (x < 0 || x >= mapGrid[0].length) continue
+
+        const insideHospital =
+          x >= hospital.x && x < hospital.x + hospital.width &&
+          y >= hospital.y && y < hospital.y + hospital.height
+        if (insideHospital) continue
+
+        const tileCenterX = x + 0.5
+        const tileCenterY = y + 0.5
+        const distance = Math.hypot(tileCenterX - centerX, tileCenterY - centerY)
+
+        if (distance <= serviceRadiusTiles) {
+          candidatePositions.push({ x, y, distance })
+        }
+      }
+    }
+
+    candidatePositions.sort((a, b) => a.distance - b.distance)
+
+    const reservedPositions = new Set()
+    let anyAssigned = false
+    let anyFailed = false
+
     ambulances.forEach(ambulance => {
       ambulance.refillingTarget = hospital
 
-      // Set path to hospital refill area (3 tiles below hospital)
-      const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
-      const refillY = hospital.y + hospital.height + 1 // 1 tile below hospital
-
-      // Find available position in refill area
-      const refillPositions = [
-        { x: hospitalCenterX - 1, y: refillY },
-        { x: hospitalCenterX, y: refillY },
-        { x: hospitalCenterX + 1, y: refillY },
-        { x: hospitalCenterX - 1, y: refillY + 1 },
-        { x: hospitalCenterX, y: refillY + 1 },
-        { x: hospitalCenterX + 1, y: refillY + 1 },
-        { x: hospitalCenterX - 1, y: refillY + 2 },
-        { x: hospitalCenterX, y: refillY + 2 },
-        { x: hospitalCenterX + 1, y: refillY + 2 }
-      ]
-
       let destinationFound = false
-      for (const pos of refillPositions) {
-        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = findPath(
-            { x: ambulance.tileX, y: ambulance.tileY },
-            { x: pos.x, y: pos.y },
-            mapGrid,
-            gameState.occupancyMap
-          )
-          if (path && path.length > 0) {
-            ambulance.path = path
-            ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
-            ambulance.target = null // Clear any attack target
-            destinationFound = true
-            break
-          }
+      for (const pos of candidatePositions) {
+        const key = `${pos.x},${pos.y}`
+        if (reservedPositions.has(key)) {
+          continue
+        }
+
+        const path = findPath(
+          { x: ambulance.tileX, y: ambulance.tileY },
+          { x: pos.x, y: pos.y },
+          mapGrid,
+          gameState.occupancyMap
+        )
+
+        if (path && path.length > 0) {
+          reservedPositions.add(key)
+          ambulance.path = path
+          ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+          ambulance.target = null // Clear any attack target
+          destinationFound = true
+          anyAssigned = true
+          break
         }
       }
 
       if (!destinationFound) {
         showNotification('Cannot reach hospital refill area!', 2000)
         ambulance.refillingTarget = null
+        anyFailed = true
       }
     })
 
-    playSound('movement', 0.5)
+    if (anyAssigned) {
+      playSound('movement', 0.5)
+    } else if (!anyFailed) {
+      showNotification('No available space within hospital service radius!', 2000)
+    }
   }
 
   handleGasStationRefillCommand(selectedUnits, station, mapGrid) {
