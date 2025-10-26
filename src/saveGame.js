@@ -5,6 +5,7 @@ import { units } from './main.js'
 import { mapGrid } from './main.js'
 import { cleanupOreFromBuildings } from './gameSetup.js'
 import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
+import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
@@ -360,6 +361,10 @@ export function loadGame(key) {
         typeof p.duration === 'number'
       )
     }
+
+    // Smoke particle pools are transient and should always be reset on load/save
+    gameState.smokeParticlePool = []
+    enforceSmokeParticleCapacity(gameState)
 
     // Restore AI player budgets
     if (loaded.aiFactoryBudgets) {

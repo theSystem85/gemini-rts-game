@@ -1,5 +1,14 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
-import { INERTIA_DECAY, TILE_SIZE, KEYBOARD_SCROLL_SPEED, ORE_SPREAD_INTERVAL, ORE_SPREAD_PROBABILITY, ORE_SPREAD_ENABLED } from '../config.js'
+import {
+  INERTIA_DECAY,
+  TILE_SIZE,
+  KEYBOARD_SCROLL_SPEED,
+  ORE_SPREAD_INTERVAL,
+  ORE_SPREAD_PROBABILITY,
+  ORE_SPREAD_ENABLED,
+  WIND_DIRECTION,
+  WIND_STRENGTH
+} from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions, triggerExplosion } from '../logic.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
@@ -7,6 +16,7 @@ import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
+import { removeSmokeParticle } from '../utils/smokeUtils.js'
 
 /**
  * Updates map scrolling with inertia
@@ -120,12 +130,6 @@ export function updateExplosions(gameState) {
  * Updates smoke particle effects
  * @param {Object} gameState - Game state object
  */
-import { WIND_DIRECTION, WIND_STRENGTH } from '../config.js'
-
-/**
- * Updates smoke particle effects
- * @param {Object} gameState - Game state object
- */
 export function updateSmokeParticles(gameState) {
   const now = performance.now()
 
@@ -134,13 +138,14 @@ export function updateSmokeParticles(gameState) {
 
     // Safety check: remove particles with invalid properties
     if (!p || typeof p.startTime !== 'number' || typeof p.duration !== 'number' || !p.size || p.size <= 0) {
-      gameState.smokeParticles.splice(i, 1)
+      removeSmokeParticle(gameState, i)
       continue
     }
 
     const progress = (now - p.startTime) / p.duration
     if (progress >= 1) {
-      gameState.smokeParticles.splice(i, 1)
+      removeSmokeParticle(gameState, i)
+      continue
     } else {
       // Update position with wind effect
       p.x += p.vx + WIND_DIRECTION.x * WIND_STRENGTH
@@ -158,7 +163,7 @@ export function updateSmokeParticles(gameState) {
       p.vy += (Math.random() - 0.5) * 0.003
 
       // Fade out alpha and expand size over time (reduced expansion)
-      p.alpha = (1 - progress) * p.alpha
+      p.alpha = Math.max(0, (1 - progress) * p.alpha)
 
       // Smoke expands as it rises (reduced expansion rate)
       if (!p.originalSize || p.originalSize <= 0) {
