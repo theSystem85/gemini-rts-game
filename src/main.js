@@ -174,22 +174,15 @@ function ensureMobileStatusBar(container, orientation) {
     moneyRow.id = 'mobileMoneyDisplay'
     moneyRow.className = 'mobile-resource-row'
 
-    const moneyLabel = document.createElement('span')
-    moneyLabel.id = 'mobileMoneyLabel'
-    moneyLabel.className = 'mobile-resource-label'
-    moneyLabel.textContent = 'Money'
-
     const moneyValue = document.createElement('span')
     moneyValue.id = 'mobileMoneyValue'
     moneyValue.className = 'mobile-resource-value'
     moneyValue.textContent = '$0'
 
-    moneyRow.appendChild(moneyLabel)
     moneyRow.appendChild(moneyValue)
 
-    const energyRow = document.createElement('div')
-    energyRow.id = 'mobileEnergyDisplay'
-    energyRow.className = 'mobile-resource-row'
+    const energyContainer = document.createElement('div')
+    energyContainer.id = 'mobileEnergyBarContainer'
 
     const energyLabel = document.createElement('span')
     energyLabel.id = 'mobileEnergyLabel'
@@ -201,19 +194,18 @@ function ensureMobileStatusBar(container, orientation) {
     energyValue.className = 'mobile-resource-value'
     energyValue.textContent = '0 MW'
 
-    energyRow.appendChild(energyLabel)
-    energyRow.appendChild(energyValue)
-
-    const energyContainer = document.createElement('div')
-    energyContainer.id = 'mobileEnergyBarContainer'
+    const energyTrack = document.createElement('div')
+    energyTrack.id = 'mobileEnergyTrack'
 
     const energyBar = document.createElement('div')
     energyBar.id = 'mobileEnergyBar'
 
-    energyContainer.appendChild(energyBar)
+    energyTrack.appendChild(energyBar)
+    energyContainer.appendChild(energyLabel)
+    energyContainer.appendChild(energyValue)
+    energyContainer.appendChild(energyTrack)
 
     statusBar.appendChild(moneyRow)
-    statusBar.appendChild(energyRow)
     statusBar.appendChild(energyContainer)
 
     mobileLayoutState.mobileStatusBar = statusBar

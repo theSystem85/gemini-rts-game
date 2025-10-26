@@ -200,12 +200,14 @@ body.mobile-landscape #mobileSidebarControls[aria-hidden="false"] {
 }
 
 body.mobile-landscape #mobileSidebarControls {
-  gap: 0;
+  gap: 8px;
+  align-items: center;
   background: rgba(10, 10, 10, 0.82);
   border-radius: 0 14px 14px 0;
-  padding: 6px;
+  padding: 10px 6px;
   box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
   box-sizing: border-box;
+  width: calc(var(--mobile-action-size) + 12px);
 }
 
 body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
@@ -213,14 +215,16 @@ body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   height: var(--mobile-action-size);
   margin: 0;
   border-radius: 12px;
+  position: relative;
+  z-index: 2;
 }
 
 body.mobile-landscape #mobileActionsContainer {
   display: none;
-  width: var(--mobile-action-size);
+  width: 100%;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
+  gap: 6px;
   margin: 0;
   padding: 0;
 }
@@ -231,10 +235,11 @@ body.mobile-landscape.sidebar-collapsed #mobileActionsContainer {
 
 body.mobile-landscape #actions {
   flex-direction: column;
-  gap: 0;
+  gap: 6px;
   margin: 0;
   width: 100%;
   justify-content: flex-start;
+  align-items: center;
 }
 
 body.mobile-landscape #actions .action-button {
@@ -245,7 +250,7 @@ body.mobile-landscape #actions .action-button {
   background-color: transparent;
   border: none;
   box-shadow: none;
-  opacity: 0.5;
+  opacity: 1;
   transition: opacity 0.2s ease;
   border-radius: 0;
 }
@@ -253,7 +258,7 @@ body.mobile-landscape #actions .action-button {
 body.mobile-landscape #actions .action-button:hover,
 body.mobile-landscape #actions .action-button:focus {
   background-color: transparent;
-  opacity: 0.85;
+  opacity: 1;
   transform: none;
 }
 
@@ -294,7 +299,7 @@ body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
 }
 
 body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
-  width: min(260px, 45vw);
+  width: 80px;
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #productionArea {
@@ -351,26 +356,27 @@ body.mobile-landscape #mobileCategoryToggle {
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 0 10px;
   background: rgba(0, 0, 0, 0.35);
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin: 0;
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-label,
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   color: #f2f2f2;
-  letter-spacing: 0.01em;
 }
 
 body.mobile-landscape #mobileMoneyValue {
@@ -380,22 +386,51 @@ body.mobile-landscape #mobileMoneyValue {
 body.mobile-landscape #mobileEnergyBarContainer {
   position: relative;
   width: 100%;
-  height: 12px;
+  height: 32px;
   background: rgba(12, 12, 12, 0.85);
-  border-radius: 0;
+  border-radius: 12px 0 0 12px;
   overflow: hidden;
   margin: 0;
+}
+
+body.mobile-landscape #mobileEnergyLabel {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+body.mobile-landscape #mobileEnergyValue {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+body.mobile-landscape #mobileEnergyTrack {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 body.mobile-landscape #mobileEnergyBar {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  height: 100%;
   width: 100%;
   background-color: #4CAF50;
   transition: width 0.3s ease, background-color 0.3s ease;
-  border-radius: 0;
+  border-radius: 999px;
 }
 
 body.mobile-landscape #energyBarContainer {
