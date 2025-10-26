@@ -461,6 +461,11 @@ export let TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
 export let SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
 export let SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
 export let SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
+export let MAX_SMOKE_PARTICLES = 600 // Upper limit to keep smoke rendering performant
+
+export function setMaxSmokeParticles(value) {
+  MAX_SMOKE_PARTICLES = value
+}
 
 // Duration of the building sell animation (in milliseconds)
 export let BUILDING_SELL_DURATION = 3000

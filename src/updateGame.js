@@ -1,7 +1,8 @@
 // Main Game Update Module - Coordinates all game systems
 import {
   TILE_SIZE,
-  SMOKE_EMIT_INTERVAL
+  SMOKE_EMIT_INTERVAL,
+  BUILDING_SMOKE_EMIT_INTERVAL
 } from './config.js'
 
 import { emitSmokeParticles } from './utils/smokeUtils.js'
@@ -163,16 +164,15 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
             const tracker = building.smokeEmissionTrackers[spotIndex]
             const timeSinceLastEmission = now - tracker.lastEmissionTime
 
-            // Emit every 200ms for steady, overlapping smoke streams
-            if (timeSinceLastEmission > 200) {
+            if (timeSinceLastEmission > BUILDING_SMOKE_EMIT_INTERVAL) {
               const scaledX = smokeSpot.x * scaleX
               const scaledY = smokeSpot.y * scaleY
               // Use precise coordinates without additional offset now that scaling is accurate
               const smokeX = building.x * TILE_SIZE + scaledX
               const smokeY = building.y * TILE_SIZE + scaledY
 
-              // Emit 3 particles for denser, overlapping effect
-              emitSmokeParticles(gameState, smokeX, smokeY, now, 3)
+              // Emit a limited number of particles per puff to avoid runaway counts
+              emitSmokeParticles(gameState, smokeX, smokeY, now, 2)
 
               tracker.lastEmissionTime = now
               tracker.emissionStage = (tracker.emissionStage + 1) % 4 // Cycle through stages
