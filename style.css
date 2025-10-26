@@ -200,6 +200,9 @@ body.mobile-landscape #mobileSidebarControls[aria-hidden="false"] {
 }
 
 body.mobile-landscape #mobileSidebarControls {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   gap: 10px;
   align-items: center;
   background: none;
@@ -224,7 +227,7 @@ body.mobile-landscape #mobileActionsContainer {
   display: flex;
   width: 100%;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -264,11 +267,6 @@ body.mobile-landscape #actions .action-button:active {
   box-shadow: none;
 }
 
-body.mobile-landscape #actions .action-button img,
-body.mobile-landscape #actions .action-button .button-icon {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
-}
-
 body.mobile-landscape #actions .action-button.active {
   background-color: transparent;
   opacity: 1;
@@ -277,6 +275,15 @@ body.mobile-landscape #actions .action-button.active {
 body.mobile-landscape #actions .action-button .button-icon,
 body.mobile-landscape #actions .action-button img {
   opacity: 1;
+}
+
+body.mobile-landscape #actions .action-button img {
+  filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+body.mobile-landscape #actions .action-button .button-icon {
+  color: #f5f5f5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 body.mobile-landscape #actions .action-button.icon-button {
@@ -359,8 +366,8 @@ body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
-  padding: 6px 0 8px;
+  gap: 6px;
+  padding: 6px 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -369,14 +376,13 @@ body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resourc
   align-items: center;
   justify-content: flex-end;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-label,
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0;
   color: #f2f2f2;
 }
@@ -393,42 +399,22 @@ body.mobile-landscape #moneyLabel {
 body.mobile-landscape #mobileEnergyBarContainer {
   position: relative;
   width: 100%;
-  height: 26px;
-  background: rgba(12, 12, 12, 0.85);
-  border-radius: 12px 0 0 12px;
-  overflow: hidden;
+  height: 18px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
   margin: 0;
-}
-
-body.mobile-landscape #mobileEnergyLabel {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-body.mobile-landscape #mobileEnergyValue {
-  position: absolute;
-  top: 2px;
-  right: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0;
+  padding: 0;
 }
 
 body.mobile-landscape #mobileEnergyTrack {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 4px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 8, 8, 0.8);
+  border-radius: 0;
   overflow: hidden;
+  flex: 1;
 }
 
 body.mobile-landscape #mobileEnergyBar {
@@ -439,7 +425,25 @@ body.mobile-landscape #mobileEnergyBar {
   width: 100%;
   background-color: #4CAF50;
   transition: width 0.3s ease, background-color 0.3s ease;
-  border-radius: 999px;
+  border-radius: 0;
+  z-index: 1;
+}
+
+body.mobile-landscape #mobileEnergyValue {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: #f4f4f4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  letter-spacing: 0;
+  pointer-events: none;
 }
 
 body.mobile-landscape #energyBarContainer {

@@ -183,16 +183,7 @@ function ensureMobileStatusBar(container, orientation) {
 
     const energyContainer = document.createElement('div')
     energyContainer.id = 'mobileEnergyBarContainer'
-
-    const energyLabel = document.createElement('span')
-    energyLabel.id = 'mobileEnergyLabel'
-    energyLabel.className = 'mobile-resource-label'
-    energyLabel.textContent = 'Energy'
-
-    const energyValue = document.createElement('span')
-    energyValue.id = 'mobileEnergyValue'
-    energyValue.className = 'mobile-resource-value'
-    energyValue.textContent = '0 MW'
+    energyContainer.className = 'mobile-resource-row'
 
     const energyTrack = document.createElement('div')
     energyTrack.id = 'mobileEnergyTrack'
@@ -200,9 +191,13 @@ function ensureMobileStatusBar(container, orientation) {
     const energyBar = document.createElement('div')
     energyBar.id = 'mobileEnergyBar'
 
+    const energyValue = document.createElement('span')
+    energyValue.id = 'mobileEnergyValue'
+    energyValue.className = 'mobile-resource-value energy-bar-value'
+    energyValue.textContent = '0 MW'
+
     energyTrack.appendChild(energyBar)
-    energyContainer.appendChild(energyLabel)
-    energyContainer.appendChild(energyValue)
+    energyTrack.appendChild(energyValue)
     energyContainer.appendChild(energyTrack)
 
     statusBar.appendChild(moneyRow)
