@@ -362,16 +362,36 @@ export class UnitCommandsHandler {
       }
       return false
     }
-    if (wreck.isBeingRestored || wreck.isBeingRecycled || wreck.towedBy) {
+    const trackedWreck = getWreckById(gameState, wreck.id)
+    if (!trackedWreck) {
+      if (!suppressNotifications) {
+        showNotification('Recovery tanks can only target wrecks.', 2000)
+      }
+      return false
+    }
+
+    const targetWreck = trackedWreck
+
+    if (targetWreck.isBeingRestored || targetWreck.isBeingRecycled || targetWreck.towedBy) {
       if (!suppressNotifications) {
         showNotification('This wreck is already being processed.', 2000)
       }
       return false
     }
 
-    if (wreck.assignedTankId && wreck.assignedTankId !== tank.id) {
+    if (tank.towedWreck && tank.towedWreck.id !== targetWreck.id) {
+      releaseWreckAssignment(tank.towedWreck)
+      tank.towedWreck.towedBy = null
+      tank.towedWreck = null
+    }
+
+    if (tank.recoveryTask && tank.recoveryTask.wreckId !== targetWreck.id) {
+      this.cancelRecoveryTask(tank)
+    }
+
+    if (targetWreck.assignedTankId && targetWreck.assignedTankId !== tank.id) {
       const assignedTankAlive = units.some(
-        candidate => candidate.id === wreck.assignedTankId && candidate.type === 'recoveryTank' && candidate.health > 0
+        candidate => candidate.id === targetWreck.assignedTankId && candidate.type === 'recoveryTank' && candidate.health > 0
       )
       if (assignedTankAlive) {
         if (!suppressNotifications) {
@@ -379,7 +399,7 @@ export class UnitCommandsHandler {
         }
         return false
       }
-      releaseWreckAssignment(wreck)
+      releaseWreckAssignment(targetWreck)
     }
 
     if (!this.canRecoveryTankRepair(tank)) {
@@ -394,11 +414,11 @@ export class UnitCommandsHandler {
     }
 
     const candidatePositions = [
-      { x: wreck.tileX, y: wreck.tileY },
-      { x: wreck.tileX + 1, y: wreck.tileY },
-      { x: wreck.tileX - 1, y: wreck.tileY },
-      { x: wreck.tileX, y: wreck.tileY + 1 },
-      { x: wreck.tileX, y: wreck.tileY - 1 }
+      { x: targetWreck.tileX, y: targetWreck.tileY },
+      { x: targetWreck.tileX + 1, y: targetWreck.tileY },
+      { x: targetWreck.tileX - 1, y: targetWreck.tileY },
+      { x: targetWreck.tileX, y: targetWreck.tileY + 1 },
+      { x: targetWreck.tileX, y: targetWreck.tileY - 1 }
     ]
 
     let assignedPath = null
@@ -422,7 +442,7 @@ export class UnitCommandsHandler {
       return false
     }
 
-    const task = { wreckId: wreck.id }
+    const task = { wreckId: targetWreck.id }
 
     if (mode === 'tow') {
       const nearestWorkshop = findNearestWorkshop(gameState, tank.owner, { x: tank.tileX, y: tank.tileY })
@@ -438,7 +458,7 @@ export class UnitCommandsHandler {
       task.workshopEntry = nearestWorkshop.entryTile
       task.originalPosition = { x: tank.tileX, y: tank.tileY }
     } else if (mode === 'recycle') {
-      const recycleDuration = getRecycleDurationForWreck(wreck)
+      const recycleDuration = getRecycleDurationForWreck(targetWreck)
       task.mode = 'recycle'
       task.state = 'movingToWreck'
       task.recycleDuration = recycleDuration
@@ -452,7 +472,7 @@ export class UnitCommandsHandler {
     tank.path = assignedPath.slice(1)
     tank.moveTarget = { x: destination.x, y: destination.y }
     tank.recoveryTask = task
-    wreck.assignedTankId = tank.id
+    targetWreck.assignedTankId = tank.id
 
     if (!suppressNotifications) {
       playSound('movement', 0.5)
