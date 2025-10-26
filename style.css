@@ -203,8 +203,8 @@ body.mobile-landscape #mobileSidebarControls {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 10px;
-  align-items: center;
+  gap: 0;
+  align-items: flex-start;
   background: none;
   border-radius: 0;
   padding: 0;
@@ -217,7 +217,7 @@ body.mobile-landscape #mobileSidebarControls {
 body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   width: var(--mobile-action-size);
   height: var(--mobile-action-size);
-  margin: 0;
+  margin: 0 0 12px 0;
   border-radius: 12px;
   position: relative;
   z-index: 2;
@@ -227,10 +227,11 @@ body.mobile-landscape #mobileActionsContainer {
   display: flex;
   width: 100%;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   margin: 0;
   padding: 0;
+  margin-top: auto;
 }
 
 body.mobile-landscape #actions {
@@ -239,7 +240,7 @@ body.mobile-landscape #actions {
   margin: 0;
   width: 100%;
   justify-content: flex-start;
-  align-items: center;
+  align-items: flex-start;
 }
 
 body.mobile-landscape #actions .action-button {
@@ -469,15 +470,20 @@ body.mobile-landscape.sidebar-collapsed #sidebar {
 #mobileSidebarControls {
   position: fixed;
   top: calc(var(--safe-area-top));
+  bottom: calc(var(--safe-area-bottom) + 12px);
   left: calc(var(--safe-area-left));
   display: none;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
   width: var(--mobile-action-size);
-  padding: 0;
+  padding: 0 0 12px 0;
   z-index: 1600;
   pointer-events: none;
+}
+
+#mobileSidebarControls .sidebar-toggle {
+  margin-bottom: 12px;
 }
 
 #mobileSidebarControls .sidebar-toggle,
