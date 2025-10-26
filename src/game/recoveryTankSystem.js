@@ -3,6 +3,7 @@ import { playSound } from '../sound.js'
 import { getUnitCost } from '../utils.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
+import { getUnitCommandsHandler } from '../inputHandler.js'
 import {
   getWreckById,
   removeWreckById,
@@ -191,7 +192,11 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
   const tanks = units.filter(u => u.type === 'recoveryTank')
   if (tanks.length === 0) return
 
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+
   tanks.forEach(tank => {
+    const queueState = tank.utilityQueue
+
     if (tank.recoveryTask) {
       const wreck = getWreckById(gameState, tank.recoveryTask.wreckId)
       if (!wreck) {
@@ -237,22 +242,40 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       tank.repairTarget = null
       tank.repairData = null
       tank.repairStarted = false
+      tank.repairTargetUnit = null
+      if (unitCommands) {
+        unitCommands.clearUtilityQueueState(tank)
+      }
       return
     }
 
     // Auto-repair logic - find nearby damaged units
     if (!tank.repairTarget) {
-      const target = units.find(u =>
-        u.owner === tank.owner &&
-        u !== tank &&
-        u.health < u.maxHealth &&
-        Math.abs(u.tileX - tank.tileX) <= 1 &&
-        Math.abs(u.tileY - tank.tileY) <= 1 &&
-        !(u.movement && u.movement.isMoving)
-      )
+      let target = null
+      if (tank.repairTargetUnit &&
+          tank.repairTargetUnit.health > 0 &&
+          tank.repairTargetUnit.health < tank.repairTargetUnit.maxHealth &&
+          Math.abs(tank.repairTargetUnit.tileX - tank.tileX) <= 1 &&
+          Math.abs(tank.repairTargetUnit.tileY - tank.tileY) <= 1 &&
+          !(tank.repairTargetUnit.movement && tank.repairTargetUnit.movement.isMoving)) {
+        target = tank.repairTargetUnit
+      } else {
+        if (tank.repairTargetUnit && tank.repairTargetUnit.health >= tank.repairTargetUnit.maxHealth) {
+          tank.repairTargetUnit = null
+        }
+        target = units.find(u =>
+          u.owner === tank.owner &&
+          u !== tank &&
+          u.health < u.maxHealth &&
+          Math.abs(u.tileX - tank.tileX) <= 1 &&
+          Math.abs(u.tileY - tank.tileY) <= 1 &&
+          !(u.movement && u.movement.isMoving)
+        )
+      }
       if (target) {
         tank.repairTarget = target
         tank.repairStarted = true
+        tank.repairTargetUnit = target
         // Calculate repair parameters once
         const cost = getUnitCost(target.type) || 1000
         const buildDuration = Math.max(1000, 3000 * (cost / 500)) // Minimum 1 second
@@ -346,6 +369,49 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
         } else {
           // console.log(`Recovery tank repair paused: insufficient funds (need ${spend.toFixed(2)}, have ${gameState.money.toFixed(2)})`)
         }
+      }
+    }
+
+    if (queueState && queueState.mode === 'repair') {
+      const trackingWreck = queueState.currentTargetType === 'wreck' || (
+        !queueState.currentTargetType && queueState.currentTargetId &&
+        tank.recoveryTask && tank.recoveryTask.wreckId === queueState.currentTargetId
+      )
+
+      if (trackingWreck) {
+        if (tank.recoveryTask && tank.recoveryTask.wreckId) {
+          if (queueState.currentTargetId !== tank.recoveryTask.wreckId) {
+            queueState.currentTargetId = tank.recoveryTask.wreckId
+          }
+          queueState.currentTargetType = 'wreck'
+        } else {
+          queueState.currentTargetId = null
+          queueState.currentTargetType = null
+          if (unitCommands) {
+            unitCommands.advanceUtilityQueue(tank, gameState.mapGrid, true)
+          }
+        }
+        return
+      }
+
+      const activeTargetId = tank.repairTarget
+        ? tank.repairTarget.id
+        : (tank.repairTargetUnit && tank.repairTargetUnit.health < tank.repairTargetUnit.maxHealth
+          ? tank.repairTargetUnit.id
+          : null)
+
+      if (!activeTargetId) {
+        tank.repairTargetUnit = null
+        if (queueState.currentTargetId) {
+          queueState.currentTargetId = null
+          queueState.currentTargetType = null
+        }
+        if (unitCommands) {
+          unitCommands.advanceUtilityQueue(tank, gameState.mapGrid, true)
+        }
+      } else if (queueState.currentTargetId !== activeTargetId || queueState.currentTargetType !== 'unit') {
+        queueState.currentTargetId = activeTargetId
+        queueState.currentTargetType = 'unit'
       }
     }
   })

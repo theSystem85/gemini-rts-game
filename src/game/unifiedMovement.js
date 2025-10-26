@@ -394,6 +394,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (reachedTarget) {
       unit.restorationMoveOverride = false
       unit.restorationMoveTarget = null
+      unit.restorationProtectedFromRecovery = false
       if (target && unit.moveTarget && unit.moveTarget.x === target.x && unit.moveTarget.y === target.y) {
         unit.moveTarget = null
       }
@@ -403,6 +404,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       unit.movement.isMoving = false
       unit.movement.currentSpeed = 0
     }
+  } else if (unit.restorationProtectedFromRecovery) {
+    unit.restorationProtectedFromRecovery = false
   }
 
   // Handle stuck unit detection and recovery for all units (as requested)

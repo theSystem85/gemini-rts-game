@@ -301,6 +301,10 @@ function processWorkshopRestoration(workshop, units, mapGrid, delta) {
         restored.restorationMoveTarget = null
       }
 
+      // Prevent freshly restored units that are automatically heading to the rally point
+      // from being immediately targeted again by recovery tanks.
+      restored.restorationProtectedFromRecovery = Boolean(restored.moveTarget)
+
       units.push(restored)
 
       if (occupancyMap) {
