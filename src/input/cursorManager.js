@@ -417,8 +417,54 @@ export class CursorManager {
       const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
 
+      const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
+      const setAttackCursor = () => setCursor('none', 'attack-mode')
+      const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
+      const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')
+      const setMoveCursor = () => setCursor('none', 'move-mode')
+      const setDefaultCursor = () => setCursor('default')
+      const setGrabbingCursor = () => setCursor('grabbing')
+
+      const isArtilleryTurretSelected = (() => {
+        if (selectedBuildings.some(b => b.type === 'artilleryTurret')) {
+          return true
+        }
+        if (gameState.buildings) {
+          const hasSelectedTurret = gameState.buildings.some(b =>
+            b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
+          )
+          if (hasSelectedTurret) {
+            return true
+          }
+        }
+        return selectedUnits.some(u => u.type === 'artilleryTurret')
+      })()
+
+      const applyArtilleryTargeting = () => {
+        if (!isArtilleryTurretSelected) {
+          return false
+        }
+
+        if (this.isOverEnemyInRange) {
+          setAttackCursor()
+          return true
+        }
+
+        if (this.isOverEnemyOutOfRange) {
+          setAttackBlockedCursor()
+          return true
+        }
+
+        if (this.isOverEnemy) {
+          setAttackCursor()
+          return true
+        }
+
+        return false
+      }
+
       // CHECK FOR AGF MODE CAPABILITY FIRST - but allow recovery tank interactions to override
-      const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+      const hasSelectedUnits = selectedUnits.length > 0
       const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
         unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
       )
@@ -432,223 +478,120 @@ export class CursorManager {
                           !gameState.sellMode &&
                           !gameState.attackGroupMode
 
-      // Check for recovery tank interactions first - these take priority over AGF
-      if (this.isOverWreck) {
-        // Over wreck with recovery tanks selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-        return // Exit early - recovery tank interaction takes priority
-      } else if (this.isOverRepairableUnit) {
-        // Over repairable unit with recovery tanks selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-        return // Exit early - recovery tank interaction takes priority
-      } else if (this.isOverRecoveryTank) {
-        // Over recovery tank with damaged units selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-        return // Exit early - recovery tank interaction takes priority
-      } else if (this.isOverPlayerWorkshop) {
-        // Damaged units or tankers over workshop - highest priority move-into cursor
-        setCursor('none', 'move-into-mode')
+      const hasImmediateMoveIntoTarget = this.isOverWreck ||
+        this.isOverRepairableUnit ||
+        this.isOverRecoveryTank ||
+        this.isOverPlayerWorkshop
+
+      if (hasImmediateMoveIntoTarget) {
+        setMoveIntoCursor()
         return
       }
 
-      // If AGF capable and no recovery tank interactions, use AGF behavior
       if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
-        if (this.isOverEnemy) {
-          // Over enemy - use attack cursor
-          setCursor('none', 'attack-mode')
+        const isSupportTarget = this.isOverHealableUnit ||
+          this.isOverRefuelableUnit ||
+          this.isOverPlayerHospital ||
+          this.isOverPlayerGasStation ||
+          this.isOverPlayerWorkshop
+
+        if (isSupportTarget) {
+          setMoveIntoCursor()
+        } else if (this.isOverEnemy) {
+          setAttackCursor()
         } else if (this.isOverBlockedTerrain) {
-          // Over blocked terrain - use move-blocked cursor
-          setCursor('none', 'move-blocked-mode')
+          setMoveBlockedCursor()
+        } else if (this.isOverFriendlyUnit) {
+          setDefaultCursor()
         } else if (!gameState.isRightDragging) {
-          // Normal move cursor for AGF-capable units
-          setCursor('none', 'move-mode')
+          setMoveCursor()
         } else {
-          // Right-drag scrolling
-          setCursor('grabbing')
+          setGrabbingCursor()
         }
-        return // Exit early to prevent other interactions
+        return
       }
 
       if (!hasNonBuildingSelected) {
-        // Only buildings are selected
         const singleBuilding = selectedBuildings.length === 1 ? selectedBuildings[0] : null
         const isVehicleFactory = singleBuilding && singleBuilding.type === 'vehicleFactory'
 
         if (isVehicleFactory) {
-          // Vehicle factory uses move cursor for rally point placement
           if (this.isOverBlockedTerrain) {
-            setCursor('none', 'move-blocked-mode')
+            setMoveBlockedCursor()
           } else if (!gameState.isRightDragging) {
-            setCursor('none', 'move-mode')
+            setMoveCursor()
           } else {
-            setCursor('grabbing')
+            setGrabbingCursor()
           }
+        } else if (applyArtilleryTargeting()) {
+          // Artillery targeting already applied
         } else {
-          // Other buildings: check if artillery turret is selected for range-based cursor
-          const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-
-          // Also check gameState.buildings for selected artillery turrets (alternative selection method)
-          let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
-          if (!artilleryTurretSelected && gameState.buildings) {
-            artilleryTurretSelected = gameState.buildings.some(b =>
-              b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
-            )
-          }
-
-          // Also check selectedUnits directly for artillery turrets (without building filter)
-          if (!artilleryTurretSelected) {
-            artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
-          }
-
-          if (artilleryTurretSelected) {
-            // Artillery turret selected - show range-based cursor
-            if (this.isOverEnemyInRange) {
-              // Enemy within range - show attack cursor
-              setCursor('none', 'attack-mode')
-            } else if (this.isOverEnemyOutOfRange) {
-              // Enemy out of range - show blocked attack cursor
-              setCursor('none', 'attack-blocked-mode')
-            } else if (this.isOverEnemy) {
-              // Over enemy but range logic didn't trigger - fallback to attack cursor for now
-              setCursor('none', 'attack-mode')
-            } else {
-              setCursor('default')
-            }
-          } else {
-            // Other buildings: always show default cursor
-            setCursor('default')
-          }
+          setDefaultCursor()
         }
-      } else if (this.isGuardMode) {
-        // Guard mode - show guard cursor
-        setCursor('none', 'guard-mode')
-      } else if (this.isForceAttackMode) {
-        // Force attack mode - check if artillery turret is selected for range-based cursor
-        const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
-        const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-
-        // Also check gameState.buildings for selected artillery turrets (alternative selection method)
-        let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
-        if (!artilleryTurretSelected && gameState.buildings) {
-          artilleryTurretSelected = gameState.buildings.some(b =>
-            b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
-          )
-        }
-
-        // Also check selectedUnits directly for artillery turrets (without building filter)
-        if (!artilleryTurretSelected) {
-          artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
-        }
-
-        if (artilleryTurretSelected) {
-          // Artillery turret selected in force attack mode - use range-based cursor
-          if (this.isInArtilleryRange) {
-            // Within artillery range - show attack cursor
-            setCursor('none', 'attack-mode')
-          } else if (this.isOutOfArtilleryRange) {
-            // Out of artillery range - show blocked attack cursor
-            setCursor('none', 'attack-blocked-mode')
-          } else {
-            // Default force attack cursor when range not calculated
-            setCursor('none', 'attack-mode')
-          }
-        } else {
-          // Regular force attack mode - use standard attack cursor
-          setCursor('none', 'attack-mode')
-        }
-      } else if (this.isOverRefuelableUnit) {
-        setCursor('none', 'move-into-mode')
-      } else if (this.isOverFriendlyUnit) {
-        // Over friendly unit - use normal arrow cursor
-        setCursor('default')
-      } else if (this.isOverEnemy) {
-        // Over enemy - use attack cursor
-        setCursor('none', 'attack-mode')
-      } else if (this.isOverHealableUnit) {
-        // Over healable unit with ambulances selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-      } else if (this.isOverPlayerHospital) {
-        // Over hospital with not fully loaded ambulances selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-      } else if (this.isOverPlayerGasStation) {
-        setCursor('none', 'move-into-mode')
-      } else if (this.isOverPlayerRefinery) {
-        // Over player refinery with harvesters selected - show move into cursor
-        setCursor('none', 'move-into-mode')
-      } else if (this.isOverOreTile) {
-        // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-        setCursor('none', 'attack-mode')
-      } else if (this.isOverBlockedTerrain) {
-        // Over blocked terrain - use move-blocked cursor
-        setCursor('none', 'move-blocked-mode')
-      } else if (!gameState.isRightDragging) {
-        // Normal move cursor
-        setCursor('none', 'move-mode')
-      } else {
-        // Check if artillery turret is selected and handle special cursor logic
-        const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
-        const selectedArtilleryTurrets = selectedBuildings.filter(b => b.type === 'artilleryTurret')
-
-        // Also check gameState.buildings for selected artillery turrets (alternative selection method)
-        let artilleryTurretSelected = selectedArtilleryTurrets.length > 0
-        if (!artilleryTurretSelected && gameState.buildings) {
-          artilleryTurretSelected = gameState.buildings.some(b =>
-            b.type === 'artilleryTurret' && b.selected && b.owner === gameState.humanPlayer
-          )
-        }
-
-        // Also check selectedUnits directly for artillery turrets (without building filter)
-        if (!artilleryTurretSelected) {
-          artilleryTurretSelected = selectedUnits.some(u => u.type === 'artilleryTurret')
-        }
-
-        if (artilleryTurretSelected) {
-          // Artillery turret is selected - apply range-based cursor logic
-          if (this.isOverEnemyInRange) {
-            // Enemy within range - show attack cursor
-            setCursor('none', 'attack-mode')
-          } else if (this.isOverEnemyOutOfRange) {
-            // Enemy out of range - show blocked attack cursor
-            setCursor('none', 'attack-blocked-mode')
-          } else if (this.isOverEnemy) {
-            // Over enemy but range logic didn't trigger - fallback to attack cursor for now
-            setCursor('none', 'attack-mode')
-          } else if (this.isOverPlayerRefinery) {
-            // Over player refinery with harvesters selected - use attack cursor to indicate force unload
-            setCursor('none', 'attack-mode')
-          } else if (this.isOverOreTile) {
-            // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-            setCursor('none', 'attack-mode')
-          } else if (this.isOverBlockedTerrain) {
-            // Over blocked terrain - use move-blocked cursor
-            setCursor('none', 'move-blocked-mode')
-          } else if (!gameState.isRightDragging) {
-            // Normal move cursor
-            setCursor('none', 'move-mode')
-          } else {
-            // Right-drag scrolling
-            setCursor('grabbing')
-          }
-        } else if (this.isOverEnemy) {
-          // Over enemy - use attack cursor (normal units logic)
-          setCursor('none', 'attack-mode')
-        } else if (this.isOverPlayerRefinery) {
-          // Over player refinery with harvesters selected - use attack cursor to indicate force unload
-          setCursor('none', 'attack-mode')
-        } else if (this.isOverOreTile) {
-          // Over ore tile with harvesters selected - use attack cursor to indicate harvesting
-          setCursor('none', 'attack-mode')
-        } else if (this.isOverBlockedTerrain) {
-          // Over blocked terrain - use move-blocked cursor
-          setCursor('none', 'move-blocked-mode')
-        } else if (!gameState.isRightDragging) {
-          // Normal move cursor
-          setCursor('none', 'move-mode')
-        } else {
-          // Right-drag scrolling
-          setCursor('grabbing')
-        }
+        return
       }
+
+      if (this.isGuardMode) {
+        setCursor('none', 'guard-mode')
+        return
+      }
+
+      if (this.isForceAttackMode) {
+        if (isArtilleryTurretSelected) {
+          if (this.isInArtilleryRange) {
+            setAttackCursor()
+          } else if (this.isOutOfArtilleryRange) {
+            setAttackBlockedCursor()
+          } else {
+            setAttackCursor()
+          }
+        } else {
+          setAttackCursor()
+        }
+        return
+      }
+
+      const isLogisticsTarget = this.isOverHealableUnit ||
+        this.isOverRefuelableUnit ||
+        this.isOverPlayerHospital ||
+        this.isOverPlayerGasStation ||
+        this.isOverPlayerRefinery
+
+      if (isLogisticsTarget) {
+        setMoveIntoCursor()
+        return
+      }
+
+      if (this.isOverFriendlyUnit) {
+        setDefaultCursor()
+        return
+      }
+
+      if (applyArtilleryTargeting()) {
+        return
+      }
+
+      if (this.isOverEnemy) {
+        setAttackCursor()
+        return
+      }
+
+      if (this.isOverOreTile) {
+        setAttackCursor()
+        return
+      }
+
+      if (this.isOverBlockedTerrain) {
+        setMoveBlockedCursor()
+        return
+      }
+
+      if (gameState.isRightDragging) {
+        setGrabbingCursor()
+        return
+      }
+
+      setMoveCursor()
     } else {
       // No units selected - use default cursor
       setCursor('default')
