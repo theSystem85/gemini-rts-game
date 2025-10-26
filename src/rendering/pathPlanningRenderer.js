@@ -148,16 +148,18 @@ export class PathPlanningRenderer {
         ctx.lineTo(screenX, screenY)
         ctx.stroke()
 
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
-        ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
-        const half = MOVE_TARGET_INDICATOR_SIZE / 2
-        ctx.beginPath()
-        ctx.moveTo(screenX, screenY + half)
-        ctx.lineTo(screenX - half, screenY - half)
-        ctx.lineTo(screenX + half, screenY - half)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
+        if (action.type !== 'utility') {
+          ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
+          ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
+          const half = MOVE_TARGET_INDICATOR_SIZE / 2
+          ctx.beginPath()
+          ctx.moveTo(screenX, screenY + half)
+          ctx.lineTo(screenX - half, screenY - half)
+          ctx.lineTo(screenX + half, screenY - half)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+        }
 
         ctx.fillStyle = '#000'
         ctx.font = '8px Arial'
