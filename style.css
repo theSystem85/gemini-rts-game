@@ -201,6 +201,11 @@ body.mobile-landscape #mobileSidebarControls[aria-hidden="false"] {
 
 body.mobile-landscape #mobileSidebarControls {
   gap: 0;
+  background: rgba(10, 10, 10, 0.82);
+  border-radius: 0 14px 14px 0;
+  padding: 6px;
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
 }
 
 body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
@@ -312,7 +317,7 @@ body.mobile-landscape #mobileBuildMenuContainer #production {
   flex: 1;
   overflow-y: auto;
   margin: 0;
-  padding: 0 8px 12px 8px;
+  padding: 0;
   scrollbar-width: none;
 }
 
@@ -320,59 +325,63 @@ body.mobile-landscape #mobileBuildMenuContainer #production::-webkit-scrollbar {
   display: none;
 }
 
-body.mobile-landscape #mobileBuildMenuContainer .tab-button {
-  margin: 0;
-  border-radius: 0;
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs {
+  gap: 0;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer #productionTabs .tab-button {
+  display: none;
 }
 
 body.mobile-landscape #mobileCategoryToggle {
   display: block;
+  width: 100%;
   margin: 0;
   border-radius: 0;
+  padding: 10px 12px;
+  background-color: #1f1f1f;
+  color: #f0f0f0;
+  text-align: left;
+  letter-spacing: 0.02em;
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 8px 12px 4px 12px;
-  background: rgba(0, 0, 0, 0.25);
+  gap: 4px;
+  padding: 8px 0;
+  background: rgba(0, 0, 0, 0.35);
 }
 
-body.mobile-landscape #mobileMoneyDisplay {
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  font-size: 13px;
-  font-weight: 600;
-  color: #f0f0f0;
-  margin: 0 0 6px 0;
-}
-
-body.mobile-landscape #mobileMoneyDisplay span {
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
 }
 
-body.mobile-landscape #mobileMoneyLabel {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-label,
+body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f2f2f2;
+  letter-spacing: 0.01em;
 }
 
 body.mobile-landscape #mobileMoneyValue {
-  font-size: 13px;
+  text-align: right;
 }
 
 body.mobile-landscape #mobileEnergyBarContainer {
   position: relative;
   width: 100%;
   height: 12px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
+  background: rgba(12, 12, 12, 0.85);
+  border-radius: 0;
   overflow: hidden;
+  margin: 0;
 }
 
 body.mobile-landscape #mobileEnergyBar {
@@ -383,18 +392,11 @@ body.mobile-landscape #mobileEnergyBar {
   width: 100%;
   background-color: #4CAF50;
   transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 0;
 }
 
-body.mobile-landscape #mobileEnergyText {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #fff;
-  text-shadow: 0 0 3px #000;
-  pointer-events: none;
+body.mobile-landscape #energyBarContainer {
+  display: none;
 }
 
 #mobileSidebarControls {
@@ -415,6 +417,42 @@ body.mobile-landscape #mobileEnergyText {
 #mobileSidebarControls #actions,
 #mobileSidebarControls #mobileActionsContainer {
   pointer-events: auto;
+}
+
+#sidebarUtilityButtons {
+  display: none;
+}
+
+#sidebarUtilityButtons[aria-hidden="true"] {
+  display: none;
+}
+
+body.mobile-landscape #sidebarUtilityButtons[aria-hidden="false"] {
+  display: flex;
+}
+
+body.mobile-landscape #sidebarUtilityButtons {
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+body.mobile-landscape #sidebarUtilityButtons .action-button {
+  opacity: 1;
+  width: 100%;
+  height: var(--mobile-action-size);
+  background-color: rgba(36, 36, 36, 0.9);
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.mobile-landscape #sidebarUtilityButtons .action-button:hover,
+body.mobile-landscape #sidebarUtilityButtons .action-button:focus {
+  background-color: rgba(54, 54, 54, 0.95);
 }
 
 #mobileCategoryToggle:disabled {
@@ -844,6 +882,17 @@ body.mobile-landscape #mobileEnergyText {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-content.active {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+body.mobile-landscape #mobileBuildMenuContainer .tab-content.active .production-button {
+  aspect-ratio: auto;
+  min-height: 72px;
 }
 
 /* Make all button containers maintain the square aspect ratio */

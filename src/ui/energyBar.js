@@ -68,7 +68,7 @@ export function updateEnergyBar() {
   const energyBar = document.getElementById('energyBar')
   const energyText = document.getElementById('energyText')
   const mobileEnergyBar = document.getElementById('mobileEnergyBar')
-  const mobileEnergyText = document.getElementById('mobileEnergyText')
+  const mobileEnergyValue = document.getElementById('mobileEnergyValue')
 
   if (!energyBar || !energyText) {
     // Try to recreate the energy bar if not found
@@ -82,8 +82,8 @@ export function updateEnergyBar() {
 
   // Display energy production value
   energyText.textContent = `Energy: ${totalProduction - totalConsumption}`
-  if (mobileEnergyText) {
-    mobileEnergyText.textContent = `Energy: ${totalProduction - totalConsumption}`
+  if (mobileEnergyValue) {
+    mobileEnergyValue.textContent = `${totalProduction - totalConsumption}`
   }
 
   // Calculate percentage of energy remaining

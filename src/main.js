@@ -62,7 +62,14 @@ const mobileLayoutState = {
   mobileStatusBar: null,
   mobileMoneyValue: null,
   mobileEnergyBar: null,
-  mobileEnergyText: null
+  mobileEnergyValue: null,
+  sidebarUtilityContainer: null,
+  restartButton: null,
+  restartOriginalParent: null,
+  restartOriginalNextSibling: null,
+  musicButton: null,
+  musicOriginalParent: null,
+  musicOriginalNextSibling: null
 }
 
 function ensureMobileLayoutElements() {
@@ -109,6 +116,32 @@ function ensureMobileLayoutElements() {
     mobileLayoutState.sidebarToggleListenerAttached = false
   }
 
+  if (!mobileLayoutState.sidebarUtilityContainer || !mobileLayoutState.sidebarUtilityContainer.isConnected) {
+    mobileLayoutState.sidebarUtilityContainer = document.getElementById('sidebarUtilityButtons')
+  }
+
+  if (!mobileLayoutState.restartButton || !mobileLayoutState.restartButton.isConnected) {
+    const restartButton = document.getElementById('restartBtn')
+    if (restartButton) {
+      mobileLayoutState.restartButton = restartButton
+      if (!mobileLayoutState.restartOriginalParent) {
+        mobileLayoutState.restartOriginalParent = restartButton.parentNode || null
+        mobileLayoutState.restartOriginalNextSibling = restartButton.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.musicButton || !mobileLayoutState.musicButton.isConnected) {
+    const musicButton = document.getElementById('musicControl')
+    if (musicButton) {
+      mobileLayoutState.musicButton = musicButton
+      if (!mobileLayoutState.musicOriginalParent) {
+        mobileLayoutState.musicOriginalParent = musicButton.parentNode || null
+        mobileLayoutState.musicOriginalNextSibling = musicButton.nextSibling || null
+      }
+    }
+  }
+
   if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
     mobileLayoutState.sidebarToggle.addEventListener('click', () => {
       if (!document.body || !document.body.classList.contains('mobile-landscape')) {
@@ -138,19 +171,39 @@ function ensureMobileStatusBar(container) {
     statusBar = document.createElement('div')
     statusBar.id = 'mobileStatusBar'
 
-    const moneyDisplay = document.createElement('div')
-    moneyDisplay.id = 'mobileMoneyDisplay'
+    const moneyRow = document.createElement('div')
+    moneyRow.id = 'mobileMoneyDisplay'
+    moneyRow.className = 'mobile-resource-row'
 
     const moneyLabel = document.createElement('span')
     moneyLabel.id = 'mobileMoneyLabel'
+    moneyLabel.className = 'mobile-resource-label'
     moneyLabel.textContent = 'Money'
 
     const moneyValue = document.createElement('span')
     moneyValue.id = 'mobileMoneyValue'
+    moneyValue.className = 'mobile-resource-value'
     moneyValue.textContent = '$0'
 
-    moneyDisplay.appendChild(moneyLabel)
-    moneyDisplay.appendChild(moneyValue)
+    moneyRow.appendChild(moneyLabel)
+    moneyRow.appendChild(moneyValue)
+
+    const energyRow = document.createElement('div')
+    energyRow.id = 'mobileEnergyDisplay'
+    energyRow.className = 'mobile-resource-row'
+
+    const energyLabel = document.createElement('span')
+    energyLabel.id = 'mobileEnergyLabel'
+    energyLabel.className = 'mobile-resource-label'
+    energyLabel.textContent = 'Energy'
+
+    const energyValue = document.createElement('span')
+    energyValue.id = 'mobileEnergyValue'
+    energyValue.className = 'mobile-resource-value'
+    energyValue.textContent = '0'
+
+    energyRow.appendChild(energyLabel)
+    energyRow.appendChild(energyValue)
 
     const energyContainer = document.createElement('div')
     energyContainer.id = 'mobileEnergyBarContainer'
@@ -158,24 +211,20 @@ function ensureMobileStatusBar(container) {
     const energyBar = document.createElement('div')
     energyBar.id = 'mobileEnergyBar'
 
-    const energyText = document.createElement('div')
-    energyText.id = 'mobileEnergyText'
-    energyText.textContent = 'Energy: 0'
-
     energyContainer.appendChild(energyBar)
-    energyContainer.appendChild(energyText)
 
-    statusBar.appendChild(moneyDisplay)
+    statusBar.appendChild(moneyRow)
+    statusBar.appendChild(energyRow)
     statusBar.appendChild(energyContainer)
 
     mobileLayoutState.mobileStatusBar = statusBar
     mobileLayoutState.mobileMoneyValue = moneyValue
     mobileLayoutState.mobileEnergyBar = energyBar
-    mobileLayoutState.mobileEnergyText = energyText
+    mobileLayoutState.mobileEnergyValue = energyValue
   } else {
     mobileLayoutState.mobileMoneyValue = document.getElementById('mobileMoneyValue')
     mobileLayoutState.mobileEnergyBar = document.getElementById('mobileEnergyBar')
-    mobileLayoutState.mobileEnergyText = document.getElementById('mobileEnergyText')
+    mobileLayoutState.mobileEnergyValue = document.getElementById('mobileEnergyValue')
   }
 
   if (statusBar.parentNode !== container) {
@@ -237,6 +286,20 @@ function restoreActions() {
   }
 }
 
+function restoreUtilityButton(button, originalParent, originalNextSibling) {
+  if (!button || !originalParent) {
+    return
+  }
+
+  if (button.parentNode !== originalParent) {
+    if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+      originalParent.insertBefore(button, originalNextSibling)
+    } else {
+      originalParent.appendChild(button)
+    }
+  }
+}
+
 function applyMobileLandscapeLayout(enabled) {
   ensureMobileLayoutElements()
 
@@ -245,7 +308,10 @@ function applyMobileLandscapeLayout(enabled) {
     mobileContainer,
     actions,
     mobileActionsContainer,
-    mobileControls
+    mobileControls,
+    sidebarUtilityContainer,
+    restartButton,
+    musicButton
   } = mobileLayoutState
 
   if (!productionArea || !mobileContainer || !document.body) {
@@ -264,6 +330,15 @@ function applyMobileLandscapeLayout(enabled) {
     if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
       mobileActionsContainer.appendChild(actions)
     }
+    if (sidebarUtilityContainer) {
+      sidebarUtilityContainer.setAttribute('aria-hidden', 'false')
+      if (restartButton && restartButton.parentNode !== sidebarUtilityContainer) {
+        sidebarUtilityContainer.appendChild(restartButton)
+      }
+      if (musicButton && musicButton.parentNode !== sidebarUtilityContainer) {
+        sidebarUtilityContainer.appendChild(musicButton)
+      }
+    }
     const shouldCollapse = typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
       ? mobileLayoutState.isSidebarCollapsed
       : true
@@ -275,6 +350,19 @@ function applyMobileLandscapeLayout(enabled) {
     if (mobileControls) {
       mobileControls.setAttribute('aria-hidden', 'true')
     }
+    if (sidebarUtilityContainer) {
+      sidebarUtilityContainer.setAttribute('aria-hidden', 'true')
+    }
+    restoreUtilityButton(
+      mobileLayoutState.restartButton,
+      mobileLayoutState.restartOriginalParent,
+      mobileLayoutState.restartOriginalNextSibling
+    )
+    restoreUtilityButton(
+      mobileLayoutState.musicButton,
+      mobileLayoutState.musicOriginalParent,
+      mobileLayoutState.musicOriginalNextSibling
+    )
     document.body.classList.remove('sidebar-collapsed')
     if (mobileLayoutState.sidebarToggle) {
       mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
