@@ -1,25 +1,26 @@
-import { GAS_REFILL_TIME, GAS_REFILL_COST } from '../config.js'
+import { GAS_REFILL_TIME, GAS_REFILL_COST, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { playSound } from '../sound.js'
+import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 export const updateGasStationLogic = logPerformance(function(units, buildings, gameState, delta) {
   const stations = buildings.filter(b => b.type === 'gasStation')
   if (stations.length === 0) return
 
   stations.forEach(station => {
-    const areaStartX = station.x - 1
-    const areaEndX = station.x + station.width
-    const areaStartY = station.y - 1
-    const areaEndY = station.y + station.height
+    const serviceRadius = getServiceRadiusPixels(station)
+    if (serviceRadius <= 0) return
+
+    const centerX = station.x * TILE_SIZE + (station.width * TILE_SIZE) / 2
+    const centerY = station.y * TILE_SIZE + (station.height * TILE_SIZE) / 2
 
     units.forEach(unit => {
       if (typeof unit.maxGas !== 'number' || unit.health <= 0) return
 
-      const inArea =
-        unit.tileX >= areaStartX &&
-        unit.tileX <= areaEndX &&
-        unit.tileY >= areaStartY &&
-        unit.tileY <= areaEndY
+      const unitCenterX = (unit.x ?? unit.tileX * TILE_SIZE) + TILE_SIZE / 2
+      const unitCenterY = (unit.y ?? unit.tileY * TILE_SIZE) + TILE_SIZE / 2
+      const distance = Math.hypot(unitCenterX - centerX, unitCenterY - centerY)
+      const inArea = distance <= serviceRadius
 
       const stationary = !(unit.movement && unit.movement.isMoving)
 

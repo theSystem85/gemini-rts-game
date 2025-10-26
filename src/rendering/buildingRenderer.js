@@ -4,6 +4,7 @@ import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTurretWithImages, turretImagesAvailable } from './turretImageRenderer.js'
+import { getServiceRadiusPixels, isServiceBuilding } from '../utils/serviceRadius.js'
 
 export class BuildingRenderer {
   constructor() {
@@ -128,6 +129,7 @@ export class BuildingRenderer {
     }
 
     this.renderTurret(ctx, building, screenX, screenY, width, height)
+    this.renderServiceRadius(ctx, building, screenX, screenY, width, height)
     this.renderSelection(ctx, building, screenX, screenY, width, height)
     if (building.type !== 'concreteWall') {
       this.renderOwnerIndicator(ctx, building, screenX, screenY)
@@ -426,6 +428,30 @@ export class BuildingRenderer {
         ctx.stroke()
       }
     }
+  }
+
+  renderServiceRadius(ctx, building, screenX, screenY, width, height) {
+    if (!building?.selected || !isServiceBuilding(building)) {
+      return
+    }
+
+    const radius = getServiceRadiusPixels(building)
+    if (!radius) {
+      return
+    }
+
+    const centerX = screenX + width / 2
+    const centerY = screenY + height / 2
+
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.45)'
+    ctx.lineWidth = 2
+    ctx.setLineDash([8, 6])
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
   }
 
   renderSelection(ctx, building, screenX, screenY, width, height) {
