@@ -5,11 +5,65 @@ export class PathPlanningRenderer {
   render(ctx, units, scrollOffset) {
     if (!units) return
 
+    const buildUtilityQueueActions = unit => {
+      const list = []
+      const queue = unit.utilityQueue
+      if (!queue) {
+        return list
+      }
+
+      const seen = new Set()
+      const pushTarget = (targetId, targetType) => {
+        if (!targetId || seen.has(`${targetType}:${targetId}`)) {
+          return
+        }
+        let targetX
+        let targetY
+        if (targetType === 'wreck') {
+          const wreck = (gameState.unitWrecks || []).find(w => w.id === targetId)
+          if (!wreck) {
+            return
+          }
+          targetX = wreck.x + TILE_SIZE / 2
+          targetY = wreck.y + TILE_SIZE / 2
+        } else {
+          const targetUnit = units.find(u => u.id === targetId)
+          if (!targetUnit) {
+            return
+          }
+          targetX = targetUnit.x + TILE_SIZE / 2
+          targetY = targetUnit.y + TILE_SIZE / 2
+        }
+        seen.add(`${targetType}:${targetId}`)
+        list.push({ type: 'utility', target: { x: targetX, y: targetY } })
+      }
+
+      if (queue.currentTargetId) {
+        pushTarget(queue.currentTargetId, queue.currentTargetType || 'unit')
+      }
+
+      if (Array.isArray(queue.targets)) {
+        queue.targets.forEach(entry => {
+          if (!entry) return
+          if (typeof entry === 'object') {
+            pushTarget(entry.id, entry.type || 'unit')
+          } else {
+            pushTarget(entry, 'unit')
+          }
+        })
+      }
+
+      return list
+    }
+
     const actionsForUnit = unit => {
       const list = []
       if (unit.currentCommand) list.push(unit.currentCommand)
       if (unit.commandQueue && unit.commandQueue.length > 0) {
         list.push(...unit.commandQueue)
+      }
+      if (unit.utilityQueue && (unit.utilityQueue.currentTargetId || (unit.utilityQueue.targets && unit.utilityQueue.targets.length > 0))) {
+        list.push(...buildUtilityQueueActions(unit))
       }
       return list
     }
@@ -68,6 +122,13 @@ export class PathPlanningRenderer {
             if (!nearest) return
             targetX = (nearest.x + nearest.width / 2) * TILE_SIZE
             targetY = (nearest.y + nearest.height) * TILE_SIZE
+            break
+          }
+          case 'utility': {
+            const t = action.target
+            if (!t) return
+            targetX = t.x
+            targetY = t.y
             break
           }
           default:

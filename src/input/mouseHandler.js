@@ -65,6 +65,7 @@ export class MouseHandler {
 
   isUtilityUnit(unit) {
     if (!unit) return false
+    if (unit.isUtilityUnit) return true
     return unit.type === 'ambulance' || unit.type === 'tankerTruck' || unit.type === 'recoveryTank'
   }
 
@@ -118,7 +119,7 @@ export class MouseHandler {
       const centerY = wreck.y + TILE_SIZE / 2
       if (centerX < x1 || centerX > x2 || centerY < y1 || centerY > y2) return
       if (wreck.isBeingRestored || wreck.towedBy || wreck.isBeingRecycled) return
-      wreckTargets.push({ ...wreck, isWreckTarget: true })
+      wreckTargets.push({ ...wreck, isWreckTarget: true, queueAction: 'tow' })
     })
 
     let anyQueued = false
@@ -942,6 +943,7 @@ export class MouseHandler {
 
   handleUnitSelection(worldX, worldY, e, units, factories, selectedUnits, selectionManager, unitCommands, mapGrid) {
     selectionManager.clearWreckSelection()
+    const appendToUtilityQueue = e.altKey || gameState.altKeyDown
     // Check for AGF capability first - if units are AGF capable, prioritize normal AGF behavior
     const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
     const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
@@ -1008,7 +1010,7 @@ export class MouseHandler {
             const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
             const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
             if (uX === tileX && uY === tileY && unit.gas < unit.maxGas) {
-              unitCommands.handleTankerRefuelCommand(commandableUnits, unit, mapGrid)
+              unitCommands.handleTankerRefuelCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
               return
             }
           }
@@ -1031,7 +1033,7 @@ export class MouseHandler {
               const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
               if (missingCrew.length > 0) {
                 // Handle ambulance healing command
-                unitCommands.handleAmbulanceHealCommand(commandableUnits, unit, mapGrid)
+                unitCommands.handleAmbulanceHealCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
                 return // Exit early, don't process unit selection
               }
             }
@@ -1045,10 +1047,10 @@ export class MouseHandler {
       if (hasSelectedRecoveryTanks) {
         const wreck = findWreckAtTile(gameState, tileX, tileY)
         if (wreck) {
-          if (gameState.shiftKeyDown) {
-            unitCommands.handleRecoveryWreckRecycleCommand(commandableUnits, wreck, mapGrid)
+          if (gameState.shiftKeyDown || e.shiftKey) {
+            unitCommands.handleRecoveryWreckRecycleCommand(commandableUnits, wreck, mapGrid, { append: appendToUtilityQueue })
           } else {
-            unitCommands.handleRecoveryWreckTowCommand(commandableUnits, wreck, mapGrid)
+            unitCommands.handleRecoveryWreckTowCommand(commandableUnits, wreck, mapGrid, { append: appendToUtilityQueue })
           }
           return
         }
@@ -1063,7 +1065,7 @@ export class MouseHandler {
 
             if (unitTileX === tileX && unitTileY === tileY) {
               // Handle recovery tank repair command
-              unitCommands.handleRecoveryTankRepairCommand(commandableUnits, unit, mapGrid)
+              unitCommands.handleRecoveryTankRepairCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
               return // Exit early, don't process unit selection
             }
           }

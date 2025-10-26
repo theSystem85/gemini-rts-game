@@ -698,6 +698,9 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     buildDuration: determineBuildDuration(actualType, options.buildDuration || null)
   }
 
+  const utilityUnitTypes = ['ambulance', 'tankerTruck', 'recoveryTank']
+  unit.isUtilityUnit = utilityUnitTypes.includes(actualType)
+
   // Gas system
   const gasProps = UNIT_GAS_PROPERTIES[actualType]
   if (gasProps) {
