@@ -14,11 +14,6 @@ export function addPowerIndicator() {
   // Clear any existing content to prevent duplicates
   energyBarContainer.innerHTML = ''
 
-  const energyLabel = document.createElement('div')
-  energyLabel.id = 'energyBarLabel'
-  energyLabel.className = 'energy-bar-label'
-  energyLabel.textContent = 'Energy'
-
   const energyTrack = document.createElement('div')
   energyTrack.id = 'energyBarTrack'
   energyTrack.className = 'energy-bar-track'
@@ -63,7 +58,6 @@ export function addPowerIndicator() {
   energyTrack.appendChild(energyText)
 
   // Add elements to container
-  energyBarContainer.appendChild(energyLabel)
   energyBarContainer.appendChild(energyTrack)
 
   // Make sure the container itself is visible and properly styled
@@ -72,7 +66,7 @@ export function addPowerIndicator() {
   energyBarContainer.style.height = '26px'
   energyBarContainer.style.position = 'relative'
   energyBarContainer.style.overflow = 'visible'
-  energyBarContainer.style.margin = '0 0 10px 0'
+  energyBarContainer.style.margin = '0'
   energyBarContainer.style.padding = '0'
 
   // Initialize energy stats in gameState with default values
