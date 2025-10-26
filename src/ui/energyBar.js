@@ -14,44 +14,66 @@ export function addPowerIndicator() {
   // Clear any existing content to prevent duplicates
   energyBarContainer.innerHTML = ''
 
+  const energyLabel = document.createElement('div')
+  energyLabel.id = 'energyBarLabel'
+  energyLabel.className = 'energy-bar-label'
+  energyLabel.textContent = 'Energy'
+
+  const energyTrack = document.createElement('div')
+  energyTrack.id = 'energyBarTrack'
+  energyTrack.className = 'energy-bar-track'
+  energyTrack.style.position = 'absolute'
+  energyTrack.style.left = '0'
+  energyTrack.style.bottom = '0'
+  energyTrack.style.width = '100%'
+  energyTrack.style.height = '12px'
+  energyTrack.style.backgroundColor = 'rgba(12, 12, 12, 0.85)'
+  energyTrack.style.borderRadius = '0'
+  energyTrack.style.overflow = 'hidden'
+
   // Create energy bar
   const energyBar = document.createElement('div')
   energyBar.id = 'energyBar'
-
-  // Set explicit styles for the energy bar to ensure it's visible
-  energyBar.style.width = '100%'
-  energyBar.style.height = '100%'
-  energyBar.style.backgroundColor = '#4CAF50' // Green
   energyBar.style.position = 'absolute'
   energyBar.style.top = '0'
   energyBar.style.left = '0'
-  energyBar.style.zIndex = '0'
+  energyBar.style.height = '100%'
+  energyBar.style.width = '100%'
+  energyBar.style.backgroundColor = '#4CAF50'
 
-  // Create energy text
+  // Create energy text/value overlay
   const energyText = document.createElement('div')
   energyText.id = 'energyText'
-  energyText.className = 'energyBarLabel'
+  energyText.className = 'energy-bar-value'
   energyText.style.position = 'absolute'
+  energyText.style.top = '0'
+  energyText.style.left = '0'
   energyText.style.width = '100%'
-  energyText.style.textAlign = 'center'
+  energyText.style.height = '100%'
+  energyText.style.display = 'flex'
+  energyText.style.alignItems = 'center'
+  energyText.style.justifyContent = 'center'
   energyText.style.fontSize = '12px'
-  energyText.style.lineHeight = '20px'
-  energyText.style.zIndex = '1'
+  energyText.style.fontWeight = '600'
   energyText.style.textShadow = '0 0 3px #000'
-  energyText.style.color = '#fff' // White text
-  energyText.textContent = 'Energy: 100'
+  energyText.style.color = '#fff'
+  energyText.textContent = '0 MW'
+
+  energyTrack.appendChild(energyBar)
+  energyTrack.appendChild(energyText)
 
   // Add elements to container
-  energyBarContainer.appendChild(energyBar)
-  energyBarContainer.appendChild(energyText)
+  energyBarContainer.appendChild(energyLabel)
+  energyBarContainer.appendChild(energyTrack)
 
   // Make sure the container itself is visible and properly styled
   energyBarContainer.style.display = 'block'
   energyBarContainer.style.visibility = 'visible'
-  energyBarContainer.style.height = '20px'
+  energyBarContainer.style.height = '26px'
   energyBarContainer.style.position = 'relative'
-  energyBarContainer.style.overflow = 'hidden'
+  energyBarContainer.style.overflow = 'visible'
   energyBarContainer.style.margin = '0 0 10px 0'
+  energyBarContainer.style.padding = '0'
 
   // Initialize energy stats in gameState with default values
   gameState.totalPowerProduction = 50
@@ -81,9 +103,9 @@ export function updateEnergyBar() {
   const totalConsumption = gameState.playerPowerConsumption || 0
 
   // Display energy production value
-  energyText.textContent = `Energy: ${totalProduction - totalConsumption}`
+  energyText.textContent = `${totalProduction - totalConsumption} MW`
   if (mobileEnergyValue) {
-    mobileEnergyValue.textContent = `${totalProduction - totalConsumption}`
+    mobileEnergyValue.textContent = `${totalProduction - totalConsumption} MW`
   }
 
   // Calculate percentage of energy remaining
