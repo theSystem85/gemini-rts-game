@@ -143,12 +143,7 @@ function ensureMobileLayoutElements() {
 
   if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
     mobileLayoutState.sidebarToggle.addEventListener('click', () => {
-      if (
-        !document.body || (
-          !document.body.classList.contains('mobile-landscape') &&
-          !document.body.classList.contains('mobile-portrait')
-        )
-      ) {
+      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
         return
       }
       const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
@@ -289,7 +284,7 @@ function ensureSidebarSwipeHandlers(enable) {
   }
 
   const handleTouchStart = (event) => {
-    if (!document.body || !document.body.classList.contains('mobile-portrait')) {
+    if (!document.body || !document.body.classList.contains('mobile-landscape')) {
       mobileLayoutState.sidebarSwipeState = null
       return
     }
@@ -492,7 +487,7 @@ function applyMobileSidebarLayout(mode) {
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
-    ensureSidebarSwipeHandlers(mode === 'portrait')
+    ensureSidebarSwipeHandlers(mode === 'landscape')
   } else {
     restoreProductionArea()
     restoreActions()
@@ -535,15 +530,14 @@ function updateMobileLayoutClasses() {
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
   const shouldApplyMobileLandscape = isTouch && !isPortrait
-  const shouldApplyMobilePortrait = isTouch && isPortrait
-  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : (shouldApplyMobilePortrait ? 'portrait' : null)
+  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : null
 
   if (document.body.classList.contains('mobile-sidebar-right')) {
     document.body.classList.remove('mobile-sidebar-right')
   }
 
   document.body.classList.toggle('mobile-landscape', mobileMode === 'landscape')
-  document.body.classList.toggle('mobile-portrait', mobileMode === 'portrait')
+  document.body.classList.remove('mobile-portrait')
 
   applyMobileSidebarLayout(mobileMode)
 
