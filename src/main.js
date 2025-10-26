@@ -39,7 +39,7 @@ if ('serviceWorker' in navigator) {
 
 let gameInstance = null
 let lastIsTouchState = null
-let lastMobileLandscapeApplied = null
+let lastMobileLayoutMode = null
 let portraitQuery = null
 
 const mobileLayoutState = {
@@ -54,7 +54,21 @@ const mobileLayoutState = {
   actionsOriginalParent: null,
   actionsOriginalNextSibling: null,
   mobileActionsContainer: null,
-  mobileControls: null
+  mobileControls: null,
+  mobileStatusBar: null,
+  mobileMoneyValue: null,
+  mobileEnergyBar: null,
+  mobileEnergyValue: null,
+  sidebarUtilityContainer: null,
+  restartButton: null,
+  restartOriginalParent: null,
+  restartOriginalNextSibling: null,
+  musicButton: null,
+  musicOriginalParent: null,
+  musicOriginalNextSibling: null,
+  sidebarSwipeHandlersAttached: false,
+  sidebarSwipeState: null,
+  sidebarSwipeHandlers: null
 }
 
 function ensureMobileLayoutElements() {
@@ -101,15 +115,138 @@ function ensureMobileLayoutElements() {
     mobileLayoutState.sidebarToggleListenerAttached = false
   }
 
+  if (!mobileLayoutState.sidebarUtilityContainer || !mobileLayoutState.sidebarUtilityContainer.isConnected) {
+    mobileLayoutState.sidebarUtilityContainer = document.getElementById('sidebarUtilityButtons')
+  }
+
+  if (!mobileLayoutState.restartButton || !mobileLayoutState.restartButton.isConnected) {
+    const restartButton = document.getElementById('restartBtn')
+    if (restartButton) {
+      mobileLayoutState.restartButton = restartButton
+      if (!mobileLayoutState.restartOriginalParent) {
+        mobileLayoutState.restartOriginalParent = restartButton.parentNode || null
+        mobileLayoutState.restartOriginalNextSibling = restartButton.nextSibling || null
+      }
+    }
+  }
+
+  if (!mobileLayoutState.musicButton || !mobileLayoutState.musicButton.isConnected) {
+    const musicButton = document.getElementById('musicControl')
+    if (musicButton) {
+      mobileLayoutState.musicButton = musicButton
+      if (!mobileLayoutState.musicOriginalParent) {
+        mobileLayoutState.musicOriginalParent = musicButton.parentNode || null
+        mobileLayoutState.musicOriginalNextSibling = musicButton.nextSibling || null
+      }
+    }
+  }
+
   if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
     mobileLayoutState.sidebarToggle.addEventListener('click', () => {
-      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+      if (
+        !document.body || (
+          !document.body.classList.contains('mobile-landscape') &&
+          !document.body.classList.contains('mobile-portrait')
+        )
+      ) {
         return
       }
       const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
       setSidebarCollapsed(!currentlyCollapsed)
     })
     mobileLayoutState.sidebarToggleListenerAttached = true
+  }
+}
+
+function ensureMobileStatusBar(container, orientation) {
+  if (!container) {
+    return
+  }
+
+  let statusBar = mobileLayoutState.mobileStatusBar
+  if (!statusBar || !statusBar.isConnected) {
+    statusBar = document.getElementById('mobileStatusBar')
+    if (statusBar) {
+      mobileLayoutState.mobileStatusBar = statusBar
+    }
+  }
+
+  if (!statusBar) {
+    statusBar = document.createElement('div')
+    statusBar.id = 'mobileStatusBar'
+
+    const moneyRow = document.createElement('div')
+    moneyRow.id = 'mobileMoneyDisplay'
+    moneyRow.className = 'mobile-resource-row'
+
+    const moneyLabel = document.createElement('span')
+    moneyLabel.id = 'mobileMoneyLabel'
+    moneyLabel.className = 'mobile-resource-label'
+    moneyLabel.textContent = 'Money'
+
+    const moneyValue = document.createElement('span')
+    moneyValue.id = 'mobileMoneyValue'
+    moneyValue.className = 'mobile-resource-value'
+    moneyValue.textContent = '$0'
+
+    moneyRow.appendChild(moneyLabel)
+    moneyRow.appendChild(moneyValue)
+
+    const energyRow = document.createElement('div')
+    energyRow.id = 'mobileEnergyDisplay'
+    energyRow.className = 'mobile-resource-row'
+
+    const energyLabel = document.createElement('span')
+    energyLabel.id = 'mobileEnergyLabel'
+    energyLabel.className = 'mobile-resource-label'
+    energyLabel.textContent = 'Energy'
+
+    const energyValue = document.createElement('span')
+    energyValue.id = 'mobileEnergyValue'
+    energyValue.className = 'mobile-resource-value'
+    energyValue.textContent = '0 MW'
+
+    energyRow.appendChild(energyLabel)
+    energyRow.appendChild(energyValue)
+
+    const energyContainer = document.createElement('div')
+    energyContainer.id = 'mobileEnergyBarContainer'
+
+    const energyBar = document.createElement('div')
+    energyBar.id = 'mobileEnergyBar'
+
+    energyContainer.appendChild(energyBar)
+
+    statusBar.appendChild(moneyRow)
+    statusBar.appendChild(energyRow)
+    statusBar.appendChild(energyContainer)
+
+    mobileLayoutState.mobileStatusBar = statusBar
+    mobileLayoutState.mobileMoneyValue = moneyValue
+    mobileLayoutState.mobileEnergyBar = energyBar
+    mobileLayoutState.mobileEnergyValue = energyValue
+  } else {
+    mobileLayoutState.mobileMoneyValue = document.getElementById('mobileMoneyValue')
+    mobileLayoutState.mobileEnergyBar = document.getElementById('mobileEnergyBar')
+    mobileLayoutState.mobileEnergyValue = document.getElementById('mobileEnergyValue')
+    statusBar = mobileLayoutState.mobileStatusBar
+  }
+
+  if (statusBar) {
+    statusBar.setAttribute('data-orientation', orientation || '')
+  }
+
+  if (statusBar.parentNode !== container) {
+    container.insertBefore(statusBar, container.firstChild || null)
+  }
+
+  if (mobileLayoutState.mobileMoneyValue) {
+    const currentMoney = Math.max(0, Math.floor(gameState.money || 0))
+    mobileLayoutState.mobileMoneyValue.textContent = `$${currentMoney}`
+  }
+
+  if (typeof updateEnergyBar === 'function') {
+    updateEnergyBar()
   }
 }
 
@@ -125,6 +262,144 @@ function setSidebarCollapsed(collapsed) {
   if (toggleButton) {
     toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
     toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
+  }
+}
+
+function ensureSidebarSwipeHandlers(enable) {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  if (!enable) {
+    if (mobileLayoutState.sidebarSwipeHandlersAttached && mobileLayoutState.sidebarSwipeHandlers) {
+      const { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel } = mobileLayoutState.sidebarSwipeHandlers
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
+      document.removeEventListener('touchcancel', onTouchCancel)
+    }
+    mobileLayoutState.sidebarSwipeHandlersAttached = false
+    mobileLayoutState.sidebarSwipeHandlers = null
+    mobileLayoutState.sidebarSwipeState = null
+    return
+  }
+
+  if (mobileLayoutState.sidebarSwipeHandlersAttached) {
+    return
+  }
+
+  const handleTouchStart = (event) => {
+    if (!document.body || !document.body.classList.contains('mobile-portrait')) {
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    if (!event.touches || event.touches.length !== 1) {
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    const touch = event.touches[0]
+    const collapsed = document.body.classList.contains('sidebar-collapsed')
+    const edgeThreshold = 28
+    const activeThreshold = 140
+
+    if (collapsed && touch.clientX <= edgeThreshold) {
+      mobileLayoutState.sidebarSwipeState = {
+        type: 'open',
+        identifier: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastY: touch.clientY
+      }
+    } else if (!collapsed && touch.clientX <= activeThreshold) {
+      mobileLayoutState.sidebarSwipeState = {
+        type: 'close',
+        identifier: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastY: touch.clientY
+      }
+    } else {
+      mobileLayoutState.sidebarSwipeState = null
+    }
+  }
+
+  const handleTouchMove = (event) => {
+    const swipeState = mobileLayoutState.sidebarSwipeState
+    if (!swipeState) {
+      return
+    }
+
+    if (!event.touches) {
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    const touch = Array.from(event.touches).find(t => t.identifier === swipeState.identifier)
+    if (!touch) {
+      return
+    }
+
+    swipeState.lastX = touch.clientX
+    swipeState.lastY = touch.clientY
+
+    const deltaX = Math.abs(touch.clientX - swipeState.startX)
+    const deltaY = Math.abs(touch.clientY - swipeState.startY)
+    if (deltaX > deltaY && deltaX > 10) {
+      event.preventDefault()
+    }
+  }
+
+  const endSwipe = (event) => {
+    const swipeState = mobileLayoutState.sidebarSwipeState
+    if (!swipeState) {
+      return
+    }
+
+    if (!event.changedTouches) {
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    const touch = Array.from(event.changedTouches).find(t => t.identifier === swipeState.identifier)
+    if (!touch) {
+      return
+    }
+
+    const deltaX = touch.clientX - swipeState.startX
+    const deltaY = Math.abs(touch.clientY - swipeState.startY)
+    const horizontal = Math.abs(deltaX) > deltaY
+    const activationThreshold = 40
+
+    if (horizontal) {
+      if (swipeState.type === 'open' && deltaX > activationThreshold) {
+        setSidebarCollapsed(false)
+      } else if (swipeState.type === 'close' && deltaX < -activationThreshold) {
+        setSidebarCollapsed(true)
+      }
+    }
+
+    mobileLayoutState.sidebarSwipeState = null
+  }
+
+  const cancelSwipe = () => {
+    mobileLayoutState.sidebarSwipeState = null
+  }
+
+  document.addEventListener('touchstart', handleTouchStart, { passive: true })
+  document.addEventListener('touchmove', handleTouchMove, { passive: false })
+  document.addEventListener('touchend', endSwipe)
+  document.addEventListener('touchcancel', cancelSwipe)
+
+  mobileLayoutState.sidebarSwipeHandlersAttached = true
+  mobileLayoutState.sidebarSwipeHandlers = {
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: endSwipe,
+    onTouchCancel: cancelSwipe
   }
 }
 
@@ -158,7 +433,21 @@ function restoreActions() {
   }
 }
 
-function applyMobileLandscapeLayout(enabled) {
+function restoreUtilityButton(button, originalParent, originalNextSibling) {
+  if (!button || !originalParent) {
+    return
+  }
+
+  if (button.parentNode !== originalParent) {
+    if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+      originalParent.insertBefore(button, originalNextSibling)
+    } else {
+      originalParent.appendChild(button)
+    }
+  }
+}
+
+function applyMobileSidebarLayout(mode) {
   ensureMobileLayoutElements()
 
   const {
@@ -166,40 +455,75 @@ function applyMobileLandscapeLayout(enabled) {
     mobileContainer,
     actions,
     mobileActionsContainer,
-    mobileControls
+    mobileControls,
+    sidebarUtilityContainer,
+    restartButton,
+    musicButton
   } = mobileLayoutState
 
   if (!productionArea || !mobileContainer || !document.body) {
     return
   }
 
-  if (enabled) {
+  if (mode) {
+    ensureMobileStatusBar(mobileContainer, mode)
     if (productionArea.parentNode !== mobileContainer) {
       mobileContainer.appendChild(productionArea)
     }
     mobileContainer.setAttribute('aria-hidden', 'false')
+    mobileContainer.setAttribute('data-orientation', mode)
     if (mobileControls) {
       mobileControls.setAttribute('aria-hidden', 'false')
+      mobileControls.setAttribute('data-orientation', mode)
     }
     if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
       mobileActionsContainer.appendChild(actions)
+    }
+    if (sidebarUtilityContainer) {
+      sidebarUtilityContainer.setAttribute('aria-hidden', 'false')
+      if (restartButton && restartButton.parentNode !== sidebarUtilityContainer) {
+        sidebarUtilityContainer.appendChild(restartButton)
+      }
+      if (musicButton && musicButton.parentNode !== sidebarUtilityContainer) {
+        sidebarUtilityContainer.appendChild(musicButton)
+      }
     }
     const shouldCollapse = typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
+    ensureSidebarSwipeHandlers(mode === 'portrait')
   } else {
     restoreProductionArea()
     restoreActions()
     mobileContainer.setAttribute('aria-hidden', 'true')
+    mobileContainer.removeAttribute('data-orientation')
     if (mobileControls) {
       mobileControls.setAttribute('aria-hidden', 'true')
+      mobileControls.removeAttribute('data-orientation')
     }
+    if (sidebarUtilityContainer) {
+      sidebarUtilityContainer.setAttribute('aria-hidden', 'true')
+    }
+    restoreUtilityButton(
+      mobileLayoutState.restartButton,
+      mobileLayoutState.restartOriginalParent,
+      mobileLayoutState.restartOriginalNextSibling
+    )
+    restoreUtilityButton(
+      mobileLayoutState.musicButton,
+      mobileLayoutState.musicOriginalParent,
+      mobileLayoutState.musicOriginalNextSibling
+    )
     document.body.classList.remove('sidebar-collapsed')
     if (mobileLayoutState.sidebarToggle) {
       mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
       mobileLayoutState.sidebarToggle.setAttribute('aria-label', 'Collapse sidebar')
     }
+    if (mobileLayoutState.mobileStatusBar) {
+      mobileLayoutState.mobileStatusBar.removeAttribute('data-orientation')
+    }
+    ensureSidebarSwipeHandlers(false)
   }
 }
 
@@ -211,29 +535,27 @@ function updateMobileLayoutClasses() {
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
   const shouldApplyMobileLandscape = isTouch && !isPortrait
+  const shouldApplyMobilePortrait = isTouch && isPortrait
+  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : (shouldApplyMobilePortrait ? 'portrait' : null)
 
   if (document.body.classList.contains('mobile-sidebar-right')) {
     document.body.classList.remove('mobile-sidebar-right')
   }
 
-  if (shouldApplyMobileLandscape) {
-    document.body.classList.add('mobile-landscape')
-  } else {
-    document.body.classList.remove('mobile-landscape')
-  }
+  document.body.classList.toggle('mobile-landscape', mobileMode === 'landscape')
+  document.body.classList.toggle('mobile-portrait', mobileMode === 'portrait')
 
-  const applied = document.body.classList.contains('mobile-landscape')
-  applyMobileLandscapeLayout(applied)
+  applyMobileSidebarLayout(mobileMode)
 
-  if (lastMobileLandscapeApplied !== applied) {
-    lastMobileLandscapeApplied = applied
+  if (lastMobileLayoutMode !== mobileMode) {
+    lastMobileLayoutMode = mobileMode
     if (gameInstance && gameInstance.canvasManager) {
       gameInstance.canvasManager.resizeCanvases()
     }
   }
 
   document.dispatchEvent(new CustomEvent('mobile-landscape-layout-changed', {
-    detail: { enabled: applied }
+    detail: { enabled: !!mobileMode, mode: mobileMode }
   }))
 }
 
@@ -307,7 +629,7 @@ import { ProductionController } from './ui/productionController.js'
 import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
-import { addPowerIndicator } from './ui/energyBar.js'
+import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'

@@ -22,6 +22,10 @@ export class GameLoop {
     this.bullets = bullets
     this.productionQueue = productionQueue
     this.moneyEl = moneyEl
+    this.moneyDisplays = new Set()
+    if (moneyEl) {
+      this.moneyDisplays.add(moneyEl)
+    }
     this.gameTimeEl = gameTimeEl
 
     this.lastFrameTime = null
@@ -46,6 +50,19 @@ export class GameLoop {
 
     // Track pause state to manage audio playback
     this.wasPaused = gameState.gamePaused
+
+    this.refreshMobileDisplays()
+  }
+
+  refreshMobileDisplays() {
+    if (this.moneyEl && !this.moneyDisplays.has(this.moneyEl)) {
+      this.moneyDisplays.add(this.moneyEl)
+    }
+
+    const mobileMoneyValue = document.getElementById('mobileMoneyValue')
+    if (mobileMoneyValue) {
+      this.moneyDisplays.add(mobileMoneyValue)
+    }
   }
 
   setAssetsLoaded(loaded) {
@@ -257,7 +274,10 @@ export class GameLoop {
       currentMoney !== this.lastMoneyDisplayed &&
       now - this.lastMoneyUpdate >= 333
     ) {
-      this.moneyEl.textContent = `$${currentMoney}`
+      this.refreshMobileDisplays()
+      this.moneyDisplays.forEach((display) => {
+        display.textContent = `$${currentMoney}`
+      })
       this.lastMoneyDisplayed = currentMoney
       this.lastMoneyUpdate = now
     }
@@ -352,7 +372,10 @@ export class GameLoop {
       legacyMoney !== this.lastMoneyDisplayed &&
       timestamp - this.lastMoneyUpdate >= 333
     ) {
-      this.moneyEl.textContent = `${legacyMoney}`
+      this.refreshMobileDisplays()
+      this.moneyDisplays.forEach((display) => {
+        display.textContent = `$${legacyMoney}`
+      })
       this.lastMoneyDisplayed = legacyMoney
       this.lastMoneyUpdate = timestamp
     }

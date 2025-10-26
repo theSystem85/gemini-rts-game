@@ -63,9 +63,14 @@
       
       <!-- Money display moved directly below the minimap -->
       <div id="moneyDisplay">
-        <p>Money: <span id="money">10000</span></p>
+        <p>
+          <span class="resource-label" id="moneyLabel">Money</span>
+          <span id="money" class="resource-value">$10000</span>
+        </p>
       </div>
-      
+
+      <div id="sidebarUtilityButtons" aria-hidden="true"></div>
+
       <div id="actions">
         <button id="repairBtn" class="action-button icon-button" title="Repair">
           <img src="/icons/wrench.svg" alt="Repair" class="button-icon white-icon">
