@@ -1,4 +1,4 @@
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, UNIT_PROPERTIES } from '../config.js'
 import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
@@ -33,7 +33,16 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
           }
         }
         if (unit.type === 'ambulance' && typeof unit.medics === 'number') {
-          const maxMedics = typeof unit.maxMedics === 'number' ? unit.maxMedics : unit.medics
+          const defaultMaxMedics = UNIT_PROPERTIES?.ambulance?.maxMedics ?? 10
+          let maxMedics
+
+          if (typeof unit.maxMedics === 'number' && unit.maxMedics > 0) {
+            maxMedics = unit.maxMedics
+          } else {
+            maxMedics = defaultMaxMedics
+            unit.maxMedics = maxMedics
+          }
+
           if (unit.medics < maxMedics) {
             unit.medicRefillTimer = (unit.medicRefillTimer || 0) + delta
             const restockInterval = 2000
