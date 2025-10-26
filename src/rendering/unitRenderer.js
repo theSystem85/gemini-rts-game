@@ -500,6 +500,12 @@ export class UnitRenderer {
       return
     }
 
+    // Avoid drawing duplicate utility indicators while path planning mode (Alt) is active,
+    // since the path planning renderer already draws the target markers in that mode.
+    if (gameState.altKeyDown) {
+      return
+    }
+
     let queuePosition = null
     selectedUnits.forEach(selectedUnit => {
       if (!selectedUnit?.selected) return
@@ -540,7 +546,7 @@ export class UnitRenderer {
     ctx.font = '10px Arial'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 3)
+    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 2)
 
     ctx.restore()
   }

@@ -164,7 +164,7 @@ export class PathPlanningRenderer {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         // Position the number slightly lower so it sits inside the triangle
-        ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 3)
+        ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
         ctx.restore()
 
         prevX = targetX
