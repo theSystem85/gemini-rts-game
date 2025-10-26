@@ -654,7 +654,13 @@ export class ProductionController {
 
         const buildingType = button.getAttribute('data-building-type')
         const currentTime = performance.now()
-        const isUpperHalf = this.isUpperHalfClick(event, button)
+        const hasExistingStack = this.getBuildingProductionCount(button) > 0 ||
+          button.classList.contains('ready-for-placement')
+        let isUpperHalf = this.isUpperHalfClick(event, button)
+
+        if (!hasExistingStack) {
+          isUpperHalf = true
+        }
 
         this.showStackDirectionIndicator(button, isUpperHalf ? 'increase' : 'decrease')
 
