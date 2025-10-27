@@ -148,10 +148,11 @@ export class PathPlanningRenderer {
         ctx.lineTo(screenX, screenY)
         ctx.stroke()
 
+        const half = MOVE_TARGET_INDICATOR_SIZE / 2
+
         if (action.type !== 'utility') {
           ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
           ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
-          const half = MOVE_TARGET_INDICATOR_SIZE / 2
           ctx.beginPath()
           ctx.moveTo(screenX, screenY + half)
           ctx.lineTo(screenX - half, screenY - half)
@@ -165,7 +166,7 @@ export class PathPlanningRenderer {
         ctx.font = '8px Arial'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        // Position the number slightly lower so it sits inside the triangle
+        // Keep the label slightly offset so it sits nicely within the indicator footprint
         ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
         ctx.restore()
 
