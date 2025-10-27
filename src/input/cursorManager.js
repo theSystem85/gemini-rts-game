@@ -121,7 +121,9 @@ export class CursorManager {
       const resolvedStyle =
         style === 'default' || style === undefined || style === null || style === ''
           ? GAME_DEFAULT_CURSOR
-          : style
+          : style === 'none'
+            ? GAME_DEFAULT_CURSOR
+            : style
       const classList = Array.isArray(classes) ? classes.filter(Boolean) : [classes].filter(Boolean)
       this.applyCursor(gameCanvas, resolvedStyle, classList)
     }

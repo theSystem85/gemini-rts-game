@@ -470,7 +470,7 @@ export class KeyboardHandler {
         gameState.sellMode = true
 
         // Use CSS class for sell cursor - this ensures consistent usage of sell.svg
-        gameCanvas.style.cursor = 'none'
+        gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
         gameCanvas.classList.add('sell-mode')
 
         // Show notification
