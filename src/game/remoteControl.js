@@ -74,6 +74,18 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       return
     }
 
+    // Remote control requires an active commander
+    if (unit.crew && typeof unit.crew === 'object' && !unit.crew.commander) {
+      unit.remoteControlActive = false
+      return
+    }
+
+    // Units without fuel cannot be remote controlled
+    if (unit.gas !== undefined && unit.gas <= 0) {
+      unit.remoteControlActive = false
+      return
+    }
+
     // Cancel pathing when using remote control
     if (rc.forward || rc.backward || rc.turnLeft || rc.turnRight) {
       unit.path = []
