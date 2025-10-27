@@ -2,6 +2,7 @@
 import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
+import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 
 const CURSOR_CLASS_NAMES = [
   'repair-mode',
@@ -117,8 +118,14 @@ export class CursorManager {
     const y = e.clientY
 
     const setCursor = (style, classes = []) => {
+      const resolvedStyle =
+        style === 'default' || style === undefined || style === null || style === ''
+          ? GAME_DEFAULT_CURSOR
+          : style === 'none'
+            ? GAME_DEFAULT_CURSOR
+            : style
       const classList = Array.isArray(classes) ? classes.filter(Boolean) : [classes].filter(Boolean)
-      this.applyCursor(gameCanvas, style, classList)
+      this.applyCursor(gameCanvas, resolvedStyle, classList)
     }
 
     // Check if cursor is over the game canvas

@@ -6,11 +6,13 @@ html, body {
   width: 100vw;
   overflow: hidden;
   background-color: #000;
+  cursor: var(--game-default-cursor);
 }
 
 :root {
   --sidebar-width: 250px;
   --mobile-action-size: 48px;
+  --game-default-cursor: url('/cursors/default.svg') 6 4, auto;
 }
 
 body {
@@ -131,7 +133,7 @@ body.is-touch {
   width: calc(100% - var(--sidebar-width));
   height: 100%;
   background: #000;
-  cursor: default;
+  cursor: var(--game-default-cursor);
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;

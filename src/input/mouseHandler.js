@@ -10,6 +10,7 @@ import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
 import { isWithinBaseRange } from '../utils/baseUtils.js'
+import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 
 export class MouseHandler {
   constructor() {
@@ -1668,7 +1669,7 @@ export class MouseHandler {
     // Reset cursor if any mode was canceled
     if (modeWasCanceled) {
       // Reset cursor
-      gameCanvas.style.cursor = 'default'
+      gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
 
       // Show notification
       showNotification('Action mode canceled')

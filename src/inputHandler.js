@@ -6,6 +6,7 @@ import { KeyboardHandler } from './input/keyboardHandler.js'
 import { SelectionManager } from './input/selectionManager.js'
 import { UnitCommandsHandler } from './input/unitCommands.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from './utils/inputUtils.js'
+import { GAME_DEFAULT_CURSOR, preloadCursorAssets } from './input/cursorStyles.js'
 
 export const selectedUnits = []
 export const selectionActive = false
@@ -26,6 +27,8 @@ export function setRenderScheduler(callback) {
 }
 
 export function setupInputHandlers(units, factories, mapGrid) {
+  preloadCursorAssets()
+
   // Store human player factory reference for later use
   const humanPlayer = gameState.humanPlayer || 'player1'
   const playerFactory = factories.find(factory => factory.id === humanPlayer) || factories.find(factory => factory.id === 'player')
@@ -68,9 +71,9 @@ export function setupInputHandlers(units, factories, mapGrid) {
           e.clientY <= sidebarRect.bottom
       )
 
-      // Always hide custom cursor over sidebar
+      // Always reset to the shared default cursor over the sidebar
       if (isOverSidebar) {
-        document.body.style.cursor = 'default'
+        document.body.style.cursor = GAME_DEFAULT_CURSOR
       }
     }
   })

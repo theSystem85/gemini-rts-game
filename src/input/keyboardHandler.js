@@ -11,6 +11,7 @@ import { cancelUnitMovement } from '../game/unifiedMovement.js'
 import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
 import { performanceDialog } from '../ui/performanceDialog.js'
 import { runtimeConfigDialog } from '../ui/runtimeConfigDialog.js'
+import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -469,7 +470,7 @@ export class KeyboardHandler {
         gameState.sellMode = true
 
         // Use CSS class for sell cursor - this ensures consistent usage of sell.svg
-        gameCanvas.style.cursor = 'none'
+        gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
         gameCanvas.classList.add('sell-mode')
 
         // Show notification
@@ -484,7 +485,7 @@ export class KeyboardHandler {
       }
 
       // Reset cursor and remove sell mode classes
-      gameCanvas.style.cursor = 'default'
+      gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
       gameCanvas.classList.remove('sell-mode', 'sell-blocked-mode')
 
       // Show notification
@@ -514,7 +515,7 @@ export class KeyboardHandler {
       gameState.repairMode = false
       if (repairBtn) repairBtn.classList.remove('active')
       gameCanvas.classList.remove('repair-mode', 'repair-blocked-mode')
-      gameCanvas.style.cursor = 'default'
+      gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
       this.showNotification('Repair mode deactivated.')
     }
   }
