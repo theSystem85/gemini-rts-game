@@ -205,6 +205,7 @@ export class CheatSystem {
           <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
           <li><code>status</code> - Show current cheat status</li>
           <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
+          <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
           <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
@@ -355,6 +356,13 @@ export class CheatSystem {
           this.setFuel(parsed)
         } else {
           this.showError('Invalid amount. Use: fuel [number] or fuel [percent%]')
+        }
+      } else if (normalizedCode.startsWith('medics ')) {
+        const amount = this.parseAmount(normalizedCode.substring(7))
+        if (amount !== null) {
+          this.setSelectedAmbulanceMedics(amount)
+        } else {
+          this.showError('Invalid amount. Use: medics [number]')
         }
       } else {
         const spawn = this.parseSpawnCommand(code)
@@ -665,6 +673,38 @@ export class CheatSystem {
     showNotification(`⛽ Fuel set to ${display} for ${selected.length} unit${selected.length > 1 ? 's' : ''}`,
       3000)
     playSound('confirmed', 0.5)
+  }
+
+  setSelectedAmbulanceMedics(amount) {
+    let selected = []
+    if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
+      try {
+        selected = window.debugGetSelectedUnits()
+      } catch {
+        selected = []
+      }
+    }
+
+    if (!selected || selected.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let appliedCount = 0
+    selected.forEach(unit => {
+      if (unit.type === 'ambulance' && typeof unit.maxMedics === 'number') {
+        const clamped = Math.min(Math.max(amount, 0), unit.maxMedics)
+        unit.medics = clamped
+        appliedCount++
+      }
+    })
+
+    if (appliedCount > 0) {
+      showNotification(`🚑 Medics set to ${amount} for ${appliedCount} ambulance${appliedCount > 1 ? 's' : ''}`, 3000)
+      playSound('confirmed', 0.5)
+    } else {
+      this.showError('No ambulances selected')
+    }
   }
 
   enableEnemyControl() {

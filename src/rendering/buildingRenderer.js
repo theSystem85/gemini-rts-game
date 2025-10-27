@@ -151,6 +151,7 @@ export class BuildingRenderer {
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
     this.renderWorkshopRestoration(ctx, building, screenX, screenY, width, height)
+    this.renderHospitalHealing(ctx, building, screenX, screenY, width, height)
     this.renderFactoryBudget(ctx, building, screenX, screenY, width, height)
     this.renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height)
   }
@@ -853,6 +854,46 @@ export class BuildingRenderer {
     ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
 
     ctx.restore()
+  }
+
+  renderHospitalHealing(ctx, building, screenX, screenY, width, height) {
+    // Only render for hospitals
+    if (building.type !== 'hospital') {
+      return
+    }
+
+    // Check if hospital is currently healing units
+    if (!building.healingUnits || building.healingUnits.length === 0) {
+      return
+    }
+
+    // Render progress bars for each healing unit
+    building.healingUnits.forEach((healing, index) => {
+      const progress = healing.progress / healing.totalProgress
+
+      // Position bars below the building, stacked vertically
+      const progressBarWidth = width * 0.8
+      const progressBarHeight = 3
+      const progressBarX = screenX + (width - progressBarWidth) / 2
+      const progressBarY = screenY + height + 2 + (index * (progressBarHeight + 1)) // Stack bars
+
+      ctx.save()
+
+      // Background bar
+      ctx.fillStyle = '#333'
+      ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+
+      // Progress fill (green color for healing)
+      ctx.fillStyle = '#00FF00'
+      ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
+
+      // Border
+      ctx.strokeStyle = '#000'
+      ctx.lineWidth = 1
+      ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+
+      ctx.restore()
+    })
   }
 
   renderFactoryBudget(ctx, building, screenX, screenY, width, height) {

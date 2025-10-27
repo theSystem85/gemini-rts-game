@@ -3,6 +3,7 @@ import { TILE_SIZE } from '../config.js'
 import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 export const updateAmbulanceLogic = logPerformance(function(units, gameState, delta) {
   const ambulances = units.filter(u => u.type === 'ambulance')
@@ -15,6 +16,17 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
     const queueActive = queueState && queueState.mode === 'heal' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+
+    // Check if ambulance is in hospital range - if so, don't heal, let it refill
+    const inHospitalRange = isAmbulanceInHospitalRange(ambulance, gameState.buildings)
+    if (inHospitalRange) {
+      // Clear healing target when in hospital range to allow refilling
+      if (ambulance.healingTarget) {
+        ambulance.healingTarget = null
+        ambulance.healingTimer = 0
+      }
+      return
+    }
 
     // Ambulances require a loader to tend to wounded units
     if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
@@ -188,4 +200,31 @@ export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
   // This would be handled by the input system when user clicks
 
   return true
+}
+
+function isAmbulanceInHospitalRange(ambulance, buildings) {
+  if (!buildings || buildings.length === 0) {
+    return false
+  }
+
+  const hospitals = buildings.filter(b => b.type === 'hospital')
+  if (hospitals.length === 0) return false
+
+  const ambulanceCenterX = (ambulance.x ?? ambulance.tileX * TILE_SIZE) + TILE_SIZE / 2
+  const ambulanceCenterY = (ambulance.y ?? ambulance.tileY * TILE_SIZE) + TILE_SIZE / 2
+
+  for (const hospital of hospitals) {
+    const serviceRadius = getServiceRadiusPixels(hospital)
+    if (serviceRadius <= 0) continue
+
+    const hospitalCenterX = hospital.x * TILE_SIZE + (hospital.width * TILE_SIZE) / 2
+    const hospitalCenterY = hospital.y * TILE_SIZE + (hospital.height * TILE_SIZE) / 2
+
+    const distance = Math.hypot(ambulanceCenterX - hospitalCenterX, ambulanceCenterY - hospitalCenterY)
+    if (distance <= serviceRadius) {
+      return true
+    }
+  }
+
+  return false
 }

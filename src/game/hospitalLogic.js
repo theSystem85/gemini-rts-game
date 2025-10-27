@@ -9,8 +9,32 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
     const serviceRadius = getServiceRadiusPixels(hospital)
     if (serviceRadius <= 0) return
 
+    // Initialize healing tracking if not present
+    if (!hospital.healingUnits) {
+      hospital.healingUnits = []
+    }
+
     const centerX = hospital.x * TILE_SIZE + (hospital.width * TILE_SIZE) / 2
     const centerY = hospital.y * TILE_SIZE + (hospital.height * TILE_SIZE) / 2
+
+    // Clear healing units that are no longer in range or don't need healing
+    hospital.healingUnits = hospital.healingUnits.filter(healing => {
+      const unit = units.find(u => u.id === healing.unitId)
+      if (!unit) return false
+
+      const unitCenterX = (unit.x ?? unit.tileX * TILE_SIZE) + TILE_SIZE / 2
+      const unitCenterY = (unit.y ?? unit.tileY * TILE_SIZE) + TILE_SIZE / 2
+      const distance = Math.hypot(unitCenterX - centerX, unitCenterY - centerY)
+      const inArea = distance <= serviceRadius
+
+      if (!inArea) return false
+
+      // Check if unit still needs healing
+      if (!unit.crew || typeof unit.crew !== 'object') return false
+      const missingRoles = Object.keys(unit.crew).filter(role => !unit.crew[role])
+      return missingRoles.length > 0
+    })
+
     units.forEach(unit => {
       if (!unit.crew || typeof unit.crew !== 'object') return
       // Skip ambulances for AI players as they don't use the crew system
@@ -23,30 +47,69 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
       if (inArea) {
         const healInterval = 10000
         const healOrder = ['driver', 'commander', 'loader', 'gunner']
-        unit.healTimer = (unit.healTimer || 0) + delta
 
-        while (unit.healTimer >= healInterval) {
+        // Find or create healing entry for this unit
+        let healingEntry = hospital.healingUnits.find(h => h.unitId === unit.id)
+        if (!healingEntry) {
           const missingRoles = Object.keys(unit.crew).filter(role => !unit.crew[role])
-          if (missingRoles.length === 0) {
-            unit.healTimer = 0
-            break
-          }
-
-          const roleToHeal = healOrder.find(role => missingRoles.includes(role)) || missingRoles[0]
-          unit.crew[roleToHeal] = true
-          unit.healTimer -= healInterval
-
-          // Only deduct money from human player
-          if (unit.owner === gameState.humanPlayer && gameState.money >= 100) {
-            gameState.money -= 100
+          if (missingRoles.length > 0) {
+            healingEntry = {
+              unitId: unit.id,
+              progress: 0,
+              totalProgress: healInterval,
+              currentRole: healOrder.find(role => missingRoles.includes(role)) || missingRoles[0]
+            }
+            hospital.healingUnits.push(healingEntry)
           }
         }
 
-        if (unit.type === 'ambulance' && typeof unit.medics === 'number') {
-          const maxMedics = typeof unit.maxMedics === 'number' ? unit.maxMedics : unit.medics
+        if (healingEntry) {
+          healingEntry.progress += delta
+
+          // Check if healing is complete for current role
+          if (healingEntry.progress >= healingEntry.totalProgress) {
+            // Heal the current role
+            unit.crew[healingEntry.currentRole] = true
+            healingEntry.progress -= healingEntry.totalProgress
+
+            // Only deduct money from human player
+            if (unit.owner === gameState.humanPlayer && gameState.money >= 10) {
+              gameState.money -= 10
+            }
+
+            // Find next role to heal
+            const missingRoles = Object.keys(unit.crew).filter(role => !unit.crew[role])
+            const nextRole = healOrder.find(role => missingRoles.includes(role)) || missingRoles[0]
+
+            if (nextRole) {
+              healingEntry.currentRole = nextRole
+              healingEntry.progress = 0
+            } else {
+              // All roles healed, remove from healing list
+              hospital.healingUnits = hospital.healingUnits.filter(h => h.unitId !== unit.id)
+            }
+          }
+        }
+      } else {
+        // Unit moved out of range, remove from healing
+        hospital.healingUnits = hospital.healingUnits.filter(h => h.unitId !== unit.id)
+      }
+    })
+
+    // Handle ambulance medic refills (separate from crew healing)
+    units.forEach(unit => {
+      // Only refill at friendly hospitals (matching owner)
+      if (unit.type === 'ambulance' && typeof unit.medics === 'number' && unit.owner === hospital.owner) {
+        const unitCenterX = (unit.x ?? unit.tileX * TILE_SIZE) + TILE_SIZE / 2
+        const unitCenterY = (unit.y ?? unit.tileY * TILE_SIZE) + TILE_SIZE / 2
+        const distance = Math.hypot(unitCenterX - centerX, unitCenterY - centerY)
+        const inArea = distance <= serviceRadius
+
+        if (inArea) {
+          const maxMedics = typeof unit.maxMedics === 'number' && unit.maxMedics > 0 ? unit.maxMedics : 10
           if (unit.medics < maxMedics) {
             unit.medicRefillTimer = (unit.medicRefillTimer || 0) + delta
-            const restockInterval = 2000
+            const restockInterval = 2000  // 2 seconds per medic refill
 
             while (unit.medics < maxMedics && unit.medicRefillTimer >= restockInterval) {
               unit.medics += 1
@@ -59,10 +122,7 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
           } else {
             unit.medicRefillTimer = 0
           }
-        }
-      } else {
-        unit.healTimer = 0
-        if (unit.type === 'ambulance') {
+        } else {
           unit.medicRefillTimer = 0
         }
       }
