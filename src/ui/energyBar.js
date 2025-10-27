@@ -63,7 +63,6 @@ export function addPowerIndicator() {
   // Make sure the container itself is visible and properly styled
   energyBarContainer.style.display = 'block'
   energyBarContainer.style.visibility = 'visible'
-  energyBarContainer.style.height = '26px'
   energyBarContainer.style.position = 'relative'
   energyBarContainer.style.overflow = 'visible'
   energyBarContainer.style.margin = '0'
