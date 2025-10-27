@@ -2,6 +2,7 @@
 import { SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 export const updateAmbulanceLogic = logPerformance(function(units, gameState, delta) {
   const ambulances = units.filter(u => u.type === 'ambulance')
@@ -16,6 +17,17 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
     )
     const now = performance?.now ? performance.now() : Date.now()
     const wasServing = Boolean(ambulance._alertWasServing)
+
+    // Check if ambulance is in hospital range - if so, don't heal, let it refill
+    const inHospitalRange = isAmbulanceInHospitalRange(ambulance, gameState.buildings)
+    if (inHospitalRange) {
+      // Clear healing target when in hospital range to allow refilling
+      if (ambulance.healingTarget) {
+        ambulance.healingTarget = null
+        ambulance.healingTimer = 0
+      }
+      return
+    }
 
     // Ambulances require a loader to tend to wounded units
     if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
@@ -129,8 +141,18 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
 
       // Check if ambulance has crew to give
       if (!ambulance.medics || ambulance.medics <= 0) {
+        ambulance.medics = 0
         ambulance.healingTarget = null
         ambulance.healingTimer = 0
+        if (unitCommands) {
+          unitCommands.clearUtilityQueueState(ambulance)
+        } else if (ambulance.utilityQueue) {
+          ambulance.utilityQueue.mode = null
+          ambulance.utilityQueue.targets = []
+          ambulance.utilityQueue.currentTargetId = null
+          ambulance.utilityQueue.currentTargetType = null
+          ambulance.utilityQueue.currentTargetAction = null
+        }
         return
       }
 
@@ -138,28 +160,22 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       ambulance.healingTimer = (ambulance.healingTimer || 0) + delta
       const healingInterval = 2000 // 2 seconds per crew member
 
-      while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
-        missingCrew.shift()
-
-        // Heal in order: driver, commander, loader, gunner
-        const healOrder = ['driver', 'commander', 'loader', 'gunner']
-        let healedRole = null
-
-        for (const checkRole of healOrder) {
-          if (!target.crew[checkRole]) {
-            target.crew[checkRole] = true
-            healedRole = checkRole
-            break
-          }
+      const healOrder = ['driver', 'commander', 'loader', 'gunner']
+      while (ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
+        const currentMissing = Object.keys(target.crew).filter(role => !target.crew[role])
+        if (currentMissing.length === 0) {
+          ambulance.healingTarget = null
+          ambulance.healingTimer = 0
+          break
         }
 
-        if (healedRole) {
-          ambulance.medics -= 1
-          ambulance.healingTimer -= healingInterval
+        const roleToHeal = healOrder.find(role => currentMissing.includes(role)) || currentMissing[0]
+        target.crew[roleToHeal] = true
+        ambulance.medics = Math.max(ambulance.medics - 1, 0)
+        ambulance.healingTimer -= healingInterval
 
-          // Play sound effect
-          // playSound('crewRestored')
-        }
+        // Play sound effect
+        // playSound('crewRestored')
       }
     }
 
@@ -237,4 +253,31 @@ export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
   // This would be handled by the input system when user clicks
 
   return true
+}
+
+function isAmbulanceInHospitalRange(ambulance, buildings) {
+  if (!buildings || buildings.length === 0) {
+    return false
+  }
+
+  const hospitals = buildings.filter(b => b.type === 'hospital')
+  if (hospitals.length === 0) return false
+
+  const ambulanceCenterX = (ambulance.x ?? ambulance.tileX * TILE_SIZE) + TILE_SIZE / 2
+  const ambulanceCenterY = (ambulance.y ?? ambulance.tileY * TILE_SIZE) + TILE_SIZE / 2
+
+  for (const hospital of hospitals) {
+    const serviceRadius = getServiceRadiusPixels(hospital)
+    if (serviceRadius <= 0) continue
+
+    const hospitalCenterX = hospital.x * TILE_SIZE + (hospital.width * TILE_SIZE) / 2
+    const hospitalCenterY = hospital.y * TILE_SIZE + (hospital.height * TILE_SIZE) / 2
+
+    const distance = Math.hypot(ambulanceCenterX - hospitalCenterX, ambulanceCenterY - hospitalCenterY)
+    if (distance <= serviceRadius) {
+      return true
+    }
+  }
+
+  return false
 }

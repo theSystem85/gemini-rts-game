@@ -21,13 +21,19 @@ export function ensureServiceRadius(building) {
     return 0
   }
 
+  const baseRadius = computeServiceRadiusTiles(building.width, building.height)
+  const multiplier = building.type === 'hospital' ? 2 : 1
+  const desiredRadius = baseRadius * multiplier
+
   if (typeof building.serviceRadius === 'number') {
+    if (building.serviceRadius !== desiredRadius) {
+      building.serviceRadius = desiredRadius
+    }
     return building.serviceRadius
   }
 
-  const radius = computeServiceRadiusTiles(building.width, building.height)
-  building.serviceRadius = radius
-  return radius
+  building.serviceRadius = desiredRadius
+  return building.serviceRadius
 }
 
 export function getServiceRadiusPixels(building) {
