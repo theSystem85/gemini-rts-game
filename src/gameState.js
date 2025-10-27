@@ -76,13 +76,13 @@ export const gameState = {
 
   // Remote control key states for tanks
   remoteControl: {
-    forward: false,
-    backward: false,
-    turnLeft: false,
-    turnRight: false,
-    turretLeft: false,
-    turretRight: false,
-    fire: false
+    forward: 0,
+    backward: 0,
+    turnLeft: 0,
+    turnRight: 0,
+    turretLeft: 0,
+    turretRight: 0,
+    fire: 0
   },
   remoteControlSources: {
     forward: {},

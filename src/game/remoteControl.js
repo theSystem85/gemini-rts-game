@@ -6,9 +6,43 @@ import {
   isTurretTankUnitType
 } from '../config.js'
 import { fireBullet } from './bulletSystem.js'
-import { selectedUnits } from '../inputHandler.js'
+import { selectedUnits, getKeyboardHandler } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
 import { normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
+
+let lastAutoFocusUnitId = null
+
+function ensureAutoFocusForRemoteControl(mapGrid) {
+  if (!selectedUnits || selectedUnits.length !== 1) {
+    lastAutoFocusUnitId = null
+    return
+  }
+
+  const [unit] = selectedUnits
+  if (!unit) {
+    lastAutoFocusUnitId = null
+    return
+  }
+
+  if (gameState.cameraFollowUnitId === unit.id) {
+    lastAutoFocusUnitId = unit.id
+    return
+  }
+
+  if (lastAutoFocusUnitId === unit.id) {
+    return
+  }
+
+  const keyboardHandler = getKeyboardHandler ? getKeyboardHandler() : null
+  if (!keyboardHandler || typeof keyboardHandler.toggleAutoFocus !== 'function') {
+    return
+  }
+
+  keyboardHandler.toggleAutoFocus(selectedUnits, mapGrid)
+  if (gameState.cameraFollowUnitId === unit.id) {
+    lastAutoFocusUnitId = unit.id
+  }
+}
 
 function getFireRateForUnit(unit) {
   if (unit.type === 'rocketTank') return 12000
@@ -61,8 +95,34 @@ function aimTurretAtTarget(unit, target) {
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
   const rc = gameState.remoteControl
   if (!rc) return
-  if (!selectedUnits || selectedUnits.length === 0) return
+  if (!selectedUnits || selectedUnits.length === 0) {
+    lastAutoFocusUnitId = null
+    return
+  }
+
   const now = performance.now()
+  const forwardIntensity = rc.forward || 0
+  const backwardIntensity = rc.backward || 0
+  const turnLeftIntensity = rc.turnLeft || 0
+  const turnRightIntensity = rc.turnRight || 0
+  const turretLeftIntensity = rc.turretLeft || 0
+  const turretRightIntensity = rc.turretRight || 0
+  const fireIntensity = rc.fire || 0
+  const remoteControlEngaged =
+    forwardIntensity > 0 ||
+    backwardIntensity > 0 ||
+    turnLeftIntensity > 0 ||
+    turnRightIntensity > 0 ||
+    turretLeftIntensity > 0 ||
+    turretRightIntensity > 0 ||
+    fireIntensity > 0
+
+  if (remoteControlEngaged) {
+    ensureAutoFocusForRemoteControl(mapGrid)
+  } else if (!gameState.cameraFollowUnitId) {
+    lastAutoFocusUnitId = null
+  }
+
   selectedUnits.forEach(unit => {
     if (!unit || !unit.movement) return
 
@@ -76,51 +136,47 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       return
     }
 
+    const hasMovementInput =
+      forwardIntensity > 0 ||
+      backwardIntensity > 0 ||
+      turnLeftIntensity > 0 ||
+      turnRightIntensity > 0
+
     // Cancel pathing when using remote control
-    if (rc.forward || rc.backward || rc.turnLeft || rc.turnRight) {
+    if (hasMovementInput) {
       unit.path = []
       unit.moveTarget = null
     }
 
     // Track whether this unit is actively being moved via remote control
-    unit.remoteControlActive = rc.forward || rc.backward || rc.turnLeft || rc.turnRight
+    unit.remoteControlActive = !!hasMovementInput
 
     // Adjust rotation of the wagon directly so movement aligns with it
-    if (rc.turnLeft) {
-      unit.direction = normalizeAngle(
-        (unit.direction || 0) - (unit.rotationSpeed || 0.05)
-      )
-    }
-    if (rc.turnRight) {
-      unit.direction = normalizeAngle(
-        (unit.direction || 0) + (unit.rotationSpeed || 0.05)
-      )
+    const rotationSpeed = unit.rotationSpeed || 0.05
+    const netTurn = turnRightIntensity - turnLeftIntensity
+    if (netTurn) {
+      unit.direction = normalizeAngle((unit.direction || 0) + rotationSpeed * netTurn)
     }
 
     // Manual turret rotation when shift-modified keys are used
-    if (hasTurret && rc.turretLeft) {
-      const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+    const turretSpeed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+    const netTurret = turretRightIntensity - turretLeftIntensity
+    if (hasTurret && netTurret) {
       const current =
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
-      unit.turretDirection = normalizeAngle(current - speed)
+      unit.turretDirection = normalizeAngle(current + turretSpeed * netTurret)
       unit.turretShouldFollowMovement = false
       unit.manualTurretOverrideUntil = now + 150
     }
-    if (hasTurret && rc.turretRight) {
-      const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
-      const current =
-        unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
-      unit.turretDirection = normalizeAngle(current + speed)
-      unit.turretShouldFollowMovement = false
-      unit.manualTurretOverrideUntil = now + 150
-    }
-    const manualTurretInput = hasTurret && (rc.turretLeft || rc.turretRight)
+
+    const manualTurretInput = hasTurret && (turretLeftIntensity > 0 || turretRightIntensity > 0)
     if (!manualTurretInput && hasTurret && unit.manualTurretOverrideUntil && now >= unit.manualTurretOverrideUntil) {
       unit.manualTurretOverrideUntil = null
     }
 
     const manualOverrideActive =
       manualTurretInput || (hasTurret && unit.manualTurretOverrideUntil && now < unit.manualTurretOverrideUntil)
+
     // Keep movement rotation in sync with wagon direction
     unit.movement.rotation = unit.direction
     unit.movement.targetRotation = unit.direction
@@ -138,8 +194,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     const effectiveMaxSpeed = 0.9 * speedModifier * terrainMultiplier
 
     // Move forward/backward relative to wagon direction
-    if (rc.forward || rc.backward) {
-      const directionSign = rc.forward ? 1 : -1
+    const movementAxis = forwardIntensity - backwardIntensity
+    if (movementAxis) {
+      const directionSign = movementAxis > 0 ? 1 : -1
+      const movementMagnitude = Math.min(Math.abs(movementAxis), 1)
       const fx = Math.cos(unit.direction)
       const fy = Math.sin(unit.direction)
 
@@ -158,8 +216,8 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         !(nextTileX === currentTileX && nextTileY === currentTileY)
 
       if (!occupied) {
-        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign
-        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * directionSign
+        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign * movementMagnitude
+        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * directionSign * movementMagnitude
         unit.movement.isMoving = true
       } else {
         unit.movement.targetVelocity.x = 0
@@ -177,7 +235,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     }
 
     // Fire forward when requested
-    if (hasTurret && rc.fire && unit.canFire !== false) {
+    if (hasTurret && fireIntensity > 0 && unit.canFire !== false) {
       const baseRate = getFireRateForUnit(unit)
       const effectiveRate =
         unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate
@@ -200,5 +258,6 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       }
     }
   })
-  rc.fire = false
+
+  rc.fire = 0
 }

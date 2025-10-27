@@ -10,6 +10,19 @@ const REMOTE_CONTROL_ACTIONS = [
   'fire'
 ]
 
+function clampIntensity(value) {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+  if (value <= 0) {
+    return 0
+  }
+  if (value >= 1) {
+    return 1
+  }
+  return value
+}
+
 function ensureRemoteControlSources() {
   if (!gameState.remoteControlSources) {
     gameState.remoteControlSources = {}
@@ -19,8 +32,8 @@ function ensureRemoteControlSources() {
     if (!gameState.remoteControlSources[action]) {
       gameState.remoteControlSources[action] = {}
     }
-    if (typeof gameState.remoteControl[action] !== 'boolean') {
-      gameState.remoteControl[action] = false
+    if (typeof gameState.remoteControl[action] !== 'number') {
+      gameState.remoteControl[action] = 0
     }
   }
 }
@@ -28,14 +41,19 @@ function ensureRemoteControlSources() {
 function recomputeAction(action) {
   const sources = gameState.remoteControlSources[action]
   if (!sources) {
-    gameState.remoteControl[action] = false
+    gameState.remoteControl[action] = 0
     return
   }
-  const hasSource = Object.keys(sources).length > 0
-  gameState.remoteControl[action] = hasSource
+  let maxIntensity = 0
+  for (const value of Object.values(sources)) {
+    if (value > maxIntensity) {
+      maxIntensity = value
+    }
+  }
+  gameState.remoteControl[action] = maxIntensity
 }
 
-export function setRemoteControlAction(action, source, active) {
+export function setRemoteControlAction(action, source, active, intensity = 1) {
   if (!REMOTE_CONTROL_ACTIONS.includes(action)) {
     throw new Error(`Unsupported remote control action: ${action}`)
   }
@@ -46,7 +64,12 @@ export function setRemoteControlAction(action, source, active) {
   ensureRemoteControlSources()
   const sources = gameState.remoteControlSources[action]
   if (active) {
-    sources[source] = true
+    const clamped = clampIntensity(intensity)
+    if (clamped > 0) {
+      sources[source] = clamped
+    } else {
+      delete sources[source]
+    }
   } else {
     delete sources[source]
   }
@@ -67,7 +90,7 @@ export function clearRemoteControlSource(source) {
 
 export function getRemoteControlActionState(action) {
   ensureRemoteControlSources()
-  return !!gameState.remoteControl[action]
+  return gameState.remoteControl[action] || 0
 }
 
 export function getRemoteControlActions() {

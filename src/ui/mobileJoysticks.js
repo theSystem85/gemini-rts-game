@@ -16,26 +16,38 @@ const HOLD_SOURCES = {
 }
 const TAP_PULSE_DURATION = 150
 
+const AXES = ['up', 'down', 'left', 'right']
+const MOVEMENT_DEADZONE = 0.25
+
+function createAxisState() {
+  return {
+    up: 0,
+    down: 0,
+    left: 0,
+    right: 0
+  }
+}
+
 const joystickState = {
   left: {
     element: null,
     base: null,
     thumb: null,
     pointerId: null,
-    direction: 'neutral',
     startTime: 0,
     moved: false,
-    activeActions: new Set()
+    axisIntensities: createAxisState(),
+    activeActions: new Map()
   },
   right: {
     element: null,
     base: null,
     thumb: null,
     pointerId: null,
-    direction: 'neutral',
     startTime: 0,
     moved: false,
-    activeActions: new Set()
+    axisIntensities: createAxisState(),
+    activeActions: new Map()
   }
 }
 
@@ -67,22 +79,23 @@ function isJoystickEnabled() {
   return !!(container && container.getAttribute('aria-hidden') !== 'true')
 }
 
-function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, direction = 'neutral') {
+function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, active = false) {
   const state = joystickState[side]
   const thumb = state.thumb
   if (!thumb) {
     return
   }
 
-  if (direction === 'neutral') {
+  if (!active || !radius) {
     thumb.style.transform = 'translate(-50%, -50%)'
     thumb.classList.remove('active')
     return
   }
 
-  const maxRadius = radius > 0 ? radius * 0.6 : (state.base ? state.base.getBoundingClientRect().width * 0.3 : 0)
   const distance = Math.hypot(dx, dy) || 1
-  const scale = distance > 0 ? Math.min(maxRadius / distance, 1) : 0
+  const maxRadius = radius * 0.85
+  const clampedDistance = Math.min(distance, maxRadius)
+  const scale = clampedDistance / distance
   const finalX = dx * scale
   const finalY = dy * scale
   thumb.style.transform = `translate(calc(-50% + ${finalX}px), calc(-50% + ${finalY}px))`
@@ -92,23 +105,39 @@ function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, direction = 'neut
 function applyMappingForSide(side, mapping) {
   const state = joystickState[side]
   const previousActions = state.activeActions
-  const nextActions = new Set()
+  const nextActions = new Map()
   const source = HOLD_SOURCES[side]
 
-  if (mapping && state.direction !== 'neutral') {
-    const actions = mapping[side] && mapping[side][state.direction]
-    if (Array.isArray(actions)) {
-      actions.forEach(action => nextActions.add(action))
-    }
+  if (mapping) {
+    const sideMapping = mapping[side] || {}
+    AXES.forEach((axis) => {
+      const intensity = state.axisIntensities[axis] || 0
+      if (!intensity) {
+        return
+      }
+      const actions = sideMapping[axis]
+      if (!Array.isArray(actions) || actions.length === 0) {
+        return
+      }
+      actions.forEach((action) => {
+        const existing = nextActions.get(action) || 0
+        if (intensity > existing) {
+          nextActions.set(action, intensity)
+        }
+      })
+    })
   }
 
-  nextActions.forEach(action => {
-    setRemoteControlAction(action, source, true)
+  nextActions.forEach((intensity, action) => {
+    const previousIntensity = previousActions.get(action) || 0
+    if (Math.abs(previousIntensity - intensity) > 0.001) {
+      setRemoteControlAction(action, source, true, intensity)
+    }
   })
 
-  previousActions.forEach(action => {
+  previousActions.forEach((previousIntensity, action) => {
     if (!nextActions.has(action)) {
-      setRemoteControlAction(action, source, false)
+      setRemoteControlAction(action, source, false, 0)
     }
   })
 
@@ -158,7 +187,7 @@ function triggerTapActions(side) {
 
   clearTapState(side)
   const source = TAP_SOURCES[side]
-  actions.forEach(action => setRemoteControlAction(action, source, true))
+  actions.forEach(action => setRemoteControlAction(action, source, true, 1))
 
   const timeoutId = window.setTimeout(() => {
     actions.forEach(action => setRemoteControlAction(action, source, false))
@@ -178,11 +207,11 @@ function resetJoystick(side) {
     }
   }
   state.pointerId = null
-  state.direction = 'neutral'
   state.startTime = 0
   state.moved = false
-  state.activeActions = new Set()
-  updateThumbPosition(side, 0, 0, 0, 'neutral')
+  state.axisIntensities = createAxisState()
+  state.activeActions = new Map()
+  updateThumbPosition(side, 0, 0, 0, false)
   clearRemoteControlSource(HOLD_SOURCES[side])
   clearTapState(side)
   clearRemoteControlSource(TAP_SOURCES[side])
@@ -258,20 +287,35 @@ function handlePointerMove(side, event, fromDown = false) {
   const dx = event.clientX - centerX
   const dy = event.clientY - centerY
   const radius = rect.width / 2
-  const threshold = radius * 0.3
-  const distance = Math.hypot(dx, dy)
+  const normalizedX = radius ? Math.max(-1, Math.min(dx / radius, 1)) : 0
+  const normalizedY = radius ? Math.max(-1, Math.min(dy / radius, 1)) : 0
+  const distance = Math.min(Math.hypot(normalizedX, normalizedY), 1)
 
-  let newDirection = 'neutral'
-  if (distance > threshold) {
-    newDirection = Math.abs(dx) > Math.abs(dy)
-      ? (dx > 0 ? 'right' : 'left')
-      : (dy > 0 ? 'down' : 'up')
+  const axisIntensities = createAxisState()
+  const computeDirectionalIntensity = (value) => {
+    if (value <= 0) {
+      return 0
+    }
+    if (value <= MOVEMENT_DEADZONE) {
+      return 0
+    }
+    const scaled = (value - MOVEMENT_DEADZONE) / (1 - MOVEMENT_DEADZONE)
+    return Math.max(0, Math.min(scaled, 1))
+  }
+
+  axisIntensities.up = computeDirectionalIntensity(Math.max(0, -normalizedY))
+  axisIntensities.down = computeDirectionalIntensity(Math.max(0, normalizedY))
+  axisIntensities.left = computeDirectionalIntensity(Math.max(0, -normalizedX))
+  axisIntensities.right = computeDirectionalIntensity(Math.max(0, normalizedX))
+
+  state.axisIntensities = axisIntensities
+  if (distance > MOVEMENT_DEADZONE + 0.02) {
     state.moved = true
   }
 
-  updateThumbPosition(side, dx, dy, radius, newDirection)
-  if (newDirection !== state.direction || fromDown) {
-    state.direction = newDirection
+  const isActive = axisIntensities.up || axisIntensities.down || axisIntensities.left || axisIntensities.right
+  updateThumbPosition(side, dx, dy, radius, !!isActive)
+  if (isActive || state.activeActions.size || fromDown) {
     applyJoystickMappings(true)
   }
 }
@@ -324,9 +368,11 @@ function initializeJoysticks() {
     state.base = state.element ? state.element.querySelector('.joystick-base') : null
     state.thumb = state.element ? state.element.querySelector('.joystick-thumb') : null
     state.pointerId = null
-    state.direction = 'neutral'
-    state.activeActions = new Set()
-    updateThumbPosition(side, 0, 0, 0, 'neutral')
+    state.startTime = 0
+    state.moved = false
+    state.axisIntensities = createAxisState()
+    state.activeActions = new Map()
+    updateThumbPosition(side, 0, 0, 0, false)
     attachJoystickEvents(side)
   })
 

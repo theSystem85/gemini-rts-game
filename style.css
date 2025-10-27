@@ -226,14 +226,17 @@ body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
 }
 
 #mobileJoystickContainer {
+  --joystick-base-size: calc(min(32vw, 180px) * 0.42);
   position: fixed;
   left: var(--safe-area-left);
   right: var(--safe-area-right);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-  padding: 0 24px;
+  padding-left: calc(var(--mobile-action-size) + 24px);
+  padding-right: calc(var(--mobile-action-size) + 24px);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: clamp(16px, 6vw, 48px);
   pointer-events: none;
   opacity: 0;
   z-index: 105;
@@ -251,8 +254,10 @@ body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"] {
 
 #mobileJoystickContainer .mobile-joystick {
   position: relative;
-  width: min(32vw, 180px);
-  height: min(32vw, 180px);
+  width: var(--joystick-base-size);
+  height: var(--joystick-base-size);
+  max-width: 96px;
+  max-height: 96px;
   pointer-events: auto;
   touch-action: none;
   display: flex;
@@ -264,17 +269,17 @@ body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"] {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(30, 30, 30, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+  background: rgba(30, 30, 30, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(4px);
   position: relative;
 }
 
 #mobileJoystickContainer .joystick-thumb {
   position: absolute;
-  width: 42%;
-  height: 42%;
+  width: 70%;
+  height: 70%;
   border-radius: 50%;
   left: 50%;
   top: 50%;
