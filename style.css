@@ -324,6 +324,49 @@ body.mobile-landscape #mobileActionsContainer {
   margin-top: auto;
 }
 
+#mobileMinimapButton {
+  display: none;
+}
+
+body.mobile-landscape #mobileMinimapButton {
+  display: flex;
+}
+
+#mobileMinimapButton .minimap-icon {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  display: block;
+}
+
+#mobileMinimapButton .minimap-icon::before,
+#mobileMinimapButton .minimap-icon::after {
+  content: '';
+  position: absolute;
+  background-color: currentColor;
+  opacity: 0.85;
+  border-radius: 1px;
+}
+
+#mobileMinimapButton .minimap-icon::before {
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+#mobileMinimapButton .minimap-icon::after {
+  height: 2px;
+  width: 100%;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 body.mobile-landscape #actions {
   flex-direction: column;
   gap: 6px;
@@ -598,6 +641,35 @@ body.mobile-landscape #sidebarUtilityButtons {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
+}
+
+#mobileMinimapOverlay {
+  position: fixed;
+  left: calc(var(--safe-area-left) + 12px);
+  bottom: calc(var(--safe-area-bottom) + var(--mobile-action-size) + 20px);
+  width: 176px;
+  height: 176px;
+  padding: 10px;
+  background: rgba(12, 12, 12, 0.92);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  display: none;
+  pointer-events: none;
+  z-index: 2100;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body.mobile-landscape #mobileMinimapOverlay.visible {
+  display: block;
+  pointer-events: auto;
+}
+
+#mobileMinimapOverlay canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: block;
 }
 
 body.mobile-landscape #sidebarUtilityButtons .action-button {
