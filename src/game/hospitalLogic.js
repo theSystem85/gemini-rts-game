@@ -1,7 +1,7 @@
 import { TILE_SIZE, UNIT_PROPERTIES } from '../config.js'
-import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
+import { showNotification } from '../ui/notifications.js'
 export const updateHospitalLogic = logPerformance(function(units, buildings, gameState, delta) {
   const hospitals = buildings.filter(b => b.type === 'hospital')
   if (hospitals.length === 0) return
@@ -20,6 +20,33 @@ export const updateHospitalLogic = logPerformance(function(units, buildings, gam
       const distance = Math.hypot(unitCenterX - centerX, unitCenterY - centerY)
       const inArea = distance <= serviceRadius
       const stationary = !(unit.movement && unit.movement.isMoving)
+
+      if (unit.type === 'ambulance') {
+        if (unit.refillingTarget !== hospital && unit.refillArrivalNotified) {
+          unit.refillArrivalNotified = false
+        }
+
+        if (unit.refillingTarget === hospital) {
+          if (inArea) {
+            if (unit.owner === gameState.humanPlayer && !unit.refillArrivalNotified) {
+              const hospitalTileX = Math.floor(centerX / TILE_SIZE)
+              const hospitalTileY = Math.floor(centerY / TILE_SIZE)
+              showNotification(
+                `Ambulance #${unit.id} reached hospital service zone at (${hospitalTileX}, ${hospitalTileY}).`,
+                2500
+              )
+            }
+            unit.refillArrivalNotified = true
+            unit.refillingStatus = 'arrived'
+          } else if (unit.refillArrivalNotified) {
+            unit.refillArrivalNotified = false
+            if (unit.refillingStatus === 'arrived') {
+              unit.refillingStatus = null
+            }
+          }
+        }
+      }
+
       if (inArea && stationary) {
         unit.healTimer = (unit.healTimer || 0) + delta
         const missing = Object.entries(unit.crew).filter(([_,alive]) => !alive)

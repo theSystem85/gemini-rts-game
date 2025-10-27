@@ -1171,6 +1171,10 @@ export class UnitCommandsHandler {
     }
 
     const serviceRadiusTiles = getServiceRadiusPixels(hospital) / TILE_SIZE
+    if (serviceRadiusTiles <= 0) {
+      showNotification('Selected hospital cannot provide crew refills right now!', 2500)
+      return
+    }
     const centerX = hospital.x + hospital.width / 2
     const centerY = hospital.y + hospital.height / 2
     const maxTileRadius = Math.max(1, Math.ceil(serviceRadiusTiles))
@@ -1198,13 +1202,18 @@ export class UnitCommandsHandler {
 
     candidatePositions.sort((a, b) => a.distance - b.distance)
 
+    if (candidatePositions.length === 0) {
+      showNotification('No accessible parking within the hospital service radius!', 2500)
+      return
+    }
+
     const reservedPositions = new Set()
     let anyAssigned = false
     let anyFailed = false
 
     ambulances.forEach(ambulance => {
       ambulance.refillingTarget = hospital
-
+      ambulance.refillArrivalNotified = false
       let destinationFound = false
       for (const pos of candidatePositions) {
         const key = `${pos.x},${pos.y}`
@@ -1221,18 +1230,32 @@ export class UnitCommandsHandler {
 
         if (path && path.length > 0) {
           reservedPositions.add(key)
-          ambulance.path = path
-          ambulance.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
+          const trimmedPath = path.length > 1 ? path.slice(1) : []
+          ambulance.path = trimmedPath
+          ambulance.moveTarget = { x: pos.x, y: pos.y }
           ambulance.target = null // Clear any attack target
           destinationFound = true
           anyAssigned = true
+          ambulance.refillingStatus = 'enRoute'
+          if (ambulance.owner === gameState.humanPlayer) {
+            showNotification(
+              `Ambulance #${ambulance.id} heading to hospital at (${hospital.x}, ${hospital.y}) for crew refill.`,
+              2500
+            )
+          }
           break
         }
       }
 
       if (!destinationFound) {
-        showNotification('Cannot reach hospital refill area!', 2000)
+        if (ambulance.owner === gameState.humanPlayer) {
+          showNotification(`Ambulance #${ambulance.id} cannot reach the hospital service area!`, 2500)
+        }
         ambulance.refillingTarget = null
+        ambulance.refillingStatus = null
+        ambulance.refillArrivalNotified = false
+        ambulance.path = []
+        ambulance.moveTarget = null
         anyFailed = true
       }
     })
