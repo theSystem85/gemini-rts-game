@@ -605,14 +605,14 @@ body.mobile-landscape.sidebar-collapsed #sidebar {
 #mobileSidebarControls {
   position: fixed;
   top: calc(var(--safe-area-top));
-  bottom: calc(var(--safe-area-bottom) + 12px);
+  bottom: calc(var(--safe-area-bottom));
   left: calc(var(--safe-area-left));
   display: none;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
   width: var(--mobile-action-size);
-  padding: 0 0 12px 0;
+  padding: 0;
   z-index: 1600;
   pointer-events: none;
 }
@@ -663,14 +663,14 @@ body.mobile-landscape #sidebarUtilityButtons {
   width: 176px;
   height: 176px;
   padding: 0;
-  background: rgba(12, 12, 12, 0.92);
-  border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   display: none;
   pointer-events: none;
   z-index: 2100;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   overflow: hidden;
   touch-action: none;
 }
@@ -683,7 +683,7 @@ body.mobile-landscape #mobileMinimapOverlay.visible {
 #mobileMinimapOverlay canvas {
   width: 100%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: 0;
   display: block;
   -webkit-user-select: none;
   user-select: none;

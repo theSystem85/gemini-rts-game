@@ -10,6 +10,9 @@ export function setupMinimapHandlers(gameCanvas) {
     return
   }
 
+  mobileMinimapState.minimapElement = minimapElement
+  mobileMinimapState.gameCanvas = gameCanvas
+
   // Handle minimap dragging state
   let isMinimapDragging = false
   let activeTouchId = null
@@ -129,7 +132,10 @@ const mobileMinimapState = {
   layoutEnabled: false,
   initialized: false,
   keyActive: false,
-  positionFrame: null
+  positionFrame: null,
+  activeDragPointerId: null,
+  gameCanvas: null,
+  minimapElement: null
 }
 
 function ensureMobileMinimapElements() {
@@ -145,7 +151,12 @@ function ensureMobileMinimapElements() {
     mobileMinimapState.button = document.getElementById('mobileMinimapButton')
   }
 
-  return !!(mobileMinimapState.overlay && mobileMinimapState.button)
+  const minimap = document.getElementById('minimap')
+  if (minimap) {
+    mobileMinimapState.minimapElement = minimap
+  }
+
+  return !!(mobileMinimapState.overlay && mobileMinimapState.button && mobileMinimapState.minimapElement)
 }
 
 function restoreMinimapToOriginalParent() {
@@ -176,7 +187,11 @@ function setMobileMinimapOverlayVisible(visible) {
     return
   }
 
-  const minimap = document.getElementById('minimap')
+  const minimap = mobileMinimapState.minimapElement || document.getElementById('minimap')
+  if (minimap) {
+    mobileMinimapState.minimapElement = minimap
+  }
+
   const { overlay, button } = mobileMinimapState
   if (!minimap || !overlay) {
     return
@@ -218,6 +233,7 @@ function setMobileMinimapOverlayVisible(visible) {
       window.cancelAnimationFrame(mobileMinimapState.positionFrame)
     }
     mobileMinimapState.positionFrame = null
+    mobileMinimapState.activeDragPointerId = null
   }
 }
 
@@ -246,20 +262,19 @@ function updateMobileOverlayPosition() {
     return
   }
 
-  const overlayRect = overlay.getBoundingClientRect()
-  const overlayHeight = overlayRect.height || overlay.offsetHeight || 0
   const viewport = window.visualViewport
   const viewportTop = viewport ? viewport.offsetTop : 0
   const viewportLeft = viewport ? viewport.offsetLeft : 0
+  const viewportHeight = viewport ? viewport.height : window.innerHeight
 
   const left = Math.max(buttonRect.left + viewportLeft, 0)
-  const top = buttonRect.bottom - overlayHeight + viewportTop
+  const bottom = Math.max((viewportTop + viewportHeight) - buttonRect.bottom, 0)
 
   overlay.style.left = `${left}px`
-  overlay.style.top = `${top}px`
-  overlay.style.bottom = ''
+  overlay.style.top = ''
   overlay.style.right = ''
   overlay.style.transform = ''
+  overlay.style.bottom = `${bottom}px`
 }
 
 function scheduleMobileOverlayPositionUpdate() {
@@ -280,11 +295,60 @@ function scheduleMobileOverlayPositionUpdate() {
   }
 }
 
+function forwardPointerToMinimap(clientX, clientY) {
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { minimapElement, gameCanvas, overlay } = mobileMinimapState
+  if (!minimapElement || !gameCanvas || !overlay || !overlay.classList.contains('visible')) {
+    return
+  }
+
+  handleMinimapClick({ target: minimapElement, clientX, clientY }, gameCanvas)
+}
+
+function startMobileMinimapDrag(event) {
+  mobileMinimapState.activeDragPointerId = event.pointerId
+
+  const executeForwarding = () => {
+    forwardPointerToMinimap(event.clientX, event.clientY)
+  }
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(executeForwarding)
+  } else {
+    executeForwarding()
+  }
+}
+
+function handleMobileMinimapPointerMove(event) {
+  if (mobileMinimapState.activeDragPointerId !== event.pointerId) {
+    return
+  }
+
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!mobileMinimapState.overlay || !mobileMinimapState.overlay.classList.contains('visible')) {
+    return
+  }
+
+  event.preventDefault()
+  forwardPointerToMinimap(event.clientX, event.clientY)
+}
+
 function endMobileMinimapHold(pointerId) {
   if (mobileMinimapState.holdPointerId !== pointerId) {
     return
   }
   mobileMinimapState.holdPointerId = null
+  mobileMinimapState.activeDragPointerId = null
   setMobileMinimapOverlayVisible(false)
 }
 
@@ -303,10 +367,31 @@ function handleMobileMinimapPointerDown(event) {
 
   mobileMinimapState.holdPointerId = event.pointerId
 
+  if (mobileMinimapState.button && typeof mobileMinimapState.button.setPointerCapture === 'function') {
+    try {
+      mobileMinimapState.button.setPointerCapture(event.pointerId)
+    } catch {
+      // Ignore capture errors on unsupported elements
+    }
+  }
+
+  event.preventDefault()
+
   setMobileMinimapOverlayVisible(true)
+  startMobileMinimapDrag(event)
 }
 
 function handleMobileMinimapPointerUp(event) {
+  if (mobileMinimapState.button && typeof mobileMinimapState.button.releasePointerCapture === 'function') {
+    try {
+      if (typeof mobileMinimapState.button.hasPointerCapture === 'function' && mobileMinimapState.button.hasPointerCapture(event.pointerId)) {
+        mobileMinimapState.button.releasePointerCapture(event.pointerId)
+      }
+    } catch {
+      // Ignore release errors
+    }
+  }
+
   endMobileMinimapHold(event.pointerId)
 }
 
@@ -363,6 +448,7 @@ function initializeMobileMinimapToggle() {
 
   document.addEventListener('pointerup', handleMobileMinimapPointerUp)
   document.addEventListener('pointercancel', handleMobileMinimapPointerUp)
+  document.addEventListener('pointermove', handleMobileMinimapPointerMove, { passive: false })
 
   mobileMinimapState.initialized = true
 }
@@ -370,6 +456,7 @@ function initializeMobileMinimapToggle() {
 function disableMobileMinimapOverlay() {
   mobileMinimapState.holdPointerId = null
   mobileMinimapState.keyActive = false
+  mobileMinimapState.activeDragPointerId = null
   setMobileMinimapOverlayVisible(false)
 }
 
