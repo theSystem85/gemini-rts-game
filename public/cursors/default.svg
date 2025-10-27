@@ -1,43 +1,26 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" id="rts-arrow-cursor">
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <style>
-      #rts-arrow-cursor .arrow-body {
-        fill: #000000;
-        stroke: #ff7a1f;
-        stroke-width: 1.5;
-        stroke-linejoin: round;
-        filter: drop-shadow(0 0 1.5px #ff7a1f) drop-shadow(0 0 3px #ff7a1f);
-      }
-
-      #rts-arrow-cursor .arrow-outline {
-        fill: none;
-        stroke: #000000;
-        stroke-width: 0.5;
-        stroke-linejoin: round;
-        opacity: 0.6;
-      }
-    </style>
+    <linearGradient id="sleekFillLighter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9a9a9a"/>
+      <stop offset="50%" stop-color="#5a5a5a"/>
+      <stop offset="100%" stop-color="#2a2a2a"/>
+    </linearGradient>
+    <linearGradient id="topShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-
-  <path class="arrow-body" d="
-    M6 4
-    L6 22
-    L10.5 17.5
-    L13.5 27
-    L16.5 26
-    L13.5 17.5
-    L22 17.5
-    Z
-  "/>
-
-  <path class="arrow-outline" d="
-    M6 4
-    L6 22
-    L10.5 17.5
-    L13.5 27
-    L16.5 26
-    L13.5 17.5
-    L22 17.5
-    Z
-  "/>
+  <path d="M6 4 L6 22 L10.5 17.5 L13.5 27 L16.5 26 L13.5 17.5 L22 17.5 Z"
+        fill="url(#sleekFillLighter)"
+        stroke="#dcd48a"
+        stroke-width="1.4"
+        stroke-linejoin="round"/>
+  <path d="M6 4 L6 14 L11 17 L22 17.5 L6 4 Z"
+        fill="url(#topShine)"/>
+  <path d="M6 4 L6 22 L10.5 17.5 L13.5 27 L16.5 26 L13.5 17.5 L22 17.5 Z"
+        fill="none"
+        stroke="#000000"
+        stroke-width="0.7"
+        stroke-linejoin="round"
+        opacity="0.6"/>
 </svg>
