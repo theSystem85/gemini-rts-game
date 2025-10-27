@@ -128,7 +128,8 @@ const mobileMinimapState = {
   holdPointerId: null,
   layoutEnabled: false,
   initialized: false,
-  keyActive: false
+  keyActive: false,
+  positionFrame: null
 }
 
 function ensureMobileMinimapElements() {
@@ -198,15 +199,84 @@ function setMobileMinimapOverlayVisible(visible) {
     if (button) {
       button.setAttribute('aria-pressed', 'true')
     }
+    scheduleMobileOverlayPositionUpdate()
   } else {
     restoreMinimapToOriginalParent()
     if (overlay) {
       overlay.classList.remove('visible')
       overlay.setAttribute('aria-hidden', 'true')
+      overlay.style.left = ''
+      overlay.style.right = ''
+      overlay.style.top = ''
+      overlay.style.bottom = ''
+      overlay.style.transform = ''
     }
     if (button) {
       button.setAttribute('aria-pressed', 'false')
     }
+    if (mobileMinimapState.positionFrame !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(mobileMinimapState.positionFrame)
+    }
+    mobileMinimapState.positionFrame = null
+  }
+}
+
+function updateMobileOverlayPosition() {
+  mobileMinimapState.positionFrame = null
+
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return
+  }
+
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { overlay, button } = mobileMinimapState
+  if (!overlay || !button || !overlay.classList.contains('visible')) {
+    return
+  }
+
+  const buttonRect = button.getBoundingClientRect()
+  if ((buttonRect.width === 0 && buttonRect.height === 0) || !Number.isFinite(buttonRect.left)) {
+    return
+  }
+
+  const overlayRect = overlay.getBoundingClientRect()
+  const overlayHeight = overlayRect.height || overlay.offsetHeight || 0
+  const viewport = window.visualViewport
+  const viewportTop = viewport ? viewport.offsetTop : 0
+  const viewportLeft = viewport ? viewport.offsetLeft : 0
+
+  const left = Math.max(buttonRect.left + viewportLeft, 0)
+  const top = buttonRect.bottom - overlayHeight + viewportTop
+
+  overlay.style.left = `${left}px`
+  overlay.style.top = `${top}px`
+  overlay.style.bottom = ''
+  overlay.style.right = ''
+  overlay.style.transform = ''
+}
+
+function scheduleMobileOverlayPositionUpdate() {
+  if (typeof window === 'undefined') {
+    updateMobileOverlayPosition()
+    return
+  }
+
+  if (mobileMinimapState.positionFrame !== null && typeof window.cancelAnimationFrame === 'function') {
+    window.cancelAnimationFrame(mobileMinimapState.positionFrame)
+    mobileMinimapState.positionFrame = null
+  }
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    mobileMinimapState.positionFrame = window.requestAnimationFrame(updateMobileOverlayPosition)
+  } else {
+    updateMobileOverlayPosition()
   }
 }
 
@@ -330,9 +400,16 @@ if (typeof document !== 'undefined') {
       restoreMinimapToOriginalParent()
       setMobileMinimapOverlayVisible(false)
     }
+    scheduleMobileOverlayPositionUpdate()
   })
 
   window.addEventListener('blur', () => {
     disableMobileMinimapOverlay()
   })
+
+  window.addEventListener('resize', scheduleMobileOverlayPositionUpdate)
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleMobileOverlayPositionUpdate)
+    window.visualViewport.addEventListener('scroll', scheduleMobileOverlayPositionUpdate)
+  }
 }
