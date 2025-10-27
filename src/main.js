@@ -621,19 +621,27 @@ if (window.visualViewport) {
 function setupDoubleTapPrevention() {
   let lastTouchEnd = 0
 
-  document.addEventListener('touchend', (event) => {
-    if (!document.body || !document.body.classList.contains('is-touch')) {
-      lastTouchEnd = Date.now()
-      return
-    }
+  if (document.documentElement) {
+    document.documentElement.style.touchAction = 'manipulation'
+  }
+  if (document.body) {
+    document.body.style.touchAction = 'manipulation'
+  }
 
+  document.addEventListener('touchstart', (event) => {
+    if (event.touches && event.touches.length > 1) {
+      event.preventDefault()
+    }
+  }, { passive: false })
+
+  document.addEventListener('touchend', (event) => {
     if (event.touches && event.touches.length > 0) {
       lastTouchEnd = Date.now()
       return
     }
 
     const target = event.target
-    if (target && typeof target.closest === 'function' && target.closest('input, textarea, select')) {
+    if (target && typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]')) {
       lastTouchEnd = Date.now()
       return
     }

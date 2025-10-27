@@ -10,6 +10,9 @@ export function setupMinimapHandlers(gameCanvas) {
     return
   }
 
+  mobileMinimapState.minimapElement = minimapElement
+  mobileMinimapState.gameCanvas = gameCanvas
+
   // Handle minimap dragging state
   let isMinimapDragging = false
   let activeTouchId = null
@@ -118,4 +121,458 @@ export function handleMinimapClick(e, gameCanvas) {
   // Update gameState.scrollOffset
   gameState.scrollOffset.x = Math.max(0, Math.min(newX, MAP_TILES_X * TILE_SIZE - logicalCanvasWidth))
   gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight))
+}
+
+const mobileMinimapState = {
+  overlay: null,
+  button: null,
+  originalParent: null,
+  originalNextSibling: null,
+  holdPointerId: null,
+  layoutEnabled: false,
+  initialized: false,
+  keyActive: false,
+  positionFrame: null,
+  activeDragPointerId: null,
+  gameCanvas: null,
+  minimapElement: null
+}
+
+function ensureMobileMinimapElements() {
+  if (typeof document === 'undefined') {
+    return false
+  }
+
+  if (!mobileMinimapState.overlay || !mobileMinimapState.overlay.isConnected) {
+    mobileMinimapState.overlay = document.getElementById('mobileMinimapOverlay')
+  }
+
+  if (!mobileMinimapState.button || !mobileMinimapState.button.isConnected) {
+    mobileMinimapState.button = document.getElementById('mobileMinimapButton')
+  }
+
+  const minimap = document.getElementById('minimap')
+  if (minimap) {
+    mobileMinimapState.minimapElement = minimap
+  }
+
+  return !!(mobileMinimapState.overlay && mobileMinimapState.button && mobileMinimapState.minimapElement)
+}
+
+function parseCssPixelValue(value) {
+  if (!value) {
+    return 0
+  }
+
+  const trimmed = `${value}`.trim()
+  if (!trimmed) {
+    return 0
+  }
+
+  const parsed = Number.parseFloat(trimmed)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getSafeAreaInsets() {
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body) {
+    return { left: 0, bottom: 0 }
+  }
+
+  try {
+    const style = window.getComputedStyle(document.body)
+    return {
+      left: parseCssPixelValue(style.getPropertyValue('--safe-area-left')),
+      bottom: parseCssPixelValue(style.getPropertyValue('--safe-area-bottom'))
+    }
+  } catch {
+    return { left: 0, bottom: 0 }
+  }
+}
+
+function syncMobileOverlaySize() {
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { overlay, minimapElement } = mobileMinimapState
+  if (!overlay || !minimapElement) {
+    return
+  }
+
+  let widthValue = minimapElement.style.width
+  let heightValue = minimapElement.style.height
+  let minimapRect = null
+
+  if ((!widthValue || !heightValue) && typeof minimapElement.getBoundingClientRect === 'function') {
+    minimapRect = minimapElement.getBoundingClientRect()
+  }
+
+  if (!widthValue && minimapRect && minimapRect.width > 0) {
+    widthValue = `${minimapRect.width}px`
+  }
+
+  if (!heightValue && minimapRect && minimapRect.height > 0) {
+    heightValue = `${minimapRect.height}px`
+  }
+
+  if (widthValue) {
+    overlay.style.width = widthValue
+  }
+
+  if (heightValue) {
+    overlay.style.height = heightValue
+  }
+}
+
+function restoreMinimapToOriginalParent() {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const minimap = document.getElementById('minimap')
+  const { overlay, originalParent, originalNextSibling } = mobileMinimapState
+  if (!minimap) {
+    return
+  }
+
+  if (overlay && overlay.contains(minimap) && originalParent) {
+    if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+      originalParent.insertBefore(minimap, originalNextSibling)
+    } else {
+      originalParent.appendChild(minimap)
+    }
+  }
+
+  mobileMinimapState.originalParent = null
+  mobileMinimapState.originalNextSibling = null
+}
+
+function setMobileMinimapOverlayVisible(visible) {
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const minimap = mobileMinimapState.minimapElement || document.getElementById('minimap')
+  if (minimap) {
+    mobileMinimapState.minimapElement = minimap
+  }
+
+  const { overlay, button } = mobileMinimapState
+  if (!minimap || !overlay) {
+    return
+  }
+
+  if (visible) {
+    if (!mobileMinimapState.layoutEnabled) {
+      return
+    }
+    const currentParent = minimap.parentNode
+    if (currentParent && currentParent !== overlay) {
+      mobileMinimapState.originalParent = currentParent
+      mobileMinimapState.originalNextSibling = minimap.nextSibling
+    }
+    if (minimap.parentNode !== overlay) {
+      overlay.appendChild(minimap)
+    }
+    syncMobileOverlaySize()
+    overlay.classList.add('visible')
+    overlay.setAttribute('aria-hidden', 'false')
+    if (button) {
+      button.setAttribute('aria-pressed', 'true')
+    }
+    scheduleMobileOverlayPositionUpdate()
+  } else {
+    restoreMinimapToOriginalParent()
+    if (overlay) {
+      overlay.classList.remove('visible')
+      overlay.setAttribute('aria-hidden', 'true')
+      overlay.style.left = ''
+      overlay.style.right = ''
+      overlay.style.top = ''
+      overlay.style.bottom = ''
+      overlay.style.transform = ''
+      overlay.style.width = ''
+      overlay.style.height = ''
+    }
+    if (button) {
+      button.setAttribute('aria-pressed', 'false')
+    }
+    if (mobileMinimapState.positionFrame !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(mobileMinimapState.positionFrame)
+    }
+    mobileMinimapState.positionFrame = null
+    mobileMinimapState.activeDragPointerId = null
+  }
+}
+
+function updateMobileOverlayPosition() {
+  mobileMinimapState.positionFrame = null
+
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return
+  }
+
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { overlay, button } = mobileMinimapState
+  if (!overlay || !button || !overlay.classList.contains('visible')) {
+    return
+  }
+
+  syncMobileOverlaySize()
+
+  const viewport = window.visualViewport
+  const viewportTop = viewport ? viewport.offsetTop : 0
+  const viewportLeft = viewport ? viewport.offsetLeft : 0
+  const { left: safeLeft, bottom: safeBottom } = getSafeAreaInsets()
+
+  const left = Math.max(viewportLeft + safeLeft, 0)
+  const bottom = Math.max(viewportTop + safeBottom, 0)
+
+  overlay.style.left = `${left}px`
+  overlay.style.top = ''
+  overlay.style.right = ''
+  overlay.style.transform = ''
+  overlay.style.bottom = `${bottom}px`
+
+  if (typeof overlay.getBoundingClientRect === 'function') {
+    const overlayRect = overlay.getBoundingClientRect()
+    const buttonRect = button.getBoundingClientRect()
+    if (overlayRect && buttonRect && buttonRect.width > 0 && overlayRect.width > 0) {
+      if (buttonRect.right > overlayRect.right) {
+        const horizontalShift = buttonRect.right - overlayRect.right
+        overlay.style.left = `${Math.max(left - horizontalShift, viewportLeft)}px`
+      }
+    }
+  }
+}
+
+function scheduleMobileOverlayPositionUpdate() {
+  if (typeof window === 'undefined') {
+    updateMobileOverlayPosition()
+    return
+  }
+
+  if (mobileMinimapState.positionFrame !== null && typeof window.cancelAnimationFrame === 'function') {
+    window.cancelAnimationFrame(mobileMinimapState.positionFrame)
+    mobileMinimapState.positionFrame = null
+  }
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    mobileMinimapState.positionFrame = window.requestAnimationFrame(updateMobileOverlayPosition)
+  } else {
+    updateMobileOverlayPosition()
+  }
+}
+
+function forwardPointerToMinimap(clientX, clientY) {
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { minimapElement, gameCanvas, overlay } = mobileMinimapState
+  if (!minimapElement || !gameCanvas || !overlay || !overlay.classList.contains('visible')) {
+    return
+  }
+
+  handleMinimapClick({ target: minimapElement, clientX, clientY }, gameCanvas)
+}
+
+function startMobileMinimapDrag(event) {
+  mobileMinimapState.activeDragPointerId = event.pointerId
+
+  const executeForwarding = () => {
+    forwardPointerToMinimap(event.clientX, event.clientY)
+  }
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(executeForwarding)
+  } else {
+    executeForwarding()
+  }
+}
+
+function handleMobileMinimapPointerMove(event) {
+  if (mobileMinimapState.activeDragPointerId !== event.pointerId) {
+    return
+  }
+
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (!mobileMinimapState.overlay || !mobileMinimapState.overlay.classList.contains('visible')) {
+    return
+  }
+
+  event.preventDefault()
+  forwardPointerToMinimap(event.clientX, event.clientY)
+}
+
+function endMobileMinimapHold(pointerId) {
+  if (mobileMinimapState.holdPointerId !== pointerId) {
+    return
+  }
+  mobileMinimapState.holdPointerId = null
+  mobileMinimapState.activeDragPointerId = null
+  setMobileMinimapOverlayVisible(false)
+}
+
+function handleMobileMinimapPointerDown(event) {
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+
+  if (event.pointerType === 'mouse' && event.button !== 0) {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  mobileMinimapState.holdPointerId = event.pointerId
+
+  if (mobileMinimapState.button && typeof mobileMinimapState.button.setPointerCapture === 'function') {
+    try {
+      mobileMinimapState.button.setPointerCapture(event.pointerId)
+    } catch {
+      // Ignore capture errors on unsupported elements
+    }
+  }
+
+  event.preventDefault()
+
+  setMobileMinimapOverlayVisible(true)
+  startMobileMinimapDrag(event)
+}
+
+function handleMobileMinimapPointerUp(event) {
+  if (mobileMinimapState.button && typeof mobileMinimapState.button.releasePointerCapture === 'function') {
+    try {
+      if (typeof mobileMinimapState.button.hasPointerCapture === 'function' && mobileMinimapState.button.hasPointerCapture(event.pointerId)) {
+        mobileMinimapState.button.releasePointerCapture(event.pointerId)
+      }
+    } catch {
+      // Ignore release errors
+    }
+  }
+
+  endMobileMinimapHold(event.pointerId)
+}
+
+function handleMobileMinimapKeyDown(event) {
+  if (event.repeat) {
+    return
+  }
+  if (!mobileMinimapState.layoutEnabled) {
+    return
+  }
+  if (event.code !== 'Space' && event.code !== 'Enter') {
+    return
+  }
+  mobileMinimapState.keyActive = true
+  event.preventDefault()
+  setMobileMinimapOverlayVisible(true)
+}
+
+function handleMobileMinimapKeyUp(event) {
+  if (!mobileMinimapState.keyActive) {
+    return
+  }
+  if (event.code !== 'Space' && event.code !== 'Enter') {
+    return
+  }
+  mobileMinimapState.keyActive = false
+  event.preventDefault()
+  setMobileMinimapOverlayVisible(false)
+}
+
+function initializeMobileMinimapToggle() {
+  if (mobileMinimapState.initialized || typeof document === 'undefined') {
+    return
+  }
+
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { button } = mobileMinimapState
+  if (!button) {
+    return
+  }
+
+  button.setAttribute('aria-pressed', 'false')
+  button.addEventListener('pointerdown', handleMobileMinimapPointerDown)
+  button.addEventListener('pointerup', handleMobileMinimapPointerUp)
+  button.addEventListener('pointercancel', handleMobileMinimapPointerUp)
+  button.addEventListener('keydown', handleMobileMinimapKeyDown)
+  button.addEventListener('keyup', handleMobileMinimapKeyUp)
+  button.addEventListener('contextmenu', (event) => {
+    event.preventDefault()
+  })
+
+  document.addEventListener('pointerup', handleMobileMinimapPointerUp)
+  document.addEventListener('pointercancel', handleMobileMinimapPointerUp)
+  document.addEventListener('pointermove', handleMobileMinimapPointerMove, { passive: false })
+
+  mobileMinimapState.initialized = true
+}
+
+function disableMobileMinimapOverlay() {
+  mobileMinimapState.holdPointerId = null
+  mobileMinimapState.keyActive = false
+  mobileMinimapState.activeDragPointerId = null
+  setMobileMinimapOverlayVisible(false)
+}
+
+if (typeof document !== 'undefined') {
+  const init = () => {
+    initializeMobileMinimapToggle()
+    if (document.body) {
+      mobileMinimapState.layoutEnabled = document.body.classList.contains('mobile-landscape')
+    }
+    if (!mobileMinimapState.layoutEnabled) {
+      setMobileMinimapOverlayVisible(false)
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true })
+  } else {
+    init()
+  }
+
+  document.addEventListener('mobile-landscape-layout-changed', (event) => {
+    const enabled = !!(event && event.detail && event.detail.enabled)
+    mobileMinimapState.layoutEnabled = enabled
+    if (!enabled) {
+      disableMobileMinimapOverlay()
+    } else if (mobileMinimapState.initialized) {
+      // Ensure the minimap returns to its sidebar when re-entering mobile layout
+      restoreMinimapToOriginalParent()
+      setMobileMinimapOverlayVisible(false)
+    }
+    scheduleMobileOverlayPositionUpdate()
+  })
+
+  window.addEventListener('blur', () => {
+    disableMobileMinimapOverlay()
+  })
+
+  window.addEventListener('resize', scheduleMobileOverlayPositionUpdate)
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleMobileOverlayPositionUpdate)
+    window.visualViewport.addEventListener('scroll', scheduleMobileOverlayPositionUpdate)
+  }
 }
