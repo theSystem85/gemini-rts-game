@@ -27,6 +27,8 @@ import {
   setOreSpreadProbability,
   TANK_FIRE_RANGE,
   setTankFireRange,
+  SERVICE_ALERT_RANGE,
+  setServiceAlertRange,
   DEFAULT_ROTATION_SPEED,
   setDefaultRotationSpeed,
   FAST_ROTATION_SPEED,
@@ -120,6 +122,18 @@ export const configRegistry = {
     type: 'number',
     get: () => TANK_FIRE_RANGE,
     set: setTankFireRange,
+    min: 1,
+    max: 20,
+    step: 1,
+    category: 'Game Balance'
+  },
+
+  serviceAlertRange: {
+    name: 'Service Alert Range',
+    description: 'Detection range for service vehicles in alert mode (in tiles)',
+    type: 'number',
+    get: () => SERVICE_ALERT_RANGE,
+    set: setServiceAlertRange,
     min: 1,
     max: 20,
     step: 1,

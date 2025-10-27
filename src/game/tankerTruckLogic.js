@@ -1,4 +1,4 @@
-import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY } from '../config.js'
+import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY, SERVICE_ALERT_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
@@ -18,6 +18,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     const queueActive = queueState && queueState.mode === 'refuel' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+    const now = performance?.now ? performance.now() : Date.now()
+    const wasServing = Boolean(tanker._alertWasServing)
 
     // Tankers need a loader to operate the refueling equipment
     if (tanker.crew && typeof tanker.crew === 'object' && !tanker.crew.loader) {
@@ -85,7 +87,51 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       }
     }
 
-    if (!tanker.refuelTarget && !queueActive) {
+    if (!tanker.alertMode) {
+      tanker.alertActiveService = false
+      tanker.alertAssignmentId = null
+      tanker.nextUtilityScanTime = null
+    }
+
+    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode
+    if (canAutoScan && unitCommands) {
+      const nextScan = tanker.nextUtilityScanTime || 0
+      if (now >= nextScan) {
+        const candidates = units
+          .filter(u =>
+            u.id !== tanker.id &&
+            u.owner === tanker.owner &&
+            typeof u.maxGas === 'number' &&
+            u.gas < (u.maxGas * 0.95) &&
+            u.health > 0 &&
+            !(u.movement && u.movement.isMoving)
+          )
+          .map(u => ({
+            unit: u,
+            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+          }))
+          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+          .sort((a, b) => a.distance - b.distance)
+
+        const targetEntry = candidates[0]
+
+        if (targetEntry) {
+          const assigned = unitCommands.assignTankerToTarget(tanker, targetEntry.unit, gameState.mapGrid, {
+            suppressNotifications: true
+          })
+          if (assigned) {
+            tanker.alertActiveService = true
+            tanker.alertAssignmentId = targetEntry.unit.id
+          } else {
+            tanker.nextUtilityScanTime = now + 2000
+          }
+        } else {
+          tanker.nextUtilityScanTime = now + 2000
+        }
+      }
+    }
+
+    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
       const target = units.find(u =>
@@ -190,6 +236,17 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         queueState.currentTargetType = 'unit'
       }
     }
+
+    const isCurrentlyServing = Boolean(tanker.refuelTarget)
+    if (wasServing && !isCurrentlyServing) {
+      tanker.alertActiveService = false
+      tanker.alertAssignmentId = null
+      tanker.nextUtilityScanTime = now + 2000
+    }
+    if (isCurrentlyServing) {
+      tanker.alertActiveService = true
+    }
+    tanker._alertWasServing = isCurrentlyServing
   })
 })
 

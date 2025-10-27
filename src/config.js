@@ -388,7 +388,18 @@ export function setKeyboardScrollSpeed(value) {
 export let TANK_FIRE_RANGE = 9
 
 export function setTankFireRange(value) {
+  const previous = TANK_FIRE_RANGE
   TANK_FIRE_RANGE = value
+  if (SERVICE_ALERT_RANGE === previous) {
+    SERVICE_ALERT_RANGE = value
+  }
+}
+
+// Service vehicle alert detection range (defaults to tank fire range)
+export let SERVICE_ALERT_RANGE = TANK_FIRE_RANGE
+
+export function setServiceAlertRange(value) {
+  SERVICE_ALERT_RANGE = value
 }
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
@@ -802,6 +813,7 @@ const EXPORTED_CONFIG_VARIABLES = [
   'INERTIA_STOP_THRESHOLD',
   'KEYBOARD_SCROLL_SPEED',
   'TANK_FIRE_RANGE',
+  'SERVICE_ALERT_RANGE',
   'MAX_BUILDING_GAP_TILES',
   'BUILDING_PROXIMITY_RANGE',
   'SHADOW_OF_WAR_CONFIG',

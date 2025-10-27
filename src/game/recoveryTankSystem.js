@@ -1,4 +1,4 @@
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, SERVICE_ALERT_RANGE } from '../config.js'
 import { playSound } from '../sound.js'
 import { getUnitCost } from '../utils.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -196,6 +196,8 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
 
   tanks.forEach(tank => {
     const queueState = tank.utilityQueue
+    const now = performance?.now ? performance.now() : Date.now()
+    const wasServing = Boolean(tank._alertWasServing)
 
     if (tank.recoveryTask) {
       const wreck = getWreckById(gameState, tank.recoveryTask.wreckId)
@@ -249,8 +251,92 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       return
     }
 
+    if (!tank.alertMode) {
+      tank.alertActiveService = false
+      tank.alertAssignmentId = null
+      tank.alertAssignmentType = null
+      tank.nextUtilityScanTime = null
+    }
+
+    const isBusy = Boolean(tank.recoveryTask || tank.repairTarget)
+    const queueActive = Boolean(
+      queueState &&
+      ((Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId)
+    )
+    const canAutoScan = tank.alertMode && !isBusy && !queueActive
+
+    if (canAutoScan && unitCommands) {
+      const nextScan = tank.nextUtilityScanTime || 0
+      if (now >= nextScan) {
+        const damagedCandidates = units
+          .filter(u =>
+            u.id !== tank.id &&
+            u.owner === tank.owner &&
+            u.health > 0 &&
+            u.health < u.maxHealth &&
+            !(u.movement && u.movement.isMoving)
+          )
+          .map(u => ({
+            id: u.id,
+            type: 'unit',
+            reference: u,
+            distance: Math.hypot(u.tileX - tank.tileX, u.tileY - tank.tileY)
+          }))
+          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+
+        const wrecks = Array.isArray(gameState.unitWrecks) ? gameState.unitWrecks : []
+        const wreckCandidates = wrecks
+          .filter(w =>
+            w.owner === tank.owner &&
+            (!w.assignedTankId || w.assignedTankId === tank.id) &&
+            !w.isBeingRecycled &&
+            !w.towedBy
+          )
+          .map(w => ({
+            id: w.id,
+            type: 'wreck',
+            reference: w,
+            distance: Math.hypot(w.tileX - tank.tileX, w.tileY - tank.tileY)
+          }))
+          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+
+        const candidates = [...damagedCandidates, ...wreckCandidates]
+          .sort((a, b) => {
+            if (a.type !== b.type) {
+              return a.type === 'unit' ? -1 : 1
+            }
+            return a.distance - b.distance
+          })
+
+        const targetEntry = candidates[0]
+
+        if (targetEntry) {
+          let assigned = false
+          if (targetEntry.type === 'unit') {
+            assigned = unitCommands.assignRecoveryTankToTarget(tank, targetEntry.reference, gameState.mapGrid, {
+              suppressNotifications: true
+            })
+          } else if (targetEntry.type === 'wreck') {
+            assigned = unitCommands.assignRecoveryTankToWreck(tank, targetEntry.reference, gameState.mapGrid, {
+              suppressNotifications: true
+            })
+          }
+
+          if (assigned) {
+            tank.alertActiveService = true
+            tank.alertAssignmentId = targetEntry.id
+            tank.alertAssignmentType = targetEntry.type
+          } else {
+            tank.nextUtilityScanTime = now + 2000
+          }
+        } else {
+          tank.nextUtilityScanTime = now + 2000
+        }
+      }
+    }
+
     // Auto-repair logic - find nearby damaged units
-    if (!tank.repairTarget) {
+    if (!tank.repairTarget && !tank.alertMode) {
       let target = null
       if (tank.repairTargetUnit &&
           tank.repairTargetUnit.health > 0 &&
@@ -414,6 +500,18 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
         queueState.currentTargetType = 'unit'
       }
     }
+
+    const isCurrentlyServing = Boolean(tank.recoveryTask || tank.repairTarget)
+    if (wasServing && !isCurrentlyServing) {
+      tank.alertActiveService = false
+      tank.alertAssignmentId = null
+      tank.alertAssignmentType = null
+      tank.nextUtilityScanTime = now + 2000
+    }
+    if (isCurrentlyServing) {
+      tank.alertActiveService = true
+    }
+    tank._alertWasServing = isCurrentlyServing
   })
 })
 

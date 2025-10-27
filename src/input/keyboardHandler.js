@@ -416,26 +416,29 @@ export class KeyboardHandler {
   }
 
   handleAlertMode(selectedUnits) {
-    // Toggle alert mode on all selected player units.
-    let alertToggledCount = 0
-    let tankV2Count = 0
+    // Toggle alert mode on selected units that support it.
+    const alertEligibleTypes = new Set(['tank-v2', 'ambulance', 'tankerTruck', 'recoveryTank'])
+    let eligibleCount = 0
+    let toggledCount = 0
+    let newStatus = null
 
     selectedUnits.forEach(unit => {
-      // Only tank-v2 units can use alert mode
-      if (unit.type === 'tank-v2') {
-        tankV2Count++
+      if (alertEligibleTypes.has(unit.type)) {
+        eligibleCount++
         unit.alertMode = !unit.alertMode
-        alertToggledCount++
+        toggledCount++
+        newStatus = unit.alertMode
       }
     })
 
-    // Provide feedback to the user
-    if (tankV2Count === 0) {
-      this.showNotification('Alert mode only works with Tank V2 units', 2000)
-    } else if (alertToggledCount > 0) {
-      const tank = selectedUnits.find(u => u.type === 'tank-v2')
-      const modeStatus = tank.alertMode ? 'ON' : 'OFF'
-      this.showNotification(`Alert mode ${modeStatus} for ${alertToggledCount} Tank V2 unit(s)`, 2000)
+    if (eligibleCount === 0) {
+      this.showNotification('Alert mode is available for Tank V2, Ambulance, Tanker Truck and Recovery Tank units.', 2000)
+      return
+    }
+
+    if (toggledCount > 0 && newStatus !== null) {
+      const modeStatus = newStatus ? 'ON' : 'OFF'
+      this.showNotification(`Alert mode ${modeStatus} for ${toggledCount} unit(s)`, 2000)
       playSound('unitSelection')
     }
   }

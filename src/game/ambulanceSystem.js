@@ -1,6 +1,5 @@
 // ambulanceSystem.js - Handle ambulance healing functionality
-import { TILE_SIZE } from '../config.js'
-import { playSound } from '../sound.js'
+import { SERVICE_ALERT_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 
@@ -15,6 +14,8 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
     const queueActive = queueState && queueState.mode === 'heal' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+    const now = performance?.now ? performance.now() : Date.now()
+    const wasServing = Boolean(ambulance._alertWasServing)
 
     // Ambulances require a loader to tend to wounded units
     if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
@@ -25,8 +26,51 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       }
       return
     }
-    // Auto-acquire healing target if none set
-    if (!ambulance.healingTarget && !queueActive) {
+    if (!ambulance.alertMode) {
+      ambulance.alertActiveService = false
+      ambulance.alertAssignmentId = null
+      ambulance.nextUtilityScanTime = null
+    }
+
+    const canAutoScan = ambulance.alertMode && !ambulance.healingTarget && !queueActive && !ambulance.refillingTarget
+    if (canAutoScan && unitCommands) {
+      const nextScan = ambulance.nextUtilityScanTime || 0
+      if (now >= nextScan) {
+        const candidates = units
+          .filter(u =>
+            u.id !== ambulance.id &&
+            u.owner === ambulance.owner &&
+            u.crew && typeof u.crew === 'object' &&
+            Object.values(u.crew).some(alive => !alive) &&
+            !(u.movement && u.movement.isMoving)
+          )
+          .map(u => ({
+            unit: u,
+            distance: Math.hypot(u.tileX - ambulance.tileX, u.tileY - ambulance.tileY)
+          }))
+          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+          .sort((a, b) => a.distance - b.distance)
+
+        const targetEntry = candidates[0]
+
+        if (targetEntry) {
+          const assigned = unitCommands.assignAmbulanceToTarget(ambulance, targetEntry.unit, gameState.mapGrid, {
+            suppressNotifications: true
+          })
+          if (assigned) {
+            ambulance.alertActiveService = true
+            ambulance.alertAssignmentId = targetEntry.unit.id
+          } else {
+            ambulance.nextUtilityScanTime = now + 2000
+          }
+        } else {
+          ambulance.nextUtilityScanTime = now + 2000
+        }
+      }
+    }
+
+    // Auto-acquire healing target if none set (legacy close-range behaviour)
+    if (!ambulance.healingTarget && !queueActive && !ambulance.alertMode) {
       const potential = units.find(u =>
         u.id !== ambulance.id &&
         u.owner === ambulance.owner &&
@@ -97,7 +141,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       const healingInterval = 2000 // 2 seconds per crew member
 
       while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
-        const [role] = missingCrew.shift()
+        missingCrew.shift()
 
         // Heal in order: driver, commander, loader, gunner
         const healOrder = ['driver', 'commander', 'loader', 'gunner']
@@ -135,6 +179,17 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         queueState.currentTargetType = 'unit'
       }
     }
+
+    const isCurrentlyServing = Boolean(ambulance.healingTarget)
+    if (wasServing && !isCurrentlyServing) {
+      ambulance.alertActiveService = false
+      ambulance.alertAssignmentId = null
+      ambulance.nextUtilityScanTime = now + 2000
+    }
+    if (isCurrentlyServing) {
+      ambulance.alertActiveService = true
+    }
+    ambulance._alertWasServing = isCurrentlyServing
   })
 })
 
