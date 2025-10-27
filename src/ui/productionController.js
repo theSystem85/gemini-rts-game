@@ -111,6 +111,7 @@ export class ProductionController {
     const hasPowerPlant = playerBuildings.some(b => b.type === 'powerPlant')
     const hasRefinery = playerBuildings.some(b => b.type === 'oreRefinery')
     const hasVehicleFactory = playerBuildings.some(b => b.type === 'vehicleFactory')
+    const hasVehicleWorkshop = playerBuildings.some(b => b.type === 'vehicleWorkshop')
 
     const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
 
@@ -118,6 +119,15 @@ export class ProductionController {
       const type = button.getAttribute('data-building-type')
       let disable = false
       const req = []
+      const shouldForceVisible =
+        button.classList.contains('ready-for-placement') ||
+        this.getBuildingProductionCount(button) > 0
+
+      if (!gameState.availableBuildingTypes.has(type)) {
+        button.classList.add('disabled')
+        button.style.display = 'none'
+        return
+      }
 
       const isPowerPlant = type === 'powerPlant'
       const isOreRefinery = type === 'oreRefinery'
@@ -126,12 +136,12 @@ export class ProductionController {
 
       if (!hasConstructionYard && !isConstructionYardButton) {
         disable = true
-        req.push('Construction Yard')
+        if (!req.includes('Construction Yard')) req.push('Construction Yard')
       }
 
       if (buildingData[type]?.requiresRadar && !hasRadar) {
         disable = true
-        req.push('Radar Station')
+        if (!req.includes('Radar Station')) req.push('Radar Station')
       }
 
       if (!hasPowerPlant && !isPowerPlant && !isConstructionYardButton) {
@@ -149,14 +159,26 @@ export class ProductionController {
         if (!req.includes('Vehicle Factory')) req.push('Vehicle Factory')
       }
 
+      if (isConstructionYardButton && !hasVehicleWorkshop) {
+        disable = true
+        if (!req.includes('Vehicle Workshop')) req.push('Vehicle Workshop')
+      }
+
       // Vehicle Factory now only requires Power Plant (removed refinery requirement)
 
       if (disable) {
         button.classList.add('disabled')
-        button.title = 'Requires ' + req.join(' & ')
+        const requirementText = req.length ? 'Requires ' + req.join(' & ') : ''
+        button.title = requirementText
+        if (!shouldForceVisible) {
+          button.style.display = 'none'
+        } else {
+          button.style.display = ''
+        }
       } else {
         button.classList.remove('disabled')
         button.title = ''
+        button.style.display = ''
       }
     })
   }
