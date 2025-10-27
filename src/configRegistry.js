@@ -65,6 +65,10 @@ import {
   setGasRefillTime,
   GAS_REFILL_COST,
   setGasRefillCost,
+  getMobileTankJoystickMapping,
+  setMobileTankJoystickMapping,
+  getMobileVehicleJoystickMapping,
+  setMobileVehicleJoystickMapping,
   SAFE_RANGE_ENABLED
 } from './config.js'
 
@@ -131,6 +135,25 @@ export const configRegistry = {
     get: () => SAFE_RANGE_ENABLED,
     set: null, // Read-only const
     category: 'Gameplay'
+  },
+
+  // Mobile Controls
+  mobileTankJoystickMapping: {
+    name: 'Mobile Tank Joystick Mapping',
+    description: 'JSON mapping for mobile joysticks when controlling tanks. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    type: 'string',
+    get: () => JSON.stringify(getMobileTankJoystickMapping(), null, 2),
+    set: setMobileTankJoystickMapping,
+    category: 'Controls'
+  },
+
+  mobileVehicleJoystickMapping: {
+    name: 'Mobile Vehicle Joystick Mapping',
+    description: 'JSON mapping for mobile joysticks when controlling non-turret vehicles. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    type: 'string',
+    get: () => JSON.stringify(getMobileVehicleJoystickMapping(), null, 2),
+    set: setMobileVehicleJoystickMapping,
+    category: 'Controls'
   },
 
   // Enemy Control

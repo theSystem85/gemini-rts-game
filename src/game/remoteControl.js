@@ -2,7 +2,8 @@ import {
   TILE_SIZE,
   TANK_FIRE_RANGE,
   STREET_SPEED_MULTIPLIER,
-  ENABLE_ENEMY_CONTROL
+  ENABLE_ENEMY_CONTROL,
+  isTurretTankUnitType
 } from '../config.js'
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits } from '../inputHandler.js'
@@ -63,8 +64,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
   if (!selectedUnits || selectedUnits.length === 0) return
   const now = performance.now()
   selectedUnits.forEach(unit => {
-    if (!unit.type || !unit.type.includes('tank')) return
-    if (!unit.movement) return
+    if (!unit || !unit.movement) return
+
+    const hasTurret = isTurretTankUnitType(unit.type)
 
     // Only allow remote control for player units unless enemy control is enabled
     const humanPlayer = gameState.humanPlayer || 'player1'
@@ -81,7 +83,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     }
 
     // Track whether this unit is actively being moved via remote control
-    unit.remoteControlActive = rc.forward || rc.backward
+    unit.remoteControlActive = rc.forward || rc.backward || rc.turnLeft || rc.turnRight
 
     // Adjust rotation of the wagon directly so movement aligns with it
     if (rc.turnLeft) {
@@ -96,7 +98,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     }
 
     // Manual turret rotation when shift-modified keys are used
-    if (rc.turretLeft) {
+    if (hasTurret && rc.turretLeft) {
       const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
       const current =
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
@@ -104,7 +106,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       unit.turretShouldFollowMovement = false
       unit.manualTurretOverrideUntil = now + 150
     }
-    if (rc.turretRight) {
+    if (hasTurret && rc.turretRight) {
       const speed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
       const current =
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
@@ -112,13 +114,13 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       unit.turretShouldFollowMovement = false
       unit.manualTurretOverrideUntil = now + 150
     }
-    const manualTurretInput = rc.turretLeft || rc.turretRight
-    if (!manualTurretInput && unit.manualTurretOverrideUntil && now >= unit.manualTurretOverrideUntil) {
+    const manualTurretInput = hasTurret && (rc.turretLeft || rc.turretRight)
+    if (!manualTurretInput && hasTurret && unit.manualTurretOverrideUntil && now >= unit.manualTurretOverrideUntil) {
       unit.manualTurretOverrideUntil = null
     }
 
     const manualOverrideActive =
-      manualTurretInput || (unit.manualTurretOverrideUntil && now < unit.manualTurretOverrideUntil)
+      manualTurretInput || (hasTurret && unit.manualTurretOverrideUntil && now < unit.manualTurretOverrideUntil)
     // Keep movement rotation in sync with wagon direction
     unit.movement.rotation = unit.direction
     unit.movement.targetRotation = unit.direction
@@ -170,12 +172,12 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       unit.movement.isMoving = false
     }
 
-    if (unit.target && !manualOverrideActive) {
+    if (hasTurret && unit.target && !manualOverrideActive) {
       aimTurretAtTarget(unit, unit.target)
     }
 
     // Fire forward when requested
-    if (rc.fire && unit.canFire !== false) {
+    if (hasTurret && rc.fire && unit.canFire !== false) {
       const baseRate = getFireRateForUnit(unit)
       const effectiveRate =
         unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate

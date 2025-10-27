@@ -84,6 +84,15 @@ export const gameState = {
     turretRight: false,
     fire: false
   },
+  remoteControlSources: {
+    forward: {},
+    backward: {},
+    turnLeft: {},
+    turnRight: {},
+    turretLeft: {},
+    turretRight: {},
+    fire: {}
+  },
 
   // Repair mode
   repairMode: false,
