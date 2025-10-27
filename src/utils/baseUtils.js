@@ -32,7 +32,7 @@ export function getBaseStructures(owner, {
   if (Array.isArray(buildings)) {
     buildings.forEach(building => {
       if (!building || building.owner !== owner) return
-      if (building.type !== 'constructionYard' && building.type !== 'commandCenter') return
+
       baseStructures.push({
         x: building.x || 0,
         y: building.y || 0,
