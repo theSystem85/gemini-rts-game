@@ -388,7 +388,25 @@ export function setKeyboardScrollSpeed(value) {
 export let TANK_FIRE_RANGE = 9
 
 export function setTankFireRange(value) {
+  const previous = TANK_FIRE_RANGE
   TANK_FIRE_RANGE = value
+  if (SERVICE_DISCOVERY_RANGE === previous) {
+    SERVICE_DISCOVERY_RANGE = value
+  }
+}
+
+// Service vehicle detection range when in alert mode (defaults to tank fire range)
+export let SERVICE_DISCOVERY_RANGE = TANK_FIRE_RANGE
+
+export function setServiceDiscoveryRange(value) {
+  SERVICE_DISCOVERY_RANGE = value
+}
+
+// Effective service range for utility vehicles (defaults to close support distance)
+export let SERVICE_SERVING_RANGE = Math.SQRT2
+
+export function setServiceServingRange(value) {
+  SERVICE_SERVING_RANGE = value
 }
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
@@ -703,12 +721,6 @@ export let ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for
 export let MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
 export let MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
 
-// Utility vehicle service visualization constants
-export const UTILITY_SERVICE_RANGES = {
-  recoveryTank: Math.SQRT2,
-  ambulance: Math.SQRT2,
-  tankerTruck: Math.SQRT2
-}
 export const UTILITY_SERVICE_INDICATOR_SIZE = 8
 export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
 
@@ -760,6 +772,159 @@ export function setGasRefillCost(value) {
   GAS_REFILL_COST = value
 }
 
+const REMOTE_CONTROL_ALLOWED_ACTIONS = [
+  'forward',
+  'backward',
+  'turnLeft',
+  'turnRight',
+  'turretLeft',
+  'turretRight',
+  'fire'
+]
+
+const TURRET_TANK_TYPES = new Set([
+  'tank',
+  'tank_v1',
+  'tank_v2',
+  'tank_v3',
+  'tank-v2',
+  'tank-v3',
+  'rocketTank'
+])
+
+const DEFAULT_TANK_JOYSTICK_MAPPING = {
+  left: {
+    up: ['forward'],
+    down: ['backward'],
+    left: ['turretLeft'],
+    right: ['turretRight'],
+    tap: []
+  },
+  right: {
+    up: [],
+    down: [],
+    left: ['turnLeft'],
+    right: ['turnRight'],
+    tap: ['fire']
+  }
+}
+
+const DEFAULT_VEHICLE_JOYSTICK_MAPPING = {
+  left: {
+    up: ['forward'],
+    down: ['backward'],
+    left: [],
+    right: [],
+    tap: []
+  },
+  right: {
+    up: [],
+    down: [],
+    left: ['turnLeft'],
+    right: ['turnRight'],
+    tap: []
+  }
+}
+
+function cloneJoystickMapping(mapping) {
+  return JSON.parse(JSON.stringify(mapping))
+}
+
+function normalizeActionList(value) {
+  if (value === null || value === undefined) {
+    return []
+  }
+
+  let actions
+  if (Array.isArray(value)) {
+    actions = value
+  } else if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed.toLowerCase() === 'none') {
+      return []
+    }
+    actions = trimmed.split(',').map(item => item.trim()).filter(Boolean)
+  } else {
+    throw new Error('Joystick mapping values must be strings or arrays of actions')
+  }
+
+  const uniqueActions = []
+  for (const action of actions) {
+    const normalized = String(action).trim()
+    if (!normalized) {
+      continue
+    }
+    if (!REMOTE_CONTROL_ALLOWED_ACTIONS.includes(normalized)) {
+      throw new Error(`Unsupported joystick action: ${normalized}`)
+    }
+    if (!uniqueActions.includes(normalized)) {
+      uniqueActions.push(normalized)
+    }
+  }
+  return uniqueActions
+}
+
+function normalizeJoystickMapping(mapping, fallback) {
+  if (!mapping || typeof mapping !== 'object') {
+    throw new Error('Joystick mapping must be an object')
+  }
+
+  const normalized = { left: {}, right: {} }
+  const sides = ['left', 'right']
+  const directions = ['up', 'down', 'left', 'right', 'tap']
+
+  for (const side of sides) {
+    const inputSide = mapping[side] && typeof mapping[side] === 'object' ? mapping[side] : {}
+    const fallbackSide = fallback[side] || {}
+    normalized[side] = {}
+
+    for (const direction of directions) {
+      const rawValue =
+        inputSide[direction] !== undefined ? inputSide[direction] : fallbackSide[direction]
+      normalized[side][direction] = normalizeActionList(rawValue)
+    }
+  }
+
+  return normalized
+}
+
+function parseJoystickMappingInput(value, fallback) {
+  let mapping = value
+  if (typeof mapping === 'string') {
+    const trimmed = mapping.trim()
+    mapping = trimmed ? JSON.parse(trimmed) : {}
+  }
+
+  return normalizeJoystickMapping(mapping, fallback)
+}
+
+export let MOBILE_TANK_JOYSTICK_MAPPING = cloneJoystickMapping(DEFAULT_TANK_JOYSTICK_MAPPING)
+export let MOBILE_VEHICLE_JOYSTICK_MAPPING = cloneJoystickMapping(DEFAULT_VEHICLE_JOYSTICK_MAPPING)
+
+export function setMobileTankJoystickMapping(value) {
+  MOBILE_TANK_JOYSTICK_MAPPING = parseJoystickMappingInput(value, DEFAULT_TANK_JOYSTICK_MAPPING)
+}
+
+export function setMobileVehicleJoystickMapping(value) {
+  MOBILE_VEHICLE_JOYSTICK_MAPPING = parseJoystickMappingInput(value, DEFAULT_VEHICLE_JOYSTICK_MAPPING)
+}
+
+export function getMobileTankJoystickMapping() {
+  return MOBILE_TANK_JOYSTICK_MAPPING
+}
+
+export function getMobileVehicleJoystickMapping() {
+  return MOBILE_VEHICLE_JOYSTICK_MAPPING
+}
+
+export function getMobileJoystickMapping(profile) {
+  return profile === 'tank' ? MOBILE_TANK_JOYSTICK_MAPPING : MOBILE_VEHICLE_JOYSTICK_MAPPING
+}
+
+export function isTurretTankUnitType(unitType) {
+  return TURRET_TANK_TYPES.has(unitType)
+}
+
 export let UNIT_GAS_PROPERTIES = {
   tank_v1: { tankSize: 1900, consumption: 450 },
   'tank-v2': { tankSize: 1900, consumption: 450 },
@@ -802,6 +967,8 @@ const EXPORTED_CONFIG_VARIABLES = [
   'INERTIA_STOP_THRESHOLD',
   'KEYBOARD_SCROLL_SPEED',
   'TANK_FIRE_RANGE',
+  'SERVICE_DISCOVERY_RANGE',
+  'SERVICE_SERVING_RANGE',
   'MAX_BUILDING_GAP_TILES',
   'BUILDING_PROXIMITY_RANGE',
   'SHADOW_OF_WAR_CONFIG',

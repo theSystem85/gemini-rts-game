@@ -18,6 +18,7 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
+import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
 import { initSaveGameSystem } from './saveGame.js'
@@ -82,6 +83,7 @@ const mobileLayoutState = {
   actionsOriginalNextSibling: null,
   mobileActionsContainer: null,
   mobileControls: null,
+  mobileJoystickContainer: null,
   mobileStatusBar: null,
   mobileMoneyValue: null,
   mobileEnergyBar: null,
@@ -135,6 +137,10 @@ function ensureMobileLayoutElements() {
 
   if (!mobileLayoutState.mobileControls || !mobileLayoutState.mobileControls.isConnected) {
     mobileLayoutState.mobileControls = document.getElementById('mobileSidebarControls')
+  }
+
+  if (!mobileLayoutState.mobileJoystickContainer || !mobileLayoutState.mobileJoystickContainer.isConnected) {
+    mobileLayoutState.mobileJoystickContainer = document.getElementById('mobileJoystickContainer')
   }
 
   if (!mobileLayoutState.sidebarToggle || !mobileLayoutState.sidebarToggle.isConnected) {
@@ -465,6 +471,7 @@ function applyMobileSidebarLayout(mode) {
     actions,
     mobileActionsContainer,
     mobileControls,
+    mobileJoystickContainer,
     sidebarUtilityContainer,
     restartButton,
     musicButton
@@ -484,6 +491,10 @@ function applyMobileSidebarLayout(mode) {
     if (mobileControls) {
       mobileControls.setAttribute('aria-hidden', 'false')
       mobileControls.setAttribute('data-orientation', mode)
+    }
+    if (mobileJoystickContainer) {
+      mobileJoystickContainer.setAttribute('aria-hidden', 'false')
+      mobileJoystickContainer.setAttribute('data-orientation', mode)
     }
     if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
       mobileActionsContainer.appendChild(actions)
@@ -510,6 +521,10 @@ function applyMobileSidebarLayout(mode) {
     if (mobileControls) {
       mobileControls.setAttribute('aria-hidden', 'true')
       mobileControls.removeAttribute('data-orientation')
+    }
+    if (mobileJoystickContainer) {
+      mobileJoystickContainer.setAttribute('aria-hidden', 'true')
+      mobileJoystickContainer.removeAttribute('data-orientation')
     }
     if (sidebarUtilityContainer) {
       sidebarUtilityContainer.setAttribute('aria-hidden', 'true')

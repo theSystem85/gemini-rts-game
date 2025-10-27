@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_RANGES, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -192,7 +192,7 @@ export class UnitRenderer {
   renderUtilityServiceRange(ctx, unit, centerX, centerY) {
     if (!unit?.selected) return
 
-    const rangeInTiles = UTILITY_SERVICE_RANGES[unit.type]
+    const rangeInTiles = unit?.isUtilityUnit ? SERVICE_SERVING_RANGE : undefined
     if (!rangeInTiles) return
 
     const radius = rangeInTiles * TILE_SIZE
@@ -210,7 +210,7 @@ export class UnitRenderer {
 
   renderAlertMode(ctx, unit, centerX, centerY) {
     // If unit is alert, draw an outer red circle.
-    if (unit.alertMode && unit.type === 'tank-v2') {
+    if (unit.alertMode && (unit.type === 'tank-v2' || unit.isUtilityUnit)) {
       const now = performance.now()
       const pulse = Math.sin(now * 0.005) * 0.3 + 0.7 // Pulsing effect between 0.4 and 1.0
 
@@ -224,7 +224,8 @@ export class UnitRenderer {
       ctx.strokeStyle = `rgba(255, 100, 100, ${pulse * 0.3})`
       ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.arc(centerX, centerY, TANK_FIRE_RANGE * TILE_SIZE, 0, 2 * Math.PI)
+      const indicatorRange = unit.isUtilityUnit ? SERVICE_DISCOVERY_RANGE : TANK_FIRE_RANGE
+      ctx.arc(centerX, centerY, indicatorRange * TILE_SIZE, 0, 2 * Math.PI)
       ctx.stroke()
     }
   }
@@ -707,8 +708,55 @@ export class UnitRenderer {
   renderOverlays(ctx, units, scrollOffset) {
     units.forEach(unit => {
       this.renderTowCable(ctx, unit, scrollOffset)
+      this.renderFuelHose(ctx, unit, units, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
     })
+  }
+
+  renderFuelHose(ctx, unit, units, scrollOffset) {
+    if (!unit || unit.type !== 'tankerTruck' || !unit.refuelTarget) {
+      return
+    }
+
+    const targetInfo = unit.refuelTarget
+    const target = (targetInfo && targetInfo.id !== undefined)
+      ? units.find(u => u.id === targetInfo.id) || targetInfo
+      : targetInfo
+
+    if (!target || target.health <= 0) {
+      return
+    }
+
+    if (typeof target.tileX !== 'number' || typeof target.tileY !== 'number') {
+      return
+    }
+
+    const dx = Math.abs(target.tileX - unit.tileX)
+    const dy = Math.abs(target.tileY - unit.tileY)
+
+    if (dx > 1 || dy > 1) {
+      return
+    }
+
+    if ((unit.movement && unit.movement.isMoving) || (target.movement && target.movement.isMoving)) {
+      return
+    }
+
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const startY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const targetX = (typeof target.x === 'number') ? target.x : target.tileX * TILE_SIZE
+    const targetY = (typeof target.y === 'number') ? target.y : target.tileY * TILE_SIZE
+    const endX = targetX + TILE_SIZE / 2 - scrollOffset.x
+    const endY = targetY + TILE_SIZE / 2 - scrollOffset.y
+
+    ctx.save()
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+    ctx.restore()
   }
 
   renderTowCable(ctx, unit, scrollOffset) {

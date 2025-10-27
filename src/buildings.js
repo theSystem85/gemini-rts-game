@@ -207,7 +207,7 @@ export const buildingData = {
     damage: 100, // 500% of a tank's base damage
     armor: 2,
     projectileType: 'artillery',
-    projectileSpeed: 3
+    projectileSpeed: 0.75
   },
   concreteWall: {
     width: 1,

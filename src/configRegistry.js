@@ -27,6 +27,10 @@ import {
   setOreSpreadProbability,
   TANK_FIRE_RANGE,
   setTankFireRange,
+  SERVICE_DISCOVERY_RANGE,
+  setServiceDiscoveryRange,
+  SERVICE_SERVING_RANGE,
+  setServiceServingRange,
   DEFAULT_ROTATION_SPEED,
   setDefaultRotationSpeed,
   FAST_ROTATION_SPEED,
@@ -67,6 +71,10 @@ import {
   setGasRefillTime,
   GAS_REFILL_COST,
   setGasRefillCost,
+  getMobileTankJoystickMapping,
+  setMobileTankJoystickMapping,
+  getMobileVehicleJoystickMapping,
+  setMobileVehicleJoystickMapping,
   SAFE_RANGE_ENABLED
 } from './config.js'
 
@@ -126,6 +134,30 @@ export const configRegistry = {
     category: 'Game Balance'
   },
 
+  serviceDiscoveryRange: {
+    name: 'Service Discovery Range',
+    description: 'Detection range for service vehicles in alert mode (in tiles)',
+    type: 'number',
+    get: () => SERVICE_DISCOVERY_RANGE,
+    set: setServiceDiscoveryRange,
+    min: 1,
+    max: 20,
+    step: 1,
+    category: 'Game Balance'
+  },
+
+  serviceServingRange: {
+    name: 'Service Serving Range',
+    description: 'Effective range for service vehicles to assist nearby units (in tiles)',
+    type: 'number',
+    get: () => SERVICE_SERVING_RANGE,
+    set: setServiceServingRange,
+    min: 0.5,
+    max: 6,
+    step: 0.5,
+    category: 'Game Balance'
+  },
+
   safeRangeEnabled: {
     name: 'Safe Range Enabled',
     description: 'Enable safe range mode for units',
@@ -133,6 +165,25 @@ export const configRegistry = {
     get: () => SAFE_RANGE_ENABLED,
     set: null, // Read-only const
     category: 'Gameplay'
+  },
+
+  // Mobile Controls
+  mobileTankJoystickMapping: {
+    name: 'Mobile Tank Joystick Mapping',
+    description: 'JSON mapping for mobile joysticks when controlling tanks. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    type: 'string',
+    get: () => JSON.stringify(getMobileTankJoystickMapping(), null, 2),
+    set: setMobileTankJoystickMapping,
+    category: 'Controls'
+  },
+
+  mobileVehicleJoystickMapping: {
+    name: 'Mobile Vehicle Joystick Mapping',
+    description: 'JSON mapping for mobile joysticks when controlling non-turret vehicles. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    type: 'string',
+    get: () => JSON.stringify(getMobileVehicleJoystickMapping(), null, 2),
+    set: setMobileVehicleJoystickMapping,
+    category: 'Controls'
   },
 
   // Enemy Control

@@ -1,4 +1,4 @@
-import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY } from '../config.js'
+import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
@@ -18,6 +18,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     const queueActive = queueState && queueState.mode === 'refuel' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+    const now = performance?.now ? performance.now() : Date.now()
+    const wasServing = Boolean(tanker._alertWasServing)
 
     // Tankers need a loader to operate the refueling equipment
     if (tanker.crew && typeof tanker.crew === 'object' && !tanker.crew.loader) {
@@ -70,9 +72,8 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         tanker.emergencyStartTime = null
       } else {
         // Check if we're close enough to start refueling (any surrounding tile)
-        const dx = Math.abs(emergencyUnit.tileX - tanker.tileX)
-        const dy = Math.abs(emergencyUnit.tileY - tanker.tileY)
-        if (dx <= 1 && dy <= 1 && !(emergencyUnit.movement && emergencyUnit.movement.isMoving)) {
+        const distance = Math.hypot(emergencyUnit.tileX - tanker.tileX, emergencyUnit.tileY - tanker.tileY)
+        if (distance <= SERVICE_SERVING_RANGE && !(emergencyUnit.movement && emergencyUnit.movement.isMoving)) {
           // Start emergency refueling
           tanker.refuelTarget = emergencyUnit
           tanker.refuelTimer = 0
@@ -85,7 +86,51 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       }
     }
 
-    if (!tanker.refuelTarget && !queueActive) {
+    if (!tanker.alertMode) {
+      tanker.alertActiveService = false
+      tanker.alertAssignmentId = null
+      tanker.nextUtilityScanTime = null
+    }
+
+    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode
+    if (canAutoScan && unitCommands) {
+      const nextScan = tanker.nextUtilityScanTime || 0
+      if (now >= nextScan) {
+        const candidates = units
+          .filter(u =>
+            u.id !== tanker.id &&
+            u.owner === tanker.owner &&
+            typeof u.maxGas === 'number' &&
+            u.gas < (u.maxGas * 0.95) &&
+            u.health > 0 &&
+            !(u.movement && u.movement.isMoving)
+          )
+          .map(u => ({
+            unit: u,
+            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+          }))
+          .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
+          .sort((a, b) => a.distance - b.distance)
+
+        const targetEntry = candidates[0]
+
+        if (targetEntry) {
+          const assigned = unitCommands.assignTankerToTarget(tanker, targetEntry.unit, gameState.mapGrid, {
+            suppressNotifications: true
+          })
+          if (assigned) {
+            tanker.alertActiveService = true
+            tanker.alertAssignmentId = targetEntry.unit.id
+          } else {
+            tanker.nextUtilityScanTime = now + 2000
+          }
+        } else {
+          tanker.nextUtilityScanTime = now + 2000
+        }
+      }
+    }
+
+    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
       const target = units.find(u =>
@@ -94,8 +139,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         typeof u.maxGas === 'number' &&
         u.gas < (u.maxGas * 0.95) && // Only refuel if unit has less than 95% gas
         u.health > 0 && // Ensure target is alive
-        Math.abs(u.tileX - tanker.tileX) <= 1 &&
-        Math.abs(u.tileY - tanker.tileY) <= 1 &&
+        Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY) <= SERVICE_SERVING_RANGE &&
         !(u.movement && u.movement.isMoving)
       )
       if (target && (tanker.supplyGas > 0 || tanker.supplyGas === undefined)) {
@@ -122,17 +166,17 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         tanker.lastRefuelDebug = performance.now()
       }
 
+      const distanceToTarget = target ? Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY) : Infinity
       if (!target ||
           target.health <= 0 ||
-          Math.abs(target.tileX - tanker.tileX) > 1 ||
-          Math.abs(target.tileY - tanker.tileY) > 1 ||
+          distanceToTarget > SERVICE_SERVING_RANGE ||
           (target.movement && target.movement.isMoving)) {
         const distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
 
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
       } else if (tanker.supplyGas > 0 && target.gas < (target.maxGas * 0.95)) {
-        // Log when tanker starts refueling (distance <= 1)
+        // Log when tanker starts refueling (within serving range)
         if (!tanker.refuelTimer || tanker.refuelTimer === 0) {
         }
         // Emergency units get faster refueling rate
@@ -190,6 +234,17 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         queueState.currentTargetType = 'unit'
       }
     }
+
+    const isCurrentlyServing = Boolean(tanker.refuelTarget)
+    if (wasServing && !isCurrentlyServing) {
+      tanker.alertActiveService = false
+      tanker.alertAssignmentId = null
+      tanker.nextUtilityScanTime = now + 2000
+    }
+    if (isCurrentlyServing) {
+      tanker.alertActiveService = true
+    }
+    tanker._alertWasServing = isCurrentlyServing
   })
 })
 
