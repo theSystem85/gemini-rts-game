@@ -707,8 +707,55 @@ export class UnitRenderer {
   renderOverlays(ctx, units, scrollOffset) {
     units.forEach(unit => {
       this.renderTowCable(ctx, unit, scrollOffset)
+      this.renderFuelHose(ctx, unit, units, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
     })
+  }
+
+  renderFuelHose(ctx, unit, units, scrollOffset) {
+    if (!unit || unit.type !== 'tankerTruck' || !unit.refuelTarget) {
+      return
+    }
+
+    const targetInfo = unit.refuelTarget
+    const target = (targetInfo && targetInfo.id !== undefined)
+      ? units.find(u => u.id === targetInfo.id) || targetInfo
+      : targetInfo
+
+    if (!target || target.health <= 0) {
+      return
+    }
+
+    if (typeof target.tileX !== 'number' || typeof target.tileY !== 'number') {
+      return
+    }
+
+    const dx = Math.abs(target.tileX - unit.tileX)
+    const dy = Math.abs(target.tileY - unit.tileY)
+
+    if (dx > 1 || dy > 1) {
+      return
+    }
+
+    if ((unit.movement && unit.movement.isMoving) || (target.movement && target.movement.isMoving)) {
+      return
+    }
+
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const startY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const targetX = (typeof target.x === 'number') ? target.x : target.tileX * TILE_SIZE
+    const targetY = (typeof target.y === 'number') ? target.y : target.tileY * TILE_SIZE
+    const endX = targetX + TILE_SIZE / 2 - scrollOffset.x
+    const endY = targetY + TILE_SIZE / 2 - scrollOffset.y
+
+    ctx.save()
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+    ctx.restore()
   }
 
   renderTowCable(ctx, unit, scrollOffset) {
