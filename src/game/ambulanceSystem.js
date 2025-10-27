@@ -87,8 +87,18 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
 
       // Check if ambulance has crew to give
       if (!ambulance.medics || ambulance.medics <= 0) {
+        ambulance.medics = 0
         ambulance.healingTarget = null
         ambulance.healingTimer = 0
+        if (unitCommands) {
+          unitCommands.clearUtilityQueueState(ambulance)
+        } else if (ambulance.utilityQueue) {
+          ambulance.utilityQueue.mode = null
+          ambulance.utilityQueue.targets = []
+          ambulance.utilityQueue.currentTargetId = null
+          ambulance.utilityQueue.currentTargetType = null
+          ambulance.utilityQueue.currentTargetAction = null
+        }
         return
       }
 
@@ -96,28 +106,22 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       ambulance.healingTimer = (ambulance.healingTimer || 0) + delta
       const healingInterval = 2000 // 2 seconds per crew member
 
-      while (missingCrew.length > 0 && ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
-        const [role] = missingCrew.shift()
-
-        // Heal in order: driver, commander, loader, gunner
-        const healOrder = ['driver', 'commander', 'loader', 'gunner']
-        let healedRole = null
-
-        for (const checkRole of healOrder) {
-          if (!target.crew[checkRole]) {
-            target.crew[checkRole] = true
-            healedRole = checkRole
-            break
-          }
+      const healOrder = ['driver', 'commander', 'loader', 'gunner']
+      while (ambulance.healingTimer >= healingInterval && ambulance.medics > 0) {
+        const currentMissing = Object.keys(target.crew).filter(role => !target.crew[role])
+        if (currentMissing.length === 0) {
+          ambulance.healingTarget = null
+          ambulance.healingTimer = 0
+          break
         }
 
-        if (healedRole) {
-          ambulance.medics -= 1
-          ambulance.healingTimer -= healingInterval
+        const roleToHeal = healOrder.find(role => currentMissing.includes(role)) || currentMissing[0]
+        target.crew[roleToHeal] = true
+        ambulance.medics = Math.max(ambulance.medics - 1, 0)
+        ambulance.healingTimer -= healingInterval
 
-          // Play sound effect
-          // playSound('crewRestored')
-        }
+        // Play sound effect
+        // playSound('crewRestored')
       }
     }
 
