@@ -1,6 +1,7 @@
 // Game State Management Module - Handles win/loss conditions, cleanup, and map scrolling
 import {
   INERTIA_DECAY,
+  INERTIA_STOP_THRESHOLD,
   TILE_SIZE,
   KEYBOARD_SCROLL_SPEED,
   ORE_SPREAD_INTERVAL,
@@ -34,6 +35,9 @@ export function updateMapScrolling(gameState, mapGrid) {
       gameState.dragVelocity.x = -KEYBOARD_SCROLL_SPEED
     } else {
       gameState.dragVelocity.x *= INERTIA_DECAY
+      if (Math.abs(gameState.dragVelocity.x) < INERTIA_STOP_THRESHOLD) {
+        gameState.dragVelocity.x = 0
+      }
     }
 
     if (gameState.keyScroll.up) {
@@ -42,6 +46,9 @@ export function updateMapScrolling(gameState, mapGrid) {
       gameState.dragVelocity.y = -KEYBOARD_SCROLL_SPEED
     } else {
       gameState.dragVelocity.y *= INERTIA_DECAY
+      if (Math.abs(gameState.dragVelocity.y) < INERTIA_STOP_THRESHOLD) {
+        gameState.dragVelocity.y = 0
+      }
     }
 
     gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX))
