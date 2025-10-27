@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_RANGES, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -192,7 +192,7 @@ export class UnitRenderer {
   renderUtilityServiceRange(ctx, unit, centerX, centerY) {
     if (!unit?.selected) return
 
-    const rangeInTiles = UTILITY_SERVICE_RANGES[unit.type]
+    const rangeInTiles = unit?.isUtilityUnit ? SERVICE_SERVING_RANGE : undefined
     if (!rangeInTiles) return
 
     const radius = rangeInTiles * TILE_SIZE
@@ -210,7 +210,7 @@ export class UnitRenderer {
 
   renderAlertMode(ctx, unit, centerX, centerY) {
     // If unit is alert, draw an outer red circle.
-    if (unit.alertMode && unit.type === 'tank-v2') {
+    if (unit.alertMode && (unit.type === 'tank-v2' || unit.isUtilityUnit)) {
       const now = performance.now()
       const pulse = Math.sin(now * 0.005) * 0.3 + 0.7 // Pulsing effect between 0.4 and 1.0
 
@@ -224,7 +224,8 @@ export class UnitRenderer {
       ctx.strokeStyle = `rgba(255, 100, 100, ${pulse * 0.3})`
       ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.arc(centerX, centerY, TANK_FIRE_RANGE * TILE_SIZE, 0, 2 * Math.PI)
+      const indicatorRange = unit.isUtilityUnit ? SERVICE_DISCOVERY_RANGE : TANK_FIRE_RANGE
+      ctx.arc(centerX, centerY, indicatorRange * TILE_SIZE, 0, 2 * Math.PI)
       ctx.stroke()
     }
   }

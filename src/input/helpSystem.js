@@ -35,7 +35,7 @@ export class HelpSystem {
           <li><strong>Shift + Right Click:</strong> Retreat selected combat units</li>
           <li><strong>Alt + Command:</strong> Queue orders (Path Planning)</li>
           <li><strong>CTRL + Left Click:</strong> Force Attack (attack friendly units/buildings)</li>
-          <li><strong>A Key:</strong> Toggle alert mode on selected tanks</li>
+          <li><strong>A Key:</strong> Toggle alert mode on selected tanks and service vehicles</li>
           <li><strong>X Key:</strong> Make selected units dodge</li>
           <li><strong>G Key:</strong> Toggle map grid visibility</li>
           <li><strong>O Key:</strong> Toggle occupancy map visibility (red glow on occupied tiles)</li>
