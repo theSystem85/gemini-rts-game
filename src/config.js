@@ -369,6 +369,11 @@ export let GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
 export let GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
 export let INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
+export let INERTIA_STOP_THRESHOLD = 1  // Velocity magnitude below this stops inertia entirely
+
+export function setInertiaStopThreshold(value) {
+  INERTIA_STOP_THRESHOLD = value
+}
 // Wreck impact physics tuning
 export let WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
 export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
@@ -794,6 +799,7 @@ const EXPORTED_CONFIG_VARIABLES = [
   'GRASS_DECORATIVE_RATIO',
   'GRASS_IMPASSABLE_RATIO',
   'INERTIA_DECAY',
+  'INERTIA_STOP_THRESHOLD',
   'KEYBOARD_SCROLL_SPEED',
   'TANK_FIRE_RANGE',
   'MAX_BUILDING_GAP_TILES',
