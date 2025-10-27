@@ -61,6 +61,8 @@ import {
   setStreetSpeedMultiplier,
   KEYBOARD_SCROLL_SPEED,
   setKeyboardScrollSpeed,
+  INERTIA_STOP_THRESHOLD,
+  setInertiaStopThreshold,
   GAS_REFILL_TIME,
   setGasRefillTime,
   GAS_REFILL_COST,
@@ -355,6 +357,18 @@ export const configRegistry = {
     min: 1,
     max: 32,
     step: 1,
+    category: 'Controls'
+  },
+
+  inertiaStopThreshold: {
+    name: 'Inertia Stop Threshold',
+    description: 'Minimum drag velocity before camera inertia stops completely',
+    type: 'number',
+    get: () => INERTIA_STOP_THRESHOLD,
+    set: setInertiaStopThreshold,
+    min: 0,
+    max: 10,
+    step: 0.1,
     category: 'Controls'
   },
 
