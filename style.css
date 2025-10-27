@@ -232,13 +232,14 @@ body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   right: var(--safe-area-right);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: calc(var(--mobile-action-size) + 24px);
-  padding-right: calc(var(--mobile-action-size) + 24px);
+  padding-right: calc(var(--mobile-action-size) + 34px);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   gap: clamp(16px, 6vw, 48px);
   pointer-events: none;
   opacity: 0;
+  visibility: hidden;
   z-index: 105;
   transition: opacity 0.2s ease;
 }
@@ -246,10 +247,17 @@ body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
 #mobileJoystickContainer[aria-hidden="true"] {
   pointer-events: none;
   opacity: 0;
+  visibility: hidden;
 }
 
-body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"] {
+body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"][data-selection-active="true"] {
   opacity: 1;
+  visibility: visible;
+}
+
+#mobileJoystickContainer[aria-hidden="false"][data-selection-active="false"] {
+  opacity: 0;
+  visibility: hidden;
 }
 
 #mobileJoystickContainer .mobile-joystick {
@@ -263,6 +271,10 @@ body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"] {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#mobileJoystickContainer[data-selection-active="false"] .mobile-joystick {
+  pointer-events: none;
 }
 
 #mobileJoystickContainer .joystick-base {

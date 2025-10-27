@@ -1,4 +1,5 @@
 import { selectedUnits } from '../inputHandler.js'
+import { gameState } from '../gameState.js'
 import { getMobileJoystickMapping, isTurretTankUnitType } from '../config.js'
 import {
   setRemoteControlAction,
@@ -61,22 +62,50 @@ let initialized = false
 let profileWatcherHandle = null
 let lastProfile = null
 
+function isFriendlyUnit(unit) {
+  if (!unit) {
+    return false
+  }
+
+  const humanPlayer = gameState.humanPlayer || 'player1'
+  if (!unit.owner) {
+    return false
+  }
+
+  if (unit.owner === humanPlayer) {
+    return true
+  }
+
+  if (humanPlayer === 'player1' && unit.owner === 'player') {
+    return true
+  }
+
+  return false
+}
+
 function determineCurrentProfile() {
-  if (!selectedUnits || selectedUnits.length === 0) {
+  if (!selectedUnits || selectedUnits.length !== 1) {
     return null
   }
 
-  const movableUnits = selectedUnits.filter(unit => unit && unit.movement)
-  if (movableUnits.length === 0) {
+  const [unit] = selectedUnits
+  if (!unit || !unit.movement || !isFriendlyUnit(unit)) {
     return null
   }
 
-  const allTurretTanks = movableUnits.every(unit => isTurretTankUnitType(unit.type))
-  return allTurretTanks ? 'tank' : 'vehicle'
+  return isTurretTankUnitType(unit.type) ? 'tank' : 'vehicle'
+}
+
+function isContainerActive() {
+  return !!(container && container.getAttribute('aria-hidden') !== 'true')
 }
 
 function isJoystickEnabled() {
-  return !!(container && container.getAttribute('aria-hidden') !== 'true')
+  if (!isContainerActive()) {
+    return false
+  }
+
+  return container.getAttribute('data-selection-active') === 'true'
 }
 
 function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, active = false) {
@@ -144,8 +173,27 @@ function applyMappingForSide(side, mapping) {
   state.activeActions = nextActions
 }
 
+function updateContainerSelectionVisibility(profile) {
+  if (!container) {
+    return
+  }
+
+  const shouldDisplay = !!profile
+  const currentlyDisplayed = container.getAttribute('data-selection-active') === 'true'
+
+  if (shouldDisplay !== currentlyDisplayed) {
+    container.setAttribute('data-selection-active', shouldDisplay ? 'true' : 'false')
+    if (!shouldDisplay) {
+      JOYSTICK_SIDES.forEach((side) => {
+        resetJoystick(side)
+      })
+    }
+  }
+}
+
 function applyJoystickMappings(force = false, profileOverride = null) {
   const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
+  updateContainerSelectionVisibility(profile)
   if (!force && profile === lastProfile) {
     return
   }
@@ -225,10 +273,8 @@ function startProfileWatcher() {
   const tick = () => {
     profileWatcherHandle = null
     const profile = determineCurrentProfile()
-    if (profile !== lastProfile) {
-      applyJoystickMappings(true, profile)
-    }
-    if (isJoystickEnabled()) {
+    applyJoystickMappings(false, profile)
+    if (isContainerActive()) {
       profileWatcherHandle = window.setTimeout(tick, 150)
     } else {
       lastProfile = null
@@ -362,6 +408,10 @@ function initializeJoysticks() {
     return
   }
 
+  if (!container.hasAttribute('data-selection-active')) {
+    container.setAttribute('data-selection-active', 'false')
+  }
+
   JOYSTICK_SIDES.forEach((side) => {
     const state = joystickState[side]
     state.element = container.querySelector(`[data-joystick="${side}"]`)
@@ -378,7 +428,7 @@ function initializeJoysticks() {
 
   initialized = true
 
-  if (isJoystickEnabled()) {
+  if (isContainerActive()) {
     startProfileWatcher()
   }
 }
@@ -397,6 +447,9 @@ if (typeof document !== 'undefined') {
       JOYSTICK_SIDES.forEach((side) => {
         resetJoystick(side)
       })
+      if (container) {
+        container.setAttribute('data-selection-active', 'false')
+      }
       lastProfile = null
     } else {
       startProfileWatcher()
