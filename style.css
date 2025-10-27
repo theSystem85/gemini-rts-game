@@ -660,8 +660,8 @@ body.mobile-landscape #sidebarUtilityButtons {
   bottom: calc(var(--safe-area-bottom));
   top: auto;
   right: auto;
-  width: 176px;
-  height: 176px;
+  width: auto;
+  height: auto;
   padding: 0;
   background: transparent;
   border-radius: 0;

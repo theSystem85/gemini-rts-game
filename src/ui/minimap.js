@@ -159,6 +159,71 @@ function ensureMobileMinimapElements() {
   return !!(mobileMinimapState.overlay && mobileMinimapState.button && mobileMinimapState.minimapElement)
 }
 
+function parseCssPixelValue(value) {
+  if (!value) {
+    return 0
+  }
+
+  const trimmed = `${value}`.trim()
+  if (!trimmed) {
+    return 0
+  }
+
+  const parsed = Number.parseFloat(trimmed)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getSafeAreaInsets() {
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body) {
+    return { left: 0, bottom: 0 }
+  }
+
+  try {
+    const style = window.getComputedStyle(document.body)
+    return {
+      left: parseCssPixelValue(style.getPropertyValue('--safe-area-left')),
+      bottom: parseCssPixelValue(style.getPropertyValue('--safe-area-bottom'))
+    }
+  } catch {
+    return { left: 0, bottom: 0 }
+  }
+}
+
+function syncMobileOverlaySize() {
+  if (!ensureMobileMinimapElements()) {
+    return
+  }
+
+  const { overlay, minimapElement } = mobileMinimapState
+  if (!overlay || !minimapElement) {
+    return
+  }
+
+  let widthValue = minimapElement.style.width
+  let heightValue = minimapElement.style.height
+  let minimapRect = null
+
+  if ((!widthValue || !heightValue) && typeof minimapElement.getBoundingClientRect === 'function') {
+    minimapRect = minimapElement.getBoundingClientRect()
+  }
+
+  if (!widthValue && minimapRect && minimapRect.width > 0) {
+    widthValue = `${minimapRect.width}px`
+  }
+
+  if (!heightValue && minimapRect && minimapRect.height > 0) {
+    heightValue = `${minimapRect.height}px`
+  }
+
+  if (widthValue) {
+    overlay.style.width = widthValue
+  }
+
+  if (heightValue) {
+    overlay.style.height = heightValue
+  }
+}
+
 function restoreMinimapToOriginalParent() {
   if (typeof document === 'undefined') {
     return
@@ -209,6 +274,7 @@ function setMobileMinimapOverlayVisible(visible) {
     if (minimap.parentNode !== overlay) {
       overlay.appendChild(minimap)
     }
+    syncMobileOverlaySize()
     overlay.classList.add('visible')
     overlay.setAttribute('aria-hidden', 'false')
     if (button) {
@@ -225,6 +291,8 @@ function setMobileMinimapOverlayVisible(visible) {
       overlay.style.top = ''
       overlay.style.bottom = ''
       overlay.style.transform = ''
+      overlay.style.width = ''
+      overlay.style.height = ''
     }
     if (button) {
       button.setAttribute('aria-pressed', 'false')
@@ -257,24 +325,32 @@ function updateMobileOverlayPosition() {
     return
   }
 
-  const buttonRect = button.getBoundingClientRect()
-  if ((buttonRect.width === 0 && buttonRect.height === 0) || !Number.isFinite(buttonRect.left)) {
-    return
-  }
+  syncMobileOverlaySize()
 
   const viewport = window.visualViewport
   const viewportTop = viewport ? viewport.offsetTop : 0
   const viewportLeft = viewport ? viewport.offsetLeft : 0
-  const viewportHeight = viewport ? viewport.height : window.innerHeight
+  const { left: safeLeft, bottom: safeBottom } = getSafeAreaInsets()
 
-  const left = Math.max(buttonRect.left + viewportLeft, 0)
-  const bottom = Math.max((viewportTop + viewportHeight) - buttonRect.bottom, 0)
+  const left = Math.max(viewportLeft + safeLeft, 0)
+  const bottom = Math.max(viewportTop + safeBottom, 0)
 
   overlay.style.left = `${left}px`
   overlay.style.top = ''
   overlay.style.right = ''
   overlay.style.transform = ''
   overlay.style.bottom = `${bottom}px`
+
+  if (typeof overlay.getBoundingClientRect === 'function') {
+    const overlayRect = overlay.getBoundingClientRect()
+    const buttonRect = button.getBoundingClientRect()
+    if (overlayRect && buttonRect && buttonRect.width > 0 && overlayRect.width > 0) {
+      if (buttonRect.right > overlayRect.right) {
+        const horizontalShift = buttonRect.right - overlayRect.right
+        overlay.style.left = `${Math.max(left - horizontalShift, viewportLeft)}px`
+      }
+    }
+  }
 }
 
 function scheduleMobileOverlayPositionUpdate() {
