@@ -1,5 +1,5 @@
 // ambulanceSystem.js - Handle ambulance healing functionality
-import { SERVICE_ALERT_RANGE } from '../config.js'
+import { SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 
@@ -48,7 +48,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
             unit: u,
             distance: Math.hypot(u.tileX - ambulance.tileX, u.tileY - ambulance.tileY)
           }))
-          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+          .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
           .sort((a, b) => a.distance - b.distance)
 
         const targetEntry = candidates[0]
@@ -76,8 +76,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         u.owner === ambulance.owner &&
         u.crew && typeof u.crew === 'object' &&
         Object.values(u.crew).some(alive => !alive) &&
-        Math.abs(u.tileX - ambulance.tileX) <= 1 &&
-        Math.abs(u.tileY - ambulance.tileY) <= 1 &&
+        Math.hypot(u.tileX - ambulance.tileX, u.tileY - ambulance.tileY) <= SERVICE_SERVING_RANGE &&
         !(u.movement && u.movement.isMoving)
       )
       if (potential && ambulance.medics > 0) {
@@ -98,9 +97,8 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       }
 
       // Check distance (within 1 tile)
-      const dx = Math.abs(ambulance.tileX - target.tileX)
-      const dy = Math.abs(ambulance.tileY - target.tileY)
-      const withinRange = dx <= 1 && dy <= 1
+      const distanceInTiles = Math.hypot(ambulance.tileX - target.tileX, ambulance.tileY - target.tileY)
+      const withinRange = distanceInTiles <= SERVICE_SERVING_RANGE
 
       if (!withinRange) {
         // Move closer to target

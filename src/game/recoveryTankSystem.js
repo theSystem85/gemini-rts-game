@@ -1,4 +1,4 @@
-import { TILE_SIZE, SERVICE_ALERT_RANGE } from '../config.js'
+import { TILE_SIZE, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
 import { playSound } from '../sound.js'
 import { getUnitCost } from '../utils.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -282,7 +282,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
             reference: u,
             distance: Math.hypot(u.tileX - tank.tileX, u.tileY - tank.tileY)
           }))
-          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+          .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
 
         const wrecks = Array.isArray(gameState.unitWrecks) ? gameState.unitWrecks : []
         const wreckCandidates = wrecks
@@ -298,7 +298,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
             reference: w,
             distance: Math.hypot(w.tileX - tank.tileX, w.tileY - tank.tileY)
           }))
-          .filter(entry => entry.distance <= SERVICE_ALERT_RANGE)
+          .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
 
         const candidates = [...damagedCandidates, ...wreckCandidates]
           .sort((a, b) => {
@@ -341,8 +341,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       if (tank.repairTargetUnit &&
           tank.repairTargetUnit.health > 0 &&
           tank.repairTargetUnit.health < tank.repairTargetUnit.maxHealth &&
-          Math.abs(tank.repairTargetUnit.tileX - tank.tileX) <= 1 &&
-          Math.abs(tank.repairTargetUnit.tileY - tank.tileY) <= 1 &&
+          Math.hypot(tank.repairTargetUnit.tileX - tank.tileX, tank.repairTargetUnit.tileY - tank.tileY) <= SERVICE_SERVING_RANGE &&
           !(tank.repairTargetUnit.movement && tank.repairTargetUnit.movement.isMoving)) {
         target = tank.repairTargetUnit
       } else {
@@ -353,8 +352,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
           u.owner === tank.owner &&
           u !== tank &&
           u.health < u.maxHealth &&
-          Math.abs(u.tileX - tank.tileX) <= 1 &&
-          Math.abs(u.tileY - tank.tileY) <= 1 &&
+          Math.hypot(u.tileX - tank.tileX, u.tileY - tank.tileY) <= SERVICE_SERVING_RANGE &&
           !(u.movement && u.movement.isMoving)
         )
       }
@@ -382,9 +380,9 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       const target = tank.repairTarget
 
       // Check if target is still valid
+      const targetDistance = Math.hypot(target.tileX - tank.tileX, target.tileY - tank.tileY)
       if (target.health <= 0 ||
-          Math.abs(target.tileX - tank.tileX) > 1 ||
-          Math.abs(target.tileY - tank.tileY) > 1 ||
+          targetDistance > SERVICE_SERVING_RANGE ||
           (target.movement && target.movement.isMoving)) {
         // console.log(`Recovery tank repair cancelled: target invalid`)
         tank.repairTarget = null
