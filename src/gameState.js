@@ -93,6 +93,13 @@ export const gameState = {
     turretRight: {},
     fire: {}
   },
+  remoteControlAbsolute: {
+    wagonDirection: null,
+    wagonSpeed: 0,
+    turretDirection: null,
+    turretTurnFactor: 0
+  },
+  remoteControlAbsoluteSources: {},
 
   // Repair mode
   repairMode: false,

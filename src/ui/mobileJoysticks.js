@@ -3,7 +3,9 @@ import { gameState } from '../gameState.js'
 import { getMobileJoystickMapping, isTurretTankUnitType } from '../config.js'
 import {
   setRemoteControlAction,
-  clearRemoteControlSource
+  clearRemoteControlSource,
+  setRemoteControlAbsolute,
+  clearRemoteControlAbsoluteSource
 } from '../input/remoteControlState.js'
 
 const JOYSTICK_SIDES = ['left', 'right']
@@ -15,6 +17,7 @@ const HOLD_SOURCES = {
   left: 'leftJoystick',
   right: 'rightJoystick'
 }
+const TANK_ABSOLUTE_SOURCE = 'mobileTankJoysticks'
 const TAP_PULSE_DURATION = 150
 
 const AXES = ['up', 'down', 'left', 'right']
@@ -38,7 +41,10 @@ const joystickState = {
     startTime: 0,
     moved: false,
     axisIntensities: createAxisState(),
-    activeActions: new Map()
+    activeActions: new Map(),
+    normalizedX: 0,
+    normalizedY: 0,
+    distance: 0
   },
   right: {
     element: null,
@@ -48,7 +54,10 @@ const joystickState = {
     startTime: 0,
     moved: false,
     axisIntensities: createAxisState(),
-    activeActions: new Map()
+    activeActions: new Map(),
+    normalizedX: 0,
+    normalizedY: 0,
+    distance: 0
   }
 }
 
@@ -131,6 +140,39 @@ function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, active = false) {
   thumb.classList.add('active')
 }
 
+function computeRadialIntensity(distance) {
+  if (distance <= MOVEMENT_DEADZONE) {
+    return 0
+  }
+  const scaled = (distance - MOVEMENT_DEADZONE) / (1 - MOVEMENT_DEADZONE)
+  return Math.max(0, Math.min(scaled, 1))
+}
+
+function updateTankAbsoluteControls() {
+  const profile = determineCurrentProfile()
+  if (profile !== 'tank' || !isJoystickEnabled()) {
+    clearRemoteControlAbsoluteSource(TANK_ABSOLUTE_SOURCE)
+    return
+  }
+
+  const right = joystickState.right
+  const left = joystickState.left
+
+  const wagonSpeed = computeRadialIntensity(right.distance)
+  const wagonDirection = wagonSpeed > 0 ? Math.atan2(right.normalizedY, right.normalizedX) : null
+
+  const turretTurnFactor = computeRadialIntensity(left.distance)
+  const turretDirection =
+    turretTurnFactor > 0 ? Math.atan2(left.normalizedY, left.normalizedX) : null
+
+  setRemoteControlAbsolute(TANK_ABSOLUTE_SOURCE, {
+    wagonDirection,
+    wagonSpeed,
+    turretDirection,
+    turretTurnFactor
+  })
+}
+
 function applyMappingForSide(side, mapping) {
   const state = joystickState[side]
   const previousActions = state.activeActions
@@ -194,11 +236,24 @@ function updateContainerSelectionVisibility(profile) {
 function applyJoystickMappings(force = false, profileOverride = null) {
   const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
   updateContainerSelectionVisibility(profile)
+
+  if (profile === 'tank') {
+    updateTankAbsoluteControls()
+  } else {
+    clearRemoteControlAbsoluteSource(TANK_ABSOLUTE_SOURCE)
+  }
+
   if (!force && profile === lastProfile) {
     return
   }
 
   lastProfile = profile
+  if (profile === 'tank') {
+    applyMappingForSide('left', null)
+    applyMappingForSide('right', null)
+    return
+  }
+
   const mapping = profile ? getMobileJoystickMapping(profile) : null
   applyMappingForSide('left', mapping)
   applyMappingForSide('right', mapping)
@@ -259,10 +314,14 @@ function resetJoystick(side) {
   state.moved = false
   state.axisIntensities = createAxisState()
   state.activeActions = new Map()
+  state.normalizedX = 0
+  state.normalizedY = 0
+  state.distance = 0
   updateThumbPosition(side, 0, 0, 0, false)
   clearRemoteControlSource(HOLD_SOURCES[side])
   clearTapState(side)
   clearRemoteControlSource(TAP_SOURCES[side])
+  updateTankAbsoluteControls()
 }
 
 function startProfileWatcher() {
@@ -337,6 +396,10 @@ function handlePointerMove(side, event, fromDown = false) {
   const normalizedY = radius ? Math.max(-1, Math.min(dy / radius, 1)) : 0
   const distance = Math.min(Math.hypot(normalizedX, normalizedY), 1)
 
+  state.normalizedX = normalizedX
+  state.normalizedY = normalizedY
+  state.distance = distance
+
   const axisIntensities = createAxisState()
   const computeDirectionalIntensity = (value) => {
     if (value <= 0) {
@@ -363,6 +426,8 @@ function handlePointerMove(side, event, fromDown = false) {
   updateThumbPosition(side, dx, dy, radius, !!isActive)
   if (isActive || state.activeActions.size || fromDown) {
     applyJoystickMappings(true)
+  } else {
+    updateTankAbsoluteControls()
   }
 }
 

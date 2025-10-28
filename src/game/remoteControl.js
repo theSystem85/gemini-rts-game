@@ -108,6 +108,14 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
   const turretLeftIntensity = rc.turretLeft || 0
   const turretRightIntensity = rc.turretRight || 0
   const fireIntensity = rc.fire || 0
+  const rcAbsolute = gameState.remoteControlAbsolute || {}
+  const rawWagonDirection =
+    Number.isFinite(rcAbsolute.wagonDirection) ? rcAbsolute.wagonDirection : null
+  const rawWagonSpeed = typeof rcAbsolute.wagonSpeed === 'number' ? rcAbsolute.wagonSpeed : 0
+  const rawTurretDirection =
+    Number.isFinite(rcAbsolute.turretDirection) ? rcAbsolute.turretDirection : null
+  const rawTurretTurnFactor =
+    typeof rcAbsolute.turretTurnFactor === 'number' ? rcAbsolute.turretTurnFactor : 0
   const remoteControlEngaged =
     forwardIntensity > 0 ||
     backwardIntensity > 0 ||
@@ -115,7 +123,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     turnRightIntensity > 0 ||
     turretLeftIntensity > 0 ||
     turretRightIntensity > 0 ||
-    fireIntensity > 0
+    fireIntensity > 0 ||
+    rawWagonSpeed > 0 ||
+    rawTurretTurnFactor > 0
 
   if (remoteControlEngaged) {
     ensureAutoFocusForRemoteControl(mapGrid)
@@ -136,7 +146,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       return
     }
 
+    const absoluteMovementActive =
+      hasTurret && rawWagonDirection !== null && rawWagonSpeed > 0
     const hasMovementInput =
+      absoluteMovementActive ||
       forwardIntensity > 0 ||
       backwardIntensity > 0 ||
       turnLeftIntensity > 0 ||
@@ -164,15 +177,31 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
     // Adjust rotation of the wagon directly so movement aligns with it
     const rotationSpeed = unit.rotationSpeed || 0.05
-    const netTurn = turnRightIntensity - turnLeftIntensity
-    if (netTurn) {
-      unit.direction = normalizeAngle((unit.direction || 0) + rotationSpeed * netTurn)
+    if (absoluteMovementActive) {
+      const desiredDirection = normalizeAngle(rawWagonDirection)
+      const currentDirection = unit.direction || 0
+      unit.direction = smoothRotateTowardsAngle(currentDirection, desiredDirection, rotationSpeed)
+    } else {
+      const netTurn = turnRightIntensity - turnLeftIntensity
+      if (netTurn) {
+        unit.direction = normalizeAngle((unit.direction || 0) + rotationSpeed * netTurn)
+      }
     }
 
     // Manual turret rotation when shift-modified keys are used
     const turretSpeed = unit.turretRotationSpeed || unit.rotationSpeed || 0.05
+    const absoluteTurretActive =
+      hasTurret && rawTurretDirection !== null && rawTurretTurnFactor > 0
     const netTurret = turretRightIntensity - turretLeftIntensity
-    if (hasTurret && netTurret) {
+    if (hasTurret && absoluteTurretActive) {
+      const current =
+        unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
+      const desiredTurret = normalizeAngle(rawTurretDirection)
+      const rotationRate = turretSpeed * Math.max(0, Math.min(rawTurretTurnFactor, 1))
+      unit.turretDirection = smoothRotateTowardsAngle(current, desiredTurret, rotationRate)
+      unit.turretShouldFollowMovement = false
+      unit.manualTurretOverrideUntil = now + 150
+    } else if (hasTurret && netTurret) {
       const current =
         unit.turretDirection !== undefined ? unit.turretDirection : unit.direction
       unit.turretDirection = normalizeAngle(current + turretSpeed * netTurret)
@@ -180,7 +209,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       unit.manualTurretOverrideUntil = now + 150
     }
 
-    const manualTurretInput = hasTurret && (turretLeftIntensity > 0 || turretRightIntensity > 0)
+    const manualTurretInput =
+      hasTurret &&
+      (absoluteTurretActive || turretLeftIntensity > 0 || turretRightIntensity > 0)
     if (!manualTurretInput && hasTurret && unit.manualTurretOverrideUntil && now >= unit.manualTurretOverrideUntil) {
       unit.manualTurretOverrideUntil = null
     }
@@ -205,17 +236,14 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     const effectiveMaxSpeed = 0.9 * speedModifier * terrainMultiplier
 
     // Move forward/backward relative to wagon direction
-    const movementAxis = forwardIntensity - backwardIntensity
-    if (movementAxis) {
-      const directionSign = movementAxis > 0 ? 1 : -1
-      const movementMagnitude = Math.min(Math.abs(movementAxis), 1)
+    if (absoluteMovementActive) {
+      const movementMagnitude = Math.max(0, Math.min(rawWagonSpeed, 1))
       const fx = Math.cos(unit.direction)
       const fy = Math.sin(unit.direction)
 
-      // Check the tile one tile ahead (or behind) for occupancy
       const checkDistance = TILE_SIZE
-      const checkX = unit.x + TILE_SIZE / 2 + fx * checkDistance * directionSign
-      const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance * directionSign
+      const checkX = unit.x + TILE_SIZE / 2 + fx * checkDistance
+      const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance
       const nextTileX = Math.floor(checkX / TILE_SIZE)
       const nextTileY = Math.floor(checkY / TILE_SIZE)
       const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -227,18 +255,50 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         !(nextTileX === currentTileX && nextTileY === currentTileY)
 
       if (!occupied) {
-        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign * movementMagnitude
-        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * directionSign * movementMagnitude
-        unit.movement.isMoving = true
+        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * movementMagnitude
+        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * movementMagnitude
+        unit.movement.isMoving = movementMagnitude > 0
       } else {
         unit.movement.targetVelocity.x = 0
         unit.movement.targetVelocity.y = 0
         unit.movement.isMoving = false
       }
     } else {
-      unit.movement.targetVelocity.x = 0
-      unit.movement.targetVelocity.y = 0
-      unit.movement.isMoving = false
+      const movementAxis = forwardIntensity - backwardIntensity
+      if (movementAxis) {
+        const directionSign = movementAxis > 0 ? 1 : -1
+        const movementMagnitude = Math.min(Math.abs(movementAxis), 1)
+        const fx = Math.cos(unit.direction)
+        const fy = Math.sin(unit.direction)
+
+        // Check the tile one tile ahead (or behind) for occupancy
+        const checkDistance = TILE_SIZE
+        const checkX = unit.x + TILE_SIZE / 2 + fx * checkDistance * directionSign
+        const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance * directionSign
+        const nextTileX = Math.floor(checkX / TILE_SIZE)
+        const nextTileY = Math.floor(checkY / TILE_SIZE)
+        const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+        const occupied =
+          occupancyMap &&
+          occupancyMap[nextTileY] &&
+          occupancyMap[nextTileY][nextTileX] &&
+          !(nextTileX === currentTileX && nextTileY === currentTileY)
+
+        if (!occupied) {
+          unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * directionSign * movementMagnitude
+          unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * directionSign * movementMagnitude
+          unit.movement.isMoving = true
+        } else {
+          unit.movement.targetVelocity.x = 0
+          unit.movement.targetVelocity.y = 0
+          unit.movement.isMoving = false
+        }
+      } else {
+        unit.movement.targetVelocity.x = 0
+        unit.movement.targetVelocity.y = 0
+        unit.movement.isMoving = false
+      }
     }
 
     if (hasTurret && unit.target && !manualOverrideActive) {
