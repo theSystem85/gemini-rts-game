@@ -29,6 +29,7 @@ import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
+import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -69,6 +70,8 @@ let gameInstance = null
 let lastIsTouchState = null
 let lastMobileLayoutMode = null
 let portraitQuery = null
+
+initializeMobileViewportLock()
 
 const mobileLayoutState = {
   productionArea: null,
