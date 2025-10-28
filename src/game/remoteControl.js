@@ -8,7 +8,7 @@ import {
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits, getKeyboardHandler } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
-import { normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
+import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 
 let lastAutoFocusUnitId = null
 
@@ -177,10 +177,22 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
     // Adjust rotation of the wagon directly so movement aligns with it
     const rotationSpeed = unit.rotationSpeed || 0.05
+    let absoluteMovementDirectionSign = 1
     if (absoluteMovementActive) {
       const desiredDirection = normalizeAngle(rawWagonDirection)
       const currentDirection = unit.direction || 0
-      unit.direction = smoothRotateTowardsAngle(currentDirection, desiredDirection, rotationSpeed)
+      let targetDirection = desiredDirection
+
+      const reverseDirection = normalizeAngle(desiredDirection + Math.PI)
+      const frontDiff = angleDiff(currentDirection, desiredDirection)
+      const backDiff = angleDiff(currentDirection, reverseDirection)
+
+      if (backDiff + 0.0001 < frontDiff) {
+        targetDirection = reverseDirection
+        absoluteMovementDirectionSign = -1
+      }
+
+      unit.direction = smoothRotateTowardsAngle(currentDirection, targetDirection, rotationSpeed)
     } else {
       const netTurn = turnRightIntensity - turnLeftIntensity
       if (netTurn) {
@@ -242,8 +254,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       const fy = Math.sin(unit.direction)
 
       const checkDistance = TILE_SIZE
-      const checkX = unit.x + TILE_SIZE / 2 + fx * checkDistance
-      const checkY = unit.y + TILE_SIZE / 2 + fy * checkDistance
+      const checkX =
+        unit.x + TILE_SIZE / 2 + fx * checkDistance * absoluteMovementDirectionSign
+      const checkY =
+        unit.y + TILE_SIZE / 2 + fy * checkDistance * absoluteMovementDirectionSign
       const nextTileX = Math.floor(checkX / TILE_SIZE)
       const nextTileY = Math.floor(checkY / TILE_SIZE)
       const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -255,8 +269,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         !(nextTileX === currentTileX && nextTileY === currentTileY)
 
       if (!occupied) {
-        unit.movement.targetVelocity.x = fx * effectiveMaxSpeed * movementMagnitude
-        unit.movement.targetVelocity.y = fy * effectiveMaxSpeed * movementMagnitude
+        unit.movement.targetVelocity.x =
+          fx * effectiveMaxSpeed * movementMagnitude * absoluteMovementDirectionSign
+        unit.movement.targetVelocity.y =
+          fy * effectiveMaxSpeed * movementMagnitude * absoluteMovementDirectionSign
         unit.movement.isMoving = movementMagnitude > 0
       } else {
         unit.movement.targetVelocity.x = 0

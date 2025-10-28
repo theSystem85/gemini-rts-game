@@ -44,7 +44,10 @@ const joystickState = {
     activeActions: new Map(),
     normalizedX: 0,
     normalizedY: 0,
-    distance: 0
+    distance: 0,
+    reloadIndicator: null,
+    reloadVisible: false,
+    reloadProgress: 1
   },
   right: {
     element: null,
@@ -57,7 +60,10 @@ const joystickState = {
     activeActions: new Map(),
     normalizedX: 0,
     normalizedY: 0,
-    distance: 0
+    distance: 0,
+    reloadIndicator: null,
+    reloadVisible: false,
+    reloadProgress: 1
   }
 }
 
@@ -105,6 +111,19 @@ function determineCurrentProfile() {
   return isTurretTankUnitType(unit.type) ? 'tank' : 'vehicle'
 }
 
+function getSelectedTankUnit() {
+  if (!selectedUnits || selectedUnits.length !== 1) {
+    return null
+  }
+
+  const [unit] = selectedUnits
+  if (!unit || !unit.movement || !isFriendlyUnit(unit)) {
+    return null
+  }
+
+  return isTurretTankUnitType(unit.type) ? unit : null
+}
+
 function isContainerActive() {
   return !!(container && container.getAttribute('aria-hidden') !== 'true')
 }
@@ -115,6 +134,94 @@ function isJoystickEnabled() {
   }
 
   return container.getAttribute('data-selection-active') === 'true'
+}
+
+function getTankReloadCooldown(unit) {
+  if (!unit) {
+    return 0
+  }
+
+  const baseRate = unit.type === 'rocketTank' ? 12000 : 4000
+
+  if (unit.level >= 3) {
+    const multiplier = unit.fireRateMultiplier || 1.33
+    if (multiplier > 0) {
+      return baseRate / multiplier
+    }
+  }
+
+  return baseRate
+}
+
+function computeTankReloadState(unit) {
+  const cooldown = getTankReloadCooldown(unit)
+  if (cooldown <= 0) {
+    return { progress: 1, reloading: false }
+  }
+
+  const lastShotTime = typeof unit.lastShotTime === 'number' ? unit.lastShotTime : null
+  if (!lastShotTime || lastShotTime <= 0 || typeof performance === 'undefined') {
+    return { progress: 1, reloading: false }
+  }
+
+  const now = performance.now()
+  const elapsed = now - lastShotTime
+  if (!Number.isFinite(elapsed) || elapsed >= cooldown) {
+    return { progress: 1, reloading: false }
+  }
+
+  const progress = Math.max(0, Math.min(elapsed / cooldown, 1))
+  return { progress, reloading: progress < 0.999 }
+}
+
+function updateTankReloadIndicator(profileOverride = null) {
+  const state = joystickState.left
+  const indicator = state.reloadIndicator
+  if (!indicator) {
+    return
+  }
+
+  const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
+  const shouldShow = profile === 'tank' && isJoystickEnabled()
+
+  if (!shouldShow) {
+    if (state.reloadVisible) {
+      indicator.classList.remove('visible')
+      indicator.classList.remove('reloading')
+      indicator.style.setProperty('--progress', '1')
+    }
+    state.reloadVisible = false
+    state.reloadProgress = 1
+    return
+  }
+
+  const unit = getSelectedTankUnit()
+  if (!unit) {
+    if (state.reloadVisible) {
+      indicator.classList.remove('visible')
+      indicator.classList.remove('reloading')
+      indicator.style.setProperty('--progress', '1')
+    }
+    state.reloadVisible = false
+    state.reloadProgress = 1
+    return
+  }
+
+  const { progress, reloading } = computeTankReloadState(unit)
+  const clampedProgress = Number.isFinite(progress) ? Math.max(0, Math.min(progress, 1)) : 1
+  const wasVisible = state.reloadVisible
+
+  if (!wasVisible) {
+    indicator.classList.add('visible')
+  }
+
+  if (!wasVisible || Math.abs(clampedProgress - state.reloadProgress) > 0.01) {
+    indicator.style.setProperty('--progress', clampedProgress.toFixed(3))
+    state.reloadProgress = clampedProgress
+  }
+
+  indicator.classList.toggle('reloading', reloading)
+  state.reloadVisible = true
 }
 
 function updateThumbPosition(side, dx = 0, dy = 0, radius = 0, active = false) {
@@ -236,6 +343,7 @@ function updateContainerSelectionVisibility(profile) {
 function applyJoystickMappings(force = false, profileOverride = null) {
   const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
   updateContainerSelectionVisibility(profile)
+  updateTankReloadIndicator(profile)
 
   if (profile === 'tank') {
     updateTankAbsoluteControls()
@@ -275,6 +383,20 @@ function clearTapState(side) {
 function triggerTapActions(side) {
   const profile = determineCurrentProfile()
   if (!profile) {
+    return
+  }
+
+  if (profile === 'tank' && side === 'left') {
+    clearTapState(side)
+    const source = TAP_SOURCES[side]
+    setRemoteControlAction('fire', source, true, 1)
+
+    const timeoutId = window.setTimeout(() => {
+      setRemoteControlAction('fire', source, false)
+      tapState[side] = null
+    }, TAP_PULSE_DURATION)
+
+    tapState[side] = { timeoutId, actions: ['fire'] }
     return
   }
 
@@ -487,6 +609,21 @@ function initializeJoysticks() {
     state.moved = false
     state.axisIntensities = createAxisState()
     state.activeActions = new Map()
+    if (side === 'left' && state.base) {
+      let indicator = state.base.querySelector('.joystick-reload-ring')
+      if (!indicator) {
+        indicator = document.createElement('div')
+        indicator.className = 'joystick-reload-ring'
+        indicator.style.setProperty('--progress', '1')
+        state.base.appendChild(indicator)
+      }
+      state.reloadIndicator = indicator
+      state.reloadVisible = false
+      state.reloadProgress = 1
+      indicator.classList.remove('visible')
+      indicator.classList.remove('reloading')
+      indicator.style.setProperty('--progress', '1')
+    }
     updateThumbPosition(side, 0, 0, 0, false)
     attachJoystickEvents(side)
   })
@@ -496,6 +633,8 @@ function initializeJoysticks() {
   if (isContainerActive()) {
     startProfileWatcher()
   }
+
+  updateTankReloadIndicator()
 }
 
 if (typeof document !== 'undefined') {
@@ -516,6 +655,7 @@ if (typeof document !== 'undefined') {
         container.setAttribute('data-selection-active', 'false')
       }
       lastProfile = null
+      updateTankReloadIndicator(null)
     } else {
       startProfileWatcher()
       applyJoystickMappings(true)
