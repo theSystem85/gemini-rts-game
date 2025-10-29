@@ -37,6 +37,113 @@ const RECOVERY_APPROACH_OFFSETS = [
   { x: 1, y: 1 }
 ]
 
+function getUnitTilePosition(unit) {
+  if (!unit) return null
+  if (typeof unit.tileX === 'number' && typeof unit.tileY === 'number') {
+    return { x: unit.tileX, y: unit.tileY }
+  }
+  if (typeof unit.x === 'number' && typeof unit.y === 'number') {
+    return {
+      x: Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE),
+      y: Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+    }
+  }
+  return null
+}
+
+function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTileOverride = null) {
+  if (!serviceUnit || !target || !mapGrid || mapGrid.length === 0) {
+    return null
+  }
+
+  const startTile = startTileOverride ? { x: startTileOverride.x, y: startTileOverride.y } : getUnitTilePosition(serviceUnit)
+  if (!startTile) {
+    return null
+  }
+
+  const targetTileX = typeof target.tileX === 'number'
+    ? target.tileX
+    : Math.floor((target.x + TILE_SIZE / 2) / TILE_SIZE)
+  const targetTileY = typeof target.tileY === 'number'
+    ? target.tileY
+    : Math.floor((target.y + TILE_SIZE / 2) / TILE_SIZE)
+
+  if (Number.isNaN(targetTileX) || Number.isNaN(targetTileY)) {
+    return null
+  }
+
+  const buildResult = (path, destinationTile, moveTarget) => ({
+    path,
+    destinationTile,
+    moveTarget,
+    cost: path.length
+  })
+
+  if (mode === UTILITY_QUEUE_MODES.HEAL || mode === UTILITY_QUEUE_MODES.REFUEL) {
+    const offsets = AMBULANCE_APPROACH_OFFSETS
+    let bestPlan = null
+    offsets.forEach(offset => {
+      if (bestPlan) return
+      const destX = targetTileX + offset.x
+      const destY = targetTileY + offset.y
+      if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
+        return
+      }
+      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, null)
+      if (path && path.length > 0) {
+        bestPlan = buildResult(path, { x: destX, y: destY }, { x: destX, y: destY })
+      }
+    })
+    return bestPlan
+  }
+
+  if (mode === UTILITY_QUEUE_MODES.REPAIR) {
+    if (target.isWreckTarget) {
+      const candidatePositions = [
+        { x: targetTileX, y: targetTileY },
+        { x: targetTileX + 1, y: targetTileY },
+        { x: targetTileX - 1, y: targetTileY },
+        { x: targetTileX, y: targetTileY + 1 },
+        { x: targetTileX, y: targetTileY - 1 }
+      ]
+
+      let bestPlan = null
+      candidatePositions.forEach(pos => {
+        if (pos.x < 0 || pos.y < 0 || pos.y >= mapGrid.length || pos.x >= mapGrid[0].length) {
+          return
+        }
+        const path = findPath(startTile, pos, mapGrid, gameState.occupancyMap)
+        if (path && path.length > 0) {
+          const plan = buildResult(path, { x: pos.x, y: pos.y }, { x: pos.x, y: pos.y })
+          if (!bestPlan || plan.cost < bestPlan.cost) {
+            bestPlan = plan
+          }
+        }
+      })
+      return bestPlan
+    }
+
+    let bestPlan = null
+    RECOVERY_APPROACH_OFFSETS.forEach(offset => {
+      const destX = targetTileX + offset.x
+      const destY = targetTileY + offset.y
+      if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
+        return
+      }
+      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, gameState.occupancyMap)
+      if (path && path.length > 0) {
+        const plan = buildResult(path, { x: destX, y: destY }, { x: destX * TILE_SIZE, y: destY * TILE_SIZE })
+        if (!bestPlan || plan.cost < bestPlan.cost) {
+          bestPlan = plan
+        }
+      }
+    })
+    return bestPlan
+  }
+
+  return null
+}
+
 export class UnitCommandsHandler {
 
   // Helper function to clear attack group feature state for units
@@ -235,34 +342,19 @@ export class UnitCommandsHandler {
       }
       return false
     }
-
-    const startTile = {
-      x: Math.floor((ambulance.x + TILE_SIZE / 2) / TILE_SIZE),
-      y: Math.floor((ambulance.y + TILE_SIZE / 2) / TILE_SIZE)
-    }
-    const targetTileX = Math.floor((targetUnit.x + TILE_SIZE / 2) / TILE_SIZE)
-    const targetTileY = Math.floor((targetUnit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-    for (const offset of AMBULANCE_APPROACH_OFFSETS) {
-      const destX = targetTileX + offset.x
-      const destY = targetTileY + offset.y
-      if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
-        continue
+    const plan = computeUtilityApproachPath(ambulance, targetUnit, UTILITY_QUEUE_MODES.HEAL, mapGrid)
+    if (!plan) {
+      if (!suppressNotifications) {
+        showNotification('Cannot path to target for healing!', 2000)
       }
-      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, null)
-      if (path && path.length > 0) {
-        ambulance.path = path.slice(1)
-        ambulance.moveTarget = { x: destX, y: destY }
-        ambulance.healingTarget = targetUnit
-        ambulance.healingTimer = 0
-        return true
-      }
+      return false
     }
 
-    if (!suppressNotifications) {
-      showNotification('Cannot path to target for healing!', 2000)
-    }
-    return false
+    ambulance.path = plan.path.slice(1)
+    ambulance.moveTarget = { ...plan.moveTarget }
+    ambulance.healingTarget = targetUnit
+    ambulance.healingTimer = 0
+    return true
   }
 
   assignTankerToTarget(tanker, targetUnit, mapGrid, { suppressNotifications = false } = {}) {
@@ -279,31 +371,20 @@ export class UnitCommandsHandler {
       return false
     }
 
-    const startTile = { x: tanker.tileX, y: tanker.tileY }
-    const targetTileX = Math.floor((targetUnit.x + TILE_SIZE / 2) / TILE_SIZE)
-    const targetTileY = Math.floor((targetUnit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-    for (const offset of AMBULANCE_APPROACH_OFFSETS) {
-      const destX = targetTileX + offset.x
-      const destY = targetTileY + offset.y
-      if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
-        continue
+    const plan = computeUtilityApproachPath(tanker, targetUnit, UTILITY_QUEUE_MODES.REFUEL, mapGrid)
+    if (!plan) {
+      if (!suppressNotifications) {
+        showNotification('Cannot path to target for refuel!', 2000)
       }
-      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, null)
-      if (path && path.length > 0) {
-        tanker.path = path.slice(1)
-        tanker.moveTarget = { x: destX, y: destY }
-        tanker.refuelTarget = targetUnit
-        tanker.refuelTimer = 0
-        tanker.emergencyTarget = null
-        return true
-      }
+      return false
     }
 
-    if (!suppressNotifications) {
-      showNotification('Cannot path to target for refuel!', 2000)
-    }
-    return false
+    tanker.path = plan.path.slice(1)
+    tanker.moveTarget = { ...plan.moveTarget }
+    tanker.refuelTarget = targetUnit
+    tanker.refuelTimer = 0
+    tanker.emergencyTarget = null
+    return true
   }
 
   assignRecoveryTankToTarget(tank, targetUnit, mapGrid, { suppressNotifications = false } = {}) {
@@ -325,31 +406,22 @@ export class UnitCommandsHandler {
       }
       return false
     }
-
-    const startTile = { x: tank.tileX, y: tank.tileY }
-    for (const offset of RECOVERY_APPROACH_OFFSETS) {
-      const destX = targetUnit.tileX + offset.x
-      const destY = targetUnit.tileY + offset.y
-      if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
-        continue
+    const plan = computeUtilityApproachPath(tank, targetUnit, UTILITY_QUEUE_MODES.REPAIR, mapGrid)
+    if (!plan) {
+      if (!suppressNotifications) {
+        showNotification('Cannot reach unit for repair!', 2000)
       }
-      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, gameState.occupancyMap)
-      if (path && path.length > 0) {
-        tank.path = path.slice(1)
-        tank.moveTarget = { x: destX * TILE_SIZE, y: destY * TILE_SIZE }
-        tank.target = null
-        tank.repairTarget = null
-        tank.repairData = null
-        tank.repairStarted = false
-        tank.repairTargetUnit = targetUnit
-        return true
-      }
+      return false
     }
 
-    if (!suppressNotifications) {
-      showNotification('Cannot reach unit for repair!', 2000)
-    }
-    return false
+    tank.path = plan.path.slice(1)
+    tank.moveTarget = { ...plan.moveTarget }
+    tank.target = null
+    tank.repairTarget = null
+    tank.repairData = null
+    tank.repairStarted = false
+    tank.repairTargetUnit = targetUnit
+    return true
   }
 
   assignRecoveryTankToWreck(tank, wreck, mapGrid, { mode = 'tow', suppressNotifications = false } = {}) {
@@ -413,29 +485,10 @@ export class UnitCommandsHandler {
       return false
     }
 
-    const candidatePositions = [
-      { x: targetWreck.tileX, y: targetWreck.tileY },
-      { x: targetWreck.tileX + 1, y: targetWreck.tileY },
-      { x: targetWreck.tileX - 1, y: targetWreck.tileY },
-      { x: targetWreck.tileX, y: targetWreck.tileY + 1 },
-      { x: targetWreck.tileX, y: targetWreck.tileY - 1 }
-    ]
+    const wreckDescriptor = { ...targetWreck, isWreckTarget: true }
+    const plan = computeUtilityApproachPath(tank, wreckDescriptor, UTILITY_QUEUE_MODES.REPAIR, mapGrid)
 
-    let assignedPath = null
-    let destination = null
-    for (const pos of candidatePositions) {
-      if (pos.x < 0 || pos.y < 0 || pos.y >= mapGrid.length || pos.x >= mapGrid[0].length) {
-        continue
-      }
-      const path = findPath({ x: tank.tileX, y: tank.tileY }, pos, mapGrid, gameState.occupancyMap)
-      if (path && path.length > 0) {
-        assignedPath = path
-        destination = pos
-        break
-      }
-    }
-
-    if (!assignedPath || !destination) {
+    if (!plan) {
       if (!suppressNotifications) {
         showNotification('Cannot reach wreck location.', 2000)
       }
@@ -469,8 +522,8 @@ export class UnitCommandsHandler {
     this.cancelRecoveryTask(tank)
     tank.guardMode = false
     tank.guardTarget = null
-    tank.path = assignedPath.slice(1)
-    tank.moveTarget = { x: destination.x, y: destination.y }
+    tank.path = plan.path.slice(1)
+    tank.moveTarget = { x: plan.moveTarget.x, y: plan.moveTarget.y }
     tank.recoveryTask = task
     targetWreck.assignedTankId = tank.id
 
@@ -626,6 +679,53 @@ export class UnitCommandsHandler {
     return started
   }
 
+  findBestUtilityAssignment(serviceUnits, target, mode, mapGrid, simulatedPositions) {
+    let best = null
+    for (const unit of serviceUnits) {
+      if (!this.isUtilityTargetValid(mode, unit, target)) {
+        continue
+      }
+      const simulatedStart = simulatedPositions.get(unit.id) || getUnitTilePosition(unit)
+      if (!simulatedStart) {
+        continue
+      }
+      const plan = computeUtilityApproachPath(unit, target, mode, mapGrid, simulatedStart)
+      if (!plan) {
+        continue
+      }
+      if (!best || plan.cost < best.plan.cost) {
+        best = { unit, plan }
+      }
+    }
+    return best
+  }
+
+  planUtilityAssignments(serviceUnits, targets, mode, mapGrid) {
+    const assignmentsMap = new Map()
+    const simulatedPositions = new Map()
+    const skippedTargets = []
+
+    targets.forEach(target => {
+      const best = this.findBestUtilityAssignment(serviceUnits, target, mode, mapGrid, simulatedPositions)
+      if (!best) {
+        skippedTargets.push(target)
+        return
+      }
+
+      const { unit, plan } = best
+      if (!assignmentsMap.has(unit.id)) {
+        assignmentsMap.set(unit.id, { unit, targets: [] })
+      }
+      assignmentsMap.get(unit.id).targets.push(target)
+      simulatedPositions.set(unit.id, { x: plan.destinationTile.x, y: plan.destinationTile.y })
+    })
+
+    return {
+      assignments: Array.from(assignmentsMap.values()),
+      skippedTargets
+    }
+  }
+
   queueUtilityTargets(serviceUnits, targets, mode, mapGrid) {
     if (!serviceUnits || serviceUnits.length === 0 || !targets || targets.length === 0) {
       return false
@@ -647,25 +747,24 @@ export class UnitCommandsHandler {
       return false
     }
 
-    const primaryUnit = capableUnits[0]
-    const filteredTargets = targets.filter(target => this.isUtilityTargetValid(mode, primaryUnit, target))
+    const filteredTargets = targets.filter(target =>
+      capableUnits.some(unit => this.isUtilityTargetValid(mode, unit, target))
+    )
     if (filteredTargets.length === 0) {
       return false
     }
 
-    const assignments = capableUnits.map(() => [])
-    filteredTargets.forEach((target, index) => {
-      const assignedIndex = index % capableUnits.length
-      assignments[assignedIndex].push(target)
-    })
+    const { assignments } = this.planUtilityAssignments(capableUnits, filteredTargets, mode, mapGrid)
+    if (!assignments || assignments.length === 0) {
+      return false
+    }
 
     let anyQueued = false
-    capableUnits.forEach((unit, index) => {
-      const assignedTargets = assignments[index]
-      if (assignedTargets.length === 0) {
+    assignments.forEach(entry => {
+      if (!entry || !entry.unit || !entry.targets || entry.targets.length === 0) {
         return
       }
-      const result = this.setUtilityQueue(unit, assignedTargets, mode, mapGrid, { suppressNotifications: true })
+      const result = this.setUtilityQueue(entry.unit, entry.targets, mode, mapGrid, { suppressNotifications: true })
       if (result.addedTargets.length > 0 || result.started) {
         anyQueued = true
       }
