@@ -4,7 +4,9 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/write-commit.js",
     "dev": "node scripts/generate-version.js && vite",
+    "prebuild": "node scripts/write-commit.js",
     "build": "node scripts/generate-version.js && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ *.js",

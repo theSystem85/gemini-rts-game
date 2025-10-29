@@ -28,6 +28,7 @@ import { getTextureManager, preloadTileTextures } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
+import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 
@@ -1086,13 +1087,20 @@ class Game {
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
+    const commitMessageElement = document.getElementById('appCommitMessage')
     const configSettingsBtn = document.getElementById('configSettingsBtn')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
     // Display version number
     if (versionElement) {
-      versionElement.textContent = APP_VERSION
+      const commitHash = versionInfo?.commit || 'unknown'
+      versionElement.textContent = `${APP_VERSION} (${commitHash})`
+    }
+
+    if (commitMessageElement) {
+      commitMessageElement.textContent = versionInfo?.message || ''
+      commitMessageElement.style.display = commitMessageElement.textContent ? 'block' : 'none'
     }
 
     oreCheckbox.checked = ORE_SPREAD_ENABLED
