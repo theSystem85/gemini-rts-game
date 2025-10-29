@@ -459,19 +459,24 @@ body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   display: flex;
   flex-direction: column;
   position: fixed;
-  top: calc(var(--safe-area-top));
-  right: calc(var(--safe-area-right));
-  height: calc(100% - var(--safe-area-top) - var(--safe-area-bottom));
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  padding-top: var(--safe-area-top);
+  padding-right: var(--safe-area-right);
+  padding-bottom: var(--safe-area-bottom);
   background: rgba(32, 32, 32, 0.94);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
   z-index: 1500;
-  padding: 0;
+  padding-left: 0;
   gap: 0;
+  box-sizing: border-box;
 }
 
 body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
-  width: 80px;
+  width: calc(80px + var(--safe-area-right));
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #productionArea {

@@ -3,6 +3,10 @@
 
 import { gameState } from '../gameState.js'
 import { MAP_TILES_X, MAP_TILES_Y, TILE_SIZE } from '../config.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 export function setupMinimapHandlers(gameCanvas) {
   const minimapElement = document.getElementById('minimap')
@@ -111,8 +115,8 @@ export function handleMinimapClick(e, gameCanvas) {
 
   // Use logical (CSS) dimensions for scroll calculation, not the scaled canvas dimensions
   // The actual game coordinate space should use CSS dimensions
-  const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-  const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+  const logicalCanvasWidth = getPlayableViewportWidth(gameCanvas)
+  const logicalCanvasHeight = getPlayableViewportHeight(gameCanvas)
 
   // Calculate new scroll position
   const newX = clickX * (MAP_TILES_X * TILE_SIZE - logicalCanvasWidth)

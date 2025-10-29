@@ -13,6 +13,10 @@ import { performanceDialog } from '../ui/performanceDialog.js'
 import { runtimeConfigDialog } from '../ui/runtimeConfigDialog.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 import { setRemoteControlAction, getRemoteControlActionState } from './remoteControlState.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -649,10 +653,12 @@ export class KeyboardHandler {
       const factoryY = (this.playerFactory.y + this.playerFactory.height / 2) * TILE_SIZE
 
       // Center the view on the factory
-      gameState.scrollOffset.x = Math.max(0, Math.min(factoryX - gameCanvas.width / 2,
-        mapGrid[0].length * TILE_SIZE - gameCanvas.width))
-      gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - gameCanvas.height / 2,
-        mapGrid.length * TILE_SIZE - gameCanvas.height))
+      const viewportWidth = getPlayableViewportWidth(gameCanvas)
+      const viewportHeight = getPlayableViewportHeight(gameCanvas)
+      gameState.scrollOffset.x = Math.max(0, Math.min(factoryX - viewportWidth / 2,
+        mapGrid[0].length * TILE_SIZE - viewportWidth))
+      gameState.scrollOffset.y = Math.max(0, Math.min(factoryY - viewportHeight / 2,
+        mapGrid.length * TILE_SIZE - viewportHeight))
       gameState.dragVelocity = { x: 0, y: 0 }
       playSound('unitSelection')
       if (this.requestRenderFrame) {
@@ -667,11 +673,8 @@ export class KeyboardHandler {
     const gameCanvas = document.getElementById('gameCanvas')
 
     // Get device pixel ratio to account for Retina displays
-    const pixelRatio = window.devicePixelRatio || 1
-
-    // Calculate logical canvas dimensions
-    const logicalCanvasWidth = gameCanvas.width / pixelRatio
-    const logicalCanvasHeight = gameCanvas.height / pixelRatio
+    const logicalCanvasWidth = getPlayableViewportWidth(gameCanvas)
+    const logicalCanvasHeight = getPlayableViewportHeight(gameCanvas)
 
     let focusX, focusY
 
@@ -781,11 +784,8 @@ export class KeyboardHandler {
           const gameCanvas = document.getElementById('gameCanvas')
 
           // Get device pixel ratio to account for Retina displays
-          const pixelRatio = window.devicePixelRatio || 1
-
-          // Calculate logical canvas dimensions (not physical pixels)
-          const logicalCanvasWidth = gameCanvas.width / pixelRatio
-          const logicalCanvasHeight = gameCanvas.height / pixelRatio
+          const logicalCanvasWidth = getPlayableViewportWidth(gameCanvas)
+          const logicalCanvasHeight = getPlayableViewportHeight(gameCanvas)
 
           // Center properly accounting for the device pixel ratio
           gameState.scrollOffset.x = Math.max(0, Math.min(

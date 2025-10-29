@@ -11,6 +11,10 @@ import { initiateRetreat } from '../behaviours/retreat.js'
 import { AttackGroupHandler } from './attackGroupHandler.js'
 import { isWithinBaseRange } from '../utils/baseUtils.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 export class MouseHandler {
   constructor() {
@@ -484,8 +488,8 @@ export class MouseHandler {
     const dy = e.clientY - gameState.lastDragPos.y
 
     // Get logical dimensions accounting for pixel ratio
-    const logicalWidth = gameCanvas.clientWidth || parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-    const logicalHeight = gameCanvas.clientHeight || parseInt(gameCanvas.style.height, 10) || window.innerHeight
+    const logicalWidth = getPlayableViewportWidth(gameCanvas)
+    const logicalHeight = getPlayableViewportHeight(gameCanvas)
 
     // Multiply by 2 to make scrolling 2x faster
     const scrollSpeed = 2

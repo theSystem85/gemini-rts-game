@@ -665,6 +665,10 @@ import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from './utils/layoutMetrics.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -895,8 +899,8 @@ class Game {
       const factoryPixelY = playerFactory.y * TILE_SIZE
 
       const gameCanvas = this.canvasManager.getGameCanvas()
-      const logicalCanvasWidth = parseInt(gameCanvas.style.width, 10) || gameCanvas.width
-      const logicalCanvasHeight = parseInt(gameCanvas.style.height, 10) || gameCanvas.height
+      const logicalCanvasWidth = getPlayableViewportWidth(gameCanvas)
+      const logicalCanvasHeight = getPlayableViewportHeight(gameCanvas)
 
       gameState.scrollOffset.x = Math.max(0, Math.min(
         factoryPixelX - logicalCanvasWidth / 2,
