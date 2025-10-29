@@ -17,6 +17,50 @@ function distanceBetweenPoints(ax, ay, bx, by) {
   return Math.hypot(ax - bx, ay - by)
 }
 
+// Resolve the intended workshop for a recovery task robustly
+function resolveWorkshopForTask(gameState, task) {
+  const buildings = gameState.buildings || []
+
+  // Prefer explicit id match when available
+  if (task?.workshopId !== undefined && task?.workshopId !== null) {
+    const byId = buildings.find(b => b.id === task.workshopId && b.type === 'vehicleWorkshop')
+    if (byId) return byId
+  }
+
+  // Fallback: owner + coordinates (tile-based) if recorded
+  const owner = task?.workshopOwner
+  const wx = task?.workshopX
+  const wy = task?.workshopY
+  if (owner && (wx !== undefined) && (wy !== undefined)) {
+    const byCoords = buildings.find(b => b.type === 'vehicleWorkshop' && b.owner === owner && b.x === wx && b.y === wy)
+    if (byCoords) return byCoords
+  }
+
+  // Last resort: nearest workshop by owner to the entry tile (if present)
+  const candidates = buildings.filter(b => b.type === 'vehicleWorkshop' && (!owner || b.owner === owner))
+  if (candidates.length === 0) return null
+
+  if (task?.workshopEntry) {
+    const ex = task.workshopEntry.x
+    const ey = task.workshopEntry.y
+    let best = candidates[0]
+    let bestDist = Infinity
+    for (const b of candidates) {
+      const cx = b.x + (b.width ? b.width / 2 : 1.5)
+      const cy = b.y + (b.height ? b.height / 2 : 1.5)
+      const d = Math.hypot(cx - ex, cy - ey)
+      if (d < bestDist) {
+        bestDist = d
+        best = b
+      }
+    }
+    return best
+  }
+
+  // If no entry, just return first candidate for that owner
+  return candidates[0] || null
+}
+
 function handleTowTask(tank, task, wreck, units, gameState) {
   const mapGrid = gameState.mapGrid
   const occupancyMap = gameState.occupancyMap
@@ -58,7 +102,7 @@ function handleTowTask(tank, task, wreck, units, gameState) {
     }
     updateWreckPositionFromTank(wreck, tank, occupancyMap)
 
-    const workshop = (gameState.buildings || []).find(b => b.id === task.workshopId)
+    const workshop = resolveWorkshopForTask(gameState, task)
     if (!workshop || workshop.health <= 0) {
       releaseWreckAssignment(wreck)
       tank.recoveryTask = null
@@ -84,9 +128,7 @@ function finalizeRestoration(tank, wreck, units, gameState) {
   if (!wreck) return
 
   // Find the workshop this wreck is being delivered to
-  const workshop = (gameState.buildings || []).find(b =>
-    b.id === tank.recoveryTask?.workshopId && b.type === 'vehicleWorkshop'
-  )
+  const workshop = resolveWorkshopForTask(gameState, tank.recoveryTask)
 
   if (!workshop) {
     // Workshop no longer exists, release wreck

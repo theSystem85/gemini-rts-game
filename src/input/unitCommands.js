@@ -507,7 +507,11 @@ export class UnitCommandsHandler {
       }
       task.mode = 'tow'
       task.state = 'movingToWreck'
-      task.workshopId = nearestWorkshop.workshop.id
+      // Some buildings do not have a persistent id; record robust identifiers
+      task.workshopId = nearestWorkshop.workshop.id // may be undefined
+      task.workshopOwner = nearestWorkshop.workshop.owner
+      task.workshopX = nearestWorkshop.workshop.x
+      task.workshopY = nearestWorkshop.workshop.y
       task.workshopEntry = nearestWorkshop.entryTile
       task.originalPosition = { x: tank.tileX, y: tank.tileY }
     } else if (mode === 'recycle') {

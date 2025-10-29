@@ -49,6 +49,8 @@ import {
   setAttackPathCalcInterval,
   AI_DECISION_INTERVAL,
   setAiDecisionInterval,
+  RECOVERY_TANK_RATIO,
+  setRecoveryTankRatio,
   PATHFINDING_THRESHOLD,
   setPathfindingThreshold,
   MOVE_TARGET_REACHED_THRESHOLD,
@@ -457,6 +459,18 @@ export const configRegistry = {
     min: 100,
     max: 10000,
     step: 100,
+    category: 'AI & Pathfinding'
+  },
+
+  recoveryTankRatio: {
+    name: 'Recovery Tank Ratio',
+    description: 'Number of combat units per recovery tank (1:X ratio)',
+    type: 'number',
+    get: () => RECOVERY_TANK_RATIO,
+    set: setRecoveryTankRatio,
+    min: 1,
+    max: 20,
+    step: 1,
     category: 'AI & Pathfinding'
   },
 

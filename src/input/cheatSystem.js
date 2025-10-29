@@ -525,6 +525,8 @@ export class CheatSystem {
     const baseY = Math.floor(gameState.cursorY / TILE_SIZE)
 
     let spawned = 0
+    const spawnedRecoveryTanks = []
+    
     for (let i = 0; i < count; i++) {
       const pos = this.findSpawnPositionNear(baseX, baseY)
       if (!pos) break
@@ -536,6 +538,16 @@ export class CheatSystem {
       // updateUnitOccupancy handle the addition.
       updateUnitOccupancy(newUnit, -1, -1, gameState.occupancyMap)
       this.updateNewUnit(newUnit)
+      
+      // Special initialization for recovery tanks
+      if (unitType === 'recoveryTank' && owner !== gameState.humanPlayer) {
+        newUnit.lastRecoveryCommandTime = 0
+        newUnit.freshlySpawned = true
+        newUnit.holdInFactory = false
+        newUnit.spawnedInFactory = false
+        spawnedRecoveryTanks.push(newUnit)
+      }
+      
       spawned++
     }
 
@@ -544,6 +556,24 @@ export class CheatSystem {
         `🚀 Spawned ${spawned} ${unitType}${spawned > 1 ? 's' : ''} for ${owner}`,
         3000
       )
+      
+      // Trigger immediate assignment for enemy recovery tanks
+      if (spawnedRecoveryTanks.length > 0) {
+        // Dynamically import and call the recovery tank management
+        import('../ai/enemyStrategies.js').then(module => {
+          const { manageAIRecoveryTanks } = module
+          const now = performance?.now ? performance.now() : Date.now()
+          
+          // Multiple attempts to ensure assignment
+          setTimeout(() => manageAIRecoveryTanks(units, gameState, gameState.mapGrid, now), 50)
+          setTimeout(() => manageAIRecoveryTanks(units, gameState, gameState.mapGrid, now), 200)
+          setTimeout(() => manageAIRecoveryTanks(units, gameState, gameState.mapGrid, now), 500)
+          
+          console.log(`✓ Triggered immediate recovery tank assignment for ${spawnedRecoveryTanks.length} cheat-spawned tanks`)
+        }).catch(err => {
+          console.error('Failed to load recovery tank management:', err)
+        })
+      }
     } else {
       this.showError('No valid spawn position found')
     }

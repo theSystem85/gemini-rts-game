@@ -562,6 +562,13 @@ export function setAiDecisionInterval(value) {
   AI_DECISION_INTERVAL = value
 }
 
+// Recovery tank ratio: 1 recovery tank per X combat units
+export let RECOVERY_TANK_RATIO = 5
+
+export function setRecoveryTankRatio(value) {
+  RECOVERY_TANK_RATIO = value
+}
+
 // Smoke emission for buildings
 export let BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 
@@ -1045,6 +1052,7 @@ const EXPORTED_CONFIG_VARIABLES = [
   'PATH_CALC_INTERVAL',
   'ATTACK_PATH_CALC_INTERVAL',
   'AI_DECISION_INTERVAL',
+  'RECOVERY_TANK_RATIO',
   'BUILDING_SMOKE_EMIT_INTERVAL',
   'PATHFINDING_THRESHOLD',
   'MOVE_TARGET_REACHED_THRESHOLD',

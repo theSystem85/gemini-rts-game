@@ -1,11 +1,17 @@
 import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
 import { spawnEnemyUnit } from './enemySpawner.js'
-import { resetAttackDirections, manageAICrewHealing, manageAITankerTrucks } from './enemyStrategies.js'
+import {
+  resetAttackDirections,
+  manageAICrewHealing,
+  manageAITankerTrucks,
+  manageAIRecoveryTanks
+} from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { logPerformance } from '../performanceUtils.js'
+import { RECOVERY_TANK_RATIO } from '../config.js'
 import { gameState } from '../gameState.js'
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
@@ -505,6 +511,27 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
 
       if (newUnit) {
         units.push(newUnit)
+        
+        // Immediately trigger recovery tank assignment for newly spawned recovery tanks
+        if (unitType === 'recoveryTank') {
+          // Mark as ready for immediate assignment
+          newUnit.lastRecoveryCommandTime = 0
+          newUnit.freshlySpawned = true
+          
+          // Release from factory immediately for recovery tanks
+          newUnit.holdInFactory = false
+          newUnit.spawnedInFactory = false
+          
+          // Force immediate assignment with multiple attempts
+          const attemptAssignment = () => {
+            manageAIRecoveryTanks(units, gameState, mapGrid, now)
+          }
+          
+          // Try multiple times to ensure assignment succeeds
+          setTimeout(attemptAssignment, 50)
+          setTimeout(attemptAssignment, 200)
+          setTimeout(attemptAssignment, 500)
+        }
       } else {
         console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
       }
@@ -555,10 +582,11 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       // 1. Build up to 4 harvesters per refinery (strict limit)
       // 2. Build a tanker truck when none exists and a harvester is present
       // 3. Always build ambulance if none exists and hospital is available
-      // 4. Only build tanks if hospital exists (for crew support)
-      // 5. Then build diverse combat units
-      // 6. Focus on advanced units when budget is high
-      // 7. Maintain harvester count but prioritize combat
+      // 4. Check if we need recovery tanks based on combat unit ratio
+      // 5. Only build tanks if hospital exists (for crew support)
+      // 6. Then build diverse combat units
+      // 7. Focus on advanced units when budget is high
+      // 8. Maintain harvester count but prioritize combat
 
       const MAX_HARVESTERS = aiRefineries.length * 4 // Strict 4 harvesters per refinery limit
       const harvesterCountInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
@@ -582,31 +610,46 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
         // Always ensure at least one ambulance exists if hospital is available
         unitType = 'ambulance'
       } else {
-        // We have enough harvesters and ambulance, hospital exists, now focus on diverse combat units
-        const rand = Math.random()
-        if (forceHarvesterHunter) {
-          // Always produce the harvester hunter tank immediately
-          unitType = 'tank_v1'
-        } else if (!specialDefensesReady) {
-          // Delay other tank production until key defenses are built
-          unitType = 'none' // No combat units until defenses are ready
-        } else if (isVeryHighBudget) {
-          // Very high budget: Focus on elite units
-          if (rand < 0.1) unitType = 'tank_v1'
-          else if (rand < 0.3) unitType = 'tank-v2'
-          else if (rand < 0.6) unitType = 'tank-v3'
-          else unitType = 'rocketTank'
-        } else if (isHighBudget) {
-          // High budget: Balanced advanced units
-          if (rand < 0.2) unitType = 'tank_v1'
-          else if (rand < 0.5) unitType = 'tank-v2'
-          else if (rand < 0.75) unitType = 'rocketTank'
-          else unitType = 'tank-v3'
+        // Check if we need recovery tanks based on combat unit ratio
+        const aiRecoveryTanks = units.filter(u => u.owner === aiPlayerId && u.type === 'recoveryTank' && u.health > 0)
+        const aiCombatUnits = units.filter(u =>
+          u.owner === aiPlayerId &&
+          (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+          u.health > 0
+        )
+
+        const requiredRecoveryTanks = Math.ceil(aiCombatUnits.length / RECOVERY_TANK_RATIO)
+        const needsRecoveryTank = aiRecoveryTanks.length < requiredRecoveryTanks && aiCombatUnits.length >= RECOVERY_TANK_RATIO
+
+        if (needsRecoveryTank && aiFactory.budget >= getUnitCost('recoveryTank')) {
+          unitType = 'recoveryTank'
         } else {
-          // Normal budget: Mix of basic and medium units
-          if (rand < 0.5) unitType = 'tank_v1'
-          else if (rand < 0.8) unitType = 'tank-v2'
-          else unitType = 'rocketTank'
+          // We have enough harvesters and ambulance, hospital exists, now focus on diverse combat units
+          const rand = Math.random()
+          if (forceHarvesterHunter) {
+            // Always produce the harvester hunter tank immediately
+            unitType = 'tank_v1'
+          } else if (!specialDefensesReady) {
+            // Delay other tank production until key defenses are built
+            unitType = 'none' // No combat units until defenses are ready
+          } else if (isVeryHighBudget) {
+            // Very high budget: Focus on elite units
+            if (rand < 0.1) unitType = 'tank_v1'
+            else if (rand < 0.3) unitType = 'tank-v2'
+            else if (rand < 0.6) unitType = 'tank-v3'
+            else unitType = 'rocketTank'
+          } else if (isHighBudget) {
+            // High budget: Balanced advanced units
+            if (rand < 0.2) unitType = 'tank_v1'
+            else if (rand < 0.5) unitType = 'tank-v2'
+            else if (rand < 0.75) unitType = 'rocketTank'
+            else unitType = 'tank-v3'
+          } else {
+            // Normal budget: Mix of basic and medium units
+            if (rand < 0.5) unitType = 'tank_v1'
+            else if (rand < 0.8) unitType = 'tank-v2'
+            else unitType = 'rocketTank'
+          }
         }
       }
       // Determine cost based on unit type
@@ -686,6 +729,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   if (aiUnits.length > 0) {
     manageAICrewHealing(units, gameState, now)
     manageAITankerTrucks(units, gameState, mapGrid)
+    manageAIRecoveryTanks(units, gameState, mapGrid, now)
   }
 }
 
