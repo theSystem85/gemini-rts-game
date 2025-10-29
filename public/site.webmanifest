@@ -1,6 +1,6 @@
 {
-  "name": "Gemini RTS Game",
-  "short_name": "RTS Game",
+  "name": "CodeAndConquer",
+  "short_name": "CodeAndConquer",
   "description": "A 2D tile-based Real-Time Strategy game built with vanilla JavaScript",
   "icons": [
     {

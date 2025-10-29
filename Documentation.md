@@ -1,4 +1,4 @@
-# Gemini RTS Game - Documentation
+# CodeAndConquer - Documentation
 
 ## Enemy Unit Retaliation System
 
