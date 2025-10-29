@@ -36,6 +36,8 @@ const MOVEMENT_CONFIG = {
   BACKWARD_MOVE_THRESHOLD: 0.5  // When to allow backward movement when stuck
 }
 
+export const UNIT_COLLISION_MIN_DISTANCE = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
+
 /**
  * Initialize movement properties for a unit
  */
@@ -348,14 +350,16 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   }
 
+  const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
+
   // Handle collisions
-  if (checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  if (checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)) {
     // Revert position if collision detected
     unit.x = prevX
     unit.y = prevY
 
     // Try alternative movement (slide along obstacles)
-    trySlideMovement(unit, movement, mapGrid, occupancyMap, units)
+    trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
   }
 
   // Update tile position based on actual position (for compatibility with existing code)
@@ -493,9 +497,9 @@ function normalizeAngle(angle) {
 }
 
 /**
- * Check for unit collisions with map obstacles and other units
+ * Check for unit collisions with map obstacles, other units, and wrecks
  */
-function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
+function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileX = Math.floor(unit.x / TILE_SIZE)
   const tileY = Math.floor(unit.y / TILE_SIZE)
 
@@ -540,13 +544,53 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
     }
   }
 
+  if (wrecks && wrecks.length > 0) {
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+    const unitVelX = unit.movement?.velocity?.x || 0
+    const unitVelY = unit.movement?.velocity?.y || 0
+
+    for (const wreck of wrecks) {
+      if (!wreck || wreck.health <= 0) continue
+      if (wreck.towedBy === unit.id) continue
+
+      const wreckCenterX = wreck.x + TILE_SIZE / 2
+      const wreckCenterY = wreck.y + TILE_SIZE / 2
+      const distance = Math.hypot(unitCenterX - wreckCenterX, unitCenterY - wreckCenterY)
+
+      if (distance >= UNIT_COLLISION_MIN_DISTANCE) {
+        continue
+      }
+
+      const dx = unitCenterX - wreckCenterX
+      const dy = unitCenterY - wreckCenterY
+      const dotProduct = dx * unitVelX + dy * unitVelY
+
+      if (dotProduct > 0) {
+        // Moving away from wreck - allow
+        continue
+      }
+
+      const normalX = (wreckCenterX - unitCenterX) / (distance || 1)
+      const normalY = (wreckCenterY - unitCenterY) / (distance || 1)
+      const overlap = UNIT_COLLISION_MIN_DISTANCE - distance
+      const unitSpeed = Math.hypot(unitVelX, unitVelY)
+      const impulseStrength = Math.max(0.25, Math.min(1.5, unitSpeed * 0.75 + overlap * 0.1))
+
+      wreck.velocityX = (wreck.velocityX || 0) + normalX * impulseStrength
+      wreck.velocityY = (wreck.velocityY || 0) + normalY * impulseStrength
+
+      return true
+    }
+  }
+
   return false
 }
 
 /**
  * Try to slide along obstacles when blocked
  */
-function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
+function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = [], wrecks = []) {
   const originalX = unit.x
   const originalY = unit.y
 
@@ -554,7 +598,7 @@ function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
   unit.x = originalX + movement.velocity.x
   unit.y = originalY
 
-  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)) {
     movement.velocity.y = 0 // Cancel vertical movement
     return
   }
@@ -563,7 +607,7 @@ function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
   unit.x = originalX
   unit.y = originalY + movement.velocity.y
 
-  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)) {
     movement.velocity.x = 0 // Cancel horizontal movement
     return
   }
