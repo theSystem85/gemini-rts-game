@@ -1,5 +1,5 @@
 // ambulanceSystem.js - Handle ambulance healing functionality
-import { SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
+import { SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
