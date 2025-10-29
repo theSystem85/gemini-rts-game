@@ -1081,6 +1081,9 @@ function getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile) {
 
 function isRecoveryTankAvailable(tank) {
   if (!tank || tank.health <= 0) return false
+  
+  // Allow tanks that are still in factory to be assigned tasks (they'll execute when released)
+  // Skip tanks that are already busy with other tasks
   if (tank.recoveryTask || tank.towedWreck) return false
   if (tank.repairTarget || tank.repairTargetUnit) return false
   if (tank.returningToHospital || tank.repairingAtWorkshop || tank.returningToWorkshop) return false
@@ -1097,6 +1100,11 @@ function isRecoveryTankAvailable(tank) {
 
 function hasRecentRecoveryCommand(tank, now) {
   if (!tank || !tank.lastRecoveryCommandTime) return false
+  // Skip cooldown for freshly spawned tanks
+  if (tank.freshlySpawned) {
+    tank.freshlySpawned = false // Clear flag after first check
+    return false
+  }
   return now - tank.lastRecoveryCommandTime < RECOVERY_COMMAND_COOLDOWN
 }
 
@@ -1129,7 +1137,14 @@ function isUnitAlreadyAssignedToRecovery(recoveryTanks, targetUnit) {
 }
 
 function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, now) {
-  if (!tank || !wreck || !unitCommands) return false
+  if (!tank || !wreck || !unitCommands) {
+    console.warn('Recovery tank wreck assignment failed: missing tank, wreck, or commands', { 
+      hasTank: !!tank, 
+      hasWreck: !!wreck, 
+      hasCommands: !!unitCommands 
+    })
+    return false
+  }
 
   const descriptor = { id: wreck.id, isWreckTarget: true, queueAction: 'tow' }
   const result = unitCommands.setUtilityQueue(tank, [descriptor], 'repair', mapGrid, {
@@ -1138,16 +1153,32 @@ function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, no
 
   tank.lastRecoveryCommandTime = now
 
+  // Check multiple success conditions
   if (tank.recoveryTask && tank.recoveryTask.wreckId === wreck.id) {
+    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via recoveryTask`)
     return true
   }
 
   if (result?.started) {
+    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via setUtilityQueue (started)`)
     return true
   }
 
   const queue = tank.utilityQueue
-  return !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
+  const queueSuccess = !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
+  
+  if (queueSuccess) {
+    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via utility queue`)
+  } else {
+    console.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, { 
+      hasQueue: !!queue, 
+      queueMode: queue?.mode,
+      currentTargetId: queue?.currentTargetId,
+      resultStarted: result?.started
+    })
+  }
+  
+  return queueSuccess
 }
 
 function attemptAssignRecoveryTankToUnit(tank, targetUnit, mapGrid, unitCommands, now) {
@@ -1188,7 +1219,10 @@ function attemptAssignRecoveryTankToUnit(tank, targetUnit, mapGrid, unitCommands
 
 export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
   const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
-  if (!unitCommands) return
+  if (!unitCommands) {
+    console.warn('manageAIRecoveryTanks: No unit commands handler available')
+    return
+  }
 
   const timeNow = typeof now === 'number'
     ? now
@@ -1207,33 +1241,54 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
       isRecoveryTankAvailable(tank) && !hasRecentRecoveryCommand(tank, timeNow)
     )
 
+    console.log(`AI ${aiPlayerId}: ${recoveryTanks.length} recovery tanks, ${candidateTanks.length} available for assignment`)
+
     if (candidateTanks.length === 0) return
 
     const usedTankIds = new Set()
 
     if (Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
-      const friendlyWrecks = gameState.unitWrecks.filter(wreck =>
-        wreck.owner === aiPlayerId &&
+      const availableWrecks = gameState.unitWrecks.filter(wreck =>
         !wreck.assignedTankId &&
         !wreck.towedBy &&
         !wreck.isBeingRecycled
       )
 
-      friendlyWrecks.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+      console.log(`AI ${aiPlayerId}: ${availableWrecks.length} wrecks available for recovery`)
 
-      friendlyWrecks.forEach(wreck => {
-        if (usedTankIds.size === candidateTanks.length) return
+      // For each available recovery tank, find the closest wreck and assign it
+      // This ensures proximity-based assignment
+      candidateTanks.forEach(tank => {
+        if (usedTankIds.has(tank.id)) return
+        if (availableWrecks.length === 0) return
 
-        const targetTile = getTargetTilePosition(wreck)
-        if (!targetTile) return
+        const tankTile = getTargetTilePosition(tank)
+        if (!tankTile) return
 
-        const sortedTanks = getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile)
+        // Find closest wreck to this tank
+        let closestWreck = null
+        let closestDistance = Infinity
 
-        for (const entry of sortedTanks) {
-          const success = attemptAssignRecoveryTankToWreck(entry.tank, wreck, mapGrid, unitCommands, timeNow)
+        availableWrecks.forEach(wreck => {
+          const wreckTile = getTargetTilePosition(wreck)
+          if (!wreckTile) return
+
+          const distance = tileDistance(tankTile.x, tankTile.y, wreckTile.x, wreckTile.y)
+          if (distance < closestDistance) {
+            closestDistance = distance
+            closestWreck = wreck
+          }
+        })
+
+        if (closestWreck) {
+          const success = attemptAssignRecoveryTankToWreck(tank, closestWreck, mapGrid, unitCommands, timeNow)
           if (success) {
-            usedTankIds.add(entry.tank.id)
-            break
+            usedTankIds.add(tank.id)
+            // Remove assigned wreck from available list
+            const wreckIndex = availableWrecks.indexOf(closestWreck)
+            if (wreckIndex > -1) {
+              availableWrecks.splice(wreckIndex, 1)
+            }
           }
         }
       })

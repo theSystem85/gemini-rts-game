@@ -75,9 +75,9 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     tileY: spawnPosition.y,
     x: spawnPosition.x * TILE_SIZE,
     y: spawnPosition.y * TILE_SIZE,
-    speed: unitType === 'harvester' ? 0.45 : 0.375,
-    health: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : 100,
-    maxHealth: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : 100,
+    speed: unitType === 'harvester' ? 0.45 : unitType === 'recoveryTank' ? 0.525 : 0.375,
+    health: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : unitType === 'recoveryTank' ? 150 : 100,
+    maxHealth: unitType === 'harvester' ? 150 : unitType === 'tank-v2' ? 130 : unitType === 'tank-v3' ? 169 : unitType === 'recoveryTank' ? 150 : 100,
     path: [],
     target: null,
     selected: false,
@@ -121,7 +121,8 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       rocketTank: 2000,
       'tank-v2': 2000,
       'tank-v3': 3000,
-      ambulance: 500
+      ambulance: 500,
+      recoveryTank: 3000
     }
 
     const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
@@ -145,6 +146,10 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
   }
 
   if (unitType === 'harvester') {
+    unit.armor = 3
+  }
+
+  if (unitType === 'recoveryTank') {
     unit.armor = 3
   }
 
