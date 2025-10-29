@@ -4,6 +4,15 @@ import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 
+function clearAwaitingRefuelState(unit, tankerId = null) {
+  if (!unit) return
+  if (unit.awaitingRefuel && (!unit.awaitingRefuelTankerId || tankerId === null || unit.awaitingRefuelTankerId === tankerId)) {
+    unit.awaitingRefuel = false
+    unit.awaitingRefuelTankerId = null
+    unit.awaitingRefuelAssignedAt = null
+  }
+}
+
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
   if (tankers.length === 0) return
@@ -167,17 +176,48 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       }
 
       const distanceToTarget = target ? Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY) : Infinity
+      const targetMoving = Boolean(target?.movement && target.movement.isMoving)
+      const wasRefueling = Boolean(tanker.refueling || target?.refueling)
       if (!target ||
           target.health <= 0 ||
-          distanceToTarget > SERVICE_SERVING_RANGE ||
-          (target.movement && target.movement.isMoving)) {
+          targetMoving) {
         const distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
 
+        if (target) {
+          target.refueling = false
+          clearAwaitingRefuelState(target, tanker.id)
+        }
+        tanker.refueling = false
+        tanker.refuelTarget = null
+        tanker.refuelTimer = 0
+      } else if (distanceToTarget > SERVICE_SERVING_RANGE) {
+        if (target) {
+          target.refueling = false
+          if (wasRefueling) {
+            clearAwaitingRefuelState(target, tanker.id)
+          }
+        }
+        tanker.refueling = false
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
       } else if (tanker.supplyGas > 0 && target.gas < (target.maxGas * 0.95)) {
         // Log when tanker starts refueling (within serving range)
         if (!tanker.refuelTimer || tanker.refuelTimer === 0) {
+        }
+        if (!tanker.refueling) {
+          stopUnitMovement(tanker)
+          tanker.moveTarget = null
+          tanker.path = []
+        }
+        if (!target.refueling) {
+          stopUnitMovement(target)
+          target.moveTarget = null
+          target.path = []
+        }
+        tanker.refueling = true
+        target.refueling = true
+        if (target.awaitingRefuelTankerId === tanker.id) {
+          target.awaitingRefuel = true
         }
         // Emergency units get faster refueling rate
         const isEmergencyRefuel = target.gas <= 0
@@ -209,12 +249,20 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
             target.outOfGasPlayed = false // Reset for future out-of-gas events
           }
 
+          clearAwaitingRefuelState(target, tanker.id)
+          target.refueling = false
+          tanker.refueling = false
           tanker.refuelTarget = null
           tanker.refuelTimer = 0
           tanker.emergencyMode = false // Clear emergency mode after successful refuel
         }
       } else {
 
+        if (target) {
+          target.refueling = false
+          clearAwaitingRefuelState(target, tanker.id)
+        }
+        tanker.refueling = false
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
       }

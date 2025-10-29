@@ -1336,6 +1336,15 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
     const tankers = aiUnits.filter(u => u.type === 'tankerTruck')
     if (tankers.length === 0) return
 
+    const activeTankerIds = new Set(tankers.map(t => t.id))
+    aiUnits.forEach(u => {
+      if (u.awaitingRefuel && (!u.awaitingRefuelTankerId || !activeTankerIds.has(u.awaitingRefuelTankerId))) {
+        u.awaitingRefuel = false
+        u.awaitingRefuelTankerId = null
+        u.awaitingRefuelAssignedAt = null
+      }
+    })
+
     const harvesters = aiUnits.filter(u => u.type === 'harvester' && u.health > 0)
     const gasStations = (gameState.buildings || []).filter(
       b => b.owner === aiPlayerId && b.type === 'gasStation' && b.health > 0
@@ -1451,6 +1460,9 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
     stopUnitMovement(unit)
     unit.moveTarget = null
     unit.path = []
+    unit.awaitingRefuel = true
+    unit.awaitingRefuelTankerId = tanker.id
+    unit.awaitingRefuelAssignedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
   }
 
 
