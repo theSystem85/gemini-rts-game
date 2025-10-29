@@ -139,6 +139,31 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
     return true
   }
 
+  // If we've already maneuvered into firing range of the target, don't hold fire
+  // waiting for extra allies. This prevents units from parking next to the
+  // player's base and never actually shooting.
+  if (target.owner === gameState.humanPlayer) {
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+
+    const targetCenterX = target.tileX !== undefined
+      ? target.x + TILE_SIZE / 2
+      : (target.x + target.width / 2) * TILE_SIZE
+    const targetCenterY = target.tileY !== undefined
+      ? target.y + TILE_SIZE / 2
+      : (target.y + target.height / 2) * TILE_SIZE
+
+    const distanceToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+
+    // Tanks and rocket tanks have slightly different ranges, but using the
+    // standard tank fire range as a baseline is sufficient. Adding a small
+    // buffer keeps the check tolerant to targeting jitter.
+    const effectiveRange = TANK_FIRE_RANGE * TILE_SIZE * (unit.type === 'rocketTank' ? 1.3 : 1)
+    if (distanceToTarget <= effectiveRange * 1.1) {
+      return true
+    }
+  }
+
   // Allow individual combat if unit is under attack
   if (unit.isBeingAttacked || unit.lastDamageTime && Date.now() - unit.lastDamageTime < 5000) {
     return true
