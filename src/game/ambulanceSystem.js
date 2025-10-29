@@ -3,6 +3,7 @@ import { SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, TILE_SIZE } from '../co
 import { logPerformance } from '../performanceUtils.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
+import { findPath } from '../units.js'
 
 export const updateAmbulanceLogic = logPerformance(function(units, gameState, delta) {
   // Reset active service markers before processing to avoid stale indicators
@@ -26,7 +27,6 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
     )
     const now = performance?.now ? performance.now() : Date.now()
     const wasServing = Boolean(ambulance._alertWasServing)
-
     // Check if ambulance is in hospital range - if so, don't heal, let it refill
     const inHospitalRange = isAmbulanceInHospitalRange(ambulance, gameState.buildings)
     if (inHospitalRange) {
@@ -51,6 +51,32 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
       ambulance.alertActiveService = false
       ambulance.alertAssignmentId = null
       ambulance.nextUtilityScanTime = null
+    }
+
+    const pendingQueue = Array.isArray(ambulance.pendingHealQueue) ? ambulance.pendingHealQueue : null
+
+    if (!ambulance.healingTarget && !queueActive && !ambulance.refillingTarget && pendingQueue && pendingQueue.length > 0) {
+      const maxQueueChecks = pendingQueue.length
+      for (let i = 0; i < maxQueueChecks; i++) {
+        const request = pendingQueue.shift()
+        if (!request) continue
+        const target = units.find(u => u.id === request.unitId)
+        if (!target || !target.crew || typeof target.crew !== 'object') {
+          continue
+        }
+        const missingCrew = Object.values(target.crew).some(alive => !alive)
+        if (!missingCrew) {
+          continue
+        }
+        const assigned = assignAmbulanceToHealUnit(ambulance, target, gameState.mapGrid)
+        if (assigned) {
+          ambulance.criticalHealing = true
+          break
+        } else {
+          pendingQueue.push(request)
+          break
+        }
+      }
     }
 
     const canAutoScan = ambulance.alertMode && !ambulance.healingTarget && !queueActive && !ambulance.refillingTarget
@@ -101,8 +127,7 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         !(u.movement && u.movement.isMoving)
       )
       if (potential && ambulance.medics > 0) {
-        ambulance.healingTarget = potential
-        ambulance.healingTimer = 0
+        assignAmbulanceToHealUnit(ambulance, potential, gameState.mapGrid)
       }
     }
     // Handle ambulance healing target
@@ -246,7 +271,7 @@ export function canAmbulanceHealUnit(ambulance, targetUnit) {
   return true
 }
 
-export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
+export function assignAmbulanceToHealUnit(ambulance, targetUnit, mapGrid) {
   if (ambulance.crew && typeof ambulance.crew === 'object' && !ambulance.crew.loader) {
     return false
   }
@@ -258,11 +283,49 @@ export function assignAmbulanceToHealUnit(ambulance, targetUnit) {
     return false
   }
 
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+  if (unitCommands && mapGrid) {
+    const assigned = unitCommands.assignAmbulanceToTarget(ambulance, targetUnit, mapGrid, {
+      suppressNotifications: true
+    })
+    if (assigned) {
+      return true
+    }
+  }
+
   ambulance.healingTarget = targetUnit
   ambulance.healingTimer = 0
+  ambulance.target = null
 
-  // Set path to target
-  // This would be handled by the input system when user clicks
+  if (mapGrid) {
+    const targetTileX = Number.isFinite(targetUnit.tileX)
+      ? targetUnit.tileX
+      : Math.floor(((targetUnit.x ?? 0) + TILE_SIZE / 2) / TILE_SIZE)
+    const targetTileY = Number.isFinite(targetUnit.tileY)
+      ? targetUnit.tileY
+      : Math.floor(((targetUnit.y ?? 0) + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (Number.isFinite(targetTileX) && Number.isFinite(targetTileY)) {
+      const path = findPath(ambulance, targetTileX, targetTileY, mapGrid)
+      if (Array.isArray(path) && path.length > 1) {
+        ambulance.path = path.slice(1)
+      } else if (Array.isArray(path)) {
+        ambulance.path = path.slice()
+      } else {
+        ambulance.path = []
+      }
+      ambulance.moveTarget = {
+        x: (targetTileX + 0.5) * TILE_SIZE,
+        y: (targetTileY + 0.5) * TILE_SIZE
+      }
+    } else {
+      ambulance.path = []
+      ambulance.moveTarget = null
+    }
+  } else {
+    ambulance.path = []
+    ambulance.moveTarget = null
+  }
 
   return true
 }

@@ -19,6 +19,7 @@ import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
+import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -197,15 +198,20 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
               // Update speed modifier based on new health level
               updateUnitSpeedModifier(unit)
+              let crewLossOccurred = false
               if (unit.crew) {
                 for (const member of Object.keys(unit.crew)) {
                   if (unit.crew[member] && Math.random() < CREW_KILL_CHANCE) {
                     unit.crew[member] = false
+                    crewLossOccurred = true
                     // Only play sound for human player units
                     if (unit.owner === gameState.humanPlayer) {
                       playSound('our' + member.charAt(0).toUpperCase() + member.slice(1) + 'IsOut')
                     }
                   }
+                }
+                if (crewLossOccurred) {
+                  handleAICrewLossEvent(unit, units, gameState, mapGrid)
                 }
               }
             }
