@@ -4,6 +4,10 @@ import { buildingData, isTileValid, canPlaceBuilding } from '../buildings.js'
 import { gameState } from '../gameState.js'
 import { showNotification } from '../ui/notifications.js'
 import { getCurrentGame } from '../main.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 export class UIRenderer {
   constructor() {
@@ -237,8 +241,8 @@ export class UIRenderer {
     // If game over, render win/lose overlay and stop drawing further
     if (gameState?.gameOver && gameState?.gameOverMessage) {
       // Use logical CSS dimensions for proper centering, not physical pixel dimensions
-      const logicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-      const logicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      const logicalWidth = getPlayableViewportWidth(gameCanvas)
+      const logicalHeight = getPlayableViewportHeight(gameCanvas)
       const messageX = logicalWidth / 2
       const messageY = logicalHeight / 2
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
@@ -273,8 +277,8 @@ export class UIRenderer {
           const clickY = event.clientY - rect.top
 
           // Recalculate button bounds since messageX/Y might have changed
-          const currentLogicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-          const currentLogicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+          const currentLogicalWidth = getPlayableViewportWidth(gameCanvas)
+          const currentLogicalHeight = getPlayableViewportHeight(gameCanvas)
           const currentMessageX = currentLogicalWidth / 2
           const currentMessageY = currentLogicalHeight / 2
 

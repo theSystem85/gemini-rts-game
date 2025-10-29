@@ -3,6 +3,10 @@ import { TILE_SIZE, ENABLE_ENEMY_SELECTION, ENABLE_ENEMY_CONTROL } from '../conf
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 export class SelectionManager {
   constructor() {
@@ -81,8 +85,8 @@ export class SelectionManager {
     } else if (e.shiftKey && isDoubleClick) {
       // Shift+double click: Add all visible units of this type to selection
       const gameCanvas = document.getElementById('gameCanvas')
-      const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-      const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      const canvasWidth = getPlayableViewportWidth(gameCanvas)
+      const canvasHeight = getPlayableViewportHeight(gameCanvas)
 
       const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
 
@@ -100,8 +104,8 @@ export class SelectionManager {
     } else if (isDoubleClick) {
       // Double click: Select all visible units of this type
       const gameCanvas = document.getElementById('gameCanvas')
-      const canvasWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-      const canvasHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+      const canvasWidth = getPlayableViewportWidth(gameCanvas)
+      const canvasHeight = getPlayableViewportHeight(gameCanvas)
 
       // Clear current selection
       units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })

@@ -1,6 +1,10 @@
 // rendering/minimapRenderer.js
 import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 const MINIMAP_UNDISCOVERED_COLOR = '#111111'
 const MINIMAP_FOG_COLOR = 'rgba(30, 30, 30, 0.6)'
@@ -204,8 +208,8 @@ export class MinimapRenderer {
     }
 
     // Get logical canvas dimensions for viewport calculation
-    const gameLogicalWidth = parseInt(gameCanvas.style.width, 10) || (window.innerWidth - 250)
-    const gameLogicalHeight = parseInt(gameCanvas.style.height, 10) || window.innerHeight
+    const gameLogicalWidth = getPlayableViewportWidth(gameCanvas)
+    const gameLogicalHeight = getPlayableViewportHeight(gameCanvas)
 
     // Draw viewport border
     minimapCtx.strokeStyle = '#FF0'

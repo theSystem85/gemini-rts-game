@@ -18,6 +18,10 @@ import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
 import { removeSmokeParticle } from '../utils/smokeUtils.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth
+} from '../utils/layoutMetrics.js'
 
 /**
  * Updates map scrolling with inertia
@@ -26,8 +30,11 @@ import { removeSmokeParticle } from '../utils/smokeUtils.js'
  */
 export function updateMapScrolling(gameState, mapGrid) {
   if (!gameState.isRightDragging) {
-    const maxScrollX = mapGrid[0].length * TILE_SIZE - (window.innerWidth - 250)
-    const maxScrollY = mapGrid.length * TILE_SIZE - window.innerHeight
+    const gameCanvas = document.getElementById('gameCanvas')
+    const viewportWidth = getPlayableViewportWidth(gameCanvas)
+    const viewportHeight = getPlayableViewportHeight(gameCanvas)
+    const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
+    const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
     // Update velocity based on arrow key input
     if (gameState.keyScroll.left) {
       gameState.dragVelocity.x = KEYBOARD_SCROLL_SPEED
