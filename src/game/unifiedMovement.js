@@ -318,9 +318,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   if (shouldDecelerate || !movement.isMoving) {
     accelRate = MOVEMENT_CONFIG.DECELERATION
   } else if (canAccelerate && movement.isMoving) {
-    // Special case for ambulances - they accelerate half as fast
+    // Special case for ambulances - they accelerate at a quarter speed
     if (unit.type === 'ambulance') {
-      accelRate = MOVEMENT_CONFIG.ACCELERATION * 0.5
+      accelRate = MOVEMENT_CONFIG.ACCELERATION * 0.25
     } else {
       accelRate = MOVEMENT_CONFIG.ACCELERATION
     }
