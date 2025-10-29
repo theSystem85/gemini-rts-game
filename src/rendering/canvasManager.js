@@ -28,27 +28,41 @@ export class CanvasManager {
 
     const safeLeft = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-left')) : 0
     const safeRight = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-right')) : 0
+    const safeTop = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-top')) : 0
+    const safeBottom = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-bottom')) : 0
 
     const isTouchLayout = body ? body.classList.contains('is-touch') : false
 
     const widthCandidates = []
-    widthCandidates.push(window.innerWidth + safeLeft + safeRight)
+    widthCandidates.push(window.innerWidth)
     if (window.visualViewport && window.visualViewport.width) {
-      widthCandidates.push(window.visualViewport.width + safeLeft + safeRight)
+      widthCandidates.push(window.visualViewport.width)
+    }
+    if (document.documentElement && document.documentElement.clientWidth) {
+      widthCandidates.push(document.documentElement.clientWidth)
     }
     if (isTouchLayout && window.screen && window.screen.width) {
       widthCandidates.push(window.screen.width / pixelRatio)
     }
 
-    const viewportWidth = Math.max(...widthCandidates.filter(v => Number.isFinite(v) && v > 0))
+    const validWidths = widthCandidates.filter(v => Number.isFinite(v) && v > 0)
+    const baseViewportWidth = validWidths.length
+      ? Math.max(...validWidths)
+      : this.gameCanvas.clientWidth || 0
 
     const heightCandidates = []
     heightCandidates.push(window.innerHeight)
     if (window.visualViewport && window.visualViewport.height) {
       heightCandidates.push(window.visualViewport.height)
     }
+    if (document.documentElement && document.documentElement.clientHeight) {
+      heightCandidates.push(document.documentElement.clientHeight)
+    }
 
-    const viewportHeight = Math.max(...heightCandidates.filter(v => Number.isFinite(v) && v > 0))
+    const validHeights = heightCandidates.filter(v => Number.isFinite(v) && v > 0)
+    const baseViewportHeight = validHeights.length
+      ? Math.max(...validHeights)
+      : this.gameCanvas.clientHeight || 0
     const sidebar = document.getElementById('sidebar')
     const rawSidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
     const mobileLandscape = body ? body.classList.contains('mobile-landscape') : false
@@ -59,20 +73,30 @@ export class CanvasManager {
       document.documentElement.style.setProperty('--sidebar-width', `${sidebarBaseWidth}px`)
     }
 
-    // Set canvas display size (CSS)
-    const availableWidth = mobileLandscape
-      ? Math.max(0, viewportWidth)
-      : Math.max(0, viewportWidth - rawSidebarWidth)
-    const logicalHeight = viewportHeight
+    const safeHorizontalPadding = mobileLandscape ? safeLeft + safeRight : 0
+    const safeVerticalPadding = mobileLandscape ? safeTop + safeBottom : 0
 
-    this.gameCanvas.style.left = mobileLandscape ? '0px' : `${rawSidebarWidth}px`
-    this.gameCanvas.style.right = 'auto'
-    this.gameCanvas.style.width = `${availableWidth}px`
-    this.gameCanvas.style.height = `${logicalHeight}px`
+    // Set canvas display size (CSS)
+    const canvasCssWidth = mobileLandscape
+      ? Math.max(0, baseViewportWidth + safeHorizontalPadding)
+      : Math.max(0, baseViewportWidth - rawSidebarWidth)
+    const canvasCssHeight = Math.max(0, baseViewportHeight + safeVerticalPadding)
+
+    if (mobileLandscape) {
+      this.gameCanvas.style.left = `${-safeLeft}px`
+      this.gameCanvas.style.right = `${-safeRight}px`
+    } else {
+      this.gameCanvas.style.left = `${rawSidebarWidth}px`
+      this.gameCanvas.style.right = 'auto'
+    }
+    this.gameCanvas.style.width = `${canvasCssWidth}px`
+    this.gameCanvas.style.height = `${canvasCssHeight}px`
+    this.gameCanvas.style.top = mobileLandscape ? `${-safeTop}px` : '0px'
+    this.gameCanvas.style.bottom = mobileLandscape ? `${-safeBottom}px` : 'auto'
 
     // Set actual pixel size scaled by device pixel ratio
-    this.gameCanvas.width = Math.max(1, Math.round(availableWidth * pixelRatio))
-    this.gameCanvas.height = Math.max(1, Math.round(logicalHeight * pixelRatio))
+    this.gameCanvas.width = Math.max(1, Math.round(canvasCssWidth * pixelRatio))
+    this.gameCanvas.height = Math.max(1, Math.round(canvasCssHeight * pixelRatio))
 
     // Scale the drawing context to counter the device pixel ratio
     this.gameCtx.setTransform(1, 0, 0, 1, 0, 0)

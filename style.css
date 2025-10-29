@@ -621,6 +621,13 @@ body.mobile-landscape #gameCanvas {
   transition: left 0.25s ease, width 0.25s ease;
 }
 
+body.mobile-landscape.is-touch #gameCanvas {
+  left: calc(-1 * var(--safe-area-left));
+  width: calc(100% + var(--safe-area-left) + var(--safe-area-right));
+  top: calc(-1 * var(--safe-area-top));
+  height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom));
+}
+
 body.mobile-landscape #sidebar {
   transition: transform 0.25s ease;
 }
