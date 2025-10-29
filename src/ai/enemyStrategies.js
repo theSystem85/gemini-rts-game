@@ -27,6 +27,14 @@ const UNIT_DPS = {
 
 const RECOVERY_COMMAND_COOLDOWN = 2000
 
+// Resolve active AI player IDs based on current game setup
+function getAIPlayers(gameState) {
+  const human = gameState.humanPlayer || 'player1'
+  const playerCount = gameState.playerCount || 2
+  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  return allPlayers.filter(p => p !== human)
+}
+
 function getUnitDps(unit) {
   const type = unit.type === 'tank' ? 'tank_v1' : unit.type
   return UNIT_DPS[type] || UNIT_DPS.tank_v1
@@ -245,8 +253,6 @@ function findNearestEnemyBase(unit, gameState) {
  */
 export function handleRetreatToBase(unit, gameState, mapGrid) {
   const nearestBase = findNearestEnemyBase(unit, gameState)
-
-  console.log('Handling retreat for unit:', unit.id, 'to base:', nearestBase ? nearestBase.id : 'none')
 
   if (!nearestBase) return false
 
@@ -915,8 +921,8 @@ export function getAttackDirectionStats() {
  * Prioritizes units that need crew restoration
  */
 export function manageAICrewHealing(units, gameState, now) {
-  // Get all AI players
-  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+  // Get all AI players (respect human player and playerCount)
+  const aiPlayers = getAIPlayers(gameState)
 
   aiPlayers.forEach(aiPlayerId => {
     const aiUnits = units.filter(u => u.owner === aiPlayerId)
@@ -1155,21 +1161,17 @@ function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, no
 
   // Check multiple success conditions
   if (tank.recoveryTask && tank.recoveryTask.wreckId === wreck.id) {
-    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via recoveryTask`)
     return true
   }
 
   if (result?.started) {
-    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via setUtilityQueue (started)`)
     return true
   }
 
   const queue = tank.utilityQueue
   const queueSuccess = !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
   
-  if (queueSuccess) {
-    console.log(`✓ Recovery tank ${tank.id} assigned to wreck ${wreck.id} via utility queue`)
-  } else {
+  if (!queueSuccess) {
     console.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, { 
       hasQueue: !!queue, 
       queueMode: queue?.mode,
@@ -1228,7 +1230,7 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
     ? now
     : (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now())
 
-  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+  const aiPlayers = getAIPlayers(gameState)
 
   aiPlayers.forEach(aiPlayerId => {
     const aiUnits = units.filter(u => u.owner === aiPlayerId && u.health > 0)
@@ -1241,8 +1243,6 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
       isRecoveryTankAvailable(tank) && !hasRecentRecoveryCommand(tank, timeNow)
     )
 
-    console.log(`AI ${aiPlayerId}: ${recoveryTanks.length} recovery tanks, ${candidateTanks.length} available for assignment`)
-
     if (candidateTanks.length === 0) return
 
     const usedTankIds = new Set()
@@ -1253,8 +1253,6 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
         !wreck.towedBy &&
         !wreck.isBeingRecycled
       )
-
-      console.log(`AI ${aiPlayerId}: ${availableWrecks.length} wrecks available for recovery`)
 
       // For each available recovery tank, find the closest wreck and assign it
       // This ensures proximity-based assignment
@@ -1330,7 +1328,7 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
  * Manages tanker truck refueling and guard behavior for all AI players
  */
 export function manageAITankerTrucks(units, gameState, mapGrid) {
-  const aiPlayers = ['enemy1', 'enemy2', 'enemy3', 'enemy4']
+  const aiPlayers = getAIPlayers(gameState)
 
   aiPlayers.forEach(aiPlayerId => {
     const aiUnits = units.filter(u => u.owner === aiPlayerId)
