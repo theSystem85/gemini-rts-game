@@ -51,9 +51,12 @@ export class CheatSystem {
           border: 2px solid #3498db;
           border-radius: 8px;
           padding: 20px;
-          min-width: 400px;
+          width: min(90vw, 500px);
+          max-height: 90vh;
+          overflow-y: auto;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
           font-family: 'Arial', sans-serif;
+          box-sizing: border-box;
         }
 
         .cheat-dialog h2 {
