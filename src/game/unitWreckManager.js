@@ -6,6 +6,7 @@ import {
   DEFAULT_MAP_TILES_Y
 } from '../config.js'
 import { getUnitCost } from '../utils.js'
+import { UNIT_COLLISION_MIN_DISTANCE } from './unifiedMovement.js'
 
 function adjustWreckOccupancy(wreck, occupancyMap, tileX, tileY) {
   if (!occupancyMap || occupancyMap.length === 0) {
@@ -276,9 +277,21 @@ export function applyDamageToWreck(wreck, damage, gameState, impactPosition = nu
 
 const BASE_FRAME_TIME = 1000 / 60
 
-export function updateWreckPhysics(gameState, delta) {
+export function updateWreckPhysics(gameState, unitsOrDelta, maybeDelta) {
   if (!gameState || !Array.isArray(gameState.unitWrecks) || gameState.unitWrecks.length === 0) {
     return
+  }
+
+  let units = []
+  let delta = unitsOrDelta
+
+  if (Array.isArray(unitsOrDelta)) {
+    units = unitsOrDelta
+    delta = maybeDelta
+  }
+
+  if (!Number.isFinite(delta)) {
+    delta = undefined
   }
 
   const effectiveDelta = Number.isFinite(delta) && delta > 0 ? delta : BASE_FRAME_TIME
@@ -302,6 +315,7 @@ export function updateWreckPhysics(gameState, delta) {
   const maxY = Math.max(0, mapHeight - TILE_SIZE)
 
   const occupancyMap = gameState.occupancyMap
+  const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
 
   gameState.unitWrecks.forEach(wreck => {
     if (!wreck || wreck.health <= 0) {
@@ -332,30 +346,164 @@ export function updateWreckPhysics(gameState, delta) {
       return
     }
 
-    const targetX = wreck.x + deltaX
-    const targetY = wreck.y + deltaY
-    const newX = clamp(targetX, 0, maxX)
-    const newY = clamp(targetY, 0, maxY)
+    const prevX = wreck.x
+    const prevY = wreck.y
 
-    wreck.x = newX
-    wreck.y = newY
+    const targetX = prevX + deltaX
+    const targetY = prevY + deltaY
+    const candidateX = clamp(targetX, 0, maxX)
+    const candidateY = clamp(targetY, 0, maxY)
 
-    const newTileX = Math.floor((newX + TILE_SIZE / 2) / TILE_SIZE)
-    const newTileY = Math.floor((newY + TILE_SIZE / 2) / TILE_SIZE)
+    const prevCenterX = prevX + TILE_SIZE / 2
+    const prevCenterY = prevY + TILE_SIZE / 2
+    const candidateCenterX = candidateX + TILE_SIZE / 2
+    const candidateCenterY = candidateY + TILE_SIZE / 2
 
-    if (newTileX !== wreck.tileX || newTileY !== wreck.tileY) {
-      wreck.tileX = newTileX
-      wreck.tileY = newTileY
-      if (occupancyMap) {
-        adjustWreckOccupancy(wreck, occupancyMap, newTileX, newTileY)
+    const tileX = Math.floor(candidateCenterX / TILE_SIZE)
+    const tileY = Math.floor(candidateCenterY / TILE_SIZE)
+
+    let collided = false
+    let separationVelX = 0
+    let separationVelY = 0
+
+    if (isTileBlocked(mapGrid, tileX, tileY)) {
+      collided = true
+    }
+
+    if (!collided && Array.isArray(units) && units.length > 0) {
+      for (const unit of units) {
+        if (!unit || unit.health <= 0) continue
+
+        const unitCenterX = unit.x + TILE_SIZE / 2
+        const unitCenterY = unit.y + TILE_SIZE / 2
+
+        const collision = evaluateEntityCollision(prevCenterX, prevCenterY, candidateCenterX, candidateCenterY, unitCenterX, unitCenterY)
+        if (collision.blocked) {
+          collided = true
+          const impulse = (collision.overlap + 0.5) * 0.25
+          separationVelX += collision.normalX * impulse
+          separationVelY += collision.normalY * impulse
+          break
+        }
       }
     }
 
-    const clampedVelocityX = newX !== targetX ? 0 : velocityX * inertiaFactor
-    const clampedVelocityY = newY !== targetY ? 0 : velocityY * inertiaFactor
+    if (!collided) {
+      for (const otherWreck of gameState.unitWrecks) {
+        if (!otherWreck || otherWreck === wreck || otherWreck.health <= 0) continue
 
-    wreck.velocityX = Math.abs(clampedVelocityX) < 0.001 ? 0 : clampedVelocityX
-    wreck.velocityY = Math.abs(clampedVelocityY) < 0.001 ? 0 : clampedVelocityY
+        const otherCenterX = otherWreck.x + TILE_SIZE / 2
+        const otherCenterY = otherWreck.y + TILE_SIZE / 2
+
+        const collision = evaluateEntityCollision(prevCenterX, prevCenterY, candidateCenterX, candidateCenterY, otherCenterX, otherCenterY)
+        if (collision.blocked) {
+          collided = true
+          const impulse = (collision.overlap + 0.5) * 0.25
+          separationVelX += collision.normalX * impulse
+          separationVelY += collision.normalY * impulse
+          otherWreck.velocityX = (otherWreck.velocityX || 0) - collision.normalX * impulse
+          otherWreck.velocityY = (otherWreck.velocityY || 0) - collision.normalY * impulse
+          break
+        }
+      }
+    }
+
+    let nextVelX
+    let nextVelY
+    let finalX
+    let finalY
+    const moved = !collided
+
+    if (collided) {
+      finalX = prevX
+      finalY = prevY
+      nextVelX = separationVelX
+      nextVelY = separationVelY
+    } else {
+      finalX = candidateX
+      finalY = candidateY
+      const baseVelX = candidateX !== targetX ? 0 : velocityX * inertiaFactor
+      const baseVelY = candidateY !== targetY ? 0 : velocityY * inertiaFactor
+      nextVelX = Math.abs(baseVelX) < 0.001 ? 0 : baseVelX
+      nextVelY = Math.abs(baseVelY) < 0.001 ? 0 : baseVelY
+    }
+
+    wreck.x = finalX
+    wreck.y = finalY
+
+    if (moved) {
+      const newTileX = Math.floor((finalX + TILE_SIZE / 2) / TILE_SIZE)
+      const newTileY = Math.floor((finalY + TILE_SIZE / 2) / TILE_SIZE)
+
+      if (newTileX !== wreck.tileX || newTileY !== wreck.tileY) {
+        wreck.tileX = newTileX
+        wreck.tileY = newTileY
+        if (occupancyMap) {
+          adjustWreckOccupancy(wreck, occupancyMap, newTileX, newTileY)
+        }
+      }
+    }
+
+    wreck.velocityX = Math.abs(nextVelX) < 0.001 ? 0 : nextVelX
+    wreck.velocityY = Math.abs(nextVelY) < 0.001 ? 0 : nextVelY
   })
+}
+
+function isTileBlocked(mapGrid, tileX, tileY) {
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+    return false
+  }
+
+  if (tileY < 0 || tileY >= mapGrid.length) {
+    return true
+  }
+
+  const row = mapGrid[tileY]
+  if (!row || tileX < 0 || tileX >= row.length) {
+    return true
+  }
+
+  const tile = row[tileX]
+
+  if (tile === 1) {
+    return true
+  }
+
+  if (tile && typeof tile === 'object') {
+    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
+      return true
+    }
+
+    if (tile.walkable === false || tile.passable === false) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function evaluateEntityCollision(prevCenterX, prevCenterY, newCenterX, newCenterY, otherCenterX, otherCenterY) {
+  const newDistance = Math.hypot(newCenterX - otherCenterX, newCenterY - otherCenterY)
+
+  if (!Number.isFinite(newDistance)) {
+    return { blocked: false, overlap: 0, normalX: 0, normalY: 0 }
+  }
+
+  if (newDistance >= UNIT_COLLISION_MIN_DISTANCE) {
+    return { blocked: false, overlap: 0, normalX: 0, normalY: 0 }
+  }
+
+  const prevDistance = Math.hypot(prevCenterX - otherCenterX, prevCenterY - otherCenterY)
+  const movingAway = Number.isFinite(prevDistance) && newDistance > prevDistance + 0.1
+
+  if (movingAway) {
+    return { blocked: false, overlap: 0, normalX: 0, normalY: 0 }
+  }
+
+  const normalX = (newCenterX - otherCenterX) / (newDistance || 1)
+  const normalY = (newCenterY - otherCenterY) / (newDistance || 1)
+  const overlap = UNIT_COLLISION_MIN_DISTANCE - newDistance
+
+  return { blocked: true, overlap, normalX, normalY }
 }
 

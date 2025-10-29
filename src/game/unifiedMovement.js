@@ -1,5 +1,34 @@
 // unifiedMovement.js - Unified movement system for all ground units
-import { TILE_SIZE, STUCK_CHECK_INTERVAL, STUCK_THRESHOLD, STUCK_HANDLING_COOLDOWN, DODGE_ATTEMPT_COOLDOWN, STREET_SPEED_MULTIPLIER, TILE_LENGTH_METERS } from '../config.js'
+import {
+  TILE_SIZE,
+  STUCK_CHECK_INTERVAL,
+  STUCK_THRESHOLD,
+  STUCK_HANDLING_COOLDOWN,
+  DODGE_ATTEMPT_COOLDOWN,
+  STREET_SPEED_MULTIPLIER,
+  TILE_LENGTH_METERS,
+  COLLISION_BOUNCE_REMOTE_BOOST,
+  COLLISION_BOUNCE_SPEED_FACTOR,
+  COLLISION_BOUNCE_OVERLAP_FACTOR,
+  COLLISION_BOUNCE_MIN,
+  COLLISION_BOUNCE_MAX,
+  COLLISION_RECOIL_FACTOR_FAST,
+  COLLISION_RECOIL_MAX_FAST,
+  COLLISION_RECOIL_PUSH_OTHER_FACTOR,
+  COLLISION_RECOIL_PUSH_OTHER_MAX,
+  COLLISION_SEPARATION_SCALE,
+  COLLISION_SEPARATION_MAX,
+  COLLISION_SEPARATION_MIN,
+  COLLISION_NORMAL_DAMPING_MULT,
+  COLLISION_NORMAL_DAMPING_MAX,
+  WRECK_COLLISION_REMOTE_BOOST,
+  WRECK_COLLISION_SPEED_FACTOR,
+  WRECK_COLLISION_OVERLAP_FACTOR,
+  WRECK_COLLISION_MIN,
+  WRECK_COLLISION_MAX,
+  WRECK_COLLISION_RECOIL_FACTOR_UNIT,
+  WRECK_COLLISION_RECOIL_MAX_UNIT
+} from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
@@ -35,6 +64,8 @@ const MOVEMENT_CONFIG = {
   AVOIDANCE_FORCE: 0.3,    // Strength of collision avoidance force
   BACKWARD_MOVE_THRESHOLD: 0.5  // When to allow backward movement when stuck
 }
+
+export const UNIT_COLLISION_MIN_DISTANCE = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
 
 /**
  * Initialize movement properties for a unit
@@ -348,14 +379,24 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   }
 
+  const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
+
   // Handle collisions
-  if (checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  const collisionResult = checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
+
+  if (collisionResult.collided) {
     // Revert position if collision detected
     unit.x = prevX
     unit.y = prevY
 
-    // Try alternative movement (slide along obstacles)
-    trySlideMovement(unit, movement, mapGrid, occupancyMap, units)
+    if (collisionResult.type === 'wreck') {
+      applyWreckCollisionResponse(unit, movement, collisionResult)
+    } else if (collisionResult.type === 'unit') {
+      applyUnitCollisionResponse(unit, movement, collisionResult)
+    } else {
+      // Try alternative movement (slide along obstacles)
+      trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
+    }
   }
 
   // Update tile position based on actual position (for compatibility with existing code)
@@ -493,20 +534,20 @@ function normalizeAngle(angle) {
 }
 
 /**
- * Check for unit collisions with map obstacles and other units
+ * Check for unit collisions with map obstacles, other units, and wrecks
  */
-function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
+function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileX = Math.floor(unit.x / TILE_SIZE)
   const tileY = Math.floor(unit.y / TILE_SIZE)
 
   // Check map bounds
   if (tileX < 0 || tileX >= mapGrid[0].length || tileY < 0 || tileY >= mapGrid.length) {
-    return true
+    return { collided: true, type: 'bounds' }
   }
 
   // Check map obstacles
   if (mapGrid[tileY][tileX] === 1) {
-    return true
+    return { collided: true, type: 'terrain' }
   }
 
   // Check for other units using improved distance-based collision detection
@@ -532,21 +573,201 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units) {
         // Check if this unit's movement increases distance (moving away)
         const dotProduct = dx * unitVelX + dy * unitVelY
         if (dotProduct > 0) {
-          return false // Allow movement away from other unit
+          return { collided: false }
+        }
+        // Compute collision normal (from unit to other)
+        const normalX = (otherCenterX - unitCenterX) / (distance || 1)
+        const normalY = (otherCenterY - unitCenterY) / (distance || 1)
+        const overlap = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE - distance
+
+        // Speeds
+        const otherVelX = otherUnit.movement?.velocity?.x || 0
+        const otherVelY = otherUnit.movement?.velocity?.y || 0
+        const unitSpeed = Math.hypot(unitVelX, unitVelY)
+        const otherSpeed = Math.hypot(otherVelX, otherVelY)
+
+        // Decide who gets the "bounce" impulse: the slower one
+        const remoteBoost = unit.remoteControlActive ? COLLISION_BOUNCE_REMOTE_BOOST : 1
+        const baseImpulse = unitSpeed * COLLISION_BOUNCE_SPEED_FACTOR + overlap * COLLISION_BOUNCE_OVERLAP_FACTOR
+        const impulse = Math.max(COLLISION_BOUNCE_MIN, Math.min(COLLISION_BOUNCE_MAX, baseImpulse * remoteBoost))
+
+        if (otherSpeed <= unitSpeed) {
+          // Push the other (slower) unit away from this unit
+          if (!otherUnit.movement) initializeUnitMovement(otherUnit)
+          otherUnit.movement.velocity.x = (otherUnit.movement.velocity.x || 0) + normalX * impulse
+          otherUnit.movement.velocity.y = (otherUnit.movement.velocity.y || 0) + normalY * impulse
+          // Slight recoil to the faster unit to visibly separate
+          unit.movement.velocity.x -= normalX * Math.min(impulse * COLLISION_RECOIL_FACTOR_FAST, COLLISION_RECOIL_MAX_FAST)
+          unit.movement.velocity.y -= normalY * Math.min(impulse * COLLISION_RECOIL_FACTOR_FAST, COLLISION_RECOIL_MAX_FAST)
+        } else {
+          // Our unit is slower: bounce our unit back away from the other
+          unit.movement.velocity.x -= normalX * impulse
+          unit.movement.velocity.y -= normalY * impulse
+          // Nudge the other slightly for separation
+          if (!otherUnit.movement) initializeUnitMovement(otherUnit)
+          otherUnit.movement.velocity.x += normalX * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
+          otherUnit.movement.velocity.y += normalY * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
         }
 
-        return true // Block movement toward other unit
+        const relativeSpeed = Math.max(0, -((unitVelX * normalX) + (unitVelY * normalY)))
+
+        return {
+          collided: true,
+          type: 'unit',
+          other: otherUnit,
+          data: {
+            normalX,
+            normalY,
+            overlap,
+            unitSpeed,
+            otherSpeed,
+            impulse,
+            relativeSpeed
+          }
+        }
       }
     }
   }
 
-  return false
+  if (wrecks && wrecks.length > 0) {
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+    const unitVelX = unit.movement?.velocity?.x || 0
+    const unitVelY = unit.movement?.velocity?.y || 0
+
+    for (const wreck of wrecks) {
+      if (!wreck || wreck.health <= 0) continue
+      if (wreck.towedBy === unit.id) continue
+
+      const wreckCenterX = wreck.x + TILE_SIZE / 2
+      const wreckCenterY = wreck.y + TILE_SIZE / 2
+      const distance = Math.hypot(unitCenterX - wreckCenterX, unitCenterY - wreckCenterY)
+
+      if (distance >= UNIT_COLLISION_MIN_DISTANCE) {
+        continue
+      }
+
+      const dx = unitCenterX - wreckCenterX
+      const dy = unitCenterY - wreckCenterY
+      const dotProduct = dx * unitVelX + dy * unitVelY
+
+      if (dotProduct > 0) {
+        // Moving away from wreck - allow
+        continue
+      }
+
+      const normalX = (wreckCenterX - unitCenterX) / (distance || 1)
+      const normalY = (wreckCenterY - unitCenterY) / (distance || 1)
+      const overlap = UNIT_COLLISION_MIN_DISTANCE - distance
+      const unitSpeed = Math.hypot(unitVelX, unitVelY)
+      
+      // Compare speeds to decide who bounces more
+      const wreckSpeed = Math.hypot(wreck.velocityX || 0, wreck.velocityY || 0)
+
+      // Boost impulse for remote-controlled units actively driving
+      const remoteControlBoost = unit.remoteControlActive ? WRECK_COLLISION_REMOTE_BOOST : 1.0
+      const baseImpulse = unitSpeed * WRECK_COLLISION_SPEED_FACTOR + overlap * WRECK_COLLISION_OVERLAP_FACTOR
+      const impulseStrength = Math.max(WRECK_COLLISION_MIN, Math.min(WRECK_COLLISION_MAX, baseImpulse * remoteControlBoost))
+
+      if (wreckSpeed <= unitSpeed) {
+        // Wreck is slower: push wreck away from the unit
+        wreck.velocityX = (wreck.velocityX || 0) + normalX * impulseStrength
+        wreck.velocityY = (wreck.velocityY || 0) + normalY * impulseStrength
+        // Apply a tiny recoil to unit as well
+        unit.movement.velocity.x -= normalX * Math.min(impulseStrength * WRECK_COLLISION_RECOIL_FACTOR_UNIT, WRECK_COLLISION_RECOIL_MAX_UNIT)
+        unit.movement.velocity.y -= normalY * Math.min(impulseStrength * WRECK_COLLISION_RECOIL_FACTOR_UNIT, WRECK_COLLISION_RECOIL_MAX_UNIT)
+      } else {
+        // Unit is slower: bounce the unit away from wreck
+        unit.movement.velocity.x -= normalX * impulseStrength
+        unit.movement.velocity.y -= normalY * impulseStrength
+      }
+
+      const relativeSpeed = Math.max(0, -((unitVelX * normalX) + (unitVelY * normalY)))
+
+      return {
+        collided: true,
+        type: 'wreck',
+        wreck,
+        data: {
+          normalX,
+          normalY,
+          overlap,
+          unitSpeed,
+          impulseStrength,
+          relativeSpeed
+        }
+      }
+    }
+  }
+
+  return { collided: false }
+}
+
+function applyWreckCollisionResponse(unit, movement, collisionResult) {
+  if (!unit || !movement || !collisionResult || collisionResult.type !== 'wreck' || !collisionResult.data) {
+    return
+  }
+
+  const { normalX, normalY, overlap, relativeSpeed } = collisionResult.data
+  const remoteMultiplier = unit.remoteControlActive ? 0.6 : 1
+  const separationDistance = Math.min(4, Math.max(0, (relativeSpeed * 2 + overlap * 0.5) * remoteMultiplier))
+
+  if (separationDistance > 0.001) {
+    unit.x -= normalX * separationDistance
+    unit.y -= normalY * separationDistance
+  }
+
+  const recoilFactor = unit.remoteControlActive ? 0.45 : 0.75
+  const velocityReduction = Math.min(1.5, Math.max(0, relativeSpeed * recoilFactor + overlap * 0.25))
+
+  if (velocityReduction > 0.001) {
+    movement.velocity.x -= normalX * velocityReduction
+    movement.velocity.y -= normalY * velocityReduction
+
+    if (!unit.remoteControlActive && movement.targetVelocity) {
+      const targetReduction = velocityReduction * 0.35
+      movement.targetVelocity.x -= normalX * targetReduction
+      movement.targetVelocity.y -= normalY * targetReduction
+    }
+  }
+
+  movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+}
+
+function applyUnitCollisionResponse(unit, movement, collisionResult) {
+  if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
+    return
+  }
+
+  const { normalX, normalY, overlap, unitSpeed, otherSpeed } = collisionResult.data
+
+  // Separate units slightly to avoid persistent overlap
+  const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
+  if (separation > 0.001) {
+    // Move both slightly apart based on who is faster
+    const pushOther = otherSpeed <= unitSpeed
+    if (pushOther && collisionResult.other && collisionResult.other.movement) {
+      collisionResult.other.x += normalX * separation
+      collisionResult.other.y += normalY * separation
+    }
+    unit.x -= normalX * separation
+    unit.y -= normalY * separation
+  }
+
+  // Dampen velocity along collision normal to create a bounce effect
+  const normalVel = movement.velocity.x * normalX + movement.velocity.y * normalY
+  if (normalVel > 0) {
+    movement.velocity.x -= normalX * Math.min(normalVel * COLLISION_NORMAL_DAMPING_MULT, COLLISION_NORMAL_DAMPING_MAX)
+    movement.velocity.y -= normalY * Math.min(normalVel * COLLISION_NORMAL_DAMPING_MULT, COLLISION_NORMAL_DAMPING_MAX)
+  }
+
+  movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
 }
 
 /**
  * Try to slide along obstacles when blocked
  */
-function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
+function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = [], wrecks = []) {
   const originalX = unit.x
   const originalY = unit.y
 
@@ -554,7 +775,7 @@ function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
   unit.x = originalX + movement.velocity.x
   unit.y = originalY
 
-  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks).collided) {
     movement.velocity.y = 0 // Cancel vertical movement
     return
   }
@@ -563,7 +784,7 @@ function trySlideMovement(unit, movement, mapGrid, occupancyMap, units = []) {
   unit.x = originalX
   unit.y = originalY + movement.velocity.y
 
-  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units)) {
+  if (!checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks).collided) {
     movement.velocity.x = 0 // Cancel horizontal movement
     return
   }

@@ -192,7 +192,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateBullets(bullets, units, factories, gameState, mapGrid)
 
     // Update wreck inertia and drift after impacts
-    updateWreckPhysics(gameState, delta)
+    updateWreckPhysics(gameState, units, delta)
 
     // Building system updates
     updateBuildings(gameState, units, bullets, factories, mapGrid, delta)

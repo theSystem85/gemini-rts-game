@@ -374,9 +374,34 @@ export let INERTIA_STOP_THRESHOLD = 1  // Velocity magnitude below this stops in
 export function setInertiaStopThreshold(value) {
   INERTIA_STOP_THRESHOLD = value
 }
-// Wreck impact physics tuning
+// Wreck impact physics tuning (bullet/explosion impacts)
 export let WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
 export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
+
+// Collision bounce tuning (unit vs unit)
+export let COLLISION_BOUNCE_REMOTE_BOOST = 1.5 // Extra impulse when player is actively remote-controlling
+export let COLLISION_BOUNCE_SPEED_FACTOR = 0.8 // Contribution of speed to impulse
+export let COLLISION_BOUNCE_OVERLAP_FACTOR = 0.2 // Contribution of overlap to impulse
+export let COLLISION_BOUNCE_MIN = 0.3 // Clamp min impulse
+export let COLLISION_BOUNCE_MAX = 2.2 // Clamp max impulse
+export let COLLISION_RECOIL_FACTOR_FAST = 0.35 // Portion of impulse applied as recoil to the faster unit
+export let COLLISION_RECOIL_MAX_FAST = 0.8 // Max recoil magnitude for faster unit
+export let COLLISION_RECOIL_PUSH_OTHER_FACTOR = 0.25 // Portion of impulse nudging the faster unit when the slower bounces (for separation)
+export let COLLISION_RECOIL_PUSH_OTHER_MAX = 0.6 // Max of that nudge
+export let COLLISION_SEPARATION_SCALE = 0.6 // How much to separate positions based on overlap
+export let COLLISION_SEPARATION_MAX = 4 // Max separation distance
+export let COLLISION_SEPARATION_MIN = 0.5 // Min separation distance
+export let COLLISION_NORMAL_DAMPING_MULT = 1.1 // How strongly to damp velocity along collision normal
+export let COLLISION_NORMAL_DAMPING_MAX = 1.2 // Max damping amount
+
+// Collision bounce tuning (unit vs wreck)
+export let WRECK_COLLISION_REMOTE_BOOST = 1.1 // Stronger boost when remote-controlling
+export let WRECK_COLLISION_SPEED_FACTOR = 0.75
+export let WRECK_COLLISION_OVERLAP_FACTOR = 0.1
+export let WRECK_COLLISION_MIN = 0.4
+export let WRECK_COLLISION_MAX = 2.5
+export let WRECK_COLLISION_RECOIL_FACTOR_UNIT = 0.25 // Recoil applied to unit when wreck is slower
+export let WRECK_COLLISION_RECOIL_MAX_UNIT = 0.6
 // Scroll speed when using arrow keys (pixels per frame)
 export let KEYBOARD_SCROLL_SPEED = 8
 
@@ -965,6 +990,29 @@ const EXPORTED_CONFIG_VARIABLES = [
   'GRASS_IMPASSABLE_RATIO',
   'INERTIA_DECAY',
   'INERTIA_STOP_THRESHOLD',
+  'WRECK_IMPACT_FORCE_MULTIPLIER',
+  'WRECK_INERTIA_DECAY',
+  'COLLISION_BOUNCE_REMOTE_BOOST',
+  'COLLISION_BOUNCE_SPEED_FACTOR',
+  'COLLISION_BOUNCE_OVERLAP_FACTOR',
+  'COLLISION_BOUNCE_MIN',
+  'COLLISION_BOUNCE_MAX',
+  'COLLISION_RECOIL_FACTOR_FAST',
+  'COLLISION_RECOIL_MAX_FAST',
+  'COLLISION_RECOIL_PUSH_OTHER_FACTOR',
+  'COLLISION_RECOIL_PUSH_OTHER_MAX',
+  'COLLISION_SEPARATION_SCALE',
+  'COLLISION_SEPARATION_MAX',
+  'COLLISION_SEPARATION_MIN',
+  'COLLISION_NORMAL_DAMPING_MULT',
+  'COLLISION_NORMAL_DAMPING_MAX',
+  'WRECK_COLLISION_REMOTE_BOOST',
+  'WRECK_COLLISION_SPEED_FACTOR',
+  'WRECK_COLLISION_OVERLAP_FACTOR',
+  'WRECK_COLLISION_MIN',
+  'WRECK_COLLISION_MAX',
+  'WRECK_COLLISION_RECOIL_FACTOR_UNIT',
+  'WRECK_COLLISION_RECOIL_MAX_UNIT',
   'KEYBOARD_SCROLL_SPEED',
   'TANK_FIRE_RANGE',
   'SERVICE_DISCOVERY_RANGE',
