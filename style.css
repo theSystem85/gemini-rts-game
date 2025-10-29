@@ -405,6 +405,10 @@ body.mobile-landscape #actions {
   align-items: flex-start;
 }
 
+body.mobile-landscape #actions .mobile-sidebar-menu-button {
+  display: inline-flex;
+}
+
 body.mobile-landscape #actions .action-button {
   width: 100%;
   height: var(--mobile-action-size);
@@ -869,6 +873,10 @@ body.mobile-landscape .energy-bar-value {
   gap: 5px;
   margin: 10px 0;
   justify-content: space-between;
+}
+
+#actions .mobile-sidebar-menu-button {
+  display: none;
 }
 
 .action-button {
@@ -1700,4 +1708,81 @@ body.config-modal-open {
 .config-modal__field select option[data-overridden='true'] {
   color: #7dffb0;
   font-weight: 600;
+}
+.mobile-sidebar-modal {
+  display: none;
+}
+
+body.mobile-landscape .mobile-sidebar-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body.mobile-landscape .mobile-sidebar-modal[aria-hidden="false"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-sidebar-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.mobile-sidebar-modal__dialog {
+  position: relative;
+  background: #1f1f1f;
+  color: #eee;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 16px;
+  width: min(90vw, 420px);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-sidebar-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-sidebar-modal__title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.mobile-sidebar-modal__close {
+  width: 32px;
+  height: 32px;
+}
+
+.mobile-sidebar-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-sidebar-modal__content > * {
+  width: 100%;
+}
+
+body.mobile-sidebar-modal-open {
+  overflow: hidden;
+}
+
+body.mobile-sidebar-modal-open #sidebar,
+body.mobile-sidebar-modal-open #sidebarScroll {
+  pointer-events: none;
 }
