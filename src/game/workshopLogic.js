@@ -6,6 +6,7 @@ import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getWreckById, removeWreckById } from './unitWreckManager.js'
 import { getBaseStructures, isWithinBaseRange } from '../utils/baseUtils.js'
+import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 function initWorkshop(workshop) {
   if (!workshop.repairSlots) {
@@ -79,6 +80,35 @@ function findNearestFreeTile(originX, originY, mapGrid, occupancyMap, units, max
   }
 
   return null
+}
+
+function withdrawRepairFunds(unit, amount) {
+  if (!unit || amount <= 0) {
+    return 0
+  }
+
+  const owner = unit.owner
+  if (owner === gameState.humanPlayer) {
+    const available = typeof gameState.money === 'number' ? gameState.money : 0
+    const paid = Math.min(amount, Math.max(0, available))
+    if (paid > 0) {
+      gameState.money -= paid
+    }
+    return paid
+  }
+
+  if (Array.isArray(gameState.factories)) {
+    const factory = gameState.factories.find(f => f && (f.owner === owner || f.id === owner))
+    if (factory && typeof factory.budget === 'number' && factory.budget > 0) {
+      const paid = Math.min(amount, Math.max(0, factory.budget))
+      if (paid > 0) {
+        factory.budget -= paid
+      }
+      return paid
+    }
+  }
+
+  return 0
 }
 
 function getWorkshopSpawnOrigin(workshop, mapGrid) {
@@ -399,6 +429,37 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
     // Process workshop restoration queue
     processWorkshopRestoration(workshop, units, mapGrid, delta)
 
+    const serviceRadius = getServiceRadiusPixels(workshop)
+    if (serviceRadius > 0) {
+      const workshopCenterX = (workshop.x + workshop.width / 2) * TILE_SIZE
+      const workshopCenterY = (workshop.y + workshop.height / 2) * TILE_SIZE
+
+      units.forEach(unit => {
+        if (!unit || unit.health <= 0) return
+        if (unit.owner !== workshop.owner) return
+        if (typeof unit.maxHealth !== 'number' || unit.health >= unit.maxHealth) return
+        if (unit.repairingAtWorkshop) return
+        if (unit.returningToWorkshop) return
+        if (unit.targetWorkshop && unit.targetWorkshop !== workshop) return
+        if (workshop.repairQueue.includes(unit)) return
+        if (unit.movement && unit.movement.isMoving) return
+
+        const unitX = typeof unit.x === 'number' ? unit.x : unit.tileX * TILE_SIZE
+        const unitY = typeof unit.y === 'number' ? unit.y : unit.tileY * TILE_SIZE
+        const unitCenterX = unitX + TILE_SIZE / 2
+        const unitCenterY = unitY + TILE_SIZE / 2
+        const distance = Math.hypot(unitCenterX - workshopCenterX, unitCenterY - workshopCenterY)
+
+        if (distance <= serviceRadius) {
+          workshop.repairQueue.push(unit)
+          unit.targetWorkshop = workshop
+          if (!unit.returnTile) {
+            unit.returnTile = { x: unit.tileX, y: unit.tileY }
+          }
+        }
+      })
+    }
+
     assignUnitsToSlots(workshop, mapGrid)
     workshop.repairSlots.forEach(slot => {
       const unit = slot.unit
@@ -459,26 +520,38 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
         }
       } else {
         if (unit.health < unit.maxHealth) {
-          // Calculate how much health to restore this frame
+          const previousHealth = unit.health
           const healthIncrease = unit.maxHealth * 0.06 * (delta / 1000)
-          const newHealth = Math.min(unit.health + healthIncrease, unit.maxHealth)
+          const desiredHealth = Math.min(previousHealth + healthIncrease, unit.maxHealth)
 
-          // Calculate cost for this health increase
+          const startHealth = typeof unit.workshopStartHealth === 'number'
+            ? unit.workshopStartHealth
+            : previousHealth
+          const totalHealthToRepair = Math.max(0, unit.maxHealth - startHealth)
+
+          let costThisFrame = 0
           if (unit.workshopRepairCost && unit.workshopRepairPaid < unit.workshopRepairCost) {
-            const healthRepaired = newHealth - unit.workshopStartHealth
-            const totalHealthToRepair = unit.maxHealth - unit.workshopStartHealth
-            const repairProgress = totalHealthToRepair > 0 ? healthRepaired / totalHealthToRepair : 1
-
+            const repairedHealth = Math.max(0, desiredHealth - startHealth)
+            const repairProgress = totalHealthToRepair > 0 ? repairedHealth / totalHealthToRepair : 1
             const expectedPaid = Math.min(repairProgress * unit.workshopRepairCost, unit.workshopRepairCost)
-            const costThisFrame = expectedPaid - unit.workshopRepairPaid
+            costThisFrame = expectedPaid - (unit.workshopRepairPaid || 0)
 
-            if (costThisFrame > 0 && gameState.money >= costThisFrame) {
-              gameState.money -= costThisFrame
-              unit.workshopRepairPaid += costThisFrame
+            if (costThisFrame > 0) {
+              const paid = withdrawRepairFunds(unit, costThisFrame)
+              if (paid > 0) {
+                unit.workshopRepairPaid = (unit.workshopRepairPaid || 0) + paid
+              }
             }
           }
 
-          unit.health = newHealth
+          let allowedHealth = desiredHealth
+          if (unit.workshopRepairCost && unit.workshopRepairCost > 0 && totalHealthToRepair > 0) {
+            const paidProgress = Math.min(1, (unit.workshopRepairPaid || 0) / unit.workshopRepairCost)
+            const paidHealth = startHealth + totalHealthToRepair * paidProgress
+            allowedHealth = Math.min(allowedHealth, paidHealth)
+          }
+
+          unit.health = Math.max(previousHealth, Math.min(allowedHealth, unit.maxHealth))
           updateUnitSpeedModifier(unit)
         } else {
           // Repair complete - clean up cost tracking and workshop assignment

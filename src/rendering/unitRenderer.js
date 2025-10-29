@@ -11,6 +11,20 @@ import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recove
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
+  constructor() {
+    this.repairIcon = null
+    this.loadRepairIcon()
+  }
+
+  loadRepairIcon() {
+    this.repairIcon = new Image()
+    this.repairIcon.src = '/cursors/wrench_cursor.svg'
+    this.repairIcon.onerror = () => {
+      console.warn('Failed to load workshop repair indicator icon')
+      this.repairIcon = null
+    }
+  }
+
   renderUnitBody(ctx, unit, centerX, centerY) {
     // Use consistent colors for unit types regardless of owner
     ctx.fillStyle = UNIT_TYPE_COLORS[unit.type] || '#0000FF' // Default to blue if type not found
@@ -554,6 +568,32 @@ export class UnitRenderer {
     ctx.restore()
   }
 
+  renderWorkshopRepairIndicator(ctx, unit, centerX, centerY) {
+    if (!unit?.repairingAtWorkshop) {
+      return
+    }
+
+    const iconSize = TILE_SIZE * 0.75
+    const bounce = Math.sin(performance.now() / 250) * 3
+    const iconX = centerX - iconSize / 2
+    const iconY = centerY - TILE_SIZE / 2 - iconSize - 6 + bounce
+
+    ctx.save()
+    if (this.repairIcon) {
+      ctx.globalAlpha = 0.9
+      ctx.drawImage(this.repairIcon, iconX, iconY, iconSize, iconSize)
+    } else {
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.85)'
+      ctx.strokeStyle = 'rgba(255, 165, 0, 0.9)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(centerX, iconY + iconSize / 2, iconSize / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
   renderLevelStars(ctx, unit, scrollOffset) {
     // Only render stars for combat units with levels > 0
     if (unit.type === 'harvester' || !unit.level || unit.level <= 0) {
@@ -698,6 +738,7 @@ export class UnitRenderer {
     this.renderCrewStatus(ctx, unit, scrollOffset)
     this.renderAttackTargetIndicator(ctx, unit, centerX, centerY)
     this.renderUtilityServiceIndicator(ctx, unit, centerX, centerY)
+    this.renderWorkshopRepairIndicator(ctx, unit, centerX, centerY)
     this.renderRecoveryProgressBar(ctx, unit, scrollOffset)
   }
 

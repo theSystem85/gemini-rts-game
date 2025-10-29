@@ -22,7 +22,12 @@ export function ensureServiceRadius(building) {
   }
 
   const baseRadius = computeServiceRadiusTiles(building.width, building.height)
-  const multiplier = building.type === 'hospital' ? 2 : 1
+  let multiplier = 1
+  if (building.type === 'hospital') {
+    multiplier = 2
+  } else if (building.type === 'vehicleWorkshop') {
+    multiplier = 2
+  }
   const desiredRadius = baseRadius * multiplier
 
   if (typeof building.serviceRadius === 'number') {
