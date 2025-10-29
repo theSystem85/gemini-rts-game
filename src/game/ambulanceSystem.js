@@ -5,6 +5,15 @@ import { getUnitCommandsHandler } from '../inputHandler.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 export const updateAmbulanceLogic = logPerformance(function(units, gameState, delta) {
+  // Reset active service markers before processing to avoid stale indicators
+  if (Array.isArray(units)) {
+    units.forEach(unit => {
+      if (unit.beingServedByAmbulance) {
+        unit.beingServedByAmbulance = false
+      }
+    })
+  }
+
   const ambulances = units.filter(u => u.type === 'ambulance')
   if (ambulances.length === 0) return
 
@@ -138,6 +147,9 @@ export const updateAmbulanceLogic = logPerformance(function(units, gameState, de
         ambulance.healingTimer = 0
         return
       }
+
+      // Mark the target as actively being served by an ambulance
+      target.beingServedByAmbulance = true
 
       // Check if ambulance has crew to give
       if (!ambulance.medics || ambulance.medics <= 0) {

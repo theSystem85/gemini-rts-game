@@ -497,30 +497,30 @@ export class UnitRenderer {
   }
 
   renderUtilityServiceIndicator(ctx, unit, centerX, centerY) {
-    if (!selectedUnits || selectedUnits.length === 0) {
-      return
-    }
-
-    // Avoid drawing duplicate utility indicators while path planning mode (Alt) is active,
-    // since the path planning renderer already draws the target markers in that mode.
-    if (gameState.altKeyDown) {
-      return
-    }
+    const isBeingServedByAmbulance = Boolean(unit?.beingServedByAmbulance)
 
     let queuePosition = null
-    selectedUnits.forEach(selectedUnit => {
-      if (!selectedUnit?.selected) return
-      if (!selectedUnit.type || (selectedUnit.type !== 'ambulance' && selectedUnit.type !== 'tankerTruck' && selectedUnit.type !== 'recoveryTank')) {
+    const hasSelectedUnits = Array.isArray(selectedUnits) && selectedUnits.length > 0
+
+    // Avoid drawing duplicate utility indicators while path planning mode (Alt) is active.
+    // However, still show active service indicators even when path planning is enabled.
+    if (hasSelectedUnits && !gameState.altKeyDown) {
+      selectedUnits.forEach(selectedUnit => {
+        if (!selectedUnit?.selected) return
+        if (!selectedUnit.type || (selectedUnit.type !== 'ambulance' && selectedUnit.type !== 'tankerTruck' && selectedUnit.type !== 'recoveryTank')) {
+          return
+        }
+        const position = this.getUtilityQueuePosition(selectedUnit, unit)
+        if (position !== null) {
+          queuePosition = queuePosition === null ? position : Math.min(queuePosition, position)
+        }
+      })
+    }
+
+    if (!isBeingServedByAmbulance) {
+      if (!hasSelectedUnits || gameState.altKeyDown || queuePosition === null) {
         return
       }
-      const position = this.getUtilityQueuePosition(selectedUnit, unit)
-      if (position !== null) {
-        queuePosition = queuePosition === null ? position : Math.min(queuePosition, position)
-      }
-    })
-
-    if (queuePosition === null) {
-      return
     }
 
     const now = performance.now()
@@ -543,11 +543,13 @@ export class UnitRenderer {
     ctx.fill()
     ctx.stroke()
 
-    ctx.fillStyle = '#000'
-    ctx.font = '10px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 2)
+    if (queuePosition !== null) {
+      ctx.fillStyle = '#000'
+      ctx.font = '10px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 2)
+    }
 
     ctx.restore()
   }
