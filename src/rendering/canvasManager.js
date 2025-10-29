@@ -26,61 +26,89 @@ export class CanvasManager {
       return Number.isFinite(parsed) ? parsed : 0
     }
 
-    const safeLeft = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-left')) : 0
-    const safeRight = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-right')) : 0
-    const safeTop = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-top')) : 0
-    const safeBottom = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-bottom')) : 0
+    let safeLeft = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-left')) : 0
+    let safeRight = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-right')) : 0
+    let safeTop = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-top')) : 0
+    let safeBottom = bodyStyle ? parseSafeInset(bodyStyle.getPropertyValue('--safe-area-bottom')) : 0
 
     const isTouchLayout = body ? body.classList.contains('is-touch') : false
 
-    const widthCandidates = []
-    widthCandidates.push(window.innerWidth)
-    if (window.visualViewport && window.visualViewport.width) {
-      widthCandidates.push(window.visualViewport.width)
+    const viewport = window.visualViewport
+
+    const layoutWidthCandidates = []
+    layoutWidthCandidates.push(window.innerWidth)
+    if (viewport && viewport.width) {
+      layoutWidthCandidates.push(viewport.width)
     }
     if (document.documentElement && document.documentElement.clientWidth) {
-      widthCandidates.push(document.documentElement.clientWidth)
-    }
-    if (isTouchLayout && window.screen && window.screen.width) {
-      widthCandidates.push(window.screen.width / pixelRatio)
+      layoutWidthCandidates.push(document.documentElement.clientWidth)
     }
 
-    const validWidths = widthCandidates.filter(v => Number.isFinite(v) && v > 0)
-    const baseViewportWidth = validWidths.length
-      ? Math.max(...validWidths)
+    const validLayoutWidths = layoutWidthCandidates.filter(v => Number.isFinite(v) && v > 0)
+    const layoutViewportWidth = validLayoutWidths.length
+      ? Math.max(...validLayoutWidths)
       : this.gameCanvas.clientWidth || 0
 
-    const heightCandidates = []
-    heightCandidates.push(window.innerHeight)
-    if (window.visualViewport && window.visualViewport.height) {
-      heightCandidates.push(window.visualViewport.height)
+    const layoutHeightCandidates = []
+    layoutHeightCandidates.push(window.innerHeight)
+    if (viewport && viewport.height) {
+      layoutHeightCandidates.push(viewport.height)
     }
     if (document.documentElement && document.documentElement.clientHeight) {
-      heightCandidates.push(document.documentElement.clientHeight)
+      layoutHeightCandidates.push(document.documentElement.clientHeight)
     }
 
-    const validHeights = heightCandidates.filter(v => Number.isFinite(v) && v > 0)
-    const baseViewportHeight = validHeights.length
-      ? Math.max(...validHeights)
+    const validLayoutHeights = layoutHeightCandidates.filter(v => Number.isFinite(v) && v > 0)
+    const layoutViewportHeight = validLayoutHeights.length
+      ? Math.max(...validLayoutHeights)
       : this.gameCanvas.clientHeight || 0
+
+    const screenWidth = isTouchLayout && window.screen && window.screen.width
+      ? window.screen.width / pixelRatio
+      : 0
+    const screenHeight = isTouchLayout && window.screen && window.screen.height
+      ? window.screen.height / pixelRatio
+      : 0
+
+    if (viewport) {
+      const totalWidth = Math.max(layoutViewportWidth, screenWidth)
+      const totalHeight = Math.max(layoutViewportHeight, screenHeight)
+
+      const viewportOffsetLeft = Number.isFinite(viewport.offsetLeft) ? viewport.offsetLeft : 0
+      const viewportOffsetTop = Number.isFinite(viewport.offsetTop) ? viewport.offsetTop : 0
+      const viewportWidth = Number.isFinite(viewport.width) ? viewport.width : 0
+      const viewportHeight = Number.isFinite(viewport.height) ? viewport.height : 0
+
+      const fallbackRight = Math.max(0, totalWidth - viewportWidth - viewportOffsetLeft)
+      const fallbackBottom = Math.max(0, totalHeight - viewportHeight - viewportOffsetTop)
+
+      safeLeft = Math.max(safeLeft, viewportOffsetLeft)
+      safeRight = Math.max(safeRight, fallbackRight)
+      safeTop = Math.max(safeTop, viewportOffsetTop)
+      safeBottom = Math.max(safeBottom, fallbackBottom)
+    }
     const sidebar = document.getElementById('sidebar')
     const rawSidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
     const mobileLandscape = body ? body.classList.contains('mobile-landscape') : false
-    const safeAdjustment = mobileLandscape ? safeLeft : safeLeft
+    const safeAdjustment = mobileLandscape ? safeLeft : 0
     const sidebarBaseWidth = Math.max(0, rawSidebarWidth - safeAdjustment)
 
     if (document.documentElement) {
       document.documentElement.style.setProperty('--sidebar-width', `${sidebarBaseWidth}px`)
     }
 
-    const safeHorizontalPadding = mobileLandscape ? safeLeft + safeRight : 0
-    const safeVerticalPadding = mobileLandscape ? safeTop + safeBottom : 0
+    const baseCanvasWidth = mobileLandscape
+      ? Math.max(layoutViewportWidth + safeLeft + safeRight, screenWidth, 0)
+      : layoutViewportWidth
+    const baseCanvasHeight = mobileLandscape
+      ? Math.max(layoutViewportHeight + safeTop + safeBottom, screenHeight, 0)
+      : layoutViewportHeight
 
     // Set canvas display size (CSS)
     const canvasCssWidth = mobileLandscape
-      ? Math.max(0, baseViewportWidth + safeHorizontalPadding)
-      : Math.max(0, baseViewportWidth - rawSidebarWidth)
-    const canvasCssHeight = Math.max(0, baseViewportHeight + safeVerticalPadding)
+      ? Math.max(0, baseCanvasWidth)
+      : Math.max(0, layoutViewportWidth - rawSidebarWidth)
+    const canvasCssHeight = Math.max(0, baseCanvasHeight)
 
     if (mobileLandscape) {
       this.gameCanvas.style.left = `${-safeLeft}px`

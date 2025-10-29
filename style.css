@@ -623,8 +623,10 @@ body.mobile-landscape #gameCanvas {
 
 body.mobile-landscape.is-touch #gameCanvas {
   left: calc(-1 * var(--safe-area-left));
+  right: calc(-1 * var(--safe-area-right));
   width: calc(100% + var(--safe-area-left) + var(--safe-area-right));
   top: calc(-1 * var(--safe-area-top));
+  bottom: calc(-1 * var(--safe-area-bottom));
   height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom));
 }
 
