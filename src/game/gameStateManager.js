@@ -342,9 +342,18 @@ export function checkGameEndConditions(factories, gameState) {
   if (gameState.gameOver) return true
   if (!gameState.buildings) return false
 
-  // Count remaining buildings AND factories for human player
-  const humanPlayerBuildings = gameState.buildings.filter(b => b.owner === gameState.humanPlayer && b.health > 0)
-  const humanPlayerFactories = factories.filter(f => (f.id === gameState.humanPlayer || f.owner === gameState.humanPlayer) && f.health > 0)
+  const shouldCountBuilding = (building) => {
+    if (!building || building.health <= 0) return false
+    return building.type !== 'concreteWall'
+  }
+
+  // Count remaining buildings AND factories for human player (excluding concrete walls)
+  const humanPlayerBuildings = gameState.buildings.filter(
+    b => b.owner === gameState.humanPlayer && shouldCountBuilding(b)
+  )
+  const humanPlayerFactories = factories.filter(
+    f => (f.id === gameState.humanPlayer || f.owner === gameState.humanPlayer) && shouldCountBuilding(f)
+  )
   const totalHumanPlayerBuildings = humanPlayerBuildings.length + humanPlayerFactories.length
 
   // Check if human player has no buildings left
@@ -367,8 +376,12 @@ export function checkGameEndConditions(factories, gameState) {
   const defeatedAiPlayers = []
 
   for (const aiPlayerId of aiPlayerIds) {
-    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId && b.health > 0)
-    const aiFactories = factories.filter(f => (f.id === aiPlayerId || f.owner === aiPlayerId) && f.health > 0)
+    const aiBuildings = gameState.buildings.filter(
+      b => b.owner === aiPlayerId && shouldCountBuilding(b)
+    )
+    const aiFactories = factories.filter(
+      f => (f.id === aiPlayerId || f.owner === aiPlayerId) && shouldCountBuilding(f)
+    )
     const totalAiBuildings = aiBuildings.length + aiFactories.length
 
     if (totalAiBuildings > 0) {
