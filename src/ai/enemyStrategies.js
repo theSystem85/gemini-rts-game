@@ -4,6 +4,7 @@ import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import { stopUnitMovement } from '../game/unifiedMovement.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -1335,6 +1336,15 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
     const tankers = aiUnits.filter(u => u.type === 'tankerTruck')
     if (tankers.length === 0) return
 
+    const activeTankerIds = new Set(tankers.map(t => t.id))
+    aiUnits.forEach(u => {
+      if (u.awaitingRefuel && (!u.awaitingRefuelTankerId || !activeTankerIds.has(u.awaitingRefuelTankerId))) {
+        u.awaitingRefuel = false
+        u.awaitingRefuelTankerId = null
+        u.awaitingRefuelAssignedAt = null
+      }
+    })
+
     const harvesters = aiUnits.filter(u => u.type === 'harvester' && u.health > 0)
     const gasStations = (gameState.buildings || []).filter(
       b => b.owner === aiPlayerId && b.type === 'gasStation' && b.health > 0
@@ -1444,6 +1454,16 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   // Set the refuel target BEFORE pathfinding, just like player tanker commands
   tanker.refuelTarget = unit
   tanker.refuelTimer = 0
+
+  // Ensure the assisted unit actually stops so refueling can begin
+  if (unit) {
+    stopUnitMovement(unit)
+    unit.moveTarget = null
+    unit.path = []
+    unit.awaitingRefuel = true
+    unit.awaitingRefuelTankerId = tanker.id
+    unit.awaitingRefuelAssignedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+  }
 
 
   // Try to find an adjacent position to the target unit (like player tanker commands do)
