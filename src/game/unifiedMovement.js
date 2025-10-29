@@ -33,6 +33,7 @@ import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLo
 import { updateUnitOccupancy, findPath } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
+import { detonateTankerTruck } from './tankerTruckUtils.js'
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -379,6 +380,34 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   }
 
+  if (
+    unit.type === 'tankerTruck' &&
+    unit.kamikazeMode &&
+    unit.kamikazeTargetType === 'building' &&
+    unit.kamikazeTargetPoint
+  ) {
+    const tankerCenterX = unit.x + TILE_SIZE / 2
+    const tankerCenterY = unit.y + TILE_SIZE / 2
+    const distanceToTarget = Math.hypot(
+      unit.kamikazeTargetPoint.x - tankerCenterX,
+      unit.kamikazeTargetPoint.y - tankerCenterY
+    )
+
+    if (distanceToTarget <= TILE_SIZE * 0.75) {
+      const detonated = detonateTankerTruck(unit, units, factories || [], gameState)
+      if (detonated) {
+        movement.velocity.x = 0
+        movement.velocity.y = 0
+        if (movement.targetVelocity) {
+          movement.targetVelocity.x = 0
+          movement.targetVelocity.y = 0
+        }
+        movement.currentSpeed = 0
+        return
+      }
+    }
+  }
+
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
@@ -392,7 +421,16 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (collisionResult.type === 'wreck') {
       applyWreckCollisionResponse(unit, movement, collisionResult)
     } else if (collisionResult.type === 'unit') {
-      applyUnitCollisionResponse(unit, movement, collisionResult)
+      const detonated = applyUnitCollisionResponse(unit, movement, collisionResult, units, factories || [], gameState)
+      if (detonated) {
+        movement.velocity.x = 0
+        movement.velocity.y = 0
+        if (movement.targetVelocity) {
+          movement.targetVelocity.x = 0
+          movement.targetVelocity.y = 0
+        }
+        movement.currentSpeed = 0
+      }
     } else {
       // Try alternative movement (slide along obstacles)
       trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
@@ -734,17 +772,33 @@ function applyWreckCollisionResponse(unit, movement, collisionResult) {
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
 }
 
-function applyUnitCollisionResponse(unit, movement, collisionResult) {
+function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null) {
   if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
-    return
+    return false
   }
 
   const { normalX, normalY, overlap, unitSpeed, otherSpeed } = collisionResult.data
+  const factoryList = Array.isArray(factories) ? factories : []
 
-  // Separate units slightly to avoid persistent overlap
+  if (unit.type === 'tankerTruck') {
+    const otherUnit = collisionResult.other
+    const isEnemyCollision = Boolean(
+      otherUnit && typeof otherUnit.owner === 'string' && typeof unit.owner === 'string' && otherUnit.owner !== unit.owner
+    )
+    const kamikazeActive = isEnemyCollision && unit.kamikazeMode
+    const baseSpeed = typeof unit.speed === 'number' ? unit.speed : MOVEMENT_CONFIG.MAX_SPEED
+    const speedModifier = typeof unit.speedModifier === 'number' ? unit.speedModifier : 1
+    const effectiveSpeed = Math.max(baseSpeed * speedModifier, 0.01)
+    const currentSpeed = unitSpeed || movement.currentSpeed || 0
+    const remoteAtMaxSpeed = isEnemyCollision && unit.remoteControlActive && currentSpeed >= effectiveSpeed * 0.95
+
+    if ((kamikazeActive || remoteAtMaxSpeed) && detonateTankerTruck(unit, units, factoryList, gameState)) {
+      return true
+    }
+  }
+
   const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
   if (separation > 0.001) {
-    // Move both slightly apart based on who is faster
     const pushOther = otherSpeed <= unitSpeed
     if (pushOther && collisionResult.other && collisionResult.other.movement) {
       collisionResult.other.x += normalX * separation
@@ -754,7 +808,6 @@ function applyUnitCollisionResponse(unit, movement, collisionResult) {
     unit.y -= normalY * separation
   }
 
-  // Dampen velocity along collision normal to create a bounce effect
   const normalVel = movement.velocity.x * normalX + movement.velocity.y * normalY
   if (normalVel > 0) {
     movement.velocity.x -= normalX * Math.min(normalVel * COLLISION_NORMAL_DAMPING_MULT, COLLISION_NORMAL_DAMPING_MAX)
@@ -762,6 +815,7 @@ function applyUnitCollisionResponse(unit, movement, collisionResult) {
   }
 
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+  return false
 }
 
 /**

@@ -1,8 +1,13 @@
-import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
+import { GAS_REFILL_TIME, TANKER_SUPPLY_CAPACITY, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import {
+  computeTankerKamikazeApproach,
+  clearTankerKamikazeState,
+  updateKamikazeTargetPoint
+} from './tankerTruckUtils.js'
 
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
@@ -14,6 +19,11 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
   const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
 
   tankers.forEach(tanker => {
+    if (tanker.kamikazeMode) {
+      handleKamikazeBehavior(tanker, units, gameState)
+      return
+    }
+
     const queueState = tanker.utilityQueue
     const queueActive = queueState && queueState.mode === 'refuel' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
@@ -334,6 +344,89 @@ function handleEmergencyFuelRequests(tankers, units, gameState) {
       }
     })
   })
+}
+
+function handleKamikazeBehavior(tanker, units, gameState) {
+  const mapGrid = gameState.mapGrid
+  if (!mapGrid || mapGrid.length === 0) {
+    return
+  }
+
+  tanker.refuelTarget = null
+  tanker.refuelTimer = 0
+  tanker.emergencyTarget = null
+  tanker.emergencyMode = false
+  tanker.alertActiveService = false
+
+  const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+  const occupancyMap = gameState.occupancyMap
+
+  if (tanker.kamikazeTargetType === 'unit' && tanker.kamikazeTargetId) {
+    const targetUnit = units.find(u => u.id === tanker.kamikazeTargetId && u.health > 0)
+    if (!targetUnit) {
+      clearTankerKamikazeState(tanker)
+      return
+    }
+
+    updateKamikazeTargetPoint(tanker, targetUnit)
+
+    const tankerCenterX = tanker.x + TILE_SIZE / 2
+    const tankerCenterY = tanker.y + TILE_SIZE / 2
+    const targetPoint = tanker.kamikazeTargetPoint
+    const distance = targetPoint ? Math.hypot(targetPoint.x - tankerCenterX, targetPoint.y - tankerCenterY) : Infinity
+
+    const repathInterval = tanker.kamikazeLastPathTime ? 350 : 0
+    const shouldRepath = !tanker.path || tanker.path.length === 0 || (now - (tanker.kamikazeLastPathTime || 0) > repathInterval)
+
+    if (shouldRepath || distance > TILE_SIZE) {
+      const plan = computeTankerKamikazeApproach(tanker, targetUnit, mapGrid, occupancyMap)
+      if (plan) {
+        tanker.path = plan.path.slice(1)
+        tanker.moveTarget = { ...plan.moveTarget }
+        tanker.kamikazeLastPathTime = now
+      }
+    }
+
+  } else if (tanker.kamikazeTargetType === 'building') {
+    const targetBuilding = tanker.kamikazeTargetId
+      ? (gameState.buildings || []).find(b => b.id === tanker.kamikazeTargetId) || null
+      : null
+    if (tanker.kamikazeTargetId && (!targetBuilding || targetBuilding.health <= 0)) {
+      clearTankerKamikazeState(tanker)
+      return
+    }
+
+    if (targetBuilding) {
+      updateKamikazeTargetPoint(tanker, targetBuilding)
+    }
+
+    if (!tanker.kamikazeTargetPoint) {
+      clearTankerKamikazeState(tanker)
+      return
+    }
+
+    const tankerCenterX = tanker.x + TILE_SIZE / 2
+    const tankerCenterY = tanker.y + TILE_SIZE / 2
+    const distance = Math.hypot(tanker.kamikazeTargetPoint.x - tankerCenterX, tanker.kamikazeTargetPoint.y - tankerCenterY)
+
+    const repathInterval = tanker.kamikazeLastPathTime ? 600 : 0
+    const shouldRepath = !tanker.path || tanker.path.length === 0 || (now - (tanker.kamikazeLastPathTime || 0) > repathInterval)
+
+    if (shouldRepath || distance > TILE_SIZE) {
+      const targetTile = {
+        tileX: Math.floor(tanker.kamikazeTargetPoint.x / TILE_SIZE),
+        tileY: Math.floor(tanker.kamikazeTargetPoint.y / TILE_SIZE)
+      }
+      const plan = computeTankerKamikazeApproach(tanker, targetTile, mapGrid, occupancyMap)
+      if (plan) {
+        tanker.path = plan.path.slice(1)
+        tanker.moveTarget = { ...plan.moveTarget }
+        tanker.kamikazeLastPathTime = now
+      }
+    }
+  } else {
+    clearTankerKamikazeState(tanker)
+  }
 }
 
 /**
