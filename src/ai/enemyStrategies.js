@@ -4,6 +4,7 @@ import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import { stopUnitMovement } from '../game/unifiedMovement.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -1444,6 +1445,13 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   // Set the refuel target BEFORE pathfinding, just like player tanker commands
   tanker.refuelTarget = unit
   tanker.refuelTimer = 0
+
+  // Ensure the assisted unit actually stops so refueling can begin
+  if (unit) {
+    stopUnitMovement(unit)
+    unit.moveTarget = null
+    unit.path = []
+  }
 
 
   // Try to find an adjacent position to the target unit (like player tanker commands do)
