@@ -1289,6 +1289,7 @@ class Game {
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const configSettingsBtn = document.getElementById('configSettingsBtn')
+    const cheatMenuBtn = document.getElementById('cheatMenuBtn')
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 
@@ -1328,6 +1329,18 @@ class Game {
     if (configSettingsBtn) {
       configSettingsBtn.addEventListener('click', () => {
         runtimeConfigDialog.openDialog()
+      })
+    }
+
+    if (cheatMenuBtn) {
+      cheatMenuBtn.addEventListener('click', () => {
+        if (mobileLayoutState.sidebarModalVisible) {
+          closeMobileSidebarModal()
+        }
+
+        if (window.cheatSystem && typeof window.cheatSystem.openDialog === 'function') {
+          window.cheatSystem.openDialog()
+        }
       })
     }
   }
