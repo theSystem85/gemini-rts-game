@@ -15,8 +15,16 @@ export class AttackGroupHandler {
 
   shouldStartAttackGroupMode(selectedUnits) {
     const hasSelectedUnits = selectedUnits && selectedUnits.length > 0
+
+    // Treat utility/service vehicles as non-combat for AGF: they should not trigger AGF on drag
+    const isServiceVehicle = (u) => (
+      u.type === 'ambulance' || u.type === 'tankerTruck' || u.type === 'recoveryTank'
+    )
+
+    // Combat units are human-owned, not buildings, and not utility/service or harvesters
     const hasCombatUnits = hasSelectedUnits && selectedUnits.some(unit =>
-      unit.type !== 'harvester' && unit.owner === gameState.humanPlayer && !unit.isBuilding
+      unit.owner === gameState.humanPlayer && !unit.isBuilding &&
+      unit.type !== 'harvester' && !isServiceVehicle(unit)
     )
     const hasSelectedFactory = hasSelectedUnits && selectedUnits.some(unit =>
       (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
