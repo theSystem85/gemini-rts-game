@@ -54,7 +54,7 @@ if ('serviceWorker' in navigator) {
     if (typeof caches !== 'undefined' && caches?.keys) {
       caches.keys().then(cacheNames => {
         cacheNames
-          .filter(name => name.startsWith('gemini-rts-cache-'))
+          .filter(name => name.startsWith('codeandconquer-cache-'))
           .forEach(name => {
             caches.delete(name).catch(err => {
               console.warn('Failed to delete service worker cache', name, err)
