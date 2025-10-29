@@ -455,6 +455,10 @@ body.mobile-landscape #actions .action-button.icon-button {
   justify-content: center;
 }
 
+body.mobile-landscape {
+  --mobile-build-menu-width: 72px;
+}
+
 body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   display: flex;
   flex-direction: column;
@@ -473,10 +477,7 @@ body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   padding-left: 0;
   gap: 0;
   box-sizing: border-box;
-}
-
-body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
-  width: calc(80px + var(--safe-area-right));
+  width: calc(var(--mobile-build-menu-width) + var(--safe-area-right));
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #productionArea {
