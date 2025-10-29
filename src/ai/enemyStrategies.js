@@ -1039,7 +1039,9 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
       if (u.type === 'tankerTruck' || typeof u.maxGas !== 'number' || u.health <= 0) {
         return
       }
-      if (u.gas <= 0) {
+
+      const isCritical = u.gas <= 0 || u.needsEmergencyFuel
+      if (isCritical) {
         criticalUnits.push(u)
       } else if (u.gas / u.maxGas < 0.3) { // Changed from 0.2 to 0.3 (30% threshold)
         lowGasUnits.push(u)
@@ -1047,22 +1049,33 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
     })
 
     tankers.forEach(tanker => {
-      // First priority: tanker needs refill
-      const needsRefill =
-        (typeof tanker.maxGas === 'number' && tanker.gas / tanker.maxGas < 0.2) ||
-        (typeof tanker.maxSupplyGas === 'number' &&
-          tanker.supplyGas / tanker.maxSupplyGas < 0.2)
+      const hasSupplyCapacity = typeof tanker.maxSupplyGas === 'number' && tanker.maxSupplyGas > 0
+      const supplyGas = typeof tanker.supplyGas === 'number' ? tanker.supplyGas : null
+      const supplyPercent = hasSupplyCapacity && typeof tanker.supplyGas === 'number'
+        ? tanker.supplyGas / tanker.maxSupplyGas
+        : 1
+      const hasDriveCapacity = typeof tanker.maxGas === 'number' && tanker.maxGas > 0
+      const drivePercent = hasDriveCapacity && typeof tanker.gas === 'number'
+        ? tanker.gas / tanker.maxGas
+        : 1
 
-      if (needsRefill && gasStations.length > 0) {
-        sendTankerToGasStation(tanker, gasStations[0], mapGrid)
-        return
-      }
-
-      // Second priority: IMMEDIATE response to critical units (gas <= 0)
+      // Highest priority: respond to critical units (completely out of gas or emergency flag)
       if (criticalUnits.length > 0) {
+        const cannotServeEmergency =
+          (hasSupplyCapacity && (supplyGas === null || tanker.supplyGas <= 0)) ||
+          (hasDriveCapacity && tanker.gas <= 0)
+
+        if (cannotServeEmergency) {
+          if (gasStations.length > 0) {
+            sendTankerToGasStation(tanker, gasStations[0], mapGrid)
+          }
+          return
+        }
+
         // Find the closest critical unit that doesn't already have a tanker assigned
         let target = null
         let bestDistance = Infinity
+        let targetIsEmergency = false
 
         criticalUnits.forEach(criticalUnit => {
           // Skip if another tanker is already handling this critical unit
@@ -1073,10 +1086,17 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
           )
           if (alreadyAssigned) return
 
+          const isEmergency = Boolean(criticalUnit.needsEmergencyFuel || criticalUnit.gas <= 0)
           const distance = Math.hypot(criticalUnit.tileX - tanker.tileX, criticalUnit.tileY - tanker.tileY)
-          if (distance < bestDistance) {
+          const shouldPrioritize =
+            !target ||
+            (isEmergency && !targetIsEmergency) ||
+            (isEmergency === targetIsEmergency && distance < bestDistance)
+
+          if (shouldPrioritize) {
             bestDistance = distance
             target = criticalUnit
+            targetIsEmergency = isEmergency
           }
         })
 
@@ -1093,6 +1113,16 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
           tanker.emergencyMode = true
           return
         }
+      }
+
+      // Second priority (after emergencies): tanker needs refill
+      const needsRefill =
+        (hasDriveCapacity && drivePercent < 0.2) ||
+        (hasSupplyCapacity && typeof tanker.supplyGas === 'number' && supplyPercent < 0.2)
+
+      if (needsRefill && gasStations.length > 0) {
+        sendTankerToGasStation(tanker, gasStations[0], mapGrid)
+        return
       }
 
       // Third priority: low gas units
@@ -1136,7 +1166,6 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   // Set the refuel target BEFORE pathfinding, just like player tanker commands
   tanker.refuelTarget = unit
   tanker.refuelTimer = 0
-
 
   // Try to find an adjacent position to the target unit (like player tanker commands do)
   const targetTileX = unit.tileX
