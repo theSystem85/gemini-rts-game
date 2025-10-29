@@ -298,15 +298,42 @@ body.mobile-landscape #mobileJoystickContainer[aria-hidden="false"][data-selecti
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 162, 255, 0.85);
+  background: rgba(0, 162, 255, 0.5);
   border: 2px solid rgba(255, 255, 255, 0.45);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   transition: transform 0.12s ease-out, background 0.2s ease-out, box-shadow 0.2s ease-out;
+  z-index: 2;
 }
 
 #mobileJoystickContainer .joystick-thumb.active {
-  background: rgba(0, 196, 255, 0.95);
+  background: rgba(0, 196, 255, 0.5);
   box-shadow: 0 0 14px rgba(0, 196, 255, 0.6);
+}
+
+#mobileJoystickContainer .joystick-reload-ring {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  pointer-events: none;
+  --progress: 1;
+  background: conic-gradient(
+    rgba(0, 196, 255, 0.75) calc(var(--progress) * 360deg),
+    rgba(255, 255, 255, 0.14) 0deg
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), black calc(100% - 4px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), black calc(100% - 4px));
+  opacity: 0;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  transform: rotate(-90deg);
+  z-index: 1;
+}
+
+#mobileJoystickContainer .joystick-reload-ring.visible {
+  opacity: 1;
+}
+
+#mobileJoystickContainer .joystick-reload-ring.reloading {
+  box-shadow: 0 0 12px rgba(0, 196, 255, 0.35);
 }
 
 #mobileJoystickContainer .mobile-joystick,
