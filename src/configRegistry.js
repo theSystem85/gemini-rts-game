@@ -98,6 +98,8 @@ import {
   , setHowitzerProjectileSpeed
   , HOWITZER_VISION_RANGE
   , setHowitzerVisionRange
+  , HOWITZER_BUILDING_DAMAGE_MULTIPLIER
+  , setHowitzerBuildingDamageMultiplier
 } from './config.js'
 
 /**
@@ -307,6 +309,18 @@ export const configRegistry = {
     min: 1,
     max: 35,
     step: 1,
+    category: 'Howitzer'
+  },
+
+  howitzerBuildingDamageMultiplier: {
+    name: 'Howitzer Building Damage Multiplier',
+    description: 'Multiplier applied to howitzer explosion damage against buildings',
+    type: 'number',
+    get: () => HOWITZER_BUILDING_DAMAGE_MULTIPLIER,
+    set: setHowitzerBuildingDamageMultiplier,
+    min: 0,
+    max: 10,
+    step: 0.1,
     category: 'Howitzer'
   },
 

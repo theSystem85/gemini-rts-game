@@ -1,6 +1,7 @@
 // logic.js
 import {
-  TILE_SIZE
+  TILE_SIZE,
+  HOWITZER_BUILDING_DAMAGE_MULTIPLIER
 } from './config.js'
 import { gameState } from './gameState.js'
 import { playSound, playPositionalSound } from './sound.js'
@@ -201,6 +202,10 @@ export function triggerExplosion(
         } else {
           const falloff = 1 - distance / explosionRadius
           damage = Math.round(baseDamage * falloff * 0.3) // 30% damage with falloff
+        }
+
+        if (shooter && shooter.type === 'howitzer') {
+          damage = Math.round(damage * HOWITZER_BUILDING_DAMAGE_MULTIPLIER)
         }
 
         // Check for god mode protection for player buildings
