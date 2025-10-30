@@ -132,10 +132,16 @@ export function triggerExplosion(
   factories.forEach(factory => {
     if (factory.destroyed) return
 
-    const factoryCenterX = (factory.x + factory.width / 2) * TILE_SIZE
-    const factoryCenterY = (factory.y + factory.height / 2) * TILE_SIZE
-    const dx = factoryCenterX - x
-    const dy = factoryCenterY - y
+    const factoryMinX = factory.x * TILE_SIZE
+    const factoryMinY = factory.y * TILE_SIZE
+    const factoryMaxX = (factory.x + factory.width) * TILE_SIZE
+    const factoryMaxY = (factory.y + factory.height) * TILE_SIZE
+
+    const closestX = Math.max(factoryMinX, Math.min(x, factoryMaxX))
+    const closestY = Math.max(factoryMinY, Math.min(y, factoryMaxY))
+
+    const dx = closestX - x
+    const dy = closestY - y
     const distance = Math.hypot(dx, dy)
 
     if (distance < explosionRadius) {
@@ -176,10 +182,16 @@ export function triggerExplosion(
     gameState.buildings.forEach(building => {
       if (building.health <= 0) return
 
-      const buildingCenterX = (building.x + building.width / 2) * TILE_SIZE
-      const buildingCenterY = (building.y + building.height / 2) * TILE_SIZE
-      const dx = buildingCenterX - x
-      const dy = buildingCenterY - y
+      const buildingMinX = building.x * TILE_SIZE
+      const buildingMinY = building.y * TILE_SIZE
+      const buildingMaxX = (building.x + building.width) * TILE_SIZE
+      const buildingMaxY = (building.y + building.height) * TILE_SIZE
+
+      const closestX = Math.max(buildingMinX, Math.min(x, buildingMaxX))
+      const closestY = Math.max(buildingMinY, Math.min(y, buildingMaxY))
+
+      const dx = closestX - x
+      const dy = closestY - y
       const distance = Math.hypot(dx, dy)
 
       if (distance < explosionRadius) {

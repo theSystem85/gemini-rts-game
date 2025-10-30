@@ -22,6 +22,7 @@ import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
+import { detonateTankerTruck } from './tankerTruckUtils.js'
 
 /**
  * Updates map scrolling with inertia
@@ -211,27 +212,8 @@ export function cleanupDestroyedUnits(units, gameState) {
       // Register a wreck so the destroyed unit leaves recoverable remnants
       registerUnitWreck(unit, gameState)
 
-      // Special explosion logic for tanker trucks based on remaining supply gas
       if (unit.type === 'tankerTruck') {
-        const fillRatio = Math.max(0, Math.min(1, (unit.supplyGas || 0) / (unit.maxSupplyGas || 1)))
-        const radius = TILE_SIZE * 3 * fillRatio
-        const explosionX = unit.x + TILE_SIZE / 2
-        const explosionY = unit.y + TILE_SIZE / 2
-        if (radius > 0) {
-          triggerExplosion(
-            explosionX,
-            explosionY,
-            95,
-            units,
-            gameState.factories || [],
-            null,
-            performance.now(),
-            undefined,
-            radius,
-            true
-          )
-          triggerDistortionEffect(explosionX, explosionY, radius, gameState)
-        }
+        detonateTankerTruck(unit, units, gameState.factories || [], gameState)
       }
 
       if (unit.owner === gameState.humanPlayer) {

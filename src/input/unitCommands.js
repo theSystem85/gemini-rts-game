@@ -13,6 +13,11 @@ import {
   releaseWreckAssignment,
   getRecycleDurationForWreck
 } from '../game/unitWreckManager.js'
+import {
+  computeTankerKamikazeApproach,
+  clearTankerKamikazeState,
+  updateKamikazeTargetPoint
+} from '../game/tankerTruckUtils.js'
 
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
@@ -852,6 +857,9 @@ export class UnitCommandsHandler {
     unitsToCommand.forEach((unit, index) => {
       unit.guardTarget = null
       unit.guardMode = false
+      if (unit.type === 'tankerTruck') {
+        clearTankerKamikazeState(unit)
+      }
       let formationOffset = { x: 0, y: 0 }
 
       const colsCount = Math.ceil(Math.sqrt(count))
@@ -971,27 +979,28 @@ export class UnitCommandsHandler {
         this.cancelRecoveryTask(unit)
         unit.commandQueue = []
         unit.currentCommand = null
+        if (unit.type === 'tankerTruck') {
+          clearTankerKamikazeState(unit)
+        }
       })
     }
 
-    // Semicircle formation logic for attack
-    // Calculate safe attack distance with explosion buffer
     const explosionSafetyBuffer = TILE_SIZE * 0.5
     const safeAttackDistance = Math.max(
       TANK_FIRE_RANGE * TILE_SIZE,
       TILE_SIZE * 2 + explosionSafetyBuffer
     ) - TILE_SIZE
 
-    // Get semicircle formation positions
-    const formationPositions = this.calculateSemicircleFormation(selectedUnits, target, safeAttackDistance)
+    const tankerUnits = selectedUnits.filter(unit => unit.type === 'tankerTruck')
+    const combatUnits = selectedUnits.filter(unit => unit.type !== 'tankerTruck')
 
-    selectedUnits.forEach((unit, index) => {
-      // Reset firing capability when issuing attack commands (in case it was disabled during retreat)
+    const formationPositions = this.calculateSemicircleFormation(combatUnits, target, safeAttackDistance)
+
+    combatUnits.forEach((unit, index) => {
       unit.canFire = true
 
       const position = formationPositions[index]
 
-      // Ensure position is within safe distance
       const unitCenter = { x: unit.x + TILE_SIZE / 2, y: unit.y + TILE_SIZE / 2 }
       const targetCenter = this.getTargetPoint(target, unitCenter)
       const finalDx = targetCenter.x - position.x
@@ -1012,21 +1021,28 @@ export class UnitCommandsHandler {
         y: Math.floor(destY / TILE_SIZE)
       }
 
-      // Find path to the target position, always respect occupancy map (including in attack mode)
       const occupancyMap = gameState.occupancyMap
       const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, occupancyMap)
 
       if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
         unit.path = path.slice(1)
         unit.target = target
-        unit.moveTarget = desiredTile // Store movement target for green indicator
+        unit.moveTarget = desiredTile
         unit.forcedAttack = isForceAttack
       } else {
-        // If already at position, just set the target
         unit.path = []
         unit.target = target
-        unit.moveTarget = null // No movement needed
+        unit.moveTarget = null
         unit.forcedAttack = isForceAttack
+      }
+    })
+
+    tankerUnits.forEach(tanker => {
+      if (this.isEnemyTargetForUnit(target, tanker)) {
+        this.issueTankerKamikazeCommand(tanker, target, mapGrid)
+      } else {
+        clearTankerKamikazeState(tanker)
+        tanker.target = null
       }
     })
 
@@ -1543,6 +1559,61 @@ export class UnitCommandsHandler {
     })
 
     playSound('movement', 0.5)
+  }
+
+  issueTankerKamikazeCommand(tanker, target, mapGrid) {
+    if (!tanker || tanker.type !== 'tankerTruck' || !target || !mapGrid) {
+      return
+    }
+
+    tanker.kamikazeMode = true
+    tanker.kamikazeTargetId = target.id || null
+    tanker.kamikazeTargetType = target.tileX !== undefined ? 'unit' : 'building'
+    tanker.kamikazeTargetBuilding = tanker.kamikazeTargetType === 'building' ? target : null
+    tanker.forcedAttack = true
+    tanker.target = null
+    tanker.refuelTarget = null
+    tanker.refuelTimer = 0
+    tanker.emergencyTarget = null
+    tanker.emergencyMode = false
+
+    updateKamikazeTargetPoint(tanker, target)
+
+    const occupancyMap = gameState.occupancyMap
+    const plan = computeTankerKamikazeApproach(tanker, target, mapGrid, occupancyMap)
+    if (plan) {
+      tanker.path = plan.path.slice(1)
+      tanker.moveTarget = { ...plan.moveTarget }
+    } else if (tanker.kamikazeTargetPoint) {
+      tanker.path = []
+      tanker.moveTarget = {
+        x: Math.floor(tanker.kamikazeTargetPoint.x / TILE_SIZE),
+        y: Math.floor(tanker.kamikazeTargetPoint.y / TILE_SIZE)
+      }
+    } else {
+      tanker.path = []
+      tanker.moveTarget = null
+    }
+
+    tanker.kamikazeLastPathTime = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+  }
+
+  isEnemyTargetForUnit(target, unit) {
+    if (!target || !unit || !unit.owner) {
+      return false
+    }
+
+    const targetOwner = typeof target.owner === 'string' ? target.owner : null
+    if (!targetOwner) {
+      return false
+    }
+
+    const normalizeOwner = owner => {
+      if (owner === 'player') return 'player1'
+      return owner
+    }
+
+    return normalizeOwner(targetOwner) !== normalizeOwner(unit.owner)
   }
 
   /**

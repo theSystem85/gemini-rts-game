@@ -423,6 +423,7 @@ export class CursorManager {
     if (selectedUnits.length > 0) {
       const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
+      const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
 
       const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
       const setAttackCursor = () => setCursor('none', 'attack-mode')
@@ -515,6 +516,11 @@ export class CursorManager {
         } else {
           setGrabbingCursor()
         }
+        return
+      }
+
+      if (hasSelectedTankers && this.isOverEnemy) {
+        setAttackCursor()
         return
       }
 
