@@ -368,6 +368,8 @@ function handleKamikazeBehavior(tanker, units, gameState) {
       return
     }
 
+    tanker.kamikazeTargetBuilding = null
+
     updateKamikazeTargetPoint(tanker, targetUnit)
 
     const tankerCenterX = tanker.x + TILE_SIZE / 2
@@ -388,10 +390,28 @@ function handleKamikazeBehavior(tanker, units, gameState) {
     }
 
   } else if (tanker.kamikazeTargetType === 'building') {
-    const targetBuilding = tanker.kamikazeTargetId
-      ? (gameState.buildings || []).find(b => b.id === tanker.kamikazeTargetId) || null
-      : null
-    if (tanker.kamikazeTargetId && (!targetBuilding || targetBuilding.health <= 0)) {
+    let targetBuilding = null
+
+    if (tanker.kamikazeTargetBuilding && tanker.kamikazeTargetBuilding.health > 0) {
+      targetBuilding = tanker.kamikazeTargetBuilding
+    } else if (tanker.kamikazeTargetId) {
+      targetBuilding = (gameState.buildings || []).find(b => b.id === tanker.kamikazeTargetId && b.health > 0) || null
+      if (targetBuilding) {
+        tanker.kamikazeTargetBuilding = targetBuilding
+      }
+    }
+
+    if (tanker.kamikazeTargetBuilding && (!targetBuilding || targetBuilding.health <= 0)) {
+      tanker.kamikazeTargetBuilding = null
+      targetBuilding = null
+    }
+
+    if (tanker.kamikazeTargetId && !targetBuilding) {
+      clearTankerKamikazeState(tanker)
+      return
+    }
+
+    if (!targetBuilding && !tanker.kamikazeTargetId) {
       clearTankerKamikazeState(tanker)
       return
     }

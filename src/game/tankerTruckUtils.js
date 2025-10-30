@@ -110,6 +110,7 @@ export function detonateTankerTruck(unit, units, factories = [], gameState = nul
   unit.kamikazeTargetType = null
   unit.kamikazeTargetPoint = null
   unit.kamikazeLastPathTime = null
+  unit.kamikazeTargetBuilding = null
   unit.moveTarget = null
   unit.path = []
   unit.commandQueue = []
@@ -145,6 +146,7 @@ export function clearTankerKamikazeState(unit) {
   unit.kamikazeTargetType = null
   unit.kamikazeTargetPoint = null
   unit.kamikazeLastPathTime = null
+  unit.kamikazeTargetBuilding = null
   unit._tankerDetonated = false
   unit.moveTarget = null
 }

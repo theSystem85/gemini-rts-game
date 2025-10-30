@@ -431,6 +431,19 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         }
         movement.currentSpeed = 0
       }
+    } else if (collisionResult.type === 'building') {
+      const detonated = applyBuildingCollisionResponse(unit, movement, collisionResult, units, factories || [], gameState)
+      if (detonated) {
+        movement.velocity.x = 0
+        movement.velocity.y = 0
+        if (movement.targetVelocity) {
+          movement.targetVelocity.x = 0
+          movement.targetVelocity.y = 0
+        }
+        movement.currentSpeed = 0
+      } else {
+        trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
+      }
     } else {
       // Try alternative movement (slide along obstacles)
       trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
@@ -578,14 +591,32 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileX = Math.floor(unit.x / TILE_SIZE)
   const tileY = Math.floor(unit.y / TILE_SIZE)
 
+  const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
+  const tile = tileRow ? tileRow[tileX] : undefined
+
   // Check map bounds
-  if (tileX < 0 || tileX >= mapGrid[0].length || tileY < 0 || tileY >= mapGrid.length) {
+  if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds' }
   }
 
-  // Check map obstacles
-  if (mapGrid[tileY][tileX] === 1) {
-    return { collided: true, type: 'terrain' }
+  if (typeof tile === 'number') {
+    if (tile === 1) {
+      return { collided: true, type: 'terrain' }
+    }
+  } else {
+    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+      return { collided: true, type: 'terrain' }
+    }
+
+    if (tile.building) {
+      return {
+        collided: true,
+        type: 'building',
+        building: tile.building,
+        tileX,
+        tileY
+      }
+    }
   }
 
   // Check for other units using improved distance-based collision detection
@@ -816,6 +847,79 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
 
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
   return false
+}
+
+function applyBuildingCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null) {
+  if (!unit || !movement || !collisionResult || collisionResult.type !== 'building') {
+    return false
+  }
+
+  if (unit.type !== 'tankerTruck') {
+    return false
+  }
+
+  const building = collisionResult.building || null
+  const factoryList = Array.isArray(factories) ? factories : []
+  const enemyBuilding = building ? ownersAreEnemies(unit.owner, building.owner) : false
+
+  let shouldDetonate = false
+
+  if (unit.kamikazeMode && unit.kamikazeTargetType === 'building') {
+    if (building && unit.kamikazeTargetBuilding && building === unit.kamikazeTargetBuilding) {
+      shouldDetonate = true
+    } else if (building && unit.kamikazeTargetId && building.id === unit.kamikazeTargetId) {
+      shouldDetonate = true
+    } else if (enemyBuilding) {
+      const tileX = collisionResult.tileX
+      const tileY = collisionResult.tileY
+      if (typeof tileX === 'number' && typeof tileY === 'number' && building &&
+          typeof building.x === 'number' && typeof building.y === 'number' &&
+          typeof building.width === 'number' && typeof building.height === 'number') {
+        const withinBounds = tileX >= building.x && tileX < building.x + building.width &&
+          tileY >= building.y && tileY < building.y + building.height
+        if (withinBounds) {
+          shouldDetonate = true
+        }
+      } else if (unit.kamikazeTargetPoint) {
+        const targetTileX = Math.floor(unit.kamikazeTargetPoint.x / TILE_SIZE)
+        const targetTileY = Math.floor(unit.kamikazeTargetPoint.y / TILE_SIZE)
+        if (tileX === targetTileX && tileY === targetTileY) {
+          shouldDetonate = true
+        }
+      } else {
+        shouldDetonate = true
+      }
+    }
+  }
+
+  if (!shouldDetonate && enemyBuilding && unit.remoteControlActive) {
+    const baseSpeed = typeof unit.speed === 'number' ? unit.speed : MOVEMENT_CONFIG.MAX_SPEED
+    const speedModifier = typeof unit.speedModifier === 'number' ? unit.speedModifier : 1
+    const effectiveSpeed = Math.max(baseSpeed * speedModifier, 0.01)
+    const currentSpeed = movement.currentSpeed || Math.hypot(movement.velocity.x, movement.velocity.y)
+    if (currentSpeed >= effectiveSpeed * 0.95) {
+      shouldDetonate = true
+    }
+  }
+
+  if (shouldDetonate) {
+    return detonateTankerTruck(unit, units, factoryList, gameState)
+  }
+
+  return false
+}
+
+function ownersAreEnemies(ownerA, ownerB) {
+  if (!ownerA || !ownerB) {
+    return false
+  }
+
+  const normalize = owner => {
+    if (owner === 'player') return 'player1'
+    return owner
+  }
+
+  return normalize(ownerA) !== normalize(ownerB)
 }
 
 /**

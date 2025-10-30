@@ -1569,6 +1569,7 @@ export class UnitCommandsHandler {
     tanker.kamikazeMode = true
     tanker.kamikazeTargetId = target.id || null
     tanker.kamikazeTargetType = target.tileX !== undefined ? 'unit' : 'building'
+    tanker.kamikazeTargetBuilding = tanker.kamikazeTargetType === 'building' ? target : null
     tanker.forcedAttack = true
     tanker.target = null
     tanker.refuelTarget = null
@@ -1607,7 +1608,12 @@ export class UnitCommandsHandler {
       return false
     }
 
-    return targetOwner !== unit.owner
+    const normalizeOwner = owner => {
+      if (owner === 'player') return 'player1'
+      return owner
+    }
+
+    return normalizeOwner(targetOwner) !== normalizeOwner(unit.owner)
   }
 
   /**
