@@ -258,6 +258,7 @@ function updateUnitRotation(unit, now) {
 
   let bodyNeedsRotation = false
   let bodyTargetDirection = unit.direction
+  const isHowitzer = unit.type === 'howitzer'
 
   // Determine body's target direction
   if (unit.isRetreating && unit.targetDirection !== undefined) {
@@ -272,6 +273,21 @@ function updateUnitRotation(unit, now) {
       const dy = targetPos.y - unit.y
       bodyTargetDirection = Math.atan2(dy, dx)
     }
+  } else if (isHowitzer && unit.target) {
+    let targetCenterX
+    let targetCenterY
+
+    if (unit.target.tileX !== undefined) {
+      targetCenterX = unit.target.x + TILE_SIZE / 2
+      targetCenterY = unit.target.y + TILE_SIZE / 2
+    } else {
+      targetCenterX = unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
+      targetCenterY = unit.target.y * TILE_SIZE + (unit.target.height * TILE_SIZE) / 2
+    }
+
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+    bodyTargetDirection = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
   }
 
   // Rotate the body if needed
@@ -339,6 +355,10 @@ function updateUnitRotation(unit, now) {
     if (!unit.path || unit.path.length === 0) {
       unit.turretShouldFollowMovement = false
     }
+  }
+
+  if (isHowitzer) {
+    unit.turretDirection = unit.direction
   }
 
   // Set movement restriction flag

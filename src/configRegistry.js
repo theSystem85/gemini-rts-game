@@ -78,6 +78,26 @@ import {
   getMobileVehicleJoystickMapping,
   setMobileVehicleJoystickMapping,
   SAFE_RANGE_ENABLED
+  , HOWITZER_COST
+  , setHowitzerCost
+  , HOWITZER_SPEED
+  , setHowitzerSpeed
+  , HOWITZER_ROTATION_SPEED
+  , setHowitzerRotationSpeed
+  , HOWITZER_ACCELERATION_MULTIPLIER
+  , setHowitzerAccelerationMultiplier
+  , HOWITZER_FIRE_RANGE
+  , setHowitzerFireRange
+  , HOWITZER_MIN_RANGE
+  , setHowitzerMinRange
+  , HOWITZER_FIREPOWER
+  , setHowitzerFirepower
+  , HOWITZER_FIRE_COOLDOWN
+  , setHowitzerFireCooldown
+  , HOWITZER_PROJECTILE_SPEED
+  , setHowitzerProjectileSpeed
+  , HOWITZER_VISION_RANGE
+  , setHowitzerVisionRange
 } from './config.js'
 
 /**
@@ -167,6 +187,127 @@ export const configRegistry = {
     get: () => SAFE_RANGE_ENABLED,
     set: null, // Read-only const
     category: 'Gameplay'
+  },
+
+  // Howitzer Configuration
+  howitzerCost: {
+    name: 'Howitzer Cost',
+    description: 'Production cost for howitzer units',
+    type: 'number',
+    get: () => HOWITZER_COST,
+    set: setHowitzerCost,
+    min: 500,
+    max: 10000,
+    step: 50,
+    category: 'Howitzer'
+  },
+
+  howitzerSpeed: {
+    name: 'Howitzer Speed',
+    description: 'Base movement speed for howitzers',
+    type: 'number',
+    get: () => HOWITZER_SPEED,
+    set: setHowitzerSpeed,
+    min: 0.05,
+    max: 1,
+    step: 0.01,
+    category: 'Howitzer'
+  },
+
+  howitzerRotation: {
+    name: 'Howitzer Rotation Speed',
+    description: 'Hull rotation speed for howitzers',
+    type: 'number',
+    get: () => HOWITZER_ROTATION_SPEED,
+    set: setHowitzerRotationSpeed,
+    min: 0.01,
+    max: 0.2,
+    step: 0.005,
+    category: 'Howitzer'
+  },
+
+  howitzerAcceleration: {
+    name: 'Howitzer Acceleration Multiplier',
+    description: 'Acceleration responsiveness for howitzers',
+    type: 'number',
+    get: () => HOWITZER_ACCELERATION_MULTIPLIER,
+    set: setHowitzerAccelerationMultiplier,
+    min: 0.1,
+    max: 2,
+    step: 0.05,
+    category: 'Howitzer'
+  },
+
+  howitzerFireRange: {
+    name: 'Howitzer Fire Range',
+    description: 'Maximum firing range for howitzers (tiles)',
+    type: 'number',
+    get: () => HOWITZER_FIRE_RANGE,
+    set: setHowitzerFireRange,
+    min: 6,
+    max: 40,
+    step: 1,
+    category: 'Howitzer'
+  },
+
+  howitzerMinRange: {
+    name: 'Howitzer Minimum Range',
+    description: 'Minimum distance before howitzers can fire (tiles)',
+    type: 'number',
+    get: () => HOWITZER_MIN_RANGE,
+    set: setHowitzerMinRange,
+    min: 0,
+    max: 20,
+    step: 1,
+    category: 'Howitzer'
+  },
+
+  howitzerFirepower: {
+    name: 'Howitzer Firepower',
+    description: 'Base explosion damage for howitzers',
+    type: 'number',
+    get: () => HOWITZER_FIREPOWER,
+    set: setHowitzerFirepower,
+    min: 10,
+    max: 200,
+    step: 5,
+    category: 'Howitzer'
+  },
+
+  howitzerCooldown: {
+    name: 'Howitzer Reload Time',
+    description: 'Cooldown between howitzer shots (ms)',
+    type: 'number',
+    get: () => HOWITZER_FIRE_COOLDOWN,
+    set: setHowitzerFireCooldown,
+    min: 1000,
+    max: 15000,
+    step: 250,
+    category: 'Howitzer'
+  },
+
+  howitzerProjectileSpeed: {
+    name: 'Howitzer Projectile Speed',
+    description: 'Travel speed for howitzer shells',
+    type: 'number',
+    get: () => HOWITZER_PROJECTILE_SPEED,
+    set: setHowitzerProjectileSpeed,
+    min: 0.1,
+    max: 2,
+    step: 0.05,
+    category: 'Howitzer'
+  },
+
+  howitzerVisionRange: {
+    name: 'Howitzer Vision Range',
+    description: 'Fog-of-war reveal radius for howitzers (tiles)',
+    type: 'number',
+    get: () => HOWITZER_VISION_RANGE,
+    set: setHowitzerVisionRange,
+    min: 1,
+    max: 35,
+    step: 1,
+    category: 'Howitzer'
   },
 
   // Mobile Controls

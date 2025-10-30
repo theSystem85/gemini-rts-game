@@ -14,7 +14,8 @@ const unitImageMap = {
   tank_v3: 'images/tank_v3.png',
   rocketTank: 'images/map/units/rocket_tank.webp',
   harvester: 'images/harvester.webp',
-  artilleryTank: 'images/artillery_tank.jpg'
+  artilleryTank: 'images/artillery_tank.jpg',
+  howitzer: 'images/map/units/howitzer_map.webp'
 }
 
 export class TextureManager {

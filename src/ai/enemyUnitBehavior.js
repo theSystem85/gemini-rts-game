@@ -129,7 +129,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
   }
 
   // Combat unit behavior
-  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3') {
+  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'rocketTank' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'howitzer') {
     const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
 
     // Target selection throttled - 5 second minimum between target changes
@@ -349,7 +349,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
               // AI ready for major attacks - proceed with normal group attack logic
               // Check if we should conduct group attack before selecting targets
               const nearbyAllies = units.filter(u => u.owner === aiPlayerId && u !== unit &&
-                (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+                (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'howitzer') &&
                 Math.hypot(u.x - unit.x, u.y - unit.y) < 8 * TILE_SIZE)
 
               // Use group attack strategy with priority targeting
@@ -610,7 +610,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
   // Maintain safe attack distance for combat units
   if (useSafeAttackDistance) {
-    if ((unit.type === 'tank' || unit.type === 'rocketTank') && unit.target) {
+    if ((unit.type === 'tank' || unit.type === 'rocketTank' || unit.type === 'howitzer') && unit.target) {
       const positionCheckNeeded = !unit.lastPositionCheckTime || (now - unit.lastPositionCheckTime > lastPositionCheckTimeDelay)
       if (positionCheckNeeded) {
         unit.lastPositionCheckTime = now
@@ -687,7 +687,7 @@ function checkBaseDefenseNeeded(unit, units, gameState, aiPlayerId) {
     u.owner === aiPlayerId &&
     u.health > 0 &&
     u.defendingBase &&
-    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank')
+    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'howitzer')
   )
 
   // Need defense if player units near base and we don't have enough defenders

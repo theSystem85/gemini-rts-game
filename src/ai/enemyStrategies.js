@@ -1,5 +1,5 @@
 // enemyStrategies.js - Enhanced enemy AI strategies
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
@@ -23,7 +23,8 @@ const UNIT_DPS = {
   tank_v2: 24 / (4000 / 1000),
   'tank-v2': 24 / (4000 / 1000),
   'tank-v3': 30 / (4000 / 1000),
-  rocketTank: 120 / (12000 / 1000)
+  rocketTank: 120 / (12000 / 1000),
+  howitzer: HOWITZER_FIREPOWER / (HOWITZER_FIRE_COOLDOWN / 1000)
 }
 
 const RECOVERY_COMMAND_COOLDOWN = 2000
@@ -232,7 +233,7 @@ function countNearbyAllies(unit, units) {
     u.owner === 'enemy' &&
     u !== unit &&
     u.health > 0 &&
-    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'howitzer') &&
     Math.hypot(u.x - unit.x, u.y - unit.y) < AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE
   ).length
 }
@@ -268,7 +269,12 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
     // Tanks and rocket tanks have slightly different ranges, but using the
     // standard tank fire range as a baseline is sufficient. Adding a small
     // buffer keeps the check tolerant to targeting jitter.
-    const effectiveRange = TANK_FIRE_RANGE * TILE_SIZE * (unit.type === 'rocketTank' ? 1.3 : 1)
+    let effectiveRange = TANK_FIRE_RANGE * TILE_SIZE
+    if (unit.type === 'rocketTank') {
+      effectiveRange *= 1.3
+    } else if (unit.type === 'howitzer') {
+      effectiveRange = HOWITZER_FIRE_RANGE * TILE_SIZE
+    }
     if (distanceToTarget <= effectiveRange * 1.1) {
       return true
     }
@@ -616,7 +622,7 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
   }
 
   // Check for low health - immediately send to workshop when possible
-  if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
+  if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
     if (shouldRetreatLowHealth(unit)) {
       const sent = sendUnitToWorkshop(unit, gameState, mapGrid)
       if (!sent) {
@@ -635,7 +641,7 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
   }
 
   // Apply group attack strategies for combat units
-  if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
+  if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
     const shouldAttack = shouldConductGroupAttack(unit, units, gameState, unit.target)
     unit.allowedToAttack = shouldAttack
 
@@ -788,7 +794,7 @@ export function assignAttackDirection(unit, units, gameState) {
     u.owner === 'enemy' &&
     u !== unit &&
     u.health > 0 &&
-    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+    (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'howitzer') &&
     Math.hypot(u.x - unit.x, u.y - unit.y) < AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE * 2
   )
 
@@ -836,6 +842,8 @@ export function calculateApproachPosition(unit, target, direction, gameState, ma
   // Adjust for unit fire range
   if (unit.type === 'rocketTank' || unit.type === 'tank-v3') {
     approachDistance = Math.max(approachDistance, TANK_FIRE_RANGE / TILE_SIZE + 2)
+  } else if (unit.type === 'howitzer') {
+    approachDistance = Math.max(approachDistance, HOWITZER_FIRE_RANGE + 2)
   }
 
   // Calculate approach position in the assigned direction
@@ -878,7 +886,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
   // Only apply to combat units that aren't already retreating
   if (unit.isRetreating || !unit.allowedToAttack) return false
 
-  const combatTypes = ['tank', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank']
+  const combatTypes = ['tank', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer']
   if (!combatTypes.includes(unit.type)) return false
 
   // Skip if unit already has a specific approach position
@@ -969,7 +977,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     // Apply simple formation to nearby allies
     const group = units.filter(u =>
       u.owner === unit.owner &&
-      (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+      (u.type === 'tank' || u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'howitzer') &&
       Math.hypot(u.x - unit.x, u.y - unit.y) <= AI_CONFIG.GROUP_FORMATION_RANGE * TILE_SIZE
     )
     if (group.length > 1) {

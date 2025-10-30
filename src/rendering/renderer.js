@@ -18,6 +18,7 @@ import { preloadRocketTankImage } from './rocketTankImageRenderer.js'
 import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
 import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
 import { preloadRecoveryTankImage } from './recoveryTankImageRenderer.js'
+import { preloadHowitzerImage } from './howitzerImageRenderer.js'
 import { WreckRenderer } from './wreckRenderer.js'
 
 export class Renderer {
@@ -47,9 +48,10 @@ export class Renderer {
     let rocketTankLoaded = false
     let ambulanceLoaded = false
     let tankerLoaded = false
+    let howitzerLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded && howitzerLoaded) {
         if (callback) callback()
       }
     }
@@ -107,6 +109,14 @@ export class Renderer {
         console.warn('Recovery tank image failed to load')
       }
       recoveryTankLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadHowitzerImage((success) => {
+      if (!success) {
+        console.warn('Howitzer image failed to load')
+      }
+      howitzerLoaded = true
       checkAllLoaded()
     })
   }

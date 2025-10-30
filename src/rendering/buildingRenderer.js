@@ -740,7 +740,7 @@ export class BuildingRenderer {
       // We can use the factory system to track this
       factory = gameState.factories?.find(f => f.id === building.owner)
       if (factory && factory.currentlyProducingUnit &&
-          ['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'tankerTruck'].includes(factory.currentlyProducingUnit)) {
+          ['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'tankerTruck', 'howitzer'].includes(factory.currentlyProducingUnit)) {
         isFactory = true
         currentlyBuilding = factory.currentlyProducingUnit
         buildStartTime = factory.unitBuildStartTime
@@ -775,7 +775,7 @@ export class BuildingRenderer {
 
     // Progress fill (blue color for production)
     ctx.fillStyle = '#4CAF50' // Green for building production
-    if (['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'tankerTruck'].includes(currentlyBuilding)) {
+    if (['harvester', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'tankerTruck', 'howitzer'].includes(currentlyBuilding)) {
       ctx.fillStyle = '#2196F3' // Blue for unit production
     }
     ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
@@ -799,6 +799,7 @@ export class BuildingRenderer {
       else if (currentlyBuilding === 'tank-v2') displayName = 'Tank V2'
       else if (currentlyBuilding === 'tank-v3') displayName = 'Tank V3'
       else if (currentlyBuilding === 'rocketTank') displayName = 'Rocket Tank'
+      else if (currentlyBuilding === 'howitzer') displayName = 'Howitzer'
       else if (currentlyBuilding === 'tankerTruck') displayName = 'Tanker Truck'
       else if (currentlyBuilding === 'oreRefinery') displayName = 'Refinery'
       else if (currentlyBuilding === 'vehicleFactory') displayName = 'Vehicle Factory'
