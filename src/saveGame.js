@@ -128,7 +128,10 @@ export function saveGame(label) {
     health: b.health,
     maxHealth: b.maxHealth,
     id: b.id,
-    rallyPoint: b.rallyPoint // Save rally point if it exists
+    rallyPoint: b.rallyPoint, // Save rally point if it exists
+    fuel: typeof b.fuel === 'number' ? b.fuel : undefined,
+    maxFuel: typeof b.maxFuel === 'number' ? b.maxFuel : undefined,
+    fuelReloadTime: typeof b.fuelReloadTime === 'number' ? b.fuelReloadTime : undefined
     // Add more fields if needed
   }))
 
@@ -505,6 +508,22 @@ export function loadGame(key) {
       if (data) {
         // Always restore maxHealth from building data to ensure consistency
         building.maxHealth = data.health
+
+        if (typeof data.maxFuel === 'number') {
+          if (typeof building.maxFuel !== 'number' || building.maxFuel <= 0) {
+            building.maxFuel = data.maxFuel
+          }
+
+          if (typeof building.fuel !== 'number') {
+            building.fuel = building.maxFuel
+          } else if (building.fuel > building.maxFuel) {
+            building.fuel = building.maxFuel
+          }
+
+          if (typeof building.fuelReloadTime !== 'number' && typeof data.fuelReloadTime === 'number') {
+            building.fuelReloadTime = data.fuelReloadTime
+          }
+        }
       }
 
       // Defensive turrets: turretGunV1/V2/V3, rocketTurret, teslaCoil, artilleryTurret
