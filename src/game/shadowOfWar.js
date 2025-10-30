@@ -1,4 +1,4 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG, HOWITZER_VISION_RANGE_TILES } from '../config.js'
 import { buildingData } from '../buildings.js'
 
 const {
@@ -164,9 +164,14 @@ function applyRectVisibility(visibilityMap, startX, startY, width, height, borde
 
 function getUnitVisionRange(unit) {
   if (!unit) return 0
+  if (typeof unit.visionRange === 'number') {
+    return unit.visionRange
+  }
   switch (unit.type) {
     case 'rocketTank':
       return Math.ceil(TANK_FIRE_RANGE * rocketRangeMultiplier)
+    case 'howitzer':
+      return HOWITZER_VISION_RANGE_TILES
     case 'tank':
     case 'tank_v1':
     case 'tank-v2':

@@ -73,6 +73,28 @@ import {
   setGasRefillTime,
   GAS_REFILL_COST,
   setGasRefillCost,
+  HOWITZER_COST,
+  setHowitzerCost,
+  HOWITZER_SPEED,
+  setHowitzerSpeed,
+  HOWITZER_ROTATION_SPEED,
+  setHowitzerRotationSpeed,
+  HOWITZER_FIREPOWER,
+  setHowitzerFirepower,
+  HOWITZER_RANGE_TILES,
+  setHowitzerRange,
+  HOWITZER_MIN_RANGE_TILES,
+  setHowitzerMinRange,
+  HOWITZER_RELOAD_TIME,
+  setHowitzerReloadTime,
+  HOWITZER_PROJECTILE_SPEED,
+  setHowitzerProjectileSpeed,
+  HOWITZER_EXPLOSION_RADIUS_TILES,
+  setHowitzerExplosionRadius,
+  HOWITZER_VISION_RANGE_TILES,
+  setHowitzerVisionRange,
+  HOWITZER_ACCELERATION_MULTIPLIER,
+  setHowitzerAccelerationMultiplier,
   getMobileTankJoystickMapping,
   setMobileTankJoystickMapping,
   getMobileVehicleJoystickMapping,
@@ -132,6 +154,138 @@ export const configRegistry = {
     set: setTankFireRange,
     min: 1,
     max: 20,
+    step: 1,
+    category: 'Game Balance'
+  },
+
+  howitzerCost: {
+    name: 'Howitzer Cost',
+    description: 'Production cost for the howitzer unit',
+    type: 'number',
+    get: () => HOWITZER_COST,
+    set: setHowitzerCost,
+    min: 500,
+    max: 10000,
+    step: 50,
+    category: 'Game Balance'
+  },
+
+  howitzerSpeed: {
+    name: 'Howitzer Speed',
+    description: 'Movement speed for howitzers (tiles per frame)',
+    type: 'number',
+    get: () => HOWITZER_SPEED,
+    set: setHowitzerSpeed,
+    min: 0.05,
+    max: 1,
+    step: 0.01,
+    category: 'Game Balance'
+  },
+
+  howitzerRotationSpeed: {
+    name: 'Howitzer Rotation Speed',
+    description: 'Hull rotation speed for howitzers',
+    type: 'number',
+    get: () => HOWITZER_ROTATION_SPEED,
+    set: setHowitzerRotationSpeed,
+    min: 0.01,
+    max: 0.2,
+    step: 0.005,
+    category: 'Game Balance'
+  },
+
+  howitzerAcceleration: {
+    name: 'Howitzer Acceleration Multiplier',
+    description: 'Acceleration scaling for howitzer movement (1 = default)',
+    type: 'number',
+    get: () => HOWITZER_ACCELERATION_MULTIPLIER,
+    set: setHowitzerAccelerationMultiplier,
+    min: 0.2,
+    max: 2,
+    step: 0.05,
+    category: 'Game Balance'
+  },
+
+  howitzerFirepower: {
+    name: 'Howitzer Firepower',
+    description: 'Base damage dealt by howitzer shells',
+    type: 'number',
+    get: () => HOWITZER_FIREPOWER,
+    set: setHowitzerFirepower,
+    min: 10,
+    max: 200,
+    step: 5,
+    category: 'Game Balance'
+  },
+
+  howitzerRange: {
+    name: 'Howitzer Range',
+    description: 'Maximum firing range for howitzers (in tiles)',
+    type: 'number',
+    get: () => HOWITZER_RANGE_TILES,
+    set: setHowitzerRange,
+    min: 5,
+    max: 60,
+    step: 1,
+    category: 'Game Balance'
+  },
+
+  howitzerMinRange: {
+    name: 'Howitzer Minimum Range',
+    description: 'Minimum distance before a howitzer can fire (in tiles)',
+    type: 'number',
+    get: () => HOWITZER_MIN_RANGE_TILES,
+    set: setHowitzerMinRange,
+    min: 1,
+    max: 10,
+    step: 0.5,
+    category: 'Game Balance'
+  },
+
+  howitzerReloadTime: {
+    name: 'Howitzer Reload Time',
+    description: 'Base reload time for howitzers (milliseconds)',
+    type: 'number',
+    get: () => HOWITZER_RELOAD_TIME,
+    set: setHowitzerReloadTime,
+    min: 1000,
+    max: 15000,
+    step: 250,
+    category: 'Game Balance'
+  },
+
+  howitzerProjectileSpeed: {
+    name: 'Howitzer Projectile Speed',
+    description: 'Horizontal speed of howitzer shells',
+    type: 'number',
+    get: () => HOWITZER_PROJECTILE_SPEED,
+    set: setHowitzerProjectileSpeed,
+    min: 0.1,
+    max: 5,
+    step: 0.05,
+    category: 'Game Balance'
+  },
+
+  howitzerExplosionRadius: {
+    name: 'Howitzer Explosion Radius',
+    description: 'Explosion radius of howitzer shells (in tiles)',
+    type: 'number',
+    get: () => HOWITZER_EXPLOSION_RADIUS_TILES,
+    set: setHowitzerExplosionRadius,
+    min: 0.5,
+    max: 6,
+    step: 0.1,
+    category: 'Game Balance'
+  },
+
+  howitzerVisionRange: {
+    name: 'Howitzer Vision Range',
+    description: 'Fog of war reveal radius for howitzers (in tiles)',
+    type: 'number',
+    get: () => HOWITZER_VISION_RANGE_TILES,
+    set: setHowitzerVisionRange,
+    min: 5,
+    max: 40,
     step: 1,
     category: 'Game Balance'
   },

@@ -500,6 +500,109 @@ export function setTurretAimingThreshold(value) {
   TURRET_AIMING_THRESHOLD = value
 }
 
+// Howitzer configuration
+export let HOWITZER_COST = 2500
+export let HOWITZER_SPEED = 0.22 // ~33% slower than a standard tank
+export let HOWITZER_ROTATION_SPEED = 0.04 // Slightly slower hull rotation
+export let HOWITZER_FIREPOWER = 80 // Less than defensive artillery turret (100)
+export let HOWITZER_RANGE_TILES = 30 // Slightly lower than artillery turret (36)
+export let HOWITZER_MIN_RANGE_TILES = 4
+export let HOWITZER_RELOAD_TIME = 6000 // ms
+export let HOWITZER_PROJECTILE_SPEED = 0.85
+export let HOWITZER_EXPLOSION_RADIUS_TILES = 2.5
+export let HOWITZER_VISION_RANGE_TILES = 18 // Needs scouts to reach full range
+export let HOWITZER_ARMOR = 2
+export let HOWITZER_HEALTH = 180
+export let HOWITZER_ACCELERATION_MULTIPLIER = 0.75
+
+export function setHowitzerCost(value) {
+  HOWITZER_COST = value
+  UNIT_COSTS.howitzer = value
+}
+
+export function setHowitzerSpeed(value) {
+  HOWITZER_SPEED = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.speed = value
+  }
+}
+
+export function setHowitzerRotationSpeed(value) {
+  HOWITZER_ROTATION_SPEED = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.rotationSpeed = value
+    UNIT_PROPERTIES.howitzer.turretRotationSpeed = value
+  }
+}
+
+export function setHowitzerFirepower(value) {
+  HOWITZER_FIREPOWER = value
+}
+
+export function setHowitzerRange(value) {
+  HOWITZER_RANGE_TILES = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.range = value
+  }
+}
+
+export function setHowitzerMinRange(value) {
+  HOWITZER_MIN_RANGE_TILES = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.minRange = value
+  }
+}
+
+export function setHowitzerReloadTime(value) {
+  HOWITZER_RELOAD_TIME = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.reloadTime = value
+  }
+}
+
+export function setHowitzerProjectileSpeed(value) {
+  HOWITZER_PROJECTILE_SPEED = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.projectileSpeed = value
+  }
+}
+
+export function setHowitzerExplosionRadius(value) {
+  HOWITZER_EXPLOSION_RADIUS_TILES = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.explosionRadiusTiles = value
+  }
+}
+
+export function setHowitzerVisionRange(value) {
+  HOWITZER_VISION_RANGE_TILES = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.visionRange = value
+  }
+}
+
+export function setHowitzerArmor(value) {
+  HOWITZER_ARMOR = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.armor = value
+  }
+}
+
+export function setHowitzerHealth(value) {
+  HOWITZER_HEALTH = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.health = value
+    UNIT_PROPERTIES.howitzer.maxHealth = value
+  }
+}
+
+export function setHowitzerAccelerationMultiplier(value) {
+  HOWITZER_ACCELERATION_MULTIPLIER = value
+  if (UNIT_PROPERTIES.howitzer) {
+    UNIT_PROPERTIES.howitzer.accelerationMultiplier = value
+  }
+}
+
 // Recoil and muzzle flash animation constants
 export let RECOIL_DISTANCE = 8 // pixels to move back during recoil
 export let RECOIL_DURATION = 300 // milliseconds
@@ -631,7 +734,8 @@ export let UNIT_COSTS = {
   'tank-v3': 3000,
   ambulance: 500,
   tankerTruck: 300,
-  recoveryTank: 3000
+  recoveryTank: 3000,
+  howitzer: HOWITZER_COST
 }
 
 // Unit properties
@@ -711,6 +815,22 @@ export let UNIT_PROPERTIES = {
     speed: 0.66,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0
+  },
+  howitzer: {
+    health: HOWITZER_HEALTH,
+    maxHealth: HOWITZER_HEALTH,
+    speed: HOWITZER_SPEED,
+    rotationSpeed: HOWITZER_ROTATION_SPEED,
+    turretRotationSpeed: HOWITZER_ROTATION_SPEED,
+    armor: HOWITZER_ARMOR,
+    minRange: HOWITZER_MIN_RANGE_TILES,
+    range: HOWITZER_RANGE_TILES,
+    firepower: HOWITZER_FIREPOWER,
+    reloadTime: HOWITZER_RELOAD_TIME,
+    projectileSpeed: HOWITZER_PROJECTILE_SPEED,
+    explosionRadiusTiles: HOWITZER_EXPLOSION_RADIUS_TILES,
+    visionRange: HOWITZER_VISION_RANGE_TILES,
+    accelerationMultiplier: HOWITZER_ACCELERATION_MULTIPLIER
   }
 }
 
@@ -742,7 +862,8 @@ export let BULLET_DAMAGES = {
   tank_v1: 20,
   tank_v2: 24,
   tank_v3: 30,
-  rocketTank: 120
+  rocketTank: 120,
+  howitzer: HOWITZER_FIREPOWER
 }
 
 // Attack Group Feature (AGF) constants
@@ -766,7 +887,8 @@ export let UNIT_TYPE_COLORS = {
   rocketTank: '#800000',
   ambulance: '#00FFFF',   // Dark red
   tankerTruck: '#FFA500',
-  recoveryTank: '#FFD700' // Gold
+  recoveryTank: '#FFD700', // Gold
+  howitzer: '#FF8C00'      // Dark orange
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
@@ -821,7 +943,8 @@ const TURRET_TANK_TYPES = new Set([
   'tank_v3',
   'tank-v2',
   'tank-v3',
-  'rocketTank'
+  'rocketTank',
+  'howitzer'
 ])
 
 const DEFAULT_TANK_JOYSTICK_MAPPING = {
@@ -964,6 +1087,7 @@ export let UNIT_GAS_PROPERTIES = {
   rocketTank: { tankSize: 1900, consumption: 450 },
   // Recovery tanks consume the same fuel as standard tanks
   recoveryTank: { tankSize: 1900, consumption: 450 },
+  howitzer: { tankSize: 1900, consumption: 450 },
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
   ambulance: { tankSize: 75, consumption: 25 },
   tankerTruck: { tankSize: 700, consumption: 150 }
@@ -1035,6 +1159,19 @@ const EXPORTED_CONFIG_VARIABLES = [
   'TANK_WAGON_ROT',
   'TANK_TURRET_ROT',
   'TURRET_AIMING_THRESHOLD',
+  'HOWITZER_COST',
+  'HOWITZER_SPEED',
+  'HOWITZER_ROTATION_SPEED',
+  'HOWITZER_FIREPOWER',
+  'HOWITZER_RANGE_TILES',
+  'HOWITZER_MIN_RANGE_TILES',
+  'HOWITZER_RELOAD_TIME',
+  'HOWITZER_PROJECTILE_SPEED',
+  'HOWITZER_EXPLOSION_RADIUS_TILES',
+  'HOWITZER_VISION_RANGE_TILES',
+  'HOWITZER_ARMOR',
+  'HOWITZER_HEALTH',
+  'HOWITZER_ACCELERATION_MULTIPLIER',
   'RECOIL_DISTANCE',
   'RECOIL_DURATION',
   'MUZZLE_FLASH_DURATION',

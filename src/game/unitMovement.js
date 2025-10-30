@@ -285,7 +285,7 @@ function updateUnitRotation(unit, now) {
   unit.isRotating = bodyNeedsRotation
 
   // Update turret direction for tanks (after body direction is updated)
-  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer') {
     if (unit.target) {
       // Tank has a target - rotate turret to track target
       let targetCenterX, targetCenterY
@@ -332,6 +332,10 @@ function updateUnitRotation(unit, now) {
 
       // Rotate turret towards movement direction using turret rotation speed
       unit.turretDirection = smoothRotateTowardsAngle(unit.turretDirection, movementDirection, unit.turretRotationSpeed)
+    }
+
+    if (unit.type === 'howitzer') {
+      unit.turretDirection = unit.direction
     }
     // If no target AND turretShouldFollowMovement is false, leave turret direction unchanged (idle state)
 

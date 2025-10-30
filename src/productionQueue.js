@@ -11,7 +11,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'recoveryTank']
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'recoveryTank', 'howitzer']
 
 // Enhanced production queue system
 export const productionQueue = {

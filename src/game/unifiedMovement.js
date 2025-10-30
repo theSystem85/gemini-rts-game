@@ -280,7 +280,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
 
   // Handle rotation before movement (tanks should rotate towards target before moving)
   // Skip unified rotation for tanks as they have their own turret/body rotation system
-  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')) {
+  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
     updateUnitRotation(unit)
   }
 
@@ -289,7 +289,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   let canAccelerate = true
   let shouldDecelerate = false
 
-  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+  if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer') {
     if (unit.isRetreating) {
       // During retreat, movement is controlled by retreat behavior's canAccelerate flag
       canAccelerate = unit.canAccelerate !== false
@@ -314,6 +314,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // Determine acceleration rate based on whether we should accelerate or decelerate
+  const accelerationMultiplier = unit.accelerationMultiplier !== undefined ? unit.accelerationMultiplier : 1
   let accelRate
   if (shouldDecelerate || !movement.isMoving) {
     accelRate = MOVEMENT_CONFIG.DECELERATION
@@ -322,7 +323,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (unit.type === 'ambulance') {
       accelRate = MOVEMENT_CONFIG.ACCELERATION * 0.25
     } else {
-      accelRate = MOVEMENT_CONFIG.ACCELERATION
+      accelRate = MOVEMENT_CONFIG.ACCELERATION * accelerationMultiplier
     }
   } else {
     accelRate = MOVEMENT_CONFIG.DECELERATION // Default to deceleration when unsure
@@ -1031,7 +1032,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       // All other unit types (tanks, etc.) - new unified stuck detection logic
       // More lenient stuck detection for AI combat units to prevent wiggling
       const isAICombatUnit = unit.owner === 'enemy' &&
-        (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank')
+        (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')
 
       // Use more lenient thresholds for AI combat units
       const movementThreshold = isAICombatUnit ? TILE_SIZE / 8 : TILE_SIZE / 4  // 4px for AI, 8px for others

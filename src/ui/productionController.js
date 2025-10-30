@@ -10,7 +10,7 @@ import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance', 'tankerTruck', 'recoveryTank']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance', 'tankerTruck', 'recoveryTank', 'howitzer']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -79,6 +79,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Hospital'
+        }
+      } else if (unitType === 'howitzer') {
+        if (hasVehicleFactory && hasRadar) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Radar Station'
         }
       } else if (this.vehicleUnitTypes.includes(unitType)) {
         if (hasVehicleFactory) {

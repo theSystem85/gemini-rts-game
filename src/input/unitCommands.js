@@ -932,7 +932,7 @@ export class UnitCommandsHandler {
         unit.originalTarget = null
 
         // Flag that turret should rotate to movement direction for tanks
-        if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank') {
+        if (unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer') {
           unit.turretShouldFollowMovement = true
         }
         unit.originalPath = null

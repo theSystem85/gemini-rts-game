@@ -1,4 +1,4 @@
-import { TILE_SIZE, UNIT_PROPERTIES, UNIT_GAS_PROPERTIES, TANKER_SUPPLY_CAPACITY } from '../config.js'
+import { TILE_SIZE, UNIT_PROPERTIES, UNIT_GAS_PROPERTIES, TANKER_SUPPLY_CAPACITY, UNIT_COSTS } from '../config.js'
 import { findPath } from '../units.js'
 import { getUniqueId } from '../utils.js'
 import { findClosestOre } from '../logic.js'
@@ -97,6 +97,63 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     rotationSpeed: 0.15,
     isRotating: false
   }
+
+  const unitProps = UNIT_PROPERTIES[unitType]
+  if (unitProps) {
+    if (typeof unitProps.health === 'number') {
+      unit.health = unitProps.health
+      unit.maxHealth = unitProps.maxHealth !== undefined ? unitProps.maxHealth : unitProps.health
+    } else if (typeof unitProps.maxHealth === 'number') {
+      unit.maxHealth = unitProps.maxHealth
+    }
+
+    if (typeof unitProps.speed === 'number') {
+      unit.speed = unitProps.speed
+    }
+    if (typeof unitProps.rotationSpeed === 'number') {
+      unit.rotationSpeed = unitProps.rotationSpeed
+    }
+    if (typeof unitProps.turretRotationSpeed === 'number') {
+      unit.turretRotationSpeed = unitProps.turretRotationSpeed
+    }
+    if (unitProps.alertMode !== undefined) {
+      unit.alertMode = unitProps.alertMode
+    }
+    if (unitProps.loadedSpeed !== undefined) {
+      unit.loadedSpeed = unitProps.loadedSpeed
+    }
+    if (unitProps.armor !== undefined) {
+      unit.armor = unitProps.armor
+    }
+    if (unitProps.minRange !== undefined) {
+      unit.minRangeTiles = unitProps.minRange
+    }
+    if (unitProps.range !== undefined) {
+      unit.rangeTiles = unitProps.range
+    }
+    if (unitProps.firepower !== undefined) {
+      unit.firepower = unitProps.firepower
+    }
+    if (unitProps.reloadTime !== undefined) {
+      unit.reloadTime = unitProps.reloadTime
+    }
+    if (unitProps.projectileSpeed !== undefined) {
+      unit.projectileSpeed = unitProps.projectileSpeed
+    }
+    if (unitProps.explosionRadiusTiles !== undefined) {
+      unit.explosionRadiusTiles = unitProps.explosionRadiusTiles
+    }
+    if (unitProps.visionRange !== undefined) {
+      unit.visionRange = unitProps.visionRange
+    }
+    if (unitProps.accelerationMultiplier !== undefined) {
+      unit.accelerationMultiplier = unitProps.accelerationMultiplier
+    }
+    if (unitProps.streetSpeedMultiplier !== undefined) {
+      unit.streetSpeedMultiplier = unitProps.streetSpeedMultiplier
+    }
+  }
+
   unit.effectiveSpeed = unit.speed
 
   // Initialize gas properties to match player units
@@ -116,16 +173,7 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
   if (unitType !== 'harvester') {
     unit.level = 0
     unit.experience = 0
-    const unitCosts = {
-      tank: 1000,
-      rocketTank: 2000,
-      'tank-v2': 2000,
-      'tank-v3': 3000,
-      ambulance: 500,
-      recoveryTank: 3000
-    }
-
-    const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
+    const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
     const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
     unit.crew = { driver: true, commander: true }
@@ -142,7 +190,8 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       unit.maxMedics = UNIT_PROPERTIES.ambulance.maxMedics
     }
 
-    unit.baseCost = unitCosts[unitType] || 1000
+    const baseCost = UNIT_COSTS[unitType] || UNIT_COSTS.tank || 1000
+    unit.baseCost = baseCost
   }
 
   if (unitType === 'harvester') {

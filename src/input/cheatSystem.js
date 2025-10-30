@@ -213,6 +213,7 @@ export class CheatSystem {
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
           <li><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
+          <li><code>howitzer [amount] [party]</code> - Spawn howitzers near the cursor</li>
         </ul>
       </div>
     `

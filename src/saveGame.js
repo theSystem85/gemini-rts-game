@@ -4,7 +4,7 @@ import { factories } from './main.js'
 import { units } from './main.js'
 import { mapGrid } from './main.js'
 import { cleanupOreFromBuildings } from './gameSetup.js'
-import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
+import { TILE_SIZE, TANKER_SUPPLY_CAPACITY, HOWITZER_COST } from './config.js'
 import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
@@ -427,7 +427,7 @@ export function loadGame(key) {
         hydrated.level = u.level || 0
         hydrated.experience = u.experience || 0
         hydrated.baseCost = u.baseCost || (function() {
-          const costs = { tank: 1000, rocketTank: 2000, 'tank-v2': 2000, 'tank-v3': 3000, tank_v1: 1000 }
+          const costs = { tank: 1000, rocketTank: 2000, 'tank-v2': 2000, 'tank-v3': 3000, tank_v1: 1000, howitzer: HOWITZER_COST }
           return costs[hydrated.type] || 1000
         })()
 

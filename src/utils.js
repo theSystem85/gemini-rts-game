@@ -128,6 +128,23 @@ export function checkLevelUp(unit) {
 export function applyLevelBonuses(unit) {
   if (!unit) return
 
+  if (unit.type === 'howitzer') {
+    if (unit.level >= 1) {
+      unit.fireRateMultiplier = (unit.fireRateMultiplier || 1) * 1.33
+    }
+
+    if (unit.level >= 2) {
+      unit.damageMultiplier = (unit.damageMultiplier || 1) * 1.33
+    }
+
+    if (unit.level >= 3) {
+      unit.rangeMultiplier = (unit.rangeMultiplier || 1) * 1.33
+      unit.selfRepair = true
+    }
+
+    return
+  }
+
   // Level 1: 20% range increase
   if (unit.level >= 1) {
     unit.rangeMultiplier = (unit.rangeMultiplier || 1) * 1.2

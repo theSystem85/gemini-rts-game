@@ -698,6 +698,34 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     buildDuration: determineBuildDuration(actualType, options.buildDuration || null)
   }
 
+  if (unitProps.armor !== undefined) {
+    unit.armor = unitProps.armor
+  }
+  if (unitProps.minRange !== undefined) {
+    unit.minRangeTiles = unitProps.minRange
+  }
+  if (unitProps.range !== undefined) {
+    unit.rangeTiles = unitProps.range
+  }
+  if (unitProps.firepower !== undefined) {
+    unit.firepower = unitProps.firepower
+  }
+  if (unitProps.reloadTime !== undefined) {
+    unit.reloadTime = unitProps.reloadTime
+  }
+  if (unitProps.projectileSpeed !== undefined) {
+    unit.projectileSpeed = unitProps.projectileSpeed
+  }
+  if (unitProps.explosionRadiusTiles !== undefined) {
+    unit.explosionRadiusTiles = unitProps.explosionRadiusTiles
+  }
+  if (unitProps.visionRange !== undefined) {
+    unit.visionRange = unitProps.visionRange
+  }
+  if (unitProps.accelerationMultiplier !== undefined) {
+    unit.accelerationMultiplier = unitProps.accelerationMultiplier
+  }
+
   const utilityUnitTypes = ['ambulance', 'tankerTruck', 'recoveryTank']
   unit.isUtilityUnit = utilityUnitTypes.includes(actualType)
 
@@ -716,7 +744,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   }
 
   // Add unit-specific properties
-  const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
+  const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
   const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
   unit.crew = { driver: true, commander: true }

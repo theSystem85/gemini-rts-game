@@ -1,5 +1,18 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import {
+  TILE_SIZE,
+  TANK_FIRE_RANGE,
+  TANK_BULLET_SPEED,
+  TURRET_AIMING_THRESHOLD,
+  TANK_V3_BURST,
+  ATTACK_PATH_CALC_INTERVAL,
+  HOWITZER_RANGE_TILES,
+  HOWITZER_MIN_RANGE_TILES,
+  HOWITZER_RELOAD_TIME,
+  HOWITZER_FIREPOWER,
+  HOWITZER_PROJECTILE_SPEED,
+  HOWITZER_EXPLOSION_RADIUS_TILES
+} from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath } from '../units.js'
@@ -203,7 +216,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
-    const clearShot = unit.type === 'rocketTank' || hasClearShot(unit, target, units)
+    const clearShot = unit.type === 'rocketTank' || unit.type === 'howitzer' || hasClearShot(unit, target, units)
     if (unit.canFire !== false && clearShot && isTurretAimedAtTarget(unit, target)) {
       // Calculate aim position (with predictive aiming if enabled)
       let aimX = overrideTarget ? overrideTarget.x : targetCenterX
@@ -241,7 +254,10 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       const angle = Math.atan2(finalTarget.y - unitCenterY, finalTarget.x - unitCenterX)
 
       const isRocketTankRocket = projectileType === 'rocket' && unit.type === 'rocketTank'
-      const bulletSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED)
+      let projectileSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED)
+      if (projectileType === 'howitzerShell') {
+        projectileSpeed = unit.projectileSpeed || HOWITZER_PROJECTILE_SPEED
+      }
 
       let rocketSpawn = null
       if (isRocketTankRocket) {
@@ -252,8 +268,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         id: Date.now() + Math.random(),
         x: isRocketTankRocket ? rocketSpawn.x : unitCenterX,
         y: isRocketTankRocket ? rocketSpawn.y : unitCenterY,
-        speed: bulletSpeed,
-        baseDamage: getDamageForUnitType(unit.type),
+        speed: projectileSpeed,
+        baseDamage: getDamageForUnit(unit),
         active: true,
         shooter: unit,
         homing: isRocketTankRocket ? false : (projectileType === 'rocket'),
@@ -274,17 +290,38 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         bullet.dx = dx
         bullet.dy = dy
         bullet.distance = distance
-        bullet.flightDuration = distance / bulletSpeed
+        bullet.flightDuration = distance / projectileSpeed
         bullet.ballisticDuration = bullet.flightDuration / 2
         bullet.arcHeight = Math.max(50, distance * 0.3)
+      } else if (projectileType === 'howitzerShell') {
+        const dx = finalTarget.x - unitCenterX
+        const dy = finalTarget.y - unitCenterY
+        const distance = Math.hypot(dx, dy)
+        bullet.parabolic = true
+        bullet.startX = bullet.x
+        bullet.startY = bullet.y
+        bullet.targetX = finalTarget.x
+        bullet.targetY = finalTarget.y
+        bullet.dx = dx
+        bullet.dy = dy
+        bullet.distance = distance
+        bullet.flightDuration = Math.max(600, distance / projectileSpeed)
+        bullet.arcHeight = Math.max(TILE_SIZE * 2, distance * 0.4)
+        bullet.targetPosition = { x: finalTarget.x, y: finalTarget.y }
+        const explosionTiles = unit.explosionRadiusTiles || HOWITZER_EXPLOSION_RADIUS_TILES
+        bullet.explosionRadius = explosionTiles * TILE_SIZE
       } else if (!bullet.homing) {
         bullet.vx = bullet.speed * Math.cos(angle)
         bullet.vy = bullet.speed * Math.sin(angle)
       }
 
       bullets.push(bullet)
-      const soundName = projectileType === 'rocket' ? 'shoot_rocket' : 'shoot'
-      const vol = projectileType === 'rocket' ? 0.3 : 0.5
+      let soundName = projectileType === 'rocket' ? 'shoot_rocket' : 'shoot'
+      let vol = projectileType === 'rocket' ? 0.3 : 0.5
+      if (projectileType === 'howitzerShell') {
+        soundName = 'shoot_heavy'
+        vol = 0.5
+      }
       playPositionalSound(soundName, bullet.x, bullet.y, vol)
       unit.lastShotTime = now
 
@@ -301,12 +338,25 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 /**
  * Get damage value based on unit type
  */
-function getDamageForUnitType(unitType) {
-  switch (unitType) {
-    case 'tank-v3': return COMBAT_CONFIG.DAMAGE.TANK_V3
-    case 'rocketTank': return COMBAT_CONFIG.DAMAGE.ROCKET
-    default: return COMBAT_CONFIG.DAMAGE.STANDARD
+function getDamageForUnit(unit) {
+  if (!unit) return COMBAT_CONFIG.DAMAGE.STANDARD
+  let baseDamage
+  switch (unit.type) {
+    case 'tank-v3':
+      baseDamage = COMBAT_CONFIG.DAMAGE.TANK_V3
+      break
+    case 'rocketTank':
+      baseDamage = COMBAT_CONFIG.DAMAGE.ROCKET
+      break
+    case 'howitzer':
+      baseDamage = unit.firepower || HOWITZER_FIREPOWER
+      break
+    default:
+      baseDamage = COMBAT_CONFIG.DAMAGE.STANDARD
+      break
   }
+  const multiplier = unit.damageMultiplier || 1
+  return Math.round(baseDamage * multiplier)
 }
 
 /**
@@ -619,6 +669,8 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
       updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'rocketTank') {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
+    } else if (unit.type === 'howitzer') {
+      updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
 }, false)
@@ -819,17 +871,60 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
   }
 }
 
+function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (unit.target && unit.target.health > 0) {
+    const maxRange = getEffectiveFireRange(unit)
+    const chaseThreshold = maxRange * 0.9
+    const { distance, targetCenterX, targetCenterY } = handleTankMovement(
+      unit,
+      unit.target,
+      now,
+      occupancyMap,
+      chaseThreshold,
+      mapGrid
+    )
+
+    const minRangeTiles = unit.minRangeTiles !== undefined ? unit.minRangeTiles : HOWITZER_MIN_RANGE_TILES
+    const minRange = minRangeTiles * TILE_SIZE
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+
+    if (typeof distance === 'number') {
+      if (distance >= minRange && distance <= maxRange && canAttack) {
+        unit.canFire = true
+        const reloadTime = unit.reloadTime || HOWITZER_RELOAD_TIME
+        const effectiveFireRate = getEffectiveFireRate(unit, reloadTime)
+        handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'howitzerShell', units, mapGrid, false, null)
+      } else {
+        unit.canFire = distance >= minRange
+        if (distance < minRange) {
+          stopUnitMovement(unit)
+        }
+      }
+    } else {
+      unit.canFire = true
+    }
+  } else {
+    unit.canFire = true
+  }
+}
+
 /**
  * Get the effective fire range for a unit (including level bonuses)
  * @param {Object} unit - The unit to get fire range for
  * @returns {number} Effective fire range in pixels
  */
 function getEffectiveFireRange(unit) {
-  let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+  if (!unit) return TANK_FIRE_RANGE * TILE_SIZE
+  const defaultRangeTiles = unit.rangeTiles !== undefined
+    ? unit.rangeTiles
+    : (unit.type === 'howitzer' ? HOWITZER_RANGE_TILES : TANK_FIRE_RANGE)
 
-  // Apply level 1 bonus: 20% range increase
-  if (unit.level >= 1) {
-    baseRange *= (unit.rangeMultiplier || 1.2)
+  let baseRange = defaultRangeTiles * TILE_SIZE
+
+  if (unit.rangeMultiplier) {
+    baseRange *= unit.rangeMultiplier
+  } else if (unit.level >= 1 && unit.type !== 'howitzer') {
+    baseRange *= 1.2
   }
 
   return baseRange
@@ -842,14 +937,9 @@ function getEffectiveFireRange(unit) {
  * @returns {number} Effective fire rate in milliseconds
  */
 function getEffectiveFireRate(unit, baseFireRate) {
-  let effectiveRate = baseFireRate
-
-  // Apply level 3 bonus: 33% fire rate increase (faster firing = lower milliseconds)
-  if (unit.level >= 3) {
-    effectiveRate = baseFireRate / (unit.fireRateMultiplier || 1.33)
-  }
-
-  return effectiveRate
+  if (!unit) return baseFireRate
+  const multiplier = unit.fireRateMultiplier || (unit.level >= 3 ? 1.33 : 1)
+  return baseFireRate / multiplier
 }
 
 /**
