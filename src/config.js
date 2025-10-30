@@ -791,6 +791,12 @@ export function setHowitzerVisionRange(value) {
   HOWITZER_VISION_RANGE = value
 }
 
+export let HOWITZER_BUILDING_DAMAGE_MULTIPLIER = 2
+
+export function setHowitzerBuildingDamageMultiplier(value) {
+  HOWITZER_BUILDING_DAMAGE_MULTIPLIER = value
+}
+
 // Tank V3 burst fire configuration
 export let TANK_V3_BURST = {
   COUNT: 2,     // Number of bullets per burst
