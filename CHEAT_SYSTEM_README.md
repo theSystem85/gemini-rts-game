@@ -45,7 +45,7 @@ A comprehensive cheat system has been implemented for the RTS game that allows f
   - `tank_v1 9` spawns nine tanks for the player
   - `tank_v3` spawns one tank for the player
   - `tank_v2 3 red` spawns three tanks for the red party
-  - Available units: `harvester`, `tank_v1`, `tank-v2`, `tank-v3`, `rocketTank`, `recoveryTank`, `ambulance`, `tankerTruck`
+  - Available units: `harvester`, `tank_v1`, `tank-v2`, `tank-v3`, `rocketTank`, `howitzer`, `recoveryTank`, `ambulance`, `tankerTruck`
 
 ### 📊 Status Command
 - **Command**: `status`

@@ -1,4 +1,4 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG, HOWITZER_VISION_RANGE } from '../config.js'
 import { buildingData } from '../buildings.js'
 
 const {
@@ -180,6 +180,8 @@ function getUnitVisionRange(unit) {
     case 'ambulance':
     case 'tankerTruck':
       return defaultNonCombatRange
+    case 'howitzer':
+      return HOWITZER_VISION_RANGE
     default:
       return TANK_FIRE_RANGE
   }
@@ -332,4 +334,25 @@ export function markAllVisible(gameState) {
       cell.discovered = true
     })
   })
+}
+
+export function isPositionVisibleToPlayer(gameState, mapGrid, pixelX, pixelY) {
+  if (!gameState || !gameState.shadowOfWarEnabled) {
+    return true
+  }
+
+  const visibilityMap = ensureVisibilityMap(gameState, mapGrid)
+  if (!visibilityMap || visibilityMap.length === 0 || !visibilityMap[0] || visibilityMap[0].length === 0) {
+    return true
+  }
+
+  const tileX = Math.floor(pixelX / TILE_SIZE)
+  const tileY = Math.floor(pixelY / TILE_SIZE)
+
+  if (tileY < 0 || tileY >= visibilityMap.length || tileX < 0 || tileX >= visibilityMap[0].length) {
+    return false
+  }
+
+  const cell = visibilityMap[tileY] && visibilityMap[tileY][tileX]
+  return cell ? Boolean(cell.visible) : false
 }

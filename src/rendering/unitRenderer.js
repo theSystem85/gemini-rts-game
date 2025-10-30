@@ -5,6 +5,7 @@ import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
 import { renderHarvesterWithImage, isHarvesterImageLoaded } from './harvesterImageRenderer.js'
 import { renderRocketTankWithImage, isRocketTankImageLoaded } from './rocketTankImageRenderer.js'
+import { renderHowitzerWithImage, isHowitzerImageLoaded } from './howitzerImageRenderer.js'
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
@@ -79,6 +80,10 @@ export class UnitRenderer {
     }
     if (unit.type === 'recoveryTank' && !isRecoveryTankImageLoaded()) {
       // no special fallback
+    }
+
+    if (unit.type === 'howitzer') {
+      return
     }
 
     // Calculate recoil offset
@@ -713,6 +718,16 @@ export class UnitRenderer {
         return
       }
       // If image rendering failed, fall through to original rendering
+    }
+
+    if (unit.type === 'howitzer' && isHowitzerImageLoaded()) {
+      const ok = renderHowitzerWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
     }
 
     // Original rendering method (for non-tanks or when image rendering is disabled/failed)

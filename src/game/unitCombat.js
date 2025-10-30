@@ -1,5 +1,5 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, HOWITZER_PROJECTILE_SPEED, HOWITZER_EXPLOSION_RADIUS_TILES } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath } from '../units.js'
@@ -8,6 +8,7 @@ import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
+import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -16,7 +17,31 @@ import { logPerformance } from '../performanceUtils.js'
  * @returns {boolean} True if turret is aimed within threshold
  */
 function isTurretAimedAtTarget(unit, target) {
-  if (unit.turretDirection === undefined || !target) {
+  if (!target) {
+    return false
+  }
+
+  if (unit.type === 'howitzer') {
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+
+    let targetCenterX
+    let targetCenterY
+
+    if (target.tileX !== undefined) {
+      targetCenterX = target.x + TILE_SIZE / 2
+      targetCenterY = target.y + TILE_SIZE / 2
+    } else {
+      targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
+      targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
+    }
+
+    const angleToTarget = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+    const angleDifference = Math.abs(angleDiff(unit.direction || 0, angleToTarget))
+    return angleDifference <= TURRET_AIMING_THRESHOLD
+  }
+
+  if (unit.turretDirection === undefined) {
     return false
   }
 
@@ -528,6 +553,7 @@ function updateGuardTargeting(unit, units) {
   const range = getEffectiveFireRange(unit)
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
+  const mapGrid = gameState.mapGrid
 
   if (unit.target && unit.target.health > 0) {
     const targetCenterX = unit.target.tileX !== undefined ? unit.target.x + TILE_SIZE / 2 : unit.target.x * TILE_SIZE + (unit.target.width * TILE_SIZE) / 2
@@ -548,6 +574,9 @@ function updateGuardTargeting(unit, units) {
       const cy = p.y + TILE_SIZE / 2
       const d = Math.hypot(cx - unitCenterX, cy - unitCenterY)
       if (d <= range && d < closestDist) {
+        if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, cx, cy)) {
+          return
+        }
         closestDist = d
         closest = p
       }
@@ -560,12 +589,15 @@ function updateGuardTargeting(unit, units) {
         const bx = b.x * TILE_SIZE + (b.width * TILE_SIZE) / 2
         const by = b.y * TILE_SIZE + (b.height * TILE_SIZE) / 2
         const d = Math.hypot(bx - unitCenterX, by - unitCenterY)
-        if (d <= range && d < closestDist) {
-          closestDist = d
-          closest = b
+      if (d <= range && d < closestDist) {
+        if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, bx, by)) {
+          return
         }
+        closestDist = d
+        closest = b
       }
-    })
+    }
+  })
   }
 
   if (closest) {
@@ -619,6 +651,8 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
       updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'rocketTank') {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
+    } else if (unit.type === 'howitzer') {
+      updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
 }, false)
@@ -819,15 +853,132 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
   }
 }
 
+function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (!unit.target || unit.target.health <= 0) {
+    return
+  }
+
+  const CHASE_THRESHOLD = getHowitzerRange(unit) * 1.1
+  const { distance, targetCenterX, targetCenterY } = handleTankMovement(
+    unit,
+    unit.target,
+    now,
+    occupancyMap,
+    CHASE_THRESHOLD,
+    mapGrid
+  )
+
+  const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+  const minRangePx = getHowitzerMinRange()
+  const effectiveRange = getHowitzerRange(unit)
+  const targetVisible = isHowitzerTargetVisible(unit, unit.target, mapGrid)
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  if (distance < minRangePx) {
+    if (unit.owner !== gameState.humanPlayer && mapGrid && mapGrid.length > 0) {
+      const shouldReposition = !unit.lastMinRangeReposition || (now - unit.lastMinRangeReposition > 750)
+      if (shouldReposition) {
+        const mapHeight = mapGrid.length
+        const mapWidth = mapGrid[0]?.length || 0
+
+        if (mapWidth > 0) {
+          const retreatVectorX = unitCenterX - targetCenterX
+          const retreatVectorY = unitCenterY - targetCenterY
+          const retreatDistance = Math.hypot(retreatVectorX, retreatVectorY)
+
+          if (retreatDistance > 1) {
+            const desiredDistance = Math.max(minRangePx + TILE_SIZE, retreatDistance)
+            const normX = retreatVectorX / retreatDistance
+            const normY = retreatVectorY / retreatDistance
+            const desiredX = targetCenterX + normX * desiredDistance
+            const desiredY = targetCenterY + normY * desiredDistance
+
+            const baseTileX = Math.max(0, Math.min(mapWidth - 1, Math.floor(desiredX / TILE_SIZE)))
+            const baseTileY = Math.max(0, Math.min(mapHeight - 1, Math.floor(desiredY / TILE_SIZE)))
+
+            const currentTileX = Math.floor(unitCenterX / TILE_SIZE)
+            const currentTileY = Math.floor(unitCenterY / TILE_SIZE)
+
+            const candidateOffsets = [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+              { x: -1, y: 0 },
+              { x: 0, y: 1 },
+              { x: 0, y: -1 },
+              { x: 1, y: 1 },
+              { x: -1, y: -1 },
+              { x: 1, y: -1 },
+              { x: -1, y: 1 }
+            ]
+
+            for (const offset of candidateOffsets) {
+              const tileX = Math.max(0, Math.min(mapWidth - 1, baseTileX + offset.x))
+              const tileY = Math.max(0, Math.min(mapHeight - 1, baseTileY + offset.y))
+
+              if (tileX === currentTileX && tileY === currentTileY) {
+                continue
+              }
+
+              const tile = mapGrid[tileY]?.[tileX]
+              if (!tile || tile.type === 'water' || tile.type === 'rock' || tile.building) {
+                continue
+              }
+
+              const path = findPath(
+                { x: currentTileX, y: currentTileY },
+                { x: tileX, y: tileY },
+                mapGrid,
+                occupancyMap
+              )
+
+              if (path.length > 1) {
+                unit.path = path.slice(1)
+                unit.moveTarget = { x: tileX, y: tileY }
+                unit.lastAttackPathCalcTime = now
+                break
+              }
+            }
+          }
+        }
+
+        unit.lastMinRangeReposition = now
+      }
+    }
+
+    return
+  }
+
+  if (distance <= effectiveRange && canAttack && targetVisible && unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
+    if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
+      return
+    }
+    const cooldown = getHowitzerCooldown(unit)
+    if (!unit.lastShotTime || now - unit.lastShotTime >= cooldown) {
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      const aimPoint = applyTargetingSpread(unitCenterX, unitCenterY, targetCenterX, targetCenterY, 'artillery', unit.type)
+      fireHowitzerShell(unit, aimPoint, bullets, now)
+    }
+  }
+}
+
 /**
  * Get the effective fire range for a unit (including level bonuses)
  * @param {Object} unit - The unit to get fire range for
  * @returns {number} Effective fire range in pixels
  */
 function getEffectiveFireRange(unit) {
+  if (unit.type === 'howitzer') {
+    let baseRange = HOWITZER_FIRE_RANGE * TILE_SIZE
+    if (unit.rangeMultiplier) {
+      baseRange *= unit.rangeMultiplier
+    }
+    return baseRange
+  }
+
   let baseRange = TANK_FIRE_RANGE * TILE_SIZE
 
-  // Apply level 1 bonus: 20% range increase
   if (unit.level >= 1) {
     baseRange *= (unit.rangeMultiplier || 1.2)
   }
@@ -850,6 +1001,85 @@ function getEffectiveFireRate(unit, baseFireRate) {
   }
 
   return effectiveRate
+}
+
+function getHowitzerRange(unit) {
+  const rangeMultiplier = unit.rangeMultiplier || 1
+  return HOWITZER_FIRE_RANGE * TILE_SIZE * rangeMultiplier
+}
+
+function getHowitzerMinRange() {
+  return HOWITZER_MIN_RANGE * TILE_SIZE
+}
+
+function getHowitzerCooldown(unit) {
+  const fireRateMultiplier = unit.fireRateMultiplier || 1
+  return HOWITZER_FIRE_COOLDOWN / fireRateMultiplier
+}
+
+function getHowitzerDamage(unit) {
+  const damageMultiplier = unit.damageMultiplier || 1
+  return HOWITZER_FIREPOWER * damageMultiplier
+}
+
+function isHowitzerTargetVisible(unit, target, mapGrid) {
+  if (!gameState.shadowOfWarEnabled) {
+    return true
+  }
+
+  if (!target) return false
+
+  let targetCenterX
+  let targetCenterY
+
+  if (target.tileX !== undefined) {
+    targetCenterX = target.x + TILE_SIZE / 2
+    targetCenterY = target.y + TILE_SIZE / 2
+  } else {
+    targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
+    targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
+  }
+
+  return isPositionVisibleToPlayer(gameState, mapGrid, targetCenterX, targetCenterY)
+}
+
+function fireHowitzerShell(unit, aimTarget, bullets, now) {
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  const dx = aimTarget.x - unitCenterX
+  const dy = aimTarget.y - unitCenterY
+  const distance = Math.hypot(dx, dy)
+
+  const projectile = {
+    id: Date.now() + Math.random(),
+    x: unitCenterX,
+    y: unitCenterY,
+    speed: HOWITZER_PROJECTILE_SPEED,
+    baseDamage: getHowitzerDamage(unit),
+    active: true,
+    shooter: unit,
+    startTime: now,
+    parabolic: true,
+    startX: unitCenterX,
+    startY: unitCenterY,
+    targetX: aimTarget.x,
+    targetY: aimTarget.y,
+    dx,
+    dy,
+    distance,
+    flightDuration: distance / HOWITZER_PROJECTILE_SPEED,
+    arcHeight: distance * 0.5,
+    targetPosition: { x: aimTarget.x, y: aimTarget.y },
+    explosionRadius: TILE_SIZE * HOWITZER_EXPLOSION_RADIUS_TILES,
+    projectileType: 'artillery'
+  }
+
+  bullets.push(projectile)
+  playPositionalSound('shoot_heavy', unitCenterX, unitCenterY, 0.5)
+  unit.lastShotTime = now
+  unit.recoilStartTime = now
+  unit.muzzleFlashStartTime = now
 }
 
 /**

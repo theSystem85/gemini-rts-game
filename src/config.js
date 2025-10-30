@@ -622,6 +622,13 @@ export function setStreetSpeedMultiplier(value) {
 export let STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
 
 // Unit costs
+export let HOWITZER_COST = 2500
+
+export function setHowitzerCost(value) {
+  HOWITZER_COST = value
+  UNIT_COSTS.howitzer = value
+}
+
 export let UNIT_COSTS = {
   tank: 1000,
   tank_v1: 1000, // Alias for tank (used by AI)
@@ -631,7 +638,8 @@ export let UNIT_COSTS = {
   'tank-v3': 3000,
   ambulance: 500,
   tankerTruck: 300,
-  recoveryTank: 3000
+  recoveryTank: 3000,
+  howitzer: HOWITZER_COST
 }
 
 // Unit properties
@@ -711,7 +719,76 @@ export let UNIT_PROPERTIES = {
     speed: 0.66,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0
+  },
+  howitzer: {
+    health: 160,
+    maxHealth: 160,
+    speed: 0.22,
+    rotationSpeed: 0.04,
+    turretRotationSpeed: 0.04,
+    accelerationMultiplier: 0.75,
+    armor: 2
   }
+}
+
+export let HOWITZER_SPEED = UNIT_PROPERTIES.howitzer.speed
+
+export function setHowitzerSpeed(value) {
+  HOWITZER_SPEED = value
+  UNIT_PROPERTIES.howitzer.speed = value
+}
+
+export let HOWITZER_ROTATION_SPEED = UNIT_PROPERTIES.howitzer.rotationSpeed
+
+export function setHowitzerRotationSpeed(value) {
+  HOWITZER_ROTATION_SPEED = value
+  UNIT_PROPERTIES.howitzer.rotationSpeed = value
+  UNIT_PROPERTIES.howitzer.turretRotationSpeed = value
+}
+
+export let HOWITZER_ACCELERATION_MULTIPLIER = UNIT_PROPERTIES.howitzer.accelerationMultiplier
+
+export function setHowitzerAccelerationMultiplier(value) {
+  HOWITZER_ACCELERATION_MULTIPLIER = value
+  UNIT_PROPERTIES.howitzer.accelerationMultiplier = value
+}
+
+export let HOWITZER_FIRE_RANGE = 30
+
+export function setHowitzerFireRange(value) {
+  HOWITZER_FIRE_RANGE = value
+}
+
+export let HOWITZER_MIN_RANGE = 6
+
+export function setHowitzerMinRange(value) {
+  HOWITZER_MIN_RANGE = value
+}
+
+export let HOWITZER_FIREPOWER = 60
+
+export function setHowitzerFirepower(value) {
+  HOWITZER_FIREPOWER = value
+}
+
+export let HOWITZER_FIRE_COOLDOWN = 6000
+
+export function setHowitzerFireCooldown(value) {
+  HOWITZER_FIRE_COOLDOWN = value
+}
+
+export let HOWITZER_PROJECTILE_SPEED = 0.85
+
+export function setHowitzerProjectileSpeed(value) {
+  HOWITZER_PROJECTILE_SPEED = value
+}
+
+export let HOWITZER_EXPLOSION_RADIUS_TILES = 3
+
+export let HOWITZER_VISION_RANGE = 18
+
+export function setHowitzerVisionRange(value) {
+  HOWITZER_VISION_RANGE = value
 }
 
 // Tank V3 burst fire configuration
@@ -766,7 +843,8 @@ export let UNIT_TYPE_COLORS = {
   rocketTank: '#800000',
   ambulance: '#00FFFF',   // Dark red
   tankerTruck: '#FFA500',
-  recoveryTank: '#FFD700' // Gold
+  recoveryTank: '#FFD700', // Gold
+  howitzer: '#D2691E'     // Chocolate
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
@@ -964,6 +1042,7 @@ export let UNIT_GAS_PROPERTIES = {
   rocketTank: { tankSize: 1900, consumption: 450 },
   // Recovery tanks consume the same fuel as standard tanks
   recoveryTank: { tankSize: 1900, consumption: 450 },
+  howitzer: { tankSize: 1900, consumption: 450 },
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
   ambulance: { tankSize: 75, consumption: 25 },
   tankerTruck: { tankSize: 700, consumption: 150 }
@@ -1081,6 +1160,17 @@ const EXPORTED_CONFIG_VARIABLES = [
   'GAS_REFILL_TIME',
   'GAS_REFILL_COST',
   'UNIT_GAS_PROPERTIES'
+  ,'HOWITZER_COST'
+  ,'HOWITZER_SPEED'
+  ,'HOWITZER_ROTATION_SPEED'
+  ,'HOWITZER_ACCELERATION_MULTIPLIER'
+  ,'HOWITZER_FIRE_RANGE'
+  ,'HOWITZER_MIN_RANGE'
+  ,'HOWITZER_FIREPOWER'
+  ,'HOWITZER_FIRE_COOLDOWN'
+  ,'HOWITZER_PROJECTILE_SPEED'
+  ,'HOWITZER_EXPLOSION_RADIUS_TILES'
+  ,'HOWITZER_VISION_RANGE'
 ]
 
 // The old eval-based config system has been removed because it cannot work in production

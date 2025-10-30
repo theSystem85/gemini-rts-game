@@ -4,6 +4,7 @@ import { getRocketTankBaseImage } from './rocketTankImageRenderer.js'
 import { getAmbulanceBaseImage } from './ambulanceImageRenderer.js'
 import { getTankerTruckBaseImage } from './tankerTruckImageRenderer.js'
 import { getRecoveryTankBaseImage } from './recoveryTankImageRenderer.js'
+import { getHowitzerBaseImage } from './howitzerImageRenderer.js'
 
 const grayscaleCache = new WeakMap()
 
@@ -84,6 +85,9 @@ export function getSingleImageWreckSprite(unitType) {
       break
     case 'recoveryTank':
       image = getRecoveryTankBaseImage()
+      break
+    case 'howitzer':
+      image = getHowitzerBaseImage()
       break
     default:
       image = null

@@ -716,7 +716,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   }
 
   // Add unit-specific properties
-  const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
+  const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
   const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
   unit.crew = { driver: true, commander: true }
@@ -726,6 +726,18 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.crew.loader = true
   } else if (loaderUnits.includes(actualType)) {
     unit.crew.loader = true
+  }
+
+  if (unitProps.accelerationMultiplier) {
+    unit.accelerationMultiplier = unitProps.accelerationMultiplier
+  }
+
+  if (unitProps.armor) {
+    unit.armor = unitProps.armor
+  }
+
+  if (actualType === 'howitzer') {
+    unit.isHowitzer = true
   }
 
   if (actualType === 'ambulance') {

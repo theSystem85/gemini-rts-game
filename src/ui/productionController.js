@@ -10,7 +10,7 @@ import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'ambulance', 'tankerTruck', 'recoveryTank']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -51,6 +51,9 @@ export class ProductionController {
     const hasHospital = gameState.buildings.some(
       b => b.type === 'hospital' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasRadar = gameState.buildings.some(
+      b => b.type === 'radarStation' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
@@ -71,6 +74,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Workshop'
+        }
+      } else if (unitType === 'howitzer') {
+        if (hasVehicleFactory && hasRadar) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Radar Station'
         }
       } else if (unitType === 'ambulance') {
         if (hasVehicleFactory && hasHospital) {
@@ -387,6 +398,13 @@ export class ProductionController {
           if (!hasVehicleFactory || !hasGasStation) {
             requirementsMet = false
             requirementText = 'Requires Vehicle Factory & Gas Station'
+          }
+        } else if (unitType === 'howitzer') {
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+          const hasRadar = gameState.buildings.some(b => b.type === 'radarStation' && b.owner === gameState.humanPlayer)
+          if (!hasVehicleFactory || !hasRadar) {
+            requirementsMet = false
+            requirementText = 'Requires Vehicle Factory & Radar Station'
           }
         } else if (this.vehicleUnitTypes.includes(unitType)) {
           const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
@@ -1086,6 +1104,9 @@ export class ProductionController {
       this.forceUnlockUnitType('tank-v2')
       ;['turretGunV2', 'turretGunV3', 'rocketTurret', 'teslaCoil', 'artilleryTurret']
         .forEach(t => this.forceUnlockBuildingType(t))
+      if (hasFactory) {
+        this.forceUnlockUnitType('howitzer')
+      }
     }
 
     this.updateVehicleButtonStates()
