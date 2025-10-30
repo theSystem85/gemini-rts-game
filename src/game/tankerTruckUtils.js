@@ -83,7 +83,7 @@ export function detonateTankerTruck(unit, units, factories = [], gameState = nul
     : TANKER_SUPPLY_CAPACITY
   const currentSupply = Math.max(0, unit.supplyGas ?? maxSupply)
   const fillRatio = maxSupply > 0 ? Math.max(0, Math.min(1, currentSupply / maxSupply)) : 0
-  const radius = TILE_SIZE * 3 * fillRatio
+  const radius = TILE_SIZE * (3 + fillRatio * 2)
 
   if (radius > 0) {
     const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
