@@ -210,6 +210,7 @@ export class CheatSystem {
           <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
           <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
           <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
+          <li><code>kill</code> - Destroy all selected units or buildings</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
           <li><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
@@ -367,6 +368,8 @@ export class CheatSystem {
         } else {
           this.showError('Invalid amount. Use: medics [number]')
         }
+      } else if (normalizedCode === 'kill') {
+        this.killSelectedTargets()
       } else {
         const spawn = this.parseSpawnCommand(code)
         if (spawn) {
@@ -827,6 +830,61 @@ export class CheatSystem {
       }
       showNotification(`🎨 Changed party to ${owner} for ${changed} item(s)`, 3000)
     }
+  }
+
+  killSelectedTargets() {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    const targets = [...this.selectedUnits]
+    let destroyedUnits = 0
+    let destroyedBuildings = 0
+
+    targets.forEach(target => {
+      if (!target || typeof target.health !== 'number') return
+
+      const alreadyDestroyed = target.health <= 0 || target.destroyed === true
+      if (alreadyDestroyed) return
+
+      if (target.isBuilding) {
+        destroyedBuildings++
+      } else {
+        destroyedUnits++
+      }
+
+      target.health = 0
+      target.destroyed = true
+      if (target.selected) {
+        target.selected = false
+      }
+    })
+
+    const totalDestroyed = destroyedUnits + destroyedBuildings
+    if (totalDestroyed === 0) {
+      this.showError('No valid targets selected')
+      return
+    }
+
+    this.selectedUnits.length = 0
+
+    if (gameState) {
+      gameState.selectionActive = false
+      gameState.selectionStart = { x: 0, y: 0 }
+      gameState.selectionEnd = { x: 0, y: 0 }
+    }
+
+    const parts = []
+    if (destroyedUnits > 0) {
+      parts.push(`${destroyedUnits} unit${destroyedUnits === 1 ? '' : 's'}`)
+    }
+    if (destroyedBuildings > 0) {
+      parts.push(`${destroyedBuildings} building${destroyedBuildings === 1 ? '' : 's'}`)
+    }
+
+    showNotification(`💥 Destroyed ${parts.join(' and ')}`, 4000)
+    playSound('explosion', 0.7)
   }
 
   showError(message) {
