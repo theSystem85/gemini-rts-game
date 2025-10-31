@@ -56,6 +56,12 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
               heli.tileX = Math.floor(heli.x / TILE_SIZE)
               heli.tileY = Math.floor(heli.y / TILE_SIZE)
 
+              if (typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo < heli.maxRocketAmmo) {
+                heli.rocketAmmo = heli.maxRocketAmmo
+                heli.apacheAmmoEmpty = false
+                heli.canFire = true
+              }
+
               if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
                 const refuelRate = heli.maxGas / 4000
                 const transfer = Math.min(refuelRate * delta, heli.maxGas - heli.gas, helipad.fuel)

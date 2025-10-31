@@ -8,8 +8,8 @@ let bodyLoaded = false
 let rotorLoaded = false
 let loading = false
 
-const BODY_TARGET_WIDTH = TILE_SIZE * 1.9
-const ROTOR_TARGET_WIDTH = TILE_SIZE * 2.1
+const BODY_TARGET_WIDTH = TILE_SIZE * 0.7
+const ROTOR_TARGET_WIDTH = TILE_SIZE
 const ROTOR_ANCHOR = { x: 31, y: 30 }
 const SPRITE_CACHE = new Map()
 
@@ -105,13 +105,13 @@ function getBodySprite(rotationBucket, tiltState) {
   const targetHeight = sourceHeight * scale
 
   const canvas = document.createElement('canvas')
-  const padding = TILE_SIZE * 0.5
-  canvas.width = Math.ceil(targetWidth + padding)
-  canvas.height = Math.ceil(targetHeight + padding)
+  const maxDimension = TILE_SIZE
+  canvas.width = Math.ceil(maxDimension)
+  canvas.height = Math.ceil(maxDimension)
   const ctx = canvas.getContext('2d')
 
   ctx.translate(canvas.width / 2, canvas.height / 2)
-  ctx.rotate((rotationBucket * Math.PI) / 180 - Math.PI / 2)
+  ctx.rotate((rotationBucket * Math.PI) / 180 + Math.PI / 2)
 
   let tiltX = 1
   let tiltY = 1
@@ -150,7 +150,7 @@ function getBodySprite(rotationBucket, tiltState) {
 
 function renderShadow(ctx, unit, centerX, centerY) {
   const shadow = unit.shadow || { offset: 0, scale: 1 }
-  const baseRadius = TILE_SIZE * 0.45
+  const baseRadius = TILE_SIZE * 0.35
   const offsetY = shadow.offset || 0
   const scale = shadow.scale || 1
 
@@ -190,7 +190,7 @@ function renderRotor(ctx, unit, centerX, centerY) {
 
   ctx.save()
   ctx.translate(centerX, centerY - altitudeLift)
-  ctx.rotate((unit.direction || 0) - Math.PI / 2)
+  ctx.rotate((unit.direction || 0) + Math.PI / 2)
   ctx.translate(-anchorX, -anchorY)
   ctx.translate(anchorX, anchorY)
   ctx.rotate(unit.rotor?.angle || 0)
@@ -237,7 +237,7 @@ export function getApacheRocketSpawnPoints(unit, centerX, centerY) {
   }
 
   const results = {}
-  const rotation = (unit.direction || 0) - Math.PI / 2
+  const rotation = (unit.direction || 0) + Math.PI / 2
   Object.entries(hardpoints).forEach(([key, point]) => {
     const localX = (point.x - bodyWidth / 2) * scale
     const localY = (point.y - (bodyImage?.naturalHeight || bodyImage?.height || TILE_SIZE) / 2) * scale

@@ -217,7 +217,8 @@ const COMBAT_CONFIG = {
   DAMAGE: {
     STANDARD: 25,
     TANK_V3: 30,
-    ROCKET: 20
+    ROCKET: 20,
+    APACHE: 10
   },
   RANGE_MULTIPLIER: {
     ROCKET: 1.5
@@ -250,6 +251,15 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     const clearShot = unit.type === 'rocketTank' || unit.type === 'apache' || hasClearShot(unit, target, units)
     const turretAimed = unit.type === 'apache' ? true : isTurretAimedAtTarget(unit, target)
     if (unit.canFire !== false && clearShot && turretAimed) {
+      const targetIsAirborneApache = target && target.type === 'apache' && target.flightState !== 'grounded'
+      const shooterCanHitAir =
+        unit.type === 'rocketTank' ||
+        unit.type === 'apache' ||
+        unit.type === 'rocketTurret' ||
+        unit.type === 'teslaCoil'
+      if (targetIsAirborneApache && !shooterCanHitAir) {
+        return false
+      }
       // Calculate aim position (with predictive aiming if enabled)
       let aimX = overrideTarget ? overrideTarget.x : targetCenterX
       let aimY = overrideTarget ? overrideTarget.y : targetCenterY
@@ -313,6 +323,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         projectileType
       }
 
+      if (isApacheRocket) {
+        bullet.explosionRadius = TILE_SIZE
+        bullet.skipCollisionChecks = true
+      }
+
       if (isRocketTankRocket) {
         const dx = finalTarget.x - rocketSpawn.x
         const dy = finalTarget.y - rocketSpawn.y
@@ -363,7 +378,7 @@ function getDamageForUnitType(unitType) {
   switch (unitType) {
     case 'tank-v3': return COMBAT_CONFIG.DAMAGE.TANK_V3
     case 'rocketTank': return COMBAT_CONFIG.DAMAGE.ROCKET
-    case 'apache': return COMBAT_CONFIG.DAMAGE.ROCKET
+    case 'apache': return COMBAT_CONFIG.DAMAGE.APACHE
     default: return COMBAT_CONFIG.DAMAGE.STANDARD
   }
 }
@@ -404,13 +419,26 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
  * Handle multi-rocket volley for Apache helicopter
  */
 function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCenterY, units, mapGrid) {
+  const availableAmmo = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+  if (availableAmmo <= 0) {
+    unit.volleyState = null
+    unit.apacheAmmoEmpty = true
+    unit.canFire = false
+    return true
+  }
+
   if (!unit.volleyState) {
+    const rocketsThisVolley = Math.min(8, availableAmmo)
+    const leftCount = Math.min(4, Math.ceil(rocketsThisVolley / 2))
+    const rightCount = Math.min(4, rocketsThisVolley - leftCount)
+
     unit.volleyState = {
-      leftRemaining: 4,
-      rightRemaining: 4,
+      leftRemaining: leftCount,
+      rightRemaining: rightCount,
       lastRocketTime: 0,
       delay: 120,
-      nextSide: 'left'
+      nextSide: 'left',
+      totalInVolley: rocketsThisVolley
     }
   }
 
@@ -456,6 +484,7 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
   unit.customRocketSpawn = null
 
   if (fired) {
+    unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
     if (side === 'left') {
       state.leftRemaining = Math.max(0, state.leftRemaining - 1)
     } else {
@@ -465,6 +494,12 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
     state.nextSide = side === 'left' ? 'right' : 'left'
 
     if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+      unit.volleyState = null
+      return true
+    }
+    if (unit.rocketAmmo <= 0) {
+      unit.apacheAmmoEmpty = true
+      unit.canFire = false
       unit.volleyState = null
       return true
     }
@@ -973,6 +1008,13 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     return
   }
 
+  const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+  unit.apacheAmmoEmpty = ammoRemaining <= 0
+  if (unit.apacheAmmoEmpty) {
+    unit.canFire = false
+    unit.volleyState = null
+  }
+
   const targetCenter = getApacheTargetCenter(unit.target)
   if (!targetCenter) {
     unit.volleyState = null
@@ -1017,22 +1059,27 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
   }
 
   if (distance <= effectiveRange && canAttack) {
-    if (!unit.volleyState) {
+    if (!unit.volleyState && !unit.apacheAmmoEmpty) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
       if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
         if (unit.canFire !== false) {
+          const rocketsThisVolley = Math.min(8, ammoRemaining)
+          const leftCount = Math.min(4, Math.ceil(rocketsThisVolley / 2))
+          const rightCount = Math.min(4, rocketsThisVolley - leftCount)
+
           unit.volleyState = {
-            leftRemaining: 4,
-            rightRemaining: 4,
+            leftRemaining: leftCount,
+            rightRemaining: rightCount,
             lastRocketTime: 0,
             delay: 120,
-            nextSide: 'left'
+            nextSide: 'left',
+            totalInVolley: rocketsThisVolley
           }
         }
       }
     }
 
-    if (unit.volleyState) {
+    if (unit.volleyState && !unit.apacheAmmoEmpty) {
       const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenter.x, targetCenter.y, units, mapGrid)
       if (volleyComplete) {
         unit.lastShotTime = now

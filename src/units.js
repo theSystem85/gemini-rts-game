@@ -755,7 +755,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.flightState = 'grounded'
     unit.altitude = 0
     unit.targetAltitude = 0
-    unit.maxAltitude = TILE_SIZE * 1.5
+    unit.maxAltitude = TILE_SIZE * 4.5
     unit.airCruiseSpeed = unitProps.speed
     unit.hoverFuelMultiplier = 0.2
     unit.autoHoldAltitude = false
@@ -785,6 +785,8 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.helipadTargetId = null
     unit.crew.gunner = true
     unit.crew.loader = true
+    unit.maxRocketAmmo = 38
+    unit.rocketAmmo = unit.maxRocketAmmo
   }
 
   if (actualType === 'ambulance') {

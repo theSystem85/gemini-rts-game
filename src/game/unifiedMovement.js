@@ -149,8 +149,8 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   rotor.targetSpeed = rotorTargetSpeed
 
   const altitudeRatio = Math.min(1, unit.maxAltitude > 0 ? unit.altitude / unit.maxAltitude : 0)
-  shadow.offset = altitudeRatio * TILE_SIZE * 0.6
-  shadow.scale = 1 + altitudeRatio * 0.35
+  shadow.offset = altitudeRatio * TILE_SIZE * 1.8
+  shadow.scale = 1 + altitudeRatio * 0.5
 
   if (manualState === 'takeoff' && unit.altitude >= unit.maxAltitude * 0.95) {
     unit.manualFlightState = 'auto'
@@ -506,7 +506,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 }
   if (movement.isMoving && canAccelerate) {
-    avoidanceForce = calculateCollisionAvoidance(unit, units)
+    const skipAvoidance = unit.type === 'apache' && unit.flightState !== 'grounded'
+    avoidanceForce = skipAvoidance ? { x: 0, y: 0 } : calculateCollisionAvoidance(unit, units)
   }
 
   // Determine acceleration rate based on whether we should accelerate or decelerate
@@ -601,7 +602,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
-  const collisionResult = checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
+  const skipCollisionChecks = unit.type === 'apache' && unit.flightState !== 'grounded'
+  const collisionResult = skipCollisionChecks
+    ? { collided: false }
+    : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
 
   if (collisionResult.collided) {
     // Revert position if collision detected
