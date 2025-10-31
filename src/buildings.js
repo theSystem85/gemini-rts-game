@@ -3,7 +3,14 @@ import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
 import { logPerformance } from './performanceUtils.js'
-import { PLAYER_POSITIONS, MAP_TILES_X, MAP_TILES_Y, MAX_BUILDING_GAP_TILES } from './config.js'
+import {
+  PLAYER_POSITIONS,
+  MAP_TILES_X,
+  MAP_TILES_Y,
+  MAX_BUILDING_GAP_TILES,
+  HELIPAD_FUEL_CAPACITY,
+  HELIPAD_RELOAD_TIME
+} from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { ensureServiceRadius } from './utils/serviceRadius.js'
 
@@ -84,6 +91,19 @@ export const buildingData = {
     image: 'hospital.webp',
     displayName: 'Hospital',
     health: 200,
+    smokeSpots: []
+  },
+  helipad: {
+    width: 2,
+    height: 2,
+    cost: 1000,
+    power: -20,
+    image: 'helipad_sidebar.webp',
+    displayName: 'Helipad',
+    health: 300,
+    requiresRadar: true,
+    maxFuel: HELIPAD_FUEL_CAPACITY,
+    fuelReloadTime: HELIPAD_RELOAD_TIME,
     smokeSpots: []
   },
   gasStation: {
@@ -240,6 +260,14 @@ export function createBuilding(type, x, y) {
     // Timestamp for construction animation
     constructionStartTime: performance.now(),
     constructionFinished: false
+  }
+
+  if (typeof data.maxFuel === 'number') {
+    building.maxFuel = data.maxFuel
+    building.fuel = data.maxFuel
+    if (typeof data.fuelReloadTime === 'number') {
+      building.fuelReloadTime = data.fuelReloadTime
+    }
   }
 
   // Initialize rally point for vehicle factories and workshops

@@ -73,6 +73,10 @@ import {
   setGasRefillTime,
   GAS_REFILL_COST,
   setGasRefillCost,
+  HELIPAD_FUEL_CAPACITY,
+  setHelipadFuelCapacity,
+  HELIPAD_RELOAD_TIME,
+  setHelipadReloadTime,
   getMobileTankJoystickMapping,
   setMobileTankJoystickMapping,
   getMobileVehicleJoystickMapping,
@@ -455,6 +459,30 @@ export const configRegistry = {
     min: 0,
     max: 500,
     step: 10,
+    category: 'Resources'
+  },
+
+  helipadFuelCapacity: {
+    name: 'Helipad Fuel Capacity',
+    description: 'Fuel reserve capacity stored at helipad',
+    type: 'number',
+    get: () => HELIPAD_FUEL_CAPACITY,
+    set: setHelipadFuelCapacity,
+    min: 100,
+    max: 10000,
+    step: 100,
+    category: 'Resources'
+  },
+
+  helipadReloadTime: {
+    name: 'Helipad Reload Time',
+    description: 'Time to fully reload helipad reserve (ms)',
+    type: 'number',
+    get: () => HELIPAD_RELOAD_TIME,
+    set: setHelipadReloadTime,
+    min: 1000,
+    max: 60000,
+    step: 1000,
     category: 'Resources'
   },
 

@@ -195,6 +195,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     const hospitals = aiBuildings.filter(b => b.type === 'hospital')
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
+    const helipads = aiBuildings.filter(b => b.type === 'helipad')
     const aiHarvesters = units.filter(
       u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
     )
@@ -268,6 +269,25 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
       buildingType = 'hospital'
       cost = buildingData.hospital.cost
+    } else if (
+      gasStations.length > 0 &&
+      hospitals.length > 0 &&
+      vehicleWorkshops.length > 0 &&
+      radarStations.length === 0 &&
+      aiFactory.budget >= buildingData.radarStation.cost
+    ) {
+      buildingType = 'radarStation'
+      cost = buildingData.radarStation.cost
+    } else if (
+      gasStations.length > 0 &&
+      hospitals.length > 0 &&
+      vehicleWorkshops.length > 0 &&
+      radarStations.length > 0 &&
+      helipads.length === 0 &&
+      aiFactory.budget >= buildingData.helipad.cost
+    ) {
+      buildingType = 'helipad'
+      cost = buildingData.helipad.cost
     } else if (turrets.length < 3) {
       // Basic defense: choose turret based on budget
       const allowTurretGun = turretGunCount < 2 || totalTanks >= 4

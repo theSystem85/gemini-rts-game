@@ -888,6 +888,18 @@ export function setGasRefillCost(value) {
   GAS_REFILL_COST = value
 }
 
+export let HELIPAD_FUEL_CAPACITY = 1200
+
+export function setHelipadFuelCapacity(value) {
+  HELIPAD_FUEL_CAPACITY = value
+}
+
+export let HELIPAD_RELOAD_TIME = 8000 // ms to fully reload helipad reserve
+
+export function setHelipadReloadTime(value) {
+  HELIPAD_RELOAD_TIME = value
+}
+
 const REMOTE_CONTROL_ALLOWED_ACTIONS = [
   'forward',
   'backward',
@@ -1165,6 +1177,8 @@ const EXPORTED_CONFIG_VARIABLES = [
   'DEFAULT_PLAYER_COUNT',
   'GAS_REFILL_TIME',
   'GAS_REFILL_COST',
+  'HELIPAD_FUEL_CAPACITY',
+  'HELIPAD_RELOAD_TIME',
   'UNIT_GAS_PROPERTIES'
   ,'HOWITZER_COST'
   ,'HOWITZER_SPEED'
