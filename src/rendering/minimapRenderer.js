@@ -146,6 +146,8 @@ export class MinimapRenderer {
     if (shadowEnabled) {
       const tileWidth = minimapLogicalWidth / mapGrid[0].length
       const tileHeight = minimapLogicalHeight / mapGrid.length
+      const undiscoveredRects = []
+      const fogRects = []
 
       for (let y = 0; y < mapGrid.length; y++) {
         const row = visibilityMap[y]
@@ -153,13 +155,40 @@ export class MinimapRenderer {
           const cell = row ? row[x] : null
           const destX = x * tileWidth
           const destY = y * tileHeight
+
           if (!cell || !cell.discovered) {
-            minimapCtx.fillStyle = MINIMAP_UNDISCOVERED_COLOR
-            minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+            undiscoveredRects.push(destX, destY)
           } else if (!cell.visible) {
-            minimapCtx.fillStyle = MINIMAP_FOG_COLOR
-            minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+            fogRects.push(destX, destY)
           }
+        }
+      }
+
+      if (undiscoveredRects.length > 0) {
+        minimapCtx.save()
+        minimapCtx.globalCompositeOperation = 'destination-out'
+        minimapCtx.fillStyle = '#000'
+        for (let i = 0; i < undiscoveredRects.length; i += 2) {
+          const destX = undiscoveredRects[i]
+          const destY = undiscoveredRects[i + 1]
+          minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+        }
+        minimapCtx.restore()
+
+        minimapCtx.fillStyle = MINIMAP_UNDISCOVERED_COLOR
+        for (let i = 0; i < undiscoveredRects.length; i += 2) {
+          const destX = undiscoveredRects[i]
+          const destY = undiscoveredRects[i + 1]
+          minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
+        }
+      }
+
+      if (fogRects.length > 0) {
+        minimapCtx.fillStyle = MINIMAP_FOG_COLOR
+        for (let i = 0; i < fogRects.length; i += 2) {
+          const destX = fogRects[i]
+          const destY = fogRects[i + 1]
+          minimapCtx.fillRect(destX, destY, tileWidth, tileHeight)
         }
       }
     }
