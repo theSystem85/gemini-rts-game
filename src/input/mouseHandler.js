@@ -15,6 +15,7 @@ import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
+import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
 
 export class MouseHandler {
   constructor() {
@@ -1454,6 +1455,7 @@ export class MouseHandler {
         pointerIds,
         lastCenter: center
       }
+      suspendRemoteControlAutoFocus()
       pointerIds.forEach(id => {
         const state = activePointers.get(id)
         if (state) {
