@@ -172,7 +172,48 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       // Check for unit collisions
       if (bullet.active && units && units.length > 0) {
         for (const unit of units) {
+          if (bullet.ignoredUnitId === unit.id && bullet.ignoreUntil && now < bullet.ignoreUntil) {
+            continue
+          }
           if (unit.health > 0 && checkUnitCollision(bullet, unit)) {
+          if (unit.type === 'apache') {
+            const shooterType = bullet.shooter?.type || ''
+            const allowedShooters = ['rocketTank', 'rocketTurret', 'teslaCoil']
+            if (!allowedShooters.includes(shooterType)) {
+              continue
+            }
+          }
+          if (unit.type === 'apache' && bullet.projectileType === 'rocket') {
+            const dodgeChance = typeof unit.dodgeChance === 'number' ? unit.dodgeChance : 0.6
+            const canAttemptDodge = !unit.lastDodgeTime || now - unit.lastDodgeTime > 400
+            if (canAttemptDodge && Math.random() < dodgeChance) {
+              const lateralSign = Math.random() < 0.5 ? -1 : 1
+              const dodgeAngle = (unit.direction || 0) + lateralSign * Math.PI / 2
+              const dodgeDistance = TILE_SIZE * 0.6
+              const offsetX = Math.cos(dodgeAngle) * dodgeDistance
+              const offsetY = Math.sin(dodgeAngle) * dodgeDistance
+              unit.x += offsetX
+              unit.y += offsetY
+              const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE
+              const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE
+              unit.x = Math.max(0, Math.min(unit.x, maxX))
+              unit.y = Math.max(0, Math.min(unit.y, maxY))
+              unit.tileX = Math.floor(unit.x / TILE_SIZE)
+              unit.tileY = Math.floor(unit.y / TILE_SIZE)
+              unit.dodgeVelocity = {
+                vx: Math.cos(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
+                vy: Math.sin(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
+                endTime: now + 400
+              }
+              unit.lastDodgeTime = now
+              if (unit.flightState === 'grounded') {
+                unit.flightState = 'takeoff'
+              }
+              bullet.ignoredUnitId = unit.id
+              bullet.ignoreUntil = now + 250
+              continue
+            }
+          }
           // Calculate hit zone damage multiplier for tanks
             const hitZoneResult = calculateHitZoneDamageMultiplier(bullet, unit)
 

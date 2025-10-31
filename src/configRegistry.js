@@ -81,6 +81,8 @@ import {
   setMobileTankJoystickMapping,
   getMobileVehicleJoystickMapping,
   setMobileVehicleJoystickMapping,
+  getMobileApacheJoystickMapping,
+  setMobileApacheJoystickMapping,
   SAFE_RANGE_ENABLED
   , HOWITZER_COST
   , setHowitzerCost
@@ -331,7 +333,8 @@ export const configRegistry = {
   // Mobile Controls
   mobileTankJoystickMapping: {
     name: 'Mobile Tank Joystick Mapping',
-    description: 'JSON mapping for mobile joysticks when controlling tanks. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    description:
+      'JSON mapping for mobile joysticks when controlling tanks. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire, ascend, descend, strafeLeft, strafeRight.',
     type: 'string',
     get: () => JSON.stringify(getMobileTankJoystickMapping(), null, 2),
     set: setMobileTankJoystickMapping,
@@ -340,10 +343,21 @@ export const configRegistry = {
 
   mobileVehicleJoystickMapping: {
     name: 'Mobile Vehicle Joystick Mapping',
-    description: 'JSON mapping for mobile joysticks when controlling non-turret vehicles. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire.',
+    description:
+      'JSON mapping for mobile joysticks when controlling non-turret vehicles. Valid actions: forward, backward, turnLeft, turnRight, turretLeft, turretRight, fire, ascend, descend, strafeLeft, strafeRight.',
     type: 'string',
     get: () => JSON.stringify(getMobileVehicleJoystickMapping(), null, 2),
     set: setMobileVehicleJoystickMapping,
+    category: 'Controls'
+  },
+
+  mobileApacheJoystickMapping: {
+    name: 'Mobile Apache Joystick Mapping',
+    description:
+      'JSON mapping for mobile joysticks when controlling Apache helicopters. Valid actions: forward, backward, turnLeft, turnRight, fire, ascend, descend, strafeLeft, strafeRight.',
+    type: 'string',
+    get: () => JSON.stringify(getMobileApacheJoystickMapping(), null, 2),
+    set: setMobileApacheJoystickMapping,
     category: 'Controls'
   },
 

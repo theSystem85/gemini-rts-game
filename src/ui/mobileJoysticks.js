@@ -18,6 +18,7 @@ const HOLD_SOURCES = {
   right: 'rightJoystick'
 }
 const TANK_ABSOLUTE_SOURCE = 'mobileTankJoysticks'
+const APACHE_ABSOLUTE_SOURCE = 'mobileApacheJoysticks'
 const TAP_PULSE_DURATION = 150
 
 const AXES = ['up', 'down', 'left', 'right']
@@ -106,6 +107,10 @@ function determineCurrentProfile() {
   const [unit] = selectedUnits
   if (!unit || !unit.movement || !isFriendlyUnit(unit)) {
     return null
+  }
+
+  if (unit.type === 'apache') {
+    return 'apache'
   }
 
   return isTurretTankUnitType(unit.type) ? 'tank' : 'vehicle'
@@ -255,29 +260,50 @@ function computeRadialIntensity(distance) {
   return Math.max(0, Math.min(scaled, 1))
 }
 
-function updateTankAbsoluteControls() {
-  const profile = determineCurrentProfile()
-  if (profile !== 'tank' || !isJoystickEnabled()) {
+function updateAbsoluteControls(profileOverride = null) {
+  const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
+  const joystickActive = isJoystickEnabled()
+
+  if (profile === 'tank' && joystickActive) {
+    const right = joystickState.right
+    const left = joystickState.left
+
+    const wagonSpeed = computeRadialIntensity(right.distance)
+    const wagonDirection = wagonSpeed > 0 ? Math.atan2(right.normalizedY, right.normalizedX) : null
+
+    const turretTurnFactor = computeRadialIntensity(left.distance)
+    const turretDirection =
+      turretTurnFactor > 0 ? Math.atan2(left.normalizedY, left.normalizedX) : null
+
+    setRemoteControlAbsolute(TANK_ABSOLUTE_SOURCE, {
+      wagonDirection,
+      wagonSpeed,
+      turretDirection,
+      turretTurnFactor
+    })
+  } else {
     clearRemoteControlAbsoluteSource(TANK_ABSOLUTE_SOURCE)
-    return
   }
 
-  const right = joystickState.right
-  const left = joystickState.left
+  if (profile === 'apache' && joystickActive) {
+    const right = joystickState.right
+    const movementSpeed = computeRadialIntensity(right.distance)
+    const movementDirection =
+      movementSpeed > 0 ? Math.atan2(right.normalizedY, right.normalizedX) : null
 
-  const wagonSpeed = computeRadialIntensity(right.distance)
-  const wagonDirection = wagonSpeed > 0 ? Math.atan2(right.normalizedY, right.normalizedX) : null
-
-  const turretTurnFactor = computeRadialIntensity(left.distance)
-  const turretDirection =
-    turretTurnFactor > 0 ? Math.atan2(left.normalizedY, left.normalizedX) : null
-
-  setRemoteControlAbsolute(TANK_ABSOLUTE_SOURCE, {
-    wagonDirection,
-    wagonSpeed,
-    turretDirection,
-    turretTurnFactor
-  })
+    if (movementDirection !== null) {
+      setRemoteControlAbsolute(APACHE_ABSOLUTE_SOURCE, {
+        wagonDirection: movementDirection,
+        wagonSpeed: movementSpeed,
+        turretDirection: null,
+        turretTurnFactor: 0
+      })
+    } else {
+      clearRemoteControlAbsoluteSource(APACHE_ABSOLUTE_SOURCE)
+    }
+  } else {
+    clearRemoteControlAbsoluteSource(APACHE_ABSOLUTE_SOURCE)
+  }
 }
 
 function applyMappingForSide(side, mapping) {
@@ -344,12 +370,7 @@ function applyJoystickMappings(force = false, profileOverride = null) {
   const profile = profileOverride !== null ? profileOverride : determineCurrentProfile()
   updateContainerSelectionVisibility(profile)
   updateTankReloadIndicator(profile)
-
-  if (profile === 'tank') {
-    updateTankAbsoluteControls()
-  } else {
-    clearRemoteControlAbsoluteSource(TANK_ABSOLUTE_SOURCE)
-  }
+  updateAbsoluteControls(profile)
 
   if (!force && profile === lastProfile) {
     return
@@ -443,7 +464,7 @@ function resetJoystick(side) {
   clearRemoteControlSource(HOLD_SOURCES[side])
   clearTapState(side)
   clearRemoteControlSource(TAP_SOURCES[side])
-  updateTankAbsoluteControls()
+  updateAbsoluteControls()
 }
 
 function startProfileWatcher() {
@@ -549,7 +570,7 @@ function handlePointerMove(side, event, fromDown = false) {
   if (isActive || state.activeActions.size || fromDown) {
     applyJoystickMappings(true)
   } else {
-    updateTankAbsoluteControls()
+    updateAbsoluteControls()
   }
 }
 
