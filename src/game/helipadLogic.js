@@ -42,28 +42,37 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
         const distance = Math.hypot(heliCenterX - helipadCenterX, heliCenterY - helipadCenterY)
         const landingRadius = TILE_SIZE * 1.2
 
-        if (distance <= landingRadius) {
-          if (heli.flightState !== 'grounded') {
-            heli.manualFlightState = 'land'
-          }
-          if (heli.flightState === 'grounded') {
-            heli.x = helipadCenterX - TILE_SIZE / 2
-            heli.y = helipadCenterY - TILE_SIZE / 2
-            heli.tileX = Math.floor(heli.x / TILE_SIZE)
-            heli.tileY = Math.floor(heli.y / TILE_SIZE)
+        const landingRequested = heli.helipadLandingRequested && (!heli.helipadTargetId || heli.helipadTargetId === helipad.id)
 
-            if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
-              const refuelRate = heli.maxGas / 4000
-              const transfer = Math.min(refuelRate * delta, heli.maxGas - heli.gas, helipad.fuel)
-              if (transfer > 0) {
-                heli.gas = Math.min(heli.maxGas, heli.gas + transfer)
-                helipad.fuel = Math.max(0, helipad.fuel - transfer)
-                heli.refuelingAtHelipad = true
+        if (distance <= landingRadius) {
+          if (landingRequested) {
+            if (heli.flightState !== 'grounded') {
+              heli.autoHoldAltitude = false
+              heli.manualFlightState = 'land'
+            }
+            if (heli.flightState === 'grounded') {
+              heli.x = helipadCenterX - TILE_SIZE / 2
+              heli.y = helipadCenterY - TILE_SIZE / 2
+              heli.tileX = Math.floor(heli.x / TILE_SIZE)
+              heli.tileY = Math.floor(heli.y / TILE_SIZE)
+
+              if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
+                const refuelRate = heli.maxGas / 4000
+                const transfer = Math.min(refuelRate * delta, heli.maxGas - heli.gas, helipad.fuel)
+                if (transfer > 0) {
+                  heli.gas = Math.min(heli.maxGas, heli.gas + transfer)
+                  helipad.fuel = Math.max(0, helipad.fuel - transfer)
+                  heli.refuelingAtHelipad = true
+                } else {
+                  heli.refuelingAtHelipad = false
+                }
               } else {
                 heli.refuelingAtHelipad = false
               }
-            } else {
-              heli.refuelingAtHelipad = false
+
+              heli.helipadLandingRequested = false
+              heli.autoHoldAltitude = false
+              heli.helipadTargetId = helipad.id
             }
           }
         } else if (heli.refuelingAtHelipad) {

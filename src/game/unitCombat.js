@@ -105,6 +105,24 @@ function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileTy
   }
 }
 
+function getApacheTargetCenter(target) {
+  if (!target) {
+    return null
+  }
+
+  if (target.tileX !== undefined) {
+    return {
+      x: target.x + TILE_SIZE / 2,
+      y: target.y + TILE_SIZE / 2
+    }
+  }
+
+  return {
+    x: (target.x + (target.width || 1) / 2) * TILE_SIZE,
+    y: (target.y + (target.height || 1) / 2) * TILE_SIZE
+  }
+}
+
 /**
  * Common combat logic helper - handles movement and pathfinding
  */
@@ -945,42 +963,82 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
 }
 
 function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
-  if (unit.target && unit.target.health > 0) {
-    const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.ROCKET
+  if (!unit.target || unit.target.health <= 0) {
+    unit.volleyState = null
+    unit.flightPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? null : unit.flightPlan
+    return
+  }
 
-    const { distance, targetCenterX, targetCenterY } = handleTankMovement(
-      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
-    )
+  if (unit.remoteControlActive) {
+    return
+  }
 
-    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
-    const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
-    if (distance <= effectiveRange && canAttack) {
-      if (!unit.volleyState) {
-        const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
-        if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-          if (unit.canFire !== false) {
-            unit.volleyState = {
-              leftRemaining: 4,
-              rightRemaining: 4,
-              lastRocketTime: 0,
-              delay: 120,
-              nextSide: 'left'
-            }
+  const targetCenter = getApacheTargetCenter(unit.target)
+  if (!targetCenter) {
+    unit.volleyState = null
+    return
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const dx = targetCenter.x - unitCenterX
+  const dy = targetCenter.y - unitCenterY
+  const distance = Math.hypot(dx, dy)
+
+  const destTile = {
+    x: Math.floor(targetCenter.x / TILE_SIZE),
+    y: Math.floor(targetCenter.y / TILE_SIZE)
+  }
+
+  const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+  const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+
+  unit.autoHoldAltitude = true
+  if (unit.flightState === 'grounded') {
+    unit.manualFlightState = 'takeoff'
+  }
+
+  if (distance > effectiveRange * 0.8 && !unit.helipadLandingRequested) {
+    const currentPlan = unit.flightPlan
+    const needsPlan = !currentPlan || currentPlan.mode !== 'combat' ||
+      Math.hypot(currentPlan.x - targetCenter.x, currentPlan.y - targetCenter.y) > TILE_SIZE * 0.5
+
+    if (needsPlan) {
+      unit.flightPlan = {
+        x: targetCenter.x,
+        y: targetCenter.y,
+        stopRadius: TILE_SIZE * 0.25,
+        mode: 'combat',
+        followTargetId: unit.target.id || null,
+        destinationTile: destTile
+      }
+      unit.moveTarget = destTile
+    }
+  }
+
+  if (distance <= effectiveRange && canAttack) {
+    if (!unit.volleyState) {
+      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
+      if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
+        if (unit.canFire !== false) {
+          unit.volleyState = {
+            leftRemaining: 4,
+            rightRemaining: 4,
+            lastRocketTime: 0,
+            delay: 120,
+            nextSide: 'left'
           }
         }
       }
-
-      if (unit.volleyState) {
-        const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenterX, targetCenterY, units, mapGrid)
-        if (volleyComplete) {
-          unit.lastShotTime = now
-        }
-      }
-    } else {
-      unit.volleyState = null
     }
-  }
-  if (!unit.target || unit.target.health <= 0) {
+
+    if (unit.volleyState) {
+      const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenter.x, targetCenter.y, units, mapGrid)
+      if (volleyComplete) {
+        unit.lastShotTime = now
+      }
+    }
+  } else {
     unit.volleyState = null
   }
 }

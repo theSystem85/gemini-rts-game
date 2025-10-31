@@ -200,6 +200,12 @@ function handleApacheRemoteControl(unit, params) {
   unit.remoteControlActive = remoteActive
 
   if (remoteActive) {
+    unit.flightPlan = null
+    unit.helipadLandingRequested = false
+    unit.autoHoldAltitude = !descendActive
+  }
+
+  if (remoteActive) {
     unit.path = []
     unit.moveTarget = null
   }
@@ -211,11 +217,14 @@ function handleApacheRemoteControl(unit, params) {
   if (ascendActive) {
     unit.manualFlightHoverRequested = true
     unit.manualFlightState = 'takeoff'
+    unit.autoHoldAltitude = true
   } else if (descendActive) {
     unit.manualFlightHoverRequested = false
     unit.manualFlightState = 'land'
+    unit.autoHoldAltitude = false
   } else if (unit.manualFlightHoverRequested && unit.flightState !== 'grounded') {
     unit.manualFlightState = 'hover'
+    unit.autoHoldAltitude = true
   } else if (!remoteActive && unit.flightState === 'grounded') {
     unit.manualFlightHoverRequested = false
     unit.manualFlightState = 'auto'

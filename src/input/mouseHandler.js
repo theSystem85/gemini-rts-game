@@ -968,6 +968,7 @@ export class MouseHandler {
     // PRIORITY 1: Check for refinery unload command if harvesters are already selected
     if (selectedUnits.length > 0) {
       const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
+      const hasSelectedApaches = commandableUnits.some(unit => unit.type === 'apache')
       const hasSelectedHarvesters = commandableUnits.some(unit => unit.type === 'harvester')
 
       if (hasSelectedHarvesters) {
@@ -1142,6 +1143,23 @@ export class MouseHandler {
               tileX >= building.x && tileX < building.x + building.width &&
               tileY >= building.y && tileY < building.y + building.height) {
             unitCommands.handleGasStationRefillCommand(commandableUnits, building, mapGrid)
+            return
+          }
+        }
+      }
+
+      if (
+        hasSelectedApaches &&
+        commandableUnits.every(unit => unit.type === 'apache') &&
+        gameState.buildings && Array.isArray(gameState.buildings)
+      ) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'helipad' &&
+              building.owner === gameState.humanPlayer &&
+              building.health > 0 &&
+              tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height) {
+            unitCommands.handleApacheHelipadCommand(commandableUnits, building, mapGrid)
             return
           }
         }
