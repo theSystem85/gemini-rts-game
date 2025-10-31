@@ -11,16 +11,40 @@ import { gameState } from '../gameState.js'
 import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 
 let lastAutoFocusUnitId = null
+let autoFocusSuppressed = false
+let autoFocusResumeArmed = false
+
+export function suspendRemoteControlAutoFocus() {
+  if (
+    !gameState.cameraFollowUnitId ||
+    gameState.cameraFollowUnitId !== lastAutoFocusUnitId
+  ) {
+    return
+  }
+
+  autoFocusSuppressed = true
+  autoFocusResumeArmed = false
+  lastAutoFocusUnitId = null
+  gameState.cameraFollowUnitId = null
+}
 
 function ensureAutoFocusForRemoteControl(mapGrid) {
   if (!selectedUnits || selectedUnits.length !== 1) {
     lastAutoFocusUnitId = null
+    autoFocusSuppressed = false
+    autoFocusResumeArmed = false
     return
   }
 
   const [unit] = selectedUnits
   if (!unit) {
     lastAutoFocusUnitId = null
+    autoFocusSuppressed = false
+    autoFocusResumeArmed = false
+    return
+  }
+
+  if (autoFocusSuppressed) {
     return
   }
 
@@ -128,9 +152,24 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     rawTurretTurnFactor > 0
 
   if (remoteControlEngaged) {
-    ensureAutoFocusForRemoteControl(mapGrid)
-  } else if (!gameState.cameraFollowUnitId) {
-    lastAutoFocusUnitId = null
+    if (autoFocusSuppressed && autoFocusResumeArmed) {
+      autoFocusSuppressed = false
+      autoFocusResumeArmed = false
+    }
+
+    if (!autoFocusSuppressed) {
+      ensureAutoFocusForRemoteControl(mapGrid)
+    }
+  } else {
+    if (autoFocusSuppressed) {
+      autoFocusResumeArmed = true
+    }
+
+    if (!gameState.cameraFollowUnitId) {
+      lastAutoFocusUnitId = null
+      autoFocusSuppressed = false
+      autoFocusResumeArmed = false
+    }
   }
 
   selectedUnits.forEach(unit => {

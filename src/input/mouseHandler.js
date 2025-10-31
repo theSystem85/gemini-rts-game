@@ -15,6 +15,7 @@ import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
+import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
 
 export class MouseHandler {
   constructor() {
@@ -1454,6 +1455,18 @@ export class MouseHandler {
         pointerIds,
         lastCenter: center
       }
+      suspendRemoteControlAutoFocus()
+      pointerIds.forEach(id => {
+        const state = activePointers.get(id)
+        if (state) {
+          state.skipTapAfterPan = true
+          state.leftActive = false
+        }
+      })
+      this.isSelecting = false
+      gameState.selectionActive = false
+      this.wasDragging = false
+      this.attackGroupHandler.isAttackGroupSelecting = false
       activePointers.forEach(cancelLongPress)
       const synthetic = this.createSyntheticMouseEventFromCoords(gameCanvas, center.x, center.y, 2)
       this.handleRightMouseDown(synthetic, gameCanvas, cursorManager)
@@ -1475,6 +1488,10 @@ export class MouseHandler {
       if (!this.twoFingerPan) return
       const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 2)
       this.handleRightMouseUp(synthetic, units, factories, selectedUnits, selectionManager, cursorManager)
+      const endedTouch = activePointers.get(event.pointerId)
+      if (endedTouch) {
+        endedTouch.skipTapAfterPan = true
+      }
       const remainingPointerId = this.twoFingerPan.pointerIds.find(id => id !== event.pointerId && activePointers.has(id))
       this.twoFingerPan = null
       if (remainingPointerId) {
@@ -1485,6 +1502,7 @@ export class MouseHandler {
           remaining.leftActive = false
           remaining.rightActive = false
           remaining.longPressFired = false
+          remaining.skipTapAfterPan = true
           startLongPress(remaining)
         }
       }
@@ -1503,7 +1521,8 @@ export class MouseHandler {
         leftActive: false,
         rightActive: false,
         longPressFired: false,
-        longPressTimer: null
+        longPressTimer: null,
+        skipTapAfterPan: false
       }
       activePointers.set(event.pointerId, touchState)
       startLongPress(touchState)
@@ -1529,7 +1548,7 @@ export class MouseHandler {
       }
 
       const movement = Math.hypot(event.clientX - touchState.startX, event.clientY - touchState.startY)
-      if (!touchState.longPressFired && !touchState.leftActive && movement > 8) {
+      if (!touchState.skipTapAfterPan && !touchState.longPressFired && !touchState.leftActive && movement > 8) {
         cancelLongPress(touchState)
         touchState.leftActive = true
         const { worldX, worldY } = getWorldPosition(event)
@@ -1567,7 +1586,7 @@ export class MouseHandler {
       } else if (touchState.longPressFired) {
         const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 2)
         this.handleRightMouseUp(synthetic, units, factories, selectedUnits, selectionManager, cursorManager)
-      } else {
+      } else if (!touchState.skipTapAfterPan) {
         const { worldX, worldY } = getWorldPosition(event)
         const synthetic = this.createSyntheticMouseEvent(event, gameCanvas, 0)
         if (!touchState.leftActive) {
