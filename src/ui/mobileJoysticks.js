@@ -108,6 +108,9 @@ function determineCurrentProfile() {
     return null
   }
 
+  if (unit.type === 'apache') {
+    return 'helicopter'
+  }
   return isTurretTankUnitType(unit.type) ? 'tank' : 'vehicle'
 }
 
@@ -121,6 +124,9 @@ function getSelectedTankUnit() {
     return null
   }
 
+  if (unit.type === 'apache') {
+    return unit
+  }
   return isTurretTankUnitType(unit.type) ? unit : null
 }
 

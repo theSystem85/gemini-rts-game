@@ -16,6 +16,18 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
   // IMMEDIATE RESPONSE: Check for units that just ran out of gas completely
   handleEmergencyFuelRequests(tankers, units, gameState)
 
+  const helipadsByOwner = new Map()
+  if (Array.isArray(gameState.buildings)) {
+    gameState.buildings.forEach(building => {
+      if (building.type === 'helipad' && building.health > 0 && typeof building.fuel === 'number') {
+        if (!helipadsByOwner.has(building.owner)) {
+          helipadsByOwner.set(building.owner, [])
+        }
+        helipadsByOwner.get(building.owner).push(building)
+      }
+    })
+  }
+
   const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
 
   tankers.forEach(tanker => {
@@ -255,6 +267,53 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       tanker.alertActiveService = true
     }
     tanker._alertWasServing = isCurrentlyServing
+
+    const ownerHelipads = helipadsByOwner.get(tanker.owner)
+    if (!ownerHelipads || ownerHelipads.length === 0) {
+      return
+    }
+
+    if (!tanker.supplyGas || tanker.supplyGas <= 0) {
+      return
+    }
+
+    ownerHelipads.forEach(helipad => {
+      if (typeof helipad.maxFuel !== 'number' || helipad.maxFuel <= 0) {
+        return
+      }
+      if (helipad.fuel >= helipad.maxFuel) {
+        return
+      }
+
+      const helipadCenterX = helipad.x + helipad.width / 2
+      const helipadCenterY = helipad.y + helipad.height / 2
+      const distance = Math.hypot(helipadCenterX - tanker.tileX, helipadCenterY - tanker.tileY)
+      if (distance > SERVICE_SERVING_RANGE) {
+        return
+      }
+
+      const maxSupply = tanker.maxSupplyGas || TANKER_SUPPLY_CAPACITY
+      const transferRate = maxSupply / GAS_REFILL_TIME
+      const amountNeeded = helipad.maxFuel - helipad.fuel
+      const transfer = Math.min(transferRate * delta, amountNeeded, tanker.supplyGas)
+      if (transfer <= 0) {
+        return
+      }
+
+      helipad.fuel += transfer
+      if (helipad.fuel >= helipad.maxFuel) {
+        helipad.fuel = helipad.maxFuel
+      }
+
+      if (typeof helipad.maxFuel === 'number' && helipad.maxFuel > 0) {
+        helipad.needsRefuel = helipad.fuel <= helipad.maxFuel * 0.1
+      }
+
+      tanker.supplyGas -= transfer
+      if (tanker.supplyGas < 0) {
+        tanker.supplyGas = 0
+      }
+    })
   })
 })
 
@@ -344,6 +403,7 @@ function handleEmergencyFuelRequests(tankers, units, gameState) {
       }
     })
   })
+})
 }
 
 function handleKamikazeBehavior(tanker, units, gameState) {

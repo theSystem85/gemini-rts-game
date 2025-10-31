@@ -53,6 +53,9 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
   }
 
   units.forEach(unit => {
+    if (unit.isAirUnit && unit.airborne) {
+      return
+    }
     const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (
@@ -98,6 +101,10 @@ export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) 
 export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
   if (!occupancyMap) return
 
+  if (unit.isAirUnit && unit.airborne) {
+    return
+  }
+
   // Remove occupancy from previous position (using center coordinates)
   if (
     prevTileY >= 0 &&
@@ -128,6 +135,9 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
 
 export function removeUnitOccupancy(unit, occupancyMap) {
   if (!occupancyMap) return
+  if (unit.isAirUnit && unit.airborne) {
+    return
+  }
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
   const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
   if (
@@ -719,6 +729,10 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
   const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
+  if (actualType === 'apache') {
+    unit.isAirUnit = true
+  }
+
   unit.crew = { driver: true, commander: true }
 
   if (fullCrewTanks.includes(actualType)) {
@@ -738,6 +752,49 @@ export function createUnit(factory, unitType, x, y, options = {}) {
 
   if (actualType === 'howitzer') {
     unit.isHowitzer = true
+  }
+
+  if (actualType === 'apache') {
+    unit.flightState = 'grounded'
+    unit.altitude = 0
+    unit.targetAltitude = 0
+    unit.altitudeVelocity = 0
+    unit.maxAltitude = unitProps.maxAltitude || 80
+    unit.takeoffDuration = unitProps.takeoffDuration || 1400
+    unit.landingDuration = unitProps.landingDuration || 1200
+    unit.rotor = {
+      speed: unitProps.rotorIdleSpeed || 0.2,
+      targetSpeed: unitProps.rotorIdleSpeed || 0.2,
+      idleSpeed: unitProps.rotorIdleSpeed || 0.2,
+      flightSpeed: unitProps.rotorFlightSpeed || 1.0,
+      phase: 0
+    }
+    unit.rotorAcceleration = 0.0015
+    unit.rotorDeceleration = 0.001
+    unit.airborne = false
+    unit.shadowOffset = 0
+    unit.shadowScale = 1
+    unit.strafeSpeed = unitProps.strafeSpeed || 0.35
+    unit.dodgeCooldown = unitProps.dodgeCooldown || 1500
+    unit.dodgeDistance = unitProps.dodgeDistance || 18
+    unit.dodgeDuration = unitProps.dodgeDuration || 280
+    unit.lastDodgeTime = 0
+    unit.dodgeActive = false
+    unit.dodgeVector = { x: 0, y: 0 }
+    unit.dodgeStartTime = 0
+    unit.manualFlightInput = {
+      forward: 0,
+      strafe: 0,
+      turn: 0,
+      vertical: 0
+    }
+    unit.flightCommand = null
+    unit.flightTarget = null
+    unit.hovering = false
+    unit.apacheFireState = null
+    unit.rotorAnchor = { x: 31, y: 30 }
+    unit.landingPadTarget = null
+    unit.tiltState = 'neutral'
   }
 
   if (actualType === 'ambulance') {

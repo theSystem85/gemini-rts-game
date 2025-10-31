@@ -49,6 +49,28 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       bullet.startTime = now
     }
 
+    if (!bullet.apacheDodgeChecked && bullet.target && bullet.target.type === 'apache') {
+      bullet.apacheDodgeChecked = true
+      const heli = bullet.target
+      if (heli && heli.health > 0 && !heli.dodgeActive) {
+        const cooldown = heli.dodgeCooldown || 1500
+        if (!heli.lastDodgeTime || now - heli.lastDodgeTime >= cooldown) {
+          if (Math.random() < 0.6) {
+            const speed = Math.hypot(bullet.vx || 0, bullet.vy || 0) || bullet.speed || 1
+            const normX = (bullet.vx || 0) / speed
+            const normY = (bullet.vy || 0) / speed
+            const side = Math.random() < 0.5 ? 1 : -1
+            const perpX = -normY * side
+            const perpY = normX * side
+            heli.dodgeVector = { x: perpX, y: perpY }
+            heli.dodgeActive = true
+            heli.dodgeStartTime = now
+            heli.lastDodgeTime = now
+          }
+        }
+      }
+    }
+
     // Ballistic projectile handling: rocket goes straight up then switches to homing
     let skipStandardMotion = false
     if (bullet.parabolic) {

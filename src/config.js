@@ -639,7 +639,8 @@ export let UNIT_COSTS = {
   ambulance: 500,
   tankerTruck: 300,
   recoveryTank: 3000,
-  howitzer: HOWITZER_COST
+  howitzer: HOWITZER_COST,
+  apache: 3000
 }
 
 // Unit properties
@@ -728,6 +729,22 @@ export let UNIT_PROPERTIES = {
     turretRotationSpeed: 0.04,
     accelerationMultiplier: 0.75,
     armor: 2
+  },
+  apache: {
+    health: 36,
+    maxHealth: 36,
+    speed: 0.5,
+    rotationSpeed: 0.08,
+    turretRotationSpeed: 0,
+    maxAltitude: 80,
+    takeoffDuration: 1400,
+    landingDuration: 1200,
+    rotorIdleSpeed: 0.2,
+    rotorFlightSpeed: 1.0,
+    strafeSpeed: 0.35,
+    dodgeCooldown: 1500,
+    dodgeDistance: 18,
+    dodgeDuration: 280
   }
 }
 
@@ -850,7 +867,8 @@ export let UNIT_TYPE_COLORS = {
   ambulance: '#00FFFF',   // Dark red
   tankerTruck: '#FFA500',
   recoveryTank: '#FFD700', // Gold
-  howitzer: '#D2691E'     // Chocolate
+  howitzer: '#D2691E',    // Chocolate
+  apache: '#556B2F'       // Dark olive green
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
@@ -888,7 +906,7 @@ export function setGasRefillCost(value) {
   GAS_REFILL_COST = value
 }
 
-export let HELIPAD_FUEL_CAPACITY = 1200
+export let HELIPAD_FUEL_CAPACITY = 14400
 
 export function setHelipadFuelCapacity(value) {
   HELIPAD_FUEL_CAPACITY = value
@@ -907,7 +925,11 @@ const REMOTE_CONTROL_ALLOWED_ACTIONS = [
   'turnRight',
   'turretLeft',
   'turretRight',
-  'fire'
+  'fire',
+  'ascend',
+  'descend',
+  'strafeLeft',
+  'strafeRight'
 ]
 
 const TURRET_TANK_TYPES = new Set([
@@ -951,6 +973,23 @@ const DEFAULT_VEHICLE_JOYSTICK_MAPPING = {
     left: ['turnLeft'],
     right: ['turnRight'],
     tap: []
+  }
+}
+
+const DEFAULT_HELICOPTER_JOYSTICK_MAPPING = {
+  left: {
+    up: ['ascend'],
+    down: ['descend'],
+    left: ['strafeLeft'],
+    right: ['strafeRight'],
+    tap: []
+  },
+  right: {
+    up: ['forward'],
+    down: ['backward'],
+    left: ['turnLeft'],
+    right: ['turnRight'],
+    tap: ['fire']
   }
 }
 
@@ -1028,6 +1067,7 @@ function parseJoystickMappingInput(value, fallback) {
 
 export let MOBILE_TANK_JOYSTICK_MAPPING = cloneJoystickMapping(DEFAULT_TANK_JOYSTICK_MAPPING)
 export let MOBILE_VEHICLE_JOYSTICK_MAPPING = cloneJoystickMapping(DEFAULT_VEHICLE_JOYSTICK_MAPPING)
+export let MOBILE_HELICOPTER_JOYSTICK_MAPPING = cloneJoystickMapping(DEFAULT_HELICOPTER_JOYSTICK_MAPPING)
 
 export function setMobileTankJoystickMapping(value) {
   MOBILE_TANK_JOYSTICK_MAPPING = parseJoystickMappingInput(value, DEFAULT_TANK_JOYSTICK_MAPPING)
@@ -1035,6 +1075,10 @@ export function setMobileTankJoystickMapping(value) {
 
 export function setMobileVehicleJoystickMapping(value) {
   MOBILE_VEHICLE_JOYSTICK_MAPPING = parseJoystickMappingInput(value, DEFAULT_VEHICLE_JOYSTICK_MAPPING)
+}
+
+export function setMobileHelicopterJoystickMapping(value) {
+  MOBILE_HELICOPTER_JOYSTICK_MAPPING = parseJoystickMappingInput(value, DEFAULT_HELICOPTER_JOYSTICK_MAPPING)
 }
 
 export function getMobileTankJoystickMapping() {
@@ -1045,8 +1089,18 @@ export function getMobileVehicleJoystickMapping() {
   return MOBILE_VEHICLE_JOYSTICK_MAPPING
 }
 
+export function getMobileHelicopterJoystickMapping() {
+  return MOBILE_HELICOPTER_JOYSTICK_MAPPING
+}
+
 export function getMobileJoystickMapping(profile) {
-  return profile === 'tank' ? MOBILE_TANK_JOYSTICK_MAPPING : MOBILE_VEHICLE_JOYSTICK_MAPPING
+  if (profile === 'tank') {
+    return MOBILE_TANK_JOYSTICK_MAPPING
+  }
+  if (profile === 'helicopter') {
+    return MOBILE_HELICOPTER_JOYSTICK_MAPPING
+  }
+  return MOBILE_VEHICLE_JOYSTICK_MAPPING
 }
 
 export function isTurretTankUnitType(unitType) {
@@ -1063,7 +1117,8 @@ export let UNIT_GAS_PROPERTIES = {
   howitzer: { tankSize: 1900, consumption: 450 },
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
   ambulance: { tankSize: 75, consumption: 25 },
-  tankerTruck: { tankSize: 700, consumption: 150 }
+  tankerTruck: { tankSize: 700, consumption: 150 },
+  apache: { tankSize: 4800, consumption: 220 }
 }
 
 const EXPORTED_CONFIG_VARIABLES = [

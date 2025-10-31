@@ -7,6 +7,10 @@ const REMOTE_CONTROL_ACTIONS = [
   'turnRight',
   'turretLeft',
   'turretRight',
+  'strafeLeft',
+  'strafeRight',
+  'ascend',
+  'descend',
   'fire'
 ]
 

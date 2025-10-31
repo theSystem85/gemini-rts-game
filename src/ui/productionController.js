@@ -10,7 +10,7 @@ import { playSound } from '../sound.js'
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'apache', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -54,6 +54,9 @@ export class ProductionController {
     const hasRadar = gameState.buildings.some(
       b => b.type === 'radarStation' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasHelipad = gameState.buildings.some(
+      b => b.type === 'helipad' && b.owner === gameState.humanPlayer && b.health > 0
+    )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
 
     unitButtons.forEach(button => {
@@ -74,6 +77,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Workshop'
+        }
+      } else if (unitType === 'apache') {
+        if (hasVehicleFactory && hasHelipad) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Helipad'
         }
       } else if (unitType === 'howitzer') {
         if (hasVehicleFactory && hasRadar) {

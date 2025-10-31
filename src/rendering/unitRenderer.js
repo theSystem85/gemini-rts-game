@@ -9,12 +9,14 @@ import { renderHowitzerWithImage, isHowitzerImageLoaded } from './howitzerImageR
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
+import { renderApacheWithImage, preloadApacheImages } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
   constructor() {
     this.repairIcon = null
     this.loadRepairIcon()
+    preloadApacheImages()
   }
 
   loadRepairIcon() {
@@ -27,6 +29,11 @@ export class UnitRenderer {
   }
 
   renderUnitBody(ctx, unit, centerX, centerY) {
+    if (unit.type === 'apache') {
+      if (renderApacheWithImage(ctx, unit, centerX, centerY)) {
+        return
+      }
+    }
     // Use consistent colors for unit types regardless of owner
     ctx.fillStyle = UNIT_TYPE_COLORS[unit.type] || '#0000FF' // Default to blue if type not found
 
@@ -68,6 +75,10 @@ export class UnitRenderer {
 
     // Ambulances don't have turrets
     if (unit.type === 'ambulance') {
+      return
+    }
+
+    if (unit.type === 'apache') {
       return
     }
 

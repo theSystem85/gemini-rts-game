@@ -7,6 +7,7 @@ import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { getApacheRocketMounts } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 
@@ -211,6 +212,26 @@ const COMBAT_CONFIG = {
     COUNT: TANK_V3_BURST.COUNT,
     DELAY: TANK_V3_BURST.DELAY
   }
+}
+
+const APACHE_COMBAT = {
+  RANGE_TILES: 14,
+  FIRE_RATE: 4500,
+  BURST_COUNT: 8,
+  BURST_DELAY: 90,
+  ROCKET_SPEED: 7.5,
+  DAMAGE: 25,
+  EXPLOSION_RADIUS: TILE_SIZE * 0.9,
+  SPREAD_RADIUS: TILE_SIZE * 0.6
+}
+
+function canUnitAttackAir(unit) {
+  if (!unit) return false
+  return unit.type === 'rocketTank' || unit.type === 'apache'
+}
+
+function isAirTarget(target) {
+  return target && target.isAirUnit
 }
 
 /**
@@ -475,7 +496,11 @@ function processAttackQueue(unit, units, mapGrid) {
   }
 
   // Remove any dead targets from the queue first
-  unit.attackQueue = unit.attackQueue.filter(target => target && target.health > 0)
+  unit.attackQueue = unit.attackQueue.filter(target => {
+    if (!target || target.health <= 0) return false
+    if (isAirTarget(target) && !canUnitAttackAir(unit)) return false
+    return true
+  })
 
   // If queue is now empty, clear everything
   if (unit.attackQueue.length === 0) {
@@ -486,6 +511,9 @@ function processAttackQueue(unit, units, mapGrid) {
 
   // Helper function to initiate pathfinding to new target
   function setNewTargetWithPath(newTarget) {
+    if (isAirTarget(newTarget) && !canUnitAttackAir(unit)) {
+      return
+    }
     const oldTarget = unit.target
     unit.target = newTarget
 
@@ -653,6 +681,8 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'howitzer') {
       updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap)
+    } else if (unit.type === 'apache') {
+      updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
   })
 }, false)
@@ -661,6 +691,10 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
  * Updates standard tank combat
  */
 function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (unit.target && isAirTarget(unit.target) && !canUnitAttackAir(unit)) {
+    unit.target = null
+    return
+  }
   if (unit.target && unit.target.health > 0) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.STANDARD
 
@@ -684,6 +718,9 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
  * Updates tank-v2 combat with improved targeting and alert mode
  */
 function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (unit.target && isAirTarget(unit.target) && !canUnitAttackAir(unit)) {
+    unit.target = null
+  }
   // Alert mode: automatically scan for targets when no target is assigned
   // Skip alert mode if unit is retreating
   if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0) && !unit.isRetreating) {
@@ -697,6 +734,9 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Scan for enemy units within range
     units.forEach(potentialTarget => {
       if (potentialTarget.owner !== unit.owner && potentialTarget.health > 0) {
+        if (isAirTarget(potentialTarget) && !canUnitAttackAir(unit)) {
+          return
+        }
         const targetCenterX = potentialTarget.x + TILE_SIZE / 2
         const targetCenterY = potentialTarget.y + TILE_SIZE / 2
         const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
@@ -712,6 +752,9 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     if (gameState.buildings) {
       gameState.buildings.forEach(building => {
         if (building.owner !== unit.owner && building.health > 0) {
+          if (isAirTarget(building) && !canUnitAttackAir(unit)) {
+            return
+          }
           const buildingCenterX = building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2
           const buildingCenterY = building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2
           const distance = Math.hypot(buildingCenterX - unitCenterX, buildingCenterY - unitCenterY)
@@ -783,6 +826,10 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
  * Updates tank-v3 combat with aim-ahead feature
  */
 function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (unit.target && isAirTarget(unit.target) && !canUnitAttackAir(unit)) {
+    unit.target = null
+    return
+  }
   if (unit.target && unit.target.health > 0) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.STANDARD
 
@@ -855,6 +902,10 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
 
 function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
   if (!unit.target || unit.target.health <= 0) {
+    return
+  }
+  if (isAirTarget(unit.target)) {
+    unit.target = null
     return
   }
 
@@ -959,6 +1010,133 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
       const unitCenterY = unit.y + TILE_SIZE / 2
       const aimPoint = applyTargetingSpread(unitCenterX, unitCenterY, targetCenterX, targetCenterY, 'artillery', unit.type)
       fireHowitzerShell(unit, aimPoint, bullets, now)
+    }
+  }
+}
+
+function fireApacheRocket(unit, bullets, now, targetCenterX, targetCenterY) {
+  const fireState = unit.apacheFireState
+  if (!fireState) return
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const mounts = getApacheRocketMounts(unit, unitCenterX, unitCenterY)
+  const side = fireState.nextSide || 0
+  fireState.nextSide = side === 0 ? 1 : 0
+  fireState.podCounts = fireState.podCounts || [0, 0]
+  const podIndex = fireState.podCounts[side] || 0
+  fireState.podCounts[side] = podIndex + 1
+
+  const spawnBase = mounts[side] || mounts[0]
+  const direction = unit.direction || 0
+  const forwardX = Math.cos(direction)
+  const forwardY = Math.sin(direction)
+  const rightX = Math.cos(direction + Math.PI / 2)
+  const rightY = Math.sin(direction + Math.PI / 2)
+
+  const along = podIndex * TILE_SIZE * 0.12
+  const lateral = (side === 0 ? -1 : 1) * (TILE_SIZE * 0.04 + podIndex * TILE_SIZE * 0.015)
+  const spawnX = spawnBase.x + forwardX * along + rightX * lateral
+  const spawnY = spawnBase.y + forwardY * along + rightY * lateral
+
+  const spreadX = (Math.random() - 0.5) * APACHE_COMBAT.SPREAD_RADIUS
+  const spreadY = (Math.random() - 0.5) * APACHE_COMBAT.SPREAD_RADIUS
+  const aimX = targetCenterX + spreadX
+  const aimY = targetCenterY + spreadY
+  const dx = aimX - spawnX
+  const dy = aimY - spawnY
+  const distance = Math.hypot(dx, dy) || 1
+  const vx = (dx / distance) * APACHE_COMBAT.ROCKET_SPEED
+  const vy = (dy / distance) * APACHE_COMBAT.ROCKET_SPEED
+
+  const bullet = {
+    id: Date.now() + Math.random(),
+    x: spawnX,
+    y: spawnY,
+    speed: APACHE_COMBAT.ROCKET_SPEED,
+    baseDamage: APACHE_COMBAT.DAMAGE,
+    active: true,
+    shooter: unit,
+    homing: false,
+    vx,
+    vy,
+    target: unit.target,
+    targetPosition: { x: aimX, y: aimY },
+    startTime: now,
+    explosionRadius: APACHE_COMBAT.EXPLOSION_RADIUS,
+    apacheRocket: true
+  }
+
+  bullets.push(bullet)
+  playPositionalSound('shoot_rocket', spawnX, spawnY, 0.35)
+}
+
+function updateApacheCombat(unit, units, bullets, mapGrid, now) {
+  const target = unit.target
+  if (!target || target.health <= 0) {
+    unit.apacheFireState = null
+    unit.manualFireRequested = null
+    return
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  let targetCenterX
+  let targetCenterY
+  if (target.tileX !== undefined) {
+    targetCenterX = target.x + TILE_SIZE / 2
+    targetCenterY = target.y + TILE_SIZE / 2
+  } else {
+    targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
+    targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
+  }
+
+  const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
+  const range = APACHE_COMBAT.RANGE_TILES * TILE_SIZE
+
+  if (!unit.remoteControlActive && distance > range * 1.05) {
+    unit.apacheFireState = null
+    if (!unit.moveTarget) {
+      unit.moveTarget = { x: target.tileX || Math.floor(targetCenterX / TILE_SIZE), y: target.tileY || Math.floor(targetCenterY / TILE_SIZE) }
+    }
+    return
+  }
+
+  if (unit.altitude < 10) {
+    unit.apacheFireState = null
+    return
+  }
+
+  const canFire = unit.owner === gameState.humanPlayer || unit.allowedToAttack === true || unit.remoteControlActive
+  if (!canFire) {
+    unit.apacheFireState = null
+    return
+  }
+
+  if (!unit.apacheFireState) {
+    const ready = !unit.lastShotTime || now - unit.lastShotTime >= APACHE_COMBAT.FIRE_RATE || unit.manualFireRequested
+    if (ready && distance <= range) {
+      unit.apacheFireState = {
+        rocketsRemaining: APACHE_COMBAT.BURST_COUNT,
+        lastFireTime: 0,
+        nextSide: 0,
+        podCounts: [0, 0]
+      }
+    }
+  }
+
+  if (unit.apacheFireState && distance <= range) {
+    const state = unit.apacheFireState
+    if (state.rocketsRemaining > 0 && (state.lastFireTime === 0 || now - state.lastFireTime >= APACHE_COMBAT.BURST_DELAY)) {
+      fireApacheRocket(unit, bullets, now, targetCenterX, targetCenterY)
+      state.rocketsRemaining -= 1
+      state.lastFireTime = now
+      if (state.rocketsRemaining <= 0) {
+        unit.apacheFireState = null
+        unit.lastShotTime = now
+        unit.manualFireRequested = null
+      }
     }
   }
 }

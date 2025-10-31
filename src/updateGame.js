@@ -26,7 +26,7 @@ import { updateWreckPhysics } from './game/unitWreckManager.js'
 import { updateHospitalLogic } from './game/hospitalLogic.js'
 import { updateAmbulanceLogic } from './game/ambulanceSystem.js'
 import { updateGasStationLogic } from './game/gasStationLogic.js'
-import { updateHelipadLogic } from './game/helipadLogic.js'
+import { updateHelipadLogic, updateHelipadService } from './game/helipadLogic.js'
 import { updateTankerTruckLogic } from './game/tankerTruckLogic.js'
 import { updateRecoveryTankLogic } from './game/recoveryTankSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
@@ -98,6 +98,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateAmbulanceLogic(units, gameState, delta)
     updateGasStationLogic(units, gameState.buildings, gameState, delta)
     updateHelipadLogic(units, gameState.buildings, gameState, delta)
+    updateHelipadService(units, gameState.buildings, gameState, delta)
     updateTankerTruckLogic(units, gameState, delta)
     // Handle self-repair for level 3 units
     units.forEach(unit => {

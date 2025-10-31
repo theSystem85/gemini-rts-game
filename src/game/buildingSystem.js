@@ -159,24 +159,31 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
 
       if (building.forcedAttackTarget) {
         const t = building.forcedAttackTarget
-        if (t.health === undefined || t.health > 0) {
-          const tx = t.x + (t.width ? t.width * TILE_SIZE / 2 : 0)
-          const ty = t.y + (t.height ? t.height * TILE_SIZE / 2 : 0)
-          const dist = Math.hypot(tx - centerX, ty - centerY)
-          if (dist <= maxRange && dist >= minRange) {
-            closestEnemy = t
-            closestDistance = dist
-          } else if (dist > maxRange) {
+        if (t && t.isAirUnit && !(building.type === 'rocketTurret' || building.type === 'teslaCoil')) {
+          building.forcedAttackTarget = null
+        } else if (t) {
+          if (t.health === undefined || t.health > 0) {
+            const tx = t.x + (t.width ? t.width * TILE_SIZE / 2 : 0)
+            const ty = t.y + (t.height ? t.height * TILE_SIZE / 2 : 0)
+            const dist = Math.hypot(tx - centerX, ty - centerY)
+            if (dist <= maxRange && dist >= minRange) {
+              closestEnemy = t
+              closestDistance = dist
+            } else if (dist > maxRange) {
+              building.forcedAttackTarget = null
+            }
+          } else {
             building.forcedAttackTarget = null
           }
-        } else {
-          building.forcedAttackTarget = null
         }
       }
 
       if (!closestEnemy) {
         for (const unit of units) {
           if (unit.owner !== building.owner && unit.health > 0) {
+            if (unit.isAirUnit && !(building.type === 'rocketTurret' || building.type === 'teslaCoil')) {
+              continue
+            }
             const unitCenterX = unit.x + TILE_SIZE / 2
             const unitCenterY = unit.y + TILE_SIZE / 2
             const dx = unitCenterX - centerX
@@ -188,6 +195,10 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             }
           }
         }
+      }
+
+      if (closestEnemy && closestEnemy.isAirUnit && !(building.type === 'rocketTurret' || building.type === 'teslaCoil')) {
+        closestEnemy = null
       }
 
       // Update turret rotation for gun turrets and rocket turrets (continuous tracking)
@@ -334,6 +345,12 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
             // We already have closestEnemy from the shared enemy detection code above
 
             const firingTarget = closestEnemy || building.forcedAttackTarget
+            if (firingTarget && firingTarget.isAirUnit && !(building.type === 'rocketTurret' || building.type === 'teslaCoil')) {
+              if (building.forcedAttackTarget === firingTarget) {
+                building.forcedAttackTarget = null
+              }
+              return
+            }
             if (firingTarget) {
               // For gun turrets, target angle is already calculated in continuous tracking above
               const targetX = firingTarget.x + (firingTarget.width ? firingTarget.width * TILE_SIZE / 2 : TILE_SIZE / 2)

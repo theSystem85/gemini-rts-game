@@ -93,7 +93,14 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
       const unitCenterY = unit.y + TILE_SIZE / 2
       const distToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
       // Use tank range if tank, otherwise default to 6 tiles
-      const ATTACK_RANGE = (unit.type && unit.type.startsWith('tank')) ? 9 * TILE_SIZE : 6 * TILE_SIZE
+      let ATTACK_RANGE
+      if (unit.type && unit.type.startsWith('tank')) {
+        ATTACK_RANGE = 9 * TILE_SIZE
+      } else if (unit.type === 'apache') {
+        ATTACK_RANGE = 14 * TILE_SIZE
+      } else {
+        ATTACK_RANGE = 6 * TILE_SIZE
+      }
       if (distToTarget > ATTACK_RANGE) {
         // Only update if not already moving to target and throttle attack pathfinding to 3 seconds
         const targetTileX = unit.target.tileX !== undefined ? Math.floor(unit.target.x / TILE_SIZE) : unit.target.x
@@ -111,7 +118,7 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
             { x: unit.tileX, y: unit.tileY },
             { x: targetTileX, y: targetTileY },
             mapGrid,
-            occupancyMap
+            unit.type === 'apache' ? null : occupancyMap
           )
           if (path.length > 1) {
             unit.path = path.slice(1)
@@ -190,9 +197,8 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
         // For regular movement commands, use occupancy map for close range, ignore for long distance
         const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
         const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
-        const newPath = useOccupancyMap
-          ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
-          : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+        const occupancyForPath = unit.type === 'apache' ? null : (useOccupancyMap ? occupancyMap : null)
+        const newPath = findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyForPath)
 
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
@@ -234,7 +240,12 @@ export function updateSpawnExit(units, factories, mapGrid, occupancyMap) {
         unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
         const exitTile = findAdjacentTile(factory, mapGrid)
         if (exitTile) {
-          const exitPath = findPath({ x: unit.tileX, y: unit.tileY }, exitTile, mapGrid, occupancyMap)
+        const exitPath = findPath(
+          { x: unit.tileX, y: unit.tileY },
+          exitTile,
+          mapGrid,
+          unit.type === 'apache' ? null : occupancyMap
+        )
           if (exitPath && exitPath.length > 1) {
             unit.path = exitPath.slice(1)
           }

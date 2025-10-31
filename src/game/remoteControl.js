@@ -92,6 +92,49 @@ function aimTurretAtTarget(unit, target) {
   unit.turretShouldFollowMovement = false
 }
 
+function clampRemoteIntensity(value) {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+  if (value > 1) return 1
+  if (value < -1) return -1
+  return value
+}
+
+function updateApacheRemoteControl(unit, inputs, now) {
+  if (!unit.manualFlightInput) {
+    unit.manualFlightInput = { forward: 0, strafe: 0, turn: 0, vertical: 0 }
+  }
+
+  const forward = clampRemoteIntensity(inputs.forward)
+  const strafe = clampRemoteIntensity(inputs.strafe)
+  const turn = clampRemoteIntensity(inputs.turn)
+  const vertical = clampRemoteIntensity(inputs.vertical)
+
+  const hasMovementInput =
+    Math.abs(forward) > 0.05 ||
+    Math.abs(strafe) > 0.05 ||
+    Math.abs(turn) > 0.05 ||
+    Math.abs(vertical) > 0.05
+
+  if (hasMovementInput) {
+    unit.path = []
+    unit.moveTarget = null
+    unit.flightTarget = null
+    unit.flightCommand = null
+  }
+
+  unit.manualFlightInput.forward = forward
+  unit.manualFlightInput.strafe = strafe
+  unit.manualFlightInput.turn = turn
+  unit.manualFlightInput.vertical = vertical
+  unit.remoteControlActive = hasMovementInput
+
+  if (inputs.fire > 0.1) {
+    unit.manualFireRequested = now
+  }
+}
+
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
   const rc = gameState.remoteControl
   if (!rc) return
@@ -108,6 +151,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
   const turretLeftIntensity = rc.turretLeft || 0
   const turretRightIntensity = rc.turretRight || 0
   const fireIntensity = rc.fire || 0
+  const ascendIntensity = rc.ascend || 0
+  const descendIntensity = rc.descend || 0
+  const strafeLeftIntensity = rc.strafeLeft || 0
+  const strafeRightIntensity = rc.strafeRight || 0
   const rcAbsolute = gameState.remoteControlAbsolute || {}
   const rawWagonDirection =
     Number.isFinite(rcAbsolute.wagonDirection) ? rcAbsolute.wagonDirection : null
@@ -148,12 +195,25 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
     const absoluteMovementActive =
       hasTurret && rawWagonDirection !== null && rawWagonSpeed > 0
-    const hasMovementInput =
-      absoluteMovementActive ||
-      forwardIntensity > 0 ||
-      backwardIntensity > 0 ||
-      turnLeftIntensity > 0 ||
-      turnRightIntensity > 0
+    let hasMovementInput
+    if (unit.type === 'apache') {
+      const forward = forwardIntensity - backwardIntensity
+      const strafe = strafeRightIntensity - strafeLeftIntensity
+      const turn = turnRightIntensity - turnLeftIntensity
+      const vertical = ascendIntensity - descendIntensity
+      hasMovementInput =
+        Math.abs(forward) > 0 ||
+        Math.abs(strafe) > 0 ||
+        Math.abs(turn) > 0 ||
+        Math.abs(vertical) > 0
+    } else {
+      hasMovementInput =
+        absoluteMovementActive ||
+        forwardIntensity > 0 ||
+        backwardIntensity > 0 ||
+        turnLeftIntensity > 0 ||
+        turnRightIntensity > 0
+    }
     // Remote control requires an active commander
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.commander) {
       unit.remoteControlActive = false
@@ -166,13 +226,22 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       return
     }
 
-    // Cancel pathing when using remote control
+    if (unit.type === 'apache') {
+      updateApacheRemoteControl(unit, {
+        forward: forwardIntensity - backwardIntensity,
+        strafe: strafeRightIntensity - strafeLeftIntensity,
+        turn: turnRightIntensity - turnLeftIntensity,
+        vertical: ascendIntensity - descendIntensity,
+        fire: fireIntensity
+      }, now)
+      continue
+    }
+
     if (hasMovementInput) {
       unit.path = []
       unit.moveTarget = null
     }
 
-    // Track whether this unit is actively being moved via remote control
     unit.remoteControlActive = !!hasMovementInput
 
     // Adjust rotation of the wagon directly so movement aligns with it

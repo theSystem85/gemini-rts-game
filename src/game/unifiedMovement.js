@@ -34,6 +34,7 @@ import { updateUnitOccupancy, findPath } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -68,6 +69,298 @@ const MOVEMENT_CONFIG = {
 
 export const UNIT_COLLISION_MIN_DISTANCE = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
 
+const APACHE_WAYPOINT_THRESHOLD = TILE_SIZE * 0.45
+const APACHE_ROTATION_EASING = 0.08
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
+
+function clearApacheOccupancy(unit, occupancyMap) {
+  if (!occupancyMap || unit._apacheOccupancyCleared) {
+    return
+  }
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileY >= 0 && tileY < occupancyMap.length &&
+    tileX >= 0 && tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = Math.max(0, (occupancyMap[tileY][tileX] || 0) - 1)
+  }
+  unit._apacheOccupancyCleared = true
+}
+
+function restoreApacheOccupancy(unit, occupancyMap) {
+  if (!occupancyMap) return
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileY >= 0 && tileY < occupancyMap.length &&
+    tileX >= 0 && tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = (occupancyMap[tileY][tileX] || 0) + 1
+  }
+  unit._apacheOccupancyCleared = false
+}
+
+function updateApacheTilt(unit, forwardIntensity, strafeIntensity) {
+  const tiltThreshold = 0.15
+  if (forwardIntensity > tiltThreshold) {
+    unit.tiltState = 'forward'
+  } else if (forwardIntensity < -tiltThreshold) {
+    unit.tiltState = 'backward'
+  } else if (strafeIntensity > tiltThreshold) {
+    unit.tiltState = 'right'
+  } else if (strafeIntensity < -tiltThreshold) {
+    unit.tiltState = 'left'
+  } else {
+    unit.tiltState = 'neutral'
+  }
+}
+
+function updateApachePosition(unit, mapGrid, occupancyMap, now, units, gameState, factories) {
+  const delta = unit.lastApacheUpdate ? Math.max(16, now - unit.lastApacheUpdate) : 16
+  unit.lastApacheUpdate = now
+
+  unit.manualFlightInput = unit.manualFlightInput || { forward: 0, strafe: 0, turn: 0, vertical: 0 }
+
+  if (!unit.remoteControlActive) {
+    const damping = Math.max(0, 1 - delta / 220)
+    unit.manualFlightInput.forward *= damping
+    unit.manualFlightInput.strafe *= damping
+    unit.manualFlightInput.turn *= damping
+    if (Math.abs(unit.manualFlightInput.vertical) < 0.05) {
+      unit.manualFlightInput.vertical = 0
+    } else {
+      unit.manualFlightInput.vertical *= damping
+    }
+  }
+
+  const rotor = unit.rotor || { speed: 0, targetSpeed: 0, idleSpeed: 0.2, flightSpeed: 1.0, phase: 0 }
+  unit.rotor = rotor
+
+  const wantsMovement =
+    unit.remoteControlActive ||
+    (unit.path && unit.path.length > 0) ||
+    !!unit.flightCommand ||
+    !!unit.moveTarget ||
+    Math.abs(unit.manualFlightInput.forward) > 0.1 ||
+    Math.abs(unit.manualFlightInput.strafe) > 0.1 ||
+    unit.manualFlightInput.vertical > 0.1
+
+  const desiredRotorSpeed = wantsMovement ? (rotor.flightSpeed || 1.0) : (rotor.idleSpeed || 0.2)
+  rotor.targetSpeed = desiredRotorSpeed
+  const accel = unit.rotorAcceleration || 0.0015
+  const decel = unit.rotorDeceleration || accel
+  if (rotor.speed < rotor.targetSpeed) {
+    rotor.speed = Math.min(rotor.targetSpeed, rotor.speed + accel * delta)
+  } else if (rotor.speed > rotor.targetSpeed) {
+    rotor.speed = Math.max(rotor.targetSpeed, rotor.speed - decel * delta)
+  }
+  rotor.phase = (rotor.phase || 0) + rotor.speed * delta * 0.02
+  if (rotor.phase > Math.PI * 2) {
+    rotor.phase -= Math.PI * 2
+  }
+
+  // Determine altitude target
+  const manualVertical = unit.manualFlightInput.vertical
+  if (manualVertical > 0.2) {
+    unit.targetAltitude = unit.maxAltitude
+  } else if (manualVertical < -0.2) {
+    unit.targetAltitude = 0
+  } else if ((unit.path && unit.path.length > 0) || unit.flightCommand || unit.moveTarget) {
+    unit.targetAltitude = unit.maxAltitude
+  } else if (!unit.remoteControlActive && !unit.hovering) {
+    unit.targetAltitude = 0
+  }
+
+  // Handle state transitions
+  if (unit.targetAltitude > 1 && unit.flightState === 'grounded') {
+    unit.flightState = 'takingOff'
+    unit.takeoffStartTime = now
+  }
+  if (unit.flightState === 'airborne' && unit.targetAltitude <= 1 && !unit.remoteControlActive) {
+    unit.flightState = 'landing'
+    unit.landingStartTime = now
+  }
+  if (unit.flightState === 'landing' && unit.targetAltitude > 1) {
+    unit.flightState = 'airborne'
+  }
+
+  const ascendRate = unit.maxAltitude / Math.max(unit.takeoffDuration || 1400, 1)
+  const descendRate = unit.maxAltitude / Math.max(unit.landingDuration || 1200, 1)
+
+  if (unit.flightState === 'takingOff' || unit.targetAltitude > unit.altitude) {
+    unit.altitude = Math.min(unit.maxAltitude, unit.altitude + ascendRate * delta)
+    if (unit.altitude >= unit.maxAltitude * 0.95) {
+      unit.flightState = 'airborne'
+    }
+  } else if (unit.flightState === 'landing' || unit.targetAltitude < unit.altitude) {
+    unit.altitude = Math.max(0, unit.altitude - descendRate * delta)
+  }
+
+  if (unit.altitude > 4) {
+    clearApacheOccupancy(unit, occupancyMap)
+    unit.airborne = true
+  } else if (unit.flightState === 'grounded' || (unit.altitude <= 1 && unit.targetAltitude <= 1)) {
+    if (unit.airborne) {
+      restoreApacheOccupancy(unit, occupancyMap)
+    }
+    unit.airborne = false
+    unit.altitude = 0
+    unit.flightState = 'grounded'
+    if (!wantsMovement) {
+      rotor.targetSpeed = rotor.idleSpeed || 0.2
+    }
+  } else if (unit.flightState === 'landing' && occupancyMap) {
+    const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+    const onHelipad = unit.landingPadTarget &&
+      tileX >= unit.landingPadTarget.x && tileX < unit.landingPadTarget.x + unit.landingPadTarget.width &&
+      tileY >= unit.landingPadTarget.y && tileY < unit.landingPadTarget.y + unit.landingPadTarget.height
+    if (
+      tileY >= 0 && tileY < occupancyMap.length &&
+      tileX >= 0 && tileX < occupancyMap[0].length &&
+      occupancyMap[tileY][tileX] > 0 &&
+      !onHelipad
+    ) {
+      unit.targetAltitude = unit.maxAltitude
+      unit.flightState = 'airborne'
+    }
+  }
+
+  unit.shadowOffset = unit.altitude * 0.6
+  unit.shadowScale = 1 - Math.min(0.45, unit.altitude / Math.max(unit.maxAltitude * 2.2, 1))
+
+  let velocityX = 0
+  let velocityY = 0
+
+  if (unit.landingPadTarget && !unit.remoteControlActive) {
+    const landing = unit.landingPadTarget
+    const landingX = landing.x * TILE_SIZE + 50 - TILE_SIZE / 2
+    const landingY = landing.y * TILE_SIZE + 90 - TILE_SIZE / 2
+    if (unit.flightState !== 'grounded') {
+      unit.flightTarget = { x: landingX, y: landingY }
+      unit.targetAltitude = unit.maxAltitude
+    } else {
+      const snapStrength = 0.18
+      unit.x += (landingX - unit.x) * snapStrength
+      unit.y += (landingY - unit.y) * snapStrength
+    }
+  }
+
+  if (unit.dodgeActive) {
+    const progress = now - unit.dodgeStartTime
+    const duration = unit.dodgeDuration || 280
+    if (progress >= duration) {
+      unit.dodgeActive = false
+    } else {
+      const dodgeFactor = unit.dodgeDistance || 18
+      const dodgeSpeed = (dodgeFactor / duration) * delta
+      velocityX += unit.dodgeVector.x * dodgeSpeed
+      velocityY += unit.dodgeVector.y * dodgeSpeed
+    }
+  }
+
+  if (!unit.dodgeActive) {
+    const forwardInput = clamp(unit.manualFlightInput.forward || 0, -1, 1)
+    const strafeInput = clamp(unit.manualFlightInput.strafe || 0, -1, 1)
+    const turnInput = clamp(unit.manualFlightInput.turn || 0, -1, 1)
+
+    if (unit.remoteControlActive && Math.abs(turnInput) > 0.01) {
+      const turnSpeed = (unit.rotationSpeed || APACHE_ROTATION_EASING) * (delta / 16)
+      unit.direction = normalizeAngle((unit.direction || 0) + turnSpeed * turnInput)
+    }
+
+    if (unit.remoteControlActive) {
+      const forwardSpeed = (unit.speed || 0.5) * TILE_SIZE * (delta / 16) * forwardInput
+      const strafeSpeed = (unit.strafeSpeed || unit.speed || 0.5) * TILE_SIZE * (delta / 16) * strafeInput
+      const direction = unit.direction || 0
+      const forwardX = Math.cos(direction)
+      const forwardY = Math.sin(direction)
+      const rightX = Math.cos(direction + Math.PI / 2)
+      const rightY = Math.sin(direction + Math.PI / 2)
+      velocityX += forwardX * forwardSpeed + rightX * strafeSpeed
+      velocityY += forwardY * forwardSpeed + rightY * strafeSpeed
+      updateApacheTilt(unit, forwardInput, strafeInput)
+    } else {
+      // Autopilot movement using path/flight targets
+      if (unit.path && unit.path.length > 0) {
+        const next = unit.path[0]
+        const targetX = next.x * TILE_SIZE
+        const targetY = next.y * TILE_SIZE
+        const dx = targetX - unit.x
+        const dy = targetY - unit.y
+        const distance = Math.hypot(dx, dy)
+        if (distance < APACHE_WAYPOINT_THRESHOLD) {
+          unit.path.shift()
+          if (unit.path.length === 0 && !unit.remoteControlActive) {
+            unit.flightCommand = null
+            if (!unit.manualFlightInput.vertical) {
+              unit.targetAltitude = 0
+            }
+          }
+        } else {
+          const direction = Math.atan2(dy, dx)
+          const moveSpeed = (unit.speed || 0.5) * TILE_SIZE * (delta / 16)
+          velocityX += Math.cos(direction) * moveSpeed
+          velocityY += Math.sin(direction) * moveSpeed
+          unit.direction = smoothRotateTowardsAngle(unit.direction || 0, direction, (unit.rotationSpeed || APACHE_ROTATION_EASING) * (delta / 16))
+          const forwardBlend = clamp(distance / TILE_SIZE, -1, 1)
+          updateApacheTilt(unit, forwardBlend, 0)
+        }
+      } else if (unit.flightTarget) {
+        const targetX = unit.flightTarget.x
+        const targetY = unit.flightTarget.y
+        const dx = targetX - unit.x
+        const dy = targetY - unit.y
+        const distance = Math.hypot(dx, dy)
+        if (distance < TILE_SIZE * 0.3) {
+          unit.flightTarget = null
+          if (!unit.remoteControlActive) {
+            unit.targetAltitude = 0
+          }
+        } else {
+          const direction = Math.atan2(dy, dx)
+          const moveSpeed = (unit.speed || 0.5) * TILE_SIZE * (delta / 16)
+          velocityX += Math.cos(direction) * moveSpeed
+          velocityY += Math.sin(direction) * moveSpeed
+          unit.direction = smoothRotateTowardsAngle(unit.direction || 0, direction, (unit.rotationSpeed || APACHE_ROTATION_EASING) * (delta / 16))
+          updateApacheTilt(unit, clamp(distance / TILE_SIZE, -1, 1), 0)
+        }
+      } else {
+        updateApacheTilt(unit, 0, 0)
+      }
+    }
+  }
+
+  unit.x += velocityX
+  unit.y += velocityY
+
+  unit.tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  unit.tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+  unit.movement.velocity.x = velocityX
+  unit.movement.velocity.y = velocityY
+  unit.movement.isMoving = Math.abs(velocityX) + Math.abs(velocityY) > 0.01
+  unit.movement.currentSpeed = Math.hypot(velocityX, velocityY)
+
+  if (typeof unit.gas === 'number') {
+    const distTiles = Math.hypot(velocityX, velocityY) / TILE_SIZE
+    const distMeters = distTiles * TILE_LENGTH_METERS
+    const usage = (unit.gasConsumption || 0) * distMeters / 100000
+    const prevGas = unit.gas
+    unit.gas = Math.max(0, unit.gas - usage)
+    if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
+      playSound('outOfGas')
+      unit.outOfGasPlayed = true
+      unit.needsEmergencyFuel = true
+      unit.emergencyFuelRequestTime = performance.now()
+    }
+  }
+}
+
 /**
  * Initialize movement properties for a unit
  */
@@ -89,6 +382,11 @@ export function initializeUnitMovement(unit) {
  */
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit)
+
+  if (unit.type === 'apache') {
+    updateApachePosition(unit, mapGrid, occupancyMap, now, units, gameState, factories)
+    return
+  }
 
   const hasRestorationOverride = Boolean(unit.restorationMoveOverride)
 

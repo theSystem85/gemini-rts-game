@@ -11,7 +11,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'recoveryTank', 'howitzer']
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'recoveryTank', 'howitzer', 'apache']
 
 // Enhanced production queue system
 export const productionQueue = {
@@ -173,6 +173,22 @@ export const productionQueue = {
       duration: duration,
       isBuilding: item.isBuilding, // Should always be false here
       rallyPoint: item.rallyPoint || null
+    }
+
+    if (item.type === 'apache') {
+      const hasHelipad = gameState.buildings?.some(
+        building => building.type === 'helipad' && building.owner === gameState.humanPlayer && building.health > 0
+      )
+      if (!hasHelipad) {
+        console.error('Attempted to produce Apache without a Helipad')
+        showNotification('Cannot produce Apache: Helipad required.')
+        this.currentUnit = null
+        this.unitItems.shift()
+        gameState.money += cost
+        this.updateBatchCounter(item.button, this.unitItems.filter(i => i.button === item.button).length)
+        this.startNextUnitProduction()
+        return
+      }
     }
 
     // Mark button as active
