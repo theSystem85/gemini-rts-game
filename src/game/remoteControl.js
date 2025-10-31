@@ -135,7 +135,7 @@ function handleApacheRemoteControl(unit, params) {
     return
   }
 
-  const rotationSpeed = unit.rotationSpeed || 0.05
+  const rotationSpeed = (unit.rotationSpeed || 0.05) * 0.25
   const baseSpeed = typeof unit.speed === 'number' ? unit.speed : 0.5
   const speedModifier = typeof unit.speedModifier === 'number' ? unit.speedModifier : 1
   const effectiveMaxSpeed = Math.max(0, baseSpeed * speedModifier)

@@ -724,7 +724,7 @@ export let UNIT_PROPERTIES = {
   apache: {
     health: 40,
     maxHealth: 40,
-    speed: 1.5,
+    speed: 4.5,
     rotationSpeed: 0.18,
     turretRotationSpeed: 0,
     accelerationMultiplier: 1.25

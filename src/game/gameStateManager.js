@@ -210,7 +210,9 @@ export function cleanupDestroyedUnits(units, gameState) {
       }
 
       // Register a wreck so the destroyed unit leaves recoverable remnants
-      registerUnitWreck(unit, gameState)
+      if (unit.type !== 'apache') {
+        registerUnitWreck(unit, gameState)
+      }
 
       if (unit.type === 'tankerTruck') {
         detonateTankerTruck(unit, units, gameState.factories || [], gameState)

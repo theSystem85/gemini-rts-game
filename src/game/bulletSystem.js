@@ -170,7 +170,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       }
 
       // Check for unit collisions
-      if (bullet.active && units && units.length > 0) {
+      if (!bullet.skipCollisionChecks && bullet.active && units && units.length > 0) {
         for (const unit of units) {
           if (bullet.ignoredUnitId === unit.id && bullet.ignoreUntil && now < bullet.ignoreUntil) {
             continue
@@ -311,7 +311,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         }
       }
 
-      if (bullet.active && Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
+      if (!bullet.skipCollisionChecks && bullet.active && Array.isArray(gameState.unitWrecks) && gameState.unitWrecks.length > 0) {
         let wreckHit = false
         for (let j = gameState.unitWrecks.length - 1; j >= 0; j--) {
           const wreck = gameState.unitWrecks[j]
@@ -346,7 +346,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       }
 
       // Check for collisions with buildings
-      if (bullet.active && gameState.buildings && gameState.buildings.length > 0) {
+      if (!bullet.skipCollisionChecks && bullet.active && gameState.buildings && gameState.buildings.length > 0) {
         for (const building of gameState.buildings) {
           if (checkBuildingCollision(bullet, building)) {
           // Apply damage with some randomization
@@ -403,7 +403,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       }
 
       // Check for collisions with factories
-      if (bullet.active && factories && factories.length > 0) {
+      if (!bullet.skipCollisionChecks && bullet.active && factories && factories.length > 0) {
         for (const factory of factories) {
           if (checkFactoryCollision(bullet, factory)) {
           // Apply damage with some randomization
