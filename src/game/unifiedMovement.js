@@ -30,7 +30,7 @@ import {
   WRECK_COLLISION_RECOIL_MAX_UNIT
 } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
-import { updateUnitOccupancy, findPath } from '../units.js'
+import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
@@ -49,6 +49,101 @@ function calculatePositionalAudio(x, y) {
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
+}
+
+function addUnitOccupancyDirect(unit, occupancyMap) {
+  if (!occupancyMap) return
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileX >= 0 &&
+    tileY >= 0 &&
+    tileY < occupancyMap.length &&
+    tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = (occupancyMap[tileY][tileX] || 0) + 1
+  }
+}
+
+function updateApacheFlightState(unit, movement, occupancyMap, now) {
+  const rotor = unit.rotor || { angle: 0, speed: 0, targetSpeed: 0 }
+  unit.rotor = rotor
+  const shadow = unit.shadow || { offset: 0, scale: 1 }
+  unit.shadow = shadow
+
+  const deltaMs = Math.max(16, now - (unit.lastFlightUpdate || now))
+  unit.lastFlightUpdate = now
+  const deltaSeconds = deltaMs / 1000
+
+  const manualState = unit.manualFlightState || 'auto'
+  const isMoving = movement?.isMoving || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
+
+  let desiredAltitude = 0
+  if (manualState === 'takeoff') {
+    desiredAltitude = unit.maxAltitude
+  } else if (manualState === 'land') {
+    desiredAltitude = 0
+  } else if (manualState === 'hover') {
+    desiredAltitude = unit.maxAltitude * 0.75
+  } else {
+    desiredAltitude = isMoving ? unit.maxAltitude : 0
+  }
+
+  unit.targetAltitude = desiredAltitude
+
+  const altitudeDiff = desiredAltitude - unit.altitude
+  const climbRate = unit.maxAltitude * (manualState === 'land' ? 2.5 : 3)
+  const maxStep = climbRate * deltaSeconds
+  const altitudeStep = Math.max(-maxStep, Math.min(maxStep, altitudeDiff))
+  unit.altitude = Math.max(0, unit.altitude + altitudeStep)
+
+  let newFlightState = unit.flightState
+  if (unit.altitude > 2 && altitudeDiff > 0.5) {
+    newFlightState = 'takeoff'
+  } else if (unit.altitude > 2 && Math.abs(altitudeDiff) <= 1) {
+    newFlightState = 'airborne'
+  } else if (unit.altitude <= 2 && altitudeDiff < -0.5) {
+    newFlightState = 'landing'
+  } else if (unit.altitude <= 2) {
+    newFlightState = 'grounded'
+  }
+
+  const previouslyGrounded = unit.flightState === 'grounded' || unit.flightState === undefined
+  unit.flightState = newFlightState
+
+  if (unit.flightState !== 'grounded') {
+    if (!unit.occupancyRemoved && previouslyGrounded) {
+      removeUnitOccupancy(unit, occupancyMap)
+      unit.occupancyRemoved = true
+    }
+  } else if (unit.occupancyRemoved) {
+    addUnitOccupancyDirect(unit, occupancyMap)
+    unit.occupancyRemoved = false
+  }
+
+  const rotorTargetSpeed = unit.flightState === 'grounded' ? 0.05 : 0.35
+  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * 4)
+  rotor.angle = (rotor.angle + rotor.speed * deltaMs) % (Math.PI * 2)
+  rotor.targetSpeed = rotorTargetSpeed
+
+  const altitudeRatio = Math.min(1, unit.maxAltitude > 0 ? unit.altitude / unit.maxAltitude : 0)
+  shadow.offset = altitudeRatio * TILE_SIZE * 0.6
+  shadow.scale = 1 + altitudeRatio * 0.35
+
+  if (manualState === 'takeoff' && unit.altitude >= unit.maxAltitude * 0.95) {
+    unit.manualFlightState = 'auto'
+  } else if (manualState === 'land' && unit.altitude <= 1) {
+    unit.manualFlightState = 'auto'
+  }
+
+  if (unit.dodgeVelocity) {
+    if (now < unit.dodgeVelocity.endTime) {
+      unit.x += unit.dodgeVelocity.vx * deltaSeconds
+      unit.y += unit.dodgeVelocity.vy * deltaSeconds
+    } else {
+      unit.dodgeVelocity = null
+    }
+  }
 }
 
 /**
@@ -463,6 +558,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE))
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE))
 
+  if (unit.type === 'apache') {
+    updateApacheFlightState(unit, movement, occupancyMap, now)
+  }
+
   // Update occupancy map using center-based coordinates
   const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
   const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
@@ -597,6 +696,13 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
   const tile = tileRow ? tileRow[tileX] : undefined
 
+  if (unit.type === 'apache' && unit.flightState !== 'grounded') {
+    if (!tileRow || tile === undefined) {
+      return { collided: true, type: 'bounds' }
+    }
+    return { collided: false }
+  }
+
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds' }
@@ -612,6 +718,9 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     }
 
     if (tile.building) {
+      if (unit.type === 'apache' && tile.building.type === 'helipad') {
+        return { collided: false }
+      }
       return {
         collided: true,
         type: 'building',

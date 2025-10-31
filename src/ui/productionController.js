@@ -55,6 +55,9 @@ export class ProductionController {
       b => b.type === 'radarStation' && b.owner === gameState.humanPlayer && b.health > 0
     )
     const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
+    const hasHelipad = gameState.buildings.some(
+      b => b.type === 'helipad' && b.owner === gameState.humanPlayer && b.health > 0
+    )
 
     unitButtons.forEach(button => {
       const unitType = button.getAttribute('data-unit-type')
@@ -90,6 +93,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Hospital'
+        }
+      } else if (unitType === 'apache') {
+        if (hasHelipad) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Helipad'
         }
       } else if (this.vehicleUnitTypes.includes(unitType)) {
         if (hasVehicleFactory) {
@@ -405,6 +416,12 @@ export class ProductionController {
           if (!hasVehicleFactory || !hasRadar) {
             requirementsMet = false
             requirementText = 'Requires Vehicle Factory & Radar Station'
+          }
+        } else if (unitType === 'apache') {
+          const hasHelipad = gameState.buildings.some(b => b.type === 'helipad' && b.owner === gameState.humanPlayer)
+          if (!hasHelipad) {
+            requirementsMet = false
+            requirementText = 'Requires Helipad'
           }
         } else if (this.vehicleUnitTypes.includes(unitType)) {
           const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
@@ -1070,6 +1087,7 @@ export class ProductionController {
     const hasGasStation = buildings.some(b => b.type === 'gasStation')
     const hasHospital = buildings.some(b => b.type === 'hospital')
     const hasWorkshop = buildings.some(b => b.type === 'vehicleWorkshop')
+    const hasHelipad = buildings.some(b => b.type === 'helipad')
     const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
 
     if (hasFactory) {
@@ -1090,6 +1108,10 @@ export class ProductionController {
 
     if (hasFactory && hasWorkshop) {
       this.forceUnlockUnitType('recoveryTank')
+    }
+
+    if (hasHelipad) {
+      this.forceUnlockUnitType('apache')
     }
 
     if (factoryCount >= 2) {

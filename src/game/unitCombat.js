@@ -7,6 +7,7 @@ import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 
@@ -228,8 +229,9 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
-    const clearShot = unit.type === 'rocketTank' || hasClearShot(unit, target, units)
-    if (unit.canFire !== false && clearShot && isTurretAimedAtTarget(unit, target)) {
+    const clearShot = unit.type === 'rocketTank' || unit.type === 'apache' || hasClearShot(unit, target, units)
+    const turretAimed = unit.type === 'apache' ? true : isTurretAimedAtTarget(unit, target)
+    if (unit.canFire !== false && clearShot && turretAimed) {
       // Calculate aim position (with predictive aiming if enabled)
       let aimX = overrideTarget ? overrideTarget.x : targetCenterX
       let aimY = overrideTarget ? overrideTarget.y : targetCenterY
@@ -266,25 +268,31 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       const angle = Math.atan2(finalTarget.y - unitCenterY, finalTarget.x - unitCenterX)
 
       const isRocketTankRocket = projectileType === 'rocket' && unit.type === 'rocketTank'
-      const bulletSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED)
+      const isApacheRocket = projectileType === 'rocket' && unit.type === 'apache'
+      const bulletSpeed = isRocketTankRocket
+        ? 6
+        : (projectileType === 'rocket' ? (isApacheRocket ? 5 : 3) : TANK_BULLET_SPEED)
 
       let rocketSpawn = null
       if (isRocketTankRocket) {
         rocketSpawn = getRocketSpawnPoint(unit, unitCenterX, unitCenterY)
+      } else if (isApacheRocket) {
+        rocketSpawn = unit.customRocketSpawn || getApacheRocketSpawnPoints(unit, unitCenterX, unitCenterY).left
       }
 
       const bullet = {
         id: Date.now() + Math.random(),
-        x: isRocketTankRocket ? rocketSpawn.x : unitCenterX,
-        y: isRocketTankRocket ? rocketSpawn.y : unitCenterY,
+        x: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.x : unitCenterX,
+        y: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.y : unitCenterY,
         speed: bulletSpeed,
         baseDamage: getDamageForUnitType(unit.type),
         active: true,
         shooter: unit,
-        homing: isRocketTankRocket ? false : (projectileType === 'rocket'),
+        homing: isRocketTankRocket ? false : (projectileType === 'rocket' && !isApacheRocket),
         target: projectileType === 'rocket' ? target : null,
         targetPosition: { x: finalTarget.x, y: finalTarget.y },
-        startTime: now
+        startTime: now,
+        projectileType
       }
 
       if (isRocketTankRocket) {
@@ -317,6 +325,13 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       unit.recoilStartTime = now
       unit.muzzleFlashStartTime = now
 
+      if (isApacheRocket && unit.customRocketSpawn) {
+        delete unit.customRocketSpawn
+      }
+      if (isApacheRocket) {
+        bullet.originType = 'apacheRocket'
+      }
+
       return true
     }
   }
@@ -330,6 +345,7 @@ function getDamageForUnitType(unitType) {
   switch (unitType) {
     case 'tank-v3': return COMBAT_CONFIG.DAMAGE.TANK_V3
     case 'rocketTank': return COMBAT_CONFIG.DAMAGE.ROCKET
+    case 'apache': return COMBAT_CONFIG.DAMAGE.ROCKET
     default: return COMBAT_CONFIG.DAMAGE.STANDARD
   }
 }
@@ -364,6 +380,79 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
   }
 
   return false // Burst still in progress or failed
+}
+
+/**
+ * Handle multi-rocket volley for Apache helicopter
+ */
+function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCenterY, units, mapGrid) {
+  if (!unit.volleyState) {
+    unit.volleyState = {
+      leftRemaining: 4,
+      rightRemaining: 4,
+      lastRocketTime: 0,
+      delay: 120,
+      nextSide: 'left'
+    }
+  }
+
+  const state = unit.volleyState
+  if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+    unit.volleyState = null
+    return true
+  }
+
+  if (now - state.lastRocketTime < state.delay) {
+    return false
+  }
+
+  let side = state.nextSide
+  if (side === 'left' && state.leftRemaining <= 0) side = 'right'
+  if (side === 'right' && state.rightRemaining <= 0) side = 'left'
+
+  if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+    unit.volleyState = null
+    return true
+  }
+
+  const centerX = unit.x + TILE_SIZE / 2
+  const centerY = unit.y + TILE_SIZE / 2
+  const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+  const spawn = spawnPoints[side] || { x: centerX, y: centerY }
+
+  unit.customRocketSpawn = spawn
+  const fired = handleTankFiring(
+    unit,
+    target,
+    bullets,
+    now,
+    0,
+    targetCenterX,
+    targetCenterY,
+    'rocket',
+    units,
+    mapGrid,
+    false,
+    null
+  )
+  unit.customRocketSpawn = null
+
+  if (fired) {
+    if (side === 'left') {
+      state.leftRemaining = Math.max(0, state.leftRemaining - 1)
+    } else {
+      state.rightRemaining = Math.max(0, state.rightRemaining - 1)
+    }
+    state.lastRocketTime = now
+    state.nextSide = side === 'left' ? 'right' : 'left'
+
+    if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+      unit.volleyState = null
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
@@ -651,6 +740,8 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
       updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'rocketTank') {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
+    } else if (unit.type === 'apache') {
+      updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'howitzer') {
       updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
@@ -850,6 +941,47 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
         handleRocketBurstFire(unit, unit.target, bullets, now, targetCenterX, targetCenterY, units, mapGrid)
       }
     }
+  }
+}
+
+function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (unit.target && unit.target.health > 0) {
+    const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.ROCKET
+
+    const { distance, targetCenterX, targetCenterY } = handleTankMovement(
+      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
+    )
+
+    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+    const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+    if (distance <= effectiveRange && canAttack) {
+      if (!unit.volleyState) {
+        const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
+        if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
+          if (unit.canFire !== false) {
+            unit.volleyState = {
+              leftRemaining: 4,
+              rightRemaining: 4,
+              lastRocketTime: 0,
+              delay: 120,
+              nextSide: 'left'
+            }
+          }
+        }
+      }
+
+      if (unit.volleyState) {
+        const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenterX, targetCenterY, units, mapGrid)
+        if (volleyComplete) {
+          unit.lastShotTime = now
+        }
+      }
+    } else {
+      unit.volleyState = null
+    }
+  }
+  if (!unit.target || unit.target.health <= 0) {
+    unit.volleyState = null
   }
 }
 

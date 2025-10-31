@@ -53,6 +53,9 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
   }
 
   units.forEach(unit => {
+    if (unit.isAirUnit && unit.flightState !== 'grounded') {
+      return
+    }
     const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (
@@ -98,6 +101,10 @@ export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) 
 export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
   if (!occupancyMap) return
 
+  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+    return
+  }
+
   // Remove occupancy from previous position (using center coordinates)
   if (
     prevTileY >= 0 &&
@@ -128,6 +135,9 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
 
 export function removeUnitOccupancy(unit, occupancyMap) {
   if (!occupancyMap) return
+  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+    return
+  }
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
   const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
   if (
@@ -738,6 +748,34 @@ export function createUnit(factory, unitType, x, y, options = {}) {
 
   if (actualType === 'howitzer') {
     unit.isHowitzer = true
+  }
+
+  if (actualType === 'apache') {
+    unit.isAirUnit = true
+    unit.flightState = 'grounded'
+    unit.altitude = 0
+    unit.targetAltitude = 0
+    unit.maxAltitude = TILE_SIZE * 1.5
+    unit.rotor = {
+      angle: 0,
+      speed: 0,
+      targetSpeed: 0
+    }
+    unit.shadow = {
+      offset: 0,
+      scale: 1
+    }
+    unit.airborneSince = null
+    const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+    unit.landedSince = now
+    unit.attackCooldown = 0
+    unit.volleyState = null
+    unit.dodgeCooldown = 0
+    unit.dodgeChance = 0.6
+    unit.fuelSource = null
+    unit.requiresHelipad = true
+    unit.manualFlightState = 'auto'
+    unit.manualFlightHoverRequested = false
   }
 
   if (actualType === 'ambulance') {

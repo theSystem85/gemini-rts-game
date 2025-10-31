@@ -9,6 +9,7 @@ import { renderHowitzerWithImage, isHowitzerImageLoaded } from './howitzerImageR
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
+import { renderApacheWithImage } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
 export class UnitRenderer {
@@ -27,6 +28,13 @@ export class UnitRenderer {
   }
 
   renderUnitBody(ctx, unit, centerX, centerY) {
+    if (unit.type === 'apache') {
+      const rendered = renderApacheWithImage(ctx, unit, centerX, centerY)
+      if (rendered) {
+        return
+      }
+    }
+
     // Use consistent colors for unit types regardless of owner
     ctx.fillStyle = UNIT_TYPE_COLORS[unit.type] || '#0000FF' // Default to blue if type not found
 
@@ -58,6 +66,9 @@ export class UnitRenderer {
   }
 
   renderTurret(ctx, unit, centerX, centerY) {
+    if (unit.type === 'apache') {
+      return
+    }
     // Harvesters use image rendering. Show mining bar only if image not loaded
     if (unit.type === 'harvester') {
       if (!isHarvesterImageLoaded()) {
