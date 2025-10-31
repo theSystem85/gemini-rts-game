@@ -58,6 +58,10 @@ export class EventHandlers {
       // If the game was just unpaused, resume any pending productions
       if (!gameState.gamePaused) {
         productionQueue.resumeProductionAfterUnpause()
+
+        if (this.gameInstance && this.gameInstance.gameLoop && typeof this.gameInstance.gameLoop.resumeFromPause === 'function') {
+          this.gameInstance.gameLoop.resumeFromPause()
+        }
       }
     })
 

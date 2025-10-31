@@ -91,6 +91,16 @@ export class GameLoop {
     this.scheduleNextFrame()
   }
 
+  resumeFromPause() {
+    if (!this.running) {
+      return
+    }
+
+    this.forceRender = true
+    this.lastFrameTime = null
+    this.scheduleNextFrame()
+  }
+
   scheduleNextFrame() {
     if (!this.running || this.animationId) {
       return
