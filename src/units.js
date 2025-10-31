@@ -756,6 +756,10 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.altitude = 0
     unit.targetAltitude = 0
     unit.maxAltitude = TILE_SIZE * 1.5
+    unit.airCruiseSpeed = unitProps.speed
+    unit.hoverFuelMultiplier = 0.2
+    unit.autoHoldAltitude = false
+    unit.flightPlan = null
     unit.rotor = {
       angle: 0,
       speed: 0,
@@ -765,6 +769,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
       offset: 0,
       scale: 1
     }
+    unit.hovering = false
     unit.airborneSince = null
     const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
     unit.landedSince = now
@@ -776,6 +781,10 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.requiresHelipad = true
     unit.manualFlightState = 'auto'
     unit.manualFlightHoverRequested = false
+    unit.helipadLandingRequested = false
+    unit.helipadTargetId = null
+    unit.crew.gunner = true
+    unit.crew.loader = true
   }
 
   if (actualType === 'ambulance') {

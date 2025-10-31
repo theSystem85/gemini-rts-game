@@ -35,6 +35,8 @@ import { playPositionalSound, playSound, audioContext, getMasterVolume } from '.
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 
+const BASE_FRAME_SECONDS = 1 / 60
+
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
   if (!canvas) {
@@ -65,6 +67,25 @@ function addUnitOccupancyDirect(unit, occupancyMap) {
   }
 }
 
+function consumeUnitGas(unit, amount) {
+  if (!unit || typeof unit.gas !== 'number') {
+    return
+  }
+  if (amount <= 0) {
+    return
+  }
+
+  const prevGas = unit.gas
+  unit.gas = Math.max(0, unit.gas - amount)
+
+  if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
+    playSound('outOfGas')
+    unit.outOfGasPlayed = true
+    unit.needsEmergencyFuel = true
+    unit.emergencyFuelRequestTime = performance.now()
+  }
+}
+
 function updateApacheFlightState(unit, movement, occupancyMap, now) {
   const rotor = unit.rotor || { angle: 0, speed: 0, targetSpeed: 0 }
   unit.rotor = rotor
@@ -76,7 +97,8 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   const deltaSeconds = deltaMs / 1000
 
   const manualState = unit.manualFlightState || 'auto'
-  const isMoving = movement?.isMoving || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
+  const holdAltitude = Boolean(unit.autoHoldAltitude) || Boolean(unit.flightPlan) || Boolean(unit.remoteControlActive)
+  const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
 
   let desiredAltitude = 0
   if (manualState === 'takeoff') {
@@ -86,7 +108,7 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   } else if (manualState === 'hover') {
     desiredAltitude = unit.maxAltitude * 0.75
   } else {
-    desiredAltitude = isMoving ? unit.maxAltitude : 0
+    desiredAltitude = (holdAltitude || isInMotion) ? unit.maxAltitude : 0
   }
 
   unit.targetAltitude = desiredAltitude
@@ -144,6 +166,22 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
       unit.dodgeVelocity = null
     }
   }
+
+  const isHovering = unit.flightState === 'airborne' && (!movement || movement.currentSpeed < 0.1)
+  unit.hovering = isHovering
+
+  if (typeof unit.gas === 'number' && unit.gas > 0) {
+    const shouldConsumeHoverFuel = isHovering && !unit.helipadLandingRequested && manualState !== 'land'
+    if (shouldConsumeHoverFuel) {
+      const frameScale = Math.max(0, Math.min(deltaSeconds / BASE_FRAME_SECONDS, 6))
+      const airSpeed = unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED
+      const hoverEquivalentPixels = airSpeed * frameScale
+      const metersPerPixel = TILE_LENGTH_METERS / TILE_SIZE
+      const hoverMeters = hoverEquivalentPixels * metersPerPixel
+      const hoverUsage = (unit.gasConsumption || 0) * hoverMeters / 100000 * (unit.hoverFuelMultiplier || 0.2)
+      consumeUnitGas(unit, hoverUsage)
+    }
+  }
 }
 
 /**
@@ -198,6 +236,14 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     unit.movement.targetVelocity = { x: 0, y: 0 }
     unit.movement.isMoving = false
     unit.movement.currentSpeed = 0
+    if (unit.type === 'apache') {
+      unit.flightPlan = null
+      unit.autoHoldAltitude = false
+      unit.helipadLandingRequested = false
+      if (unit.flightState !== 'grounded') {
+        unit.manualFlightState = 'land'
+      }
+    }
     return
   } else if (unit.gas > 0 && unit.needsEmergencyFuel) {
     // Clear emergency fuel flag if unit has gas again
@@ -268,6 +314,60 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier
+
+  const isApache = unit.type === 'apache'
+  if (isApache) {
+    if (unit.remoteControlActive) {
+      unit.flightPlan = null
+    }
+
+    const plan = unit.remoteControlActive ? null : unit.flightPlan
+
+    if (plan) {
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      const dx = plan.x - unitCenterX
+      const dy = plan.y - unitCenterY
+      const distance = Math.hypot(dx, dy)
+      const stopRadius = Math.max(6, plan.stopRadius || TILE_SIZE * 0.2)
+
+      if (distance <= stopRadius) {
+        unit.flightPlan = null
+        movement.targetVelocity.x = 0
+        movement.targetVelocity.y = 0
+        movement.isMoving = false
+        movement.targetRotation = movement.rotation
+        unit.hovering = unit.flightState === 'airborne'
+        if (!unit.helipadLandingRequested) {
+          unit.autoHoldAltitude = true
+        }
+      } else {
+        const airSpeed = (unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED) * (unit.speedModifier || 1)
+        const dirX = dx / distance
+        const dirY = dy / distance
+        movement.targetVelocity.x = dirX * airSpeed
+        movement.targetVelocity.y = dirY * airSpeed
+        movement.isMoving = true
+        const desiredRotation = normalizeAngle(Math.atan2(dirY, dirX))
+        movement.targetRotation = desiredRotation
+        movement.rotation = desiredRotation
+        unit.direction = desiredRotation
+        unit.rotation = desiredRotation
+        unit.hovering = false
+      }
+      unit.path = []
+    } else if (!unit.remoteControlActive) {
+      movement.targetVelocity.x = 0
+      movement.targetVelocity.y = 0
+      movement.targetRotation = movement.rotation
+      if (movement.isMoving) {
+        movement.isMoving = false
+      }
+      if (movement.currentSpeed < MOVEMENT_CONFIG.MIN_SPEED) {
+        unit.hovering = unit.flightState === 'airborne'
+      }
+    }
+  }
 
   // Handle path following
   if (unit.path && unit.path.length > 0) {
@@ -467,15 +567,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distTiles = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
     const distMeters = distTiles * TILE_LENGTH_METERS
     const usage = (unit.gasConsumption || 0) * distMeters / 100000
-    const prevGas = unit.gas
-    unit.gas = Math.max(0, unit.gas - usage)
-    if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
-      playSound('outOfGas')
-      unit.outOfGasPlayed = true
-      // Mark unit as needing immediate fuel assistance
-      unit.needsEmergencyFuel = true
-      unit.emergencyFuelRequestTime = performance.now()
-    }
+    consumeUnitGas(unit, usage)
   }
 
   if (
