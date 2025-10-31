@@ -7,7 +7,11 @@ const REMOTE_CONTROL_ACTIONS = [
   'turnRight',
   'turretLeft',
   'turretRight',
-  'fire'
+  'fire',
+  'ascend',
+  'descend',
+  'strafeLeft',
+  'strafeRight'
 ]
 
 const DEFAULT_ABSOLUTE_STATE = {
