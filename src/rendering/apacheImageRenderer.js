@@ -54,8 +54,8 @@ function ensureImagesLoaded(callback) {
     if (callback) callback(false)
   }
 
-  bodyImage.src = 'images/map/units/apache-body-map.webp'
-  rotorImage.src = 'images/map/units/apache-rotor-map.webp'
+  bodyImage.src = 'images/map/units/apache_body_map.webp'
+  rotorImage.src = 'images/map/units/apache_rotor_map.webp'
 }
 
 export function preloadApacheImages(callback) {
