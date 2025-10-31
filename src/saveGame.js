@@ -678,6 +678,10 @@ export function loadGame(key) {
     gameState.gamePaused = false
     gameState.gameStarted = true
 
+    if (gameInstance && gameInstance.gameLoop && typeof gameInstance.gameLoop.resumeFromPause === 'function') {
+      gameInstance.gameLoop.resumeFromPause()
+    }
+
     // Update pause button to show pause icon since game is now running
     const pauseBtn = document.getElementById('pauseBtn')
     if (pauseBtn) {
