@@ -44,8 +44,8 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   ctx.save()
   ctx.translate(centerX, centerY)
 
-  // Image faces downward by default. Rotate so direction=0 points right.
-  const rotation = unit.direction - Math.PI / 2
+  // Image faces upward by default. Rotate so direction=0 points right.
+  const rotation = unit.direction + Math.PI / 2
   ctx.rotate(rotation)
 
   const scale = TILE_SIZE / Math.max(howitzerImg.width, howitzerImg.height)
