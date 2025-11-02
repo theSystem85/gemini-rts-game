@@ -100,31 +100,31 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       if (bullet.homing) {
         if (now - bullet.startTime > 5000) { // Max flight time for homing missiles
         // Explode at the bullet's current position upon timeout
-        if (bullet.originType === 'apacheRocket') {
+          if (bullet.originType === 'apacheRocket') {
           // Apache rockets create multiple explosions around the target area even on timeout
-          const targetCenter = bullet.targetPosition || { x: bullet.x, y: bullet.y }
-          const explosionRadius = TILE_SIZE * 1.5 // 3 tile diameter = 1.5 tile radius
-          const numExplosions = 8 // Number of explosion points
+            const targetCenter = bullet.targetPosition || { x: bullet.x, y: bullet.y }
+            const explosionRadius = TILE_SIZE * 1.5 // 3 tile diameter = 1.5 tile radius
+            const numExplosions = 8 // Number of explosion points
 
-          for (let i = 0; i < numExplosions; i++) {
+            for (let i = 0; i < numExplosions; i++) {
             // Random angle and distance within the explosion radius
-            const angle = Math.random() * Math.PI * 2
-            const distance = Math.random() * explosionRadius
+              const angle = Math.random() * Math.PI * 2
+              const distance = Math.random() * explosionRadius
 
-            const explosionX = targetCenter.x + Math.cos(angle) * distance
-            const explosionY = targetCenter.y + Math.sin(angle) * distance
+              const explosionX = targetCenter.x + Math.cos(angle) * distance
+              const explosionY = targetCenter.y + Math.sin(angle) * distance
 
-            // Create surface damage explosion (smaller radius, proximity-based damage)
-            triggerExplosion(explosionX, explosionY, bullet.baseDamage * 0.3, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
+              // Create surface damage explosion (smaller radius, proximity-based damage)
+              triggerExplosion(explosionX, explosionY, bullet.baseDamage * 0.3, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
+            }
+
+            // Play explosion sound once for the rocket impact
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
+          } else {
+            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
           }
-
-          // Play explosion sound once for the rocket impact
-          playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
-        } else {
-          triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
-        }
-        bullets.splice(i, 1)
-        continue
+          bullets.splice(i, 1)
+          continue
         }
 
         // Update homing logic
@@ -192,13 +192,13 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         const distanceToTarget = Math.hypot(bullet.x - bullet.targetPosition.x, bullet.y - bullet.targetPosition.y)
         const flightTime = now - (bullet.creationTime || bullet.startTime || now)
         const maxFlightTime = bullet.maxFlightTime || 3000
-        
+
         if (distanceToTarget < 25 || flightTime >= maxFlightTime) { // Explode on proximity OR time limit
           // Apache rockets create 1 explosion at their current position
           // Base damage 10 * 0.9 multiplier * 2.5 tank multiplier = 22.5 per rocket
           // 8 rockets * 22.5 = 180 damage (enough to kill tank-v3 with 169 HP)
           const baseDamage = bullet.baseDamage * 0.9
-          
+
           // Apply tank damage multiplier for direct unit hits
           let damageMultiplier = 1.0
           if (bullet.shooter && units) {
@@ -208,14 +208,14 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               if (u.health <= 0 || u.owner === bullet.shooter.owner) return false
               const tankTypes = ['tank', 'tank_v1', 'tank-v2', 'tank-v3']
               if (!tankTypes.includes(u.type)) return false
-              const dist = Math.hypot(u.x + TILE_SIZE/2 - bullet.x, u.y + TILE_SIZE/2 - bullet.y)
+              const dist = Math.hypot(u.x + TILE_SIZE / 2 - bullet.x, u.y + TILE_SIZE / 2 - bullet.y)
               return dist <= explosionRadius
             })
             if (hasTankNearby) {
               damageMultiplier = 2.5 // Boost damage for tank targets
             }
           }
-          
+
           triggerExplosion(bullet.x, bullet.y, baseDamage * damageMultiplier, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
 
           // Play explosion sound
@@ -251,45 +251,45 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             continue
           }
           if (unit.health > 0 && checkUnitCollision(bullet, unit)) {
-          if (unit.type === 'apache') {
-            const shooterType = bullet.shooter?.type || ''
-            const allowedShooters = ['rocketTank', 'rocketTurret', 'teslaCoil']
-            if (!allowedShooters.includes(shooterType)) {
-              continue
-            }
-          }
-          if (unit.type === 'apache' && bullet.projectileType === 'rocket') {
-            const dodgeChance = typeof unit.dodgeChance === 'number' ? unit.dodgeChance : 0.6
-            const canAttemptDodge = !unit.lastDodgeTime || now - unit.lastDodgeTime > 400
-            if (canAttemptDodge && Math.random() < dodgeChance) {
-              const lateralSign = Math.random() < 0.5 ? -1 : 1
-              const dodgeAngle = (unit.direction || 0) + lateralSign * Math.PI / 2
-              const dodgeDistance = TILE_SIZE * 0.6
-              const offsetX = Math.cos(dodgeAngle) * dodgeDistance
-              const offsetY = Math.sin(dodgeAngle) * dodgeDistance
-              unit.x += offsetX
-              unit.y += offsetY
-              const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE
-              const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE
-              unit.x = Math.max(0, Math.min(unit.x, maxX))
-              unit.y = Math.max(0, Math.min(unit.y, maxY))
-              unit.tileX = Math.floor(unit.x / TILE_SIZE)
-              unit.tileY = Math.floor(unit.y / TILE_SIZE)
-              unit.dodgeVelocity = {
-                vx: Math.cos(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
-                vy: Math.sin(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
-                endTime: now + 400
+            if (unit.type === 'apache') {
+              const shooterType = bullet.shooter?.type || ''
+              const allowedShooters = ['rocketTank', 'rocketTurret', 'teslaCoil']
+              if (!allowedShooters.includes(shooterType)) {
+                continue
               }
-              unit.lastDodgeTime = now
-              if (unit.flightState === 'grounded') {
-                unit.flightState = 'takeoff'
-              }
-              bullet.ignoredUnitId = unit.id
-              bullet.ignoreUntil = now + 250
-              continue
             }
-          }
-          // Calculate hit zone damage multiplier for tanks
+            if (unit.type === 'apache' && bullet.projectileType === 'rocket') {
+              const dodgeChance = typeof unit.dodgeChance === 'number' ? unit.dodgeChance : 0.6
+              const canAttemptDodge = !unit.lastDodgeTime || now - unit.lastDodgeTime > 400
+              if (canAttemptDodge && Math.random() < dodgeChance) {
+                const lateralSign = Math.random() < 0.5 ? -1 : 1
+                const dodgeAngle = (unit.direction || 0) + lateralSign * Math.PI / 2
+                const dodgeDistance = TILE_SIZE * 0.6
+                const offsetX = Math.cos(dodgeAngle) * dodgeDistance
+                const offsetY = Math.sin(dodgeAngle) * dodgeDistance
+                unit.x += offsetX
+                unit.y += offsetY
+                const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE
+                const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE
+                unit.x = Math.max(0, Math.min(unit.x, maxX))
+                unit.y = Math.max(0, Math.min(unit.y, maxY))
+                unit.tileX = Math.floor(unit.x / TILE_SIZE)
+                unit.tileY = Math.floor(unit.y / TILE_SIZE)
+                unit.dodgeVelocity = {
+                  vx: Math.cos(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
+                  vy: Math.sin(dodgeAngle) * (unit.speed || 0.5) * TILE_SIZE * 4,
+                  endTime: now + 400
+                }
+                unit.lastDodgeTime = now
+                if (unit.flightState === 'grounded') {
+                  unit.flightState = 'takeoff'
+                }
+                bullet.ignoredUnitId = unit.id
+                bullet.ignoreUntil = now + 250
+                continue
+              }
+            }
+            // Calculate hit zone damage multiplier for tanks
             const hitZoneResult = calculateHitZoneDamageMultiplier(bullet, unit)
 
             // Apply damage with some randomization and hit zone multiplier

@@ -360,6 +360,15 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
                 units.forEach(u => {
                   if (u.owner === gameState.humanPlayer && u.health > 0) {
+                    // Check if target is an airborne Apache - only certain units can target them
+                    const targetIsAirborneApache = u.type === 'apache' && u.flightState !== 'grounded'
+                    const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+                    // Skip airborne Apache if this unit can't target air units
+                    if (targetIsAirborneApache && !shooterCanHitAir) {
+                      return
+                    }
+
                     const d = Math.hypot((u.x + TILE_SIZE / 2) - (unit.x + TILE_SIZE / 2), (u.y + TILE_SIZE / 2) - (unit.y + TILE_SIZE / 2))
                     if (d < closestPlayerDist) {
                       closestPlayerDist = d
@@ -415,11 +424,22 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
                 }
               } else {
                 // Solo unit behavior - be more cautious, focus on harvesters and weak targets
-                const soloTargets = units.filter(u =>
-                  u.owner === gameState.humanPlayer &&
-              u.health > 0 &&
-              (u.type === 'harvester' || u.health <= 50) // Target harvesters or damaged units
-                )
+                const soloTargets = units.filter(u => {
+                  if (u.owner !== gameState.humanPlayer || u.health <= 0) {
+                    return false
+                  }
+
+                  // Check if target is an airborne Apache - only certain units can target them
+                  const targetIsAirborneApache = u.type === 'apache' && u.flightState !== 'grounded'
+                  const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+                  // Skip airborne Apache if this unit can't target air units
+                  if (targetIsAirborneApache && !shooterCanHitAir) {
+                    return false
+                  }
+
+                  return u.type === 'harvester' || u.health <= 50 // Target harvesters or damaged units
+                })
 
                 if (soloTargets.length > 0) {
                   let closestTarget = null

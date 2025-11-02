@@ -727,6 +727,15 @@ function updateGuardTargeting(unit, units) {
   let closestDist = Infinity
   units.forEach(p => {
     if (p.owner !== unit.owner && p.health > 0) {
+      // Check if target is an airborne Apache - only certain units can target them
+      const targetIsAirborneApache = p.type === 'apache' && p.flightState !== 'grounded'
+      const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+      // Skip airborne Apache if this unit can't target air units
+      if (targetIsAirborneApache && !shooterCanHitAir) {
+        return
+      }
+
       const cx = p.x + TILE_SIZE / 2
       const cy = p.y + TILE_SIZE / 2
       const d = Math.hypot(cx - unitCenterX, cy - unitCenterY)
@@ -746,15 +755,15 @@ function updateGuardTargeting(unit, units) {
         const bx = b.x * TILE_SIZE + (b.width * TILE_SIZE) / 2
         const by = b.y * TILE_SIZE + (b.height * TILE_SIZE) / 2
         const d = Math.hypot(bx - unitCenterX, by - unitCenterY)
-      if (d <= range && d < closestDist) {
-        if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, bx, by)) {
-          return
+        if (d <= range && d < closestDist) {
+          if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, bx, by)) {
+            return
+          }
+          closestDist = d
+          closest = b
         }
-        closestDist = d
-        closest = b
       }
-    }
-  })
+    })
   }
 
   if (closest) {
@@ -856,6 +865,15 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Scan for enemy units within range
     units.forEach(potentialTarget => {
       if (potentialTarget.owner !== unit.owner && potentialTarget.health > 0) {
+        // Check if target is an airborne Apache - only certain units can target them
+        const targetIsAirborneApache = potentialTarget.type === 'apache' && potentialTarget.flightState !== 'grounded'
+        const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+        // Skip airborne Apache if this unit can't target air units
+        if (targetIsAirborneApache && !shooterCanHitAir) {
+          return
+        }
+
         const targetCenterX = potentialTarget.x + TILE_SIZE / 2
         const targetCenterY = potentialTarget.y + TILE_SIZE / 2
         const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)

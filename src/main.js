@@ -1635,12 +1635,12 @@ export { unitCosts }
 export { showNotification }
 
 // Initialize the game when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async() => {
   // NOTE: The old eval-based config override system has been removed and replaced with
   // the new configRegistry.js system. Config overrides from localStorage and external
   // files are no longer automatically loaded on startup. The new runtime config dialog
   // (press K) now handles config changes using direct function references instead of eval.
- 
+
   updateTouchClass()
   updateMobileLayoutClasses()
   setupDoubleTapPrevention()

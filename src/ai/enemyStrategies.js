@@ -1207,7 +1207,7 @@ function getSortedRecoveryTankOptions(candidateTanks, usedTankIds, targetTile) {
 
 function isRecoveryTankAvailable(tank) {
   if (!tank || tank.health <= 0) return false
-  
+
   // Allow tanks that are still in factory to be assigned tasks (they'll execute when released)
   // Skip tanks that are already busy with other tasks
   if (tank.recoveryTask || tank.towedWreck) return false
@@ -1264,10 +1264,10 @@ function isUnitAlreadyAssignedToRecovery(recoveryTanks, targetUnit) {
 
 function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, now) {
   if (!tank || !wreck || !unitCommands) {
-    console.warn('Recovery tank wreck assignment failed: missing tank, wreck, or commands', { 
-      hasTank: !!tank, 
-      hasWreck: !!wreck, 
-      hasCommands: !!unitCommands 
+    console.warn('Recovery tank wreck assignment failed: missing tank, wreck, or commands', {
+      hasTank: !!tank,
+      hasWreck: !!wreck,
+      hasCommands: !!unitCommands
     })
     return false
   }
@@ -1290,16 +1290,16 @@ function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, no
 
   const queue = tank.utilityQueue
   const queueSuccess = !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
-  
+
   if (!queueSuccess) {
-    console.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, { 
-      hasQueue: !!queue, 
+    console.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, {
+      hasQueue: !!queue,
       queueMode: queue?.mode,
       currentTargetId: queue?.currentTargetId,
       resultStarted: result?.started
     })
   }
-  
+
   return queueSuccess
 }
 
