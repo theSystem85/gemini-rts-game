@@ -1060,35 +1060,77 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
   const dy = targetCenter.y - unitCenterY
   const distance = Math.hypot(dx, dy)
 
-  const destTile = {
-    x: Math.floor(targetCenter.x / TILE_SIZE),
-    y: Math.floor(targetCenter.y / TILE_SIZE)
-  }
-
   const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
   const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+  const desiredStandoff = Math.max(TILE_SIZE * 4, effectiveRange * 0.9)
+  const chaseThreshold = desiredStandoff * 1.1
+  const retreatThreshold = desiredStandoff * 0.75
+
+  let standOffX = targetCenter.x
+  let standOffY = targetCenter.y
+  let offsetX = unitCenterX - targetCenter.x
+  let offsetY = unitCenterY - targetCenter.y
+  let offsetMag = Math.hypot(offsetX, offsetY)
+  if (offsetMag < 1) {
+    const fallbackAngle = unit.direction || 0
+    offsetX = Math.cos(fallbackAngle)
+    offsetY = Math.sin(fallbackAngle)
+    offsetMag = 1
+  }
+  const normX = offsetX / offsetMag
+  const normY = offsetY / offsetMag
+  standOffX = targetCenter.x + normX * desiredStandoff
+  standOffY = targetCenter.y + normY * desiredStandoff
+
+  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
+    const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE / 2
+    const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE / 2
+    standOffX = Math.max(TILE_SIZE / 2, Math.min(standOffX, maxX))
+    standOffY = Math.max(TILE_SIZE / 2, Math.min(standOffY, maxY))
+  }
+
+  const standOffTile = {
+    x: Math.max(0, Math.floor(standOffX / TILE_SIZE)),
+    y: Math.max(0, Math.floor(standOffY / TILE_SIZE))
+  }
+
+  const distanceToStandoff = Math.hypot(unitCenterX - standOffX, unitCenterY - standOffY)
+  const existingPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? unit.flightPlan : null
+  const followTargetId = unit.target.id || null
+  const planStopRadius = Math.max(12, desiredStandoff * 0.05)
+  const distanceTooFar = distance > chaseThreshold
+  const distanceTooClose = distance < retreatThreshold
+  const needsNewPlan =
+    !existingPlan ||
+    existingPlan.followTargetId !== followTargetId ||
+    Math.abs((existingPlan.desiredRange || 0) - desiredStandoff) > 1
+  const shouldReposition = distanceTooFar || distanceTooClose || distanceToStandoff > planStopRadius * 1.5
+
+  if (!unit.helipadLandingRequested && (shouldReposition || (needsNewPlan && (!existingPlan || distanceTooFar || distanceTooClose || distanceToStandoff > planStopRadius)))) {
+    unit.flightPlan = {
+      x: standOffX,
+      y: standOffY,
+      stopRadius: planStopRadius,
+      mode: 'combat',
+      followTargetId,
+      destinationTile: standOffTile,
+      desiredRange: desiredStandoff
+    }
+    unit.moveTarget = standOffTile
+  } else if (existingPlan && !unit.helipadLandingRequested) {
+    existingPlan.x = standOffX
+    existingPlan.y = standOffY
+    existingPlan.stopRadius = planStopRadius
+    existingPlan.destinationTile = standOffTile
+    existingPlan.desiredRange = desiredStandoff
+    if (!unit.moveTarget || unit.moveTarget.x !== standOffTile.x || unit.moveTarget.y !== standOffTile.y) {
+      unit.moveTarget = standOffTile
+    }
+  }
 
   unit.autoHoldAltitude = true
   if (unit.flightState === 'grounded') {
     unit.manualFlightState = 'takeoff'
-  }
-
-  if (distance > effectiveRange * 0.8 && !unit.helipadLandingRequested) {
-    const currentPlan = unit.flightPlan
-    const needsPlan = !currentPlan || currentPlan.mode !== 'combat' ||
-      Math.hypot(currentPlan.x - targetCenter.x, currentPlan.y - targetCenter.y) > TILE_SIZE * 0.5
-
-    if (needsPlan) {
-      unit.flightPlan = {
-        x: targetCenter.x,
-        y: targetCenter.y,
-        stopRadius: TILE_SIZE * 0.5,
-        mode: 'combat',
-        followTargetId: unit.target.id || null,
-        destinationTile: destTile
-      }
-      unit.moveTarget = destTile
-    }
   }
 
   if (distance <= effectiveRange && canAttack) {

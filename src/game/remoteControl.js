@@ -11,6 +11,16 @@ import { gameState } from '../gameState.js'
 import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 
+const APACHE_REMOTE_RANGE_MULTIPLIER = 1.5
+
+function getApacheRemoteRange(unit) {
+  let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+  if (unit.level >= 1) {
+    baseRange *= unit.rangeMultiplier || 1.2
+  }
+  return baseRange * APACHE_REMOTE_RANGE_MULTIPLIER
+}
+
 let lastAutoFocusUnitId = null
 let autoFocusSuppressed = false
 let autoFocusResumeArmed = false
@@ -128,7 +138,8 @@ function handleApacheRemoteControl(unit, params) {
     strafeLeftIntensity,
     strafeRightIntensity,
     rawWagonDirection,
-    rawWagonSpeed
+    rawWagonSpeed,
+    fireIntensity = 0
   } = params
 
   if (!unit.movement) {
@@ -197,7 +208,6 @@ function handleApacheRemoteControl(unit, params) {
     Math.abs(strafeAxis) > 0.05
   const hasFlightInput = ascendActive || descendActive
   const remoteActive = hasMovementInput || hasFlightInput
-
   unit.remoteControlActive = remoteActive
 
   if (remoteActive) {
@@ -244,6 +254,25 @@ function handleApacheRemoteControl(unit, params) {
   const direction = typeof unit.direction === 'number' ? unit.direction : 0
   unit.movement.rotation = direction
   unit.movement.targetRotation = direction
+
+  if (remoteActive || fireIntensity > 0) {
+    const centerX = unit.x + TILE_SIZE / 2
+    const centerY = unit.y + TILE_SIZE / 2
+    const rangePx = getApacheRemoteRange(unit)
+    const targetX = centerX + Math.cos(direction) * rangePx
+    const targetY = centerY + Math.sin(direction) * rangePx
+
+    unit.remoteRocketTarget = {
+      x: targetX,
+      y: targetY,
+      tileX: Math.floor(targetX / TILE_SIZE),
+      tileY: Math.floor(targetY / TILE_SIZE)
+    }
+    unit.remoteReticleVisible = true
+  } else if (!unit.remoteFireCommandActive) {
+    unit.remoteRocketTarget = null
+    unit.remoteReticleVisible = false
+  }
 }
 
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
@@ -361,48 +390,51 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         strafeLeftIntensity,
         strafeRightIntensity,
         rawWagonDirection,
-        rawWagonSpeed
+        rawWagonSpeed,
+        fireIntensity
       })
 
-      // Handle Apache rocket firing in remote control
-      if (fireIntensity > 0 && unit.canFire !== false) {
+      const firePressed = fireIntensity > 0
+      const previouslyPressed = Boolean(unit.remoteFireCommandActive)
+      unit.remoteFireCommandActive = firePressed
+
+      if (firePressed && !previouslyPressed && unit.canFire !== false) {
         const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
         if (ammoRemaining > 0) {
-          const effectiveFireRate = 12000 // Same as normal Apache fire rate
-          if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-            // Fire rockets forward in the direction the Apache is facing
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
-            const direction = unit.direction || 0
-            const rangePx = TANK_FIRE_RANGE * TILE_SIZE
-            const targetX = centerX + Math.cos(direction) * rangePx
-            const targetY = centerY + Math.sin(direction) * rangePx
+          const centerX = unit.x + TILE_SIZE / 2
+          const centerY = unit.y + TILE_SIZE / 2
+          const direction = unit.direction || 0
+          const rangePx = getApacheRemoteRange(unit)
+          const targetX = centerX + Math.cos(direction) * rangePx
+          const targetY = centerY + Math.sin(direction) * rangePx
 
-            const target = {
-              tileX: Math.floor(targetX / TILE_SIZE),
-              tileY: Math.floor(targetY / TILE_SIZE),
-              x: targetX,
-              y: targetY
+          const target = {
+            tileX: Math.floor(targetX / TILE_SIZE),
+            tileY: Math.floor(targetY / TILE_SIZE),
+            x: targetX,
+            y: targetY
+          }
+
+          const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+          const spawn = spawnPoints.left || { x: centerX, y: centerY }
+
+          const previousLastShot = unit.lastShotTime
+          unit.customRocketSpawn = spawn
+          const fired = fireBullet(unit, target, bullets, now)
+          unit.customRocketSpawn = null
+
+          if (fired) {
+            unit.lastShotTime = previousLastShot
+            unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
+            unit.apacheAmmoEmpty = unit.rocketAmmo <= 0
+            if (unit.apacheAmmoEmpty) {
+              unit.canFire = false
             }
-
-            // Fire a single rocket from the left side for remote control
-            const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
-            const spawn = spawnPoints.left || { x: centerX, y: centerY }
-
-            unit.customRocketSpawn = spawn
-            const fired = fireBullet(unit, target, bullets, now)
-            unit.customRocketSpawn = null
-
-            if (fired) {
-              unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
-              unit.lastShotTime = now
-
-              if (unit.rocketAmmo <= 0) {
-                unit.canFire = false
-              }
-            }
+            unit.remoteReticleVisible = true
           }
         }
+      } else if (!firePressed && !unit.remoteControlActive) {
+        unit.remoteReticleVisible = false
       }
 
       return

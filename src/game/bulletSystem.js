@@ -18,8 +18,11 @@ import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
+
+const APACHE_REMOTE_DAMAGE = 10
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -659,6 +662,35 @@ export function fireBullet(unit, target, bullets, now) {
       arcHeight: Math.max(50, distance * 0.3),
       targetPosition: { x: targetCenterX, y: targetCenterY }
     }
+  } else if (unit.type === 'apache') {
+    const spawnPoints = getApacheRocketSpawnPoints(unit, unitCenterX, unitCenterY)
+    const spawn = unit.customRocketSpawn || spawnPoints.left || { x: unitCenterX, y: unitCenterY }
+    const dx = targetCenterX - spawn.x
+    const dy = targetCenterY - spawn.y
+    const distance = Math.hypot(dx, dy) || 1
+    const speed = 5
+
+    bullet = {
+      id: Date.now() + Math.random(),
+      x: spawn.x,
+      y: spawn.y,
+      speed,
+      baseDamage: APACHE_REMOTE_DAMAGE,
+      active: true,
+      shooter: unit,
+      homing: false,
+      target: null,
+      targetPosition: { x: targetCenterX, y: targetCenterY },
+      explosionRadius: TILE_SIZE,
+      skipCollisionChecks: true,
+      maxFlightTime: 3000,
+      creationTime: now,
+      projectileType: 'rocket',
+      originType: 'apacheRocket'
+    }
+
+    bullet.vx = (dx / distance) * speed
+    bullet.vy = (dy / distance) * speed
   }
 
   if (bullet) {
@@ -678,5 +710,7 @@ export function fireBullet(unit, target, bullets, now) {
     bullets.push(bullet)
     playPositionalSound('shoot', bullet.x, bullet.y, 0.5)
     unit.lastShotTime = now
+    return bullet
   }
+  return null
 }

@@ -974,7 +974,7 @@ const DEFAULT_APACHE_JOYSTICK_MAPPING = {
     down: ['descend'],
     left: ['strafeLeft'],
     right: ['strafeRight'],
-    tap: []
+    tap: ['fire']
   },
   right: {
     up: [],
