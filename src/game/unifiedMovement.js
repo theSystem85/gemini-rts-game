@@ -487,7 +487,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // For tanks, handle acceleration/deceleration based on rotation state
-  // For other units, allow movement when rotation is close to target
+  // For other units (except Apache), allow movement when rotation is close to target
+  // Apache can move while rotating since it's a helicopter
   let canAccelerate = true
   let shouldDecelerate = false
 
@@ -503,11 +504,13 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       canAccelerate = unit.canAccelerate !== false
       shouldDecelerate = !canAccelerate && movement.isMoving
     }
-  } else {
+  } else if (unit.type !== 'apache') {
+    // Non-tank, non-Apache units need to be mostly facing the right direction
     const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation))
     canAccelerate = rotationDiff < Math.PI / 4 // Allow movement if within 45 degrees
     shouldDecelerate = !canAccelerate && movement.isMoving
   }
+  // Apache can always accelerate while moving (helicopters can fly in any direction while rotating)
 
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 }
