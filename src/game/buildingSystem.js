@@ -177,6 +177,15 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
       if (!closestEnemy) {
         for (const unit of units) {
           if (unit.owner !== building.owner && unit.health > 0) {
+            // Check if target is an airborne Apache - only certain buildings can target them
+            const targetIsAirborneApache = unit.type === 'apache' && unit.flightState !== 'grounded'
+            const canTargetAir = building.type === 'rocketTurret' || building.type === 'teslaCoil'
+
+            // Skip airborne Apache if this building can't target air units
+            if (targetIsAirborneApache && !canTargetAir) {
+              continue
+            }
+
             const unitCenterX = unit.x + TILE_SIZE / 2
             const unitCenterY = unit.y + TILE_SIZE / 2
             const dx = unitCenterX - centerX

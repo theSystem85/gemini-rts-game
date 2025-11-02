@@ -129,7 +129,7 @@ export async function ensureConfigOverridesLoaded() {
   }
 
   if (!overridesLoadPromise) {
-    overridesLoadPromise = (async () => {
+    overridesLoadPromise = (async() => {
       await loadOverridesFromFile()
       loadOverridesFromLocalStorage()
       overridesLoaded = true
@@ -237,10 +237,10 @@ export function setXpMultiplier(value) {
 }
 
 // config.js
-export let TILE_SIZE = 32
-export let MIN_MAP_TILES = 32
-export let DEFAULT_MAP_TILES_X = 100
-export let DEFAULT_MAP_TILES_Y = 100
+export const TILE_SIZE = 32
+export const MIN_MAP_TILES = 32
+export const DEFAULT_MAP_TILES_X = 100
+export const DEFAULT_MAP_TILES_Y = 100
 export let MAP_TILES_X = DEFAULT_MAP_TILES_X
 export let MAP_TILES_Y = DEFAULT_MAP_TILES_Y
 
@@ -266,8 +266,8 @@ export function getMapHeight() {
   return MAP_TILES_Y * TILE_SIZE
 }
 // Approximate real world length of one tile in meters
-export let TILE_LENGTH_METERS = 1000
-export let SAFE_RANGE_ENABLED = false
+export const TILE_LENGTH_METERS = 1000
+export const SAFE_RANGE_ENABLED = false
 export let CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
 export function setCrewKillChance(value) {
@@ -289,7 +289,7 @@ export function setEnemyControlEnabled(value) {
 }
 
 // Sound configuration
-export let MASTER_VOLUME = 0.25  // Default to 50% volume
+export const MASTER_VOLUME = 0.25  // Default to 50% volume
 
 // Targeting spread for tanks and turrets (in pixels, about 3/4 of a tile for more noticeable inaccuracy)
 export let TARGETING_SPREAD = TILE_SIZE * 0.75
@@ -320,7 +320,7 @@ export function setTankerSupplyCapacity(value) {
 }
 
 // Fallback colors for tiles when images aren't available
-export let TILE_COLORS = {
+export const TILE_COLORS = {
   land: '#A0522D',
   water: '#1E90FF',
   rock: '#808080',
@@ -331,7 +331,7 @@ export let TILE_COLORS = {
 }
 
 // Image paths for tile types
-export let TILE_IMAGES = {
+export const TILE_IMAGES = {
   land: {
     // Use programmatic discovery for grass tiles
     useGrassTileDiscovery: true
@@ -354,54 +354,54 @@ export let TILE_IMAGES = {
 }
 
 // Sprite sheet and mapping for map tiles
-export let TILE_SPRITE_SHEET = 'images/map/map_sprites.webp'
-export let TILE_SPRITE_MAP = 'images/map/map_sprites.json'
+export const TILE_SPRITE_SHEET = 'images/map/map_sprites.webp'
+export const TILE_SPRITE_MAP = 'images/map/map_sprites.json'
 
 // Enable/disable texture usage (for performance testing/fallback)
-export let USE_TEXTURES = true
+export const USE_TEXTURES = true
 
 // Enable/disable tank image-based rendering (T key to toggle during gameplay)
-export let USE_TANK_IMAGES = true
+export const USE_TANK_IMAGES = true
 
 // Grass tile ratio configuration (higher numbers = rarer)
 // 1 out of X tiles will be decorative/impassable
-export let GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
-export let GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
+export const GRASS_DECORATIVE_RATIO = 33  // 1 in x tiles will be decorative
+export const GRASS_IMPASSABLE_RATIO = 50  // 1 in x tiles will be impassable
 
-export let INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
+export const INERTIA_DECAY = 0.983  // Increased from 0.95 to make inertia 3x longer
 export let INERTIA_STOP_THRESHOLD = 1  // Velocity magnitude below this stops inertia entirely
 
 export function setInertiaStopThreshold(value) {
   INERTIA_STOP_THRESHOLD = value
 }
 // Wreck impact physics tuning (bullet/explosion impacts)
-export let WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
-export let WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
+export const WRECK_IMPACT_FORCE_MULTIPLIER = 0.02 // Scales how far wrecks are tossed per point of damage
+export const WRECK_INERTIA_DECAY = 0.92 // Controls how quickly tossed wrecks slow down
 
 // Collision bounce tuning (unit vs unit)
-export let COLLISION_BOUNCE_REMOTE_BOOST = 1.5 // Extra impulse when player is actively remote-controlling
-export let COLLISION_BOUNCE_SPEED_FACTOR = 0.8 // Contribution of speed to impulse
-export let COLLISION_BOUNCE_OVERLAP_FACTOR = 0.2 // Contribution of overlap to impulse
-export let COLLISION_BOUNCE_MIN = 0.3 // Clamp min impulse
-export let COLLISION_BOUNCE_MAX = 2.2 // Clamp max impulse
-export let COLLISION_RECOIL_FACTOR_FAST = 0.35 // Portion of impulse applied as recoil to the faster unit
-export let COLLISION_RECOIL_MAX_FAST = 0.8 // Max recoil magnitude for faster unit
-export let COLLISION_RECOIL_PUSH_OTHER_FACTOR = 0.25 // Portion of impulse nudging the faster unit when the slower bounces (for separation)
-export let COLLISION_RECOIL_PUSH_OTHER_MAX = 0.6 // Max of that nudge
-export let COLLISION_SEPARATION_SCALE = 0.6 // How much to separate positions based on overlap
-export let COLLISION_SEPARATION_MAX = 4 // Max separation distance
-export let COLLISION_SEPARATION_MIN = 0.5 // Min separation distance
-export let COLLISION_NORMAL_DAMPING_MULT = 1.1 // How strongly to damp velocity along collision normal
-export let COLLISION_NORMAL_DAMPING_MAX = 1.2 // Max damping amount
+export const COLLISION_BOUNCE_REMOTE_BOOST = 1.5 // Extra impulse when player is actively remote-controlling
+export const COLLISION_BOUNCE_SPEED_FACTOR = 0.8 // Contribution of speed to impulse
+export const COLLISION_BOUNCE_OVERLAP_FACTOR = 0.2 // Contribution of overlap to impulse
+export const COLLISION_BOUNCE_MIN = 0.3 // Clamp min impulse
+export const COLLISION_BOUNCE_MAX = 2.2 // Clamp max impulse
+export const COLLISION_RECOIL_FACTOR_FAST = 0.35 // Portion of impulse applied as recoil to the faster unit
+export const COLLISION_RECOIL_MAX_FAST = 0.8 // Max recoil magnitude for faster unit
+export const COLLISION_RECOIL_PUSH_OTHER_FACTOR = 0.25 // Portion of impulse nudging the faster unit when the slower bounces (for separation)
+export const COLLISION_RECOIL_PUSH_OTHER_MAX = 0.6 // Max of that nudge
+export const COLLISION_SEPARATION_SCALE = 0.6 // How much to separate positions based on overlap
+export const COLLISION_SEPARATION_MAX = 4 // Max separation distance
+export const COLLISION_SEPARATION_MIN = 0.5 // Min separation distance
+export const COLLISION_NORMAL_DAMPING_MULT = 1.1 // How strongly to damp velocity along collision normal
+export const COLLISION_NORMAL_DAMPING_MAX = 1.2 // Max damping amount
 
 // Collision bounce tuning (unit vs wreck)
-export let WRECK_COLLISION_REMOTE_BOOST = 1.1 // Stronger boost when remote-controlling
-export let WRECK_COLLISION_SPEED_FACTOR = 0.75
-export let WRECK_COLLISION_OVERLAP_FACTOR = 0.1
-export let WRECK_COLLISION_MIN = 0.4
-export let WRECK_COLLISION_MAX = 2.5
-export let WRECK_COLLISION_RECOIL_FACTOR_UNIT = 0.25 // Recoil applied to unit when wreck is slower
-export let WRECK_COLLISION_RECOIL_MAX_UNIT = 0.6
+export const WRECK_COLLISION_REMOTE_BOOST = 1.1 // Stronger boost when remote-controlling
+export const WRECK_COLLISION_SPEED_FACTOR = 0.75
+export const WRECK_COLLISION_OVERLAP_FACTOR = 0.1
+export const WRECK_COLLISION_MIN = 0.4
+export const WRECK_COLLISION_MAX = 2.5
+export const WRECK_COLLISION_RECOIL_FACTOR_UNIT = 0.25 // Recoil applied to unit when wreck is slower
+export const WRECK_COLLISION_RECOIL_MAX_UNIT = 0.6
 // Scroll speed when using arrow keys (pixels per frame)
 export let KEYBOARD_SCROLL_SPEED = 8
 
@@ -435,12 +435,12 @@ export function setServiceServingRange(value) {
 }
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
-export let MAX_BUILDING_GAP_TILES = 3
+export const MAX_BUILDING_GAP_TILES = 3
 // Backwards-compatible export for systems that still consume the old name
-export let BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
+export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
 // Shadow of War configuration
-export let SHADOW_OF_WAR_CONFIG = {
+export const SHADOW_OF_WAR_CONFIG = {
   tilePadding: 0.5,
   rocketRangeMultiplier: 1.5,
   defaultNonCombatRange: 2,
@@ -469,14 +469,14 @@ export function setTankBulletSpeed(value) {
 }
 
 // Hit zone damage multipliers for tanks
-export let HIT_ZONE_DAMAGE_MULTIPLIERS = {
+export const HIT_ZONE_DAMAGE_MULTIPLIERS = {
   FRONT: 1.0,   // Normal damage from front
   SIDE: 1.25,    // 30% more damage from sides
   REAR: 1.5     // 100% more damage from behind (critical hit)
 }
 
 // Critical damage sound cooldown (30 seconds)
-export let CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
+export const CRITICAL_DAMAGE_SOUND_COOLDOWN = 30000
 
 // Separate rotation rates for tank components
 export let TANK_WAGON_ROT = 0.05 // Radians per frame for tank body/wagon movement
@@ -501,14 +501,14 @@ export function setTurretAimingThreshold(value) {
 }
 
 // Recoil and muzzle flash animation constants
-export let RECOIL_DISTANCE = 8 // pixels to move back during recoil
-export let RECOIL_DURATION = 300 // milliseconds
-export let MUZZLE_FLASH_DURATION = 150 // milliseconds
-export let MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
-export let TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
-export let SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
-export let SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
-export let SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
+export const RECOIL_DISTANCE = 8 // pixels to move back during recoil
+export const RECOIL_DURATION = 300 // milliseconds
+export const MUZZLE_FLASH_DURATION = 150 // milliseconds
+export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
+export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
+export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
+export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
+export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
 export let MAX_SMOKE_PARTICLES = 600 // Upper limit to keep smoke rendering performant
 
 export function setMaxSmokeParticles(value) {
@@ -516,11 +516,11 @@ export function setMaxSmokeParticles(value) {
 }
 
 // Duration of the building sell animation (in milliseconds)
-export let BUILDING_SELL_DURATION = 3000
+export const BUILDING_SELL_DURATION = 3000
 
 // Wind effects for smoke particles
-export let WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
-export let WIND_STRENGTH = 0.008 // How much wind affects particle movement
+export const WIND_DIRECTION = { x: 0.3, y: -0.1 } // Slight eastward and upward wind
+export const WIND_STRENGTH = 0.008 // How much wind affects particle movement
 
 export let ORE_SPREAD_INTERVAL = 30000  // 30 seconds (3x faster than before)
 
@@ -570,7 +570,7 @@ export function setRecoveryTankRatio(value) {
 }
 
 // Smoke emission for buildings
-export let BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
+export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
 
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export let PATHFINDING_THRESHOLD = 10
@@ -593,7 +593,7 @@ export function setStuckCheckInterval(value) {
   STUCK_CHECK_INTERVAL = value
 }
 
-export let HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
+export const HARVESTER_PRODUCTIVITY_CHECK_INTERVAL = 500  // Check harvester productivity every 0.5 seconds
 export let STUCK_THRESHOLD = 500  // Consider units stuck after 0.5 seconds
 
 export function setStuckThreshold(value) {
@@ -619,7 +619,7 @@ export function setStreetSpeedMultiplier(value) {
   STREET_SPEED_MULTIPLIER = value
 }
 
-export let STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
+export const STREET_PATH_COST = 1 / STREET_SPEED_MULTIPLIER  // Prefer streets in pathfinding
 
 // Unit costs
 export let HOWITZER_COST = 2500
@@ -629,7 +629,7 @@ export function setHowitzerCost(value) {
   UNIT_COSTS.howitzer = value
 }
 
-export let UNIT_COSTS = {
+export const UNIT_COSTS = {
   tank: 1000,
   tank_v1: 1000, // Alias for tank (used by AI)
   rocketTank: 2000,
@@ -644,7 +644,7 @@ export let UNIT_COSTS = {
 }
 
 // Unit properties
-export let UNIT_PROPERTIES = {
+export const UNIT_PROPERTIES = {
   // Base properties
   base: {
     health: 100,
@@ -792,7 +792,7 @@ export function setHowitzerProjectileSpeed(value) {
   HOWITZER_PROJECTILE_SPEED = value
 }
 
-export let HOWITZER_EXPLOSION_RADIUS_TILES = 3
+export const HOWITZER_EXPLOSION_RADIUS_TILES = 3
 
 export let HOWITZER_VISION_RANGE = 18
 
@@ -807,16 +807,16 @@ export function setHowitzerBuildingDamageMultiplier(value) {
 }
 
 // Tank V3 burst fire configuration
-export let TANK_V3_BURST = {
+export const TANK_V3_BURST = {
   COUNT: 2,     // Number of bullets per burst
   DELAY: 300    // Delay between bullets in milliseconds
 }
 
 // Pathfinding constants
-export let PATHFINDING_LIMIT = 1000
+export const PATHFINDING_LIMIT = 1000
 
 // Movement directions for pathfinding and position search
-export let DIRECTIONS = [
+export const DIRECTIONS = [
   { x: 0, y: -1 },  // north
   { x: 1, y: 0 },   // east
   { x: 0, y: 1 },   // south
@@ -828,9 +828,9 @@ export let DIRECTIONS = [
 ]
 
 // Maximum search distance for spawn positions
-export let MAX_SPAWN_SEARCH_DISTANCE = 10
+export const MAX_SPAWN_SEARCH_DISTANCE = 10
 
-export let BULLET_DAMAGES = {
+export const BULLET_DAMAGES = {
   tank_v1: 20,
   tank_v2: 24,
   tank_v3: 30,
@@ -838,18 +838,18 @@ export let BULLET_DAMAGES = {
 }
 
 // Attack Group Feature (AGF) constants
-export let ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
-export let ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
+export const ATTACK_TARGET_INDICATOR_SIZE = 8 // Size of the red triangle indicator above targeted units
+export const ATTACK_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for target indicators
 
 // Movement target indicator constants
-export let MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
-export let MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
+export const MOVE_TARGET_INDICATOR_SIZE = 8 // Size of the green triangle indicator for movement targets
+export const MOVE_TARGET_BOUNCE_SPEED = 0.003 // Speed of bouncing animation for movement target indicators
 
 export const UTILITY_SERVICE_INDICATOR_SIZE = 8
 export const UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED = 0.003
 
 // Unit type colors (same for all players/enemies of same type)
-export let UNIT_TYPE_COLORS = {
+export const UNIT_TYPE_COLORS = {
   tank: '#0000FF',        // Blue
   tank_v1: '#0000FF',     // Blue
   'tank-v2': '#FFFFFF',   // White
@@ -864,7 +864,7 @@ export let UNIT_TYPE_COLORS = {
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
-export let PARTY_COLORS = {
+export const PARTY_COLORS = {
   player1: '#00FF00',     // Green (Human player by default)
   player2: '#FF0000',     // Red
   player3: '#0080FF',     // Blue
@@ -875,7 +875,7 @@ export let PARTY_COLORS = {
 }
 
 // Player position constants for 4-corner setup
-export let PLAYER_POSITIONS = {
+export const PLAYER_POSITIONS = {
   player1: { x: 0.1, y: 0.9 },   // Bottom-left (current player position)
   player2: { x: 0.9, y: 0.1 },   // Top-right (current enemy position)
   player3: { x: 0.1, y: 0.1 },   // Top-left
@@ -883,7 +883,7 @@ export let PLAYER_POSITIONS = {
 }
 
 // Default number of players
-export let DEFAULT_PLAYER_COUNT = 2
+export const DEFAULT_PLAYER_COUNT = 2
 
 // Gas system configuration
 export let GAS_REFILL_TIME = 7000 // ms to fully refill at station
@@ -1099,7 +1099,7 @@ export function isTurretTankUnitType(unitType) {
   return TURRET_TANK_TYPES.has(unitType)
 }
 
-export let UNIT_GAS_PROPERTIES = {
+export const UNIT_GAS_PROPERTIES = {
   tank_v1: { tankSize: 1900, consumption: 450 },
   'tank-v2': { tankSize: 1900, consumption: 450 },
   'tank-v3': { tankSize: 1900, consumption: 450 },

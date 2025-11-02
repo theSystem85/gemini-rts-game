@@ -34,6 +34,7 @@ import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
 
@@ -350,9 +351,13 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         movement.isMoving = true
         const desiredRotation = normalizeAngle(Math.atan2(dirY, dirX))
         movement.targetRotation = desiredRotation
-        movement.rotation = desiredRotation
-        unit.direction = desiredRotation
-        unit.rotation = desiredRotation
+        // Smooth rotation towards target instead of instant snap
+        const apacheRotationSpeed = unit.rotationSpeed || 0.18
+        const currentRotation = unit.direction || movement.rotation || 0
+        const smoothedRotation = smoothRotate(currentRotation, desiredRotation, apacheRotationSpeed)
+        movement.rotation = smoothedRotation
+        unit.direction = smoothedRotation
+        unit.rotation = smoothedRotation
         unit.hovering = false
       }
       unit.path = []
@@ -938,7 +943,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
       const normalY = (wreckCenterY - unitCenterY) / (distance || 1)
       const overlap = UNIT_COLLISION_MIN_DISTANCE - distance
       const unitSpeed = Math.hypot(unitVelX, unitVelY)
-      
+
       // Compare speeds to decide who bounces more
       const wreckSpeed = Math.hypot(wreck.velocityX || 0, wreck.velocityY || 0)
 

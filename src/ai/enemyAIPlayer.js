@@ -531,22 +531,22 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
 
       if (newUnit) {
         units.push(newUnit)
-        
+
         // Immediately trigger recovery tank assignment for newly spawned recovery tanks
         if (unitType === 'recoveryTank') {
           // Mark as ready for immediate assignment
           newUnit.lastRecoveryCommandTime = 0
           newUnit.freshlySpawned = true
-          
+
           // Release from factory immediately for recovery tanks
           newUnit.holdInFactory = false
           newUnit.spawnedInFactory = false
-          
+
           // Force immediate assignment with multiple attempts
           const attemptAssignment = () => {
             manageAIRecoveryTanks(units, gameState, mapGrid, now)
           }
-          
+
           // Try multiple times to ensure assignment succeeds
           setTimeout(attemptAssignment, 50)
           setTimeout(attemptAssignment, 200)

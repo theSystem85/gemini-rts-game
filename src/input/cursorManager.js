@@ -211,31 +211,31 @@ export class CursorManager {
       const hasUnitsNeedingGas = selectedUnits.some(
         u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
       )
-        if (hasUnitsNeedingGas) {
-          for (const building of gameState.buildings) {
-            if (building.type === 'gasStation' &&
+      if (hasUnitsNeedingGas) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'gasStation' &&
                 building.owner === gameState.humanPlayer &&
                 building.health > 0 &&
                 tileX >= building.x && tileX < building.x + building.width &&
                 tileY >= building.y && tileY < building.y + building.height) {
-              this.isOverPlayerGasStation = true
-              break
-            }
+            this.isOverPlayerGasStation = true
+            break
           }
         }
+      }
 
-        if (hasSelectedApaches) {
-          for (const building of gameState.buildings) {
-            if (building.type === 'helipad' &&
+      if (hasSelectedApaches) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'helipad' &&
                 building.owner === gameState.humanPlayer &&
                 building.health > 0 &&
                 tileX >= building.x && tileX < building.x + building.width &&
                 tileY >= building.y && tileY < building.y + building.height) {
-              this.isOverFriendlyHelipad = true
-              break
-            }
+            this.isOverFriendlyHelipad = true
+            break
           }
         }
+      }
 
       // Check for healable units when fully loaded ambulances are selected
       if (hasSelectedAmbulancesWithMedics && units && Array.isArray(units)) {
@@ -501,7 +501,7 @@ export class CursorManager {
                           !gameState.sellMode &&
                           !gameState.attackGroupMode
 
-        const hasImmediateMoveIntoTarget = this.isOverWreck ||
+      const hasImmediateMoveIntoTarget = this.isOverWreck ||
           this.isOverRepairableUnit ||
           this.isOverRecoveryTank ||
           this.isOverPlayerWorkshop ||
@@ -512,8 +512,8 @@ export class CursorManager {
         return
       }
 
-        if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
-          const isSupportTarget = this.isOverHealableUnit ||
+      if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
+        const isSupportTarget = this.isOverHealableUnit ||
             this.isOverRefuelableUnit ||
             this.isOverPlayerHospital ||
             this.isOverPlayerGasStation ||

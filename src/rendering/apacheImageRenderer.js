@@ -69,7 +69,7 @@ export function isApacheImageLoaded() {
 function getRotationBucket(angle) {
   const normalized = (angle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2)
   const degrees = normalized * 180 / Math.PI
-  const bucketSize = 15
+  const bucketSize = 7.5  // Doubled rotation states (was 15, now 7.5)
   return Math.round(degrees / bucketSize) * bucketSize
 }
 
