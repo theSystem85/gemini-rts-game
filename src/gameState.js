@@ -113,8 +113,8 @@ export const gameState = {
   // Radar station status - initialize to false (no radar at game start)
   radarActive: false,
 
-  // Shadow of war visibility state
-  shadowOfWarEnabled: true,
+  // Shadow of war visibility state (disabled by default for new games)
+  shadowOfWarEnabled: false,
   visibilityMap: [],
 
   // Grid visibility toggle - initialize to false (grid hidden by default)
