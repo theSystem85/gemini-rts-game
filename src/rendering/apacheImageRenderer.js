@@ -8,8 +8,8 @@ let bodyLoaded = false
 let rotorLoaded = false
 let loading = false
 
-const BODY_TARGET_WIDTH = TILE_SIZE * 0.7
-const ROTOR_TARGET_WIDTH = TILE_SIZE
+const BODY_TARGET_WIDTH = TILE_SIZE * 0.7 * 1.5 // 50% larger
+const ROTOR_TARGET_WIDTH = TILE_SIZE * 1.5 // 50% larger
 const ROTOR_ANCHOR = { x: 31, y: 30 }
 const SPRITE_CACHE = new Map()
 

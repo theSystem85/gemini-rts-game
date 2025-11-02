@@ -31,6 +31,12 @@ export class UnitRenderer {
     if (unit.type === 'apache') {
       const rendered = renderApacheWithImage(ctx, unit, centerX, centerY)
       if (rendered) {
+        // For Apache, adjust selection position to account for altitude lift
+        const altitudeLift = (unit.altitude || 0) * 0.4
+        const adjustedCenterY = centerY - altitudeLift
+        this.renderUtilityServiceRange(ctx, unit, centerX, adjustedCenterY)
+        this.renderSelection(ctx, unit, centerX, adjustedCenterY)
+        this.renderAlertMode(ctx, unit, centerX, adjustedCenterY)
         return
       }
     }
@@ -269,12 +275,15 @@ export class UnitRenderer {
       return
     }
 
+    // Apply altitude adjustment for Apache helicopters to align with selection markers
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+
     // Draw health bar with party colors for owner distinction
     const unitHealthRatio = unit.health / unit.maxHealth
     const healthBarWidth = TILE_SIZE * 0.8
     const healthBarHeight = 4
     const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
-    const healthBarY = unit.y - 10 - scrollOffset.y
+    const healthBarY = unit.y - 10 - scrollOffset.y - altitudeLift
     ctx.strokeStyle = '#000'
     ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
 
@@ -335,10 +344,13 @@ export class UnitRenderer {
     }
 
     if (shouldShowBar) {
+      // Apply altitude adjustment for Apache helicopters to align with health bar
+      const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+
       const progressBarWidth = TILE_SIZE * 0.8
       const progressBarHeight = 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
-      const progressBarY = unit.y - 5 - scrollOffset.y
+      const progressBarY = unit.y - 5 - scrollOffset.y - altitudeLift
 
       // Background bar
       ctx.fillStyle = '#333'
@@ -359,8 +371,11 @@ export class UnitRenderer {
 
     const ratio = unit.gas / unit.maxGas
 
+    // Apply altitude adjustment for Apache helicopters to align with selection
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
-    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
     const halfTile = TILE_SIZE / 2
     const cornerSize = 8
     const offset = 2
@@ -737,6 +752,20 @@ export class UnitRenderer {
         this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    // Handle Apache helicopter (always uses image rendering when available)
+    if (unit.type === 'apache') {
+      const ok = renderApacheWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        // For Apache, adjust selection position to account for altitude lift
+        const altitudeLift = (unit.altitude || 0) * 0.4
+        const adjustedCenterY = centerY - altitudeLift
+        this.renderUtilityServiceRange(ctx, unit, centerX, adjustedCenterY)
+        this.renderSelection(ctx, unit, centerX, adjustedCenterY)
+        this.renderAlertMode(ctx, unit, centerX, adjustedCenterY)
         return
       }
     }

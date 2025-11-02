@@ -996,7 +996,7 @@ export class UnitCommandsHandler {
       return false
     }
 
-    const stopRadius = Math.max(6, options.stopRadius || TILE_SIZE * 0.3)
+    const stopRadius = Math.max(6, options.stopRadius || TILE_SIZE * 0.5)
     unit.path = []
     unit.originalPath = null
     unit.moveTarget = destTile ? { x: destTile.x, y: destTile.y } : null

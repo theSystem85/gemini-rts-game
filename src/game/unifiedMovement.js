@@ -329,7 +329,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       const dx = plan.x - unitCenterX
       const dy = plan.y - unitCenterY
       const distance = Math.hypot(dx, dy)
-      const stopRadius = Math.max(6, plan.stopRadius || TILE_SIZE * 0.2)
+      const stopRadius = Math.max(6, plan.stopRadius || TILE_SIZE * 0.4)
 
       if (distance <= stopRadius) {
         unit.flightPlan = null
@@ -475,8 +475,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // Handle rotation before movement (tanks should rotate towards target before moving)
-  // Skip unified rotation for tanks as they have their own turret/body rotation system
-  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
+  // Skip unified rotation for tanks and Apache as they have their own rotation systems
+  // Apache uses instant rotation in flight plan system
+  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer' || unit.type === 'apache')) {
     updateUnitRotation(unit)
   }
 
@@ -602,7 +603,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
-  const skipCollisionChecks = unit.type === 'apache' && unit.flightState !== 'grounded'
+  const skipCollisionChecks = unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')
   const collisionResult = skipCollisionChecks
     ? { collided: false }
     : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
@@ -792,7 +793,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
   const tile = tileRow ? tileRow[tileX] : undefined
 
-  if (unit.type === 'apache' && unit.flightState !== 'grounded') {
+  if (unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')) {
     if (!tileRow || tile === undefined) {
       return { collided: true, type: 'bounds' }
     }

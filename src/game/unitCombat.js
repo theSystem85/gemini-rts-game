@@ -316,8 +316,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         baseDamage: getDamageForUnitType(unit.type),
         active: true,
         shooter: unit,
-        homing: isRocketTankRocket ? false : (projectileType === 'rocket' && !isApacheRocket),
-        target: projectileType === 'rocket' ? target : null,
+        homing: isRocketTankRocket ? false : (isApacheRocket ? false : (projectileType === 'rocket')),
+        target: projectileType === 'rocket' && !isApacheRocket ? target : null,
         targetPosition: { x: finalTarget.x, y: finalTarget.y },
         startTime: now,
         projectileType
@@ -326,6 +326,14 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       if (isApacheRocket) {
         bullet.explosionRadius = TILE_SIZE
         bullet.skipCollisionChecks = true
+        bullet.maxFlightTime = 3000 // 3 seconds max flight time before forced explosion
+        bullet.creationTime = now
+        // Apache rockets fly straight to their target position
+        const dx = finalTarget.x - rocketSpawn.x
+        const dy = finalTarget.y - rocketSpawn.y
+        const distance = Math.hypot(dx, dy)
+        bullet.vx = (dx / distance) * bulletSpeed
+        bullet.vy = (dy / distance) * bulletSpeed
       }
 
       if (isRocketTankRocket) {
@@ -466,6 +474,13 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
   const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
   const spawn = spawnPoints[side] || { x: centerX, y: centerY }
 
+  // Generate random target position within 2-tile diameter circle around target center
+  const explosionRadius = TILE_SIZE * 1.0 // 2 tile diameter = 1.0 tile radius
+  const angle = Math.random() * Math.PI * 2
+  const distance = Math.random() * explosionRadius
+  const randomTargetX = targetCenterX + Math.cos(angle) * distance
+  const randomTargetY = targetCenterY + Math.sin(angle) * distance
+
   unit.customRocketSpawn = spawn
   const fired = handleTankFiring(
     unit,
@@ -473,13 +488,13 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
     bullets,
     now,
     0,
-    targetCenterX,
-    targetCenterY,
+    randomTargetX,
+    randomTargetY,
     'rocket',
     units,
     mapGrid,
     false,
-    null
+    { x: randomTargetX, y: randomTargetY } // Override target to bypass targeting spread
   )
   unit.customRocketSpawn = null
 
@@ -1049,7 +1064,7 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
       unit.flightPlan = {
         x: targetCenter.x,
         y: targetCenter.y,
-        stopRadius: TILE_SIZE * 0.25,
+        stopRadius: TILE_SIZE * 0.5,
         mode: 'combat',
         followTargetId: unit.target.id || null,
         destinationTile: destTile

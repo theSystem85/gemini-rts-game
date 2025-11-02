@@ -729,13 +729,16 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
   const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
-  unit.crew = { driver: true, commander: true }
+  // Apache helicopters don't have crew system
+  if (actualType !== 'apache') {
+    unit.crew = { driver: true, commander: true }
 
-  if (fullCrewTanks.includes(actualType)) {
-    unit.crew.gunner = true
-    unit.crew.loader = true
-  } else if (loaderUnits.includes(actualType)) {
-    unit.crew.loader = true
+    if (fullCrewTanks.includes(actualType)) {
+      unit.crew.gunner = true
+      unit.crew.loader = true
+    } else if (loaderUnits.includes(actualType)) {
+      unit.crew.loader = true
+    }
   }
 
   if (unitProps.accelerationMultiplier) {
@@ -783,8 +786,6 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.manualFlightHoverRequested = false
     unit.helipadLandingRequested = false
     unit.helipadTargetId = null
-    unit.crew.gunner = true
-    unit.crew.loader = true
     unit.maxRocketAmmo = 38
     unit.rocketAmmo = unit.maxRocketAmmo
   }

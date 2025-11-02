@@ -9,6 +9,7 @@ import { fireBullet } from './bulletSystem.js'
 import { selectedUnits, getKeyboardHandler } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
 import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 
 let lastAutoFocusUnitId = null
 let autoFocusSuppressed = false
@@ -362,9 +363,50 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         rawWagonDirection,
         rawWagonSpeed
       })
+
+      // Handle Apache rocket firing in remote control
+      if (fireIntensity > 0 && unit.canFire !== false) {
+        const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+        if (ammoRemaining > 0) {
+          const effectiveFireRate = 12000 // Same as normal Apache fire rate
+          if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
+            // Fire rockets forward in the direction the Apache is facing
+            const centerX = unit.x + TILE_SIZE / 2
+            const centerY = unit.y + TILE_SIZE / 2
+            const direction = unit.direction || 0
+            const rangePx = TANK_FIRE_RANGE * TILE_SIZE
+            const targetX = centerX + Math.cos(direction) * rangePx
+            const targetY = centerY + Math.sin(direction) * rangePx
+
+            const target = {
+              tileX: Math.floor(targetX / TILE_SIZE),
+              tileY: Math.floor(targetY / TILE_SIZE),
+              x: targetX,
+              y: targetY
+            }
+
+            // Fire a single rocket from the left side for remote control
+            const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+            const spawn = spawnPoints.left || { x: centerX, y: centerY }
+
+            unit.customRocketSpawn = spawn
+            const fired = fireBullet(unit, target, bullets, now)
+            unit.customRocketSpawn = null
+
+            if (fired) {
+              unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
+              unit.lastShotTime = now
+
+              if (unit.rocketAmmo <= 0) {
+                unit.canFire = false
+              }
+            }
+          }
+        }
+      }
+
       return
     }
-    // Remote control requires an active commander
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.commander) {
       unit.remoteControlActive = false
       return
