@@ -7,6 +7,7 @@ import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 
@@ -104,6 +105,24 @@ function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileTy
   }
 }
 
+function getApacheTargetCenter(target) {
+  if (!target) {
+    return null
+  }
+
+  if (target.tileX !== undefined) {
+    return {
+      x: target.x + TILE_SIZE / 2,
+      y: target.y + TILE_SIZE / 2
+    }
+  }
+
+  return {
+    x: (target.x + (target.width || 1) / 2) * TILE_SIZE,
+    y: (target.y + (target.height || 1) / 2) * TILE_SIZE
+  }
+}
+
 /**
  * Common combat logic helper - handles movement and pathfinding
  */
@@ -198,7 +217,8 @@ const COMBAT_CONFIG = {
   DAMAGE: {
     STANDARD: 25,
     TANK_V3: 30,
-    ROCKET: 20
+    ROCKET: 20,
+    APACHE: 10
   },
   RANGE_MULTIPLIER: {
     ROCKET: 1.5
@@ -228,8 +248,18 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
-    const clearShot = unit.type === 'rocketTank' || hasClearShot(unit, target, units)
-    if (unit.canFire !== false && clearShot && isTurretAimedAtTarget(unit, target)) {
+    const clearShot = unit.type === 'rocketTank' || unit.type === 'apache' || hasClearShot(unit, target, units)
+    const turretAimed = unit.type === 'apache' ? true : isTurretAimedAtTarget(unit, target)
+    if (unit.canFire !== false && clearShot && turretAimed) {
+      const targetIsAirborneApache = target && target.type === 'apache' && target.flightState !== 'grounded'
+      const shooterCanHitAir =
+        unit.type === 'rocketTank' ||
+        unit.type === 'apache' ||
+        unit.type === 'rocketTurret' ||
+        unit.type === 'teslaCoil'
+      if (targetIsAirborneApache && !shooterCanHitAir) {
+        return false
+      }
       // Calculate aim position (with predictive aiming if enabled)
       let aimX = overrideTarget ? overrideTarget.x : targetCenterX
       let aimY = overrideTarget ? overrideTarget.y : targetCenterY
@@ -266,25 +296,44 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       const angle = Math.atan2(finalTarget.y - unitCenterY, finalTarget.x - unitCenterX)
 
       const isRocketTankRocket = projectileType === 'rocket' && unit.type === 'rocketTank'
-      const bulletSpeed = isRocketTankRocket ? 6 : (projectileType === 'rocket' ? 3 : TANK_BULLET_SPEED)
+      const isApacheRocket = projectileType === 'rocket' && unit.type === 'apache'
+      const bulletSpeed = isRocketTankRocket
+        ? 6
+        : (projectileType === 'rocket' ? (isApacheRocket ? 5 : 3) : TANK_BULLET_SPEED)
 
       let rocketSpawn = null
       if (isRocketTankRocket) {
         rocketSpawn = getRocketSpawnPoint(unit, unitCenterX, unitCenterY)
+      } else if (isApacheRocket) {
+        rocketSpawn = unit.customRocketSpawn || getApacheRocketSpawnPoints(unit, unitCenterX, unitCenterY).left
       }
 
       const bullet = {
         id: Date.now() + Math.random(),
-        x: isRocketTankRocket ? rocketSpawn.x : unitCenterX,
-        y: isRocketTankRocket ? rocketSpawn.y : unitCenterY,
+        x: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.x : unitCenterX,
+        y: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.y : unitCenterY,
         speed: bulletSpeed,
         baseDamage: getDamageForUnitType(unit.type),
         active: true,
         shooter: unit,
-        homing: isRocketTankRocket ? false : (projectileType === 'rocket'),
-        target: projectileType === 'rocket' ? target : null,
+        homing: isRocketTankRocket ? false : (isApacheRocket ? false : (projectileType === 'rocket')),
+        target: projectileType === 'rocket' && !isApacheRocket ? target : null,
         targetPosition: { x: finalTarget.x, y: finalTarget.y },
-        startTime: now
+        startTime: now,
+        projectileType
+      }
+
+      if (isApacheRocket) {
+        bullet.explosionRadius = TILE_SIZE
+        bullet.skipCollisionChecks = true
+        bullet.maxFlightTime = 3000 // 3 seconds max flight time before forced explosion
+        bullet.creationTime = now
+        // Apache rockets fly straight to their target position
+        const dx = finalTarget.x - rocketSpawn.x
+        const dy = finalTarget.y - rocketSpawn.y
+        const distance = Math.hypot(dx, dy)
+        bullet.vx = (dx / distance) * bulletSpeed
+        bullet.vy = (dy / distance) * bulletSpeed
       }
 
       if (isRocketTankRocket) {
@@ -317,6 +366,13 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       unit.recoilStartTime = now
       unit.muzzleFlashStartTime = now
 
+      if (isApacheRocket && unit.customRocketSpawn) {
+        delete unit.customRocketSpawn
+      }
+      if (isApacheRocket) {
+        bullet.originType = 'apacheRocket'
+      }
+
       return true
     }
   }
@@ -330,6 +386,7 @@ function getDamageForUnitType(unitType) {
   switch (unitType) {
     case 'tank-v3': return COMBAT_CONFIG.DAMAGE.TANK_V3
     case 'rocketTank': return COMBAT_CONFIG.DAMAGE.ROCKET
+    case 'apache': return COMBAT_CONFIG.DAMAGE.APACHE
     default: return COMBAT_CONFIG.DAMAGE.STANDARD
   }
 }
@@ -364,6 +421,106 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
   }
 
   return false // Burst still in progress or failed
+}
+
+/**
+ * Handle multi-rocket volley for Apache helicopter
+ */
+function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCenterY, units, mapGrid) {
+  const availableAmmo = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+  if (availableAmmo <= 0) {
+    unit.volleyState = null
+    unit.apacheAmmoEmpty = true
+    unit.canFire = false
+    return true
+  }
+
+  if (!unit.volleyState) {
+    const rocketsThisVolley = Math.min(8, availableAmmo)
+    const leftCount = Math.min(4, Math.ceil(rocketsThisVolley / 2))
+    const rightCount = Math.min(4, rocketsThisVolley - leftCount)
+
+    unit.volleyState = {
+      leftRemaining: leftCount,
+      rightRemaining: rightCount,
+      lastRocketTime: 0,
+      delay: 120,
+      nextSide: 'left',
+      totalInVolley: rocketsThisVolley
+    }
+  }
+
+  const state = unit.volleyState
+  if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+    unit.volleyState = null
+    return true
+  }
+
+  if (now - state.lastRocketTime < state.delay) {
+    return false
+  }
+
+  let side = state.nextSide
+  if (side === 'left' && state.leftRemaining <= 0) side = 'right'
+  if (side === 'right' && state.rightRemaining <= 0) side = 'left'
+
+  if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+    unit.volleyState = null
+    return true
+  }
+
+  const centerX = unit.x + TILE_SIZE / 2
+  const centerY = unit.y + TILE_SIZE / 2
+  const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+  const spawn = spawnPoints[side] || { x: centerX, y: centerY }
+
+  // Generate random target position within 2-tile diameter circle around target center
+  const explosionRadius = TILE_SIZE * 1.0 // 2 tile diameter = 1.0 tile radius
+  const angle = Math.random() * Math.PI * 2
+  const distance = Math.random() * explosionRadius
+  const randomTargetX = targetCenterX + Math.cos(angle) * distance
+  const randomTargetY = targetCenterY + Math.sin(angle) * distance
+
+  unit.customRocketSpawn = spawn
+  const fired = handleTankFiring(
+    unit,
+    target,
+    bullets,
+    now,
+    0,
+    randomTargetX,
+    randomTargetY,
+    'rocket',
+    units,
+    mapGrid,
+    false,
+    { x: randomTargetX, y: randomTargetY } // Override target to bypass targeting spread
+  )
+  unit.customRocketSpawn = null
+
+  if (fired) {
+    unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
+    if (side === 'left') {
+      state.leftRemaining = Math.max(0, state.leftRemaining - 1)
+    } else {
+      state.rightRemaining = Math.max(0, state.rightRemaining - 1)
+    }
+    state.lastRocketTime = now
+    state.nextSide = side === 'left' ? 'right' : 'left'
+
+    if (state.leftRemaining <= 0 && state.rightRemaining <= 0) {
+      unit.volleyState = null
+      return true
+    }
+    if (unit.rocketAmmo <= 0) {
+      unit.apacheAmmoEmpty = true
+      unit.canFire = false
+      unit.volleyState = null
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
@@ -570,6 +727,15 @@ function updateGuardTargeting(unit, units) {
   let closestDist = Infinity
   units.forEach(p => {
     if (p.owner !== unit.owner && p.health > 0) {
+      // Check if target is an airborne Apache - only certain units can target them
+      const targetIsAirborneApache = p.type === 'apache' && p.flightState !== 'grounded'
+      const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+      // Skip airborne Apache if this unit can't target air units
+      if (targetIsAirborneApache && !shooterCanHitAir) {
+        return
+      }
+
       const cx = p.x + TILE_SIZE / 2
       const cy = p.y + TILE_SIZE / 2
       const d = Math.hypot(cx - unitCenterX, cy - unitCenterY)
@@ -589,15 +755,15 @@ function updateGuardTargeting(unit, units) {
         const bx = b.x * TILE_SIZE + (b.width * TILE_SIZE) / 2
         const by = b.y * TILE_SIZE + (b.height * TILE_SIZE) / 2
         const d = Math.hypot(bx - unitCenterX, by - unitCenterY)
-      if (d <= range && d < closestDist) {
-        if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, bx, by)) {
-          return
+        if (d <= range && d < closestDist) {
+          if (unit.type === 'howitzer' && !isPositionVisibleToPlayer(gameState, mapGrid, bx, by)) {
+            return
+          }
+          closestDist = d
+          closest = b
         }
-        closestDist = d
-        closest = b
       }
-    }
-  })
+    })
   }
 
   if (closest) {
@@ -651,6 +817,8 @@ export const updateUnitCombat = logPerformance(function updateUnitCombat(units, 
       updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'rocketTank') {
       updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap)
+    } else if (unit.type === 'apache') {
+      updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     } else if (unit.type === 'howitzer') {
       updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap)
     }
@@ -697,6 +865,15 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Scan for enemy units within range
     units.forEach(potentialTarget => {
       if (potentialTarget.owner !== unit.owner && potentialTarget.health > 0) {
+        // Check if target is an airborne Apache - only certain units can target them
+        const targetIsAirborneApache = potentialTarget.type === 'apache' && potentialTarget.flightState !== 'grounded'
+        const shooterCanHitAir = unit.type === 'rocketTank' || unit.type === 'apache'
+
+        // Skip airborne Apache if this unit can't target air units
+        if (targetIsAirborneApache && !shooterCanHitAir) {
+          return
+        }
+
         const targetCenterX = potentialTarget.x + TILE_SIZE / 2
         const targetCenterY = potentialTarget.y + TILE_SIZE / 2
         const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
@@ -850,6 +1027,99 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
         handleRocketBurstFire(unit, unit.target, bullets, now, targetCenterX, targetCenterY, units, mapGrid)
       }
     }
+  }
+}
+
+function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  if (!unit.target || unit.target.health <= 0) {
+    unit.volleyState = null
+    unit.flightPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? null : unit.flightPlan
+    return
+  }
+
+  if (unit.remoteControlActive) {
+    return
+  }
+
+  const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+  unit.apacheAmmoEmpty = ammoRemaining <= 0
+  if (unit.apacheAmmoEmpty) {
+    unit.canFire = false
+    unit.volleyState = null
+  }
+
+  const targetCenter = getApacheTargetCenter(unit.target)
+  if (!targetCenter) {
+    unit.volleyState = null
+    return
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const dx = targetCenter.x - unitCenterX
+  const dy = targetCenter.y - unitCenterY
+  const distance = Math.hypot(dx, dy)
+
+  const destTile = {
+    x: Math.floor(targetCenter.x / TILE_SIZE),
+    y: Math.floor(targetCenter.y / TILE_SIZE)
+  }
+
+  const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+  const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+
+  unit.autoHoldAltitude = true
+  if (unit.flightState === 'grounded') {
+    unit.manualFlightState = 'takeoff'
+  }
+
+  if (distance > effectiveRange * 0.8 && !unit.helipadLandingRequested) {
+    const currentPlan = unit.flightPlan
+    const needsPlan = !currentPlan || currentPlan.mode !== 'combat' ||
+      Math.hypot(currentPlan.x - targetCenter.x, currentPlan.y - targetCenter.y) > TILE_SIZE * 0.5
+
+    if (needsPlan) {
+      unit.flightPlan = {
+        x: targetCenter.x,
+        y: targetCenter.y,
+        stopRadius: TILE_SIZE * 0.5,
+        mode: 'combat',
+        followTargetId: unit.target.id || null,
+        destinationTile: destTile
+      }
+      unit.moveTarget = destTile
+    }
+  }
+
+  if (distance <= effectiveRange && canAttack) {
+    if (!unit.volleyState && !unit.apacheAmmoEmpty) {
+      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
+      if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
+        if (unit.canFire !== false) {
+          const rocketsThisVolley = Math.min(8, ammoRemaining)
+          const leftCount = Math.min(4, Math.ceil(rocketsThisVolley / 2))
+          const rightCount = Math.min(4, rocketsThisVolley - leftCount)
+
+          unit.volleyState = {
+            leftRemaining: leftCount,
+            rightRemaining: rightCount,
+            lastRocketTime: 0,
+            delay: 120,
+            nextSide: 'left',
+            totalInVolley: rocketsThisVolley
+          }
+        }
+      }
+    }
+
+    if (unit.volleyState && !unit.apacheAmmoEmpty) {
+      const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenter.x, targetCenter.y, units, mapGrid)
+      if (volleyComplete) {
+        unit.lastShotTime = now
+      }
+    }
+  } else {
+    unit.volleyState = null
   }
 }
 

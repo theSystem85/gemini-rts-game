@@ -517,6 +517,8 @@ export const productionQueue = {
         // Update building button states after construction
         if (this.productionController) {
           this.productionController.updateBuildingButtonStates()
+          // Sync tech tree to unlock new units based on new buildings
+          this.productionController.syncTechTreeWithBuildings()
         }
       } else {
         this.completedBuildings.push({ type: this.currentBuilding.type, button: this.currentBuilding.button })

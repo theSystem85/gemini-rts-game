@@ -128,13 +128,16 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
     const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
-    unit.crew = { driver: true, commander: true }
+    // Apache helicopters don't have crew system
+    if (unitType !== 'apache') {
+      unit.crew = { driver: true, commander: true }
 
-    if (fullCrewTanks.includes(unitType)) {
-      unit.crew.gunner = true
-      unit.crew.loader = true
-    } else if (loaderUnits.includes(unitType)) {
-      unit.crew.loader = true
+      if (fullCrewTanks.includes(unitType)) {
+        unit.crew.gunner = true
+        unit.crew.loader = true
+      } else if (loaderUnits.includes(unitType)) {
+        unit.crew.loader = true
+      }
     }
 
     if (unitType === 'ambulance') {

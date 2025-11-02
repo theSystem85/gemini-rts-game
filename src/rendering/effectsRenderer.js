@@ -28,42 +28,75 @@ export class EffectsRenderer {
 
       // Different rendering for different projectile types
       if (bullet.homing || bullet.ballistic) {
-        // Rockets - small body with flame
-        let angle = 0
-        if (bullet.vx !== undefined && bullet.vy !== undefined) {
-          angle = Math.atan2(bullet.vy, bullet.vx)
-        } else if (bullet.dx !== undefined && bullet.dy !== undefined) {
-          angle = Math.atan2(bullet.dy, bullet.dx)
+        // Check if this is an Apache rocket - render as tank bullet with trail
+        if (bullet.originType === 'apacheRocket') {
+          // Apache rockets: tank bullet style with trail
+          const bulletLength = 6
+          const bulletWidth = 2
+
+          // Calculate bullet direction
+          let angle = 0
+          if (bullet.vx !== undefined && bullet.vy !== undefined) {
+            angle = Math.atan2(bullet.vy, bullet.vx)
+          } else if (bullet.dx !== undefined && bullet.dy !== undefined) {
+            angle = Math.atan2(bullet.dy, bullet.dx)
+          }
+
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(angle)
+
+          // Draw bullet shape with copper color
+          ctx.fillStyle = '#B87333' // Copper color
+          ctx.beginPath()
+          ctx.ellipse(0, 0, bulletLength / 2, bulletWidth / 2, 0, 0, 2 * Math.PI)
+          ctx.fill()
+
+          // Add a darker tip for the bullet
+          ctx.fillStyle = '#8B4513' // Darker copper/bronze
+          ctx.beginPath()
+          ctx.ellipse(bulletLength / 4, 0, bulletLength / 4, bulletWidth / 4, 0, 0, 2 * Math.PI)
+          ctx.fill()
+
+          ctx.restore()
+        } else {
+          // Regular rockets - small body with flame
+          let angle = 0
+          if (bullet.vx !== undefined && bullet.vy !== undefined) {
+            angle = Math.atan2(bullet.vy, bullet.vx)
+          } else if (bullet.dx !== undefined && bullet.dy !== undefined) {
+            angle = Math.atan2(bullet.dy, bullet.dx)
+          }
+
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(angle)
+
+          // Rocket body
+          ctx.fillStyle = '#CCCCCC'
+          ctx.fillRect(-4, -1.5, 6, 3)
+
+          // Rocket nose
+          ctx.fillStyle = '#888888'
+          ctx.beginPath()
+          ctx.moveTo(2, -1.5)
+          ctx.lineTo(4, 0)
+          ctx.lineTo(2, 1.5)
+          ctx.closePath()
+          ctx.fill()
+
+          // Flame with slight flicker
+          const flicker = Math.sin(now / 80 + bullet.id) * 1.2
+          ctx.fillStyle = '#FF4500'
+          ctx.beginPath()
+          ctx.moveTo(-4, -1)
+          ctx.lineTo(-4 - 4 - flicker, 0)
+          ctx.lineTo(-4, 1)
+          ctx.closePath()
+          ctx.fill()
+
+          ctx.restore()
         }
-
-        ctx.save()
-        ctx.translate(x, y)
-        ctx.rotate(angle)
-
-        // Rocket body
-        ctx.fillStyle = '#CCCCCC'
-        ctx.fillRect(-4, -1.5, 6, 3)
-
-        // Rocket nose
-        ctx.fillStyle = '#888888'
-        ctx.beginPath()
-        ctx.moveTo(2, -1.5)
-        ctx.lineTo(4, 0)
-        ctx.lineTo(2, 1.5)
-        ctx.closePath()
-        ctx.fill()
-
-        // Flame with slight flicker
-        const flicker = Math.sin(now / 80 + bullet.id) * 1.2
-        ctx.fillStyle = '#FF4500'
-        ctx.beginPath()
-        ctx.moveTo(-4, -1)
-        ctx.lineTo(-4 - 4 - flicker, 0)
-        ctx.lineTo(-4, 1)
-        ctx.closePath()
-        ctx.fill()
-
-        ctx.restore()
       } else {
         // Tank bullets - smaller, copper-colored, bullet-shaped
         const bulletLength = 6

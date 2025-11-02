@@ -358,6 +358,8 @@ export class EventHandlers {
           if (this.productionController) {
             this.productionController.updateVehicleButtonStates()
             this.productionController.updateBuildingButtonStates()
+            // Sync tech tree to unlock new units based on new buildings
+            this.productionController.syncTechTreeWithBuildings()
           }
         } else {
           // Play error sound for invalid placement

@@ -30,10 +30,13 @@ import {
   WRECK_COLLISION_RECOIL_MAX_UNIT
 } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
-import { updateUnitOccupancy, findPath } from '../units.js'
+import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
+
+const BASE_FRAME_SECONDS = 1 / 60
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -49,6 +52,137 @@ function calculatePositionalAudio(x, y) {
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
+}
+
+function addUnitOccupancyDirect(unit, occupancyMap) {
+  if (!occupancyMap) return
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileX >= 0 &&
+    tileY >= 0 &&
+    tileY < occupancyMap.length &&
+    tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = (occupancyMap[tileY][tileX] || 0) + 1
+  }
+}
+
+function consumeUnitGas(unit, amount) {
+  if (!unit || typeof unit.gas !== 'number') {
+    return
+  }
+  if (amount <= 0) {
+    return
+  }
+
+  const prevGas = unit.gas
+  unit.gas = Math.max(0, unit.gas - amount)
+
+  if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
+    playSound('outOfGas')
+    unit.outOfGasPlayed = true
+    unit.needsEmergencyFuel = true
+    unit.emergencyFuelRequestTime = performance.now()
+  }
+}
+
+function updateApacheFlightState(unit, movement, occupancyMap, now) {
+  const rotor = unit.rotor || { angle: 0, speed: 0, targetSpeed: 0 }
+  unit.rotor = rotor
+  const shadow = unit.shadow || { offset: 0, scale: 1 }
+  unit.shadow = shadow
+
+  const deltaMs = Math.max(16, now - (unit.lastFlightUpdate || now))
+  unit.lastFlightUpdate = now
+  const deltaSeconds = deltaMs / 1000
+
+  const manualState = unit.manualFlightState || 'auto'
+  const holdAltitude = Boolean(unit.autoHoldAltitude) || Boolean(unit.flightPlan) || Boolean(unit.remoteControlActive)
+  const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
+
+  let desiredAltitude = 0
+  if (manualState === 'takeoff') {
+    desiredAltitude = unit.maxAltitude
+  } else if (manualState === 'land') {
+    desiredAltitude = 0
+  } else if (manualState === 'hover') {
+    desiredAltitude = unit.maxAltitude * 0.75
+  } else {
+    desiredAltitude = (holdAltitude || isInMotion) ? unit.maxAltitude : 0
+  }
+
+  unit.targetAltitude = desiredAltitude
+
+  const altitudeDiff = desiredAltitude - unit.altitude
+  const climbRate = unit.maxAltitude * (manualState === 'land' ? 2.5 : 3)
+  const maxStep = climbRate * deltaSeconds
+  const altitudeStep = Math.max(-maxStep, Math.min(maxStep, altitudeDiff))
+  unit.altitude = Math.max(0, unit.altitude + altitudeStep)
+
+  let newFlightState = unit.flightState
+  if (unit.altitude > 2 && altitudeDiff > 0.5) {
+    newFlightState = 'takeoff'
+  } else if (unit.altitude > 2 && Math.abs(altitudeDiff) <= 1) {
+    newFlightState = 'airborne'
+  } else if (unit.altitude <= 2 && altitudeDiff < -0.5) {
+    newFlightState = 'landing'
+  } else if (unit.altitude <= 2) {
+    newFlightState = 'grounded'
+  }
+
+  const previouslyGrounded = unit.flightState === 'grounded' || unit.flightState === undefined
+  unit.flightState = newFlightState
+
+  if (unit.flightState !== 'grounded') {
+    if (!unit.occupancyRemoved && previouslyGrounded) {
+      removeUnitOccupancy(unit, occupancyMap)
+      unit.occupancyRemoved = true
+    }
+  } else if (unit.occupancyRemoved) {
+    addUnitOccupancyDirect(unit, occupancyMap)
+    unit.occupancyRemoved = false
+  }
+
+  const rotorTargetSpeed = unit.flightState === 'grounded' ? 0.05 : 0.35
+  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * 4)
+  rotor.angle = (rotor.angle + rotor.speed * deltaMs) % (Math.PI * 2)
+  rotor.targetSpeed = rotorTargetSpeed
+
+  const altitudeRatio = Math.min(1, unit.maxAltitude > 0 ? unit.altitude / unit.maxAltitude : 0)
+  shadow.offset = altitudeRatio * TILE_SIZE * 1.8
+  shadow.scale = 1 + altitudeRatio * 0.5
+
+  if (manualState === 'takeoff' && unit.altitude >= unit.maxAltitude * 0.95) {
+    unit.manualFlightState = 'auto'
+  } else if (manualState === 'land' && unit.altitude <= 1) {
+    unit.manualFlightState = 'auto'
+  }
+
+  if (unit.dodgeVelocity) {
+    if (now < unit.dodgeVelocity.endTime) {
+      unit.x += unit.dodgeVelocity.vx * deltaSeconds
+      unit.y += unit.dodgeVelocity.vy * deltaSeconds
+    } else {
+      unit.dodgeVelocity = null
+    }
+  }
+
+  const isHovering = unit.flightState === 'airborne' && (!movement || movement.currentSpeed < 0.1)
+  unit.hovering = isHovering
+
+  if (typeof unit.gas === 'number' && unit.gas > 0) {
+    const shouldConsumeHoverFuel = isHovering && !unit.helipadLandingRequested && manualState !== 'land'
+    if (shouldConsumeHoverFuel) {
+      const frameScale = Math.max(0, Math.min(deltaSeconds / BASE_FRAME_SECONDS, 6))
+      const airSpeed = unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED
+      const hoverEquivalentPixels = airSpeed * frameScale
+      const metersPerPixel = TILE_LENGTH_METERS / TILE_SIZE
+      const hoverMeters = hoverEquivalentPixels * metersPerPixel
+      const hoverUsage = (unit.gasConsumption || 0) * hoverMeters / 100000 * (unit.hoverFuelMultiplier || 0.2)
+      consumeUnitGas(unit, hoverUsage)
+    }
+  }
 }
 
 /**
@@ -103,6 +237,14 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     unit.movement.targetVelocity = { x: 0, y: 0 }
     unit.movement.isMoving = false
     unit.movement.currentSpeed = 0
+    if (unit.type === 'apache') {
+      unit.flightPlan = null
+      unit.autoHoldAltitude = false
+      unit.helipadLandingRequested = false
+      if (unit.flightState !== 'grounded') {
+        unit.manualFlightState = 'land'
+      }
+    }
     return
   } else if (unit.gas > 0 && unit.needsEmergencyFuel) {
     // Clear emergency fuel flag if unit has gas again
@@ -173,6 +315,64 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier
+
+  const isApache = unit.type === 'apache'
+  if (isApache) {
+    if (unit.remoteControlActive) {
+      unit.flightPlan = null
+    }
+
+    const plan = unit.remoteControlActive ? null : unit.flightPlan
+
+    if (plan) {
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      const dx = plan.x - unitCenterX
+      const dy = plan.y - unitCenterY
+      const distance = Math.hypot(dx, dy)
+      const stopRadius = Math.max(6, plan.stopRadius || TILE_SIZE * 0.4)
+
+      if (distance <= stopRadius) {
+        unit.flightPlan = null
+        movement.targetVelocity.x = 0
+        movement.targetVelocity.y = 0
+        movement.isMoving = false
+        movement.targetRotation = movement.rotation
+        unit.hovering = unit.flightState === 'airborne'
+        if (!unit.helipadLandingRequested) {
+          unit.autoHoldAltitude = true
+        }
+      } else {
+        const airSpeed = (unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED) * (unit.speedModifier || 1)
+        const dirX = dx / distance
+        const dirY = dy / distance
+        movement.targetVelocity.x = dirX * airSpeed
+        movement.targetVelocity.y = dirY * airSpeed
+        movement.isMoving = true
+        const desiredRotation = normalizeAngle(Math.atan2(dirY, dirX))
+        movement.targetRotation = desiredRotation
+        // Smooth rotation towards target instead of instant snap
+        const apacheRotationSpeed = unit.rotationSpeed || 0.18
+        const currentRotation = unit.direction || movement.rotation || 0
+        const smoothedRotation = smoothRotate(currentRotation, desiredRotation, apacheRotationSpeed)
+        movement.rotation = smoothedRotation
+        unit.direction = smoothedRotation
+        unit.rotation = smoothedRotation
+        unit.hovering = false
+      }
+      unit.path = []
+    } else if (!unit.remoteControlActive) {
+      movement.targetVelocity.x = 0
+      movement.targetVelocity.y = 0
+      movement.targetRotation = movement.rotation
+      if (movement.isMoving) {
+        movement.isMoving = false
+      }
+      if (movement.currentSpeed < MOVEMENT_CONFIG.MIN_SPEED) {
+        unit.hovering = unit.flightState === 'airborne'
+      }
+    }
+  }
 
   // Handle path following
   if (unit.path && unit.path.length > 0) {
@@ -280,13 +480,15 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // Handle rotation before movement (tanks should rotate towards target before moving)
-  // Skip unified rotation for tanks as they have their own turret/body rotation system
-  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
+  // Skip unified rotation for tanks and Apache as they have their own rotation systems
+  // Apache uses instant rotation in flight plan system
+  if (!(unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer' || unit.type === 'apache')) {
     updateUnitRotation(unit)
   }
 
   // For tanks, handle acceleration/deceleration based on rotation state
-  // For other units, allow movement when rotation is close to target
+  // For other units (except Apache), allow movement when rotation is close to target
+  // Apache can move while rotating since it's a helicopter
   let canAccelerate = true
   let shouldDecelerate = false
 
@@ -302,16 +504,19 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       canAccelerate = unit.canAccelerate !== false
       shouldDecelerate = !canAccelerate && movement.isMoving
     }
-  } else {
+  } else if (unit.type !== 'apache') {
+    // Non-tank, non-Apache units need to be mostly facing the right direction
     const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation))
     canAccelerate = rotationDiff < Math.PI / 4 // Allow movement if within 45 degrees
     shouldDecelerate = !canAccelerate && movement.isMoving
   }
+  // Apache can always accelerate while moving (helicopters can fly in any direction while rotating)
 
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 }
   if (movement.isMoving && canAccelerate) {
-    avoidanceForce = calculateCollisionAvoidance(unit, units)
+    const skipAvoidance = unit.type === 'apache' && unit.flightState !== 'grounded'
+    avoidanceForce = skipAvoidance ? { x: 0, y: 0 } : calculateCollisionAvoidance(unit, units)
   }
 
   // Determine acceleration rate based on whether we should accelerate or decelerate
@@ -372,15 +577,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distTiles = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
     const distMeters = distTiles * TILE_LENGTH_METERS
     const usage = (unit.gasConsumption || 0) * distMeters / 100000
-    const prevGas = unit.gas
-    unit.gas = Math.max(0, unit.gas - usage)
-    if (prevGas > 0 && unit.gas <= 0 && !unit.outOfGasPlayed) {
-      playSound('outOfGas')
-      unit.outOfGasPlayed = true
-      // Mark unit as needing immediate fuel assistance
-      unit.needsEmergencyFuel = true
-      unit.emergencyFuelRequestTime = performance.now()
-    }
+    consumeUnitGas(unit, usage)
   }
 
   if (
@@ -414,7 +611,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
-  const collisionResult = checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
+  const skipCollisionChecks = unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')
+  const collisionResult = skipCollisionChecks
+    ? { collided: false }
+    : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
 
   if (collisionResult.collided) {
     // Revert position if collision detected
@@ -462,6 +662,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE))
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE))
+
+  if (unit.type === 'apache') {
+    updateApacheFlightState(unit, movement, occupancyMap, now)
+  }
 
   // Update occupancy map using center-based coordinates
   const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -597,6 +801,13 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
   const tile = tileRow ? tileRow[tileX] : undefined
 
+  if (unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')) {
+    if (!tileRow || tile === undefined) {
+      return { collided: true, type: 'bounds' }
+    }
+    return { collided: false }
+  }
+
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds' }
@@ -612,6 +823,9 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     }
 
     if (tile.building) {
+      if (unit.type === 'apache' && tile.building.type === 'helipad') {
+        return { collided: false }
+      }
       return {
         collided: true,
         type: 'building',
@@ -732,7 +946,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
       const normalY = (wreckCenterY - unitCenterY) / (distance || 1)
       const overlap = UNIT_COLLISION_MIN_DISTANCE - distance
       const unitSpeed = Math.hypot(unitVelX, unitVelY)
-      
+
       // Compare speeds to decide who bounces more
       const wreckSpeed = Math.hypot(wreck.velocityX || 0, wreck.velocityY || 0)
 

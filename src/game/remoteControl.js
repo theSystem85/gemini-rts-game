@@ -9,6 +9,7 @@ import { fireBullet } from './bulletSystem.js'
 import { selectedUnits, getKeyboardHandler } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
 import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 
 let lastAutoFocusUnitId = null
 let autoFocusSuppressed = false
@@ -116,6 +117,135 @@ function aimTurretAtTarget(unit, target) {
   unit.turretShouldFollowMovement = false
 }
 
+function handleApacheRemoteControl(unit, params) {
+  const {
+    forwardIntensity,
+    backwardIntensity,
+    turnLeftIntensity,
+    turnRightIntensity,
+    ascendIntensity,
+    descendIntensity,
+    strafeLeftIntensity,
+    strafeRightIntensity,
+    rawWagonDirection,
+    rawWagonSpeed
+  } = params
+
+  if (!unit.movement) {
+    unit.remoteControlActive = false
+    return
+  }
+
+  const rotationSpeed = (unit.rotationSpeed || 0.05) * 0.25
+  const baseSpeed = typeof unit.speed === 'number' ? unit.speed : 0.5
+  const speedModifier = typeof unit.speedModifier === 'number' ? unit.speedModifier : 1
+  const effectiveMaxSpeed = Math.max(0, baseSpeed * speedModifier)
+
+  const ascendActive = ascendIntensity > 0.05
+  const descendActive = descendIntensity > 0.05
+  const strafeAxis = (strafeRightIntensity || 0) - (strafeLeftIntensity || 0)
+  const movementAxis = (forwardIntensity || 0) - (backwardIntensity || 0)
+  const netTurn = (turnRightIntensity || 0) - (turnLeftIntensity || 0)
+  const absoluteMovementActive = rawWagonDirection !== null && rawWagonSpeed > 0
+
+  let targetVx = 0
+  let targetVy = 0
+  let movementRequested = false
+
+  if (absoluteMovementActive) {
+    const desiredDirection = normalizeAngle(rawWagonDirection)
+    const currentDirection = typeof unit.direction === 'number' ? unit.direction : 0
+    unit.direction = smoothRotateTowardsAngle(currentDirection, desiredDirection, rotationSpeed)
+
+    const magnitude = Math.max(0, Math.min(rawWagonSpeed, 1))
+    if (magnitude > 0.001) {
+      targetVx += Math.cos(unit.direction) * effectiveMaxSpeed * magnitude
+      targetVy += Math.sin(unit.direction) * effectiveMaxSpeed * magnitude
+      movementRequested = true
+    }
+  } else if (netTurn) {
+    const currentDirection = typeof unit.direction === 'number' ? unit.direction : 0
+    unit.direction = normalizeAngle(currentDirection + rotationSpeed * netTurn)
+  }
+
+  if (!absoluteMovementActive && Math.abs(movementAxis) > 0.001) {
+    const directionSign = movementAxis > 0 ? 1 : -1
+    const magnitude = Math.min(Math.abs(movementAxis), 1)
+    const direction = typeof unit.direction === 'number' ? unit.direction : 0
+    targetVx += Math.cos(direction) * effectiveMaxSpeed * directionSign * magnitude
+    targetVy += Math.sin(direction) * effectiveMaxSpeed * directionSign * magnitude
+    movementRequested = true
+  }
+
+  if (Math.abs(strafeAxis) > 0.05) {
+    const canStrafe =
+      unit.flightState !== 'grounded' || ascendActive || unit.manualFlightState === 'takeoff'
+    if (canStrafe) {
+      const direction = typeof unit.direction === 'number' ? unit.direction : 0
+      const strafeAngle = direction + (strafeAxis > 0 ? Math.PI / 2 : -Math.PI / 2)
+      const magnitude = Math.min(Math.abs(strafeAxis), 1)
+      targetVx += Math.cos(strafeAngle) * effectiveMaxSpeed * magnitude
+      targetVy += Math.sin(strafeAngle) * effectiveMaxSpeed * magnitude
+      movementRequested = true
+    }
+  }
+
+  const hasMovementInput =
+    absoluteMovementActive ||
+    Math.abs(movementAxis) > 0.001 ||
+    Math.abs(netTurn) > 0.001 ||
+    Math.abs(strafeAxis) > 0.05
+  const hasFlightInput = ascendActive || descendActive
+  const remoteActive = hasMovementInput || hasFlightInput
+
+  unit.remoteControlActive = remoteActive
+
+  if (remoteActive) {
+    unit.flightPlan = null
+    unit.helipadLandingRequested = false
+    unit.autoHoldAltitude = !descendActive
+  }
+
+  if (remoteActive) {
+    unit.path = []
+    unit.moveTarget = null
+  }
+
+  if (remoteActive && !descendActive && unit.flightState !== 'grounded') {
+    unit.manualFlightHoverRequested = true
+  }
+
+  if (ascendActive) {
+    unit.manualFlightHoverRequested = true
+    unit.manualFlightState = 'takeoff'
+    unit.autoHoldAltitude = true
+  } else if (descendActive) {
+    unit.manualFlightHoverRequested = false
+    unit.manualFlightState = 'land'
+    unit.autoHoldAltitude = false
+  } else if (unit.manualFlightHoverRequested && unit.flightState !== 'grounded') {
+    unit.manualFlightState = 'hover'
+    unit.autoHoldAltitude = true
+  } else if (!remoteActive && unit.flightState === 'grounded') {
+    unit.manualFlightHoverRequested = false
+    unit.manualFlightState = 'auto'
+  }
+
+  if (movementRequested) {
+    unit.movement.targetVelocity.x = targetVx
+    unit.movement.targetVelocity.y = targetVy
+    unit.movement.isMoving = true
+  } else {
+    unit.movement.targetVelocity.x = 0
+    unit.movement.targetVelocity.y = 0
+    unit.movement.isMoving = false
+  }
+
+  const direction = typeof unit.direction === 'number' ? unit.direction : 0
+  unit.movement.rotation = direction
+  unit.movement.targetRotation = direction
+}
+
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
   const rc = gameState.remoteControl
   if (!rc) return
@@ -132,6 +262,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
   const turretLeftIntensity = rc.turretLeft || 0
   const turretRightIntensity = rc.turretRight || 0
   const fireIntensity = rc.fire || 0
+  const ascendIntensity = rc.ascend || 0
+  const descendIntensity = rc.descend || 0
+  const strafeLeftIntensity = rc.strafeLeft || 0
+  const strafeRightIntensity = rc.strafeRight || 0
   const rcAbsolute = gameState.remoteControlAbsolute || {}
   const rawWagonDirection =
     Number.isFinite(rcAbsolute.wagonDirection) ? rcAbsolute.wagonDirection : null
@@ -148,6 +282,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     turretLeftIntensity > 0 ||
     turretRightIntensity > 0 ||
     fireIntensity > 0 ||
+    ascendIntensity > 0 ||
+    descendIntensity > 0 ||
+    strafeLeftIntensity > 0 ||
+    strafeRightIntensity > 0 ||
     rawWagonSpeed > 0 ||
     rawTurretTurnFactor > 0
 
@@ -176,6 +314,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     if (!unit || !unit.movement) return
 
     const hasTurret = isTurretTankUnitType(unit.type)
+    const isApache = unit.type === 'apache'
 
     // Only allow remote control for player units unless enemy control is enabled
     const humanPlayer = gameState.humanPlayer || 'player1'
@@ -193,7 +332,81 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       backwardIntensity > 0 ||
       turnLeftIntensity > 0 ||
       turnRightIntensity > 0
-    // Remote control requires an active commander
+
+    if (isApache) {
+      const apacheAbsoluteActive = rawWagonDirection !== null && rawWagonSpeed > 0
+      const apacheHasMovementInput =
+        apacheAbsoluteActive ||
+        forwardIntensity > 0 ||
+        backwardIntensity > 0 ||
+        turnLeftIntensity > 0 ||
+        turnRightIntensity > 0 ||
+        strafeLeftIntensity > 0 ||
+        strafeRightIntensity > 0 ||
+        ascendIntensity > 0 ||
+        descendIntensity > 0
+
+      if (apacheHasMovementInput) {
+        unit.path = []
+        unit.moveTarget = null
+      }
+
+      handleApacheRemoteControl(unit, {
+        forwardIntensity,
+        backwardIntensity,
+        turnLeftIntensity,
+        turnRightIntensity,
+        ascendIntensity,
+        descendIntensity,
+        strafeLeftIntensity,
+        strafeRightIntensity,
+        rawWagonDirection,
+        rawWagonSpeed
+      })
+
+      // Handle Apache rocket firing in remote control
+      if (fireIntensity > 0 && unit.canFire !== false) {
+        const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
+        if (ammoRemaining > 0) {
+          const effectiveFireRate = 12000 // Same as normal Apache fire rate
+          if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
+            // Fire rockets forward in the direction the Apache is facing
+            const centerX = unit.x + TILE_SIZE / 2
+            const centerY = unit.y + TILE_SIZE / 2
+            const direction = unit.direction || 0
+            const rangePx = TANK_FIRE_RANGE * TILE_SIZE
+            const targetX = centerX + Math.cos(direction) * rangePx
+            const targetY = centerY + Math.sin(direction) * rangePx
+
+            const target = {
+              tileX: Math.floor(targetX / TILE_SIZE),
+              tileY: Math.floor(targetY / TILE_SIZE),
+              x: targetX,
+              y: targetY
+            }
+
+            // Fire a single rocket from the left side for remote control
+            const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+            const spawn = spawnPoints.left || { x: centerX, y: centerY }
+
+            unit.customRocketSpawn = spawn
+            const fired = fireBullet(unit, target, bullets, now)
+            unit.customRocketSpawn = null
+
+            if (fired) {
+              unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
+              unit.lastShotTime = now
+
+              if (unit.rocketAmmo <= 0) {
+                unit.canFire = false
+              }
+            }
+          }
+        }
+      }
+
+      return
+    }
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.commander) {
       unit.remoteControlActive = false
       return

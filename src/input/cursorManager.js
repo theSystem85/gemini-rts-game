@@ -166,6 +166,7 @@ export class CursorManager {
     this.isOverRecoveryTank = false
     // Check if mouse is over a wreck when recovery tanks are selected
     this.isOverWreck = false
+    this.isOverFriendlyHelipad = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show refinery cursor if harvesters are selected
@@ -178,6 +179,7 @@ export class CursorManager {
       // Check for recovery tank interactions
       const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
       const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
+      const hasSelectedApaches = selectedUnits.some(unit => unit.type === 'apache')
 
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
@@ -212,11 +214,24 @@ export class CursorManager {
       if (hasUnitsNeedingGas) {
         for (const building of gameState.buildings) {
           if (building.type === 'gasStation' &&
-              building.owner === gameState.humanPlayer &&
-              building.health > 0 &&
-              tileX >= building.x && tileX < building.x + building.width &&
-              tileY >= building.y && tileY < building.y + building.height) {
+                building.owner === gameState.humanPlayer &&
+                building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
             this.isOverPlayerGasStation = true
+            break
+          }
+        }
+      }
+
+      if (hasSelectedApaches) {
+        for (const building of gameState.buildings) {
+          if (building.type === 'helipad' &&
+                building.owner === gameState.humanPlayer &&
+                building.health > 0 &&
+                tileX >= building.x && tileX < building.x + building.width &&
+                tileY >= building.y && tileY < building.y + building.height) {
+            this.isOverFriendlyHelipad = true
             break
           }
         }
@@ -487,9 +502,10 @@ export class CursorManager {
                           !gameState.attackGroupMode
 
       const hasImmediateMoveIntoTarget = this.isOverWreck ||
-        this.isOverRepairableUnit ||
-        this.isOverRecoveryTank ||
-        this.isOverPlayerWorkshop
+          this.isOverRepairableUnit ||
+          this.isOverRecoveryTank ||
+          this.isOverPlayerWorkshop ||
+          this.isOverFriendlyHelipad
 
       if (hasImmediateMoveIntoTarget) {
         setMoveIntoCursor()
@@ -498,10 +514,11 @@ export class CursorManager {
 
       if (isAGFCapable && !this.isGuardMode && !this.isForceAttackMode) {
         const isSupportTarget = this.isOverHealableUnit ||
-          this.isOverRefuelableUnit ||
-          this.isOverPlayerHospital ||
-          this.isOverPlayerGasStation ||
-          this.isOverPlayerWorkshop
+            this.isOverRefuelableUnit ||
+            this.isOverPlayerHospital ||
+            this.isOverPlayerGasStation ||
+            this.isOverPlayerWorkshop ||
+            this.isOverFriendlyHelipad
 
         if (isSupportTarget) {
           setMoveIntoCursor()

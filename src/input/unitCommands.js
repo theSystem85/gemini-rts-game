@@ -854,6 +854,8 @@ export class UnitCommandsHandler {
 
     let anyMoved = false
     let outOfGasCount = 0
+    const mapHeight = mapGrid.length
+    const mapWidth = mapGrid[0]?.length || 0
     unitsToCommand.forEach((unit, index) => {
       unit.guardTarget = null
       unit.guardMode = false
@@ -920,9 +922,35 @@ export class UnitCommandsHandler {
         }
       }
 
+      const gasDepleted = typeof unit.maxGas === 'number' && unit.gas <= 0
+
+      if (unit.type === 'apache') {
+        if (gasDepleted) {
+          outOfGasCount++
+          return
+        }
+
+        const clampedTile = {
+          x: Math.max(0, Math.min(destTile.x, mapWidth > 0 ? mapWidth - 1 : destTile.x)),
+          y: Math.max(0, Math.min(destTile.y, mapHeight > 0 ? mapHeight - 1 : destTile.y))
+        }
+        const center = {
+          x: clampedTile.x * TILE_SIZE + TILE_SIZE / 2,
+          y: clampedTile.y * TILE_SIZE + TILE_SIZE / 2
+        }
+
+        if (this.assignApacheFlight(unit, clampedTile, center, { mode: 'manual' })) {
+          unit.target = null
+          unit.originalTarget = null
+          unit.forcedAttack = false
+          anyMoved = true
+        }
+        return
+      }
+
       // Fixed: correctly pass unit.tileX and unit.tileY as source coordinates
       const path =
-        unit.gas <= 0 && typeof unit.maxGas === 'number'
+        gasDepleted
           ? null
           : findPath(
             { x: unit.tileX, y: unit.tileY },
@@ -947,7 +975,7 @@ export class UnitCommandsHandler {
         // Clear force attack flag when issuing a move command
         unit.forcedAttack = false
         anyMoved = true
-      } else if (typeof unit.maxGas === 'number' && unit.gas <= 0) {
+      } else if (gasDepleted) {
         outOfGasCount++
       }
 
@@ -961,6 +989,40 @@ export class UnitCommandsHandler {
       const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
       playPositionalSound('movement', avgX, avgY, 0.5)
     }
+  }
+
+  assignApacheFlight(unit, destTile, destCenter, options = {}) {
+    if (!unit || unit.type !== 'apache' || !destCenter) {
+      return false
+    }
+
+    const stopRadius = Math.max(6, options.stopRadius || TILE_SIZE * 0.5)
+    unit.path = []
+    unit.originalPath = null
+    unit.moveTarget = destTile ? { x: destTile.x, y: destTile.y } : null
+    unit.flightPlan = {
+      x: destCenter.x,
+      y: destCenter.y,
+      stopRadius,
+      mode: options.mode || 'manual',
+      followTargetId: options.followTargetId || null,
+      destinationTile: destTile ? { ...destTile } : null
+    }
+    unit.autoHoldAltitude = true
+    if (options.mode === 'helipad') {
+      unit.helipadLandingRequested = true
+      unit.helipadTargetId = options.helipadId || null
+    } else {
+      unit.helipadLandingRequested = false
+      unit.helipadTargetId = null
+    }
+    if (unit.flightState === 'grounded') {
+      unit.manualFlightState = 'takeoff'
+    }
+    unit.manualFlightHoverRequested = true
+    unit.remoteControlActive = false
+    unit.hovering = false
+    return true
   }
 
   handleAttackCommand(selectedUnits, target, mapGrid, isForceAttack = false, skipQueueClear = false) {
@@ -998,6 +1060,28 @@ export class UnitCommandsHandler {
 
     combatUnits.forEach((unit, index) => {
       unit.canFire = true
+
+      if (unit.type === 'apache') {
+        const targetCenter = target.tileX !== undefined
+          ? { x: target.x + TILE_SIZE / 2, y: target.y + TILE_SIZE / 2 }
+          : {
+            x: (target.x + (target.width || 1) / 2) * TILE_SIZE,
+            y: (target.y + (target.height || 1) / 2) * TILE_SIZE
+          }
+        const destTile = {
+          x: Math.floor(targetCenter.x / TILE_SIZE),
+          y: Math.floor(targetCenter.y / TILE_SIZE)
+        }
+
+        this.assignApacheFlight(unit, destTile, targetCenter, {
+          mode: 'combat',
+          stopRadius: TILE_SIZE * 0.25,
+          followTargetId: target.id || null
+        })
+        unit.target = target
+        unit.forcedAttack = isForceAttack
+        return
+      }
 
       const position = formationPositions[index]
 
@@ -1382,6 +1466,37 @@ export class UnitCommandsHandler {
       }
     })
     playSound('movement', 0.5)
+  }
+
+  handleApacheHelipadCommand(selectedUnits, helipad, _mapGrid) {
+    const apaches = selectedUnits.filter(unit => unit.type === 'apache')
+    if (apaches.length === 0 || !helipad) {
+      return
+    }
+
+    const center = {
+      x: (helipad.x + (helipad.width || 1) / 2) * TILE_SIZE,
+      y: (helipad.y + (helipad.height || 1) / 2) * TILE_SIZE
+    }
+    const destTile = {
+      x: Math.floor(center.x / TILE_SIZE),
+      y: Math.floor(center.y / TILE_SIZE)
+    }
+
+    apaches.forEach(unit => {
+      this.assignApacheFlight(unit, destTile, center, {
+        mode: 'helipad',
+        stopRadius: TILE_SIZE * 0.2,
+        helipadId: helipad.id || null
+      })
+      unit.target = null
+      unit.originalTarget = null
+      unit.forcedAttack = false
+    })
+
+    const avgX = apaches.reduce((sum, u) => sum + u.x, 0) / apaches.length
+    const avgY = apaches.reduce((sum, u) => sum + u.y, 0) / apaches.length
+    playPositionalSound('movement', avgX, avgY, 0.5)
   }
 
   handleRecoveryTowCommand(selectedUnits, targetUnit) {
