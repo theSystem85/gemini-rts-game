@@ -1,5 +1,6 @@
 import { HELIPAD_FUEL_CAPACITY, HELIPAD_RELOAD_TIME, TILE_SIZE, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
+import { getBuildingIdentifier } from '../utils.js'
 
 export const updateHelipadLogic = logPerformance(function(units, buildings, _gameState, delta) {
   if (!Array.isArray(buildings) || buildings.length === 0) return
@@ -8,6 +9,7 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
   if (helipads.length === 0) return
 
   helipads.forEach(helipad => {
+    const helipadId = getBuildingIdentifier(helipad)
     if (typeof helipad.maxFuel !== 'number' || helipad.maxFuel <= 0) {
       helipad.maxFuel = HELIPAD_FUEL_CAPACITY
     }
@@ -36,13 +38,28 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
       const helipadCenterY = (helipad.y + (helipad.height || 1) / 2) * TILE_SIZE
 
       const apacheUnits = units.filter(u => u.type === 'apache' && u.health > 0)
+      if (helipad.landedUnitId) {
+        const occupant = apacheUnits.find(u => u.id === helipad.landedUnitId)
+        if (!occupant || occupant.landedHelipadId !== helipadId || occupant.flightState !== 'grounded') {
+          helipad.landedUnitId = null
+        }
+      }
       apacheUnits.forEach(heli => {
         const heliCenterX = heli.x + TILE_SIZE / 2
         const heliCenterY = heli.y + TILE_SIZE / 2
         const distance = Math.hypot(heliCenterX - helipadCenterX, heliCenterY - helipadCenterY)
         const landingRadius = TILE_SIZE * 1.2
 
-        const landingRequested = heli.helipadLandingRequested && (!heli.helipadTargetId || heli.helipadTargetId === helipad.id)
+        if (heli.flightState !== 'grounded' && heli.landedHelipadId === helipadId) {
+          heli.landedHelipadId = null
+        }
+        if (heli.flightState !== 'grounded' && helipad.landedUnitId === heli.id) {
+          helipad.landedUnitId = null
+        }
+
+        const landingCommanded = heli.helipadLandingRequested && (!heli.helipadTargetId || heli.helipadTargetId === helipadId)
+        const landingLinked = heli.landedHelipadId === helipadId || helipad.landedUnitId === heli.id
+        const landingRequested = landingCommanded || landingLinked
 
         if (distance <= landingRadius) {
           if (landingRequested) {
@@ -78,11 +95,21 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
 
               heli.helipadLandingRequested = false
               heli.autoHoldAltitude = false
-              heli.helipadTargetId = helipad.id
+              heli.helipadTargetId = helipadId
+              heli.landedHelipadId = helipadId
+              helipad.landedUnitId = heli.id
             }
           }
-        } else if (heli.refuelingAtHelipad) {
-          heli.refuelingAtHelipad = false
+        } else {
+          if (heli.refuelingAtHelipad) {
+            heli.refuelingAtHelipad = false
+          }
+          if (heli.landedHelipadId === helipadId) {
+            heli.landedHelipadId = null
+          }
+          if (helipad.landedUnitId === heli.id) {
+            helipad.landedUnitId = null
+          }
         }
       })
 

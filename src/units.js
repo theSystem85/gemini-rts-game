@@ -11,7 +11,7 @@ import {
   TANKER_SUPPLY_CAPACITY
 } from './config.js'
 import { logPerformance } from './performanceUtils.js'
-import { getUniqueId, updateUnitSpeedModifier, getUnitCost } from './utils.js'
+import { getUniqueId, updateUnitSpeedModifier, getUnitCost, getBuildingIdentifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { gameState } from './gameState.js'
 
@@ -583,8 +583,20 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   const spawnY = factory.y + factory.height
 
   let spawnPosition = null
+  let worldPositionOverride = null
+  const isHelipadApache = factory.type === 'helipad' && type === 'apache'
 
-  if (factory.type === 'vehicleFactory') {
+  if (isHelipadApache) {
+    const helipadCenterX = (factory.x + factory.width / 2) * TILE_SIZE
+    const helipadCenterY = (factory.y + factory.height / 2) * TILE_SIZE
+    worldPositionOverride = {
+      x: helipadCenterX - TILE_SIZE / 2,
+      y: helipadCenterY - TILE_SIZE / 2
+    }
+    const centerTileX = Math.floor((worldPositionOverride.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((worldPositionOverride.y + TILE_SIZE / 2) / TILE_SIZE)
+    spawnPosition = { x: centerTileX, y: centerTileY }
+  } else if (factory.type === 'vehicleFactory') {
     // Attempt to free the designated spawn tile using algorithm A1
     moveBlockingUnits(spawnX, spawnY, units, mapGrid)
 
@@ -609,7 +621,11 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     return null // Return null if no position is available
   }
 
-  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y, options)
+  const unitOptions = worldPositionOverride
+    ? { ...options, worldPosition: worldPositionOverride }
+    : options
+
+  const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y, unitOptions)
   if (occupancyMap) {
     // Use center coordinates for occupancy map consistency
     const centerTileX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -618,6 +634,30 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
         centerTileX >= 0 && centerTileX < occupancyMap[0].length) {
       occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
     }
+  }
+
+  if (isHelipadApache) {
+    const helipadId = getBuildingIdentifier(factory)
+    newUnit.flightPlan = null
+    newUnit.autoHoldAltitude = false
+    newUnit.manualFlightState = 'auto'
+    newUnit.altitude = 0
+    newUnit.targetAltitude = 0
+    newUnit.hovering = false
+    newUnit.helipadLandingRequested = false
+    newUnit.helipadTargetId = helipadId
+    newUnit.landedHelipadId = helipadId
+    newUnit.remoteControlActive = false
+    if (typeof newUnit.maxRocketAmmo === 'number') {
+      newUnit.rocketAmmo = newUnit.maxRocketAmmo
+      newUnit.apacheAmmoEmpty = false
+      newUnit.canFire = true
+    }
+    if (typeof newUnit.maxGas === 'number') {
+      newUnit.gas = newUnit.maxGas
+      newUnit.outOfGasPlayed = false
+    }
+    factory.landedUnitId = newUnit.id
   }
 
   // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
@@ -674,15 +714,23 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   const actualType = (unitType === 'tank') ? 'tank_v1' : unitType
   const unitProps = UNIT_PROPERTIES[actualType] || typeProps
 
+  const worldPosition = options.worldPosition || null
+  const initialX = typeof worldPosition?.x === 'number' ? worldPosition.x : x * TILE_SIZE
+  const initialY = typeof worldPosition?.y === 'number' ? worldPosition.y : y * TILE_SIZE
+  const tileCenterX = initialX + TILE_SIZE / 2
+  const tileCenterY = initialY + TILE_SIZE / 2
+  const tileX = Math.floor(tileCenterX / TILE_SIZE)
+  const tileY = Math.floor(tileCenterY / TILE_SIZE)
+
   const unit = {
     id: getUniqueId(),
     type: actualType,
     // Determine owner based on factory's 'owner' property (for buildings) or 'id' (for initial factories)
     owner: factory.owner || factory.id,
-    tileX: x,
-    tileY: y,
-    x: x * TILE_SIZE,
-    y: y * TILE_SIZE,
+    tileX,
+    tileY,
+    x: initialX,
+    y: initialY,
     speed: unitProps.speed,
     health: unitProps.health,
     maxHealth: unitProps.maxHealth,
@@ -786,6 +834,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.manualFlightHoverRequested = false
     unit.helipadLandingRequested = false
     unit.helipadTargetId = null
+    unit.landedHelipadId = null
     unit.maxRocketAmmo = 38
     unit.rocketAmmo = unit.maxRocketAmmo
   }

@@ -7,6 +7,7 @@ import { cancelRetreatForUnits } from '../behaviours/retreat.js'
 import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
 import { showNotification } from '../ui/notifications.js'
 import { units } from '../main.js'
+import { getBuildingIdentifier } from '../utils.js'
 import {
   getWreckById,
   findNearestWorkshop,
@@ -1009,9 +1010,19 @@ export class UnitCommandsHandler {
       destinationTile: destTile ? { ...destTile } : null
     }
     unit.autoHoldAltitude = true
+    if (unit.landedHelipadId) {
+      const helipad = Array.isArray(gameState.buildings)
+        ? gameState.buildings.find(b => getBuildingIdentifier(b) === unit.landedHelipadId)
+        : null
+      if (helipad && helipad.landedUnitId === unit.id) {
+        helipad.landedUnitId = null
+      }
+      unit.landedHelipadId = null
+    }
     if (options.mode === 'helipad') {
+      const helipadId = options.helipadId || null
       unit.helipadLandingRequested = true
-      unit.helipadTargetId = options.helipadId || null
+      unit.helipadTargetId = helipadId
     } else {
       unit.helipadLandingRequested = false
       unit.helipadTargetId = null
@@ -1487,7 +1498,7 @@ export class UnitCommandsHandler {
       this.assignApacheFlight(unit, destTile, center, {
         mode: 'helipad',
         stopRadius: TILE_SIZE * 0.2,
-        helipadId: helipad.id || null
+        helipadId: getBuildingIdentifier(helipad)
       })
       unit.target = null
       unit.originalTarget = null
