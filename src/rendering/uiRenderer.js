@@ -5,13 +5,16 @@ import { gameState } from '../gameState.js'
 import { showNotification } from '../ui/notifications.js'
 import { getCurrentGame } from '../main.js'
 import {
-  getPlayableViewportHeight,
-  getPlayableViewportWidth
+  getCanvasLogicalHeight,
+  getCanvasLogicalWidth,
+  getMobileLandscapeRightUiWidth,
+  getSafeAreaInset
 } from '../utils/layoutMetrics.js'
 
 export class UIRenderer {
   constructor() {
     this.gameOverEventListenerAdded = false
+    this.lastGameOverLayout = null
   }
   renderSelectionRectangle(ctx, selectionActive, selectionStart, selectionEnd, scrollOffset) {
     // Draw normal selection rectangle if active
@@ -237,37 +240,159 @@ export class UIRenderer {
     }
   }
 
+  calculateGameOverLayout(gameCanvas) {
+    if (!gameCanvas) {
+      return null
+    }
+
+    const logicalWidth = getCanvasLogicalWidth(gameCanvas)
+    const logicalHeight = getCanvasLogicalHeight(gameCanvas)
+
+    if (!Number.isFinite(logicalWidth) || !Number.isFinite(logicalHeight) ||
+        logicalWidth <= 0 || logicalHeight <= 0) {
+      return null
+    }
+
+    const safeLeft = getSafeAreaInset('left')
+    const safeRight = getSafeAreaInset('right')
+    const safeTop = getSafeAreaInset('top')
+    const safeBottom = getSafeAreaInset('bottom')
+    const rightUiWidth = getMobileLandscapeRightUiWidth()
+    const rightObstruction = Math.max(safeRight, rightUiWidth)
+
+    const adjustedWidth = logicalWidth - safeLeft - rightObstruction
+    const adjustedHeight = logicalHeight - safeTop - safeBottom
+
+    const overlayWidth = adjustedWidth > 0 ? adjustedWidth : logicalWidth
+    const overlayHeight = adjustedHeight > 0 ? adjustedHeight : logicalHeight
+    const offsetX = adjustedWidth > 0 ? safeLeft : 0
+    const offsetY = adjustedHeight > 0 ? safeTop : 0
+
+    const headingFontSize = Math.round(Math.max(22, Math.min(
+      overlayWidth * 0.08,
+      overlayHeight * 0.1,
+      48
+    )))
+    const statsFontSize = Math.round(Math.max(14, Math.min(
+      overlayWidth * 0.05,
+      overlayHeight * 0.07,
+      26
+    )))
+
+    const verticalPadding = Math.min(
+      Math.max(statsFontSize, overlayHeight * 0.08, 18),
+      overlayHeight * 0.25
+    )
+    const headingY = offsetY + verticalPadding
+
+    const buttonHeight = Math.max(36, Math.min(overlayHeight * 0.15, 60))
+    const desiredButtonWidth = Math.max(overlayWidth * 0.8, Math.min(overlayWidth, 160))
+    const buttonWidth = Math.min(desiredButtonWidth, Math.min(overlayWidth, 320))
+    const bottomPadding = Math.min(Math.max(overlayHeight * 0.06, 18), overlayHeight * 0.25)
+    const maxButtonTop = offsetY + overlayHeight - buttonHeight - bottomPadding
+
+    const statsStartY = headingY + headingFontSize + Math.max(statsFontSize * 0.6, 12)
+    const statsCount = 5
+    const availableStatsHeight = Math.max(maxButtonTop - statsStartY, 0)
+    const baseStatsSpacing = Math.max(statsFontSize * 1.1, 18)
+
+    let statsSpacing = baseStatsSpacing
+    if (availableStatsHeight > 0) {
+      const maxSpacing = availableStatsHeight / statsCount
+      if (maxSpacing > 0) {
+        const minSpacing = Math.min(Math.max(statsFontSize * 0.9, 14), maxSpacing)
+        statsSpacing = Math.max(Math.min(baseStatsSpacing, maxSpacing), minSpacing)
+      }
+    }
+
+    const statsTotalHeight = statsSpacing * (statsCount - 1) + statsFontSize
+    const minButtonTop = statsStartY + statsTotalHeight + Math.max(statsFontSize * 0.5, 10)
+    let buttonY = Math.max(minButtonTop, offsetY + verticalPadding)
+    buttonY = Math.min(buttonY, maxButtonTop)
+    const buttonX = offsetX + (overlayWidth - buttonWidth) / 2
+
+    const buttonFontSize = Math.round(Math.max(statsFontSize, 16))
+
+    return {
+      overlay: {
+        x: offsetX,
+        y: offsetY,
+        width: overlayWidth,
+        height: overlayHeight
+      },
+      heading: {
+        x: offsetX + overlayWidth / 2,
+        y: headingY,
+        fontSize: headingFontSize
+      },
+      stats: {
+        x: offsetX + overlayWidth / 2,
+        startY: statsStartY,
+        fontSize: statsFontSize,
+        spacing: statsSpacing
+      },
+      button: {
+        x: buttonX,
+        y: buttonY,
+        width: buttonWidth,
+        height: buttonHeight,
+        fontSize: buttonFontSize,
+        centerX: offsetX + overlayWidth / 2,
+        centerY: buttonY + buttonHeight / 2
+      }
+    }
+  }
+
   renderGameOver(ctx, gameCanvas, gameState) {
     // If game over, render win/lose overlay and stop drawing further
     if (gameState?.gameOver && gameState?.gameOverMessage) {
-      // Use logical CSS dimensions for proper centering, not physical pixel dimensions
-      const logicalWidth = getPlayableViewportWidth(gameCanvas)
-      const logicalHeight = getPlayableViewportHeight(gameCanvas)
-      const messageX = logicalWidth / 2
-      const messageY = logicalHeight / 2
+      const layout = this.calculateGameOverLayout(gameCanvas)
+
+      if (!layout) {
+        return false
+      }
+
+      this.lastGameOverLayout = layout
+
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-      ctx.fillRect(0, 0, logicalWidth, logicalHeight)
+      ctx.fillRect(
+        layout.overlay.x,
+        layout.overlay.y,
+        layout.overlay.width,
+        layout.overlay.height
+      )
 
       // Render game over message
-      ctx.font = 'bold 32px Arial'
+      ctx.font = `bold ${layout.heading.fontSize}px Arial`
       ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
       ctx.fillStyle = '#FFFFFF'
-      ctx.fillText(gameState.gameOverMessage, messageX, messageY - 100)
+      ctx.fillText(gameState.gameOverMessage, layout.heading.x, layout.heading.y)
 
       // Render statistics
-      ctx.font = '20px Arial'
-      ctx.fillText(`Player Units Destroyed: ${gameState.playerUnitsDestroyed}`, messageX, messageY - 50)
-      ctx.fillText(`Enemy Units Destroyed: ${gameState.enemyUnitsDestroyed}`, messageX, messageY - 20)
-      ctx.fillText(`Player Buildings Destroyed: ${gameState.playerBuildingsDestroyed}`, messageX, messageY + 10)
-      ctx.fillText(`Enemy Buildings Destroyed: ${gameState.enemyBuildingsDestroyed}`, messageX, messageY + 40)
-      ctx.fillText(`Total Money Earned: $${gameState.totalMoneyEarned}`, messageX, messageY + 70)
+      ctx.font = `${layout.stats.fontSize}px Arial`
+      ctx.textBaseline = 'top'
+      const statsLines = [
+        `Player Units Destroyed: ${gameState.playerUnitsDestroyed}`,
+        `Enemy Units Destroyed: ${gameState.enemyUnitsDestroyed}`,
+        `Player Buildings Destroyed: ${gameState.playerBuildingsDestroyed}`,
+        `Enemy Buildings Destroyed: ${gameState.enemyBuildingsDestroyed}`,
+        `Total Money Earned: $${gameState.totalMoneyEarned}`
+      ]
+
+      statsLines.forEach((line, index) => {
+        const lineY = layout.stats.startY + index * layout.stats.spacing
+        ctx.fillText(line, layout.stats.x, lineY)
+      })
 
       // Render reset button
       ctx.fillStyle = '#FF0000'
-      ctx.fillRect(messageX - 75, messageY + 100, 150, 40)
-      ctx.font = 'bold 20px Arial'
+      ctx.fillRect(layout.button.x, layout.button.y, layout.button.width, layout.button.height)
+      ctx.font = `bold ${layout.button.fontSize}px Arial`
       ctx.fillStyle = '#FFFFFF'
-      ctx.fillText('Reset Game', messageX, messageY + 130)
+      ctx.textBaseline = 'middle'
+      ctx.fillText('Reset Game', layout.button.centerX, layout.button.centerY)
+      ctx.textBaseline = 'alphabetic'
 
       // Handle reset button click - only add listener once
       if (!this.gameOverEventListenerAdded) {
@@ -276,18 +401,20 @@ export class UIRenderer {
           const clickX = event.clientX - rect.left
           const clickY = event.clientY - rect.top
 
-          // Recalculate button bounds since messageX/Y might have changed
-          const currentLogicalWidth = getPlayableViewportWidth(gameCanvas)
-          const currentLogicalHeight = getPlayableViewportHeight(gameCanvas)
-          const currentMessageX = currentLogicalWidth / 2
-          const currentMessageY = currentLogicalHeight / 2
+          const currentLayout = this.calculateGameOverLayout(gameCanvas) || this.lastGameOverLayout
+
+          if (!currentLayout) {
+            return
+          }
+
+          const { button } = currentLayout
 
           // Check if click is within reset button bounds (using logical coordinates)
           if (
-            clickX >= currentMessageX - 75 &&
-            clickX <= currentMessageX + 75 &&
-            clickY >= currentMessageY + 100 &&
-            clickY <= currentMessageY + 140
+            clickX >= button.x &&
+            clickX <= button.x + button.width &&
+            clickY >= button.y &&
+            clickY <= button.y + button.height
           ) {
             // Reset the game instead of reloading the page
             (async() => {
@@ -322,6 +449,7 @@ export class UIRenderer {
         this.gameOverEventListenerAdded = false
         this.gameOverClickHandler = null
       }
+      this.lastGameOverLayout = null
     }
     return false
   }
