@@ -648,6 +648,25 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     newUnit.helipadTargetId = helipadId
     newUnit.landedHelipadId = helipadId
     newUnit.remoteControlActive = false
+    if (newUnit.movement) {
+      newUnit.movement.velocity = { x: 0, y: 0 }
+      newUnit.movement.targetVelocity = { x: 0, y: 0 }
+      newUnit.movement.isMoving = false
+      newUnit.movement.currentSpeed = 0
+    }
+    newUnit.flightState = 'grounded'
+    newUnit.altitude = 0
+    newUnit.targetAltitude = 0
+    if (newUnit.rotor) {
+      newUnit.rotor.speed = 0
+      newUnit.rotor.targetSpeed = 0
+    }
+    if (newUnit.shadow) {
+      newUnit.shadow.offset = 0
+      newUnit.shadow.scale = 1
+    }
+    newUnit.hovering = false
+    newUnit.refuelingAtHelipad = false
     if (typeof newUnit.maxRocketAmmo === 'number') {
       newUnit.rocketAmmo = newUnit.maxRocketAmmo
       newUnit.apacheAmmoEmpty = false
@@ -658,6 +677,14 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
       newUnit.outOfGasPlayed = false
     }
     factory.landedUnitId = newUnit.id
+    if (Array.isArray(gameState.buildings)) {
+      const matchingHelipad = gameState.buildings.find(
+        b => getBuildingIdentifier(b) === helipadId
+      )
+      if (matchingHelipad) {
+        matchingHelipad.landedUnitId = newUnit.id
+      }
+    }
   }
 
   // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
