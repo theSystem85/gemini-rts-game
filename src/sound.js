@@ -101,6 +101,9 @@ const soundFiles = {
   // Looping tank drive sound
   tankDriveLoop: ['tankDrive4sLoop.mp3'],
 
+  // Apache helicopter flight loop
+  apache_fly: ['apache_fly.mp3'],
+
   // Game event aliases (previously in soundMapping)
   movement: ['tankEngineStart01.mp3', 'confirmed.mp3', 'onMyWay.mp3'], // alias for tankMove
   shoot: ['tankShot01.mp3', 'tankShot02.mp3', 'tankShot03.mp3'], // alias for tankShot
