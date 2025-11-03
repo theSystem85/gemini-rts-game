@@ -1,7 +1,7 @@
 // unitCombat.js - Handles all unit combat and targeting logic
 import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, HOWITZER_PROJECTILE_SPEED, HOWITZER_EXPLOSION_RADIUS_TILES, APACHE_RANGE_REDUCTION } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
-import { hasClearShot, angleDiff } from '../logic.js'
+import { hasClearShot, angleDiff, smoothRotateTowardsAngle } from '../logic.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
@@ -1099,70 +1099,102 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
 
   const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
   const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
-  const desiredStandoff = Math.max(TILE_SIZE * 4, effectiveRange * 0.9)
-  const chaseThreshold = desiredStandoff * 1.1
-  const retreatThreshold = desiredStandoff * 0.75
+  const inRange = distance <= effectiveRange
+  const directOverlapThreshold = TILE_SIZE * 0.45
+  const targetDirectlyBelow = distance < directOverlapThreshold
 
-  let standOffX = targetCenter.x
-  let standOffY = targetCenter.y
-  let offsetX = unitCenterX - targetCenter.x
-  let offsetY = unitCenterY - targetCenter.y
-  let offsetMag = Math.hypot(offsetX, offsetY)
-  if (offsetMag < 1) {
-    const fallbackAngle = unit.direction || 0
-    offsetX = Math.cos(fallbackAngle)
-    offsetY = Math.sin(fallbackAngle)
-    offsetMag = 1
-  }
-  const normX = offsetX / offsetMag
-  const normY = offsetY / offsetMag
-  standOffX = targetCenter.x + normX * desiredStandoff
-  standOffY = targetCenter.y + normY * desiredStandoff
-
-  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
-    const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE / 2
-    const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE / 2
-    standOffX = Math.max(TILE_SIZE / 2, Math.min(standOffX, maxX))
-    standOffY = Math.max(TILE_SIZE / 2, Math.min(standOffY, maxY))
-  }
-
-  const standOffTile = {
-    x: Math.max(0, Math.floor(standOffX / TILE_SIZE)),
-    y: Math.max(0, Math.floor(standOffY / TILE_SIZE))
-  }
-
-  const distanceToStandoff = Math.hypot(unitCenterX - standOffX, unitCenterY - standOffY)
-  const existingPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? unit.flightPlan : null
+  let existingPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? unit.flightPlan : null
   const followTargetId = unit.target.id || null
-  const planStopRadius = Math.max(12, desiredStandoff * 0.05)
-  const distanceTooFar = distance > chaseThreshold
-  const distanceTooClose = distance < retreatThreshold
-  const needsNewPlan =
-    !existingPlan ||
-    existingPlan.followTargetId !== followTargetId ||
-    Math.abs((existingPlan.desiredRange || 0) - desiredStandoff) > 1
-  const shouldReposition = distanceTooFar || distanceTooClose || distanceToStandoff > planStopRadius * 1.5
 
-  if (!unit.helipadLandingRequested && (shouldReposition || (needsNewPlan && (!existingPlan || distanceTooFar || distanceTooClose || distanceToStandoff > planStopRadius)))) {
-    unit.flightPlan = {
-      x: standOffX,
-      y: standOffY,
-      stopRadius: planStopRadius,
-      mode: 'combat',
-      followTargetId,
-      destinationTile: standOffTile,
-      desiredRange: desiredStandoff
+  const desiredFacing = Math.atan2(dy, dx)
+  const currentDirection = typeof unit.direction === 'number' ? unit.direction : 0
+  const rotationSpeed = unit.rotationSpeed || 0.18
+  const newDirection = smoothRotateTowardsAngle(currentDirection, desiredFacing, rotationSpeed)
+  unit.direction = newDirection
+  unit.rotation = newDirection
+  if (unit.movement) {
+    unit.movement.rotation = newDirection
+    if (!existingPlan) {
+      unit.movement.targetRotation = newDirection
     }
+  }
+
+  if (inRange && !targetDirectlyBelow) {
+    if (existingPlan) {
+      unit.flightPlan = null
+      existingPlan = null
+    }
+    unit.moveTarget = null
+  } else if (!unit.helipadLandingRequested) {
+    let standOffX = targetCenter.x
+    let standOffY = targetCenter.y
+    let desiredDistance = distance
+
+    if (targetDirectlyBelow) {
+      desiredDistance = Math.max(TILE_SIZE * 1.2, effectiveRange * 0.25)
+      const baseAngle = (typeof unit.direction === 'number' ? unit.direction : desiredFacing) + Math.PI / 2
+      standOffX = targetCenter.x + Math.cos(baseAngle) * desiredDistance
+      standOffY = targetCenter.y + Math.sin(baseAngle) * desiredDistance
+    } else {
+      let offsetX = unitCenterX - targetCenter.x
+      let offsetY = unitCenterY - targetCenter.y
+      let offsetMag = Math.hypot(offsetX, offsetY)
+      if (offsetMag < 1) {
+        offsetX = Math.cos(newDirection)
+        offsetY = Math.sin(newDirection)
+        offsetMag = 1
+      }
+      const normX = offsetX / offsetMag
+      const normY = offsetY / offsetMag
+      desiredDistance = Math.max(TILE_SIZE, Math.min(effectiveRange * 0.9, offsetMag))
+      standOffX = targetCenter.x + normX * desiredDistance
+      standOffY = targetCenter.y + normY * desiredDistance
+    }
+
+    if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
+      const maxX = mapGrid[0].length * TILE_SIZE - TILE_SIZE / 2
+      const maxY = mapGrid.length * TILE_SIZE - TILE_SIZE / 2
+      standOffX = Math.max(TILE_SIZE / 2, Math.min(standOffX, maxX))
+      standOffY = Math.max(TILE_SIZE / 2, Math.min(standOffY, maxY))
+    }
+
+    const standOffTile = {
+      x: Math.max(0, Math.floor(standOffX / TILE_SIZE)),
+      y: Math.max(0, Math.floor(standOffY / TILE_SIZE))
+    }
+
+    const planStopRadius = targetDirectlyBelow
+      ? Math.max(12, desiredDistance * 0.3)
+      : Math.max(12, desiredDistance * 0.05)
+    const distanceToStandOff = Math.hypot(unitCenterX - standOffX, unitCenterY - standOffY)
+    const needsPlanUpdate =
+      !existingPlan ||
+      existingPlan.followTargetId !== followTargetId ||
+      Math.abs((existingPlan.desiredRange || 0) - desiredDistance) > 1 ||
+      Boolean(existingPlan?.strafe) !== targetDirectlyBelow
+
+    if (needsPlanUpdate || distanceToStandOff > planStopRadius * 1.25) {
+      unit.flightPlan = {
+        x: standOffX,
+        y: standOffY,
+        stopRadius: planStopRadius,
+        mode: 'combat',
+        followTargetId,
+        destinationTile: standOffTile,
+        desiredRange: desiredDistance,
+        strafe: targetDirectlyBelow
+      }
+      existingPlan = unit.flightPlan
+    } else if (existingPlan) {
+      existingPlan.x = standOffX
+      existingPlan.y = standOffY
+      existingPlan.stopRadius = planStopRadius
+      existingPlan.destinationTile = standOffTile
+      existingPlan.desiredRange = desiredDistance
+      existingPlan.strafe = targetDirectlyBelow
+    }
+
     unit.moveTarget = standOffTile
-  } else if (existingPlan && !unit.helipadLandingRequested) {
-    existingPlan.x = standOffX
-    existingPlan.y = standOffY
-    existingPlan.stopRadius = planStopRadius
-    existingPlan.destinationTile = standOffTile
-    existingPlan.desiredRange = desiredStandoff
-    if (!unit.moveTarget || unit.moveTarget.x !== standOffTile.x || unit.moveTarget.y !== standOffTile.y) {
-      unit.moveTarget = standOffTile
-    }
   }
 
   unit.autoHoldAltitude = true
