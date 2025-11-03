@@ -14,6 +14,7 @@ import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier, getUnitCost, getBuildingIdentifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { gameState } from './gameState.js'
+import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -133,9 +134,10 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
   }
 }, false)
 
-export function removeUnitOccupancy(unit, occupancyMap) {
+export function removeUnitOccupancy(unit, occupancyMap, options = {}) {
   if (!occupancyMap) return
-  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+  const { ignoreFlightState = false } = options
+  if (!ignoreFlightState && unit.isAirUnit && unit.flightState !== 'grounded') {
     return
   }
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -587,15 +589,24 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   const isHelipadApache = factory.type === 'helipad' && type === 'apache'
 
   if (isHelipadApache) {
-    const helipadCenterX = (factory.x + factory.width / 2) * TILE_SIZE
-    const helipadCenterY = (factory.y + factory.height / 2) * TILE_SIZE
-    worldPositionOverride = {
-      x: helipadCenterX - TILE_SIZE / 2,
-      y: helipadCenterY - TILE_SIZE / 2
+    const landingTopLeft = getHelipadLandingTopLeft(factory)
+    const landingTile = getHelipadLandingTile(factory)
+    if (landingTopLeft && landingTile) {
+      worldPositionOverride = { ...landingTopLeft }
+      spawnPosition = { ...landingTile }
+    } else {
+      const helipadCenter = getHelipadLandingCenter(factory)
+      if (helipadCenter) {
+        worldPositionOverride = {
+          x: helipadCenter.x - TILE_SIZE / 2,
+          y: helipadCenter.y - TILE_SIZE / 2
+        }
+        spawnPosition = {
+          x: Math.floor(helipadCenter.x / TILE_SIZE),
+          y: Math.floor(helipadCenter.y / TILE_SIZE)
+        }
+      }
     }
-    const centerTileX = Math.floor((worldPositionOverride.x + TILE_SIZE / 2) / TILE_SIZE)
-    const centerTileY = Math.floor((worldPositionOverride.y + TILE_SIZE / 2) / TILE_SIZE)
-    spawnPosition = { x: centerTileX, y: centerTileY }
   } else if (factory.type === 'vehicleFactory') {
     // Attempt to free the designated spawn tile using algorithm A1
     moveBlockingUnits(spawnX, spawnY, units, mapGrid)
@@ -626,13 +637,16 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     : options
 
   const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y, unitOptions)
-  if (occupancyMap) {
+  if (occupancyMap && !isHelipadApache) {
     // Use center coordinates for occupancy map consistency
     const centerTileX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
     const centerTileY = Math.floor((newUnit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (centerTileY >= 0 && centerTileY < occupancyMap.length &&
         centerTileX >= 0 && centerTileX < occupancyMap[0].length) {
       occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+    }
+    if (newUnit.type === 'apache') {
+      newUnit.groundedOccupancyApplied = true
     }
   }
 
@@ -648,6 +662,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     newUnit.helipadTargetId = helipadId
     newUnit.landedHelipadId = helipadId
     newUnit.remoteControlActive = false
+    newUnit.groundedOccupancyApplied = false
     if (newUnit.movement) {
       newUnit.movement.velocity = { x: 0, y: 0 }
       newUnit.movement.targetVelocity = { x: 0, y: 0 }
@@ -848,6 +863,8 @@ export function createUnit(factory, unitType, x, y, options = {}) {
       scale: 1
     }
     unit.hovering = false
+    unit.groundedOccupancyApplied = false
+    unit.lastGroundedOnHelipad = false
     unit.airborneSince = null
     const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
     unit.landedSince = now

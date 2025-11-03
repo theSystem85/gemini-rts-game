@@ -37,6 +37,11 @@ import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
+const ROTOR_AIRBORNE_SPEED = 0.35
+const ROTOR_GROUNDED_SPEED = 0
+const ROTOR_SPINUP_RESPONSE = 4
+const ROTOR_SPINDOWN_RESPONSE = 1.5
+const ROTOR_STOP_EPSILON = 0.002
 const APACHE_ROTOR_LOOP_VOLUME = 0.25
 const APACHE_ROTOR_ALTITUDE_GAIN_MIN = 0.6
 const APACHE_ROTOR_ALTITUDE_GAIN_MAX = 1.0
@@ -169,20 +174,50 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   }
 
   const previouslyGrounded = unit.flightState === 'grounded' || unit.flightState === undefined
+  const hadGroundOccupancy =
+    unit.groundedOccupancyApplied !== undefined
+      ? Boolean(unit.groundedOccupancyApplied)
+      : !unit.occupancyRemoved
   unit.flightState = newFlightState
 
-  if (unit.flightState !== 'grounded') {
-    if (!unit.occupancyRemoved && previouslyGrounded) {
-      removeUnitOccupancy(unit, occupancyMap)
-      unit.occupancyRemoved = true
+  const isGroundedNow = unit.flightState === 'grounded'
+  const onHelipadNow = isGroundedNow && Boolean(unit.landedHelipadId)
+
+  if (!isGroundedNow) {
+    if (previouslyGrounded && hadGroundOccupancy) {
+      removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
     }
-  } else if (unit.occupancyRemoved) {
-    addUnitOccupancyDirect(unit, occupancyMap)
-    unit.occupancyRemoved = false
+    unit.groundedOccupancyApplied = false
+    unit.occupancyRemoved = true
+    unit.lastGroundedOnHelipad = false
+  } else {
+    if (onHelipadNow) {
+      if (hadGroundOccupancy) {
+        removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
+      }
+      unit.groundedOccupancyApplied = false
+      unit.occupancyRemoved = true
+    } else if (!hadGroundOccupancy) {
+      addUnitOccupancyDirect(unit, occupancyMap)
+      unit.groundedOccupancyApplied = true
+      unit.occupancyRemoved = false
+    }
+    if (!onHelipadNow && hadGroundOccupancy) {
+      unit.occupancyRemoved = false
+    }
+    unit.lastGroundedOnHelipad = onHelipadNow
   }
 
-  const rotorTargetSpeed = unit.flightState === 'grounded' ? 0.05 : 0.35
-  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * 4)
+  const rotorTargetSpeed = unit.flightState === 'grounded'
+    ? ROTOR_GROUNDED_SPEED
+    : ROTOR_AIRBORNE_SPEED
+  const rotorResponse = unit.flightState === 'grounded'
+    ? ROTOR_SPINDOWN_RESPONSE
+    : ROTOR_SPINUP_RESPONSE
+  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * rotorResponse)
+  if (unit.flightState === 'grounded' && Math.abs(rotor.speed - ROTOR_GROUNDED_SPEED) < ROTOR_STOP_EPSILON) {
+    rotor.speed = ROTOR_GROUNDED_SPEED
+  }
   rotor.angle = (rotor.angle + rotor.speed * deltaMs) % (Math.PI * 2)
   rotor.targetSpeed = rotorTargetSpeed
 
@@ -948,6 +983,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     return { collided: false }
   }
 
+  const unitAirborneApache = unit.type === 'apache' && unit.flightState !== 'grounded'
+
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds' }
@@ -983,6 +1020,11 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
 
     for (const otherUnit of units) {
       if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
+
+      const otherAirborneApache = otherUnit.type === 'apache' && otherUnit.flightState !== 'grounded'
+      if ((unitAirborneApache && !otherAirborneApache) || (!unitAirborneApache && otherAirborneApache)) {
+        continue
+      }
 
       const otherCenterX = otherUnit.x + TILE_SIZE / 2
       const otherCenterY = otherUnit.y + TILE_SIZE / 2

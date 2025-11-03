@@ -1,6 +1,7 @@
 import { HELIPAD_FUEL_CAPACITY, HELIPAD_RELOAD_TIME, TILE_SIZE, TANKER_SUPPLY_CAPACITY } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getBuildingIdentifier } from '../utils.js'
+import { getHelipadLandingCenter } from '../utils/helipadUtils.js'
 
 export const updateHelipadLogic = logPerformance(function(units, buildings, _gameState, delta) {
   if (!Array.isArray(buildings) || buildings.length === 0) return
@@ -34,8 +35,12 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
     helipad.needsFuel = helipad.fuel < capacity * 0.25
 
     if (Array.isArray(units)) {
-      const helipadCenterX = (helipad.x + (helipad.width || 1) / 2) * TILE_SIZE
-      const helipadCenterY = (helipad.y + (helipad.height || 1) / 2) * TILE_SIZE
+      const landingCenter = getHelipadLandingCenter(helipad)
+      if (!landingCenter) {
+        return
+      }
+      const helipadCenterX = landingCenter.x
+      const helipadCenterY = landingCenter.y
 
       const apacheUnits = units.filter(u => u.type === 'apache' && u.health > 0)
       if (helipad.landedUnitId) {

@@ -1234,7 +1234,11 @@ export class MouseHandler {
     for (const unit of units) {
       if (selectionManager.isSelectableUnit(unit)) {
         const centerX = unit.x + TILE_SIZE / 2
-        const centerY = unit.y + TILE_SIZE / 2
+        let centerY = unit.y + TILE_SIZE / 2
+        if (unit.type === 'apache') {
+          const altitudeLift = (unit.altitude || 0) * 0.4
+          centerY -= altitudeLift
+        }
         const dx = worldX - centerX
         const dy = worldY - centerY
         if (Math.hypot(dx, dy) < TILE_SIZE / 2) {

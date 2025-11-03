@@ -8,6 +8,7 @@ import { forceHarvesterUnloadPriority } from '../game/harvesterLogic.js'
 import { showNotification } from '../ui/notifications.js'
 import { units } from '../main.js'
 import { getBuildingIdentifier } from '../utils.js'
+import { getHelipadLandingCenter, getHelipadLandingTile } from '../utils/helipadUtils.js'
 import {
   getWreckById,
   findNearestWorkshop,
@@ -1485,24 +1486,33 @@ export class UnitCommandsHandler {
       return
     }
 
-    const center = {
-      x: (helipad.x + (helipad.width || 1) / 2) * TILE_SIZE,
-      y: (helipad.y + (helipad.height || 1) / 2) * TILE_SIZE
+    const helipadId = getBuildingIdentifier(helipad)
+    const center = getHelipadLandingCenter(helipad)
+    const destTile = getHelipadLandingTile(helipad)
+    if (!center || !destTile) {
+      return
     }
-    const destTile = {
-      x: Math.floor(center.x / TILE_SIZE),
-      y: Math.floor(center.y / TILE_SIZE)
+
+    const occupant = this.units?.find(
+      unit => unit && unit.id === helipad.landedUnitId && unit.type === 'apache' && unit.health > 0
+    )
+    const occupantIsGrounded = occupant && occupant.flightState === 'grounded'
+    if (occupantIsGrounded && !apaches.some(unit => unit.id === occupant.id)) {
+      showNotification('Helipad is currently occupied!', 2000)
+      return
     }
 
     apaches.forEach(unit => {
-      this.assignApacheFlight(unit, destTile, center, {
+      const handled = this.assignApacheFlight(unit, destTile, center, {
         mode: 'helipad',
         stopRadius: TILE_SIZE * 0.2,
-        helipadId: getBuildingIdentifier(helipad)
+        helipadId
       })
-      unit.target = null
-      unit.originalTarget = null
-      unit.forcedAttack = false
+      if (handled) {
+        unit.target = null
+        unit.originalTarget = null
+        unit.forcedAttack = false
+      }
     })
 
     const avgX = apaches.reduce((sum, u) => sum + u.x, 0) / apaches.length

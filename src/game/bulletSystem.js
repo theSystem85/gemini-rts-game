@@ -23,6 +23,7 @@ import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 
 const APACHE_REMOTE_DAMAGE = 10
+const APACHE_TANK_DAMAGE_MULTIPLIER = 1.67
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -55,6 +56,16 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
     const rocketExplosionOptions = bullet.projectileType === 'rocket'
       ? { buildingDamageMultiplier: 2, factoryDamageMultiplier: 2 }
       : undefined
+
+    let apacheTargetUnit = null
+    if (bullet.originType === 'apacheRocket' && bullet.apacheTargetId && Array.isArray(units)) {
+      const match = units.find(u => u && u.id === bullet.apacheTargetId && u.health > 0)
+      if (match) {
+        apacheTargetUnit = match
+      } else {
+        bullet.apacheTargetId = null
+      }
+    }
 
     // Ballistic projectile handling: rocket goes straight up then switches to homing
     let skipStandardMotion = false
@@ -114,6 +125,28 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
     }
 
     if (!skipStandardMotion) {
+      if (bullet.originType === 'apacheRocket' && apacheTargetUnit) {
+        const targetCenterX = apacheTargetUnit.x + TILE_SIZE / 2
+        const targetCenterY = apacheTargetUnit.y + TILE_SIZE / 2
+        bullet.targetPosition = { x: targetCenterX, y: targetCenterY }
+
+        const dxToTarget = targetCenterX - bullet.x
+        const dyToTarget = targetCenterY - bullet.y
+        const distanceToCenter = Math.hypot(dxToTarget, dyToTarget)
+        const currentSpeed = Math.hypot(bullet.vx || 0, bullet.vy || 0) || bullet.speed || 0
+        if (distanceToCenter > 1e-3 && currentSpeed > 0) {
+          const speedScale = currentSpeed / distanceToCenter
+          bullet.vx = dxToTarget * speedScale
+          bullet.vy = dyToTarget * speedScale
+        }
+
+        const footprintWidth = (apacheTargetUnit.width || 1) * TILE_SIZE
+        const footprintHeight = (apacheTargetUnit.height || 1) * TILE_SIZE
+        bullet.apacheTargetRadius = Math.max(
+          TILE_SIZE * 0.35,
+          Math.max(footprintWidth, footprintHeight) / 2
+        )
+      }
 
       // Handle homing projectiles
       if (bullet.homing) {
@@ -284,32 +317,40 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         const flightTime = now - (bullet.creationTime || bullet.startTime || now)
         const maxFlightTime = bullet.maxFlightTime || 3000
 
-        if (distanceToTarget < 25 || flightTime >= maxFlightTime) { // Explode on proximity OR time limit
+        const proximityThreshold = bullet.apacheTargetRadius || TILE_SIZE * 0.3
+
+        if (distanceToTarget <= proximityThreshold || flightTime >= maxFlightTime) { // Explode on proximity OR time limit
           // Apache rockets create 1 explosion at their current position
-          // Base damage 10 * 0.9 multiplier * 2.5 tank multiplier = 22.5 per rocket
-          // 8 rockets * 22.5 = 180 damage (enough to kill tank-v3 with 169 HP)
+          // Base damage 10 * 0.9 multiplier * 1.67 tank multiplier ~= 15 damage per rocket
+          // 8 rockets * 15 ~= 120 damage (tough tanks now survive a full volley)
           const baseDamage = bullet.baseDamage * 0.9
 
           // Apply tank damage multiplier for direct unit hits
           let damageMultiplier = 1.0
-          if (bullet.shooter && units) {
+          if (apacheTargetUnit && ['tank', 'tank_v1', 'tank-v2', 'tank-v3'].includes(apacheTargetUnit.type)) {
+            damageMultiplier = APACHE_TANK_DAMAGE_MULTIPLIER
+          } else if (bullet.shooter && units) {
             // Check if explosion will hit any tanks
             const explosionRadius = TILE_SIZE * 0.8
             const hasTankNearby = units.some(u => {
               if (u.health <= 0 || u.owner === bullet.shooter.owner) return false
               const tankTypes = ['tank', 'tank_v1', 'tank-v2', 'tank-v3']
               if (!tankTypes.includes(u.type)) return false
-              const dist = Math.hypot(u.x + TILE_SIZE / 2 - bullet.x, u.y + TILE_SIZE / 2 - bullet.y)
+              const explosionOriginX = apacheTargetUnit ? apacheTargetUnit.x + TILE_SIZE / 2 : bullet.x
+              const explosionOriginY = apacheTargetUnit ? apacheTargetUnit.y + TILE_SIZE / 2 : bullet.y
+              const dist = Math.hypot(u.x + TILE_SIZE / 2 - explosionOriginX, u.y + TILE_SIZE / 2 - explosionOriginY)
               return dist <= explosionRadius
             })
             if (hasTankNearby) {
-              damageMultiplier = 2.5 // Boost damage for tank targets
+              damageMultiplier = APACHE_TANK_DAMAGE_MULTIPLIER // Boost damage for tank targets
             }
           }
 
+          const explosionX = apacheTargetUnit ? apacheTargetUnit.x + TILE_SIZE / 2 : bullet.x
+          const explosionY = apacheTargetUnit ? apacheTargetUnit.y + TILE_SIZE / 2 : bullet.y
           triggerExplosion(
-            bullet.x,
-            bullet.y,
+            explosionX,
+            explosionY,
             baseDamage * damageMultiplier,
             units,
             factories,
@@ -322,7 +363,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           )
 
           // Play explosion sound
-          playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
+          playPositionalSound('explosion', explosionX, explosionY, 0.7)
 
           bullets.splice(i, 1)
           continue
