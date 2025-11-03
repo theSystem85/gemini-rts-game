@@ -212,11 +212,22 @@ export class EffectsRenderer {
     if (gameState?.explosions && gameState?.explosions.length > 0) {
       const currentTime = performance.now()
       gameState.explosions.forEach(exp => {
-        const progress = (currentTime - exp.startTime) / exp.duration
-        const currentRadius = exp.maxRadius * progress
+        if (!exp) {
+          return
+        }
+
+        const safeDuration = Number.isFinite(exp.duration) && exp.duration > 0 ? exp.duration : 1
+        const rawProgress = (currentTime - exp.startTime) / safeDuration
+        const progress = Math.min(Math.max(rawProgress, 0), 1)
+        const maxRadius = Number.isFinite(exp.maxRadius) && exp.maxRadius > 0 ? exp.maxRadius : TILE_SIZE * 2
+        const currentRadius = maxRadius * progress
         const alpha = Math.max(0, 1 - progress)
         const centerX = exp.x - scrollOffset.x
         const centerY = exp.y - scrollOffset.y
+
+        if (!Number.isFinite(centerX) || !Number.isFinite(centerY) || !Number.isFinite(currentRadius) || currentRadius <= 0) {
+          return
+        }
 
         const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, currentRadius)
         gradient.addColorStop(0, `rgba(255,150,0,${alpha})`)

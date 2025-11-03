@@ -288,11 +288,15 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
       playPositionalSound('explosion', explosionX, explosionY, 0.5)
 
       // Add explosion effect at factory center
+      const maxDimension = Math.max(factory.width || 1, factory.height || 1)
+      const explosionRadius = Math.max(TILE_SIZE * 2, maxDimension * TILE_SIZE * 1.2)
+
       gameState.explosions.push({
         x: explosionX,
         y: explosionY,
         startTime: performance.now(),
         duration: 1000,
+        maxRadius: explosionRadius,
         color: '#ff4444'
       })
     }
