@@ -251,21 +251,30 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       }
 
       // Update bullet position
-      const previousX = bullet.x
-      const previousY = bullet.y
+      if (bullet.originType === 'apacheRocket' && typeof bullet.startX !== 'number') {
+        bullet.startX = bullet.x
+        bullet.startY = bullet.y
+      }
+
       bullet.x += bullet.vx || 0
       bullet.y += bullet.vy || 0
 
       if (bullet.originType === 'apacheRocket' && bullet.targetPosition) {
-        const prevVectorX = bullet.targetPosition.x - previousX
-        const prevVectorY = bullet.targetPosition.y - previousY
-        const currentVectorX = bullet.targetPosition.x - bullet.x
-        const currentVectorY = bullet.targetPosition.y - bullet.y
-        const passedTarget = prevVectorX * currentVectorX + prevVectorY * currentVectorY <= 0
+        const startX = bullet.startX
+        const startY = bullet.startY
+        const totalDx = bullet.targetPosition.x - startX
+        const totalDy = bullet.targetPosition.y - startY
+        const totalDistanceSq = totalDx * totalDx + totalDy * totalDy
 
-        if (passedTarget) {
-          bullet.x = bullet.targetPosition.x
-          bullet.y = bullet.targetPosition.y
+        if (totalDistanceSq > 0) {
+          const traveledDx = bullet.x - startX
+          const traveledDy = bullet.y - startY
+          const progress = (traveledDx * totalDx + traveledDy * totalDy) / totalDistanceSq
+          const clampedProgress = Math.max(0, Math.min(progress, 1))
+          const projectedX = startX + totalDx * clampedProgress
+          const projectedY = startY + totalDy * clampedProgress
+          bullet.x = projectedX
+          bullet.y = projectedY
         }
       }
 
@@ -822,6 +831,8 @@ export function fireBullet(unit, target, bullets, now) {
       skipCollisionChecks: true,
       maxFlightTime: 3000,
       creationTime: now,
+      startX: spawn.x,
+      startY: spawn.y,
       projectileType: 'rocket',
       originType: 'apacheRocket'
     }

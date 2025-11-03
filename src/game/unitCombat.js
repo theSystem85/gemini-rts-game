@@ -1,5 +1,5 @@
 // unitCombat.js - Handles all unit combat and targeting logic
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, HOWITZER_PROJECTILE_SPEED, HOWITZER_EXPLOSION_RADIUS_TILES } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, HOWITZER_PROJECTILE_SPEED, HOWITZER_EXPLOSION_RADIUS_TILES, APACHE_RANGE_REDUCTION } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { hasClearShot, angleDiff } from '../logic.js'
 import { findPath } from '../units.js'
@@ -328,6 +328,8 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         bullet.skipCollisionChecks = true
         bullet.maxFlightTime = 3000 // 3 seconds max flight time before forced explosion
         bullet.creationTime = now
+        bullet.startX = rocketSpawn.x
+        bullet.startY = rocketSpawn.y
         // Apache rockets fly straight to their target position
         const dx = finalTarget.x - rocketSpawn.x
         const dy = finalTarget.y - rocketSpawn.y
@@ -474,12 +476,47 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
   const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
   const spawn = spawnPoints[side] || { x: centerX, y: centerY }
 
-  // Generate random target position within 2-tile diameter circle around target center
-  const explosionRadius = TILE_SIZE * 1.0 // 2 tile diameter = 1.0 tile radius
-  const angle = Math.random() * Math.PI * 2
-  const distance = Math.random() * explosionRadius
-  const randomTargetX = targetCenterX + Math.cos(angle) * distance
-  const randomTargetY = targetCenterY + Math.sin(angle) * distance
+  let approachVectorX = targetCenterX - centerX
+  let approachVectorY = targetCenterY - centerY
+  let approachDistance = Math.hypot(approachVectorX, approachVectorY)
+  if (approachDistance < 1) {
+    const fallbackAngle = unit.direction || 0
+    approachVectorX = Math.cos(fallbackAngle)
+    approachVectorY = Math.sin(fallbackAngle)
+    approachDistance = 1
+  }
+
+  const forwardNormX = approachVectorX / approachDistance
+  const forwardNormY = approachVectorY / approachDistance
+  const maxImpactDistance = Math.min(approachDistance, TILE_SIZE * 0.9)
+  const desiredImpactDistance = Math.max(
+    Math.min(TILE_SIZE * 0.3, maxImpactDistance),
+    Math.min(approachDistance * 0.6, maxImpactDistance)
+  )
+
+  const baseImpactX = targetCenterX - forwardNormX * desiredImpactDistance
+  const baseImpactY = targetCenterY - forwardNormY * desiredImpactDistance
+  const perpendicularX = -forwardNormY
+  const perpendicularY = forwardNormX
+  const lateralSpan = Math.min(TILE_SIZE * 0.35, approachDistance * 0.25)
+  const lateralOffset = (Math.random() - 0.5) * 2 * lateralSpan
+  const forwardJitter = (Math.random() - 0.5) * Math.min(TILE_SIZE * 0.2, desiredImpactDistance * 0.4)
+
+  let impactX = baseImpactX - forwardNormX * forwardJitter + perpendicularX * lateralOffset
+  let impactY = baseImpactY - forwardNormY * forwardJitter + perpendicularY * lateralOffset
+
+  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
+    const mapWidth = mapGrid[0].length * TILE_SIZE
+    const mapHeight = mapGrid.length * TILE_SIZE
+    const minX = TILE_SIZE * 0.5
+    const minY = TILE_SIZE * 0.5
+    const maxX = Math.max(minX, mapWidth - TILE_SIZE * 0.5)
+    const maxY = Math.max(minY, mapHeight - TILE_SIZE * 0.5)
+    impactX = Math.max(minX, Math.min(impactX, maxX))
+    impactY = Math.max(minY, Math.min(impactY, maxY))
+  }
+
+  const overrideTarget = { x: impactX, y: impactY }
 
   unit.customRocketSpawn = spawn
   const fired = handleTankFiring(
@@ -488,13 +525,13 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
     bullets,
     now,
     0,
-    randomTargetX,
-    randomTargetY,
+    overrideTarget.x,
+    overrideTarget.y,
     'rocket',
     units,
     mapGrid,
     false,
-    { x: randomTargetX, y: randomTargetY } // Override target to bypass targeting spread
+    overrideTarget // Override target to bypass targeting spread
   )
   unit.customRocketSpawn = null
 
@@ -1290,6 +1327,10 @@ function getEffectiveFireRange(unit) {
   }
 
   let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+
+  if (unit.type === 'apache') {
+    baseRange *= APACHE_RANGE_REDUCTION
+  }
 
   if (unit.level >= 1) {
     baseRange *= (unit.rangeMultiplier || 1.2)

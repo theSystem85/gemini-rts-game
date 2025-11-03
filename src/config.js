@@ -412,6 +412,12 @@ export function setKeyboardScrollSpeed(value) {
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export let TANK_FIRE_RANGE = 9
 
+// Apache helicopters should maintain a slightly closer standoff distance than
+// their original configuration. Apply a shared reduction factor so both
+// autonomous and remote-controlled logic can stay in sync when calculating
+// their maximum engagement range.
+export const APACHE_RANGE_REDUCTION = 2 / 3
+
 export function setTankFireRange(value) {
   const previous = TANK_FIRE_RANGE
   TANK_FIRE_RANGE = value
