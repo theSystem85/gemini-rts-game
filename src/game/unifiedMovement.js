@@ -37,6 +37,9 @@ import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
+const APACHE_ROTOR_LOOP_VOLUME = 0.25
+const APACHE_ROTOR_ALTITUDE_GAIN_MIN = 0.6
+const APACHE_ROTOR_ALTITUDE_GAIN_MAX = 1.0
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -216,6 +219,104 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
       const hoverUsage = (unit.gasConsumption || 0) * hoverMeters / 100000 * (unit.hoverFuelMultiplier || 0.2)
       consumeUnitGas(unit, hoverUsage)
     }
+  }
+
+  const shouldPlayRotorSound =
+    unit.health > 0 &&
+    !unit.destroyed &&
+    unit.flightState &&
+    unit.flightState !== 'grounded'
+
+  if (shouldPlayRotorSound) {
+    const altitudeRatio = unit.maxAltitude > 0 ? Math.min(1, unit.altitude / unit.maxAltitude) : 0
+    const altitudeGain =
+      APACHE_ROTOR_ALTITUDE_GAIN_MIN +
+      altitudeRatio * (APACHE_ROTOR_ALTITUDE_GAIN_MAX - APACHE_ROTOR_ALTITUDE_GAIN_MIN)
+
+    if (!unit.rotorSound && !unit.rotorSoundLoading) {
+      unit.rotorSoundLoading = true
+      playPositionalSound('apache_fly', unit.x, unit.y, APACHE_ROTOR_LOOP_VOLUME, 0, false, { playLoop: true })
+        .then(handle => {
+          unit.rotorSoundLoading = false
+          if (!handle) {
+            return
+          }
+
+          const stillAirborne =
+            unit.health > 0 &&
+            !unit.destroyed &&
+            unit.flightState &&
+            unit.flightState !== 'grounded'
+
+          if (!stillAirborne) {
+            try {
+              handle.source.stop()
+            } catch (e) {
+              console.error('Failed to stop apache rotor sound after landing:', e)
+            }
+            return
+          }
+
+          const altitudeRatioNow = unit.maxAltitude > 0 ? Math.min(1, unit.altitude / unit.maxAltitude) : 0
+          const altitudeGainNow =
+            APACHE_ROTOR_ALTITUDE_GAIN_MIN +
+            altitudeRatioNow * (APACHE_ROTOR_ALTITUDE_GAIN_MAX - APACHE_ROTOR_ALTITUDE_GAIN_MIN)
+
+          const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+          const targetGain =
+            APACHE_ROTOR_LOOP_VOLUME *
+            volumeFactor *
+            altitudeGainNow *
+            getMasterVolume()
+
+          if (handle.gainNode) {
+            handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+            handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.4)
+          }
+          if (handle.panner) {
+            handle.panner.pan.value = pan
+          }
+
+          handle.baseVolume = APACHE_ROTOR_LOOP_VOLUME
+          unit.rotorSound = handle
+        })
+        .catch(error => {
+          unit.rotorSoundLoading = false
+          console.error('Error playing apache rotor loop:', error)
+        })
+    } else if (unit.rotorSound) {
+      const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+      const targetGain =
+        (unit.rotorSound.baseVolume || APACHE_ROTOR_LOOP_VOLUME) *
+        volumeFactor *
+        altitudeGain *
+        getMasterVolume()
+
+      if (unit.rotorSound.panner) {
+        unit.rotorSound.panner.pan.value = pan
+      }
+      if (unit.rotorSound.gainNode) {
+        unit.rotorSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
+      }
+    }
+  } else {
+    if (unit.rotorSound) {
+      const { source, gainNode } = unit.rotorSound
+      if (gainNode) {
+        gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+        gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3)
+      }
+      if (source) {
+        try {
+          source.stop(audioContext.currentTime + 0.3)
+        } catch (e) {
+          console.error('Failed to schedule apache rotor sound stop:', e)
+        }
+      }
+      unit.rotorSound = null
+    }
+    unit.rotorSoundLoading = false
   }
 }
 
