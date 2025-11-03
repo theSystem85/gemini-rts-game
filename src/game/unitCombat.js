@@ -330,6 +330,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         bullet.creationTime = now
         bullet.startX = rocketSpawn.x
         bullet.startY = rocketSpawn.y
+        bullet.apacheTargetRadius = TILE_SIZE * 0.3
         // Apache rockets fly straight to their target position
         const dx = finalTarget.x - rocketSpawn.x
         const dy = finalTarget.y - rocketSpawn.y
@@ -373,6 +374,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       }
       if (isApacheRocket) {
         bullet.originType = 'apacheRocket'
+        bullet.apacheTargetId = target ? target.id : null
       }
 
       return true

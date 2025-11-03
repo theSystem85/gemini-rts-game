@@ -171,16 +171,38 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   }
 
   const previouslyGrounded = unit.flightState === 'grounded' || unit.flightState === undefined
+  const hadGroundOccupancy =
+    unit.groundedOccupancyApplied !== undefined
+      ? Boolean(unit.groundedOccupancyApplied)
+      : !unit.occupancyRemoved
   unit.flightState = newFlightState
 
-  if (unit.flightState !== 'grounded') {
-    if (!unit.occupancyRemoved && previouslyGrounded) {
-      removeUnitOccupancy(unit, occupancyMap)
-      unit.occupancyRemoved = true
+  const isGroundedNow = unit.flightState === 'grounded'
+  const onHelipadNow = isGroundedNow && Boolean(unit.landedHelipadId)
+
+  if (!isGroundedNow) {
+    if (previouslyGrounded && hadGroundOccupancy) {
+      removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
     }
-  } else if (unit.occupancyRemoved) {
-    addUnitOccupancyDirect(unit, occupancyMap)
-    unit.occupancyRemoved = false
+    unit.groundedOccupancyApplied = false
+    unit.occupancyRemoved = true
+    unit.lastGroundedOnHelipad = false
+  } else {
+    if (onHelipadNow) {
+      if (hadGroundOccupancy) {
+        removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
+      }
+      unit.groundedOccupancyApplied = false
+      unit.occupancyRemoved = true
+    } else if (!hadGroundOccupancy) {
+      addUnitOccupancyDirect(unit, occupancyMap)
+      unit.groundedOccupancyApplied = true
+      unit.occupancyRemoved = false
+    }
+    if (!onHelipadNow && hadGroundOccupancy) {
+      unit.occupancyRemoved = false
+    }
+    unit.lastGroundedOnHelipad = onHelipadNow
   }
 
   const rotorTargetSpeed = unit.flightState === 'grounded'

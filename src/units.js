@@ -134,9 +134,10 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
   }
 }, false)
 
-export function removeUnitOccupancy(unit, occupancyMap) {
+export function removeUnitOccupancy(unit, occupancyMap, options = {}) {
   if (!occupancyMap) return
-  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+  const { ignoreFlightState = false } = options
+  if (!ignoreFlightState && unit.isAirUnit && unit.flightState !== 'grounded') {
     return
   }
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -636,13 +637,16 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     : options
 
   const newUnit = createUnit(factory, type, spawnPosition.x, spawnPosition.y, unitOptions)
-  if (occupancyMap) {
+  if (occupancyMap && !isHelipadApache) {
     // Use center coordinates for occupancy map consistency
     const centerTileX = Math.floor((newUnit.x + TILE_SIZE / 2) / TILE_SIZE)
     const centerTileY = Math.floor((newUnit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (centerTileY >= 0 && centerTileY < occupancyMap.length &&
         centerTileX >= 0 && centerTileX < occupancyMap[0].length) {
       occupancyMap[centerTileY][centerTileX] = (occupancyMap[centerTileY][centerTileX] || 0) + 1
+    }
+    if (newUnit.type === 'apache') {
+      newUnit.groundedOccupancyApplied = true
     }
   }
 
@@ -658,6 +662,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     newUnit.helipadTargetId = helipadId
     newUnit.landedHelipadId = helipadId
     newUnit.remoteControlActive = false
+    newUnit.groundedOccupancyApplied = false
     if (newUnit.movement) {
       newUnit.movement.velocity = { x: 0, y: 0 }
       newUnit.movement.targetVelocity = { x: 0, y: 0 }
@@ -858,6 +863,8 @@ export function createUnit(factory, unitType, x, y, options = {}) {
       scale: 1
     }
     unit.hovering = false
+    unit.groundedOccupancyApplied = false
+    unit.lastGroundedOnHelipad = false
     unit.airborneSince = null
     const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
     unit.landedSince = now
