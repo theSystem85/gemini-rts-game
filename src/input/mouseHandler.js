@@ -16,6 +16,7 @@ import {
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
 import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
+import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
 
 export class MouseHandler {
   constructor() {
@@ -252,6 +253,9 @@ export class MouseHandler {
     this.rightDragStart = { x: e.clientX, y: e.clientY }
     this.rightWasDragging = false
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
+    if (gameState.benchmarkActive) {
+      notifyBenchmarkManualCameraControl()
+    }
     if (cursorManager) {
       cursorManager.applyCursor(gameCanvas, 'grabbing')
     } else {
@@ -485,6 +489,9 @@ export class MouseHandler {
   }
 
   handleRightDragScrolling(e, mapGrid, gameCanvas) {
+    if (gameState.benchmarkActive) {
+      notifyBenchmarkManualCameraControl()
+    }
     const dx = e.clientX - gameState.lastDragPos.x
     const dy = e.clientY - gameState.lastDragPos.y
 
