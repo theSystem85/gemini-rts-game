@@ -23,6 +23,7 @@ import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 
 const APACHE_REMOTE_DAMAGE = 10
+const APACHE_TANK_DAMAGE_MULTIPLIER = 1.67
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -320,14 +321,14 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
         if (distanceToTarget <= proximityThreshold || flightTime >= maxFlightTime) { // Explode on proximity OR time limit
           // Apache rockets create 1 explosion at their current position
-          // Base damage 10 * 0.9 multiplier * 2.5 tank multiplier = 22.5 per rocket
-          // 8 rockets * 22.5 = 180 damage (enough to kill tank-v3 with 169 HP)
+          // Base damage 10 * 0.9 multiplier * 1.67 tank multiplier ~= 15 damage per rocket
+          // 8 rockets * 15 ~= 120 damage (tough tanks now survive a full volley)
           const baseDamage = bullet.baseDamage * 0.9
 
           // Apply tank damage multiplier for direct unit hits
           let damageMultiplier = 1.0
           if (apacheTargetUnit && ['tank', 'tank_v1', 'tank-v2', 'tank-v3'].includes(apacheTargetUnit.type)) {
-            damageMultiplier = 2.5
+            damageMultiplier = APACHE_TANK_DAMAGE_MULTIPLIER
           } else if (bullet.shooter && units) {
             // Check if explosion will hit any tanks
             const explosionRadius = TILE_SIZE * 0.8
@@ -341,7 +342,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               return dist <= explosionRadius
             })
             if (hasTankNearby) {
-              damageMultiplier = 2.5 // Boost damage for tank targets
+              damageMultiplier = APACHE_TANK_DAMAGE_MULTIPLIER // Boost damage for tank targets
             }
           }
 

@@ -882,6 +882,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     return { collided: false }
   }
 
+  const unitAirborneApache = unit.type === 'apache' && unit.flightState !== 'grounded'
+
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds' }
@@ -917,6 +919,11 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
 
     for (const otherUnit of units) {
       if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
+
+      const otherAirborneApache = otherUnit.type === 'apache' && otherUnit.flightState !== 'grounded'
+      if ((unitAirborneApache && !otherAirborneApache) || (!unitAirborneApache && otherAirborneApache)) {
+        continue
+      }
 
       const otherCenterX = otherUnit.x + TILE_SIZE / 2
       const otherCenterY = otherUnit.y + TILE_SIZE / 2

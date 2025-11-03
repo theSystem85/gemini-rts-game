@@ -1,6 +1,6 @@
 import { TILE_SIZE } from '../config.js'
 
-export const HELIPAD_LANDING_CENTER_OFFSET = Object.freeze({ x: 50, y: 90 })
+export const HELIPAD_LANDING_CENTER_OFFSET = Object.freeze({ x: 25, y: 44 })
 
 export function getHelipadLandingCenter(helipad) {
   if (!helipad || typeof helipad.x !== 'number' || typeof helipad.y !== 'number') {
