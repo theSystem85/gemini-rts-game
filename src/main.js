@@ -955,6 +955,8 @@ function loadPersistedSettings() {
     const storedShadowSetting = localStorage.getItem(SHADOW_OF_WAR_STORAGE_KEY)
     if (storedShadowSetting !== null) {
       gameState.shadowOfWarEnabled = storedShadowSetting === 'true'
+    } else {
+      gameState.shadowOfWarEnabled = false
     }
   } catch (e) {
     console.warn('Failed to load shadow of war setting from localStorage:', e)
