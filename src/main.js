@@ -30,6 +30,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
+import { attachBenchmarkButton } from './benchmark/benchmarkRunner.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 
 if ('serviceWorker' in navigator) {
@@ -1283,6 +1284,7 @@ class Game {
     const commitMessageElement = document.getElementById('appCommitMessage')
     const configSettingsBtn = document.getElementById('configSettingsBtn')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
+    attachBenchmarkButton()
 
     if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
 

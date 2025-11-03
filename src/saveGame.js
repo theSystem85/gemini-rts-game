@@ -183,6 +183,7 @@ export function saveGame(label) {
       gridVisible: gameState.gridVisible,
       occupancyVisible: gameState.occupancyVisible,
       fpsVisible: gameState.fpsVisible,
+      benchmarkActive: Boolean(gameState.benchmarkActive),
       useTankImages: gameState.useTankImages,
       useTurretImages: gameState.useTurretImages,
       nextVehicleFactoryIndex: gameState.nextVehicleFactoryIndex,

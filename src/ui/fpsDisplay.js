@@ -1,5 +1,6 @@
 // fpsDisplay.js - FPS overlay system using DOM element
 import { gameState } from '../gameState.js'
+import { notifyBenchmarkFrame } from '../benchmark/benchmarkTracker.js'
 
 export class FPSDisplay {
   constructor() {
@@ -40,6 +41,8 @@ export class FPSDisplay {
     const frameTime = currentTime - this.lastFrameTimestamp
     this.lastFrameTimestamp = currentTime
     this.frameTimeSamples.push(frameTime)
+
+    notifyBenchmarkFrame({ timestamp: currentTime, frameTime })
 
     // Keep only the last 60 frame times
     if (this.frameTimes.length > this.maxFrameTimes) {

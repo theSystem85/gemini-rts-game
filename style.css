@@ -1709,6 +1709,124 @@ body.config-modal-open {
   color: #7dffb0;
   font-weight: 600;
 }
+
+body.benchmark-modal-open {
+  overflow: hidden;
+}
+
+.benchmark-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.benchmark-modal--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.benchmark-modal__dialog {
+  background: #1f242d;
+  border-radius: 10px;
+  width: min(640px, 90vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.benchmark-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.benchmark-modal__header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.benchmark-modal__close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.benchmark-modal__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.benchmark-modal__body {
+  padding: 20px;
+  flex: 1;
+  overflow: auto;
+}
+
+.benchmark-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.benchmark-modal__metric {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+#benchmarkChart {
+  width: 100%;
+  height: 240px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.benchmark-modal__footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.benchmark-modal__button {
+  background: rgba(88, 166, 255, 0.15);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.benchmark-modal__button--primary {
+  background: #58a6ff;
+  border-color: #58a6ff;
+  color: #0b1623;
+  font-weight: 600;
+}
+
+.benchmark-modal__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .mobile-sidebar-modal {
   display: none;
 }

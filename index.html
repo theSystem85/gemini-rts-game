@@ -468,6 +468,9 @@
           <button id="configSettingsBtn" class="action-button" style="width: 100%; margin: 10px 0;">
             Runtime Config Settings
           </button>
+          <button id="runBenchmarkBtn" class="action-button" style="width: 100%; margin: 10px 0;">
+            Run Performance Benchmark
+          </button>
         </div>
         
         <div id="playerCountControl">
@@ -528,6 +531,31 @@
             in the project root to preload them on startup.
           </p>
           <div id="configValueMessage" class="config-modal__message"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="benchmarkModal" class="benchmark-modal" aria-hidden="true">
+      <div class="benchmark-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkModalTitle">
+        <div class="benchmark-modal__header">
+          <h2 id="benchmarkModalTitle">Performance Benchmark</h2>
+          <button id="benchmarkModalCloseBtn" class="benchmark-modal__close" aria-label="Close benchmark results">×</button>
+        </div>
+        <div class="benchmark-modal__body">
+          <p id="benchmarkModalStatus">Preparing benchmark…</p>
+          <div id="benchmarkResultsContainer" hidden>
+            <div class="benchmark-modal__summary">
+              <div class="benchmark-modal__metric">Min FPS: <span id="benchmarkMinFps">--</span></div>
+              <div class="benchmark-modal__metric">Max FPS: <span id="benchmarkMaxFps">--</span></div>
+              <div class="benchmark-modal__metric">Avg FPS: <span id="benchmarkAvgFps">--</span></div>
+              <div class="benchmark-modal__metric">Duration: <span id="benchmarkDuration">--</span></div>
+            </div>
+            <canvas id="benchmarkChart" width="480" height="240" aria-label="Benchmark FPS chart"></canvas>
+          </div>
+        </div>
+        <div class="benchmark-modal__footer">
+          <button id="benchmarkRunAgainBtn" class="benchmark-modal__button">Run Again</button>
+          <button id="benchmarkModalCloseFooterBtn" class="benchmark-modal__button benchmark-modal__button--primary">Close</button>
         </div>
       </div>
     </div>

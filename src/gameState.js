@@ -126,6 +126,9 @@ export const gameState = {
   // Performance dialog visibility toggle
   performanceVisible: false,
 
+  // Benchmark state
+  benchmarkActive: false,
+
   dangerZoneMaps: {},
   dzmOverlayIndex: -1,
 
