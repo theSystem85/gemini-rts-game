@@ -326,6 +326,14 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.medics || 0) / (unit.maxMedics || 10)
       barColor = '#00FFFF' // Cyan for ambulance crew
+    } else if (unit.type === 'apache') {
+      const maxAmmo = typeof unit.maxRocketAmmo === 'number' ? unit.maxRocketAmmo : null
+      if (unit.selected && maxAmmo && maxAmmo > 0) {
+        shouldShowBar = true
+        const ammoRatio = Math.max(0, Math.min(1, (unit.rocketAmmo || 0) / maxAmmo))
+        progress = ammoRatio
+        barColor = unit.apacheAmmoEmpty ? '#FF6B6B' : '#FFA500'
+      }
     } else if (unit.type === 'tankerTruck') {
       shouldShowBar = true
       progress = (unit.supplyGas || 0) / (unit.maxSupplyGas || TANKER_SUPPLY_CAPACITY)

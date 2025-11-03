@@ -97,7 +97,36 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
   unit.lastFlightUpdate = now
   const deltaSeconds = deltaMs / 1000
 
-  const manualState = unit.manualFlightState || 'auto'
+  let manualState = unit.manualFlightState || 'auto'
+  let landingBlocked = false
+
+  if (manualState === 'land' && occupancyMap) {
+    const centerTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    const row =
+      centerTileY >= 0 && centerTileY < occupancyMap.length
+        ? occupancyMap[centerTileY]
+        : null
+
+    if (row && centerTileX >= 0 && centerTileX < row.length) {
+      const occupancy = row[centerTileX] || 0
+      const helipadLandingActive = Boolean(unit.helipadLandingRequested || unit.landedHelipadId)
+
+      landingBlocked = occupancy > 0 && !helipadLandingActive
+      if (landingBlocked) {
+        manualState = 'hover'
+        unit.manualFlightState = 'hover'
+        unit.autoHoldAltitude = true
+      }
+    }
+  }
+
+  if (!landingBlocked && unit.blockedFromLanding) {
+    unit.blockedFromLanding = false
+  } else if (landingBlocked) {
+    unit.blockedFromLanding = true
+  }
   const holdAltitude = Boolean(unit.autoHoldAltitude) || Boolean(unit.flightPlan) || Boolean(unit.remoteControlActive)
   const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
 
@@ -110,6 +139,11 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
     desiredAltitude = unit.maxAltitude * 0.75
   } else {
     desiredAltitude = (holdAltitude || isInMotion) ? unit.maxAltitude : 0
+  }
+
+  if (landingBlocked) {
+    const safeHoverAltitude = Math.max(unit.altitude, unit.maxAltitude * 0.35)
+    desiredAltitude = safeHoverAltitude
   }
 
   unit.targetAltitude = desiredAltitude
