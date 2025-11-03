@@ -7,6 +7,7 @@ import { getTextureManager } from '../rendering.js'
 import { cleanupOreFromBuildings } from '../gameSetup.js'
 import { TILE_SIZE } from '../config.js'
 import { getUniqueId } from '../utils.js'
+import { resetBenchmarkCameraFocus } from './benchmarkTracker.js'
 
 const BUILDING_TYPES = Object.keys(buildingData)
 
@@ -264,4 +265,5 @@ export function setupBenchmarkScenario() {
 
 export function teardownBenchmarkScenario() {
   gameState.benchmarkActive = false
+  resetBenchmarkCameraFocus()
 }

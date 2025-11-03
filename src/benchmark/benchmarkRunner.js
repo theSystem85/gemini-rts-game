@@ -1,11 +1,14 @@
 import { setupBenchmarkScenario, teardownBenchmarkScenario } from './benchmarkScenario.js'
 import { startBenchmarkSession, isBenchmarkRunning } from './benchmarkTracker.js'
 import {
+  hideBenchmarkCountdown,
   initializeBenchmarkModal,
   openBenchmarkModal,
-  showBenchmarkStatus,
+  setBenchmarkRunningState,
+  showBenchmarkCountdownMessage,
   showBenchmarkResults,
-  setBenchmarkRunningState
+  showBenchmarkStatus,
+  startBenchmarkCountdown
 } from '../ui/benchmarkModal.js'
 import { gameState } from '../gameState.js'
 
@@ -26,28 +29,30 @@ function waitForAnimationFrames(count = 1) {
   })
 }
 
-async function runBenchmarkInternal({ triggeredFromModal = false } = {}) {
+async function runBenchmarkInternal() {
   if (isBenchmarkRunning()) {
     return null
   }
 
   const button = document.getElementById('runBenchmarkBtn')
-  if (!triggeredFromModal && button) {
+  if (button) {
     button.disabled = true
   }
 
   let scenarioInitialized = false
+  let stopCountdown = null
 
   try {
-    openBenchmarkModal()
     setBenchmarkRunningState(true)
     showBenchmarkStatus('Preparing benchmark scenario…')
+    showBenchmarkCountdownMessage('Benchmark: preparing scenario…')
 
     setupBenchmarkScenario()
     scenarioInitialized = true
     await waitForAnimationFrames(2)
 
     showBenchmarkStatus('Running benchmark (60s)…')
+    stopCountdown = startBenchmarkCountdown(BENCHMARK_DURATION_MS)
 
     const resultPromise = startBenchmarkSession(BENCHMARK_DURATION_MS)
     if (!resultPromise) {
@@ -56,14 +61,27 @@ async function runBenchmarkInternal({ triggeredFromModal = false } = {}) {
 
     const result = await resultPromise
 
+    if (stopCountdown) {
+      stopCountdown()
+      stopCountdown = null
+    }
+    hideBenchmarkCountdown()
     showBenchmarkResults(result)
     setBenchmarkRunningState(false)
+    openBenchmarkModal()
 
     return result
   } catch (err) {
     console.error('Benchmark run failed:', err)
+    if (stopCountdown) {
+      stopCountdown()
+      stopCountdown = null
+    } else {
+      hideBenchmarkCountdown()
+    }
     showBenchmarkStatus('Benchmark failed. Check console for details.')
     setBenchmarkRunningState(false)
+    openBenchmarkModal()
     return null
   } finally {
     if (scenarioInitialized) {
@@ -73,6 +91,7 @@ async function runBenchmarkInternal({ triggeredFromModal = false } = {}) {
       button.disabled = false
     }
     gameState.benchmarkActive = false
+    hideBenchmarkCountdown()
   }
 }
 
@@ -87,7 +106,7 @@ export function attachBenchmarkButton() {
   }
 
   initializeBenchmarkModal({
-    onRunAgain: () => runBenchmarkInternal({ triggeredFromModal: true }),
+    onRunAgain: () => runBenchmarkInternal(),
     onClose: () => {
       if (button) {
         button.disabled = false
@@ -96,12 +115,12 @@ export function attachBenchmarkButton() {
   })
 
   button.addEventListener('click', () => {
-    runBenchmarkInternal({ triggeredFromModal: false })
+    runBenchmarkInternal()
   })
 
   buttonInitialized = true
 }
 
 export async function runBenchmark() {
-  await runBenchmarkInternal({ triggeredFromModal: false })
+  await runBenchmarkInternal()
 }

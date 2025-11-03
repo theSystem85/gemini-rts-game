@@ -9,9 +9,23 @@ const chartId = 'benchmarkChart'
 const runAgainId = 'benchmarkRunAgainBtn'
 const closeBtnId = 'benchmarkModalCloseBtn'
 const closeFooterId = 'benchmarkModalCloseFooterBtn'
+const countdownId = 'benchmarkCountdown'
+const countdownTextId = 'benchmarkCountdownText'
 
 let closeHandlersBound = false
 let runAgainHandler = null
+let countdownAnimation = null
+
+function getCountdownElements() {
+  const countdown = document.getElementById(countdownId)
+  const countdownText = countdown ? countdown.querySelector(`#${countdownTextId}`) : null
+
+  if (!countdown || !countdownText) {
+    throw new Error('Benchmark countdown element not found')
+  }
+
+  return { countdown, countdownText }
+}
 
 function getModalElements() {
   const modal = document.getElementById(modalId)
@@ -67,19 +81,17 @@ export function initializeBenchmarkModal({ onRunAgain, onClose } = {}) {
   runAgainHandler = typeof onRunAgain === 'function' ? onRunAgain : null
 
   if (!closeHandlersBound) {
-    closeBtn.addEventListener('click', () => {
+    const handleClose = () => {
       closeBenchmarkModal()
       if (typeof onClose === 'function') onClose()
-    })
-    closeFooterBtn.addEventListener('click', () => {
-      closeBenchmarkModal()
-      if (typeof onClose === 'function') onClose()
-    })
+    }
+
+    closeBtn.addEventListener('click', handleClose)
+    closeFooterBtn.addEventListener('click', handleClose)
 
     modal.addEventListener('click', (event) => {
       if (event.target === modal) {
-        closeBenchmarkModal()
-        if (typeof onClose === 'function') onClose()
+        handleClose()
       }
     })
 
@@ -87,6 +99,8 @@ export function initializeBenchmarkModal({ onRunAgain, onClose } = {}) {
   }
 
   runAgainBtn.addEventListener('click', () => {
+    closeBenchmarkModal()
+    if (typeof onClose === 'function') onClose()
     if (runAgainHandler) {
       runAgainHandler()
     }
@@ -112,6 +126,60 @@ export function setBenchmarkRunningState(isRunning) {
   runAgainBtn.disabled = isRunning
   closeBtn.disabled = isRunning
   closeFooterBtn.disabled = isRunning
+}
+
+export function showBenchmarkCountdownMessage(message) {
+  const { countdown, countdownText } = getCountdownElements()
+  if (countdownAnimation) {
+    cancelAnimationFrame(countdownAnimation)
+    countdownAnimation = null
+  }
+  countdown.hidden = false
+  countdownText.textContent = message
+}
+
+export function startBenchmarkCountdown(durationMs) {
+  const { countdown, countdownText } = getCountdownElements()
+  const startTime = performance.now()
+  const endTime = startTime + durationMs
+  countdown.hidden = false
+
+  const update = () => {
+    const now = performance.now()
+    const remaining = Math.max(0, endTime - now)
+    const seconds = (remaining / 1000).toFixed(1)
+    countdownText.textContent = `Benchmark running: ${seconds}s remaining`
+    if (remaining > 0) {
+      countdownAnimation = requestAnimationFrame(update)
+    } else {
+      countdownAnimation = null
+    }
+  }
+
+  if (countdownAnimation) {
+    cancelAnimationFrame(countdownAnimation)
+  }
+
+  update()
+
+  return () => {
+    if (countdownAnimation) {
+      cancelAnimationFrame(countdownAnimation)
+      countdownAnimation = null
+    }
+    countdownText.textContent = ''
+    countdown.hidden = true
+  }
+}
+
+export function hideBenchmarkCountdown() {
+  const { countdown, countdownText } = getCountdownElements()
+  if (countdownAnimation) {
+    cancelAnimationFrame(countdownAnimation)
+    countdownAnimation = null
+  }
+  countdownText.textContent = ''
+  countdown.hidden = true
 }
 
 export function showBenchmarkStatus(message) {

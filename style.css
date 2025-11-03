@@ -1490,6 +1490,24 @@ body.mobile-landscape #mobileBuildMenuContainer .tab-content.active .production-
   color: #ff0000; /* Red for <15 FPS */
 }
 
+.benchmark-countdown {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(32, 32, 32, 0.9), rgba(48, 48, 48, 0.9));
+  border: 1px solid rgba(120, 120, 120, 0.6);
+  border-radius: 6px;
+  color: #ecf0f1;
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  z-index: 1100;
+  pointer-events: none;
+}
+
 /* Performance Dialog */
 .performance-dialog {
   position: absolute;
@@ -1717,14 +1735,16 @@ body.benchmark-modal-open {
 .benchmark-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
+  font-family: 'Arial', sans-serif;
 }
 
 .benchmark-modal--open {
@@ -1733,98 +1753,138 @@ body.benchmark-modal-open {
 }
 
 .benchmark-modal__dialog {
-  background: #1f242d;
-  border-radius: 10px;
-  width: min(640px, 90vw);
-  max-height: 90vh;
+  background: linear-gradient(135deg, #2a2a2a, #333333);
+  border: 2px solid #555555;
+  border-radius: 8px;
+  width: min(680px, 92vw);
+  max-width: 820px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+  color: #ecf0f1;
 }
 
 .benchmark-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .benchmark-modal__header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .benchmark-modal__close {
-  background: transparent;
+  background: #e74c3c;
+  color: #ffffff;
   border: none;
-  color: inherit;
-  font-size: 24px;
+  border-radius: 4px;
+  padding: 6px 12px;
   cursor: pointer;
-  padding: 4px 8px;
+  font-weight: 700;
+  transition: background 0.3s ease;
+}
+
+.benchmark-modal__close:hover:not(:disabled) {
+  background: #c0392b;
 }
 
 .benchmark-modal__close:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .benchmark-modal__body {
-  padding: 20px;
+  padding: 22px 24px;
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  background: rgba(40, 40, 40, 0.45);
 }
 
 .benchmark-modal__summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
 .benchmark-modal__metric {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 12px;
+  background: rgba(50, 50, 50, 0.6);
+  border-radius: 6px;
+  border-left: 3px solid #777777;
+  padding: 12px 14px;
   font-size: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+#benchmarkModalStatus {
+  margin: 0 0 18px 0;
+  font-size: 15px;
+  color: #bdc3c7;
+}
+
+#benchmarkResultsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 #benchmarkChart {
   width: 100%;
   height: 240px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(30, 30, 30, 0.6);
   border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .benchmark-modal__footer {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: flex-end;
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .benchmark-modal__button {
-  background: rgba(88, 166, 255, 0.15);
-  border: 1px solid rgba(88, 166, 255, 0.4);
-  color: #fff;
+  background: #444444;
+  border: 1px solid #666666;
+  color: #ecf0f1;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.benchmark-modal__button:hover:not(:disabled) {
+  background: #555555;
+  border-color: #777777;
 }
 
 .benchmark-modal__button--primary {
   background: #58a6ff;
   border-color: #58a6ff;
   color: #0b1623;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.benchmark-modal__button--primary:hover:not(:disabled) {
+  background: #72b7ff;
 }
 
 .benchmark-modal__button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .mobile-sidebar-modal {
