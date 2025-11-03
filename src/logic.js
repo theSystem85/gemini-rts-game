@@ -26,9 +26,11 @@ export function triggerExplosion(
   now,
   _mapGrid,
   radius = TILE_SIZE * 2,
-  constantDamage = false
+  constantDamage = false,
+  options = {}
 ) {
   const explosionRadius = radius
+  const { buildingDamageMultiplier = 1, factoryDamageMultiplier = 1 } = options || {}
 
   // Add explosion visual effect
   explosions.push({
@@ -161,6 +163,9 @@ export function triggerExplosion(
 
       // Only apply damage if damage > 0 (god mode protection)
       if (damage > 0) {
+        if (factoryDamageMultiplier !== 1) {
+          damage = Math.round(damage * factoryDamageMultiplier)
+        }
         factory.health -= damage
 
         // Ensure health doesn't go below 0
@@ -206,6 +211,10 @@ export function triggerExplosion(
 
         if (shooter && shooter.type === 'howitzer') {
           damage = Math.round(damage * HOWITZER_BUILDING_DAMAGE_MULTIPLIER)
+        }
+
+        if (buildingDamageMultiplier !== 1) {
+          damage = Math.round(damage * buildingDamageMultiplier)
         }
 
         // Check for god mode protection for player buildings

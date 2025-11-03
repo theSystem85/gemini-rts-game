@@ -317,23 +317,27 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier
 
   const isApache = unit.type === 'apache'
+  let activeFlightPlan = null
+  let hadFlightPlanAtStart = false
   if (isApache) {
     if (unit.remoteControlActive) {
       unit.flightPlan = null
+    } else {
+      activeFlightPlan = unit.flightPlan
+      hadFlightPlanAtStart = Boolean(activeFlightPlan)
     }
 
-    const plan = unit.remoteControlActive ? null : unit.flightPlan
-
-    if (plan) {
+    if (activeFlightPlan) {
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
-      const dx = plan.x - unitCenterX
-      const dy = plan.y - unitCenterY
+      const dx = activeFlightPlan.x - unitCenterX
+      const dy = activeFlightPlan.y - unitCenterY
       const distance = Math.hypot(dx, dy)
-      const stopRadius = Math.max(6, plan.stopRadius || TILE_SIZE * 0.4)
+      const stopRadius = Math.max(6, activeFlightPlan.stopRadius || TILE_SIZE * 0.4)
 
       if (distance <= stopRadius) {
         unit.flightPlan = null
+        activeFlightPlan = null
         movement.targetVelocity.x = 0
         movement.targetVelocity.y = 0
         movement.isMoving = false
@@ -375,7 +379,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   }
 
   // Handle path following
-  if (unit.path && unit.path.length > 0) {
+  const skipPathHandlingForApache = isApache && !unit.remoteControlActive && hadFlightPlanAtStart
+  if (!skipPathHandlingForApache && unit.path && unit.path.length > 0) {
     const nextTile = unit.path[0]
     const targetX = nextTile.x * TILE_SIZE
     const targetY = nextTile.y * TILE_SIZE
@@ -470,7 +475,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         movement.targetRotation = Math.atan2(dy, dx)
       }
     }
-  } else {
+  } else if (!skipPathHandlingForApache) {
     // No path - decelerate to stop unless unit is under manual remote control
     if (!unit.remoteControlActive) {
       movement.targetVelocity.x = 0

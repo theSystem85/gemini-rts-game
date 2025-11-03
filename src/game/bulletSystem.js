@@ -18,8 +18,11 @@ import { removeUnitOccupancy } from '../units.js'
 import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
+import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
+
+const APACHE_REMOTE_DAMAGE = 10
 
 /**
  * Updates all bullets in the game including movement, collision detection, and cleanup
@@ -49,12 +52,28 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       bullet.startTime = now
     }
 
+    const rocketExplosionOptions = bullet.projectileType === 'rocket'
+      ? { buildingDamageMultiplier: 2, factoryDamageMultiplier: 2 }
+      : undefined
+
     // Ballistic projectile handling: rocket goes straight up then switches to homing
     let skipStandardMotion = false
     if (bullet.parabolic) {
       const t = (now - bullet.startTime) / bullet.flightDuration
       if (t >= 1) {
-        triggerExplosion(bullet.targetPosition.x, bullet.targetPosition.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+        triggerExplosion(
+          bullet.targetPosition.x,
+          bullet.targetPosition.y,
+          bullet.baseDamage,
+          units,
+          factories,
+          bullet.shooter,
+          now,
+          mapGrid,
+          bullet.explosionRadius,
+          undefined,
+          rocketExplosionOptions
+        )
         bullets.splice(i,1)
         continue
       } else {
@@ -115,13 +134,37 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               const explosionY = targetCenter.y + Math.sin(angle) * distance
 
               // Create surface damage explosion (smaller radius, proximity-based damage)
-              triggerExplosion(explosionX, explosionY, bullet.baseDamage * 0.3, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
+              triggerExplosion(
+                explosionX,
+                explosionY,
+                bullet.baseDamage * 0.3,
+                units,
+                factories,
+                bullet.shooter,
+                now,
+                mapGrid,
+                TILE_SIZE * 0.8,
+                false,
+                rocketExplosionOptions
+              )
             }
 
             // Play explosion sound once for the rocket impact
             playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
           } else {
-            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+            triggerExplosion(
+              bullet.x,
+              bullet.y,
+              bullet.baseDamage,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              bullet.explosionRadius,
+              undefined,
+              rocketExplosionOptions
+            )
           }
           bullets.splice(i, 1)
           continue
@@ -173,10 +216,34 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           if (bullet.originType === 'apacheRocket') {
             // Apache rockets explode immediately when reaching target, not on timeout
             // This should not happen, but just in case
-            triggerExplosion(bullet.x, bullet.y, bullet.baseDamage * 0.9, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
+            triggerExplosion(
+              bullet.x,
+              bullet.y,
+              bullet.baseDamage * 0.9,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              TILE_SIZE * 0.8,
+              false,
+              rocketExplosionOptions
+            )
             playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
           } else {
-            triggerExplosion(explosionX, explosionY, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+            triggerExplosion(
+              explosionX,
+              explosionY,
+              bullet.baseDamage,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              bullet.explosionRadius,
+              undefined,
+              rocketExplosionOptions
+            )
           }
           bullets.splice(i, 1)
           continue
@@ -184,8 +251,32 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       }
 
       // Update bullet position
+      if (bullet.originType === 'apacheRocket' && typeof bullet.startX !== 'number') {
+        bullet.startX = bullet.x
+        bullet.startY = bullet.y
+      }
+
       bullet.x += bullet.vx || 0
       bullet.y += bullet.vy || 0
+
+      if (bullet.originType === 'apacheRocket' && bullet.targetPosition) {
+        const startX = bullet.startX
+        const startY = bullet.startY
+        const totalDx = bullet.targetPosition.x - startX
+        const totalDy = bullet.targetPosition.y - startY
+        const totalDistanceSq = totalDx * totalDx + totalDy * totalDy
+
+        if (totalDistanceSq > 0) {
+          const traveledDx = bullet.x - startX
+          const traveledDy = bullet.y - startY
+          const progress = (traveledDx * totalDx + traveledDy * totalDy) / totalDistanceSq
+          const clampedProgress = Math.max(0, Math.min(progress, 1))
+          const projectedX = startX + totalDx * clampedProgress
+          const projectedY = startY + totalDy * clampedProgress
+          bullet.x = projectedX
+          bullet.y = projectedY
+        }
+      }
 
       // Check if Apache rocket has reached its target position or exceeded max flight time
       if (bullet.originType === 'apacheRocket' && bullet.targetPosition) {
@@ -216,7 +307,19 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             }
           }
 
-          triggerExplosion(bullet.x, bullet.y, baseDamage * damageMultiplier, units, factories, bullet.shooter, now, mapGrid, TILE_SIZE * 0.8, false)
+          triggerExplosion(
+            bullet.x,
+            bullet.y,
+            baseDamage * damageMultiplier,
+            units,
+            factories,
+            bullet.shooter,
+            now,
+            mapGrid,
+            TILE_SIZE * 0.8,
+            false,
+            rocketExplosionOptions
+          )
 
           // Play explosion sound
           playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
@@ -385,7 +488,19 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Apache rockets explode immediately when reaching target, not on collision
               // This should not happen since they have skipCollisionChecks: true
             } else {
-              triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+              triggerExplosion(
+                bullet.x,
+                bullet.y,
+                bullet.baseDamage,
+                units,
+                factories,
+                bullet.shooter,
+                now,
+                mapGrid,
+                bullet.explosionRadius,
+                undefined,
+                rocketExplosionOptions
+              )
             }
             bullets.splice(i, 1)
             continue
@@ -421,7 +536,9 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
                 bullet.shooter,
                 now,
                 mapGrid,
-                bullet.explosionRadius
+                bullet.explosionRadius,
+                undefined,
+                rocketExplosionOptions
               )
             }
             bullets.splice(i, 1)
@@ -442,6 +559,10 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           // Apply damage with some randomization
             const damageMultiplier = 0.8 + Math.random() * 0.4
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+
+            if (bullet.projectileType === 'rocket') {
+              actualDamage = Math.round(actualDamage * 2)
+            }
 
             // Check for god mode protection for player buildings
             if (window.cheatSystem && building.owner === gameState.humanPlayer) {
@@ -491,7 +612,19 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Apache rockets explode immediately when reaching target, not on collision
               // This should not happen since they have skipCollisionChecks: true
             } else {
-              triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+              triggerExplosion(
+                bullet.x,
+                bullet.y,
+                bullet.baseDamage,
+                units,
+                factories,
+                bullet.shooter,
+                now,
+                mapGrid,
+                bullet.explosionRadius,
+                undefined,
+                rocketExplosionOptions
+              )
             }
             bullets.splice(i, 1)
             break
@@ -506,6 +639,10 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           // Apply damage with some randomization
             const damageMultiplier = 0.8 + Math.random() * 0.4
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
+
+            if (bullet.projectileType === 'rocket') {
+              actualDamage = Math.round(actualDamage * 2)
+            }
 
             // Check for god mode protection for player factories
             if (window.cheatSystem && factory.id === gameState.humanPlayer) {
@@ -552,7 +689,19 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Apache rockets explode immediately when reaching target, not on collision
               // This should not happen since they have skipCollisionChecks: true
             } else {
-              triggerExplosion(bullet.x, bullet.y, bullet.baseDamage, units, factories, bullet.shooter, now, mapGrid, bullet.explosionRadius)
+              triggerExplosion(
+                bullet.x,
+                bullet.y,
+                bullet.baseDamage,
+                units,
+                factories,
+                bullet.shooter,
+                now,
+                mapGrid,
+                bullet.explosionRadius,
+                undefined,
+                rocketExplosionOptions
+              )
             }
             bullets.splice(i, 1)
             break
@@ -659,6 +808,37 @@ export function fireBullet(unit, target, bullets, now) {
       arcHeight: Math.max(50, distance * 0.3),
       targetPosition: { x: targetCenterX, y: targetCenterY }
     }
+  } else if (unit.type === 'apache') {
+    const spawnPoints = getApacheRocketSpawnPoints(unit, unitCenterX, unitCenterY)
+    const spawn = unit.customRocketSpawn || spawnPoints.left || { x: unitCenterX, y: unitCenterY }
+    const dx = targetCenterX - spawn.x
+    const dy = targetCenterY - spawn.y
+    const distance = Math.hypot(dx, dy) || 1
+    const speed = 5
+
+    bullet = {
+      id: Date.now() + Math.random(),
+      x: spawn.x,
+      y: spawn.y,
+      speed,
+      baseDamage: APACHE_REMOTE_DAMAGE,
+      active: true,
+      shooter: unit,
+      homing: false,
+      target: null,
+      targetPosition: { x: targetCenterX, y: targetCenterY },
+      explosionRadius: TILE_SIZE,
+      skipCollisionChecks: true,
+      maxFlightTime: 3000,
+      creationTime: now,
+      startX: spawn.x,
+      startY: spawn.y,
+      projectileType: 'rocket',
+      originType: 'apacheRocket'
+    }
+
+    bullet.vx = (dx / distance) * speed
+    bullet.vy = (dy / distance) * speed
   }
 
   if (bullet) {
@@ -678,5 +858,7 @@ export function fireBullet(unit, target, bullets, now) {
     bullets.push(bullet)
     playPositionalSound('shoot', bullet.x, bullet.y, 0.5)
     unit.lastShotTime = now
+    return bullet
   }
+  return null
 }

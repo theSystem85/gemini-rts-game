@@ -3,13 +3,111 @@ import {
   TANK_FIRE_RANGE,
   STREET_SPEED_MULTIPLIER,
   ENABLE_ENEMY_CONTROL,
-  isTurretTankUnitType
+  isTurretTankUnitType,
+  APACHE_RANGE_REDUCTION
 } from '../config.js'
 import { fireBullet } from './bulletSystem.js'
 import { selectedUnits, getKeyboardHandler } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
 import { angleDiff, normalizeAngle, smoothRotateTowardsAngle } from '../logic.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
+import { getPlayableViewportWidth, getPlayableViewportHeight } from '../utils/layoutMetrics.js'
+
+const APACHE_REMOTE_RANGE_MULTIPLIER = 1.5
+
+function clampRangeToViewport(rangePx, centerX, centerY, direction) {
+  const scroll = gameState.scrollOffset || { x: 0, y: 0 }
+  const screenX = centerX - (scroll.x || 0)
+  const screenY = centerY - (scroll.y || 0)
+  const gameCanvas = typeof document !== 'undefined'
+    ? document.getElementById('gameCanvas')
+    : null
+
+  if (!gameCanvas) {
+    return rangePx
+  }
+
+  const viewportWidth = getPlayableViewportWidth(gameCanvas)
+  const viewportHeight = getPlayableViewportHeight(gameCanvas)
+  if (!viewportWidth || !viewportHeight) {
+    return rangePx
+  }
+
+  const cosDir = Math.cos(direction)
+  const sinDir = Math.sin(direction)
+  const epsilon = 1e-3
+  let maxDistance = rangePx
+
+  if (Math.abs(cosDir) > epsilon) {
+    const boundaryX = cosDir > 0 ? viewportWidth - screenX : -screenX
+    const limit = boundaryX / cosDir
+    if (limit > 0) {
+      maxDistance = Math.min(maxDistance, limit)
+    }
+  }
+
+  if (Math.abs(sinDir) > epsilon) {
+    const boundaryY = sinDir > 0 ? viewportHeight - screenY : -screenY
+    const limit = boundaryY / sinDir
+    if (limit > 0) {
+      maxDistance = Math.min(maxDistance, limit)
+    }
+  }
+
+  if (!Number.isFinite(maxDistance)) {
+    return rangePx
+  }
+
+  return Math.max(0, Math.min(rangePx, maxDistance))
+}
+
+function computeApacheRemoteAim(unit, direction) {
+  const centerX = unit.x + TILE_SIZE / 2
+  const centerY = unit.y + TILE_SIZE / 2
+  const baseRange = getApacheRemoteRange(unit)
+  const viewportLimitedRange = clampRangeToViewport(baseRange, centerX, centerY, direction)
+
+  const cosDir = Math.cos(direction)
+  const sinDir = Math.sin(direction)
+  let targetX = centerX + cosDir * viewportLimitedRange
+  let targetY = centerY + sinDir * viewportLimitedRange
+
+  const mapGrid = gameState.mapGrid || []
+  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
+    const mapWidth = mapGrid[0].length * TILE_SIZE
+    const mapHeight = mapGrid.length * TILE_SIZE
+    const minX = TILE_SIZE * 0.5
+    const minY = TILE_SIZE * 0.5
+    const maxX = Math.max(minX, mapWidth - TILE_SIZE * 0.5)
+    const maxY = Math.max(minY, mapHeight - TILE_SIZE * 0.5)
+    const clampedX = Math.max(minX, Math.min(targetX, maxX))
+    const clampedY = Math.max(minY, Math.min(targetY, maxY))
+    targetX = clampedX
+    targetY = clampedY
+  }
+
+  const actualRange = Math.min(
+    viewportLimitedRange,
+    Math.hypot(targetX - centerX, targetY - centerY)
+  )
+
+  return {
+    x: targetX,
+    y: targetY,
+    tileX: Math.max(0, Math.floor(targetX / TILE_SIZE)),
+    tileY: Math.max(0, Math.floor(targetY / TILE_SIZE)),
+    range: actualRange
+  }
+}
+
+function getApacheRemoteRange(unit) {
+  let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+  if (unit.level >= 1) {
+    baseRange *= unit.rangeMultiplier || 1.2
+  }
+  baseRange *= APACHE_RANGE_REDUCTION
+  return baseRange * APACHE_REMOTE_RANGE_MULTIPLIER
+}
 
 let lastAutoFocusUnitId = null
 let autoFocusSuppressed = false
@@ -128,7 +226,8 @@ function handleApacheRemoteControl(unit, params) {
     strafeLeftIntensity,
     strafeRightIntensity,
     rawWagonDirection,
-    rawWagonSpeed
+    rawWagonSpeed,
+    fireIntensity = 0
   } = params
 
   if (!unit.movement) {
@@ -197,7 +296,6 @@ function handleApacheRemoteControl(unit, params) {
     Math.abs(strafeAxis) > 0.05
   const hasFlightInput = ascendActive || descendActive
   const remoteActive = hasMovementInput || hasFlightInput
-
   unit.remoteControlActive = remoteActive
 
   if (remoteActive) {
@@ -244,6 +342,20 @@ function handleApacheRemoteControl(unit, params) {
   const direction = typeof unit.direction === 'number' ? unit.direction : 0
   unit.movement.rotation = direction
   unit.movement.targetRotation = direction
+
+  if (remoteActive || fireIntensity > 0) {
+    const aimTarget = computeApacheRemoteAim(unit, direction)
+    if (Number.isFinite(aimTarget.x) && Number.isFinite(aimTarget.y)) {
+      unit.remoteRocketTarget = aimTarget
+      unit.remoteReticleVisible = true
+    } else {
+      unit.remoteRocketTarget = null
+      unit.remoteReticleVisible = false
+    }
+  } else if (!unit.remoteFireCommandActive) {
+    unit.remoteRocketTarget = null
+    unit.remoteReticleVisible = false
+  }
 }
 
 export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap) {
@@ -361,48 +473,48 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         strafeLeftIntensity,
         strafeRightIntensity,
         rawWagonDirection,
-        rawWagonSpeed
+        rawWagonSpeed,
+        fireIntensity
       })
 
-      // Handle Apache rocket firing in remote control
-      if (fireIntensity > 0 && unit.canFire !== false) {
+      const firePressed = fireIntensity > 0
+      const previouslyPressed = Boolean(unit.remoteFireCommandActive)
+      unit.remoteFireCommandActive = firePressed
+
+      if (firePressed && !previouslyPressed && unit.canFire !== false) {
         const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
         if (ammoRemaining > 0) {
-          const effectiveFireRate = 12000 // Same as normal Apache fire rate
-          if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-            // Fire rockets forward in the direction the Apache is facing
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
-            const direction = unit.direction || 0
-            const rangePx = TANK_FIRE_RANGE * TILE_SIZE
-            const targetX = centerX + Math.cos(direction) * rangePx
-            const targetY = centerY + Math.sin(direction) * rangePx
+          const direction = unit.direction || 0
+          const aimTarget = unit.remoteRocketTarget || computeApacheRemoteAim(unit, direction)
+          const target = {
+            tileX: aimTarget.tileX,
+            tileY: aimTarget.tileY,
+            x: aimTarget.x,
+            y: aimTarget.y
+          }
 
-            const target = {
-              tileX: Math.floor(targetX / TILE_SIZE),
-              tileY: Math.floor(targetY / TILE_SIZE),
-              x: targetX,
-              y: targetY
+          const centerX = unit.x + TILE_SIZE / 2
+          const centerY = unit.y + TILE_SIZE / 2
+          const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
+          const spawn = spawnPoints.left || { x: centerX, y: centerY }
+
+          const previousLastShot = unit.lastShotTime
+          unit.customRocketSpawn = spawn
+          const fired = fireBullet(unit, target, bullets, now)
+          unit.customRocketSpawn = null
+
+          if (fired) {
+            unit.lastShotTime = previousLastShot
+            unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
+            unit.apacheAmmoEmpty = unit.rocketAmmo <= 0
+            if (unit.apacheAmmoEmpty) {
+              unit.canFire = false
             }
-
-            // Fire a single rocket from the left side for remote control
-            const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
-            const spawn = spawnPoints.left || { x: centerX, y: centerY }
-
-            unit.customRocketSpawn = spawn
-            const fired = fireBullet(unit, target, bullets, now)
-            unit.customRocketSpawn = null
-
-            if (fired) {
-              unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
-              unit.lastShotTime = now
-
-              if (unit.rocketAmmo <= 0) {
-                unit.canFire = false
-              }
-            }
+            unit.remoteReticleVisible = true
           }
         }
+      } else if (!firePressed && !unit.remoteControlActive) {
+        unit.remoteReticleVisible = false
       }
 
       return

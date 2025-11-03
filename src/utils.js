@@ -9,6 +9,13 @@ export function getUniqueId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 5)
 }
 
+export function getBuildingIdentifier(building) {
+  if (!building) return null
+  if (building.id) return building.id
+  const type = building.type || 'unknown'
+  return `${type}:${building.x},${building.y}`
+}
+
 /**
  * Calculate speed modifier based on unit health
  * Units below 25% health move at 50% speed

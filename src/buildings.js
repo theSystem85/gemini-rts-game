@@ -262,6 +262,10 @@ export function createBuilding(type, x, y) {
     constructionFinished: false
   }
 
+  if (type === 'helipad') {
+    building.landedUnitId = null
+  }
+
   if (typeof data.maxFuel === 'number') {
     building.maxFuel = data.maxFuel
     building.fuel = data.maxFuel

@@ -808,7 +808,42 @@ export class UnitRenderer {
       this.renderTowCable(ctx, unit, scrollOffset)
       this.renderFuelHose(ctx, unit, units, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
+      this.renderApacheRemoteReticle(ctx, unit, scrollOffset)
     })
+  }
+
+  renderApacheRemoteReticle(ctx, unit, scrollOffset) {
+    if (!unit || unit.type !== 'apache') {
+      return
+    }
+
+    if (!unit.remoteReticleVisible || !unit.remoteRocketTarget) {
+      return
+    }
+
+    const target = unit.remoteRocketTarget
+    if (typeof target.x !== 'number' || typeof target.y !== 'number') {
+      return
+    }
+
+    const screenX = target.x - scrollOffset.x
+    const screenY = target.y - scrollOffset.y
+    const size = 10
+
+    ctx.save()
+    ctx.strokeStyle = '#ff3b30'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(screenX - size, screenY)
+    ctx.lineTo(screenX + size, screenY)
+    ctx.moveTo(screenX, screenY - size)
+    ctx.lineTo(screenX, screenY + size)
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.arc(screenX, screenY, size * 0.6, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
   }
 
   renderFuelHose(ctx, unit, units, scrollOffset) {
