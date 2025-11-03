@@ -492,8 +492,9 @@ export class MouseHandler {
     const logicalWidth = getPlayableViewportWidth(gameCanvas)
     const logicalHeight = getPlayableViewportHeight(gameCanvas)
 
-    // Multiply by 2 to make scrolling 2x faster
-    const scrollSpeed = 2
+    // Multiply by 2 on desktop, but ease the speed slightly on mobile landscape layouts
+    const isMobileLandscape = document.body?.classList?.contains('mobile-landscape')
+    const scrollSpeed = isMobileLandscape ? 1.4 : 2
     gameState.scrollOffset.x = Math.max(
       0,
       Math.min(gameState.scrollOffset.x - (dx * scrollSpeed), mapGrid[0].length * TILE_SIZE - logicalWidth)
