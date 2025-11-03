@@ -284,6 +284,13 @@ export class KeyboardHandler {
         }
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         e.preventDefault()
+        const shiftActive = e.shiftKey || gameState.shiftKeyDown
+        if (shiftActive && !e.repeat) {
+          const handled = this.handleApacheShiftSpace(this.selectedUnits)
+          if (handled) {
+            return
+          }
+        }
         if (!getRemoteControlActionState('fire')) {
           console.log('Remote control: space pressed')
         }
@@ -539,6 +546,45 @@ export class KeyboardHandler {
       gameCanvas.style.cursor = GAME_DEFAULT_CURSOR
       this.showNotification('Repair mode deactivated.')
     }
+  }
+
+  handleApacheShiftSpace(selectedUnits) {
+    if (!Array.isArray(selectedUnits) || selectedUnits.length === 0) {
+      return false
+    }
+
+    const apaches = selectedUnits.filter(unit => unit && unit.type === 'apache')
+    if (apaches.length === 0) {
+      return false
+    }
+
+    let toggled = false
+    apaches.forEach(unit => {
+      if (!unit) return
+      toggled = true
+      unit.path = []
+      unit.moveTarget = null
+      unit.flightPlan = null
+      unit.helipadLandingRequested = false
+      unit.remoteControlActive = true
+      if (unit.flightState === 'grounded') {
+        unit.manualFlightState = 'takeoff'
+        unit.manualFlightHoverRequested = true
+        unit.autoHoldAltitude = true
+      } else {
+        unit.manualFlightState = 'land'
+        unit.manualFlightHoverRequested = false
+        unit.autoHoldAltitude = false
+      }
+    })
+
+    if (toggled) {
+      const avgX = apaches.reduce((sum, unit) => sum + (unit?.x || 0), 0) / apaches.length
+      const avgY = apaches.reduce((sum, unit) => sum + (unit?.y || 0), 0) / apaches.length
+      playPositionalSound('movement', avgX, avgY, 0.5)
+    }
+
+    return toggled
   }
 
   handleDodgeCommand(selectedUnits, units, mapGrid) {

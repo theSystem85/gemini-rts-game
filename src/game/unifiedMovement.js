@@ -37,6 +37,11 @@ import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
+const ROTOR_AIRBORNE_SPEED = 0.35
+const ROTOR_GROUNDED_SPEED = 0
+const ROTOR_SPINUP_RESPONSE = 4
+const ROTOR_SPINDOWN_RESPONSE = 1.5
+const ROTOR_STOP_EPSILON = 0.002
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -178,8 +183,16 @@ function updateApacheFlightState(unit, movement, occupancyMap, now) {
     unit.occupancyRemoved = false
   }
 
-  const rotorTargetSpeed = unit.flightState === 'grounded' ? 0.05 : 0.35
-  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * 4)
+  const rotorTargetSpeed = unit.flightState === 'grounded'
+    ? ROTOR_GROUNDED_SPEED
+    : ROTOR_AIRBORNE_SPEED
+  const rotorResponse = unit.flightState === 'grounded'
+    ? ROTOR_SPINDOWN_RESPONSE
+    : ROTOR_SPINUP_RESPONSE
+  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * rotorResponse)
+  if (unit.flightState === 'grounded' && Math.abs(rotor.speed - ROTOR_GROUNDED_SPEED) < ROTOR_STOP_EPSILON) {
+    rotor.speed = ROTOR_GROUNDED_SPEED
+  }
   rotor.angle = (rotor.angle + rotor.speed * deltaMs) % (Math.PI * 2)
   rotor.targetSpeed = rotorTargetSpeed
 

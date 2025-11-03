@@ -14,6 +14,7 @@ import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier, getUnitCost, getBuildingIdentifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { gameState } from './gameState.js'
+import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -587,15 +588,24 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   const isHelipadApache = factory.type === 'helipad' && type === 'apache'
 
   if (isHelipadApache) {
-    const helipadCenterX = (factory.x + factory.width / 2) * TILE_SIZE
-    const helipadCenterY = (factory.y + factory.height / 2) * TILE_SIZE
-    worldPositionOverride = {
-      x: helipadCenterX - TILE_SIZE / 2,
-      y: helipadCenterY - TILE_SIZE / 2
+    const landingTopLeft = getHelipadLandingTopLeft(factory)
+    const landingTile = getHelipadLandingTile(factory)
+    if (landingTopLeft && landingTile) {
+      worldPositionOverride = { ...landingTopLeft }
+      spawnPosition = { ...landingTile }
+    } else {
+      const helipadCenter = getHelipadLandingCenter(factory)
+      if (helipadCenter) {
+        worldPositionOverride = {
+          x: helipadCenter.x - TILE_SIZE / 2,
+          y: helipadCenter.y - TILE_SIZE / 2
+        }
+        spawnPosition = {
+          x: Math.floor(helipadCenter.x / TILE_SIZE),
+          y: Math.floor(helipadCenter.y / TILE_SIZE)
+        }
+      }
     }
-    const centerTileX = Math.floor((worldPositionOverride.x + TILE_SIZE / 2) / TILE_SIZE)
-    const centerTileY = Math.floor((worldPositionOverride.y + TILE_SIZE / 2) / TILE_SIZE)
-    spawnPosition = { x: centerTileX, y: centerTileY }
   } else if (factory.type === 'vehicleFactory') {
     // Attempt to free the designated spawn tile using algorithm A1
     moveBlockingUnits(spawnX, spawnY, units, mapGrid)
