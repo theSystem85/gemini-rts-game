@@ -2,20 +2,28 @@ import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
 import { getCurrentGame, mapGrid, units } from '../main.js'
+import { updateBenchmarkCountdownAverage } from '../ui/benchmarkModal.js'
 
 const FRAME_TIME_MIN_THRESHOLD = 0.0001
-const CAMERA_UPDATE_INTERVAL_MS = 200
+const CAMERA_RETARGET_INTERVAL_MS = 5000
+const CAMERA_EASE_DURATION_MS = 1500
 const COMBAT_DISTANCE_THRESHOLD = TILE_SIZE * 10
 const COMBAT_DISTANCE_THRESHOLD_SQ = COMBAT_DISTANCE_THRESHOLD * COMBAT_DISTANCE_THRESHOLD
 const CLUSTER_SIZE_PX = TILE_SIZE * 12
-const CAMERA_LERP_FACTOR = 0.18
+const CAMERA_VELOCITY_EPSILON = 0.05
 
 let activeSession = null
 const cameraFocusState = {
-  lastUpdate: 0,
   targetX: null,
   targetY: null,
-  active: false
+  transitionStartX: null,
+  transitionStartY: null,
+  transitionStartTime: 0,
+  desiredScrollX: null,
+  desiredScrollY: null,
+  lastRetargetTime: 0,
+  active: false,
+  manualOverride: false
 }
 
 function clamp(value, min, max) {
@@ -23,25 +31,37 @@ function clamp(value, min, max) {
 }
 
 function resetCameraFocusInternal() {
-  cameraFocusState.lastUpdate = 0
   cameraFocusState.targetX = null
   cameraFocusState.targetY = null
+  cameraFocusState.transitionStartX = null
+  cameraFocusState.transitionStartY = null
+  cameraFocusState.transitionStartTime = 0
+  cameraFocusState.desiredScrollX = null
+  cameraFocusState.desiredScrollY = null
+  cameraFocusState.lastRetargetTime = 0
   cameraFocusState.active = false
+  cameraFocusState.manualOverride = false
 }
 
-function updateBenchmarkCameraFocus(timestamp) {
-  if (!cameraFocusState.active || !gameState.benchmarkActive) {
-    return
-  }
+function easeInOutCubic(t) {
+  if (t <= 0) return 0
+  if (t >= 1) return 1
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2
+}
 
-  if (timestamp - cameraFocusState.lastUpdate < CAMERA_UPDATE_INTERVAL_MS) {
-    return
-  }
+function hasManualScrollActivity() {
+  const keyScroll = gameState.keyScroll || {}
+  if (gameState.isRightDragging) return true
+  if (keyScroll.up || keyScroll.down || keyScroll.left || keyScroll.right) return true
+  const velocity = gameState.dragVelocity || { x: 0, y: 0 }
+  return Math.abs(velocity.x) > CAMERA_VELOCITY_EPSILON || Math.abs(velocity.y) > CAMERA_VELOCITY_EPSILON
+}
 
-  cameraFocusState.lastUpdate = timestamp
-
+function findCombatFocusTarget() {
   if (!Array.isArray(units) || units.length === 0 || !Array.isArray(mapGrid) || mapGrid.length === 0) {
-    return
+    return null
   }
 
   const clusters = new Map()
@@ -96,26 +116,19 @@ function updateBenchmarkCameraFocus(timestamp) {
     }
   }
 
-  if (bestCluster) {
-    cameraFocusState.targetX = bestCluster.sumX / bestCluster.weight
-    cameraFocusState.targetY = bestCluster.sumY / bestCluster.weight
+  if (!bestCluster) {
+    return null
   }
 
-  if (cameraFocusState.targetX === null || cameraFocusState.targetY === null) {
-    return
+  return {
+    x: bestCluster.sumX / bestCluster.weight,
+    y: bestCluster.sumY / bestCluster.weight
   }
+}
 
-  const game = getCurrentGame()
-  const canvasManager = game && game.canvasManager
-  const gameCanvas = canvasManager && canvasManager.getGameCanvas ? canvasManager.getGameCanvas() : null
-  if (!gameCanvas) {
-    return
-  }
-
+function beginCameraTransition(gameCanvas, mapWidthPx, mapHeightPx, timestamp) {
   const viewportWidth = getPlayableViewportWidth(gameCanvas)
   const viewportHeight = getPlayableViewportHeight(gameCanvas)
-  const mapWidthPx = (mapGrid[0]?.length || 0) * TILE_SIZE
-  const mapHeightPx = mapGrid.length * TILE_SIZE
 
   const desiredScrollX = clamp(
     cameraFocusState.targetX - viewportWidth / 2,
@@ -128,26 +141,97 @@ function updateBenchmarkCameraFocus(timestamp) {
     Math.max(0, mapHeightPx - viewportHeight)
   )
 
-  gameState.scrollOffset.x += (desiredScrollX - gameState.scrollOffset.x) * CAMERA_LERP_FACTOR
-  gameState.scrollOffset.y += (desiredScrollY - gameState.scrollOffset.y) * CAMERA_LERP_FACTOR
+  cameraFocusState.transitionStartX = gameState.scrollOffset.x
+  cameraFocusState.transitionStartY = gameState.scrollOffset.y
+  cameraFocusState.transitionStartTime = timestamp
+  cameraFocusState.desiredScrollX = desiredScrollX
+  cameraFocusState.desiredScrollY = desiredScrollY
+}
+
+function updateBenchmarkCameraFocus(timestamp) {
+  if (!cameraFocusState.active || !gameState.benchmarkActive) {
+    return
+  }
+
+  if (cameraFocusState.manualOverride || hasManualScrollActivity()) {
+    cameraFocusState.manualOverride = true
+    return
+  }
+
+  const game = getCurrentGame()
+  const canvasManager = game && game.canvasManager
+  const gameCanvas = canvasManager && canvasManager.getGameCanvas ? canvasManager.getGameCanvas() : null
+  if (!gameCanvas || !Array.isArray(mapGrid) || mapGrid.length === 0) {
+    return
+  }
+
+  const mapWidthPx = (mapGrid[0]?.length || 0) * TILE_SIZE
+  const mapHeightPx = mapGrid.length * TILE_SIZE
+
+  const needsNewTarget = (
+    cameraFocusState.targetX === null ||
+    cameraFocusState.targetY === null ||
+    timestamp - cameraFocusState.lastRetargetTime >= CAMERA_RETARGET_INTERVAL_MS
+  )
+
+  if (needsNewTarget) {
+    const target = findCombatFocusTarget()
+    if (!target) {
+      return
+    }
+
+    cameraFocusState.targetX = target.x
+    cameraFocusState.targetY = target.y
+    cameraFocusState.lastRetargetTime = timestamp
+    beginCameraTransition(gameCanvas, mapWidthPx, mapHeightPx, timestamp)
+  } else if (cameraFocusState.desiredScrollX === null || cameraFocusState.desiredScrollY === null) {
+    beginCameraTransition(gameCanvas, mapWidthPx, mapHeightPx, timestamp)
+  }
+
+  if (cameraFocusState.desiredScrollX === null || cameraFocusState.desiredScrollY === null) {
+    return
+  }
+
+  if (cameraFocusState.transitionStartX === null || cameraFocusState.transitionStartY === null) {
+    cameraFocusState.transitionStartX = gameState.scrollOffset.x
+    cameraFocusState.transitionStartY = gameState.scrollOffset.y
+    cameraFocusState.transitionStartTime = timestamp
+  }
+
+  const elapsed = timestamp - cameraFocusState.transitionStartTime
+  const progress = easeInOutCubic(Math.min(1, elapsed / CAMERA_EASE_DURATION_MS))
+
+  const nextScrollX = cameraFocusState.transitionStartX +
+    (cameraFocusState.desiredScrollX - cameraFocusState.transitionStartX) * progress
+  const nextScrollY = cameraFocusState.transitionStartY +
+    (cameraFocusState.desiredScrollY - cameraFocusState.transitionStartY) * progress
+
+  gameState.scrollOffset.x = nextScrollX
+  gameState.scrollOffset.y = nextScrollY
+
+  if (progress >= 1) {
+    cameraFocusState.transitionStartX = gameState.scrollOffset.x
+    cameraFocusState.transitionStartY = gameState.scrollOffset.y
+  }
 }
 
 function finalizeSession(session, finalTimestamp = null) {
   if (!session) return
 
-  if (session.intervalFrameTimes.length > 0) {
-    const sum = session.intervalFrameTimes.reduce((acc, t) => acc + t, 0)
-    const fps = sum > 0 ? (1000 * session.intervalFrameTimes.length) / sum : 0
+  const effectiveTimestamp = finalTimestamp || session.lastFrameTimestamp || performance.now()
+  const intervalElapsed = effectiveTimestamp - session.intervalStart
+  const framesInInterval = session.frameCount - session.lastIntervalFrameCount
+  if (framesInInterval > 0 && intervalElapsed > 0) {
+    const fps = (framesInInterval * 1000) / intervalElapsed
     session.intervalAverages.push({
-      time: ((finalTimestamp || session.lastFrameTimestamp) - session.startTime) / 1000,
+      time: (effectiveTimestamp - session.startTime) / 1000,
       fps
     })
-    session.intervalFrameTimes = []
   }
 
   const averageFps = session.frameCount > 0 ? session.fpsSum / session.frameCount : 0
   const result = {
-    durationMs: (finalTimestamp || session.lastFrameTimestamp) - session.startTime,
+    durationMs: effectiveTimestamp - session.startTime,
     frames: session.frameCount,
     averageFps,
     minFps: session.minFps === Infinity ? 0 : session.minFps,
@@ -171,6 +255,7 @@ export function notifyBenchmarkFrame({ timestamp, frameTime }) {
   if (!session.startTime) {
     session.startTime = timestamp
     session.intervalStart = timestamp
+    session.lastIntervalFrameCount = 0
   }
 
   session.lastFrameTimestamp = timestamp
@@ -183,21 +268,23 @@ export function notifyBenchmarkFrame({ timestamp, frameTime }) {
   session.minFps = Math.min(session.minFps, fps)
   session.maxFps = Math.max(session.maxFps, fps)
 
-  session.intervalFrameTimes.push(frameTime)
+  const runningAverage = session.frameCount > 0 ? session.fpsSum / session.frameCount : 0
+  updateBenchmarkCountdownAverage(runningAverage)
 
-  if (timestamp - session.intervalStart >= session.intervalDuration) {
-    const intervalSum = session.intervalFrameTimes.reduce((acc, t) => acc + t, 0)
-    const intervalFps = intervalSum > 0
-      ? (1000 * session.intervalFrameTimes.length) / intervalSum
+  const intervalElapsed = timestamp - session.intervalStart
+  if (intervalElapsed >= session.intervalDuration) {
+    const framesInInterval = session.frameCount - session.lastIntervalFrameCount
+    const intervalFps = framesInInterval > 0 && intervalElapsed > 0
+      ? (framesInInterval * 1000) / intervalElapsed
       : 0
 
     session.intervalAverages.push({
-      time: (session.intervalStart + session.intervalDuration - session.startTime) / 1000,
+      time: (timestamp - session.startTime) / 1000,
       fps: intervalFps
     })
 
-    session.intervalFrameTimes = []
-    session.intervalStart += session.intervalDuration
+    session.intervalStart = timestamp
+    session.lastIntervalFrameCount = session.frameCount
   }
 
   if (timestamp - session.startTime >= session.durationMs) {
@@ -224,12 +311,13 @@ export function startBenchmarkSession(durationMs = 60000, intervalMs = 1000) {
     fpsSum: 0,
     minFps: Infinity,
     maxFps: 0,
-    intervalFrameTimes: [],
+    lastIntervalFrameCount: 0,
     intervalAverages: [],
     resolve
   }
 
   cameraFocusState.active = true
+  cameraFocusState.manualOverride = false
 
   return promise
 }
@@ -248,4 +336,10 @@ export function cancelBenchmarkSession() {
 
 export function resetBenchmarkCameraFocus() {
   resetCameraFocusInternal()
+}
+
+export function notifyBenchmarkManualCameraControl() {
+  if (!cameraFocusState.manualOverride) {
+    cameraFocusState.manualOverride = true
+  }
 }

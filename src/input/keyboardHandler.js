@@ -17,6 +17,7 @@ import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
+import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -212,6 +213,9 @@ export class KeyboardHandler {
           setRemoteControlAction('forward', 'keyboard', true)
         } else {
           gameState.keyScroll.up = true
+          if (gameState.benchmarkActive) {
+            notifyBenchmarkManualCameraControl()
+          }
           if (this.requestRenderFrame) {
             this.requestRenderFrame()
           }
@@ -225,6 +229,9 @@ export class KeyboardHandler {
           setRemoteControlAction('backward', 'keyboard', true)
         } else {
           gameState.keyScroll.down = true
+          if (gameState.benchmarkActive) {
+            notifyBenchmarkManualCameraControl()
+          }
           if (this.requestRenderFrame) {
             this.requestRenderFrame()
           }
@@ -245,6 +252,9 @@ export class KeyboardHandler {
           }
         } else {
           gameState.keyScroll.left = true
+          if (gameState.benchmarkActive) {
+            notifyBenchmarkManualCameraControl()
+          }
           if (this.requestRenderFrame) {
             this.requestRenderFrame()
           }
@@ -265,6 +275,9 @@ export class KeyboardHandler {
           }
         } else {
           gameState.keyScroll.right = true
+          if (gameState.benchmarkActive) {
+            notifyBenchmarkManualCameraControl()
+          }
           if (this.requestRenderFrame) {
             this.requestRenderFrame()
           }

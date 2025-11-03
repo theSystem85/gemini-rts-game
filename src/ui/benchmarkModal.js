@@ -15,6 +15,20 @@ const countdownTextId = 'benchmarkCountdownText'
 let closeHandlersBound = false
 let runAgainHandler = null
 let countdownAnimation = null
+let countdownAverageFps = null
+let countdownEndTime = null
+
+function resetCountdownState() {
+  countdownAverageFps = null
+  countdownEndTime = null
+}
+
+function formatAverageFps() {
+  if (!Number.isFinite(countdownAverageFps)) {
+    return 'Avg FPS: --'
+  }
+  return `Avg FPS: ${countdownAverageFps.toFixed(1)}`
+}
 
 function getCountdownElements() {
   const countdown = document.getElementById(countdownId)
@@ -134,21 +148,31 @@ export function showBenchmarkCountdownMessage(message) {
     cancelAnimationFrame(countdownAnimation)
     countdownAnimation = null
   }
+  resetCountdownState()
   countdown.hidden = false
   countdownText.textContent = message
 }
 
 export function startBenchmarkCountdown(durationMs) {
   const { countdown, countdownText } = getCountdownElements()
-  const startTime = performance.now()
-  const endTime = startTime + durationMs
+  if (countdownAnimation) {
+    cancelAnimationFrame(countdownAnimation)
+    countdownAnimation = null
+  }
+
+  resetCountdownState()
+
+  const endTime = performance.now() + durationMs
   countdown.hidden = false
+  countdownEndTime = endTime
 
   const update = () => {
     const now = performance.now()
     const remaining = Math.max(0, endTime - now)
     const seconds = (remaining / 1000).toFixed(1)
-    countdownText.textContent = `Benchmark running: ${seconds}s remaining`
+    const parts = [`Benchmark running: ${seconds}s remaining`]
+    parts.push(formatAverageFps())
+    countdownText.textContent = parts.join(' · ')
     if (remaining > 0) {
       countdownAnimation = requestAnimationFrame(update)
     } else {
@@ -169,6 +193,7 @@ export function startBenchmarkCountdown(durationMs) {
     }
     countdownText.textContent = ''
     countdown.hidden = true
+    resetCountdownState()
   }
 }
 
@@ -180,6 +205,24 @@ export function hideBenchmarkCountdown() {
   }
   countdownText.textContent = ''
   countdown.hidden = true
+  resetCountdownState()
+}
+
+export function updateBenchmarkCountdownAverage(fps) {
+  countdownAverageFps = Number.isFinite(fps) ? fps : null
+
+  if (!countdownEndTime) {
+    return
+  }
+
+  const { countdown, countdownText } = getCountdownElements()
+  if (countdown.hidden) {
+    return
+  }
+
+  const remaining = Math.max(0, countdownEndTime - performance.now())
+  const seconds = (remaining / 1000).toFixed(1)
+  countdownText.textContent = [`Benchmark running: ${seconds}s remaining`, formatAverageFps()].join(' · ')
 }
 
 export function showBenchmarkStatus(message) {

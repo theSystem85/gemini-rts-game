@@ -1,6 +1,6 @@
 import { gameState } from '../gameState.js'
 import { factories, mapGrid, units, getCurrentGame } from '../main.js'
-import { buildingData, createBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
+import { buildingData, canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
 import { initializeOccupancyMap, createUnit } from '../units.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { getTextureManager } from '../rendering.js'
@@ -10,77 +10,170 @@ import { getUniqueId } from '../utils.js'
 import { resetBenchmarkCameraFocus } from './benchmarkTracker.js'
 
 const BUILDING_TYPES = Object.keys(buildingData)
-
-const PLAYER_BASE_ANGLES = {
-  player1: Math.PI / 4,
-  player2: -3 * Math.PI / 4,
-  player3: (3 * Math.PI) / 4,
-  player4: -Math.PI / 4
-}
+const BENCHMARK_BUILDING_TYPES = BUILDING_TYPES.filter(type => type !== 'constructionYard')
+const SEARCH_DIRECTIONS = [
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 0, y: 1 },
+  { x: 0, y: -1 }
+]
+const ANCHOR_AREA_SIZE = 6
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
-function prepareMap() {
-  for (let y = 0; y < mapGrid.length; y++) {
-    for (let x = 0; x < mapGrid[y].length; x++) {
-      const tile = mapGrid[y][x]
-      tile.type = 'land'
-      tile.ore = false
-      tile.noBuild = 0
-      tile.seedCrystal = false
-      delete tile.building
-    }
-  }
+function tileKey(x, y) {
+  return `${x},${y}`
 }
 
-function prepareArea(x, y, width, height) {
-  for (let ty = y; ty < y + height; ty++) {
-    for (let tx = x; tx < x + width; tx++) {
-      if (ty >= 0 && ty < mapGrid.length && tx >= 0 && tx < mapGrid[ty].length) {
-        const tile = mapGrid[ty][tx]
-        tile.type = 'street'
-        tile.ore = false
-        tile.noBuild = 0
+function isTileOpen(tileX, tileY) {
+  const mapHeight = mapGrid.length
+  const mapWidth = mapGrid[0]?.length || 0
+  if (tileX < 0 || tileY < 0 || tileX >= mapWidth || tileY >= mapHeight) {
+    return false
+  }
+
+  const tile = mapGrid[tileY]?.[tileX]
+  if (!tile) return false
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+    return false
+  }
+  if (tile.building) {
+    return false
+  }
+
+  return true
+}
+
+function isAreaOpen(tileX, tileY, width, height, used = new Set()) {
+  for (let y = tileY; y < tileY + height; y++) {
+    for (let x = tileX; x < tileX + width; x++) {
+      if (!isTileOpen(x, y) || used.has(tileKey(x, y))) {
+        return false
       }
     }
   }
+
+  return true
 }
 
-function placePlayerBuildings(playerId, factory, mapWidth, mapHeight) {
-  const angle = PLAYER_BASE_ANGLES[playerId] ?? 0
-  const centerX = factory.x + Math.floor(factory.width / 2)
-  const centerY = factory.y + Math.floor(factory.height / 2)
-  const radiusBase = 8
-  const radiusStep = 2
+function findOpenAreaNear(preferredX, preferredY, width = 1, height = 1, used = new Set(), bounds = null) {
+  const mapHeight = mapGrid.length
+  const mapWidth = mapGrid[0]?.length || 0
+  if (mapWidth === 0 || mapHeight === 0) {
+    return null
+  }
 
-  BUILDING_TYPES.forEach((type, index) => {
-    if (type === 'constructionYard') {
+  const minX = bounds ? Math.max(0, bounds.minX) : 0
+  const minY = bounds ? Math.max(0, bounds.minY) : 0
+  const maxX = bounds ? Math.min(mapWidth - width, bounds.maxX - width + 1) : mapWidth - width
+  const maxY = bounds ? Math.min(mapHeight - height, bounds.maxY - height + 1) : mapHeight - height
+
+  if (maxX < minX || maxY < minY) {
+    return null
+  }
+
+  const startX = clamp(preferredX, minX, maxX)
+  const startY = clamp(preferredY, minY, maxY)
+
+  const queue = [{ x: startX, y: startY }]
+  const visited = new Set([tileKey(startX, startY)])
+
+  while (queue.length > 0) {
+    const { x, y } = queue.shift()
+    if (isAreaOpen(x, y, width, height, used)) {
+      return { x, y }
+    }
+
+    for (const dir of SEARCH_DIRECTIONS) {
+      const nx = clamp(x + dir.x, minX, maxX)
+      const ny = clamp(y + dir.y, minY, maxY)
+      const key = tileKey(nx, ny)
+      if (!visited.has(key)) {
+        visited.add(key)
+        queue.push({ x: nx, y: ny })
+      }
+    }
+  }
+
+  return null
+}
+
+function takeSpawnTile(preferredX, preferredY, usedTiles, bounds = null) {
+  const tile = findOpenAreaNear(preferredX, preferredY, 1, 1, usedTiles, bounds)
+  if (!tile) {
+    return null
+  }
+  usedTiles.add(tileKey(tile.x, tile.y))
+  return tile
+}
+
+function reserveArea(x, y, width, height, tracker) {
+  for (let ty = y; ty < y + height; ty++) {
+    for (let tx = x; tx < x + width; tx++) {
+      tracker.add(tileKey(tx, ty))
+    }
+  }
+}
+
+function findPlacementForBuilding(playerId, factory, type) {
+  const data = buildingData[type]
+  if (!data) return null
+
+  const mapHeight = mapGrid.length
+  const mapWidth = mapGrid[0]?.length || 0
+  if (!mapWidth || !mapHeight) return null
+
+  const startX = clamp(
+    factory.x + Math.floor(factory.width / 2) - Math.floor(data.width / 2),
+    0,
+    Math.max(0, mapWidth - data.width)
+  )
+  const startY = clamp(
+    factory.y + Math.floor(factory.height / 2) - Math.floor(data.height / 2),
+    0,
+    Math.max(0, mapHeight - data.height)
+  )
+
+  const queue = [{ x: startX, y: startY }]
+  const visited = new Set([tileKey(startX, startY)])
+
+  while (queue.length > 0) {
+    const { x, y } = queue.shift()
+    if (canPlaceBuilding(type, x, y, mapGrid, units, gameState.buildings, factories, playerId)) {
+      return { x, y }
+    }
+
+    for (const dir of SEARCH_DIRECTIONS) {
+      const nx = clamp(x + dir.x, 0, Math.max(0, mapWidth - data.width))
+      const ny = clamp(y + dir.y, 0, Math.max(0, mapHeight - data.height))
+      const key = tileKey(nx, ny)
+      if (!visited.has(key)) {
+        visited.add(key)
+        queue.push({ x: nx, y: ny })
+      }
+    }
+  }
+
+  return null
+}
+
+function placePlayerBuildings(playerId, factory) {
+  BENCHMARK_BUILDING_TYPES.forEach((type, index) => {
+    const placement = findPlacementForBuilding(playerId, factory, type)
+    if (!placement) {
       return
     }
 
-    const data = buildingData[type]
-    if (!data) return
-
-    const angleOffset = angle - (Math.PI / 3) + (index / (BUILDING_TYPES.length - 1)) * (2 * Math.PI) / 3
-    const radius = radiusBase + radiusStep * (index % 6)
-    const targetCenterX = centerX + Math.round(Math.cos(angleOffset) * radius)
-    const targetCenterY = centerY + Math.round(Math.sin(angleOffset) * radius)
-
-    const tileX = clamp(targetCenterX - Math.floor(data.width / 2), 1, mapWidth - data.width - 1)
-    const tileY = clamp(targetCenterY - Math.floor(data.height / 2), 1, mapHeight - data.height - 1)
-
-    prepareArea(tileX - 1, tileY - 1, data.width + 2, data.height + 2)
-
-    const building = createBuilding(type, tileX, tileY)
+    const building = createBuilding(type, placement.x, placement.y)
     building.id = `${playerId}_${type}_${index}_${getUniqueId()}`
     building.owner = playerId
     building.constructionFinished = true
     building.constructionStartTime = performance.now() - 10000
     building.isBenchmarkStructure = true
 
-    placeBuilding(building, mapGrid, null)
+    placeBuilding(building, mapGrid, gameState.occupancyMap)
     gameState.buildings.push(building)
   })
 }
@@ -91,16 +184,21 @@ function spawnSupportUnits(factory, supportAnchor) {
   const supportTypes = ['harvester', 'tankerTruck', 'ambulance', 'recoveryTank']
   const mapWidth = mapGrid[0]?.length || 0
   const mapHeight = mapGrid.length || 0
+  const baseX = clamp(supportAnchor.x, 0, Math.max(0, mapWidth - 1))
+  const baseY = clamp(supportAnchor.y, 0, Math.max(0, mapHeight - 1))
+  const usedTiles = new Set()
 
   supportTypes.forEach((type, index) => {
-    const baseX = clamp(supportAnchor.x, 1, mapWidth - 2)
-    const baseY = clamp(supportAnchor.y, 1, mapHeight - 2)
-    const tileX = clamp(baseX + index * 2, 1, mapWidth - 2)
-    const tileY = clamp(baseY, 1, mapHeight - 2)
-    prepareArea(tileX, tileY, 1, 1)
-    const unit = createUnit(factory, type, tileX, tileY)
-    unit.x = tileX * TILE_SIZE
-    unit.y = tileY * TILE_SIZE
+    const preferredX = baseX + index * 2
+    const preferredY = baseY
+    const spawnTile = takeSpawnTile(preferredX, preferredY, usedTiles)
+    if (!spawnTile) {
+      return
+    }
+
+    const unit = createUnit(factory, type, spawnTile.x, spawnTile.y)
+    unit.x = spawnTile.x * TILE_SIZE
+    unit.y = spawnTile.y * TILE_SIZE
     unit.target = null
     unit.id = `${unit.id}_bench`
     units.push(unit)
@@ -119,19 +217,21 @@ function spawnBattleUnits(factory, anchor) {
   ]
 
   const createdUnits = []
-  const mapWidth = mapGrid[0]?.length || 0
-  const mapHeight = mapGrid.length || 0
+  const usedTiles = anchor.usedTiles || new Set()
+  const bounds = anchor.bounds || null
 
   battleTypes.forEach((type, index) => {
     const offset = offsets[index % offsets.length]
-    const tileX = clamp(anchor.x + offset.x, 1, mapWidth - 2)
-    const tileY = clamp(anchor.y + offset.y, 1, mapHeight - 2)
+    const preferredX = anchor.x + offset.x
+    const preferredY = anchor.y + offset.y
+    const spawnTile = takeSpawnTile(preferredX, preferredY, usedTiles, bounds)
+    if (!spawnTile) {
+      return
+    }
 
-    prepareArea(tileX, tileY, 1, 1)
-
-    const unit = createUnit(factory, type, tileX, tileY)
-    unit.x = tileX * TILE_SIZE
-    unit.y = tileY * TILE_SIZE
+    const unit = createUnit(factory, type, spawnTile.x, spawnTile.y)
+    unit.x = spawnTile.x * TILE_SIZE
+    unit.y = spawnTile.y * TILE_SIZE
     unit.id = `${unit.id}_bench`
 
     if (unit.type === 'apache') {
@@ -148,6 +248,8 @@ function spawnBattleUnits(factory, anchor) {
     createdUnits.push(unit)
     units.push(unit)
   })
+
+  anchor.usedTiles = usedTiles
 
   return createdUnits
 }
@@ -182,12 +284,6 @@ export function setupBenchmarkScenario() {
 
   game.resetGame()
 
-  prepareMap()
-
-  factories.forEach(factory => {
-    placeBuilding(factory, mapGrid, null)
-  })
-
   const mapWidth = mapGrid[0]?.length || 0
   const mapHeight = mapGrid.length || 0
 
@@ -217,22 +313,89 @@ export function setupBenchmarkScenario() {
     factory.isBenchmarkStructure = true
   })
 
+  gameState.buildings.length = 0
+  gameState.buildings.push(...factories)
+
   const centerX = Math.floor(mapWidth / 2)
   const centerY = Math.floor(mapHeight / 2)
 
-  const battleAnchors = {
-    player1: { x: centerX - 10, y: centerY + 6, units: [] },
-    player2: { x: centerX + 6, y: centerY - 10, units: [] },
-    player3: { x: centerX - 10, y: centerY - 10, units: [] },
-    player4: { x: centerX + 6, y: centerY + 6, units: [] }
+  const desiredBattleCenters = {
+    player1: { x: centerX - 10, y: centerY + 6 },
+    player2: { x: centerX + 6, y: centerY - 10 },
+    player3: { x: centerX - 10, y: centerY - 10 },
+    player4: { x: centerX + 6, y: centerY + 6 }
   }
 
-  const supportAnchors = {
-    player1: { x: factories[0]?.x + (factories[0]?.width || 0) + 2, y: factories[0]?.y + (factories[0]?.height || 0) + 1 },
-    player2: { x: factories[1]?.x - 6, y: factories[1]?.y - 2 },
-    player3: { x: factories[2]?.x + (factories[2]?.width || 0) + 2, y: factories[2]?.y - 2 },
-    player4: { x: factories[3]?.x - 6, y: factories[3]?.y + (factories[3]?.height || 0) + 1 }
-  }
+  const reservedBattleTiles = new Set()
+  const battleAnchors = {}
+
+  Object.entries(desiredBattleCenters).forEach(([playerId, desired]) => {
+    const half = Math.floor(ANCHOR_AREA_SIZE / 2)
+    const preferredTopLeftX = desired.x - half
+    const preferredTopLeftY = desired.y - half
+
+    const area = findOpenAreaNear(
+      preferredTopLeftX,
+      preferredTopLeftY,
+      ANCHOR_AREA_SIZE,
+      ANCHOR_AREA_SIZE,
+      reservedBattleTiles
+    ) || findOpenAreaNear(
+      centerX - half,
+      centerY - half,
+      ANCHOR_AREA_SIZE,
+      ANCHOR_AREA_SIZE,
+      reservedBattleTiles
+    )
+
+    const fallbackTopLeft = {
+      x: clamp(preferredTopLeftX, 0, Math.max(0, mapWidth - ANCHOR_AREA_SIZE)),
+      y: clamp(preferredTopLeftY, 0, Math.max(0, mapHeight - ANCHOR_AREA_SIZE))
+    }
+
+    const resolved = area || fallbackTopLeft
+    reserveArea(resolved.x, resolved.y, ANCHOR_AREA_SIZE, ANCHOR_AREA_SIZE, reservedBattleTiles)
+
+    battleAnchors[playerId] = {
+      x: resolved.x,
+      y: resolved.y,
+      bounds: {
+        minX: resolved.x,
+        maxX: resolved.x + ANCHOR_AREA_SIZE - 1,
+        minY: resolved.y,
+        maxY: resolved.y + ANCHOR_AREA_SIZE - 1
+      },
+      usedTiles: new Set(),
+      units: []
+    }
+  })
+
+  const supportAnchors = {}
+  factories.forEach(factory => {
+    const preferred = (() => {
+      const width = factory.width || 0
+      const height = factory.height || 0
+      switch (factory.owner) {
+        case 'player1':
+          return { x: factory.x + width + 2, y: factory.y + height + 1 }
+        case 'player2':
+          return { x: factory.x - 6, y: factory.y - 2 }
+        case 'player3':
+          return { x: factory.x + width + 2, y: factory.y - 2 }
+        case 'player4':
+          return { x: factory.x - 6, y: factory.y + height + 1 }
+        default:
+          return { x: factory.x + width + 1, y: factory.y + height + 1 }
+      }
+    })()
+
+    const anchor = findOpenAreaNear(preferred.x, preferred.y, 1, 1) || {
+      x: clamp(preferred.x, 0, Math.max(0, mapWidth - 1)),
+      y: clamp(preferred.y, 0, Math.max(0, mapHeight - 1))
+    }
+
+    supportAnchors[factory.owner] = anchor
+  })
 
   const anchorEntries = Object.entries(battleAnchors)
 
@@ -240,7 +403,7 @@ export function setupBenchmarkScenario() {
     const factory = factories.find(f => f.owner === playerId)
     if (!factory) return
 
-    placePlayerBuildings(playerId, factory, mapWidth, mapHeight)
+    placePlayerBuildings(playerId, factory)
     spawnSupportUnits(factory, supportAnchors[playerId])
 
     const battleUnits = spawnBattleUnits(factory, anchor)
