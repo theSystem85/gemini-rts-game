@@ -1473,10 +1473,6 @@ body.mobile-landscape #mobileBuildMenuContainer .tab-content.active .production-
 }
 
 /* Volume control styling */
-#volumeControl {
-  margin-top: 15px;
-}
-
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;

@@ -1281,6 +1281,9 @@ class Game {
   setupMapSettings() {
     const settingsBtn = document.getElementById('mapSettingsBtn')
     const settingsMenu = document.getElementById('mapSettingsMenu')
+    const mapSettingsToggle = document.getElementById('mapSettingsToggle')
+    const mapSettingsContent = document.getElementById('mapSettingsContent')
+    const mapSettingsToggleIcon = document.getElementById('mapSettingsToggleIcon')
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
@@ -1289,7 +1292,38 @@ class Game {
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
     attachBenchmarkButton()
 
-    if (!settingsBtn || !settingsMenu || !oreCheckbox || !shadowCheckbox) return
+    // Handle map settings accordion toggle
+    if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
+      mapSettingsToggle.addEventListener('click', () => {
+        const isExpanded = mapSettingsContent.style.display !== 'none'
+        mapSettingsToggle.setAttribute('aria-expanded', !isExpanded)
+        mapSettingsContent.style.display = isExpanded ? 'none' : 'block'
+        mapSettingsToggleIcon.textContent = isExpanded ? '▼' : '▲'
+        
+        // Scroll to make the expanded content visible
+        if (!isExpanded) {
+          // Content is being expanded, scroll to make it visible
+          setTimeout(() => {
+            const sidebarScroll = document.getElementById('sidebarScroll')
+            if (sidebarScroll && mapSettingsContent) {
+              const contentRect = mapSettingsContent.getBoundingClientRect()
+              const sidebarRect = sidebarScroll.getBoundingClientRect()
+              
+              // Check if the content is below the visible area
+              if (contentRect.bottom > sidebarRect.bottom) {
+                const scrollTop = sidebarScroll.scrollTop + (contentRect.bottom - sidebarRect.bottom) + 10
+                sidebarScroll.scrollTo({
+                  top: scrollTop,
+                  behavior: 'smooth'
+                })
+              }
+            }
+          }, 50) // Small delay to allow the content to render
+        }
+      })
+    }
+
+    if (!settingsBtn || !settingsMenu) return
 
     // Display version number
     if (versionElement) {
@@ -1302,26 +1336,36 @@ class Game {
       commitMessageElement.style.display = commitMessageElement.textContent ? 'block' : 'none'
     }
 
-    oreCheckbox.checked = ORE_SPREAD_ENABLED
-    shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
+    if (oreCheckbox) {
+      oreCheckbox.checked = ORE_SPREAD_ENABLED
+    }
+    
+    if (shadowCheckbox) {
+      shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
+    }
+    
     settingsBtn.addEventListener('click', () => {
       settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
     })
 
-    oreCheckbox.addEventListener('change', (e) => {
-      setOreSpreadEnabled(e.target.checked)
-    })
+    if (oreCheckbox) {
+      oreCheckbox.addEventListener('change', (e) => {
+        setOreSpreadEnabled(e.target.checked)
+      })
+    }
 
-    shadowCheckbox.addEventListener('change', (e) => {
-      const enabled = e.target.checked
-      gameState.shadowOfWarEnabled = enabled
-      try {
-        localStorage.setItem(SHADOW_OF_WAR_STORAGE_KEY, enabled.toString())
-      } catch (err) {
-        console.warn('Failed to save shadow of war setting to localStorage:', err)
-      }
-      updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
-    })
+    if (shadowCheckbox) {
+      shadowCheckbox.addEventListener('change', (e) => {
+        const enabled = e.target.checked
+        gameState.shadowOfWarEnabled = enabled
+        try {
+          localStorage.setItem(SHADOW_OF_WAR_STORAGE_KEY, enabled.toString())
+        } catch (err) {
+          console.warn('Failed to save shadow of war setting to localStorage:', err)
+        }
+        updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
+      })
+    }
 
     // Use the new runtime config dialog instead of the old eval-based modal
     if (configSettingsBtn) {

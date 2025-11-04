@@ -119,6 +119,15 @@
         </button>
       </div>
 
+      <!-- Master Volume Control -->
+      <div id="volumeControl">
+        <label style="display: flex; align-items: center; margin-bottom: 5px;">
+          Volume:
+          <input type="range" class="volume-slider" id="masterVolumeSlider" min="0" max="100" value="50" style="margin-left: 10px; flex: 1;">
+          <span id="volumeValue" class="volume-value">50%</span>
+        </label>
+      </div>
+
       <div id="sidebarScroll">
 
         <div id="productionArea">
@@ -398,61 +407,80 @@
             <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1" style="width: 70px; margin-left: 10px;" id="speedMultiplier">
           </label>
         </div>
-        
-        <div id="shuffleControl">
-          <label style="display: flex; align-items: center; margin: 10px 0;">
-            Seed:
-            <input type="number" class="sidebar-input" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
-          </label>
-          <div style="display: flex; gap: 5px; margin: 10px 0;">
-            <button id="shuffleMapBtn" class="action-button">Shuffle Map</button>
-            <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
-              <span class="button-icon settings-icon">⚙</span>
-            </button>
-            <button
-              id="cheatMenuBtn"
-              class="action-button icon-button"
-              type="button"
-              title="Open cheat console"
-            >
-              <span class="button-icon">🃏</span>
-            </button>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 10px; margin: 10px 0;">
-            <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
-              Width:
-              <input
-                type="number"
-                class="sidebar-input"
-                id="mapWidthTiles"
-                min="32"
-                value="100"
-                style="width: 70px;"
-              >
+
+        <!-- Settings and cheat buttons -->
+        <div style="display: flex; gap: 5px; margin: 10px 0;">
+          <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
+            <span class="button-icon settings-icon">⚙</span>
+          </button>
+          <button
+            id="cheatMenuBtn"
+            class="action-button icon-button"
+            type="button"
+            title="Open cheat console"
+          >
+            <span class="button-icon">🃏</span>
+          </button>
+        </div>
+
+        <!-- Map Settings Accordion -->
+        <div id="mapSettingsAccordion" style="margin: 10px 0;">
+          <button 
+            id="mapSettingsToggle" 
+            class="action-button" 
+            style="width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center;"
+            aria-expanded="false"
+            aria-controls="mapSettingsContent"
+          >
+            <span>Map Settings</span>
+            <span id="mapSettingsToggleIcon">▼</span>
+          </button>
+          <div id="mapSettingsContent" style="display: none; margin-top: 10px;">
+            <button id="shuffleMapBtn" class="action-button" style="width: 100%; margin: 10px 0;">Shuffle Map</button>
+            <label style="display: flex; align-items: center; margin: 10px 0;">
+              Seed:
+              <input type="number" class="sidebar-input" id="mapSeed" value="1" style="width: 70px; margin-left: 10px;">
             </label>
-            <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
-              Height:
-              <input
-                type="number"
-                class="sidebar-input"
-                id="mapHeightTiles"
-                min="32"
-                value="100"
-                style="width: 70px;"
-              >
+            <label style="display: flex; align-items: center; margin: 10px 0;">
+              Players:
+              <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin: 10px 0;">
+              <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
+                Width:
+                <input
+                  type="number"
+                  class="sidebar-input"
+                  id="mapWidthTiles"
+                  min="32"
+                  value="100"
+                  style="width: 70px;"
+                >
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
+                Height:
+                <input
+                  type="number"
+                  class="sidebar-input"
+                  id="mapHeightTiles"
+                  min="32"
+                  value="100"
+                  style="width: 70px;"
+                >
+              </label>
+            </div>
+            <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
+              <input type="checkbox" id="oreSpreadCheckbox">
+              <span>ORE_SPREAD_ENABLED</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
+              <input type="checkbox" id="shadowOfWarCheckbox">
+              <span>Shadow of War</span>
             </label>
           </div>
         </div>
 
         <div id="mapSettingsMenu" style="display:none; margin-bottom:10px;">
-          <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
-            <input type="checkbox" id="oreSpreadCheckbox">
-            <span>ORE_SPREAD_ENABLED</span>
-          </label>
-          <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
-            <input type="checkbox" id="shadowOfWarCheckbox">
-            <span>Shadow of War</span>
-          </label>
           <div style="display:flex; align-items:center; gap:5px; margin: 10px 0; font-size: 12px; color: #999;">
             <span>Version:</span>
             <span id="appVersion">-</span>
@@ -466,22 +494,6 @@
           <button id="runBenchmarkBtn" class="action-button" style="width: 100%; margin: 10px 0;">
             Run Performance Benchmark
           </button>
-        </div>
-        
-        <div id="playerCountControl">
-          <label style="display: flex; align-items: center; margin: 10px 0;">
-            Players:
-            <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
-          </label>
-        </div>
-        
-        <!-- Master Volume Control -->
-        <div id="volumeControl">
-          <label style="display: flex; align-items: center; margin: 10px 0;">
-            Volume:
-            <input type="range" class="volume-slider" id="masterVolumeSlider" min="0" max="100" value="50" style="margin-left: 10px; flex: 1;">
-            <span id="volumeValue" class="volume-value">50%</span>
-          </label>
         </div>
         </div>
       </div>
