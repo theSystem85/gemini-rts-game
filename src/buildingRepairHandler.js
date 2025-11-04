@@ -5,6 +5,7 @@ import { showNotification } from './ui/notifications.js'
 import { buildingData } from './buildings.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
+import { updateMoneyBar } from './ui/moneyBar.js'
 
 export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl) {
   // If repair mode is active, check for buildings and factories to repair
@@ -44,7 +45,10 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           gameState.buildingsUnderRepair = gameState.buildingsUnderRepair.filter(r => r !== existing)
           showNotification('Building repair cancelled')
           playSound('repairCancelled', 1.0, 0, true)
-          moneyEl.textContent = gameState.money
+          // Update money display
+          if (typeof updateMoneyBar === 'function') {
+            updateMoneyBar()
+          }
           return
         }
 

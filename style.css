@@ -788,19 +788,22 @@ body.mobile-landscape #moneyLabel::after {
   margin-right: 4px;
 }
 
-/* Energy bar positioned at the top, no padding */
+/* Energy bar positioned right above the money bar */
 #energyBarContainer {
   width: 100%;
-  height: 12px;
+  height: 14px; /* 2px higher */
   background-color: #333;
   border: none;
-  position: relative;
+  position: absolute;
+  top: 5px; /* Position above the minimap */
+  left: 0;
   overflow: hidden;
   margin: 0;
   display: block !important;
   visibility: visible !important;
-  min-height: 12px !important;
+  min-height: 14px !important; /* 2px higher */
   padding: 0;
+  z-index: 2; /* Ensure it appears above the minimap */
 }
 
 #energyBar {
@@ -816,11 +819,15 @@ body.mobile-landscape #moneyLabel::after {
 }
 
 body.mobile-landscape #energyBarContainer {
-  height: 26px;
+  height: 28px; /* 2px higher for mobile */
   background: transparent;
   overflow: visible;
   margin: 0;
   padding: 0;
+  position: absolute;
+  top: -28px; /* Position above minimap for mobile */
+  left: 0;
+  z-index: 2;
 }
 
 body.mobile-landscape #energyBarTrack {
@@ -828,7 +835,7 @@ body.mobile-landscape #energyBarTrack {
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 12px;
+  height: 14px; /* 2px higher */
   background: rgba(12, 12, 12, 0.85);
   border-radius: 0;
   overflow: hidden;
@@ -857,6 +864,86 @@ body.mobile-landscape .energy-bar-value {
   font-weight: 600;
   color: #fff;
   text-shadow: 0 0 3px #000;
+}
+
+/* Money bar positioned right below the energy bar */
+#moneyBarContainer {
+  width: 100%;
+  height: 14px; /* Same height as energy bar */
+  background-color: transparent;
+  border: none;
+  position: absolute;
+  top: 0px; /* Position at minimap level, below energy bar */
+  left: 0;
+  overflow: visible;
+  margin: 0;
+  display: block !important;
+  visibility: visible !important;
+  min-height: 14px !important;
+  padding: 0;
+  z-index: 2; /* Higher than minimap */
+}
+
+#moneyBar {
+  width: 100%;
+  height: 100%;
+  background-color: #FFA500; /* Orange color */
+  position: absolute;
+  transition: width 0.3s;
+}
+
+#moneyText {
+  font-weight: 600;
+  color: #fff; /* White text like energy bar */
+  text-shadow: 0 0 3px #000; /* Black shadow like energy bar */
+}
+
+body.mobile-landscape #moneyBarContainer {
+  height: 28px; /* Same as energy bar for mobile */
+  background: transparent;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 0px; /* Position at minimap level for mobile (below energy bar) */
+  left: 0;
+  z-index: 2;
+}
+
+body.mobile-landscape #moneyBarTrack {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 14px; /* Same as energy bar */
+  background: rgba(12, 12, 12, 0.85);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+body.mobile-landscape #moneyBar {
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+body.mobile-landscape #moneyText,
+body.mobile-landscape .money-bar-value {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff; /* White text like energy bar */
+  text-shadow: 0 0 3px #000; /* Black shadow like energy bar */
 }
 
 /* Keep power indicator padding-free */

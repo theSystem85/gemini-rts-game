@@ -3,6 +3,7 @@ import { playSound } from './sound.js'
 import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
+import { updateMoneyBar } from './ui/moneyBar.js'
 // No need to modify map grid immediately; building removal occurs after the sell animation
 
 /**
@@ -55,7 +56,10 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       if (productionQueue && typeof productionQueue.tryResumeProduction === 'function') {
         productionQueue.tryResumeProduction()
       }
-      moneyEl.textContent = gameState.money
+      // Update money display
+      if (typeof updateMoneyBar === 'function') {
+        updateMoneyBar()
+      }
 
       // Mark the building as being sold
       building.isBeingSold = true

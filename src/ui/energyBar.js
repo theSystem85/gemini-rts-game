@@ -21,7 +21,7 @@ export function addPowerIndicator() {
   energyTrack.style.left = '0'
   energyTrack.style.bottom = '0'
   energyTrack.style.width = '100%'
-  energyTrack.style.height = '12px'
+  energyTrack.style.height = '14px' // 2px higher than before
   energyTrack.style.backgroundColor = 'rgba(12, 12, 12, 0.85)'
   energyTrack.style.borderRadius = '0'
   energyTrack.style.overflow = 'hidden'

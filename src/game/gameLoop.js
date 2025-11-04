@@ -6,6 +6,7 @@ import { updateGame } from '../updateGame.js'
 import { renderGame, renderMinimap } from '../rendering.js'
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair } from '../buildings.js'
 import { updateEnergyBar } from '../ui/energyBar.js'
+import { updateMoneyBar } from '../ui/moneyBar.js'
 import { milestoneSystem } from './milestoneSystem.js'
 import { FPSDisplay } from '../ui/fpsDisplay.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -41,6 +42,7 @@ export class GameLoop {
     this.lastMoneyUpdate = 0
     this.lastGameTimeUpdate = 0
     this.lastEnergyUpdate = 0
+    this.lastMoneyBarUpdate = 0
 
     // Set the production controller reference in milestone system
     milestoneSystem.setProductionController(productionController)
@@ -241,6 +243,14 @@ export class GameLoop {
     if (now - this.lastEnergyUpdate >= 1000) {
       updateEnergyBar()
       this.lastEnergyUpdate = now
+    }
+
+    // Update money bar display at most once per second
+    if (now - this.lastMoneyBarUpdate >= 1000) {
+      if (typeof updateMoneyBar === 'function') {
+        updateMoneyBar()
+      }
+      this.lastMoneyBarUpdate = now
     }
 
     // Increment frame counter

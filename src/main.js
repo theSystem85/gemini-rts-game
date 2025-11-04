@@ -32,6 +32,7 @@ import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 import { attachBenchmarkButton } from './benchmark/benchmarkRunner.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
+import { getPlayableViewportWidth, getPlayableViewportHeight } from './utils/layoutMetrics.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -862,10 +863,7 @@ import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
-import {
-  getPlayableViewportHeight,
-  getPlayableViewportWidth
-} from './utils/layoutMetrics.js'
+import { addMoneyIndicator, updateMoneyBar } from './ui/moneyBar.js'
 
 const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -1124,6 +1122,9 @@ class Game {
 
     // Initialize energy bar
     addPowerIndicator()
+
+    // Initialize money bar
+    addMoneyIndicator()
 
     // Setup speed control
     this.setupSpeedControl()
