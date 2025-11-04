@@ -418,10 +418,10 @@ function addBuilding(buildingOptions) {
 
 addBuilding({
   type: 'constructionYard',
-  owner: 'player1',
+  owner: 'player',
   x: 12,
   y: 78,
-  id: 'player1',
+  id: 'player',
   extra: { budget: 0 }
 })
 
@@ -436,24 +436,24 @@ const enemyBuildings = [
   { type: 'oreRefinery', owner: 'player2', x: 82, y: 20, id: 'mission01-p2-ref-east' },
   { type: 'vehicleFactory', owner: 'player2', x: 68, y: 28, id: 'mission01-p2-factory', extra: { rallyPoint: { x: 76 * TILE_SIZE, y: 44 * TILE_SIZE } } },
   { type: 'vehicleWorkshop', owner: 'player2', x: 78, y: 30, id: 'mission01-p2-workshop' },
-  { type: 'gasStation', owner: 'player2', x: 68, y: 34, id: 'mission01-p2-gas' },
+  { type: 'gasStation', owner: 'player2', x: 66, y: 34, id: 'mission01-p2-gas' },
   { type: 'radarStation', owner: 'player2', x: 80, y: 30, id: 'mission01-p2-radar' },
   { type: 'teslaCoil', owner: 'player2', x: 74, y: 22, id: 'mission01-p2-tesla' },
   { type: 'rocketTurret', owner: 'player2', x: 66, y: 18, id: 'mission01-p2-rocket-nw' },
   { type: 'rocketTurret', owner: 'player2', x: 86, y: 32, id: 'mission01-p2-rocket-se' },
   { type: 'artilleryTurret', owner: 'player2', x: 82, y: 26, id: 'mission01-p2-artillery' },
-  { type: 'turretGunV3', owner: 'player2', x: 60, y: 18, id: 'mission01-p2-v3-nw' },
-  { type: 'turretGunV3', owner: 'player2', x: 86, y: 18, id: 'mission01-p2-v3-ne' },
-  { type: 'turretGunV3', owner: 'player2', x: 60, y: 42, id: 'mission01-p2-v3-sw' },
-  { type: 'turretGunV3', owner: 'player2', x: 86, y: 42, id: 'mission01-p2-v3-se' },
-  { type: 'turretGunV2', owner: 'player2', x: 66, y: 42, id: 'mission01-p2-v2-sw' },
-  { type: 'turretGunV2', owner: 'player2', x: 80, y: 42, id: 'mission01-p2-v2-se' },
-  { type: 'turretGunV2', owner: 'player2', x: 66, y: 16, id: 'mission01-p2-v2-nw' },
-  { type: 'turretGunV2', owner: 'player2', x: 80, y: 16, id: 'mission01-p2-v2-ne' },
-  { type: 'turretGunV1', owner: 'player2', x: 60, y: 30, id: 'mission01-p2-v1-west' },
-  { type: 'turretGunV1', owner: 'player2', x: 86, y: 30, id: 'mission01-p2-v1-east' },
-  { type: 'turretGunV1', owner: 'player2', x: 72, y: 16, id: 'mission01-p2-v1-north' },
-  { type: 'turretGunV1', owner: 'player2', x: 72, y: 42, id: 'mission01-p2-v1-south' }
+  { type: 'turretGunV3', owner: 'player2', x: 60, y: 14, id: 'mission01-p2-v3-nw' },
+  { type: 'turretGunV3', owner: 'player2', x: 86, y: 14, id: 'mission01-p2-v3-ne' },
+  { type: 'turretGunV3', owner: 'player2', x: 60, y: 46, id: 'mission01-p2-v3-sw' },
+  { type: 'turretGunV3', owner: 'player2', x: 86, y: 46, id: 'mission01-p2-v3-se' },
+  { type: 'turretGunV2', owner: 'player2', x: 66, y: 14, id: 'mission01-p2-v2-sw' },
+  { type: 'turretGunV2', owner: 'player2', x: 80, y: 14, id: 'mission01-p2-v2-se' },
+  { type: 'turretGunV2', owner: 'player2', x: 66, y: 46, id: 'mission01-p2-v2-nw' },
+  { type: 'turretGunV2', owner: 'player2', x: 80, y: 46, id: 'mission01-p2-v2-ne' },
+  { type: 'turretGunV1', owner: 'player2', x: 58, y: 30, id: 'mission01-p2-v1-west' },
+  { type: 'turretGunV1', owner: 'player2', x: 88, y: 30, id: 'mission01-p2-v1-east' },
+  { type: 'turretGunV1', owner: 'player2', x: 72, y: 14, id: 'mission01-p2-v1-north' },
+  { type: 'turretGunV1', owner: 'player2', x: 72, y: 46, id: 'mission01-p2-v1-south' }
 ]
 
 enemyBuildings.forEach(addBuilding)
@@ -476,9 +476,9 @@ for (let y = 16; y <= 44; y++) {
 }
 
 // Gate posts with heavier defenses near entrance
-addBuilding({ type: 'turretGunV3', owner: 'player2', x: 70, y: 44, id: 'mission01-p2-gate-v3-west' })
-addBuilding({ type: 'turretGunV3', owner: 'player2', x: 78, y: 44, id: 'mission01-p2-gate-v3-east' })
-addBuilding({ type: 'turretGunV2', owner: 'player2', x: 72, y: 44, id: 'mission01-p2-gate-v2-mid' })
+addBuilding({ type: 'turretGunV3', owner: 'player2', x: 70, y: 46, id: 'mission01-p2-gate-v3-west' })
+addBuilding({ type: 'turretGunV3', owner: 'player2', x: 78, y: 46, id: 'mission01-p2-gate-v3-east' })
+addBuilding({ type: 'turretGunV2', owner: 'player2', x: 72, y: 46, id: 'mission01-p2-gate-v2-mid' })
 
 // --- Units ---
 const units = []
@@ -632,7 +632,7 @@ const gameState = {
   globalAttackPoint: null,
   lastGlobalAttackDecision: 0,
   playerCount: 2,
-  humanPlayer: 'player1',
+  humanPlayer: 'player',
   defeatedPlayers: [],
   availableUnitTypes: [],
   availableBuildingTypes: [

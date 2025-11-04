@@ -665,6 +665,29 @@ export function loadGame(key) {
         enemyFactory.budget = legacyEnemyMoney
       }
     }
+    // Initialize mapGrid as 2D array if not already done
+    const mapWidth = gameState.mapTilesX || 100
+    const mapHeight = gameState.mapTilesY || 100
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+      mapGrid.length = 0
+      for (let y = 0; y < mapHeight; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < mapWidth; x++) {
+          mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
+        }
+      }
+    }
+    // Sync mapGrid with gameState
+    gameState.mapGrid.length = 0
+    gameState.mapGrid.push(...mapGrid)
+    // Initialize occupancyMap as 2D array
+    gameState.occupancyMap.length = 0
+    for (let y = 0; y < mapHeight; y++) {
+      gameState.occupancyMap[y] = []
+      for (let x = 0; x < mapWidth; x++) {
+        gameState.occupancyMap[y][x] = 0
+      }
+    }
     // Restore mapGrid tile types (excluding 'building' to avoid black spots)
     if (loaded.mapGridTypes) {
       for (let y = 0; y < mapGrid.length; y++) {
@@ -780,6 +803,14 @@ export function loadGame(key) {
     // Resume production after unpause
     productionQueue.resumeProductionAfterUnpause()
 
+    // Center camera on player's construction yard for missions
+    if (key.startsWith(BUILTIN_SAVE_PREFIX)) {
+      const gameInstance = getCurrentGame()
+      if (gameInstance && typeof gameInstance.centerOnPlayerFactory === 'function') {
+        gameInstance.centerOnPlayerFactory()
+      }
+    }
+
     showNotification('Game loaded: ' + (saveObj.label || key))
   }
 }
@@ -808,13 +839,25 @@ export function updateSaveGamesList() {
     li.style.padding = '2px 0'
     const label = document.createElement('span')
     const subtitleText = save.builtin
-      ? `Story mission${save.description ? ` — ${save.description}` : ''}`
+      ? ''
       : new Date(save.time).toLocaleString()
     const missionBadge = save.builtin
       ? '<span style="margin-left:6px;padding:2px 6px;border-radius:4px;background:#1f6f43;color:#fff;font-size:0.65rem;font-weight:600;letter-spacing:0.05em;">MISSION</span>'
       : ''
-    label.innerHTML = `${save.label}${missionBadge}<br><small>${subtitleText}</small>`
+    label.innerHTML = `${save.label}${missionBadge}${subtitleText ? `<br><small>${subtitleText}</small>` : ''}`
     label.style.flex = '1'
+    // Add tooltip for mission description on hover/tap
+    if (save.builtin && save.description) {
+      label.title = save.description
+      label.style.cursor = 'help'
+      // For touch devices, show description on click
+      label.addEventListener('click', (e) => {
+        if (window.matchMedia('(pointer: coarse)').matches) {
+          // Touch device - show alert with description
+          alert(`${save.label}\n\n${save.description}`)
+        }
+      })
+    }
     const loadBtn = document.createElement('button')
     loadBtn.textContent = '▶'
     loadBtn.title = 'Load save game'

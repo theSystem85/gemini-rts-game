@@ -244,6 +244,9 @@ function countNearbyAllies(unit, units) {
 export function shouldConductGroupAttack(unit, units, gameState, target) {
   if (!target) return false
 
+  // Prevent AI from attacking before having core infrastructure
+  if (!shouldAIStartAttacking(unit.owner, gameState)) return false
+
   // Allow individual combat if unit is already in player base area
   const isInPlayerBase = isUnitInPlayerBase(unit, gameState)
   if (isInPlayerBase) {
