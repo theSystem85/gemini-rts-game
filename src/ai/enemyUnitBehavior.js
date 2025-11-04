@@ -315,8 +315,8 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
 
           // Fourth priority: Group attack strategy (target player base and units)
           if (!newTarget) {
-            // Check if AI should start attacking (has hospital built)
-            const shouldAttack = shouldAIStartAttacking(aiPlayerId, gameState)
+            // Check if AI should start attacking (has hospital built and player attacked first)
+            const shouldAttack = shouldAIStartAttacking(aiPlayerId, gameState, units)
             if (!shouldAttack) {
               // AI not ready for major attacks - only defend and target harvesters
               const playerHarvesters = units.filter(u =>

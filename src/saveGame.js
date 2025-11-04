@@ -3,6 +3,7 @@ import { gameState } from './gameState.js'
 import { factories } from './main.js'
 import { units } from './main.js'
 import { mapGrid } from './main.js'
+import { builtinMissions, getBuiltinMissionById } from './missions/index.js'
 import { cleanupOreFromBuildings } from './gameSetup.js'
 import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
 import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
@@ -18,25 +19,43 @@ import { getCurrentGame } from './main.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
 
+const BUILTIN_SAVE_PREFIX = 'builtin:'
+
 // === Save/Load Game Logic ===
 export function getSaveGames() {
-  const saves = []
-  for (const key in localStorage) {
-    if (key.startsWith('rts_save_')) {
-      try {
-        const save = JSON.parse(localStorage.getItem(key))
-        saves.push({
-          key,
-          label: save.label || '(no label)',
-          time: save.time
-        })
-      } catch (err) {
-        console.warn('Error processing saved game:', err)
+  const saves = builtinMissions.map(mission => ({
+    key: `${BUILTIN_SAVE_PREFIX}${mission.id}`,
+    label: mission.label,
+    time: mission.time,
+    builtin: true,
+    description: mission.description
+  }))
+
+  if (typeof localStorage !== 'undefined') {
+    for (const key in localStorage) {
+      if (key.startsWith('rts_save_')) {
+        try {
+          const save = JSON.parse(localStorage.getItem(key))
+          saves.push({
+            key,
+            label: save?.label || '(no label)',
+            time: save?.time || 0,
+            builtin: false,
+            description: null
+          })
+        } catch (err) {
+          console.warn('Error processing saved game:', err)
+        }
       }
     }
   }
-  // Sort by most recent
-  saves.sort((a, b) => b.time - a.time)
+
+  saves.sort((a, b) => {
+    if (a.builtin && !b.builtin) return -1
+    if (!a.builtin && b.builtin) return 1
+    return (b.time || 0) - (a.time || 0)
+  })
+
   return saves
 }
 
@@ -234,10 +253,60 @@ export function saveGame(label) {
 }
 
 export function loadGame(key) {
-  const saveObj = JSON.parse(localStorage.getItem(key))
-  if (saveObj && saveObj.state) {
-    const loaded = JSON.parse(saveObj.state)
+  let saveObj = null
+
+  if (key.startsWith(BUILTIN_SAVE_PREFIX)) {
+    const missionId = key.slice(BUILTIN_SAVE_PREFIX.length)
+    const mission = getBuiltinMissionById(missionId)
+    if (!mission) {
+      console.warn('Built-in mission not found:', missionId)
+      return
+    }
+    saveObj = {
+      label: mission.label,
+      state: mission.state
+    }
+  } else {
+    if (typeof localStorage === 'undefined') {
+      console.warn('localStorage is not available, unable to load save:', key)
+      return
+    }
+    const raw = localStorage.getItem(key)
+    if (!raw) {
+      console.warn('Save game not found:', key)
+      return
+    }
+    try {
+      saveObj = JSON.parse(raw)
+    } catch (err) {
+      console.warn('Failed to parse saved game metadata:', err)
+      return
+    }
+  }
+
+  if (saveObj && saveObj.state !== undefined) {
+    let stateString
+    if (typeof saveObj.state === 'string') {
+      stateString = saveObj.state
+    } else if (saveObj.state && typeof saveObj.state === 'object') {
+      stateString = JSON.stringify(saveObj.state)
+    } else {
+      console.warn('Invalid save game format for key:', key)
+      return
+    }
+
+    let loaded
+    try {
+      loaded = JSON.parse(stateString)
+    } catch (err) {
+      console.warn('Failed to parse saved game state:', err)
+      return
+    }
+
     Object.assign(gameState, loaded.gameState)
+
+    const pendingFactoryBudgets = loaded.aiFactoryBudgets || null
+    const legacyEnemyMoney = loaded.enemyMoney
 
     if (Array.isArray(loaded.gameState?.blueprints)) {
       gameState.blueprints = loaded.gameState.blueprints.map(bp => ({
@@ -371,21 +440,6 @@ export function loadGame(key) {
     enforceSmokeParticleCapacity(gameState)
 
     // Restore AI player budgets
-    if (loaded.aiFactoryBudgets) {
-      Object.entries(loaded.aiFactoryBudgets).forEach(([playerId, budget]) => {
-        const aiFactory = factories.find(f => f.owner === playerId || f.id === playerId)
-        if (aiFactory && typeof budget === 'number') {
-          aiFactory.budget = budget
-        }
-      })
-    } else if (loaded.enemyMoney !== undefined) {
-      // Fallback for old save format
-      const enemyFactory = factories.find(f => f.id === 'enemy')
-      if (enemyFactory && typeof loaded.enemyMoney === 'number') {
-        enemyFactory.budget = loaded.enemyMoney
-      }
-    }
-
     units.length = 0
     loaded.units.forEach(u => {
       // Rehydrate unit using createUnit logic
@@ -498,6 +552,8 @@ export function loadGame(key) {
     }
 
     gameState.buildings.length = 0
+    gameState.factories.length = 0
+    factories.length = 0
     loaded.buildings.forEach(b => {
       // Rehydrate defensive buildings (turrets) so they work after loading
       const building = { ...b }
@@ -569,6 +625,21 @@ export function loadGame(key) {
       }
 
       gameState.buildings.push(building)
+
+      if (building.type === 'constructionYard') {
+        // Ensure construction yards are treated as factories
+        if (typeof building.productionCountdown !== 'number') {
+          building.productionCountdown = 0
+        }
+        if (!('budget' in building)) {
+          building.budget = 0
+        }
+        if (!('rallyPoint' in building)) {
+          building.rallyPoint = null
+        }
+        factories.push(building)
+        gameState.factories.push(building)
+      }
     })
 
     // Restore factory rally points
@@ -579,6 +650,43 @@ export function loadGame(key) {
           factory.rallyPoint = factoryData.rallyPoint
         }
       })
+    }
+
+    if (pendingFactoryBudgets) {
+      Object.entries(pendingFactoryBudgets).forEach(([playerId, budget]) => {
+        const aiFactory = factories.find(f => f.owner === playerId || f.id === playerId)
+        if (aiFactory && typeof budget === 'number') {
+          aiFactory.budget = budget
+        }
+      })
+    } else if (legacyEnemyMoney !== undefined) {
+      const enemyFactory = factories.find(f => f.id === 'enemy')
+      if (enemyFactory && typeof legacyEnemyMoney === 'number') {
+        enemyFactory.budget = legacyEnemyMoney
+      }
+    }
+    // Initialize mapGrid as 2D array if not already done
+    const mapWidth = gameState.mapTilesX || 100
+    const mapHeight = gameState.mapTilesY || 100
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+      mapGrid.length = 0
+      for (let y = 0; y < mapHeight; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < mapWidth; x++) {
+          mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
+        }
+      }
+    }
+    // Sync mapGrid with gameState
+    gameState.mapGrid.length = 0
+    gameState.mapGrid.push(...mapGrid)
+    // Initialize occupancyMap as 2D array
+    gameState.occupancyMap.length = 0
+    for (let y = 0; y < mapHeight; y++) {
+      gameState.occupancyMap[y] = []
+      for (let x = 0; x < mapWidth; x++) {
+        gameState.occupancyMap[y][x] = 0
+      }
     }
     // Restore mapGrid tile types (excluding 'building' to avoid black spots)
     if (loaded.mapGridTypes) {
@@ -695,12 +803,26 @@ export function loadGame(key) {
     // Resume production after unpause
     productionQueue.resumeProductionAfterUnpause()
 
+    // Center camera on player's construction yard for missions
+    if (key.startsWith(BUILTIN_SAVE_PREFIX)) {
+      const gameInstance = getCurrentGame()
+      if (gameInstance && typeof gameInstance.centerOnPlayerFactory === 'function') {
+        gameInstance.centerOnPlayerFactory()
+      }
+    }
+
     showNotification('Game loaded: ' + (saveObj.label || key))
   }
 }
 
 export function deleteGame(key) {
-  localStorage.removeItem(key)
+  if (key.startsWith(BUILTIN_SAVE_PREFIX)) {
+    console.warn('Built-in missions cannot be deleted:', key)
+    return
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(key)
+  }
 }
 
 export function updateSaveGamesList() {
@@ -716,23 +838,43 @@ export function updateSaveGamesList() {
     li.style.alignItems = 'center'
     li.style.padding = '2px 0'
     const label = document.createElement('span')
-    label.innerHTML = save.label + '<br><small>' + new Date(save.time).toLocaleString() + '</small>'
+    const subtitleText = save.builtin
+      ? ''
+      : new Date(save.time).toLocaleString()
+    const missionBadge = save.builtin
+      ? '<span style="margin-left:6px;padding:2px 6px;border-radius:4px;background:#1f6f43;color:#fff;font-size:0.65rem;font-weight:600;letter-spacing:0.05em;">MISSION</span>'
+      : ''
+    label.innerHTML = `${save.label}${missionBadge}${subtitleText ? `<br><small>${subtitleText}</small>` : ''}`
     label.style.flex = '1'
+    // Add tooltip for mission description on hover/tap
+    if (save.builtin && save.description) {
+      label.title = save.description
+      label.style.cursor = 'help'
+      // For touch devices, show description on click
+      label.addEventListener('click', (e) => {
+        if (window.matchMedia('(pointer: coarse)').matches) {
+          // Touch device - show alert with description
+          alert(`${save.label}\n\n${save.description}`)
+        }
+      })
+    }
     const loadBtn = document.createElement('button')
     loadBtn.textContent = '▶'
     loadBtn.title = 'Load save game'
     loadBtn.classList.add('action-button')
     loadBtn.style.marginLeft = '6px'
     loadBtn.onclick = () => { loadGame(save.key) }
-    const delBtn = document.createElement('button')
-    delBtn.textContent = '✗'
-    delBtn.title = 'Delete save'
-    delBtn.classList.add('action-button')
-    delBtn.style.marginLeft = '5px'
-    delBtn.onclick = () => { deleteGame(save.key); updateSaveGamesList() }
     li.appendChild(label)
     li.appendChild(loadBtn)
-    li.appendChild(delBtn)
+    if (!save.builtin) {
+      const delBtn = document.createElement('button')
+      delBtn.textContent = '✗'
+      delBtn.title = 'Delete save'
+      delBtn.classList.add('action-button')
+      delBtn.style.marginLeft = '5px'
+      delBtn.onclick = () => { deleteGame(save.key); updateSaveGamesList() }
+      li.appendChild(delBtn)
+    }
     list.appendChild(li)
   })
 }
