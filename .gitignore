@@ -1,5 +1,6 @@
 # Logs
 version.json
+version.js
 logs
 *.log
 npm-debug.log*
