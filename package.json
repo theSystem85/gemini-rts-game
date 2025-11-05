@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/write-commit.js",
-    "dev": "node vite",
+    "dev": "vite",
     "prebuild": "node scripts/write-commit.js",
-    "build": "node vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/ *.js",
     "lint:fix": "eslint src/ *.js --fix",
