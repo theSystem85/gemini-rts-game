@@ -80,12 +80,16 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
 - [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
 - [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
-- [ ] Add new building: Ammunition factory. It will provide ammunition to tanks that are within 1 tile distance to the building by refilling the combat units ammunition storages.
-  - [ ] a tank has 42 rounds.
-  - [ ] the rocket tank has 21 rockets.
-  - [ ] the building has the same dimensions as the vehicle factory with the same build protection zone at the bottom.
-  - [ ] when units are in range of the building there will be a loading bar shown on how much ammunition they have while being reloaded. During combat that progress bar goes down. Its color shall be orange. It will be at the bottom right of a tanks hud and it will be a 3rd of the width of the selection rectangle when 100% loaded.
-  - [ ] ensure enemy AI combat units return to their ammunition factory automatically when low on ammunition. When refilled they continue to attack again.
+- [ ] **Spec 008** Add Ammunition Factory & Supply Truck System (see `specs/008-ammunition-system/spec.md`)
+  - [ ] Ammunition Factory building: $2000 cost, 3x3 tiles, 250 health, 40MW power, resupplies units within 2 tiles in 7s
+  - [ ] Ammunition Supply Truck: $800 cost, 30 health, 2x tank speed, 500 rounds cargo, resupplies within 1 tile
+  - [ ] All combat units have limited ammunition (Tank V1/V2: 42 rounds, Tank V3: 50 rounds, Rocket Tank: 21 rockets, Howitzer: 30 rounds, Apache: 38 rounds)
+  - [ ] Orange ammunition bar on left side of HUD (health top, fuel right, ammo left)
+  - [ ] Ammunition Factory explosion: 2-tile initial blast + 30-50 scattering particles dealing 30-50 damage each for 5 seconds
+  - [ ] Helipad ammunition reserves: 1000 rounds capacity, resupplied by Ammunition Supply Truck, transfers to landed helicopters
+  - [ ] Enemy AI builds ammunition factories, produces supply trucks, and manages unit resupply automatically
+  - [ ] Units with 0 ammunition cannot fire, display "No Ammunition" notification when attack commanded
+  - [ ] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`
 - [ ] Add online multiplayer support where humans can join an existing game and take over an AI party.
   - [ ] The interface should be minimalistic
   - [ ] in the sidebar below the "Players: " input there will be a label for each active party in the game like "Red: NameOfRedPlayer" and so on. Each row has another party listed.
