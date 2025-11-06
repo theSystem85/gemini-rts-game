@@ -799,7 +799,17 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (collisionResult.type === 'wreck') {
       applyWreckCollisionResponse(unit, movement, collisionResult)
     } else if (collisionResult.type === 'unit') {
-      const detonated = applyUnitCollisionResponse(unit, movement, collisionResult, units, factories || [], gameState)
+      const detonated = applyUnitCollisionResponse(
+        unit,
+        movement,
+        collisionResult,
+        units,
+        factories || [],
+        gameState,
+        mapGrid,
+        occupancyMap,
+        wrecks
+      )
       if (detonated) {
         movement.velocity.x = 0
         movement.velocity.y = 0
@@ -1202,7 +1212,221 @@ function applyWreckCollisionResponse(unit, movement, collisionResult) {
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
 }
 
-function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null) {
+function isGroundUnit(unit) {
+  if (!unit) return false
+  return !(unit.type === 'apache' && unit.flightState !== 'grounded')
+}
+
+function isTileBlockedForCollision(mapGrid, tileX, tileY) {
+  if (!mapGrid || tileY < 0 || tileY >= mapGrid.length) {
+    return true
+  }
+  const row = mapGrid[tileY]
+  if (!row || tileX < 0 || tileX >= row.length) {
+    return true
+  }
+
+  const tile = row[tileX]
+  if (typeof tile === 'number') {
+    return tile === 1
+  }
+
+  if (!tile) {
+    return true
+  }
+
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+    return true
+  }
+
+  if (tile.building) {
+    return true
+  }
+
+  return false
+}
+
+function isPositionBlockedForCollision(unit, targetX, targetY, mapGrid, occupancyMap, units = [], wrecks = [], ignoreIds = []) {
+  if (!unit) {
+    return true
+  }
+
+  const ignoreSet = ignoreIds.length > 0 ? new Set(ignoreIds) : null
+  const centerX = targetX + TILE_SIZE / 2
+  const centerY = targetY + TILE_SIZE / 2
+  const tileX = Math.floor(centerX / TILE_SIZE)
+  const tileY = Math.floor(centerY / TILE_SIZE)
+
+  if (isTileBlockedForCollision(mapGrid, tileX, tileY)) {
+    return true
+  }
+
+  if (occupancyMap && occupancyMap[tileY]) {
+    let occupancy = occupancyMap[tileY][tileX] || 0
+    const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (tileX === currentTileX && tileY === currentTileY) {
+      occupancy = Math.max(0, occupancy - 1)
+    }
+
+    if (occupancy > 0 && ignoreSet) {
+      for (const other of units || []) {
+        if (!other || other.id === unit.id) continue
+        if (!ignoreSet.has(other.id)) continue
+        const otherTileX = Math.floor((other.x + TILE_SIZE / 2) / TILE_SIZE)
+        const otherTileY = Math.floor((other.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (otherTileX === tileX && otherTileY === tileY) {
+          occupancy = Math.max(0, occupancy - 1)
+        }
+        if (occupancy <= 0) {
+          break
+        }
+      }
+    }
+
+    if (occupancy > 0) {
+      return true
+    }
+  }
+
+  const minSeparation = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 0.95
+
+  if (units && units.length > 0) {
+    for (const other of units) {
+      if (!other || other.id === unit.id || other.health <= 0) continue
+      if (ignoreSet && ignoreSet.has(other.id)) continue
+      if (!isGroundUnit(other)) continue
+
+      const otherCenterX = other.x + TILE_SIZE / 2
+      const otherCenterY = other.y + TILE_SIZE / 2
+      const distance = Math.hypot(centerX - otherCenterX, centerY - otherCenterY)
+
+      if (distance < minSeparation) {
+        return true
+      }
+    }
+  }
+
+  if (wrecks && wrecks.length > 0) {
+    for (const wreck of wrecks) {
+      if (!wreck || wreck.health <= 0) continue
+      const wreckCenterX = wreck.x + TILE_SIZE / 2
+      const wreckCenterY = wreck.y + TILE_SIZE / 2
+      const distance = Math.hypot(centerX - wreckCenterX, centerY - wreckCenterY)
+      if (distance < minSeparation) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function applySafeSeparation(unit, dx, dy, mapGrid, occupancyMap, units = [], wrecks = [], ignoreIds = []) {
+  if (!unit || (dx === 0 && dy === 0)) {
+    return { appliedX: 0, appliedY: 0 }
+  }
+
+  const startX = unit.x
+  const startY = unit.y
+  let appliedX = 0
+  let appliedY = 0
+  let scale = 1
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const scaledX = dx * scale
+    const scaledY = dy * scale
+    const targetX = startX + scaledX
+    const targetY = startY + scaledY
+
+    if (!isPositionBlockedForCollision(unit, targetX, targetY, mapGrid, occupancyMap, units, wrecks, ignoreIds)) {
+      unit.x = targetX
+      unit.y = targetY
+      appliedX = scaledX
+      appliedY = scaledY
+      break
+    }
+
+    scale *= 0.5
+  }
+
+  if (appliedX === 0 && appliedY === 0) {
+    unit.x = startX
+    unit.y = startY
+  }
+
+  return { appliedX, appliedY }
+}
+
+function ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occupancyMap, units = [], wrecks = []) {
+  if (!unit || !otherUnit) {
+    return
+  }
+  if (!isGroundUnit(unit) || !isGroundUnit(otherUnit)) {
+    return
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const otherCenterX = otherUnit.x + TILE_SIZE / 2
+  const otherCenterY = otherUnit.y + TILE_SIZE / 2
+  const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY)
+  const desiredDistance = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 0.98
+
+  if (distance >= desiredDistance) {
+    return
+  }
+
+  let remaining = desiredDistance - distance
+  if (remaining <= 0) {
+    return
+  }
+
+  const otherResult = applySafeSeparation(
+    otherUnit,
+    normalX * remaining * 0.5,
+    normalY * remaining * 0.5,
+    mapGrid,
+    occupancyMap,
+    units,
+    wrecks,
+    [unit.id]
+  )
+
+  const otherAlong = otherResult.appliedX * normalX + otherResult.appliedY * normalY
+  remaining = Math.max(0, remaining - otherAlong)
+
+  if (remaining > 0.001) {
+    const unitResult = applySafeSeparation(
+      unit,
+      -normalX * remaining,
+      -normalY * remaining,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      [otherUnit.id]
+    )
+    const unitAlong = -(unitResult.appliedX * normalX + unitResult.appliedY * normalY)
+    remaining = Math.max(0, remaining - unitAlong)
+  }
+
+  if (remaining > 0.001) {
+    applySafeSeparation(
+      otherUnit,
+      normalX * remaining,
+      normalY * remaining,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      [unit.id]
+    )
+  }
+}
+
+function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null, mapGrid = null, occupancyMap = null, wrecks = []) {
   if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
     return false
   }
@@ -1229,13 +1453,36 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
 
   const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
   if (separation > 0.001) {
-    const pushOther = otherSpeed <= unitSpeed
-    if (pushOther && collisionResult.other && collisionResult.other.movement) {
-      collisionResult.other.x += normalX * separation
-      collisionResult.other.y += normalY * separation
+    const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+    const pushOther = Boolean(otherUnit) && otherSpeed <= unitSpeed
+
+    if (pushOther && otherUnit) {
+      applySafeSeparation(
+        otherUnit,
+        normalX * separation,
+        normalY * separation,
+        mapGrid,
+        occupancyMap,
+        units,
+        wrecks,
+        [unit.id]
+      )
     }
-    unit.x -= normalX * separation
-    unit.y -= normalY * separation
+
+    applySafeSeparation(
+      unit,
+      -normalX * separation,
+      -normalY * separation,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      otherUnit ? [otherUnit.id] : []
+    )
+
+    if (otherUnit) {
+      ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occupancyMap, units, wrecks)
+    }
   }
 
   const normalVel = movement.velocity.x * normalX + movement.velocity.y * normalY
