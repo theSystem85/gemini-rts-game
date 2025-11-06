@@ -2,6 +2,7 @@
 import { TILE_SIZE, AMMO_RESUPPLY_TIME, AMMO_FACTORY_RANGE, AMMO_TRUCK_RANGE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
+import { gameState } from '../gameState.js'
 
 /**
  * Updates ammunition resupply logic for all units near ammunition factories or supply trucks
@@ -40,6 +41,11 @@ function processAmmunitionResupply(source, units, delta, rangeInTiles) {
   const centerX = source.x * TILE_SIZE + (source.width * TILE_SIZE) / 2
   const centerY = source.y * TILE_SIZE + (source.height * TILE_SIZE) / 2
 
+  // Get power supply for the factory owner
+  const powerSupply = source.owner === 'player' ? gameState.playerPowerSupply : gameState.enemyPowerSupply
+  // If power is insufficient, resupply takes 2x longer (same as harvester unload time)
+  const powerMultiplier = powerSupply < 0 ? 2 : 1
+
   units.forEach(unit => {
     // Only resupply units with ammunition system
     if (typeof unit.maxAmmunition !== 'number' || unit.health <= 0) return
@@ -57,7 +63,8 @@ function processAmmunitionResupply(source, units, delta, rangeInTiles) {
           unit.resupplyingAmmo = true
         }
 
-        const refillRate = unit.maxAmmunition / AMMO_RESUPPLY_TIME
+        const baseRefillRate = unit.maxAmmunition / AMMO_RESUPPLY_TIME
+        const refillRate = baseRefillRate / powerMultiplier
         unit.ammoRefillTimer = (unit.ammoRefillTimer || 0) + delta
         unit.ammunition = Math.min(unit.maxAmmunition, unit.ammunition + refillRate * delta)
       } else {
