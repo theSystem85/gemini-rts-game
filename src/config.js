@@ -669,6 +669,7 @@ export const UNIT_COSTS = {
   'tank-v3': 3000,
   ambulance: 500,
   tankerTruck: 300,
+  ammunitionTruck: 800,
   recoveryTank: 3000,
   apache: 3000,
   howitzer: HOWITZER_COST
@@ -749,6 +750,13 @@ export const UNIT_PROPERTIES = {
     health: 20,
     maxHealth: 20,
     speed: 0.66,
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: 0
+  },
+  ammunitionTruck: {
+    health: 30,
+    maxHealth: 30,
+    speed: 0.66, // 2x tank speed (tank_v1 is 0.33)
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0
   },
@@ -939,6 +947,59 @@ export let HELIPAD_RELOAD_TIME = 8000 // ms to fully reload helipad reserve
 
 export function setHelipadReloadTime(value) {
   HELIPAD_RELOAD_TIME = value
+}
+
+// Ammunition system configuration
+export let AMMO_RESUPPLY_TIME = 7000 // ms to fully resupply ammunition at factory or by truck
+
+export function setAmmoResupplyTime(value) {
+  AMMO_RESUPPLY_TIME = value
+}
+
+export let AMMO_FACTORY_RANGE = 2 // tiles for ammunition factory resupply range
+
+export function setAmmoFactoryRange(value) {
+  AMMO_FACTORY_RANGE = value
+}
+
+export let AMMO_TRUCK_RANGE = 1 // tiles for ammunition supply truck resupply range
+
+export function setAmmoTruckRange(value) {
+  AMMO_TRUCK_RANGE = value
+}
+
+export let AMMO_TRUCK_CARGO = 500 // rounds capacity for ammunition supply truck
+
+export function setAmmoTruckCargo(value) {
+  AMMO_TRUCK_CARGO = value
+}
+
+export let HELIPAD_AMMO_RESERVE = 1000 // rounds capacity for helipad ammunition storage
+
+export function setHelipadAmmoReserve(value) {
+  HELIPAD_AMMO_RESERVE = value
+}
+
+export let AMMO_FACTORY_PARTICLE_COUNT = 40 // average number of particles on factory explosion
+
+export function setAmmoFactoryParticleCount(value) {
+  AMMO_FACTORY_PARTICLE_COUNT = value
+}
+
+export let AMMO_PARTICLE_DAMAGE = 40 // average damage per ammunition particle
+
+export function setAmmoParticleDamage(value) {
+  AMMO_PARTICLE_DAMAGE = value
+}
+
+// Unit ammunition capacities
+export const UNIT_AMMO_CAPACITY = {
+  tank_v1: 42,
+  'tank-v2': 42,
+  'tank-v3': 50,
+  rocketTank: 21,
+  howitzer: 30,
+  apache: 38
 }
 
 const REMOTE_CONTROL_ALLOWED_ACTIONS = [
@@ -1261,7 +1322,15 @@ const EXPORTED_CONFIG_VARIABLES = [
   'GAS_REFILL_COST',
   'HELIPAD_FUEL_CAPACITY',
   'HELIPAD_RELOAD_TIME',
-  'UNIT_GAS_PROPERTIES'
+  'UNIT_GAS_PROPERTIES',
+  'AMMO_RESUPPLY_TIME',
+  'AMMO_FACTORY_RANGE',
+  'AMMO_TRUCK_RANGE',
+  'AMMO_TRUCK_CARGO',
+  'HELIPAD_AMMO_RESERVE',
+  'AMMO_FACTORY_PARTICLE_COUNT',
+  'AMMO_PARTICLE_DAMAGE',
+  'UNIT_AMMO_CAPACITY'
   ,'HOWITZER_COST'
   ,'HOWITZER_SPEED'
   ,'HOWITZER_ROTATION_SPEED'

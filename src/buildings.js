@@ -116,6 +116,17 @@ export const buildingData = {
     health: 50,
     smokeSpots: []
   },
+  ammunitionFactory: {
+    width: 3,
+    height: 3,
+    cost: 2000,
+    power: -40,
+    image: 'ammunition_factory_map.webp',
+    displayName: 'Ammunition Factory',
+    health: 250,
+    armor: 2,
+    smokeSpots: []
+  },
   turretGunV1: {
     width: 1,
     height: 1,

@@ -8,7 +8,9 @@ import {
   MAX_SPAWN_SEARCH_DISTANCE,
   STREET_PATH_COST,
   UNIT_GAS_PROPERTIES,
-  TANKER_SUPPLY_CAPACITY
+  TANKER_SUPPLY_CAPACITY,
+  UNIT_AMMO_CAPACITY,
+  AMMO_TRUCK_CARGO
 } from './config.js'
 import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier, getUnitCost, getBuildingIdentifier } from './utils.js'
@@ -848,7 +850,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     buildDuration: determineBuildDuration(actualType, options.buildDuration || null)
   }
 
-  const utilityUnitTypes = ['ambulance', 'tankerTruck', 'recoveryTank']
+  const utilityUnitTypes = ['ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank']
   unit.isUtilityUnit = utilityUnitTypes.includes(actualType)
 
   if (unit.isUtilityUnit) {
@@ -865,9 +867,24 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.outOfGasPlayed = false
   }
 
+  // Ammunition system
+  const ammoCapacity = UNIT_AMMO_CAPACITY[actualType]
+  if (ammoCapacity) {
+    unit.maxAmmunition = ammoCapacity
+    unit.ammunition = ammoCapacity
+    // Determine ammo per shot based on unit type
+    if (actualType === 'rocketTank') {
+      unit.ammoPerShot = 3 // Fires 3 rockets per burst
+    } else if (actualType === 'tank-v3') {
+      unit.ammoPerShot = 2 // Fires 2 rounds per burst
+    } else {
+      unit.ammoPerShot = 1 // Single shot
+    }
+  }
+
   // Add unit-specific properties
   const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3', 'howitzer']
-  const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
+  const loaderUnits = ['tankerTruck', 'ammunitionTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
 
   // Apache helicopters don't have crew system
   if (actualType !== 'apache') {
@@ -943,6 +960,10 @@ export function createUnit(factory, unitType, x, y, options = {}) {
   if (actualType === 'tankerTruck') {
     unit.maxSupplyGas = TANKER_SUPPLY_CAPACITY
     unit.supplyGas = TANKER_SUPPLY_CAPACITY
+  }
+  if (actualType === 'ammunitionTruck') {
+    unit.maxAmmoCargo = AMMO_TRUCK_CARGO
+    unit.ammoCargo = AMMO_TRUCK_CARGO
   }
   if (actualType === 'recoveryTank') {
     unit.repairTarget = null
