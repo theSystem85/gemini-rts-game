@@ -10,6 +10,7 @@ import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
+import { showNotification } from '../ui/notifications.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -249,7 +250,15 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
   // Check ammunition availability
   if (typeof unit.ammunition === 'number' && unit.ammunition <= 0) {
     // Unit has no ammunition, cannot fire
+    // Show notification only for player units and only once per unit
+    if (unit.owner === gameState.humanPlayer && !unit.noAmmoNotificationShown) {
+      showNotification('No Ammunition - Resupply Required', 3000)
+      unit.noAmmoNotificationShown = true
+    }
     return false
+  } else if (unit.ammunition > 0) {
+    // Reset notification flag when unit has ammo again
+    unit.noAmmoNotificationShown = false
   }
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
@@ -1350,7 +1359,15 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
     }
     // Check ammunition availability
     if (typeof unit.ammunition === 'number' && unit.ammunition <= 0) {
+      // Show notification only for player units and only once per unit
+      if (unit.owner === gameState.humanPlayer && !unit.noAmmoNotificationShown) {
+        showNotification('No Ammunition - Resupply Required', 3000)
+        unit.noAmmoNotificationShown = true
+      }
       return
+    } else if (unit.ammunition > 0) {
+      // Reset notification flag when unit has ammo again
+      unit.noAmmoNotificationShown = false
     }
     const cooldown = getHowitzerCooldown(unit)
     if (!unit.lastShotTime || now - unit.lastShotTime >= cooldown) {
