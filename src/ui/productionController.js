@@ -166,6 +166,11 @@ export class ProductionController {
         if (!req.includes('Radar Station')) req.push('Radar Station')
       }
 
+      if (buildingData[type]?.requiresVehicleFactory && !hasVehicleFactory) {
+        disable = true
+        if (!req.includes('Vehicle Factory')) req.push('Vehicle Factory')
+      }
+
       if (!hasPowerPlant && !isPowerPlant && !isConstructionYardButton) {
         disable = true
         if (!req.includes('Power Plant')) req.push('Power Plant')
