@@ -370,14 +370,18 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     for (const neighbor of neighbors) {
       const neighborKey = `${neighbor.x},${neighbor.y}`
       if (closedSet.has(neighborKey)) continue
+      if (hasDiagonalCornerBlocker(currentNode, neighbor, mapGrid, occupancyMap, start)) {
+        continue
+      }
       // Skip if occupancyMap is provided and the tile is occupied,
       // except when the tile is the starting tile for this path.
       if (
         occupancyMap &&
         !(neighbor.x === start.x && neighbor.y === start.y) &&
-        occupancyMap[neighbor.y][neighbor.x]
-      )
+        isTileOccupied(occupancyMap, neighbor.x, neighbor.y)
+      ) {
         continue
+      }
 
       const baseCost = Math.hypot(neighbor.x - currentNode.x, neighbor.y - currentNode.y)
       const tileType = mapGrid[neighbor.y][neighbor.x].type
@@ -447,20 +451,62 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   return smoothPath(chosenPath, mapGrid, occupancyMap)
 })
 
+function isTileWithinBounds(mapGrid, x, y) {
+  return y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length
+}
+
+function isTerrainBlocked(tile) {
+  return tile.type === 'water' || tile.type === 'rock' || tile.building || tile.seedCrystal
+}
+
+function isTilePassable(mapGrid, x, y) {
+  if (!isTileWithinBounds(mapGrid, x, y)) {
+    return false
+  }
+  const tile = mapGrid[y][x]
+  return !isTerrainBlocked(tile)
+}
+
+function isTileOccupied(occupancyMap, x, y) {
+  return Boolean(occupancyMap && occupancyMap[y] && occupancyMap[y][x])
+}
+
+function hasDiagonalCornerBlocker(current, candidate, mapGrid, occupancyMap, start) {
+  const dx = candidate.x - current.x
+  const dy = candidate.y - current.y
+  if (Math.abs(dx) !== 1 || Math.abs(dy) !== 1) {
+    return false
+  }
+
+  const checks = [
+    { x: current.x + dx, y: current.y },
+    { x: current.x, y: current.y + dy }
+  ]
+
+  for (const check of checks) {
+    if (!isTilePassable(mapGrid, check.x, check.y)) {
+      return true
+    }
+    if (
+      occupancyMap &&
+      !(start && check.x === start.x && check.y === start.y) &&
+      isTileOccupied(occupancyMap, check.x, check.y)
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
 function getNeighbors(node, mapGrid) {
   const neighbors = []
 
   for (const dir of DIRECTIONS) {
     const x = node.x + dir.x
     const y = node.y + dir.y
-    if (y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length) {
-      const tile = mapGrid[y][x]
-      const tileType = tile.type
-      const hasBuilding = tile.building
-      const hasSeedCrystal = tile.seedCrystal
-      if (tileType !== 'water' && tileType !== 'rock' && !hasBuilding && !hasSeedCrystal) {
-        neighbors.push({ x, y })
-      }
+    if (isTilePassable(mapGrid, x, y)) {
+      neighbors.push({ x, y })
     }
   }
   return neighbors
@@ -521,14 +567,18 @@ function isDirectPathClear(start, end, mapGrid, occupancyMap) {
   const tiles = getLineTiles(start, end)
   for (let i = 1; i < tiles.length; i++) {
     const { x, y } = tiles[i]
-    if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) {
+    if (!isTileWithinBounds(mapGrid, x, y)) {
       return false
     }
     const tile = mapGrid[y][x]
-    if (tile.type === 'water' || tile.type === 'rock' || tile.building || tile.seedCrystal) {
+    if (isTerrainBlocked(tile)) {
       return false
     }
-    if (occupancyMap && occupancyMap[y][x]) {
+    if (occupancyMap && isTileOccupied(occupancyMap, x, y)) {
+      return false
+    }
+    const prev = tiles[i - 1]
+    if (hasDiagonalCornerBlocker(prev, { x, y }, mapGrid, occupancyMap, start)) {
       return false
     }
   }
