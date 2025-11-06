@@ -338,6 +338,10 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.supplyGas || 0) / (unit.maxSupplyGas || TANKER_SUPPLY_CAPACITY)
       barColor = '#4A90E2'
+    } else if (unit.type === 'ammunitionTruck') {
+      shouldShowBar = true
+      progress = (unit.ammoCargo || 0) / (unit.maxAmmoCargo || 500)
+      barColor = '#FFA500' // Orange for ammunition
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
@@ -402,6 +406,40 @@ export class UnitRenderer {
 
     const fillHeight = barHeight * ratio
     ctx.fillStyle = '#4A90E2'
+    ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(barX, barTop, barWidth, barHeight)
+  }
+
+  renderAmmunitionBar(ctx, unit, scrollOffset) {
+    if (!unit.selected || typeof unit.maxAmmunition !== 'number') return
+
+    const ratio = unit.ammunition / unit.maxAmmunition
+
+    // Apply altitude adjustment for Apache helicopters to align with selection
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+    const halfTile = TILE_SIZE / 2
+    const cornerSize = 8
+    const offset = 2
+
+    const left = centerX - halfTile - offset
+    const top = centerY - halfTile - offset
+    const bottom = centerY + halfTile + offset
+
+    const barWidth = 3
+    const barHeight = bottom - top - cornerSize * 2
+    const barX = left + 1
+    const barTop = top + cornerSize
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+    const fillHeight = barHeight * ratio
+    ctx.fillStyle = '#FFA500' // Orange color for ammunition
     ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
 
     ctx.strokeStyle = '#000'
@@ -794,6 +832,7 @@ export class UnitRenderer {
 
     this.renderHealthBar(ctx, unit, scrollOffset)
     this.renderGasBar(ctx, unit, scrollOffset)
+    this.renderAmmunitionBar(ctx, unit, scrollOffset)
     this.renderLevelStars(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)

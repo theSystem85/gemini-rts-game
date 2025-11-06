@@ -1299,7 +1299,7 @@ class Game {
         mapSettingsToggle.setAttribute('aria-expanded', !isExpanded)
         mapSettingsContent.style.display = isExpanded ? 'none' : 'block'
         mapSettingsToggleIcon.textContent = isExpanded ? '▼' : '▲'
-        
+
         // Scroll to make the expanded content visible
         if (!isExpanded) {
           // Content is being expanded, scroll to make it visible
@@ -1308,7 +1308,7 @@ class Game {
             if (sidebarScroll && mapSettingsContent) {
               const contentRect = mapSettingsContent.getBoundingClientRect()
               const sidebarRect = sidebarScroll.getBoundingClientRect()
-              
+
               // Check if the content is below the visible area
               if (contentRect.bottom > sidebarRect.bottom) {
                 const scrollTop = sidebarScroll.scrollTop + (contentRect.bottom - sidebarRect.bottom) + 10
@@ -1339,11 +1339,11 @@ class Game {
     if (oreCheckbox) {
       oreCheckbox.checked = ORE_SPREAD_ENABLED
     }
-    
+
     if (shadowCheckbox) {
       shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
     }
-    
+
     settingsBtn.addEventListener('click', () => {
       settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
     })
