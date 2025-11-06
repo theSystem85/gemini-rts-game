@@ -125,6 +125,7 @@ export const buildingData = {
     displayName: 'Ammunition Factory',
     health: 250,
     armor: 2,
+    requiresVehicleFactory: true,
     smokeSpots: []
   },
   turretGunV1: {
