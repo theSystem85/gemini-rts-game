@@ -283,6 +283,12 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         }
       }
 
+      // Handle ammunition particles - they expire after lifetime
+      if (bullet.projectileType === 'ammoParticle' && bullet.expiryTime && now >= bullet.expiryTime) {
+        bullets.splice(i, 1)
+        continue
+      }
+
       // Update bullet position
       if (bullet.originType === 'apacheRocket' && typeof bullet.startX !== 'number') {
         bullet.startX = bullet.x
