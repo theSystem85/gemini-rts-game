@@ -865,10 +865,10 @@ import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
 import { addMoneyIndicator, updateMoneyBar } from './ui/moneyBar.js'
 
-const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
+export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
-const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
-const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
+export const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
+export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 
 function sanitizeMapDimension(value, fallback) {
