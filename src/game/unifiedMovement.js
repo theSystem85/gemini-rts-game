@@ -62,6 +62,28 @@ function calculatePositionalAudio(x, y) {
   return { pan, volumeFactor }
 }
 
+export function hasFriendlyUnitOnTile(unit, tileX, tileY, units = []) {
+  if (!unit || !Number.isFinite(tileX) || !Number.isFinite(tileY) || !Array.isArray(units)) {
+    return false
+  }
+
+  for (const otherUnit of units) {
+    if (!otherUnit || otherUnit.id === unit.id || otherUnit.health <= 0) continue
+    if (!isGroundUnit(otherUnit)) continue
+
+    const otherTileX = Math.floor((otherUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const otherTileY = Math.floor((otherUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (otherTileX === tileX && otherTileY === tileY) {
+      if (!ownersAreEnemies(unit.owner, otherUnit.owner)) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
 function addUnitOccupancyDirect(unit, occupancyMap) {
   if (!occupancyMap) return
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -560,7 +582,15 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distance = Math.hypot(dx, dy)
 
     // Check if we've reached the current waypoint
-    if (distance < TILE_SIZE / 3) {
+    const baseReachDistance = TILE_SIZE / 3
+    let waypointReachDistance = baseReachDistance
+
+    if (distance >= baseReachDistance && hasFriendlyUnitOnTile(unit, nextTile.x, nextTile.y, units)) {
+      const friendlyAllowance = Math.min(TILE_SIZE * 0.95, MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 1.25)
+      waypointReachDistance = Math.max(baseReachDistance, friendlyAllowance)
+    }
+
+    if (distance < waypointReachDistance) {
       unit.path.shift() // Remove reached waypoint
 
       // Play waypoint sound for player units when they reach a new waypoint (but not the final destination)
