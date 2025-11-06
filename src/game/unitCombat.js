@@ -246,6 +246,12 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
     return false
   }
 
+  // Check ammunition availability
+  if (typeof unit.ammunition === 'number' && unit.ammunition <= 0) {
+    // Unit has no ammunition, cannot fire
+    return false
+  }
+
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
     const clearShot = unit.type === 'rocketTank' || unit.type === 'apache' || hasClearShot(unit, target, units)
@@ -360,6 +366,12 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       }
 
       bullets.push(bullet)
+      
+      // Deplete ammunition when firing
+      if (typeof unit.ammunition === 'number' && typeof unit.ammoPerShot === 'number') {
+        unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
+      }
+      
       const soundName = projectileType === 'rocket' ? 'shoot_rocket' : 'shoot'
       const vol = projectileType === 'rocket' ? 0.3 : 0.5
       playPositionalSound(soundName, bullet.x, bullet.y, vol)
@@ -1336,6 +1348,10 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
       return
     }
+    // Check ammunition availability
+    if (typeof unit.ammunition === 'number' && unit.ammunition <= 0) {
+      return
+    }
     const cooldown = getHowitzerCooldown(unit)
     if (!unit.lastShotTime || now - unit.lastShotTime >= cooldown) {
       const unitCenterX = unit.x + TILE_SIZE / 2
@@ -1463,6 +1479,12 @@ function fireHowitzerShell(unit, aimTarget, bullets, now) {
   }
 
   bullets.push(projectile)
+  
+  // Deplete ammunition when firing
+  if (typeof unit.ammunition === 'number' && typeof unit.ammoPerShot === 'number') {
+    unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
+  }
+  
   playPositionalSound('shoot_heavy', unitCenterX, unitCenterY, 0.5)
   unit.lastShotTime = now
   unit.recoilStartTime = now
