@@ -962,7 +962,7 @@ export function setAmmoFactoryRange(value) {
   AMMO_FACTORY_RANGE = value
 }
 
-export let AMMO_TRUCK_RANGE = 1 // tiles for ammunition supply truck resupply range
+export let AMMO_TRUCK_RANGE = 1.5 // tiles for ammunition supply truck resupply range (50% increase)
 
 export function setAmmoTruckRange(value) {
   AMMO_TRUCK_RANGE = value
@@ -974,7 +974,7 @@ export function setAmmoTruckCargo(value) {
   AMMO_TRUCK_CARGO = value
 }
 
-export let HELIPAD_AMMO_RESERVE = 1000 // rounds capacity for helipad ammunition storage
+export let HELIPAD_AMMO_RESERVE = 250 // rounds capacity for helipad ammunition storage (50% of truck cargo)
 
 export function setHelipadAmmoReserve(value) {
   HELIPAD_AMMO_RESERVE = value

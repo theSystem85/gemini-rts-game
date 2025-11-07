@@ -605,7 +605,9 @@ This specification defines a comprehensive ammunition management system for the 
 - **src/input/inputHandler.js** - Add "moveInto" cursor for Ammunition Supply Truck commands
 - **src/ui/notifications.js** - Add "No Ammunition" notification display
 - **src/sound.js** - Add sound effects (ammo_depleted.mp3, ammo_factory_explosion.mp3, ammo_scatter.mp3, ammo_impact.mp3)
-- **src/game/helipadSystem.js** (or similar) - Extend Helipad with ammunition reserve storage and transfer logic
+- **src/game/helipadLogic.js** - Extend Helipad with ammunition reserve storage (250 rounds) and transfer logic to landed helicopters
+- **src/game/unitCombat.js** - Implement Apache-specific ammo checking using `rocketAmmo` field, enforce 300ms volley delay
+- **src/input/cheatSystem.js** - Support ammo manipulation for both `ammunition` and `rocketAmmo` fields, handle Apache helicopters correctly
 - **src/saveGame.js** - Serialize/deserialize ammunition states, truck cargo, Helipad reserves
 - **public/images/map/buildings/ammunition_factory_map.webp** - Ammunition Factory map sprite
 - **public/images/sidebar/ammunition_factory_sidebar.webp** - Ammunition Factory build button sprite
@@ -658,8 +660,12 @@ This specification defines a comprehensive ammunition management system for the 
 
 ### Ammunition System Architecture
 - Ammunition tracking is added as properties to existing unit objects: `ammunition`, `maxAmmunition`, `ammoPerShot`
+- Apache helicopters use separate `rocketAmmo`/`maxRocketAmmo` fields for ammunition tracking
 - Resupply logic reuses gas station/tanker truck patterns for consistency
 - Ammunition particles use existing projectile collision system for efficiency
+- Combat system (unitCombat.js) handles ammo depletion with unit-type-specific checks
+- Apache volley state prevents firing when `rocketAmmo === 0` with user notifications
+- Helipad resupply transfers ammunition from building reserves to landed helicopters over time
 
 ### Configuration Values
 All ammunition values are defined in `config.js` as exportable constants for easy tuning:
@@ -668,7 +674,7 @@ export const AMMO_RESUPPLY_TIME = 7000 // ms
 export const AMMO_FACTORY_RANGE = 2 // tiles
 export const AMMO_TRUCK_RANGE = 1 // tiles
 export const AMMO_TRUCK_CARGO = 500 // rounds
-export const HELIPAD_AMMO_RESERVE = 1000 // rounds
+export const HELIPAD_AMMO_RESERVE = 250 // rounds (50% of truck cargo)
 export const UNIT_AMMO_CAPACITY = {
   tank_v1: 42,
   'tank-v2': 42,
@@ -680,6 +686,15 @@ export const UNIT_AMMO_CAPACITY = {
 export const AMMO_FACTORY_PARTICLE_COUNT = 40 // average
 export const AMMO_PARTICLE_DAMAGE = 40 // average
 ```
+
+### Apache Helicopter Ammunition System
+Apache helicopters use a separate `rocketAmmo` field instead of `ammunition` for technical reasons:
+- Units store `maxRocketAmmo` and `rocketAmmo` properties (set to 38 rounds)
+- Combat system checks `rocketAmmo` instead of `ammunition` for Apache units
+- Ammo depletion sets `apacheAmmoEmpty = true` and `canFire = false` when rockets depleted
+- Helipad logic transfers ammunition from helipad reserves to landed Apache helicopters
+- Cheat system handles both `ammunition` and `rocketAmmo` fields appropriately
+- Apache volley firing controlled by 300ms delay between rockets to prevent rapid-fire exploits
 
 ### Visual Design Consistency
 - Ammunition bar uses same styling as existing fuel bar (orange instead of blue)
@@ -710,6 +725,15 @@ export const AMMO_PARTICLE_DAMAGE = 40 // average
 - No ammunition manufacturing/cost per resupply - factories provide infinite ammunition (gameplay simplification)
 - Helipad ammunition reserves do not decay over time (only through helicopter resupply)
 - AI does not dynamically adjust Ammunition Factory placement based on combat hotspots (places near base center)
+
+### Implementation Status Updates (2025-11-07)
+- ✅ Apache helicopter ammunition system fully implemented with `rocketAmmo` field
+- ✅ Combat system properly checks Apache ammo before firing rockets
+- ✅ Apache volley delay enforced at 300ms to prevent rapid-fire exploits
+- ✅ Helipad ammunition transfer logic implemented in helipadLogic.js
+- ✅ Cheat system updated to handle both `ammunition` and `rocketAmmo` fields
+- ✅ False "out of ammo" notifications for Apache helicopters fixed
+- ✅ Apache helicopters with rockets can now fire continuously without false ammo warnings
 
 ### Future Enhancement Opportunities
 - Ammunition manufacturing cost (per resupply operation costs small amount of money)

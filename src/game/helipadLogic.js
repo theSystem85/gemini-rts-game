@@ -1,7 +1,32 @@
-import { HELIPAD_FUEL_CAPACITY, HELIPAD_RELOAD_TIME, TILE_SIZE, TANKER_SUPPLY_CAPACITY } from '../config.js'
+import { HELIPAD_FUEL_CAPACITY, HELIPAD_RELOAD_TIME, TILE_SIZE, TANKER_SUPPLY_CAPACITY, HELIPAD_AMMO_RESERVE, AMMO_TRUCK_RANGE, AMMO_RESUPPLY_TIME, AMMO_TRUCK_CARGO } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getBuildingIdentifier } from '../utils.js'
 import { getHelipadLandingCenter } from '../utils/helipadUtils.js'
+
+/**
+ * Check if a unit is adjacent to any tile of a building
+ * @param {Object} unit - Unit with x/y (pixel coords)
+ * @param {Object} building - Building with x/y (tile coords), width, height
+ * @param {number} range - Range in tiles
+ * @returns {boolean} True if unit is within range of any building tile
+ */
+function isUnitAdjacentToBuilding(unit, building, range) {
+  const unitTileX = Math.floor(unit.x / TILE_SIZE)
+  const unitTileY = Math.floor(unit.y / TILE_SIZE)
+  const buildingWidth = building.width || 1
+  const buildingHeight = building.height || 1
+  
+  // Check if unit is within range of any tile occupied by the building
+  for (let bx = building.x; bx < building.x + buildingWidth; bx++) {
+    for (let by = building.y; by < building.y + buildingHeight; by++) {
+      const distance = Math.hypot(unitTileX - bx, unitTileY - by)
+      if (distance <= range) {
+        return true
+      }
+    }
+  }
+  return false
+}
 
 export const updateHelipadLogic = logPerformance(function(units, buildings, _gameState, delta) {
   if (!Array.isArray(buildings) || buildings.length === 0) return
@@ -19,6 +44,16 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
       helipad.fuel = helipad.maxFuel
     }
 
+    if (typeof helipad.maxAmmo !== 'number' || helipad.maxAmmo <= 0 || helipad.maxAmmo > HELIPAD_AMMO_RESERVE) {
+      helipad.maxAmmo = HELIPAD_AMMO_RESERVE
+    }
+
+    if (typeof helipad.ammo !== 'number') {
+      helipad.ammo = helipad.maxAmmo
+    } else if (helipad.ammo > helipad.maxAmmo) {
+      helipad.ammo = helipad.maxAmmo
+    }
+
     const capacity = helipad.maxFuel
     if (capacity <= 0) return
 
@@ -34,13 +69,45 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
 
     helipad.needsFuel = helipad.fuel < capacity * 0.25
 
-    if (Array.isArray(units)) {
-      const landingCenter = getHelipadLandingCenter(helipad)
-      if (!landingCenter) {
-        return
+    // Get helipad center coordinates for ammo logic
+    const landingCenter = getHelipadLandingCenter(helipad)
+    if (!landingCenter) {
+      return
+    }
+    const helipadCenterX = landingCenter.x
+    const helipadCenterY = landingCenter.y
+
+    // Ammo reloading logic - only when ammo trucks are nearby
+    const ammoCapacity = helipad.maxAmmo
+
+    if (helipad.ammo < ammoCapacity) {
+      // Check for nearby ammo trucks
+      const ammoTrucks = units.filter(u => u.type === 'ammunitionTruck' && u.health > 0 && typeof u.ammoCargo === 'number' && u.ammoCargo > 0)
+      let ammoRefilled = false
+      
+      ammoTrucks.forEach(ammoTruck => {
+        // Check if truck is adjacent to any tile of the helipad
+        const isAdjacent = isUnitAdjacentToBuilding(ammoTruck, helipad, AMMO_TRUCK_RANGE)
+        if (isAdjacent && helipad.ammo < ammoCapacity) {
+          const refillRate = Math.max(1, ammoTruck.maxAmmoCargo || AMMO_TRUCK_CARGO) / AMMO_RESUPPLY_TIME
+          const transfer = Math.min(refillRate * delta, ammoCapacity - helipad.ammo, ammoTruck.ammoCargo)
+          if (transfer > 0) {
+            helipad.ammo = Math.min(ammoCapacity, helipad.ammo + transfer)
+            ammoTruck.ammoCargo = Math.max(0, ammoTruck.ammoCargo - transfer)
+            ammoRefilled = true
+          }
+        }
+      })
+      
+      // If no ammo trucks nearby and ammo is below capacity, do not refill automatically
+      if (!ammoRefilled) {
+        // Ammo stays at current level until ammo truck arrives
       }
-      const helipadCenterX = landingCenter.x
-      const helipadCenterY = landingCenter.y
+    }
+
+    helipad.needsAmmo = helipad.ammo < ammoCapacity * 0.25
+
+    if (Array.isArray(units)) {
 
       const apacheUnits = units.filter(u => u.type === 'apache' && u.health > 0)
       if (helipad.landedUnitId) {
@@ -79,9 +146,23 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
               heli.tileY = Math.floor(heli.y / TILE_SIZE)
 
               if (typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo < heli.maxRocketAmmo) {
-                heli.rocketAmmo = heli.maxRocketAmmo
-                heli.apacheAmmoEmpty = false
-                heli.canFire = true
+                // Only refill ammo if helipad has ammo supply available
+                if (helipad.ammo > 0) {
+                  const ammoNeeded = heli.maxRocketAmmo - heli.rocketAmmo
+                  // Ammo refill time: 10 seconds for full clip
+                  const ammoRefillTime = 10000
+                  const ammoRefillRate = heli.maxRocketAmmo / ammoRefillTime
+                  const ammoToTransfer = Math.min(ammoRefillRate * delta, ammoNeeded, helipad.ammo)
+                  if (ammoToTransfer > 0) {
+                    heli.rocketAmmo += ammoToTransfer
+                    helipad.ammo -= ammoToTransfer
+                  }
+                  if (heli.rocketAmmo > 0) {
+                    heli.apacheAmmoEmpty = false
+                    heli.canFire = true
+                  }
+                }
+                // If helipad has no ammo, helicopter keeps its current ammo level
               }
 
               if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
@@ -98,11 +179,21 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
                 heli.refuelingAtHelipad = false
               }
 
-              heli.helipadLandingRequested = false
-              heli.autoHoldAltitude = false
+              // Check if auto-return helicopter has finished refilling and can now takeoff
+              if (heli.autoReturnRefilling && typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo >= heli.maxRocketAmmo) {
+                // Ammo is full - allow helicopter to takeoff now
+                heli.autoReturnRefilling = false
+                heli.helipadLandingRequested = false
+                heli.autoHoldAltitude = false
+              }
+
               heli.helipadTargetId = helipadId
               heli.landedHelipadId = helipadId
               helipad.landedUnitId = heli.id
+              heli.autoHelipadReturnActive = false
+              heli.autoHelipadReturnTargetId = null
+              heli.autoHelipadRetryAt = 0
+              heli.noHelipadNotificationTime = 0
             }
           }
         } else {

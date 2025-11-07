@@ -4,6 +4,27 @@ import { logPerformance } from '../performanceUtils.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 import { gameState } from '../gameState.js'
 
+function isUnitWithinBuildingRange(unit, building, rangeInTiles) {
+  if (!unit || !building || typeof rangeInTiles !== 'number') {
+    return false
+  }
+
+  const unitTileX = typeof unit.tileX === 'number' ? unit.tileX : Math.floor((unit.x ?? 0) / TILE_SIZE)
+  const unitTileY = typeof unit.tileY === 'number' ? unit.tileY : Math.floor((unit.y ?? 0) / TILE_SIZE)
+  const width = building.width || 1
+  const height = building.height || 1
+
+  for (let bx = building.x; bx < building.x + width; bx++) {
+    for (let by = building.y; by < building.y + height; by++) {
+      const distance = Math.hypot(unitTileX - bx, unitTileY - by)
+      if (distance <= rangeInTiles) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 /**
  * Updates ammunition resupply logic for all units near ammunition factories or supply trucks
  * @param {Array} units - Array of unit objects
@@ -48,7 +69,7 @@ function processAmmunitionResupply(source, units, delta, rangeInTiles) {
 
   units.forEach(unit => {
     // Only resupply units with ammunition system
-    if (typeof unit.maxAmmunition !== 'number' || unit.health <= 0) return
+    if ((typeof unit.maxAmmunition !== 'number' && typeof unit.maxRocketAmmo !== 'number') || unit.health <= 0) return
 
     const unitCenterX = (unit.x ?? unit.tileX * TILE_SIZE) + TILE_SIZE / 2
     const unitCenterY = (unit.y ?? unit.tileY * TILE_SIZE) + TILE_SIZE / 2
@@ -57,16 +78,24 @@ function processAmmunitionResupply(source, units, delta, rangeInTiles) {
 
     const stationary = !(unit.movement && unit.movement.isMoving)
 
+    const isHelicopter = unit.type === 'apache'
+    const maxAmmo = isHelicopter ? unit.maxRocketAmmo : unit.maxAmmunition
+    const currentAmmo = isHelicopter ? unit.rocketAmmo : unit.ammunition
+
     if (inArea && stationary) {
-      if (unit.ammunition < unit.maxAmmunition) {
+      if (currentAmmo < maxAmmo) {
         if (!unit.resupplyingAmmo) {
           unit.resupplyingAmmo = true
         }
 
-        const baseRefillRate = unit.maxAmmunition / AMMO_RESUPPLY_TIME
+        const baseRefillRate = maxAmmo / AMMO_RESUPPLY_TIME
         const refillRate = baseRefillRate / powerMultiplier
         unit.ammoRefillTimer = (unit.ammoRefillTimer || 0) + delta
-        unit.ammunition = Math.min(unit.maxAmmunition, unit.ammunition + refillRate * delta)
+        if (isHelicopter) {
+          unit.rocketAmmo = Math.min(maxAmmo, currentAmmo + refillRate * delta)
+        } else {
+          unit.ammunition = Math.min(maxAmmo, currentAmmo + refillRate * delta)
+        }
       } else {
         unit.ammoRefillTimer = 0
         unit.resupplyingAmmo = false
@@ -93,7 +122,7 @@ function processAmmunitionTruckResupply(truck, units, delta) {
 
   units.forEach(unit => {
     // Only resupply units with ammunition system (not the truck itself or other supply units)
-    if (typeof unit.maxAmmunition !== 'number' || unit.health <= 0 || unit.id === truck.id) return
+    if ((typeof unit.maxAmmunition !== 'number' && typeof unit.maxRocketAmmo !== 'number') || unit.health <= 0 || unit.id === truck.id) return
     if (unit.type === 'ammunitionTruck') return // Don't resupply other ammo trucks
 
     const unitCenterX = unit.x + TILE_SIZE / 2
@@ -103,17 +132,25 @@ function processAmmunitionTruckResupply(truck, units, delta) {
 
     const stationary = !(unit.movement && unit.movement.isMoving)
 
-    if (inRange && stationary && unit.ammunition < unit.maxAmmunition) {
+    const isHelicopter = unit.type === 'apache'
+    const maxAmmo = isHelicopter ? unit.maxRocketAmmo : unit.maxAmmunition
+    const currentAmmo = isHelicopter ? unit.rocketAmmo : unit.ammunition
+
+    if (inRange && stationary && currentAmmo < maxAmmo) {
       if (!unit.resupplyingAmmo) {
         unit.resupplyingAmmo = true
       }
 
-      const refillRate = unit.maxAmmunition / AMMO_RESUPPLY_TIME
+      const refillRate = maxAmmo / AMMO_RESUPPLY_TIME
       const ammoNeeded = (refillRate * delta)
-      const ammoToTransfer = Math.min(ammoNeeded, truck.ammoCargo, unit.maxAmmunition - unit.ammunition)
+      const ammoToTransfer = Math.min(ammoNeeded, truck.ammoCargo, maxAmmo - currentAmmo)
 
       unit.ammoRefillTimer = (unit.ammoRefillTimer || 0) + delta
-      unit.ammunition = Math.min(unit.maxAmmunition, unit.ammunition + ammoToTransfer)
+      if (isHelicopter) {
+        unit.rocketAmmo = Math.min(maxAmmo, currentAmmo + ammoToTransfer)
+      } else {
+        unit.ammunition = Math.min(maxAmmo, currentAmmo + ammoToTransfer)
+      }
       truck.ammoCargo = Math.max(0, truck.ammoCargo - ammoToTransfer)
     } else if (!inRange || !stationary) {
       if (unit.resupplyingAmmo) {
@@ -134,23 +171,22 @@ function reloadAmmunitionTruck(truck, factories, delta) {
   if (truck.ammoCargo >= truck.maxAmmoCargo) {
     truck.reloadingAmmo = false
     truck.ammoReloadTimer = 0
+    if (truck.ammoReloadTargetId) {
+      truck.ammoReloadTargetId = null
+    }
     return
   }
 
-  const truckCenterX = truck.x + TILE_SIZE / 2
-  const truckCenterY = truck.y + TILE_SIZE / 2
-  const range = AMMO_FACTORY_RANGE * TILE_SIZE
+  const range = AMMO_FACTORY_RANGE
 
   const stationary = !(truck.movement && truck.movement.isMoving)
 
   for (const factory of factories) {
     if (factory.health <= 0) continue
 
-    const factoryCenterX = factory.x * TILE_SIZE + (factory.width * TILE_SIZE) / 2
-    const factoryCenterY = factory.y * TILE_SIZE + (factory.height * TILE_SIZE) / 2
-    const distance = Math.hypot(truckCenterX - factoryCenterX, truckCenterY - factoryCenterY)
+    const inRange = isUnitWithinBuildingRange(truck, factory, range)
 
-    if (distance <= range && stationary) {
+    if (inRange && stationary) {
       if (!truck.reloadingAmmo) {
         truck.reloadingAmmo = true
       }
@@ -158,6 +194,11 @@ function reloadAmmunitionTruck(truck, factories, delta) {
       const reloadRate = truck.maxAmmoCargo / (AMMO_RESUPPLY_TIME * 1.4) // Slightly slower reload (10s)
       truck.ammoReloadTimer = (truck.ammoReloadTimer || 0) + delta
       truck.ammoCargo = Math.min(truck.maxAmmoCargo, truck.ammoCargo + reloadRate * delta)
+      if (truck.ammoReloadTargetId && truck.ammoReloadTargetId !== factory.id) {
+        truck.ammoReloadTargetId = factory.id
+      } else if (!truck.ammoReloadTargetId) {
+        truck.ammoReloadTargetId = factory.id
+      }
       return // Only reload from one factory at a time
     }
   }

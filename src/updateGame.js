@@ -29,6 +29,7 @@ import { updateGasStationLogic } from './game/gasStationLogic.js'
 import { updateAmmunitionSystem } from './game/ammunitionSystem.js'
 import { updateHelipadLogic } from './game/helipadLogic.js'
 import { updateTankerTruckLogic } from './game/tankerTruckLogic.js'
+import { updateAmmunitionTruckLogic } from './game/ammunitionTruckLogic.js'
 import { updateRecoveryTankLogic } from './game/recoveryTankSystem.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
@@ -101,6 +102,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateAmmunitionSystem(units, gameState.buildings, gameState, delta)
     updateHelipadLogic(units, gameState.buildings, gameState, delta)
     updateTankerTruckLogic(units, gameState, delta)
+    updateAmmunitionTruckLogic(units, gameState, delta)
     // Handle self-repair for level 3 units
     units.forEach(unit => {
       handleSelfRepair(unit, now)
