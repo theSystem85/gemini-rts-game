@@ -5,7 +5,8 @@ import { hasClearShot, angleDiff, smoothRotateTowardsAngle } from '../logic.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
-import { updateUnitSpeedModifier } from '../utils.js'
+import { updateUnitSpeedModifier, getBuildingIdentifier } from '../utils.js'
+import { getHelipadLandingCenter, getHelipadLandingTile } from '../utils/helipadUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -248,15 +249,18 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
   }
 
   // Check ammunition availability
-  if (typeof unit.ammunition === 'number' && unit.ammunition <= 0) {
+  const ammoField = unit.type === 'apache' ? 'rocketAmmo' : 'ammunition'
+  const ammoValue = unit[ammoField]
+  if (typeof ammoValue === 'number' && ammoValue <= 0) {
     // Unit has no ammunition, cannot fire
     // Show notification only for player units and only once per unit
     if (unit.owner === gameState.humanPlayer && !unit.noAmmoNotificationShown) {
       showNotification('No Ammunition - Resupply Required', 3000)
+      playSound('i_am_out_of_ammo', 1.0, 0, true) // Stackable so multiple units can announce
       unit.noAmmoNotificationShown = true
     }
     return false
-  } else if (unit.ammunition > 0) {
+  } else if (ammoValue > 0) {
     // Reset notification flag when unit has ammo again
     unit.noAmmoNotificationShown = false
   }
@@ -376,9 +380,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
       bullets.push(bullet)
 
-      // Deplete ammunition when firing
-      if (typeof unit.ammunition === 'number' && typeof unit.ammoPerShot === 'number') {
-        unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
+      // Deplete ammunition when firing (skip Apache - handled in handleApacheVolley)
+      if (unit.type !== 'apache') {
+        if (typeof unit.ammunition === 'number' && typeof unit.ammoPerShot === 'number') {
+          unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
+        }
       }
 
       const soundName = projectileType === 'rocket' ? 'shoot_rocket' : 'shoot'
@@ -469,7 +475,7 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
       leftRemaining: leftCount,
       rightRemaining: rightCount,
       lastRocketTime: 0,
-      delay: 120,
+      delay: 300,
       nextSide: 'left',
       totalInVolley: rocketsThisVolley
     }
@@ -1090,6 +1096,100 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
   }
 }
 
+function findNearestHelipadForApache(unit, units) {
+  if (!unit || !Array.isArray(gameState.buildings) || gameState.buildings.length === 0) {
+    return null
+  }
+
+  const candidates = gameState.buildings.filter(building => {
+    if (!building || building.type !== 'helipad' || building.health <= 0) {
+      return false
+    }
+    if (building.owner && unit.owner && building.owner !== unit.owner) {
+      return false
+    }
+    return true
+  })
+
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+
+  let best = null
+
+  candidates.forEach(helipad => {
+    const center = getHelipadLandingCenter(helipad)
+    const tile = getHelipadLandingTile(helipad)
+    if (!center || !tile) {
+      return
+    }
+
+    const helipadId = getBuildingIdentifier(helipad)
+    if (helipad.landedUnitId && helipad.landedUnitId !== unit.id) {
+      const occupant = Array.isArray(units) ? units.find(u => u && u.id === helipad.landedUnitId) : null
+      const occupantGrounded = occupant && occupant.type === 'apache' && occupant.health > 0 && occupant.flightState === 'grounded'
+      if (occupantGrounded) {
+        return
+      }
+    }
+
+    const distance = Math.hypot(center.x - unitCenterX, center.y - unitCenterY)
+    if (!best || distance < best.distance) {
+      best = { helipad, center, tile, distance, helipadId }
+    }
+  })
+
+  return best
+}
+
+function initiateApacheHelipadReturn(unit, helipadInfo) {
+  if (!unit || !helipadInfo || !helipadInfo.center || !helipadInfo.tile) {
+    return false
+  }
+
+  const { helipad, center, tile, helipadId } = helipadInfo
+  const stopRadius = Math.max(6, TILE_SIZE * 0.2)
+
+  unit.path = []
+  unit.originalPath = null
+  unit.moveTarget = { x: tile.x, y: tile.y }
+  unit.flightPlan = {
+    x: center.x,
+    y: center.y,
+    stopRadius,
+    mode: 'helipad',
+    followTargetId: null,
+    destinationTile: { ...tile }
+  }
+  unit.autoHoldAltitude = true
+
+  if (unit.landedHelipadId) {
+    const previousHelipad = Array.isArray(gameState.buildings)
+      ? gameState.buildings.find(b => getBuildingIdentifier(b) === unit.landedHelipadId)
+      : null
+    if (previousHelipad && previousHelipad.landedUnitId === unit.id) {
+      previousHelipad.landedUnitId = null
+    }
+    unit.landedHelipadId = null
+  }
+
+  unit.helipadLandingRequested = true
+  unit.helipadTargetId = helipadId || getBuildingIdentifier(helipad)
+  if (unit.flightState === 'grounded') {
+    unit.manualFlightState = 'takeoff'
+  }
+  unit.manualFlightHoverRequested = true
+  unit.remoteControlActive = false
+  unit.hovering = false
+  unit.autoHelipadReturnActive = true
+  unit.autoHelipadReturnTargetId = unit.helipadTargetId
+
+  return true
+}
+
 function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
   if (!unit.target || unit.target.health <= 0) {
     unit.volleyState = null
@@ -1101,11 +1201,49 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     return
   }
 
+  const wasAmmoEmpty = unit.apacheAmmoEmpty === true
   const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
-  unit.apacheAmmoEmpty = ammoRemaining <= 0
-  if (unit.apacheAmmoEmpty) {
+  const ammoEmpty = ammoRemaining <= 0
+  unit.apacheAmmoEmpty = ammoEmpty
+
+  if (ammoEmpty) {
     unit.canFire = false
     unit.volleyState = null
+
+    const alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+    if (!alreadyLanding) {
+      const retryAt = unit.autoHelipadRetryAt || 0
+      const shouldAttempt = !wasAmmoEmpty || !unit.autoHelipadReturnActive || now >= retryAt
+      if (shouldAttempt) {
+        const helipadInfo = findNearestHelipadForApache(unit, units)
+        const assigned = helipadInfo ? initiateApacheHelipadReturn(unit, helipadInfo) : false
+        if (!assigned) {
+          unit.autoHelipadReturnActive = false
+          unit.autoHelipadRetryAt = now + 1200
+          if (unit.owner === gameState.humanPlayer) {
+            const lastNotice = unit.noHelipadNotificationTime || 0
+            if (!wasAmmoEmpty || now - lastNotice > 5000) {
+              showNotification('No available helipad for Apache resupply!', 2000)
+              unit.noHelipadNotificationTime = now
+            }
+          }
+        } else {
+          unit.autoHelipadRetryAt = now + 3000
+        }
+      }
+    }
+  } else {
+    if (unit.autoHelipadReturnActive) {
+      unit.autoHelipadReturnActive = false
+    }
+    if (unit.autoHelipadReturnTargetId) {
+      unit.autoHelipadReturnTargetId = null
+    }
+    if (unit.autoHelipadRetryAt) {
+      unit.autoHelipadRetryAt = 0
+    }
+    // Set canFire to true when ammo is available
+    unit.canFire = true
   }
 
   const targetCenter = getApacheTargetCenter(unit.target)
@@ -1225,6 +1363,14 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     unit.manualFlightState = 'takeoff'
   }
 
+  // Continue any ongoing volley regardless of current range
+  if (unit.volleyState && !unit.apacheAmmoEmpty) {
+    const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenter.x, targetCenter.y, units, mapGrid)
+    if (volleyComplete) {
+      unit.lastShotTime = now
+    }
+  }
+
   if (distance <= effectiveRange && canAttack) {
     if (!unit.volleyState && !unit.apacheAmmoEmpty) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
@@ -1245,15 +1391,12 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
         }
       }
     }
-
-    if (unit.volleyState && !unit.apacheAmmoEmpty) {
-      const volleyComplete = handleApacheVolley(unit, unit.target, bullets, now, targetCenter.x, targetCenter.y, units, mapGrid)
-      if (volleyComplete) {
-        unit.lastShotTime = now
-      }
-    }
   } else {
-    unit.volleyState = null
+    // Only cancel volley if target is destroyed or we're switching targets
+    // Don't cancel ongoing volleys just because Apache moved out of range
+    if (!unit.target || unit.target.health <= 0) {
+      unit.volleyState = null
+    }
   }
 }
 
@@ -1362,6 +1505,7 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
       // Show notification only for player units and only once per unit
       if (unit.owner === gameState.humanPlayer && !unit.noAmmoNotificationShown) {
         showNotification('No Ammunition - Resupply Required', 3000)
+        playSound('i_am_out_of_ammo', 1.0, 0, true) // Stackable so multiple units can announce
         unit.noAmmoNotificationShown = true
       }
       return

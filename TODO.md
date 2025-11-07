@@ -83,12 +83,16 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [ ] **Spec 008** Add Ammunition Factory & Supply Truck System (see `specs/008-ammunition-system/spec.md`)
   - [ ] Ammunition Factory building: $2000 cost, 3x3 tiles, 250 health, 40MW power, resupplies units within 2 tiles in 7s
   - [ ] Ammunition Supply Truck: $800 cost, 30 health, 2x tank speed, 500 rounds cargo, resupplies within 1 tile
-  - [ ] All combat units have limited ammunition (Tank V1/V2: 42 rounds, Tank V3: 50 rounds, Rocket Tank: 21 rockets, Howitzer: 30 rounds, Apache: 38 rounds)
+  - [x] ✅ All combat units have limited ammunition (Tank V1/V2: 42 rounds, Tank V3: 50 rounds, Rocket Tank: 21 rockets, Howitzer: 30 rounds, Apache: 38 rounds)
   - [ ] Orange ammunition bar on left side of HUD (health top, fuel right, ammo left)
   - [ ] Ammunition Factory explosion: 2-tile initial blast + 30-50 scattering particles dealing 30-50 damage each for 5 seconds
-  - [ ] Helipad ammunition reserves: 1000 rounds capacity, resupplied by Ammunition Supply Truck, transfers to landed helicopters
+  - [x] ✅ Helipad ammunition reserves: 250 rounds capacity (50% of truck cargo), resupplied by Ammunition Supply Truck, transfers to landed helicopters
   - [ ] Enemy AI builds ammunition factories, produces supply trucks, and manages unit resupply automatically
-  - [ ] Units with 0 ammunition cannot fire, display "No Ammunition" notification when attack commanded
+  - [x] ✅ Units with 0 ammunition cannot fire, display "No Ammunition" notification when attack commanded
+  - [x] ✅ Apache helicopter ammunition system implemented with `rocketAmmo` field (38 rounds capacity)
+  - [x] ✅ Apache combat system checks `rocketAmmo` before firing, enforces 300ms volley delay
+  - [x] ✅ Helipad ammunition transfer to landed Apache helicopters implemented
+  - [x] ✅ Cheat system supports ammunition manipulation for all unit types including Apache
   - [ ] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`
 - [ ] Add online multiplayer support where humans can join an existing game and take over an AI party.
   - [ ] The interface should be minimalistic
@@ -107,6 +111,14 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [ ] (still an issue?) When about 10 units get stuck the game slows down significantly.
 
 ### Closed Issues
+
+## Bug Fixes (2025-11-07)
+- [x] ✅ Fixed Apache helicopter false "out of ammo" notifications when rockets available
+- [x] ✅ Fixed Apache helicopters firing rockets faster than 300ms minimum interval
+- [x] ✅ Fixed cheat system ammo commands not applying to Apache helicopters
+- [x] ✅ Fixed combat system not checking `rocketAmmo` field for Apache units
+- [x] ✅ Fixed cheat system using non-existent `window.debugGetSelectedUnits()` function
+- [x] ✅ Updated cheat system to use `this.selectedUnits` reference for all ammo/fuel/medic commands
 
 ## Improvements
 - [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.

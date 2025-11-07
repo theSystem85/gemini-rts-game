@@ -11,7 +11,7 @@ import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTr
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
 import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
-import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
+import { getExperienceProgress, initializeUnitLeveling, getBuildingIdentifier } from '../utils.js'
 
 export class UnitRenderer {
   constructor() {
@@ -406,9 +406,35 @@ export class UnitRenderer {
   }
 
   renderAmmunitionBar(ctx, unit, scrollOffset) {
-    if (!unit.selected || typeof unit.maxAmmunition !== 'number') return
+    if (!unit.selected) return
 
-    const ratio = unit.ammunition / unit.maxAmmunition
+    let ratio = 0
+    let hasAmmo = false
+
+    // Special handling for Apache helicopters
+    if (unit.type === 'apache') {
+      // Check if Apache is landed on a helipad
+      if (unit.landedHelipadId && gameState.buildings) {
+        const helipad = gameState.buildings.find(b => b.type === 'helipad' && getBuildingIdentifier(b) === unit.landedHelipadId)
+        if (helipad && typeof helipad.maxAmmo === 'number' && helipad.maxAmmo > 0) {
+          // Show helipad ammo bar
+          ratio = Math.max(0, Math.min(1, (helipad.ammo ?? helipad.maxAmmo) / helipad.maxAmmo))
+          hasAmmo = true
+        }
+      }
+      
+      // If not landed or no helipad ammo, show unit ammo
+      if (!hasAmmo && typeof unit.maxRocketAmmo === 'number') {
+        ratio = Math.max(0, Math.min(1, (unit.rocketAmmo ?? 0) / unit.maxRocketAmmo))
+        hasAmmo = true
+      }
+    } else if (typeof unit.maxAmmunition === 'number') {
+      // Regular units
+      ratio = unit.ammunition / unit.maxAmmunition
+      hasAmmo = true
+    }
+
+    if (!hasAmmo) return
 
     // Apply altitude adjustment for Apache helicopters to align with selection
     const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
@@ -857,6 +883,7 @@ export class UnitRenderer {
     units.forEach(unit => {
       this.renderTowCable(ctx, unit, scrollOffset)
       this.renderFuelHose(ctx, unit, units, scrollOffset)
+      this.renderAmmoHose(ctx, unit, units, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
       this.renderApacheRemoteReticle(ctx, unit, scrollOffset)
     })
@@ -934,6 +961,52 @@ export class UnitRenderer {
 
     ctx.save()
     ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  renderAmmoHose(ctx, unit, units, scrollOffset) {
+    if (!unit || unit.type !== 'ammunitionTruck' || !unit.ammoResupplyTarget) {
+      return
+    }
+
+    const targetInfo = unit.ammoResupplyTarget
+    const target = (targetInfo && targetInfo.id !== undefined)
+      ? units.find(u => u.id === targetInfo.id) || targetInfo
+      : targetInfo
+
+    if (!target || (target.health !== undefined && target.health <= 0)) {
+      return
+    }
+
+    if (typeof target.tileX !== 'number' || typeof target.tileY !== 'number') {
+      return
+    }
+
+    const dx = Math.abs(target.tileX - unit.tileX)
+    const dy = Math.abs(target.tileY - unit.tileY)
+
+    if (dx > 1 || dy > 1) {
+      return
+    }
+
+    if ((unit.movement && unit.movement.isMoving) || (target.movement && target.movement.isMoving)) {
+      return
+    }
+
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const startY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const targetX = (typeof target.x === 'number') ? target.x : target.tileX * TILE_SIZE
+    const targetY = (typeof target.y === 'number') ? target.y : target.tileY * TILE_SIZE
+    const endX = targetX + TILE_SIZE / 2 - scrollOffset.x
+    const endY = targetY + TILE_SIZE / 2 - scrollOffset.y
+
+    ctx.save()
+    ctx.strokeStyle = '#8B4513' // Brown color for ammo hose
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.moveTo(startX, startY)
