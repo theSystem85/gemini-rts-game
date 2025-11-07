@@ -9,6 +9,7 @@ import { renderHowitzerWithImage, isHowitzerImageLoaded } from './howitzerImageR
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
+import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
 
@@ -762,6 +763,16 @@ export class UnitRenderer {
 
     if (unit.type === 'tankerTruck' && isTankerTruckImageLoaded()) {
       const ok = renderTankerTruckWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'ammunitionTruck' && isAmmunitionTruckImageLoaded()) {
+      const ok = renderAmmunitionTruckWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)
