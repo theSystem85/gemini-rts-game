@@ -45,6 +45,9 @@ const ROTOR_STOP_EPSILON = 0.002
 const APACHE_ROTOR_LOOP_VOLUME = 0.25
 const APACHE_ROTOR_ALTITUDE_GAIN_MIN = 0.6
 const APACHE_ROTOR_ALTITUDE_GAIN_MAX = 1.0
+const STATIC_COLLISION_NUDGE = TILE_SIZE * 0.2
+const STATIC_COLLISION_BOUNCE_FACTOR = 0.6
+const STATIC_COLLISION_RECOVERY_WINDOW = 600
 
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
@@ -822,6 +825,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
 
   if (collisionResult.collided) {
+    const attemptedDx = unit.x - prevX
+    const attemptedDy = unit.y - prevY
+
     // Revert position if collision detected
     unit.x = prevX
     unit.y = prevY
@@ -860,11 +866,45 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         }
         movement.currentSpeed = 0
       } else {
-        trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
+        applyStaticObstacleBounce(
+          unit,
+          movement,
+          collisionResult,
+          attemptedDx,
+          attemptedDy,
+          mapGrid,
+          occupancyMap,
+          units,
+          wrecks,
+          now
+        )
       }
+    } else if (collisionResult.type === 'terrain' || collisionResult.type === 'bounds') {
+      applyStaticObstacleBounce(
+        unit,
+        movement,
+        collisionResult,
+        attemptedDx,
+        attemptedDy,
+        mapGrid,
+        occupancyMap,
+        units,
+        wrecks,
+        now
+      )
     } else {
-      // Try alternative movement (slide along obstacles)
-      trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
+      applyStaticObstacleBounce(
+        unit,
+        movement,
+        collisionResult,
+        attemptedDx,
+        attemptedDy,
+        mapGrid,
+        occupancyMap,
+        units,
+        wrecks,
+        now
+      )
     }
   }
 
@@ -1027,16 +1067,16 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
 
   // Check map bounds
   if (!tileRow || tile === undefined) {
-    return { collided: true, type: 'bounds' }
+    return { collided: true, type: 'bounds', tileX, tileY }
   }
 
   if (typeof tile === 'number') {
     if (tile === 1) {
-      return { collided: true, type: 'terrain' }
+      return { collided: true, type: 'terrain', tileX, tileY }
     }
   } else {
     if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
-      return { collided: true, type: 'terrain' }
+      return { collided: true, type: 'terrain', tileX, tileY, tile }
     }
 
     if (tile.building) {
@@ -1240,6 +1280,83 @@ function applyWreckCollisionResponse(unit, movement, collisionResult) {
   }
 
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+}
+
+function applyStaticObstacleBounce(
+  unit,
+  movement,
+  collisionResult,
+  attemptedDx,
+  attemptedDy,
+  mapGrid,
+  occupancyMap,
+  units = [],
+  wrecks = [],
+  now = performance.now()
+) {
+  if (!unit || !movement || !collisionResult) {
+    return
+  }
+
+  let normalX = 0
+  let normalY = 0
+
+  if (typeof collisionResult.tileX === 'number' && typeof collisionResult.tileY === 'number') {
+    const tileCenterX = (collisionResult.tileX + 0.5) * TILE_SIZE
+    const tileCenterY = (collisionResult.tileY + 0.5) * TILE_SIZE
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+    const dx = unitCenterX - tileCenterX
+    const dy = unitCenterY - tileCenterY
+    const distance = Math.hypot(dx, dy)
+
+    if (distance > 0.001) {
+      normalX = dx / distance
+      normalY = dy / distance
+    }
+  }
+
+  if (normalX === 0 && normalY === 0) {
+    const attemptedLength = Math.hypot(attemptedDx, attemptedDy)
+    if (attemptedLength > 0.001) {
+      normalX = -attemptedDx / attemptedLength
+      normalY = -attemptedDy / attemptedLength
+    } else {
+      normalX = 1
+      normalY = 0
+    }
+  }
+
+  applySafeSeparation(
+    unit,
+    normalX * STATIC_COLLISION_NUDGE,
+    normalY * STATIC_COLLISION_NUDGE,
+    mapGrid,
+    occupancyMap,
+    units,
+    wrecks,
+    []
+  )
+
+  const currentDot = movement.velocity.x * normalX + movement.velocity.y * normalY
+  if (currentDot < 0) {
+    const bounceImpulse = -currentDot * (1 + STATIC_COLLISION_BOUNCE_FACTOR)
+    movement.velocity.x += normalX * bounceImpulse
+    movement.velocity.y += normalY * bounceImpulse
+  }
+
+  if (movement.targetVelocity) {
+    const targetDot = movement.targetVelocity.x * normalX + movement.targetVelocity.y * normalY
+    if (targetDot < 0) {
+      const bounceImpulse = -targetDot * (1 + STATIC_COLLISION_BOUNCE_FACTOR * 0.5)
+      movement.targetVelocity.x += normalX * bounceImpulse
+      movement.targetVelocity.y += normalY * bounceImpulse
+    }
+  }
+
+  movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+  movement.lastStaticCollisionTime = now
+  movement.lastStaticCollisionNormal = { x: normalX, y: normalY }
 }
 
 function isGroundUnit(unit) {
@@ -1733,6 +1850,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
 
   const now = performance.now()
   const stuck = unit.movement.stuckDetection
+  const movement = unit.movement
 
   // Enhanced stuck detection for all units - each unit has its own randomized check interval
   const stuckThreshold = STUCK_THRESHOLD // Consider units stuck after 0.5 seconds
@@ -1741,9 +1859,19 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   // Check if unit has moved significantly
   if (now - stuck.lastMovementCheck > unitCheckInterval) {
     const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y)
+    const recentlyStaticCollision =
+      movement && typeof movement.lastStaticCollisionTime === 'number'
+        ? now - movement.lastStaticCollisionTime < STATIC_COLLISION_RECOVERY_WINDOW
+        : false
+    const skipStuckHandling = recentlyStaticCollision && distanceMoved < TILE_SIZE / 3
 
     // Special handling for harvesters - don't consider them stuck if they're performing valid actions
-    if (unit.type === 'harvester') {
+    if (skipStuckHandling) {
+      stuck.stuckTime = 0
+      stuck.rotationAttempts = 0
+      stuck.dodgeAttempts = 0
+      stuck.isRotating = false
+    } else if (unit.type === 'harvester') {
       const isPerformingValidAction = unit.harvesting ||
                                     unit.unloadingAtRefinery ||
                                     (unit.oreCarried === 0 && !unit.oreField && (!unit.path || unit.path.length === 0)) || // Idle without task
