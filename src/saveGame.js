@@ -73,6 +73,49 @@ function syncLoadedMapSettings(widthTiles, heightTiles, mapSeed) {
   }
 }
 
+function createDefaultMapTile() {
+  return { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
+}
+
+function ensureMapGridMatchesDimensions(grid, width, height) {
+  if (!Array.isArray(grid)) {
+    return Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => createDefaultMapTile())
+    )
+  }
+
+  grid.length = height
+  for (let y = 0; y < height; y++) {
+    if (!Array.isArray(grid[y])) {
+      grid[y] = []
+    }
+    const row = grid[y]
+    row.length = width
+    for (let x = 0; x < width; x++) {
+      if (!row[x] || typeof row[x] !== 'object') {
+        row[x] = createDefaultMapTile()
+        continue
+      }
+
+      const tile = row[x]
+      if (typeof tile.type !== 'string') {
+        tile.type = 'land'
+      }
+      if (typeof tile.ore !== 'boolean') {
+        tile.ore = false
+      }
+      if (typeof tile.seedCrystal !== 'boolean') {
+        tile.seedCrystal = false
+      }
+      if (!Number.isFinite(tile.noBuild)) {
+        tile.noBuild = 0
+      }
+    }
+  }
+
+  return grid
+}
+
 // === Save/Load Game Logic ===
 export function getSaveGames() {
   const saves = builtinMissions.map(mission => ({
@@ -738,14 +781,12 @@ export function loadGame(key) {
     // Initialize mapGrid as 2D array if not already done
     const mapWidth = gameState.mapTilesX || 100
     const mapHeight = gameState.mapTilesY || 100
-    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+    const normalizedMapGrid = ensureMapGridMatchesDimensions(mapGrid, mapWidth, mapHeight)
+    if (normalizedMapGrid !== mapGrid) {
       mapGrid.length = 0
-      for (let y = 0; y < mapHeight; y++) {
-        mapGrid[y] = []
-        for (let x = 0; x < mapWidth; x++) {
-          mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
-        }
-      }
+      normalizedMapGrid.forEach((row, index) => {
+        mapGrid[index] = row
+      })
     }
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
