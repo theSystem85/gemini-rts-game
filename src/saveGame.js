@@ -5,7 +5,13 @@ import { units } from './main.js'
 import { mapGrid } from './main.js'
 import { builtinMissions, getBuiltinMissionById } from './missions/index.js'
 import { cleanupOreFromBuildings } from './gameSetup.js'
-import { TILE_SIZE, TANKER_SUPPLY_CAPACITY } from './config.js'
+import {
+  TILE_SIZE,
+  TANKER_SUPPLY_CAPACITY,
+  setMapDimensions,
+  DEFAULT_MAP_TILES_X,
+  DEFAULT_MAP_TILES_Y
+} from './config.js'
 import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
 import { createUnit } from './units.js'
 import { buildingData } from './buildings.js'
@@ -15,11 +21,100 @@ import { initializeOccupancyMap } from './units.js'
 import { getTextureManager } from './rendering.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { productionQueue } from './productionQueue.js'
-import { getCurrentGame } from './main.js'
+import {
+  getCurrentGame,
+  MAP_SEED_STORAGE_KEY,
+  MAP_WIDTH_TILES_STORAGE_KEY,
+  MAP_HEIGHT_TILES_STORAGE_KEY
+} from './main.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
+
+function syncLoadedMapSettings(widthTiles, heightTiles, mapSeed) {
+  const widthInput = document.getElementById('mapWidthTiles')
+  if (widthInput) {
+    widthInput.value = widthTiles
+  }
+
+  const heightInput = document.getElementById('mapHeightTiles')
+  if (heightInput) {
+    heightInput.value = heightTiles
+  }
+
+  const seedInput = document.getElementById('mapSeed')
+  if (seedInput && typeof mapSeed === 'string') {
+    seedInput.value = mapSeed
+  }
+
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+
+  try {
+    localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, widthTiles.toString())
+  } catch (err) {
+    console.warn('Failed to persist loaded map width to localStorage:', err)
+  }
+
+  try {
+    localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, heightTiles.toString())
+  } catch (err) {
+    console.warn('Failed to persist loaded map height to localStorage:', err)
+  }
+
+  if (typeof mapSeed === 'string') {
+    try {
+      localStorage.setItem(MAP_SEED_STORAGE_KEY, mapSeed)
+    } catch (err) {
+      console.warn('Failed to persist loaded map seed to localStorage:', err)
+    }
+  }
+}
+
+function createDefaultMapTile() {
+  return { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
+}
+
+function ensureMapGridMatchesDimensions(grid, width, height) {
+  if (!Array.isArray(grid)) {
+    return Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => createDefaultMapTile())
+    )
+  }
+
+  grid.length = height
+  for (let y = 0; y < height; y++) {
+    if (!Array.isArray(grid[y])) {
+      grid[y] = []
+    }
+    const row = grid[y]
+    row.length = width
+    for (let x = 0; x < width; x++) {
+      if (!row[x] || typeof row[x] !== 'object') {
+        row[x] = createDefaultMapTile()
+        continue
+      }
+
+      const tile = row[x]
+      if (typeof tile.type !== 'string') {
+        tile.type = 'land'
+      }
+      if (typeof tile.ore !== 'boolean') {
+        tile.ore = false
+      }
+      if (typeof tile.seedCrystal !== 'boolean') {
+        tile.seedCrystal = false
+      }
+      if (!Number.isFinite(tile.noBuild)) {
+        tile.noBuild = 0
+      }
+    }
+  }
+
+  return grid
+}
 
 // === Save/Load Game Logic ===
 export function getSaveGames() {
@@ -304,6 +399,24 @@ export function loadGame(key) {
     }
 
     Object.assign(gameState, loaded.gameState)
+
+    const savedWidthTiles = Number.isFinite(loaded?.gameState?.mapTilesX)
+      ? loaded.gameState.mapTilesX
+      : DEFAULT_MAP_TILES_X
+    const savedHeightTiles = Number.isFinite(loaded?.gameState?.mapTilesY)
+      ? loaded.gameState.mapTilesY
+      : DEFAULT_MAP_TILES_Y
+    const { width: appliedWidth, height: appliedHeight } = setMapDimensions(savedWidthTiles, savedHeightTiles)
+    gameState.mapTilesX = appliedWidth
+    gameState.mapTilesY = appliedHeight
+
+    const savedSeed = typeof loaded?.gameState?.mapSeed === 'string'
+      ? loaded.gameState.mapSeed
+      : (loaded?.gameState?.mapSeed != null ? String(loaded.gameState.mapSeed) : null)
+    if (typeof savedSeed === 'string') {
+      gameState.mapSeed = savedSeed
+    }
+    syncLoadedMapSettings(appliedWidth, appliedHeight, savedSeed)
 
     const pendingFactoryBudgets = loaded.aiFactoryBudgets || null
     const legacyEnemyMoney = loaded.enemyMoney
@@ -668,14 +781,12 @@ export function loadGame(key) {
     // Initialize mapGrid as 2D array if not already done
     const mapWidth = gameState.mapTilesX || 100
     const mapHeight = gameState.mapTilesY || 100
-    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+    const normalizedMapGrid = ensureMapGridMatchesDimensions(mapGrid, mapWidth, mapHeight)
+    if (normalizedMapGrid !== mapGrid) {
       mapGrid.length = 0
-      for (let y = 0; y < mapHeight; y++) {
-        mapGrid[y] = []
-        for (let x = 0; x < mapWidth; x++) {
-          mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
-        }
-      }
+      normalizedMapGrid.forEach((row, index) => {
+        mapGrid[index] = row
+      })
     }
     // Sync mapGrid with gameState
     gameState.mapGrid.length = 0
