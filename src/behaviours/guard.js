@@ -5,6 +5,12 @@ const FOLLOW_DISTANCE = 1.5 * TILE_SIZE
 const PATH_INTERVAL = 500
 
 export function updateGuardBehavior(unit, mapGrid, occupancyMap, now) {
+  if (unit.awaitingRefuel || unit.refueling) {
+    unit.guardTarget = null
+    unit.guardMode = false
+    return
+  }
+
   if (unit.guardTarget && unit.guardTarget.health > 0) {
     unit.guardMode = true
     const unitCenterX = unit.x + TILE_SIZE / 2

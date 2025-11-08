@@ -220,19 +220,17 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
         // Log when tanker starts refueling (within serving range)
         if (!tanker.refuelTimer || tanker.refuelTimer === 0) {
         }
-        if (!tanker.refueling) {
-          stopUnitMovement(tanker)
-          tanker.moveTarget = null
-          tanker.path = []
-        }
-        if (!target.refueling) {
-          stopUnitMovement(target)
-          target.moveTarget = null
-          target.path = []
-        }
+        stopUnitMovement(tanker)
+        tanker.moveTarget = null
+        tanker.path = []
+
+        stopUnitMovement(target)
+        target.moveTarget = null
+        target.path = []
         tanker.refueling = true
         target.refueling = true
-        if (target.awaitingRefuelTankerId === tanker.id) {
+        if (!target.awaitingRefuelTankerId || target.awaitingRefuelTankerId === tanker.id) {
+          target.awaitingRefuelTankerId = tanker.id
           target.awaitingRefuel = true
         }
         // Emergency units get faster refueling rate

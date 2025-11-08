@@ -1,5 +1,5 @@
 // enemyStrategies.js - Enhanced enemy AI strategies
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, SERVICE_SERVING_RANGE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
@@ -1365,6 +1365,50 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
     })
 
     tankers.forEach(tanker => {
+      let activeTarget = null
+      if (tanker.refuelTarget) {
+        const liveTarget = units.find(u => u.id === tanker.refuelTarget.id)
+        if (liveTarget && liveTarget.health > 0) {
+          activeTarget = liveTarget
+          if (tanker.refuelTarget !== liveTarget) {
+            tanker.refuelTarget = liveTarget
+          }
+        } else {
+          tanker.refuelTarget = null
+        }
+      }
+
+      if (tanker.refueling) {
+        stopUnitMovement(tanker)
+        tanker.moveTarget = null
+        tanker.path = []
+
+        if (activeTarget && activeTarget.awaitingRefuelTankerId === tanker.id) {
+          stopUnitMovement(activeTarget)
+          activeTarget.moveTarget = null
+          activeTarget.path = []
+          activeTarget.awaitingRefuel = true
+        }
+        return
+      }
+
+      if (activeTarget) {
+        const distanceToTarget = Math.hypot(activeTarget.tileX - tanker.tileX, activeTarget.tileY - tanker.tileY)
+        if (distanceToTarget <= SERVICE_SERVING_RANGE + 0.01) {
+          stopUnitMovement(tanker)
+          tanker.moveTarget = null
+          tanker.path = []
+
+          if (activeTarget.awaitingRefuelTankerId === tanker.id) {
+            activeTarget.awaitingRefuel = true
+            stopUnitMovement(activeTarget)
+            activeTarget.moveTarget = null
+            activeTarget.path = []
+          }
+          return
+        }
+      }
+
       // First priority: tanker needs refill
       const needsRefill =
         (typeof tanker.maxGas === 'number' && tanker.gas / tanker.maxGas < 0.2) ||
@@ -1457,12 +1501,20 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
 
   // Ensure the assisted unit actually stops so refueling can begin
   if (unit) {
+    const distanceToUnit = Math.hypot(unit.tileX - tanker.tileX, unit.tileY - tanker.tileY)
     stopUnitMovement(unit)
     unit.moveTarget = null
     unit.path = []
     unit.awaitingRefuel = true
     unit.awaitingRefuelTankerId = tanker.id
     unit.awaitingRefuelAssignedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+
+    if (distanceToUnit <= SERVICE_SERVING_RANGE + 0.01) {
+      stopUnitMovement(tanker)
+      tanker.moveTarget = null
+      tanker.path = []
+      return
+    }
   }
 
 
