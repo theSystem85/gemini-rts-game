@@ -536,8 +536,6 @@ export class UnitCommandsHandler {
     tank.path = plan.path.slice(1)
     tank.moveTarget = { x: plan.moveTarget.x, y: plan.moveTarget.y }
     tank.recoveryTask = task
-    targetWreck.assignedTankId = tank.id
-
     if (!suppressNotifications) {
       playSound('movement', 0.5)
     }

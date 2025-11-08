@@ -73,10 +73,29 @@ function handleTowTask(tank, task, wreck, units, gameState) {
     const dist = distanceBetweenPoints(tankCenterX, tankCenterY, wreckCenterX, wreckCenterY)
 
     if (dist <= TOW_DISTANCE_THRESHOLD) {
+      if (wreck.towedBy && wreck.towedBy !== tank.id) {
+        // Another tank has already mounted this wreck
+        tank.recoveryTask = null
+        tank.path = []
+        tank.moveTarget = null
+        tank.towedWreck = null
+        tank.recoveryProgress = 0
+        return
+      }
+      if (wreck.assignedTankId && wreck.assignedTankId !== tank.id) {
+        // Respect existing assignment if another tank mounted in the same frame
+        tank.recoveryTask = null
+        tank.path = []
+        tank.moveTarget = null
+        tank.towedWreck = null
+        tank.recoveryProgress = 0
+        return
+      }
       tank.path = []
       tank.moveTarget = null
       tank.towedWreck = wreck
       wreck.towedBy = tank.id
+      wreck.assignedTankId = tank.id
       task.state = 'towingToWorkshop'
 
       const path = findPath(
@@ -202,12 +221,20 @@ function handleRecycleTask(tank, task, wreck, gameState, delta) {
     const dist = distanceBetweenPoints(tankCenterX, tankCenterY, wreckCenterX, wreckCenterY)
 
     if (dist <= TOW_DISTANCE_THRESHOLD) {
+      if (wreck.assignedTankId && wreck.assignedTankId !== tank.id) {
+        tank.recoveryTask = null
+        tank.path = []
+        tank.moveTarget = null
+        tank.recoveryProgress = 0
+        return
+      }
       tank.path = []
       tank.moveTarget = null
       task.state = 'recycling'
       task.elapsed = 0
       wreck.isBeingRecycled = true
       wreck.recycleStartedAt = performance.now()
+      wreck.assignedTankId = tank.id
       tank.recoveryProgress = 0
     }
   } else if (task.state === 'recycling') {
