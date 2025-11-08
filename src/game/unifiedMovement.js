@@ -27,7 +27,11 @@ import {
   WRECK_COLLISION_MIN,
   WRECK_COLLISION_MAX,
   WRECK_COLLISION_RECOIL_FACTOR_UNIT,
-  WRECK_COLLISION_RECOIL_MAX_UNIT
+  WRECK_COLLISION_RECOIL_MAX_UNIT,
+  STATIC_COLLISION_BOUNCE_MULT,
+  STATIC_COLLISION_BOUNCE_OVERLAP,
+  STATIC_COLLISION_BOUNCE_MIN,
+  STATIC_COLLISION_BOUNCE_MAX
 } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
@@ -46,6 +50,11 @@ const APACHE_ROTOR_LOOP_VOLUME = 0.25
 const APACHE_ROTOR_ALTITUDE_GAIN_MIN = 0.6
 const APACHE_ROTOR_ALTITUDE_GAIN_MAX = 1.0
 
+const STATIC_COLLISION_SEPARATION_SCALE = 0.3
+const STATIC_COLLISION_SEPARATION_MIN = 0.25
+const STATIC_COLLISION_SEPARATION_MAX = 6
+const STATIC_COLLISION_GRACE_PERIOD = 650
+
 function calculatePositionalAudio(x, y) {
   const canvas = document.getElementById('gameCanvas')
   if (!canvas) {
@@ -60,6 +69,28 @@ function calculatePositionalAudio(x, y) {
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
+}
+
+export function hasFriendlyUnitOnTile(unit, tileX, tileY, units = []) {
+  if (!unit || !Number.isFinite(tileX) || !Number.isFinite(tileY) || !Array.isArray(units)) {
+    return false
+  }
+
+  for (const otherUnit of units) {
+    if (!otherUnit || otherUnit.id === unit.id || otherUnit.health <= 0) continue
+    if (!isGroundUnit(otherUnit)) continue
+
+    const otherTileX = Math.floor((otherUnit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const otherTileY = Math.floor((otherUnit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (otherTileX === tileX && otherTileY === tileY) {
+      if (!ownersAreEnemies(unit.owner, otherUnit.owner)) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 function addUnitOccupancyDirect(unit, occupancyMap) {
@@ -560,7 +591,15 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     const distance = Math.hypot(dx, dy)
 
     // Check if we've reached the current waypoint
-    if (distance < TILE_SIZE / 3) {
+    const baseReachDistance = TILE_SIZE / 3
+    let waypointReachDistance = baseReachDistance
+
+    if (distance >= baseReachDistance && hasFriendlyUnitOnTile(unit, nextTile.x, nextTile.y, units)) {
+      const friendlyAllowance = Math.min(TILE_SIZE * 0.95, MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 1.25)
+      waypointReachDistance = Math.max(baseReachDistance, friendlyAllowance)
+    }
+
+    if (distance < waypointReachDistance) {
       unit.path.shift() // Remove reached waypoint
 
       // Play waypoint sound for player units when they reach a new waypoint (but not the final destination)
@@ -748,6 +787,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.x += movement.velocity.x
   unit.y += movement.velocity.y
 
+  const attemptedX = unit.x
+  const attemptedY = unit.y
+
   if (typeof unit.gas === 'number') {
     const distTiles = Math.hypot(unit.x - prevX, unit.y - prevY) / TILE_SIZE
     const distMeters = distTiles * TILE_LENGTH_METERS
@@ -799,7 +841,17 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     if (collisionResult.type === 'wreck') {
       applyWreckCollisionResponse(unit, movement, collisionResult)
     } else if (collisionResult.type === 'unit') {
-      const detonated = applyUnitCollisionResponse(unit, movement, collisionResult, units, factories || [], gameState)
+      const detonated = applyUnitCollisionResponse(
+        unit,
+        movement,
+        collisionResult,
+        units,
+        factories || [],
+        gameState,
+        mapGrid,
+        occupancyMap,
+        wrecks
+      )
       if (detonated) {
         movement.velocity.x = 0
         movement.velocity.y = 0
@@ -820,8 +872,30 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         }
         movement.currentSpeed = 0
       } else {
-        trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
+        applyStaticObstacleCollisionResponse(
+          unit,
+          movement,
+          collisionResult,
+          attemptedX,
+          attemptedY,
+          mapGrid,
+          occupancyMap,
+          units,
+          wrecks
+        )
       }
+    } else if (collisionResult.type === 'terrain' || collisionResult.type === 'bounds') {
+      applyStaticObstacleCollisionResponse(
+        unit,
+        movement,
+        collisionResult,
+        attemptedX,
+        attemptedY,
+        mapGrid,
+        occupancyMap,
+        units,
+        wrecks
+      )
     } else {
       // Try alternative movement (slide along obstacles)
       trySlideMovement(unit, movement, mapGrid, occupancyMap, units, wrecks)
@@ -987,16 +1061,16 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
 
   // Check map bounds
   if (!tileRow || tile === undefined) {
-    return { collided: true, type: 'bounds' }
+    return { collided: true, type: 'bounds', tileX, tileY }
   }
 
   if (typeof tile === 'number') {
     if (tile === 1) {
-      return { collided: true, type: 'terrain' }
+      return { collided: true, type: 'terrain', tileX, tileY }
     }
   } else {
     if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
-      return { collided: true, type: 'terrain' }
+      return { collided: true, type: 'terrain', tileX, tileY }
     }
 
     if (tile.building) {
@@ -1202,7 +1276,356 @@ function applyWreckCollisionResponse(unit, movement, collisionResult) {
   movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
 }
 
-function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null) {
+function getStaticObstacleCollisionInfo(unit, collisionResult, attemptedX, attemptedY, mapGrid) {
+  if (!unit || !collisionResult) {
+    return null
+  }
+
+  const attemptedCenterX = attemptedX + TILE_SIZE / 2
+  const attemptedCenterY = attemptedY + TILE_SIZE / 2
+  const velocityX = unit.movement?.velocity?.x || 0
+  const velocityY = unit.movement?.velocity?.y || 0
+
+  let normalX = 0
+  let normalY = 0
+  let overlap = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 0.5
+
+  if (collisionResult.type === 'terrain' || collisionResult.type === 'building') {
+    let tileX = Number.isFinite(collisionResult.tileX) ? collisionResult.tileX : null
+    let tileY = Number.isFinite(collisionResult.tileY) ? collisionResult.tileY : null
+
+    if (tileX === null) {
+      tileX = Math.floor(attemptedCenterX / TILE_SIZE)
+    }
+    if (tileY === null) {
+      tileY = Math.floor(attemptedCenterY / TILE_SIZE)
+    }
+
+    const tileCenterX = (tileX + 0.5) * TILE_SIZE
+    const tileCenterY = (tileY + 0.5) * TILE_SIZE
+    normalX = tileCenterX - attemptedCenterX
+    normalY = tileCenterY - attemptedCenterY
+
+    const tileMinX = tileX * TILE_SIZE
+    const tileMaxX = tileMinX + TILE_SIZE
+    const tileMinY = tileY * TILE_SIZE
+    const tileMaxY = tileMinY + TILE_SIZE
+    const distLeft = attemptedCenterX - tileMinX
+    const distRight = tileMaxX - attemptedCenterX
+    const distTop = attemptedCenterY - tileMinY
+    const distBottom = tileMaxY - attemptedCenterY
+    const minEdgeDistance = Math.min(distLeft, distRight, distTop, distBottom)
+    const halfTile = TILE_SIZE / 2
+    overlap += Math.max(0, halfTile - minEdgeDistance)
+  } else if (collisionResult.type === 'bounds') {
+    const mapWidth = (mapGrid && mapGrid[0] ? mapGrid[0].length : 0) * TILE_SIZE
+    const mapHeight = (Array.isArray(mapGrid) ? mapGrid.length : 0) * TILE_SIZE
+
+    if (attemptedCenterX < TILE_SIZE / 2) {
+      normalX = -1
+      overlap += TILE_SIZE / 2 - attemptedCenterX
+    } else if (mapWidth > 0 && attemptedCenterX > mapWidth - TILE_SIZE / 2) {
+      normalX = 1
+      overlap += attemptedCenterX - (mapWidth - TILE_SIZE / 2)
+    }
+
+    if (attemptedCenterY < TILE_SIZE / 2) {
+      normalY = -1
+      overlap += TILE_SIZE / 2 - attemptedCenterY
+    } else if (mapHeight > 0 && attemptedCenterY > mapHeight - TILE_SIZE / 2) {
+      normalY = 1
+      overlap += attemptedCenterY - (mapHeight - TILE_SIZE / 2)
+    }
+  }
+
+  const normalLength = Math.hypot(normalX, normalY)
+  if (normalLength > 0.0001) {
+    normalX /= normalLength
+    normalY /= normalLength
+  } else {
+    const velocityLength = Math.hypot(velocityX, velocityY)
+    if (velocityLength > 0.0001) {
+      normalX = velocityX / velocityLength
+      normalY = velocityY / velocityLength
+    } else {
+      normalX = 0
+      normalY = -1
+    }
+  }
+
+  return { normalX, normalY, overlap }
+}
+
+function applyStaticObstacleCollisionResponse(
+  unit,
+  movement,
+  collisionResult,
+  attemptedX,
+  attemptedY,
+  mapGrid,
+  occupancyMap,
+  units = [],
+  wrecks = []
+) {
+  if (!unit || !movement || !collisionResult) {
+    return
+  }
+
+  const info = getStaticObstacleCollisionInfo(unit, collisionResult, attemptedX, attemptedY, mapGrid)
+  if (!info) {
+    return
+  }
+
+  const { normalX, normalY, overlap } = info
+  const normalVel = movement.velocity.x * normalX + movement.velocity.y * normalY
+
+  if (normalVel > 0) {
+    const impulseBase = normalVel * STATIC_COLLISION_BOUNCE_MULT + overlap * STATIC_COLLISION_BOUNCE_OVERLAP
+    const impulse = Math.max(STATIC_COLLISION_BOUNCE_MIN, Math.min(STATIC_COLLISION_BOUNCE_MAX, impulseBase))
+    movement.velocity.x -= normalX * impulse
+    movement.velocity.y -= normalY * impulse
+  }
+
+  if (movement.targetVelocity) {
+    const targetNormal = movement.targetVelocity.x * normalX + movement.targetVelocity.y * normalY
+    if (targetNormal > 0) {
+      movement.targetVelocity.x -= normalX * targetNormal
+      movement.targetVelocity.y -= normalY * targetNormal
+    }
+  }
+
+  const separation = Math.min(
+    STATIC_COLLISION_SEPARATION_MAX,
+    Math.max(
+      STATIC_COLLISION_SEPARATION_MIN,
+      overlap * STATIC_COLLISION_SEPARATION_SCALE + Math.max(0, normalVel) * 0.4
+    )
+  )
+
+  if (separation > 0.001) {
+    applySafeSeparation(unit, -normalX * separation, -normalY * separation, mapGrid, occupancyMap, units, wrecks)
+  }
+
+  movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+  movement.lastStaticCollisionTime = performance.now()
+  movement.lastStaticCollisionNormal = { x: normalX, y: normalY }
+}
+
+function isGroundUnit(unit) {
+  if (!unit) return false
+  return !(unit.type === 'apache' && unit.flightState !== 'grounded')
+}
+
+function isTileBlockedForCollision(mapGrid, tileX, tileY) {
+  if (!mapGrid || tileY < 0 || tileY >= mapGrid.length) {
+    return true
+  }
+  const row = mapGrid[tileY]
+  if (!row || tileX < 0 || tileX >= row.length) {
+    return true
+  }
+
+  const tile = row[tileX]
+  if (typeof tile === 'number') {
+    return tile === 1
+  }
+
+  if (!tile) {
+    return true
+  }
+
+  if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+    return true
+  }
+
+  if (tile.building) {
+    return true
+  }
+
+  return false
+}
+
+function isPositionBlockedForCollision(unit, targetX, targetY, mapGrid, occupancyMap, units = [], wrecks = [], ignoreIds = []) {
+  if (!unit) {
+    return true
+  }
+
+  const ignoreSet = ignoreIds.length > 0 ? new Set(ignoreIds) : null
+  const centerX = targetX + TILE_SIZE / 2
+  const centerY = targetY + TILE_SIZE / 2
+  const tileX = Math.floor(centerX / TILE_SIZE)
+  const tileY = Math.floor(centerY / TILE_SIZE)
+
+  if (isTileBlockedForCollision(mapGrid, tileX, tileY)) {
+    return true
+  }
+
+  if (occupancyMap && occupancyMap[tileY]) {
+    let occupancy = occupancyMap[tileY][tileX] || 0
+    const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    if (tileX === currentTileX && tileY === currentTileY) {
+      occupancy = Math.max(0, occupancy - 1)
+    }
+
+    if (occupancy > 0 && ignoreSet) {
+      for (const other of units || []) {
+        if (!other || other.id === unit.id) continue
+        if (!ignoreSet.has(other.id)) continue
+        const otherTileX = Math.floor((other.x + TILE_SIZE / 2) / TILE_SIZE)
+        const otherTileY = Math.floor((other.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (otherTileX === tileX && otherTileY === tileY) {
+          occupancy = Math.max(0, occupancy - 1)
+        }
+        if (occupancy <= 0) {
+          break
+        }
+      }
+    }
+
+    if (occupancy > 0) {
+      return true
+    }
+  }
+
+  const minSeparation = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 0.95
+
+  if (units && units.length > 0) {
+    for (const other of units) {
+      if (!other || other.id === unit.id || other.health <= 0) continue
+      if (ignoreSet && ignoreSet.has(other.id)) continue
+      if (!isGroundUnit(other)) continue
+
+      const otherCenterX = other.x + TILE_SIZE / 2
+      const otherCenterY = other.y + TILE_SIZE / 2
+      const distance = Math.hypot(centerX - otherCenterX, centerY - otherCenterY)
+
+      if (distance < minSeparation) {
+        return true
+      }
+    }
+  }
+
+  if (wrecks && wrecks.length > 0) {
+    for (const wreck of wrecks) {
+      if (!wreck || wreck.health <= 0) continue
+      const wreckCenterX = wreck.x + TILE_SIZE / 2
+      const wreckCenterY = wreck.y + TILE_SIZE / 2
+      const distance = Math.hypot(centerX - wreckCenterX, centerY - wreckCenterY)
+      if (distance < minSeparation) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function applySafeSeparation(unit, dx, dy, mapGrid, occupancyMap, units = [], wrecks = [], ignoreIds = []) {
+  if (!unit || (dx === 0 && dy === 0)) {
+    return { appliedX: 0, appliedY: 0 }
+  }
+
+  const startX = unit.x
+  const startY = unit.y
+  let appliedX = 0
+  let appliedY = 0
+  let scale = 1
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const scaledX = dx * scale
+    const scaledY = dy * scale
+    const targetX = startX + scaledX
+    const targetY = startY + scaledY
+
+    if (!isPositionBlockedForCollision(unit, targetX, targetY, mapGrid, occupancyMap, units, wrecks, ignoreIds)) {
+      unit.x = targetX
+      unit.y = targetY
+      appliedX = scaledX
+      appliedY = scaledY
+      break
+    }
+
+    scale *= 0.5
+  }
+
+  if (appliedX === 0 && appliedY === 0) {
+    unit.x = startX
+    unit.y = startY
+  }
+
+  return { appliedX, appliedY }
+}
+
+function ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occupancyMap, units = [], wrecks = []) {
+  if (!unit || !otherUnit) {
+    return
+  }
+  if (!isGroundUnit(unit) || !isGroundUnit(otherUnit)) {
+    return
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const otherCenterX = otherUnit.x + TILE_SIZE / 2
+  const otherCenterY = otherUnit.y + TILE_SIZE / 2
+  const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY)
+  const desiredDistance = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * 0.98
+
+  if (distance >= desiredDistance) {
+    return
+  }
+
+  let remaining = desiredDistance - distance
+  if (remaining <= 0) {
+    return
+  }
+
+  const otherResult = applySafeSeparation(
+    otherUnit,
+    normalX * remaining * 0.5,
+    normalY * remaining * 0.5,
+    mapGrid,
+    occupancyMap,
+    units,
+    wrecks,
+    [unit.id]
+  )
+
+  const otherAlong = otherResult.appliedX * normalX + otherResult.appliedY * normalY
+  remaining = Math.max(0, remaining - otherAlong)
+
+  if (remaining > 0.001) {
+    const unitResult = applySafeSeparation(
+      unit,
+      -normalX * remaining,
+      -normalY * remaining,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      [otherUnit.id]
+    )
+    const unitAlong = -(unitResult.appliedX * normalX + unitResult.appliedY * normalY)
+    remaining = Math.max(0, remaining - unitAlong)
+  }
+
+  if (remaining > 0.001) {
+    applySafeSeparation(
+      otherUnit,
+      normalX * remaining,
+      normalY * remaining,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      [unit.id]
+    )
+  }
+}
+
+function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null, mapGrid = null, occupancyMap = null, wrecks = []) {
   if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
     return false
   }
@@ -1229,13 +1652,36 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
 
   const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
   if (separation > 0.001) {
-    const pushOther = otherSpeed <= unitSpeed
-    if (pushOther && collisionResult.other && collisionResult.other.movement) {
-      collisionResult.other.x += normalX * separation
-      collisionResult.other.y += normalY * separation
+    const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+    const pushOther = Boolean(otherUnit) && otherSpeed <= unitSpeed
+
+    if (pushOther && otherUnit) {
+      applySafeSeparation(
+        otherUnit,
+        normalX * separation,
+        normalY * separation,
+        mapGrid,
+        occupancyMap,
+        units,
+        wrecks,
+        [unit.id]
+      )
     }
-    unit.x -= normalX * separation
-    unit.y -= normalY * separation
+
+    applySafeSeparation(
+      unit,
+      -normalX * separation,
+      -normalY * separation,
+      mapGrid,
+      occupancyMap,
+      units,
+      wrecks,
+      otherUnit ? [otherUnit.id] : []
+    )
+
+    if (otherUnit) {
+      ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occupancyMap, units, wrecks)
+    }
   }
 
   const normalVel = movement.velocity.x * normalX + movement.velocity.y * normalY
@@ -1436,6 +1882,7 @@ export function rotateUnitInPlace(unit, targetDirection = null) {
  */
 export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = null, factories = null) {
   initializeUnitMovement(unit)
+  const movement = unit.movement
 
   // Initialize stuck detection if not present
   if (!unit.movement.stuckDetection) {
@@ -1464,6 +1911,11 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   // Check if unit has moved significantly
   if (now - stuck.lastMovementCheck > unitCheckInterval) {
     const distanceMoved = Math.hypot(unit.x - stuck.lastPosition.x, unit.y - stuck.lastPosition.y)
+    const timeDelta = now - stuck.lastMovementCheck
+    const recentStaticCollision = Boolean(
+      movement?.lastStaticCollisionTime &&
+      now - movement.lastStaticCollisionTime < STATIC_COLLISION_GRACE_PERIOD
+    )
 
     // Special handling for harvesters - don't consider them stuck if they're performing valid actions
     if (unit.type === 'harvester') {
@@ -1486,7 +1938,13 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
         const stuckTimeThreshold = isAIHarvester ? stuckThreshold * 2 : stuckThreshold  // 2x longer for AI harvesters
 
         if (distanceMoved < movementThreshold) {
-          stuck.stuckTime += now - stuck.lastMovementCheck
+          const slidingProgress = recentStaticCollision && distanceMoved >= movementThreshold * 0.35
+
+          if (slidingProgress) {
+            stuck.stuckTime = Math.max(0, stuck.stuckTime - timeDelta * 0.5)
+          } else {
+            stuck.stuckTime += timeDelta
+          }
 
           if (stuck.stuckTime > stuckTimeThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
 
@@ -1595,7 +2053,13 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
       const stuckTimeThreshold = isAICombatUnit ? stuckThreshold * 3 : stuckThreshold  // 3x longer for AI units
 
       if (distanceMoved < movementThreshold) {
-        stuck.stuckTime += now - stuck.lastMovementCheck
+        const slidingProgress = recentStaticCollision && distanceMoved >= movementThreshold * 0.35
+
+        if (slidingProgress) {
+          stuck.stuckTime = Math.max(0, stuck.stuckTime - timeDelta * 0.5)
+        } else {
+          stuck.stuckTime += timeDelta
+        }
 
         if (stuck.stuckTime > stuckTimeThreshold && !stuck.isRotating && (now - stuck.lastStuckHandling > STUCK_HANDLING_COOLDOWN)) {
 

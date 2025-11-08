@@ -394,6 +394,31 @@ export const COLLISION_SEPARATION_MIN = 0.5 // Min separation distance
 export const COLLISION_NORMAL_DAMPING_MULT = 1.1 // How strongly to damp velocity along collision normal
 export const COLLISION_NORMAL_DAMPING_MAX = 1.2 // Max damping amount
 
+// Collision bounce tuning (unit vs static obstacles)
+export let STATIC_COLLISION_BOUNCE_MULT = 0.75 // Velocity contribution when bouncing off static obstacles
+
+export function setStaticCollisionBounceMult(value) {
+  STATIC_COLLISION_BOUNCE_MULT = value
+}
+
+export let STATIC_COLLISION_BOUNCE_OVERLAP = 0.1 // Overlap contribution when bouncing off static obstacles
+
+export function setStaticCollisionBounceOverlap(value) {
+  STATIC_COLLISION_BOUNCE_OVERLAP = value
+}
+
+export let STATIC_COLLISION_BOUNCE_MIN = 0.1 // Minimum bounce impulse against static obstacles
+
+export function setStaticCollisionBounceMin(value) {
+  STATIC_COLLISION_BOUNCE_MIN = value
+}
+
+export let STATIC_COLLISION_BOUNCE_MAX = 2 // Maximum bounce impulse against static obstacles
+
+export function setStaticCollisionBounceMax(value) {
+  STATIC_COLLISION_BOUNCE_MAX = value
+}
+
 // Collision bounce tuning (unit vs wreck)
 export const WRECK_COLLISION_REMOTE_BOOST = 1.1 // Stronger boost when remote-controlling
 export const WRECK_COLLISION_SPEED_FACTOR = 0.75
@@ -1163,6 +1188,10 @@ const EXPORTED_CONFIG_VARIABLES = [
   'COLLISION_SEPARATION_MIN',
   'COLLISION_NORMAL_DAMPING_MULT',
   'COLLISION_NORMAL_DAMPING_MAX',
+  'STATIC_COLLISION_BOUNCE_MULT',
+  'STATIC_COLLISION_BOUNCE_OVERLAP',
+  'STATIC_COLLISION_BOUNCE_MIN',
+  'STATIC_COLLISION_BOUNCE_MAX',
   'WRECK_COLLISION_REMOTE_BOOST',
   'WRECK_COLLISION_SPEED_FACTOR',
   'WRECK_COLLISION_OVERLAP_FACTOR',

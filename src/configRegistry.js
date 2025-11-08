@@ -63,6 +63,14 @@ import {
   setStuckHandlingCooldown,
   DODGE_ATTEMPT_COOLDOWN,
   setDodgeAttemptCooldown,
+  STATIC_COLLISION_BOUNCE_MULT,
+  setStaticCollisionBounceMult,
+  STATIC_COLLISION_BOUNCE_OVERLAP,
+  setStaticCollisionBounceOverlap,
+  STATIC_COLLISION_BOUNCE_MIN,
+  setStaticCollisionBounceMin,
+  STATIC_COLLISION_BOUNCE_MAX,
+  setStaticCollisionBounceMax,
   STREET_SPEED_MULTIPLIER,
   setStreetSpeedMultiplier,
   KEYBOARD_SCROLL_SPEED,
@@ -596,6 +604,55 @@ export const configRegistry = {
     max: 3,
     step: 0.1,
     category: 'Movement'
+  },
+
+  // Collision Physics
+  staticCollisionBounceMultiplier: {
+    name: 'Static Bounce Velocity Mult',
+    description: 'Scales how strongly velocity reflects when hitting walls/rocks',
+    type: 'number',
+    get: () => STATIC_COLLISION_BOUNCE_MULT,
+    set: setStaticCollisionBounceMult,
+    min: 0,
+    max: 2,
+    step: 0.05,
+    category: 'Collisions'
+  },
+
+  staticCollisionBounceOverlap: {
+    name: 'Static Bounce Overlap Bonus',
+    description: 'Additional impulse added per pixel of penetration into static obstacles',
+    type: 'number',
+    get: () => STATIC_COLLISION_BOUNCE_OVERLAP,
+    set: setStaticCollisionBounceOverlap,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    category: 'Collisions'
+  },
+
+  staticCollisionBounceMin: {
+    name: 'Static Bounce Minimum Impulse',
+    description: 'Minimum impulse applied when bouncing off static obstacles',
+    type: 'number',
+    get: () => STATIC_COLLISION_BOUNCE_MIN,
+    set: setStaticCollisionBounceMin,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    category: 'Collisions'
+  },
+
+  staticCollisionBounceMax: {
+    name: 'Static Bounce Maximum Impulse',
+    description: 'Upper clamp for bounce impulse against static obstacles',
+    type: 'number',
+    get: () => STATIC_COLLISION_BOUNCE_MAX,
+    set: setStaticCollisionBounceMax,
+    min: 0.5,
+    max: 4,
+    step: 0.1,
+    category: 'Collisions'
   },
 
   keyboardScrollSpeed: {
