@@ -1599,6 +1599,251 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
 }
 
 /**
+ * Manages ammunition supply truck deployment and resupply operations for all AI players
+ * Implements FR-031, FR-034, FR-036
+ */
+export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
+  const aiPlayers = getAIPlayers(gameState)
+
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId)
+    const ammoTrucks = aiUnits.filter(u => u.type === 'ammunitionTruck' && u.health > 0)
+    if (ammoTrucks.length === 0) return
+
+    const ammoFactories = (gameState.buildings || []).filter(
+      b => b.owner === aiPlayerId && b.type === 'ammunitionFactory' && b.health > 0
+    )
+
+    // Separate critical (ammo <= 0) and low ammo units for priority handling
+    const criticalUnits = []
+    const lowAmmoUnits = []
+    aiUnits.forEach(u => {
+      if (u.type === 'ammunitionTruck' || u.health <= 0) return
+      
+      // Check for units with ammunition system (maxAmmunition or maxRocketAmmo)
+      const hasAmmoSystem = typeof u.maxAmmunition === 'number' || typeof u.maxRocketAmmo === 'number'
+      if (!hasAmmoSystem) return
+
+      const maxAmmo = u.type === 'apache' ? u.maxRocketAmmo : u.maxAmmunition
+      const currentAmmo = u.type === 'apache' ? u.rocketAmmo : u.ammunition
+      
+      if (currentAmmo <= 0) {
+        criticalUnits.push(u)
+      } else if (currentAmmo / maxAmmo < 0.2) { // 20% threshold for low ammunition
+        lowAmmoUnits.push(u)
+      }
+    })
+
+    ammoTrucks.forEach(truck => {
+      // First priority: truck needs reload
+      const needsReload = typeof truck.maxAmmoCargo === 'number' && truck.ammoCargo / truck.maxAmmoCargo < 0.2
+
+      if (needsReload && ammoFactories.length > 0) {
+        sendAmmoTruckToFactory(truck, ammoFactories[0], mapGrid)
+        return
+      }
+
+      // Second priority: IMMEDIATE response to critical units (ammo <= 0)
+      if (criticalUnits.length > 0 && truck.ammoCargo > 0) {
+        let target = null
+        let bestDistance = Infinity
+
+        criticalUnits.forEach(criticalUnit => {
+          // Skip if another truck is already handling this critical unit
+          const alreadyAssigned = ammoTrucks.some(otherTruck =>
+            otherTruck !== truck &&
+            otherTruck.ammoResupplyTarget?.id === criticalUnit.id
+          )
+          if (alreadyAssigned) return
+
+          const distance = Math.hypot(criticalUnit.tileX - truck.tileX, criticalUnit.tileY - truck.tileY)
+          if (distance < bestDistance) {
+            bestDistance = distance
+            target = criticalUnit
+          }
+        })
+
+        if (target) {
+          sendAmmoTruckToUnit(truck, target, mapGrid, gameState.occupancyMap)
+          return
+        }
+      }
+
+      // Third priority: low ammo units
+      if (lowAmmoUnits.length > 0 && truck.ammoCargo > 0) {
+        let target = lowAmmoUnits[0]
+        let best = Math.hypot(target.tileX - truck.tileX, target.tileY - truck.tileY)
+        lowAmmoUnits.forEach(u => {
+          const d = Math.hypot(u.tileX - truck.tileX, u.tileY - truck.tileY)
+          if (d < best) {
+            best = d
+            target = u
+          }
+        })
+        sendAmmoTruckToUnit(truck, target, mapGrid, gameState.occupancyMap)
+        return
+      }
+
+      // Fourth priority: follow combat groups at safe distance
+      const combatUnits = aiUnits.filter(u => 
+        (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+        u.health > 0
+      )
+      if (combatUnits.length > 0) {
+        // Find center of mass of combat group
+        let centerX = 0
+        let centerY = 0
+        combatUnits.forEach(u => {
+          centerX += u.tileX
+          centerY += u.tileY
+        })
+        centerX = Math.floor(centerX / combatUnits.length)
+        centerY = Math.floor(centerY / combatUnits.length)
+
+        // Stay 3-5 tiles behind the combat group
+        const distance = Math.hypot(truck.tileX - centerX, truck.tileY - centerY)
+        if (distance > 7 || distance < 3) {
+          // Move to maintain safe distance
+          const angle = Math.atan2(truck.tileY - centerY, truck.tileX - centerX)
+          const targetX = Math.floor(centerX + Math.cos(angle) * 5)
+          const targetY = Math.floor(centerY + Math.sin(angle) * 5)
+          
+          if (targetX >= 0 && targetY >= 0 && targetX < mapGrid[0].length && targetY < mapGrid.length) {
+            const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: targetX, y: targetY }, mapGrid)
+            if (path && path.length > 1) {
+              truck.path = path.slice(1)
+              truck.moveTarget = { x: targetX, y: targetY }
+            }
+          }
+        }
+      }
+    })
+  })
+}
+
+function sendAmmoTruckToFactory(truck, factory, mapGrid) {
+  const cx = factory.x + Math.floor(factory.width / 2)
+  const cy = factory.y + factory.height + 1
+  const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: cx, y: cy }, mapGrid)
+  if (path && path.length > 1) {
+    truck.path = path.slice(1)
+    truck.moveTarget = { x: cx, y: cy }
+  }
+  // Clear any existing resupply target
+  truck.ammoResupplyTarget = null
+}
+
+function sendAmmoTruckToUnit(truck, unit, mapGrid, occupancyMap) {
+  // Set the resupply target BEFORE pathfinding
+  truck.ammoResupplyTarget = unit
+  truck.ammoResupplyTimer = 0
+
+  // Try to find an adjacent position to the target unit
+  const targetTileX = unit.tileX
+  const targetTileY = unit.tileY
+  const directions = [
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+  ]
+
+  let pathFound = false
+  for (const dir of directions) {
+    const destX = targetTileX + dir.x
+    const destY = targetTileY + dir.y
+    if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
+      const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: destX, y: destY }, mapGrid, occupancyMap)
+      if (path && path.length > 0) {
+        truck.path = path.slice(1)
+        truck.moveTarget = { x: destX, y: destY }
+        pathFound = true
+        break
+      }
+    }
+  }
+}
+
+/**
+ * Monitors AI unit ammunition levels and triggers resupply retreats
+ * Implements FR-032, FR-033
+ */
+export function manageAIAmmunitionMonitoring(units, gameState, mapGrid) {
+  const aiPlayers = getAIPlayers(gameState)
+
+  aiPlayers.forEach(aiPlayerId => {
+    const aiUnits = units.filter(u => u.owner === aiPlayerId && u.health > 0)
+    const ammoFactories = (gameState.buildings || []).filter(
+      b => b.owner === aiPlayerId && b.type === 'ammunitionFactory' && b.health > 0
+    )
+    const ammoTrucks = aiUnits.filter(u => u.type === 'ammunitionTruck' && u.health > 0)
+
+    aiUnits.forEach(unit => {
+      // Skip units without ammunition system
+      const hasAmmoSystem = typeof unit.maxAmmunition === 'number' || typeof unit.maxRocketAmmo === 'number'
+      if (!hasAmmoSystem || unit.type === 'ammunitionTruck') return
+
+      const maxAmmo = unit.type === 'apache' ? unit.maxRocketAmmo : unit.maxAmmunition
+      const currentAmmo = unit.type === 'apache' ? unit.rocketAmmo : unit.ammunition
+      const ammoPercentage = currentAmmo / maxAmmo
+
+      // FR-033: Retreat logic when ammunition falls below 20%
+      if (ammoPercentage < 0.2 && !unit.retreatingForAmmo) {
+        unit.retreatingForAmmo = true
+        
+        // Find nearest resupply point (factory or truck)
+        let nearestResupply = null
+        let nearestDistance = Infinity
+
+        // Check ammunition factories
+        ammoFactories.forEach(factory => {
+          const distance = Math.hypot(
+            unit.tileX - (factory.x + Math.floor(factory.width / 2)),
+            unit.tileY - (factory.y + Math.floor(factory.height / 2))
+          )
+          if (distance < nearestDistance) {
+            nearestDistance = distance
+            nearestResupply = { type: 'factory', target: factory }
+          }
+        })
+
+        // Check ammunition trucks with cargo
+        ammoTrucks.forEach(truck => {
+          if (truck.ammoCargo > 0) {
+            const distance = Math.hypot(unit.tileX - truck.tileX, unit.tileY - truck.tileY)
+            if (distance < nearestDistance) {
+              nearestDistance = distance
+              nearestResupply = { type: 'truck', target: truck }
+            }
+          }
+        })
+
+        // Path to nearest resupply point
+        if (nearestResupply) {
+          let targetX, targetY
+          if (nearestResupply.type === 'factory') {
+            targetX = nearestResupply.target.x + Math.floor(nearestResupply.target.width / 2)
+            targetY = nearestResupply.target.y + nearestResupply.target.height + 1
+          } else {
+            targetX = nearestResupply.target.tileX
+            targetY = nearestResupply.target.tileY
+          }
+
+          const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: targetX, y: targetY }, mapGrid)
+          if (path && path.length > 1) {
+            // Cancel current attack/move commands
+            unit.target = null
+            unit.path = path.slice(1)
+            unit.moveTarget = { x: targetX, y: targetY }
+          }
+        }
+      } else if (ammoPercentage >= 0.8 && unit.retreatingForAmmo) {
+        // Resume normal operations after resupply
+        unit.retreatingForAmmo = false
+      }
+    })
+  })
+}
+
+/**
  * Checks if an AI player should start attacking (has hospital built)
  */
 export function shouldAIStartAttacking(aiPlayerId, gameState) {
