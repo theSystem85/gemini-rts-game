@@ -278,7 +278,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       ammunitionFactories.length === 0 &&
       aiFactory.budget >= buildingData.ammunitionFactory.cost
     ) {
-      // FR-030: Build ammunition factory after vehicle factory and hospital
+      // FR-030, FR-035: Build/rebuild ammunition factory after vehicle factory and hospital
+      // This handles both initial construction and rebuilding after destruction
       buildingType = 'ammunitionFactory'
       cost = buildingData.ammunitionFactory.cost
     } else if (
@@ -642,7 +643,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
         aiAmmoTrucks.length < ammunitionFactoriesForProduction.length * 2 &&
         aiFactory.budget >= getUnitCost('ammunitionTruck')
       ) {
-        // FR-031: Build 1-2 ammunition supply trucks per ammunition factory
+        // FR-031, FR-036: Build 1-2 ammunition supply trucks per ammunition factory
+        // This handles both initial production and replacement after destruction
         unitType = 'ammunitionTruck'
       } else if (currentHarvesterTotal < MAX_HARVESTERS) {
         // Priority: Build up harvesters first, but strict limit of 4 per refinery
