@@ -51,6 +51,13 @@ export function triggerExplosion(
     // Skip the shooter if this was their own bullet
     if (distance < explosionRadius) {
       if (shooter && unit.id === shooter.id) return
+
+      const isAirUnit = unit.isAirUnit || unit.type === 'apache'
+      const airborneStates = ['takeoff', 'airborne', 'landing']
+      const isAirborne = isAirUnit && airborneStates.includes(unit.flightState)
+      if (isAirborne) {
+        return
+      }
       let damage
       if (constantDamage) {
         damage = baseDamage
