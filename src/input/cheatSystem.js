@@ -10,7 +10,8 @@ import {
   TILE_SIZE,
   DIRECTIONS,
   MAX_SPAWN_SEARCH_DISTANCE,
-  UNIT_PROPERTIES
+  UNIT_PROPERTIES,
+  HELIPAD_AMMO_RESERVE
 } from '../config.js'
 import { createUnit, updateUnitOccupancy } from '../units.js'
 import { updatePowerSupply } from '../buildings.js'
@@ -209,6 +210,8 @@ export class CheatSystem {
           <li><code>status</code> - Show current cheat status</li>
           <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
           <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
+          <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
+          <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
           <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
           <li><code>kill</code> - Destroy all selected units or buildings</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
@@ -368,6 +371,26 @@ export class CheatSystem {
         } else {
           this.showError('Invalid amount. Use: medics [number]')
         }
+      } else if (normalizedCode.startsWith('ammo ')) {
+        const ammoInput = normalizedCode.substring(5).trim()
+        if (ammoInput.startsWith('load ')) {
+          // Handle "ammo load [amount]" for ammo trucks
+          const loadInput = ammoInput.substring(5).trim()
+          const parsed = this.parseAmmoValue(loadInput)
+          if (parsed) {
+            this.setAmmoTruckLoad(parsed)
+          } else {
+            this.showError('Invalid amount. Use: ammo load [number] or ammo load [percent%]')
+          }
+        } else {
+          // Handle "ammo [amount]" for selected units
+          const parsed = this.parseAmmoValue(ammoInput)
+          if (parsed) {
+            this.setSelectedUnitsAmmo(parsed)
+          } else {
+            this.showError('Invalid amount. Use: ammo [number] or ammo [percent%]')
+          }
+        }
       } else if (normalizedCode === 'kill') {
         this.killSelectedTargets()
       } else {
@@ -407,6 +430,19 @@ export class CheatSystem {
   }
 
   parseFuelValue(input) {
+    if (!input) return null
+    const trimmed = input.trim()
+    if (trimmed.endsWith('%')) {
+      const percent = parseFloat(trimmed.slice(0, -1))
+      if (isNaN(percent)) return null
+      return { value: percent / 100, isPercent: true, display: `${percent}%` }
+    }
+    const amount = this.parseAmount(trimmed)
+    if (amount === null) return null
+    return { value: amount, isPercent: false, display: `${amount}` }
+  }
+
+  parseAmmoValue(input) {
     if (!input) return null
     const trimmed = input.trim()
     if (trimmed.endsWith('%')) {
@@ -683,21 +719,12 @@ export class CheatSystem {
   setFuel(parsed) {
     const { value, isPercent, display } = parsed
 
-    let selected = []
-    if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
-      try {
-        selected = window.debugGetSelectedUnits()
-      } catch {
-        selected = []
-      }
-    }
-
-    if (!selected || selected.length === 0) {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showError('No unit selected')
       return
     }
 
-    selected.forEach(unit => {
+    this.selectedUnits.forEach(unit => {
       if (typeof unit.maxGas === 'number') {
         const target = isPercent ? unit.maxGas * value : value
         const clamped = Math.max(0, Math.min(target, unit.maxGas))
@@ -706,28 +733,19 @@ export class CheatSystem {
       }
     })
 
-    showNotification(`⛽ Fuel set to ${display} for ${selected.length} unit${selected.length > 1 ? 's' : ''}`,
+    showNotification(`⛽ Fuel set to ${display} for ${this.selectedUnits.length} unit${this.selectedUnits.length > 1 ? 's' : ''}`,
       3000)
     playSound('confirmed', 0.5)
   }
 
   setSelectedAmbulanceMedics(amount) {
-    let selected = []
-    if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
-      try {
-        selected = window.debugGetSelectedUnits()
-      } catch {
-        selected = []
-      }
-    }
-
-    if (!selected || selected.length === 0) {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showError('No unit selected')
       return
     }
 
     let appliedCount = 0
-    selected.forEach(unit => {
+    this.selectedUnits.forEach(unit => {
       if (unit.type === 'ambulance' && typeof unit.maxMedics === 'number') {
         const clamped = Math.min(Math.max(amount, 0), unit.maxMedics)
         unit.medics = clamped
@@ -740,6 +758,82 @@ export class CheatSystem {
       playSound('confirmed', 0.5)
     } else {
       this.showError('No ambulances selected')
+    }
+  }
+
+  setSelectedUnitsAmmo(parsed) {
+    const { value, isPercent, display } = parsed
+
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let appliedCount = 0
+    this.selectedUnits.forEach(unit => {
+      if (typeof unit.maxAmmunition === 'number') {
+        const target = isPercent ? unit.maxAmmunition * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxAmmunition))
+        unit.ammunition = clamped
+        if (clamped > 0) unit.noAmmoNotificationShown = false // Reset notification flag
+        appliedCount++
+      } else if (unit.type === 'apache' && typeof unit.maxRocketAmmo === 'number') {
+        // Handle Apache helicopters that use rocketAmmo instead of ammunition
+        const target = isPercent ? unit.maxRocketAmmo * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxRocketAmmo))
+        unit.rocketAmmo = clamped
+        unit.apacheAmmoEmpty = clamped === 0
+        unit.canFire = clamped > 0
+        appliedCount++
+      }
+    })
+
+    if (appliedCount > 0) {
+      showNotification(`🔫 Ammo set to ${display} for ${appliedCount} unit${appliedCount > 1 ? 's' : ''}`, 3000)
+      playSound('confirmed', 0.5)
+    } else {
+      this.showError('No units with ammunition selected')
+    }
+  }
+
+  setAmmoTruckLoad(parsed) {
+    const { value, isPercent, display } = parsed
+
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let appliedCount = 0
+    this.selectedUnits.forEach(unit => {
+      if (unit.type === 'ammunitionTruck') {
+        // Ensure maxAmmoCargo is set (safety check)
+        if (typeof unit.maxAmmoCargo !== 'number') {
+          unit.maxAmmoCargo = 500 // Default AMMO_TRUCK_CARGO value
+        }
+        
+        const target = isPercent ? unit.maxAmmoCargo * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxAmmoCargo))
+        unit.ammoCargo = clamped
+        appliedCount++
+      } else if (unit.type === 'helipad') {
+        // Handle helipad ammo reserves
+        if (typeof unit.maxAmmo !== 'number') {
+          unit.maxAmmo = HELIPAD_AMMO_RESERVE
+        }
+        
+        const target = isPercent ? unit.maxAmmo * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxAmmo))
+        unit.ammo = clamped
+        appliedCount++
+      }
+    })
+
+    if (appliedCount > 0) {
+      showNotification(`🚛 Ammo load set to ${display} for ${appliedCount} item${appliedCount > 1 ? 's' : ''}`, 3000)
+      playSound('confirmed', 0.5)
+    } else {
+      this.showError('No ammunition trucks or helipads selected')
     }
   }
 
@@ -968,21 +1062,12 @@ export class CheatSystem {
   }
 
   toggleCrewMember(role) {
-    let selected = []
-    try {
-      if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
-        selected = window.debugGetSelectedUnits()
-      }
-    } catch {
-      selected = []
-    }
-
-    if (!selected || selected.length === 0) {
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showError('No unit selected')
       return
     }
 
-    selected.forEach(unit => {
+    this.selectedUnits.forEach(unit => {
       if (unit.crew && typeof unit.crew === 'object' && role in unit.crew) {
         unit.crew[role] = !unit.crew[role]
 

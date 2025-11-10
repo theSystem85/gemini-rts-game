@@ -109,6 +109,51 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             true
           )
           triggerDistortionEffect(buildingCenterX, buildingCenterY, radius, gameState)
+        } else if (building.type === 'ammunitionFactory') {
+          // Ammunition factory explosion with particle scatter
+          const initialRadius = TILE_SIZE * 2
+          // Initial blast
+          triggerExplosion(
+            buildingCenterX,
+            buildingCenterY,
+            100,
+            units,
+            factories,
+            null,
+            now,
+            undefined,
+            initialRadius,
+            false
+          )
+          
+          // Create scattering ammunition particles
+          const particleCount = 40 // Average of 30-50
+          for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5
+            const speed = 0.5 + Math.random() * 1.5 // 0.5-2.0 tiles per second
+            const lifetime = 5000 // 5 seconds
+            const damage = 30 + Math.random() * 20 // 30-50 damage
+            
+            const particle = {
+              id: Date.now() + Math.random(),
+              x: buildingCenterX,
+              y: buildingCenterY,
+              vx: Math.cos(angle) * speed * TILE_SIZE,
+              vy: Math.sin(angle) * speed * TILE_SIZE,
+              speed: speed * TILE_SIZE,
+              baseDamage: damage,
+              active: true,
+              shooter: null,
+              startTime: now,
+              expiryTime: now + lifetime,
+              projectileType: 'ammoParticle',
+              size: 4
+            }
+            
+            bullets.push(particle)
+          }
+          
+          playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.7)
         } else {
           // Add standard explosion effect
           triggerExplosion(buildingCenterX, buildingCenterY, 40, units, factories, null, now)

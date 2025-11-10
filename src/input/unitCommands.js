@@ -394,6 +394,135 @@ export class UnitCommandsHandler {
     return true
   }
 
+  canAmmunitionTruckOperate(ammoTruck) {
+    if (!ammoTruck || ammoTruck.type !== 'ammunitionTruck') {
+      return false
+    }
+    if (ammoTruck.health <= 0) {
+      return false
+    }
+    if (ammoTruck.crew && typeof ammoTruck.crew === 'object' && !ammoTruck.crew.loader) {
+      return false
+    }
+    return true
+  }
+
+  canAmmunitionTruckProvideAmmo(ammoTruck) {
+    if (!this.canAmmunitionTruckOperate(ammoTruck)) {
+      return false
+    }
+    return ammoTruck.ammoCargo > 0
+  }
+
+  assignAmmunitionTruckToTarget(ammoTruck, target, mapGrid, { suppressNotifications = false, mode = 'resupply' } = {}) {
+    const isReloadMode = mode === 'reload'
+
+    if (isReloadMode) {
+      if (!this.canAmmunitionTruckOperate(ammoTruck)) {
+        return false
+      }
+    } else if (!this.canAmmunitionTruckProvideAmmo(ammoTruck)) {
+      if (!suppressNotifications) {
+        showNotification('No ammunition trucks with ammo selected!', 2000)
+      }
+      return false
+    }
+
+    if (!target) {
+      return false
+    }
+
+    const isUnit = typeof target.tileX === 'number'
+
+    if (!isReloadMode) {
+      const needsAmmo = isUnit ?
+        (target.type === 'apache' ?
+          (typeof target.maxRocketAmmo === 'number' && target.rocketAmmo < target.maxRocketAmmo) :
+          (typeof target.maxAmmunition === 'number' && target.ammunition < target.maxAmmunition)) :
+        (typeof target.maxAmmo === 'number' && target.ammo < target.maxAmmo)
+
+      if (!needsAmmo) {
+        if (!suppressNotifications) {
+          showNotification('Target does not need ammo!', 2000)
+        }
+        return false
+      }
+    }
+
+    // Use a simple approach path - find adjacent tile
+    // For units: x/y are pixel coordinates, need to convert to tiles
+    // For buildings: x/y are already tile coordinates
+    const targetTileX = isUnit ? Math.floor((target.x + TILE_SIZE / 2) / TILE_SIZE) : target.x
+    const targetTileY = isUnit ? Math.floor((target.y + TILE_SIZE / 2) / TILE_SIZE) : target.y
+
+    let candidateTiles = []
+
+    if (isUnit) {
+      const directions = [
+        { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+        { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+      ]
+      candidateTiles = directions.map(dir => ({
+        x: targetTileX + dir.x,
+        y: targetTileY + dir.y
+      }))
+    } else {
+      const buildingWidth = target.width || 1
+      const buildingHeight = target.height || 1
+
+      for (let bx = targetTileX - 1; bx <= targetTileX + buildingWidth; bx++) {
+        for (let by = targetTileY - 1; by <= targetTileY + buildingHeight; by++) {
+          const insideX = bx >= targetTileX && bx < targetTileX + buildingWidth
+          const insideY = by >= targetTileY && by < targetTileY + buildingHeight
+          if (insideX && insideY) {
+            continue
+          }
+          candidateTiles.push({ x: bx, y: by })
+        }
+      }
+
+      candidateTiles.sort((a, b) => {
+        const distA = Math.hypot(a.x - ammoTruck.tileX, a.y - ammoTruck.tileY)
+        const distB = Math.hypot(b.x - ammoTruck.tileX, b.y - ammoTruck.tileY)
+        return distA - distB
+      })
+    }
+
+    for (const tile of candidateTiles) {
+      const destX = tile.x
+      const destY = tile.y
+      if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
+        const path = findPath(
+          { x: ammoTruck.tileX, y: ammoTruck.tileY },
+          { x: destX, y: destY },
+          mapGrid,
+          gameState.occupancyMap
+        )
+        if (path && path.length > 0) {
+          ammoTruck.path = path.slice(1)
+          ammoTruck.moveTarget = { x: destX, y: destY }
+          if (isReloadMode) {
+            ammoTruck.ammoReloadTargetId = target.id
+            ammoTruck.ammoResupplyTarget = null
+            ammoTruck.ammoResupplyTimer = 0
+          } else {
+            ammoTruck.ammoResupplyTarget = target
+            ammoTruck.ammoResupplyTimer = 0
+            if (ammoTruck.ammoReloadTargetId) {
+              ammoTruck.ammoReloadTargetId = null
+            }
+          }
+          return true
+        }
+      }
+    }
+
+    if (!suppressNotifications) {
+      showNotification('Cannot path to target for ammo resupply!', 2000)
+    }
+    return false
+  }
+
   assignRecoveryTankToTarget(tank, targetUnit, mapGrid, { suppressNotifications = false } = {}) {
     if (!this.canRecoveryTankRepair(tank)) {
       if (!suppressNotifications) {
@@ -1371,6 +1500,92 @@ export class UnitCommandsHandler {
         suppressNotifications
       })
       if (result.addedTargets.length > 0 || result.started) {
+        anyStarted = true
+      }
+    })
+
+    if (anyStarted) {
+      playSound('movement', 0.5)
+    }
+  }
+
+  handleAmmunitionTruckResupplyCommand(selectedUnits, target, mapGrid, options = {}) {
+    const { suppressNotifications = false } = options
+    const operableTrucks = selectedUnits.filter(unit => this.canAmmunitionTruckOperate(unit))
+    const ammoTrucks = operableTrucks.filter(unit => this.canAmmunitionTruckProvideAmmo(unit))
+
+    const isUnit = typeof target.tileX === 'number'
+    const isAmmoFactory = !isUnit && target.type === 'ammunitionFactory'
+
+    if (isAmmoFactory) {
+      const reloadableTrucks = operableTrucks.filter(unit => unit.ammoCargo < unit.maxAmmoCargo)
+      if (reloadableTrucks.length === 0) {
+        if (!suppressNotifications) {
+          showNotification('Ammunition trucks are already fully loaded!', 2000)
+        }
+        return
+      }
+      this.handleAmmunitionTruckReloadCommand(reloadableTrucks, target, mapGrid, { suppressNotifications })
+      return
+    }
+
+    if (ammoTrucks.length === 0) {
+      if (!suppressNotifications) {
+        showNotification('No ammunition trucks with ammo selected!', 2000)
+      }
+      return
+    }
+
+    const needsAmmo = isUnit ?
+      (target.type === 'apache' ?
+        (typeof target.maxRocketAmmo === 'number' && target.rocketAmmo < target.maxRocketAmmo) :
+        (typeof target.maxAmmunition === 'number' && target.ammunition < target.maxAmmunition)) :
+      (typeof target.maxAmmo === 'number' && target.ammo < target.maxAmmo)
+
+    if (!needsAmmo) {
+      if (!suppressNotifications) {
+        showNotification('Target does not need ammo!', 2000)
+      }
+      return
+    }
+
+    let anyStarted = false
+    ammoTrucks.forEach(ammoTruck => {
+      if (this.assignAmmunitionTruckToTarget(ammoTruck, target, mapGrid, { suppressNotifications: true })) {
+        anyStarted = true
+      }
+    })
+
+    if (anyStarted) {
+      playSound('movement', 0.5)
+    }
+  }
+
+  handleAmmunitionTruckReloadCommand(selectedUnits, factory, mapGrid, options = {}) {
+    const { suppressNotifications = false } = options
+    if (!factory || factory.type !== 'ammunitionFactory') {
+      return
+    }
+
+    const ammoTrucks = selectedUnits.filter(unit => this.canAmmunitionTruckOperate(unit))
+    if (ammoTrucks.length === 0) {
+      if (!suppressNotifications) {
+        showNotification('No ammunition trucks are available!', 2000)
+      }
+      return
+    }
+
+    const reloadable = ammoTrucks.filter(truck => truck.ammoCargo < truck.maxAmmoCargo)
+    if (reloadable.length === 0) {
+      if (!suppressNotifications) {
+        showNotification('Ammunition trucks are already fully loaded!', 2000)
+      }
+      return
+    }
+
+    let anyStarted = false
+    reloadable.forEach(ammoTruck => {
+      if (this.assignAmmunitionTruckToTarget(ammoTruck, factory, mapGrid, { suppressNotifications: true, mode: 'reload' })) {
         anyStarted = true
       }
     })

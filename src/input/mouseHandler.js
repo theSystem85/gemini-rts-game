@@ -1032,6 +1032,46 @@ export class MouseHandler {
         }
       }
 
+      // Check for ammunition truck resupply command
+      const hasSelectedAmmoTrucks = commandableUnits.some(unit => unit.type === 'ammunitionTruck')
+      if (hasSelectedAmmoTrucks) {
+        // Check units that need ammo
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && typeof unit.maxAmmunition === 'number') {
+            const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (uX === tileX && uY === tileY && unit.ammunition < unit.maxAmmunition) {
+              unitCommands.handleAmmunitionTruckResupplyCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
+              return
+            }
+          }
+        }
+        // Check buildings that need ammo
+        if (gameState.buildings && Array.isArray(gameState.buildings)) {
+          for (const building of gameState.buildings) {
+            if (building.owner !== gameState.humanPlayer) {
+              continue
+            }
+
+            const withinFootprint = tileX >= building.x && tileX < building.x + building.width &&
+              tileY >= building.y && tileY < building.y + building.height
+            if (!withinFootprint) {
+              continue
+            }
+
+            if (typeof building.maxAmmo === 'number' && building.ammo < building.maxAmmo) {
+              unitCommands.handleAmmunitionTruckResupplyCommand(commandableUnits, building, mapGrid, { append: appendToUtilityQueue })
+              return
+            }
+
+            if (building.type === 'ammunitionFactory') {
+              unitCommands.handleAmmunitionTruckReloadCommand(commandableUnits, building, mapGrid, { append: appendToUtilityQueue })
+              return
+            }
+          }
+        }
+      }
+
       // Check for ambulance healing command if ambulances are selected
       const hasSelectedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics > 0)
 

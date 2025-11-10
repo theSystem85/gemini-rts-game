@@ -167,6 +167,8 @@ export class CursorManager {
     // Check if mouse is over a wreck when recovery tanks are selected
     this.isOverWreck = false
     this.isOverFriendlyHelipad = false
+    // Check if mouse is over ammo-receivable units/buildings when ammo trucks are selected
+    this.isOverAmmoReceivableTarget = false
     if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
         tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
       // Only show refinery cursor if harvesters are selected
@@ -268,6 +270,41 @@ export class CursorManager {
             if (unitTileX === tileX && unitTileY === tileY && unit.gas < unit.maxGas) {
               this.isOverRefuelableUnit = true
               break
+            }
+          }
+        }
+      }
+
+      // Check for ammo-receivable units/buildings when ammo trucks are selected
+      this.isOverAmmoReceivableTarget = false
+      const hasSelectedAmmoTrucks = selectedUnits.some(unit => unit.type === 'ammunitionTruck')
+      if (hasSelectedAmmoTrucks && units && Array.isArray(units)) {
+        // Check units that can receive ammo
+        for (const unit of units) {
+          if (unit.owner === gameState.humanPlayer && typeof unit.maxAmmunition === 'number') {
+            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+            if (unitTileX === tileX && unitTileY === tileY && unit.ammunition < unit.maxAmmunition) {
+              this.isOverAmmoReceivableTarget = true
+              break
+            }
+          }
+        }
+        // Check buildings that can receive ammo
+        if (!this.isOverAmmoReceivableTarget && gameState.buildings && Array.isArray(gameState.buildings)) {
+          for (const building of gameState.buildings) {
+            if (building.owner === gameState.humanPlayer) {
+              const isAmmoHungryBuilding = typeof building.maxAmmo === 'number' && building.ammo < building.maxAmmo
+              const isAmmoFactory = building.type === 'ammunitionFactory'
+              if (!isAmmoHungryBuilding && !isAmmoFactory) {
+                continue
+              }
+
+              if (tileX >= building.x && tileX < building.x + building.width &&
+                  tileY >= building.y && tileY < building.y + building.height) {
+                this.isOverAmmoReceivableTarget = true
+                break
+              }
             }
           }
         }
@@ -505,7 +542,8 @@ export class CursorManager {
           this.isOverRepairableUnit ||
           this.isOverRecoveryTank ||
           this.isOverPlayerWorkshop ||
-          this.isOverFriendlyHelipad
+          this.isOverFriendlyHelipad ||
+          this.isOverAmmoReceivableTarget
 
       if (hasImmediateMoveIntoTarget) {
         setMoveIntoCursor()
@@ -518,7 +556,8 @@ export class CursorManager {
             this.isOverPlayerHospital ||
             this.isOverPlayerGasStation ||
             this.isOverPlayerWorkshop ||
-            this.isOverFriendlyHelipad
+            this.isOverFriendlyHelipad ||
+            this.isOverAmmoReceivableTarget
 
         if (isSupportTarget) {
           setMoveIntoCursor()
@@ -585,7 +624,8 @@ export class CursorManager {
         this.isOverRefuelableUnit ||
         this.isOverPlayerHospital ||
         this.isOverPlayerGasStation ||
-        this.isOverPlayerRefinery
+        this.isOverPlayerRefinery ||
+        this.isOverAmmoReceivableTarget
 
       if (isLogisticsTarget) {
         setMoveIntoCursor()

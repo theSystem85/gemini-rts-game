@@ -91,6 +91,7 @@ const soundFiles = {
   ourGunnerIsOut: ['ourGunnerIsOut.mp3'],
   outOfGas: ['IAmOutOfGas.mp3'],
   unitRefules: ['unitRefules.mp3'],
+  i_am_out_of_ammo: ['i_am_out_of_ammo.mp3'],
 
   // New waypoint and attack notification sounds
   movingAlongThePath: ['movingAlongThePath.mp3'],

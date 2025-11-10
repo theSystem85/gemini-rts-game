@@ -9,7 +9,8 @@ import {
   MAP_TILES_Y,
   MAX_BUILDING_GAP_TILES,
   HELIPAD_FUEL_CAPACITY,
-  HELIPAD_RELOAD_TIME
+  HELIPAD_RELOAD_TIME,
+  HELIPAD_AMMO_RESERVE
 } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { ensureServiceRadius } from './utils/serviceRadius.js'
@@ -104,6 +105,8 @@ export const buildingData = {
     requiresRadar: true,
     maxFuel: HELIPAD_FUEL_CAPACITY,
     fuelReloadTime: HELIPAD_RELOAD_TIME,
+    maxAmmo: HELIPAD_AMMO_RESERVE,
+    ammoReloadTime: HELIPAD_RELOAD_TIME,
     smokeSpots: []
   },
   gasStation: {
@@ -114,6 +117,18 @@ export const buildingData = {
     image: 'gas_station.webp',
     displayName: 'Gas Station',
     health: 50,
+    smokeSpots: []
+  },
+  ammunitionFactory: {
+    width: 3,
+    height: 3,
+    cost: 2000,
+    power: -40,
+    image: 'ammunition_factory_map.webp',
+    displayName: 'Ammunition Factory',
+    health: 250,
+    armor: 2,
+    requiresVehicleFactory: true,
     smokeSpots: []
   },
   turretGunV1: {
@@ -271,6 +286,14 @@ export function createBuilding(type, x, y) {
     building.fuel = data.maxFuel
     if (typeof data.fuelReloadTime === 'number') {
       building.fuelReloadTime = data.fuelReloadTime
+    }
+  }
+
+  if (typeof data.maxAmmo === 'number') {
+    building.maxAmmo = data.maxAmmo
+    building.ammo = data.maxAmmo
+    if (typeof data.ammoReloadTime === 'number') {
+      building.ammoReloadTime = data.ammoReloadTime
     }
   }
 

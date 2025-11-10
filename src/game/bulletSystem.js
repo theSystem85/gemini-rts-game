@@ -258,7 +258,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               bullet.shooter,
               now,
               mapGrid,
-              TILE_SIZE * 0.8,
+              TILE_SIZE * 2,
               false,
               rocketExplosionOptions
             )
@@ -281,6 +281,12 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           bullets.splice(i, 1)
           continue
         }
+      }
+
+      // Handle ammunition particles - they expire after lifetime
+      if (bullet.projectileType === 'ammoParticle' && bullet.expiryTime && now >= bullet.expiryTime) {
+        bullets.splice(i, 1)
+        continue
       }
 
       // Update bullet position
@@ -331,7 +337,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             damageMultiplier = APACHE_TANK_DAMAGE_MULTIPLIER
           } else if (bullet.shooter && units) {
             // Check if explosion will hit any tanks
-            const explosionRadius = TILE_SIZE * 0.8
+            const explosionRadius = TILE_SIZE * 2
             const hasTankNearby = units.some(u => {
               if (u.health <= 0 || u.owner === bullet.shooter.owner) return false
               const tankTypes = ['tank', 'tank_v1', 'tank-v2', 'tank-v3']
@@ -357,7 +363,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             bullet.shooter,
             now,
             mapGrid,
-            TILE_SIZE * 0.8,
+            TILE_SIZE * 2,
             false,
             rocketExplosionOptions
           )
@@ -868,7 +874,7 @@ export function fireBullet(unit, target, bullets, now) {
       homing: false,
       target: null,
       targetPosition: { x: targetCenterX, y: targetCenterY },
-      explosionRadius: TILE_SIZE,
+      explosionRadius: TILE_SIZE * 2,
       skipCollisionChecks: true,
       maxFlightTime: 3000,
       creationTime: now,

@@ -25,7 +25,8 @@ export const buildingImageMap = {
   concreteWallVertical: 'images/map/buildings/concrete_wall_vertical.webp',
   // Default wall entry kept for backward compatibility
   concreteWall: 'images/map/buildings/concrete_wall_cross.webp',
-  artilleryTurret: 'images/map/buildings/artillery_turret.webp'
+  artilleryTurret: 'images/map/buildings/artillery_turret.webp',
+  ammunitionFactory: 'images/map/buildings/ammunition_factory_map.webp'
 }
 
 // Track loading state

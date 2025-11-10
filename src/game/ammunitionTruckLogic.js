@@ -1,0 +1,137 @@
+// ammunitionTruckLogic.js
+import { AMMO_RESUPPLY_TIME, AMMO_TRUCK_RANGE, TILE_SIZE } from '../config.js'
+import { logPerformance } from '../performanceUtils.js'
+import { findPath } from '../units.js'
+import { stopUnitMovement } from './unifiedMovement.js'
+import { getUnitCommandsHandler } from '../inputHandler.js'
+
+/**
+ * Check if a unit is adjacent to any tile of a building
+ * @param {Object} unit - Unit with tileX/tileY properties
+ * @param {Object} building - Building with x/y (tile coords), width, height
+ * @param {number} range - Range in tiles (default 1 for immediate adjacency)
+ * @returns {boolean} True if unit is within range of any building tile
+ */
+function isUnitAdjacentToBuilding(unit, building, range = 1) {
+  const unitTileX = unit.tileX
+  const unitTileY = unit.tileY
+  const buildingWidth = building.width || 1
+  const buildingHeight = building.height || 1
+  
+  // Check if unit is within range of any tile occupied by the building
+  for (let bx = building.x; bx < building.x + buildingWidth; bx++) {
+    for (let by = building.y; by < building.y + buildingHeight; by++) {
+      const distance = Math.hypot(unitTileX - bx, unitTileY - by)
+      if (distance <= range) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+export const updateAmmunitionTruckLogic = logPerformance(function(units, gameState, delta) {
+  const ammoTrucks = units.filter(u => u.type === 'ammunitionTruck' && u.health > 0)
+  if (ammoTrucks.length === 0) return
+
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+
+  ammoTrucks.forEach(ammoTruck => {
+    // Ensure ammo truck has proper ammo cargo properties initialized
+    if (ammoTruck.ammoCargo === undefined || ammoTruck.maxAmmoCargo === undefined) {
+      ammoTruck.maxAmmoCargo = 500 // Default AMMO_TRUCK_CARGO value
+      ammoTruck.ammoCargo = 500
+    }
+
+    // Handle manual resupply target
+    if (ammoTruck.ammoResupplyTarget) {
+      const target = units.find(u => u.id === ammoTruck.ammoResupplyTarget.id) ||
+                    gameState.buildings?.find(b => b.id === ammoTruck.ammoResupplyTarget.id)
+
+      // Clear target if it's gone, dead, or full
+      const isUnit = typeof target.tileX === 'number'
+      if (!target ||
+          target.health <= 0 ||
+          (isUnit && target.type === 'apache' && typeof target.maxRocketAmmo === 'number' && target.rocketAmmo >= target.maxRocketAmmo) ||
+          (isUnit && target.type !== 'apache' && typeof target.maxAmmunition === 'number' && target.ammunition >= target.maxAmmunition) ||
+          (!isUnit && typeof target.maxAmmo === 'number' && target.ammo >= target.maxAmmo)) {
+        ammoTruck.ammoResupplyTarget = null
+        ammoTruck.ammoResupplyTimer = 0
+      } else {
+        // Check if we're close enough to start resupplying
+        let inRange = false
+        if (isUnit) {
+          // For units: simple tile distance check
+          const distance = Math.hypot(target.tileX - ammoTruck.tileX, target.tileY - ammoTruck.tileY)
+          inRange = distance <= AMMO_TRUCK_RANGE
+        } else {
+          // For buildings: check adjacency to any building tile
+          inRange = isUnitAdjacentToBuilding(ammoTruck, target, AMMO_TRUCK_RANGE)
+        }
+        
+        if (inRange && !(ammoTruck.movement && ammoTruck.movement.isMoving)) {
+          // Start resupplying
+          ammoTruck.ammoResupplyTimer = (ammoTruck.ammoResupplyTimer || 0) + delta
+
+          if (ammoTruck.ammoCargo > 0) {
+            const needsAmmo = isUnit ?
+              (target.type === 'apache' ?
+                (target.rocketAmmo < target.maxRocketAmmo) :
+                (target.ammunition < target.maxAmmunition)) :
+              (target.ammo < target.maxAmmo)
+
+            if (needsAmmo) {
+              const refillRate = (isUnit ?
+                (target.type === 'apache' ? target.maxRocketAmmo : target.maxAmmunition) :
+                target.maxAmmo) / AMMO_RESUPPLY_TIME
+              const ammoNeeded = isUnit ?
+                (target.type === 'apache' ?
+                  (target.maxRocketAmmo - target.rocketAmmo) :
+                  (target.maxAmmunition - target.ammunition)) :
+                (target.maxAmmo - target.ammo)
+              const transfer = Math.min(refillRate * delta, ammoNeeded, ammoTruck.ammoCargo)
+
+              if (isUnit) {
+                if (target.type === 'apache') {
+                  target.rocketAmmo = Math.min(target.maxRocketAmmo, target.rocketAmmo + transfer)
+                } else {
+                  target.ammunition = Math.min(target.maxAmmunition, target.ammunition + transfer)
+                }
+              } else {
+                target.ammo = Math.min(target.maxAmmo, target.ammo + transfer)
+              }
+              ammoTruck.ammoCargo = Math.max(0, ammoTruck.ammoCargo - transfer)
+            } else {
+              // Target is full, stop resupplying
+              ammoTruck.ammoResupplyTarget = null
+              ammoTruck.ammoResupplyTimer = 0
+            }
+          } else {
+            // Truck is empty, stop resupplying
+            ammoTruck.ammoResupplyTarget = null
+            ammoTruck.ammoResupplyTimer = 0
+          }
+        }
+        // Skip other logic while actively resupplying
+        return
+      }
+    }
+
+    // Handle queued resupply commands
+    if (ammoTruck.utilityQueue && ammoTruck.utilityQueue.mode === 'ammoResupply') {
+      if (!ammoTruck.ammoResupplyTarget) {
+        if (ammoTruck.utilityQueue.currentTargetId || ammoTruck.utilityQueue.currentTargetType) {
+          ammoTruck.utilityQueue.currentTargetId = null
+          ammoTruck.utilityQueue.currentTargetType = null
+        }
+        if (unitCommands) {
+          unitCommands.advanceUtilityQueue(ammoTruck, gameState.mapGrid, true)
+        }
+      } else if (ammoTruck.utilityQueue.currentTargetId !== ammoTruck.ammoResupplyTarget.id ||
+                 ammoTruck.utilityQueue.currentTargetType !== (ammoTruck.ammoResupplyTarget.type ? 'unit' : 'building')) {
+        ammoTruck.utilityQueue.currentTargetId = ammoTruck.ammoResupplyTarget.id
+        ammoTruck.utilityQueue.currentTargetType = ammoTruck.ammoResupplyTarget.type ? 'unit' : 'building'
+      }
+    }
+  })
+})

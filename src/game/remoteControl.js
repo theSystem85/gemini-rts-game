@@ -483,7 +483,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
       if (firePressed && !previouslyPressed && unit.canFire !== false) {
         const ammoRemaining = Math.max(0, Math.floor(unit.rocketAmmo || 0))
-        if (ammoRemaining > 0) {
+        if (ammoRemaining > 0 && (!unit.lastShotTime || now - unit.lastShotTime >= 300)) {
           const direction = unit.direction || 0
           const aimTarget = unit.remoteRocketTarget || computeApacheRemoteAim(unit, direction)
           const target = {
@@ -498,13 +498,12 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
           const spawnPoints = getApacheRocketSpawnPoints(unit, centerX, centerY)
           const spawn = spawnPoints.left || { x: centerX, y: centerY }
 
-          const previousLastShot = unit.lastShotTime
           unit.customRocketSpawn = spawn
           const fired = fireBullet(unit, target, bullets, now)
           unit.customRocketSpawn = null
 
           if (fired) {
-            unit.lastShotTime = previousLastShot
+            unit.lastShotTime = now
             unit.rocketAmmo = Math.max(0, (unit.rocketAmmo || 0) - 1)
             unit.apacheAmmoEmpty = unit.rocketAmmo <= 0
             if (unit.apacheAmmoEmpty) {

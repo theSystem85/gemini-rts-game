@@ -10,7 +10,9 @@ import {
   TANKER_SUPPLY_CAPACITY,
   setMapDimensions,
   DEFAULT_MAP_TILES_X,
-  DEFAULT_MAP_TILES_Y
+  DEFAULT_MAP_TILES_Y,
+  AMMO_TRUCK_CARGO,
+  HELIPAD_AMMO_RESERVE
 } from './config.js'
 import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
 import { createUnit } from './units.js'
@@ -181,6 +183,15 @@ export function saveGame(label) {
     gasRefillTimer: u.gasRefillTimer,
     refueling: u.refueling,
     outOfGasPlayed: u.outOfGasPlayed,
+    // Ammunition system properties
+    ammunition: u.ammunition,
+    maxAmmunition: u.maxAmmunition,
+    ammoCargo: u.ammoCargo,
+    maxAmmoCargo: u.maxAmmoCargo,
+    rocketAmmo: u.rocketAmmo,
+    maxRocketAmmo: u.maxRocketAmmo,
+    apacheAmmoEmpty: u.apacheAmmoEmpty,
+    canFire: u.canFire,
     // Harvester-specific properties
     oreCarried: u.oreCarried,
     assignedRefinery: u.assignedRefinery,
@@ -245,7 +256,13 @@ export function saveGame(label) {
     rallyPoint: b.rallyPoint, // Save rally point if it exists
     fuel: typeof b.fuel === 'number' ? b.fuel : undefined,
     maxFuel: typeof b.maxFuel === 'number' ? b.maxFuel : undefined,
-    fuelReloadTime: typeof b.fuelReloadTime === 'number' ? b.fuelReloadTime : undefined
+    fuelReloadTime: typeof b.fuelReloadTime === 'number' ? b.fuelReloadTime : undefined,
+    // Ammunition system properties for buildings
+    ammo: typeof b.ammo === 'number' ? b.ammo : undefined,
+    maxAmmo: typeof b.maxAmmo === 'number' ? b.maxAmmo : undefined,
+    ammoReloadTime: typeof b.ammoReloadTime === 'number' ? b.ammoReloadTime : undefined,
+    needsAmmo: typeof b.needsAmmo === 'boolean' ? b.needsAmmo : undefined,
+    landedUnitId: b.landedUnitId
     // Add more fields if needed
   }))
 
@@ -589,6 +606,48 @@ export function loadGame(key) {
       hydrated.gasRefillTimer = u.gasRefillTimer
       hydrated.refueling = u.refueling
       hydrated.outOfGasPlayed = u.outOfGasPlayed
+      
+      // Restore ammunition system properties
+      if (typeof u.ammunition === 'number') {
+        hydrated.ammunition = u.ammunition
+      } else if (hydrated.maxAmmunition && typeof hydrated.ammunition !== 'number') {
+        // Fallback for older saves - initialize to max if not saved
+        hydrated.ammunition = hydrated.maxAmmunition
+      }
+      if (typeof u.maxAmmunition === 'number') {
+        hydrated.maxAmmunition = u.maxAmmunition
+      }
+      if (typeof u.ammoCargo === 'number') {
+        hydrated.ammoCargo = u.ammoCargo
+      } else if (hydrated.type === 'ammunitionTruck' && typeof hydrated.ammoCargo !== 'number') {
+        // Fallback for older saves - initialize ammo trucks to full capacity
+        hydrated.ammoCargo = hydrated.maxAmmoCargo || AMMO_TRUCK_CARGO
+      }
+      if (typeof u.maxAmmoCargo === 'number') {
+        hydrated.maxAmmoCargo = u.maxAmmoCargo
+      }
+      if (typeof u.rocketAmmo === 'number') {
+        hydrated.rocketAmmo = u.rocketAmmo
+      } else if (hydrated.type === 'apache' && typeof hydrated.rocketAmmo !== 'number') {
+        // Fallback for older saves - initialize Apache to full rocket ammo
+        hydrated.rocketAmmo = hydrated.maxRocketAmmo || 38
+      }
+      if (typeof u.maxRocketAmmo === 'number') {
+        hydrated.maxRocketAmmo = u.maxRocketAmmo
+      }
+      if (typeof u.apacheAmmoEmpty === 'boolean') {
+        hydrated.apacheAmmoEmpty = u.apacheAmmoEmpty
+      } else if (hydrated.type === 'apache') {
+        // Fallback - assume not empty if not saved
+        hydrated.apacheAmmoEmpty = false
+      }
+      if (typeof u.canFire === 'boolean') {
+        hydrated.canFire = u.canFire
+      } else if (hydrated.type === 'apache') {
+        // Fallback - assume can fire if not saved
+        hydrated.canFire = true
+      }
+      
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
 
@@ -694,6 +753,32 @@ export function loadGame(key) {
             building.fuelReloadTime = data.fuelReloadTime
           }
         }
+      }
+
+      // Restore ammunition system properties for buildings
+      if (typeof b.ammo === 'number') {
+        building.ammo = b.ammo
+      } else if (building.type === 'helipad' && typeof building.ammo !== 'number') {
+        // Fallback for older saves - initialize helipad ammo to full capacity
+        building.ammo = building.maxAmmo || HELIPAD_AMMO_RESERVE
+      }
+      if (typeof b.maxAmmo === 'number') {
+        building.maxAmmo = b.maxAmmo
+      } else if (building.type === 'helipad' && typeof building.maxAmmo !== 'number') {
+        // Fallback for older saves - set max ammo for helipads
+        building.maxAmmo = HELIPAD_AMMO_RESERVE
+      }
+      if (typeof b.ammoReloadTime === 'number') {
+        building.ammoReloadTime = b.ammoReloadTime
+      }
+      if (typeof b.needsAmmo === 'boolean') {
+        building.needsAmmo = b.needsAmmo
+      } else if (building.type === 'helipad') {
+        // Fallback - calculate needsAmmo based on current ammo level
+        building.needsAmmo = building.ammo < (building.maxAmmo * 0.25)
+      }
+      if (b.landedUnitId) {
+        building.landedUnitId = b.landedUnitId
       }
 
       // Defensive turrets: turretGunV1/V2/V3, rocketTurret, teslaCoil, artilleryTurret

@@ -149,6 +149,7 @@ export class BuildingRenderer {
 
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderHelipadFuel(ctx, building, screenX, screenY, width, height)
+    this.renderHelipadAmmo(ctx, building, screenX, screenY, width, height)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
     this.renderWorkshopRestoration(ctx, building, screenX, screenY, width, height)
@@ -544,6 +545,37 @@ export class BuildingRenderer {
 
     const fillHeight = barHeight * ratio
     ctx.fillStyle = '#4A90E2'
+    ctx.fillRect(barX, barY + barHeight - fillHeight, barWidth, fillHeight)
+
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(barX, barY, barWidth, barHeight)
+  }
+
+  renderHelipadAmmo(ctx, building, screenX, screenY, width, height) {
+    if (building.type !== 'helipad') {
+      return
+    }
+
+    if (!building.selected || typeof building.maxAmmo !== 'number' || building.maxAmmo <= 0) {
+      return
+    }
+
+    const margin = 4
+    const barWidth = 5
+    const barHeight = Math.max(0, height - margin * 2)
+    if (barHeight <= 0) {
+      return
+    }
+
+    const ratio = Math.max(0, Math.min(1, (building.ammo ?? building.maxAmmo) / building.maxAmmo))
+    const barX = screenX + margin / 2
+    const barY = screenY + margin
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(barX, barY, barWidth, barHeight)
+
+    const fillHeight = barHeight * ratio
+    ctx.fillStyle = '#FFA500' // Orange color for ammunition
     ctx.fillRect(barX, barY + barHeight - fillHeight, barWidth, fillHeight)
 
     ctx.strokeStyle = '#000'

@@ -9,8 +9,9 @@ import { renderHowitzerWithImage, isHowitzerImageLoaded } from './howitzerImageR
 import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceImageRenderer.js'
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
+import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
-import { getExperienceProgress, initializeUnitLeveling } from '../utils.js'
+import { getExperienceProgress, initializeUnitLeveling, getBuildingIdentifier } from '../utils.js'
 
 export class UnitRenderer {
   constructor() {
@@ -326,18 +327,14 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.medics || 0) / (unit.maxMedics || 10)
       barColor = '#00FFFF' // Cyan for ambulance crew
-    } else if (unit.type === 'apache') {
-      const maxAmmo = typeof unit.maxRocketAmmo === 'number' ? unit.maxRocketAmmo : null
-      if (unit.selected && maxAmmo && maxAmmo > 0) {
-        shouldShowBar = true
-        const ammoRatio = Math.max(0, Math.min(1, (unit.rocketAmmo || 0) / maxAmmo))
-        progress = ammoRatio
-        barColor = unit.apacheAmmoEmpty ? '#FF6B6B' : '#FFA500'
-      }
     } else if (unit.type === 'tankerTruck') {
       shouldShowBar = true
       progress = (unit.supplyGas || 0) / (unit.maxSupplyGas || TANKER_SUPPLY_CAPACITY)
       barColor = '#4A90E2'
+    } else if (unit.type === 'ammunitionTruck') {
+      shouldShowBar = true
+      progress = (unit.ammoCargo || 0) / (unit.maxAmmoCargo || 500)
+      barColor = '#FFA500' // Orange for ammunition
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
@@ -402,6 +399,66 @@ export class UnitRenderer {
 
     const fillHeight = barHeight * ratio
     ctx.fillStyle = '#4A90E2'
+    ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(barX, barTop, barWidth, barHeight)
+  }
+
+  renderAmmunitionBar(ctx, unit, scrollOffset) {
+    if (!unit.selected) return
+
+    let ratio = 0
+    let hasAmmo = false
+
+    // Special handling for Apache helicopters
+    if (unit.type === 'apache') {
+      // Check if Apache is landed on a helipad
+      if (unit.landedHelipadId && gameState.buildings) {
+        const helipad = gameState.buildings.find(b => b.type === 'helipad' && getBuildingIdentifier(b) === unit.landedHelipadId)
+        if (helipad && typeof helipad.maxAmmo === 'number' && helipad.maxAmmo > 0) {
+          // Show helipad ammo bar
+          ratio = Math.max(0, Math.min(1, (helipad.ammo ?? helipad.maxAmmo) / helipad.maxAmmo))
+          hasAmmo = true
+        }
+      }
+      
+      // If not landed or no helipad ammo, show unit ammo
+      if (!hasAmmo && typeof unit.maxRocketAmmo === 'number') {
+        ratio = Math.max(0, Math.min(1, (unit.rocketAmmo ?? 0) / unit.maxRocketAmmo))
+        hasAmmo = true
+      }
+    } else if (typeof unit.maxAmmunition === 'number') {
+      // Regular units
+      ratio = unit.ammunition / unit.maxAmmunition
+      hasAmmo = true
+    }
+
+    if (!hasAmmo) return
+
+    // Apply altitude adjustment for Apache helicopters to align with selection
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+    const halfTile = TILE_SIZE / 2
+    const cornerSize = 8
+    const offset = 2
+
+    const left = centerX - halfTile - offset
+    const top = centerY - halfTile - offset
+    const bottom = centerY + halfTile + offset
+
+    const barWidth = 3
+    const barHeight = bottom - top - cornerSize * 2
+    const barX = left + 1
+    const barTop = top + cornerSize
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+    const fillHeight = barHeight * ratio
+    ctx.fillStyle = '#FFA500' // Orange color for ammunition
     ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
 
     ctx.strokeStyle = '#000'
@@ -740,6 +797,16 @@ export class UnitRenderer {
       }
     }
 
+    if (unit.type === 'ammunitionTruck' && isAmmunitionTruckImageLoaded()) {
+      const ok = renderAmmunitionTruckWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
     if (useTankImage) {
       // Try to render with images
       const imageRenderSuccess = renderTankWithImages(ctx, unit, centerX, centerY)
@@ -794,6 +861,7 @@ export class UnitRenderer {
 
     this.renderHealthBar(ctx, unit, scrollOffset)
     this.renderGasBar(ctx, unit, scrollOffset)
+    this.renderAmmunitionBar(ctx, unit, scrollOffset)
     this.renderLevelStars(ctx, unit, scrollOffset)
     this.renderHarvesterProgress(ctx, unit, scrollOffset)
     this.renderQueueNumber(ctx, unit, scrollOffset)
@@ -815,6 +883,7 @@ export class UnitRenderer {
     units.forEach(unit => {
       this.renderTowCable(ctx, unit, scrollOffset)
       this.renderFuelHose(ctx, unit, units, scrollOffset)
+      this.renderAmmoHose(ctx, unit, units, scrollOffset)
       this.renderUnitOverlay(ctx, unit, scrollOffset)
       this.renderApacheRemoteReticle(ctx, unit, scrollOffset)
     })
@@ -892,6 +961,52 @@ export class UnitRenderer {
 
     ctx.save()
     ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  renderAmmoHose(ctx, unit, units, scrollOffset) {
+    if (!unit || unit.type !== 'ammunitionTruck' || !unit.ammoResupplyTarget) {
+      return
+    }
+
+    const targetInfo = unit.ammoResupplyTarget
+    const target = (targetInfo && targetInfo.id !== undefined)
+      ? units.find(u => u.id === targetInfo.id) || targetInfo
+      : targetInfo
+
+    if (!target || (target.health !== undefined && target.health <= 0)) {
+      return
+    }
+
+    if (typeof target.tileX !== 'number' || typeof target.tileY !== 'number') {
+      return
+    }
+
+    const dx = Math.abs(target.tileX - unit.tileX)
+    const dy = Math.abs(target.tileY - unit.tileY)
+
+    if (dx > 1 || dy > 1) {
+      return
+    }
+
+    if ((unit.movement && unit.movement.isMoving) || (target.movement && target.movement.isMoving)) {
+      return
+    }
+
+    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const startY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const targetX = (typeof target.x === 'number') ? target.x : target.tileX * TILE_SIZE
+    const targetY = (typeof target.y === 'number') ? target.y : target.tileY * TILE_SIZE
+    const endX = targetX + TILE_SIZE / 2 - scrollOffset.x
+    const endY = targetY + TILE_SIZE / 2 - scrollOffset.y
+
+    ctx.save()
+    ctx.strokeStyle = '#8B4513' // Brown color for ammo hose
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.moveTo(startX, startY)

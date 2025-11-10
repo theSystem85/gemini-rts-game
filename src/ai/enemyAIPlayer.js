@@ -4,7 +4,9 @@ import {
   resetAttackDirections,
   manageAICrewHealing,
   manageAITankerTrucks,
-  manageAIRecoveryTanks
+  manageAIRecoveryTanks,
+  manageAIAmmunitionTrucks,
+  manageAIAmmunitionMonitoring
 } from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
@@ -196,6 +198,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const helipads = aiBuildings.filter(b => b.type === 'helipad')
+    const ammunitionFactories = aiBuildings.filter(b => b.type === 'ammunitionFactory')
     const aiHarvesters = units.filter(
       u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
     )
@@ -269,6 +272,16 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     } else if (hospitals.length === 0 && aiFactory.budget >= buildingData.hospital.cost) {
       buildingType = 'hospital'
       cost = buildingData.hospital.cost
+    } else if (
+      vehicleFactories.length > 0 &&
+      hospitals.length > 0 &&
+      ammunitionFactories.length === 0 &&
+      aiFactory.budget >= buildingData.ammunitionFactory.cost
+    ) {
+      // FR-030, FR-035: Build/rebuild ammunition factory after vehicle factory and hospital
+      // This handles both initial construction and rebuilding after destruction
+      buildingType = 'ammunitionFactory'
+      cost = buildingData.ammunitionFactory.cost
     } else if (
       gasStations.length > 0 &&
       hospitals.length > 0 &&
@@ -587,9 +600,11 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       const aiHarvesters = units.filter(u => u.owner === aiPlayerId && u.type === 'harvester')
       const aiAmbulances = units.filter(u => u.owner === aiPlayerId && u.type === 'ambulance')
       const aiTankers = units.filter(u => u.owner === aiPlayerId && u.type === 'tankerTruck')
+      const aiAmmoTrucks = units.filter(u => u.owner === aiPlayerId && u.type === 'ammunitionTruck')
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
+      const ammunitionFactoriesForProduction = aiBuildings.filter(b => b.type === 'ammunitionFactory')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
       const rocketTurretsBuilt = aiBuildings.filter(b => b.type === 'rocketTurret').length
       const teslaCoilsBuilt = aiBuildings.filter(b => b.type === 'teslaCoil').length
@@ -623,6 +638,14 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       } else if (aiTankers.length === 0 && aiHarvesters.length > 0 && gasStations.length > 0) {
         // Ensure at least one tanker truck exists to refuel units
         unitType = 'tankerTruck'
+      } else if (
+        ammunitionFactoriesForProduction.length > 0 &&
+        aiAmmoTrucks.length < ammunitionFactoriesForProduction.length * 2 &&
+        aiFactory.budget >= getUnitCost('ammunitionTruck')
+      ) {
+        // FR-031, FR-036: Build 1-2 ammunition supply trucks per ammunition factory
+        // This handles both initial production and replacement after destruction
+        unitType = 'ammunitionTruck'
       } else if (currentHarvesterTotal < MAX_HARVESTERS) {
         // Priority: Build up harvesters first, but strict limit of 4 per refinery
         unitType = 'harvester'
@@ -687,7 +710,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
           unitType === 'tank-v3' ||
           unitType === 'rocketTank' ||
           unitType === 'ambulance' ||
-          unitType === 'tankerTruck'
+          unitType === 'tankerTruck' ||
+          unitType === 'ammunitionTruck'
         ) {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
@@ -750,6 +774,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     manageAICrewHealing(units, gameState, now)
     manageAITankerTrucks(units, gameState, mapGrid)
     manageAIRecoveryTanks(units, gameState, mapGrid, now)
+    manageAIAmmunitionTrucks(units, gameState, mapGrid)
+    manageAIAmmunitionMonitoring(units, gameState, mapGrid)
   }
 }
 

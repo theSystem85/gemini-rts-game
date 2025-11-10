@@ -58,6 +58,9 @@ export class ProductionController {
     const hasHelipad = gameState.buildings.some(
       b => b.type === 'helipad' && b.owner === gameState.humanPlayer && b.health > 0
     )
+    const hasAmmunitionFactory = gameState.buildings.some(
+      b => b.type === 'ammunitionFactory' && b.owner === gameState.humanPlayer && b.health > 0
+    )
 
     unitButtons.forEach(button => {
       const unitType = button.getAttribute('data-unit-type')
@@ -77,6 +80,14 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Vehicle Factory & Workshop'
+        }
+      } else if (unitType === 'ammunitionTruck') {
+        if (hasVehicleFactory && hasAmmunitionFactory) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Ammunition Factory'
         }
       } else if (unitType === 'howitzer') {
         if (hasVehicleFactory && hasRadar) {
@@ -164,6 +175,11 @@ export class ProductionController {
       if (buildingData[type]?.requiresRadar && !hasRadar) {
         disable = true
         if (!req.includes('Radar Station')) req.push('Radar Station')
+      }
+
+      if (buildingData[type]?.requiresVehicleFactory && !hasVehicleFactory) {
+        disable = true
+        if (!req.includes('Vehicle Factory')) req.push('Vehicle Factory')
       }
 
       if (!hasPowerPlant && !isPowerPlant && !isConstructionYardButton) {
@@ -422,6 +438,13 @@ export class ProductionController {
           if (!hasHelipad) {
             requirementsMet = false
             requirementText = 'Requires Helipad'
+          }
+        } else if (unitType === 'ammunitionTruck') {
+          const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
+          const hasAmmunitionFactory = gameState.buildings.some(b => b.type === 'ammunitionFactory' && b.owner === gameState.humanPlayer)
+          if (!hasVehicleFactory || !hasAmmunitionFactory) {
+            requirementsMet = false
+            requirementText = 'Requires Vehicle Factory & Ammunition Factory'
           }
         } else if (this.vehicleUnitTypes.includes(unitType)) {
           const hasVehicleFactory = gameState.buildings.some(b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer)
@@ -1088,10 +1111,12 @@ export class ProductionController {
     const hasHospital = buildings.some(b => b.type === 'hospital')
     const hasWorkshop = buildings.some(b => b.type === 'vehicleWorkshop')
     const hasHelipad = buildings.some(b => b.type === 'helipad')
+    const hasAmmunitionFactory = buildings.some(b => b.type === 'ammunitionFactory')
     const factoryCount = buildings.filter(b => b.type === 'vehicleFactory').length
 
     if (hasFactory) {
       this.forceUnlockUnitType('tank')
+      this.forceUnlockBuildingType('ammunitionFactory')
     }
 
     if (hasFactory && hasRefinery) {
@@ -1100,6 +1125,10 @@ export class ProductionController {
 
     if (hasFactory && hasGasStation) {
       this.forceUnlockUnitType('tankerTruck')
+    }
+
+    if (hasFactory && hasAmmunitionFactory) {
+      this.forceUnlockUnitType('ammunitionTruck')
     }
 
     if (hasHospital) {
