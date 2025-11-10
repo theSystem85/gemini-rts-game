@@ -93,7 +93,9 @@ This specification defines a comprehensive ammunition management system for the 
 
 5. **Given** an Ammunition Supply Truck operating in the field, **When** the truck's fuel depletes, **Then** the truck stops moving and requires refueling from a tanker truck or gas station before resuming operations
 
-6. **Given** an Ammunition Supply Truck with depleted ammunition supply, **When** the truck returns to an Ammunition Factory (within 2 tiles) and waits for 10 seconds, **Then** the truck's ammunition supply is fully replenished to 500 rounds capacity (indicated by top loading bar)
+6. **Given** an Ammunition Supply Truck is destroyed, **When** the wreckage would normally be registered, **Then** the truck leaves no towable wreck, triggers an immediate 2-tile radius blast, and launches ten random ammunition rounds that can damage any nearby vehicles or buildings regardless of ownership.
+
+7. **Given** an Ammunition Supply Truck with depleted ammunition supply, **When** the truck returns to an Ammunition Factory (within 2 tiles) and waits for 10 seconds, **Then** the truck's ammunition supply is fully replenished to 500 rounds capacity (indicated by top loading bar)
 
 ---
 
@@ -347,7 +349,7 @@ This specification defines a comprehensive ammunition management system for the 
 
 #### FR-023: Ammunition Supply Truck Destruction
 **Priority:** P2  
-**Description:** When Ammunition Supply Truck is destroyed, it explodes with 1.5-tile blast radius dealing 50 damage to nearby units/buildings. If cargo >0, explosion spawns 10-15 ammunition particles (same mechanics as factory particles) that scatter and deal 20 damage on impact.
+**Description:** When Ammunition Supply Truck is destroyed, it leaves no towable wreck, triggers a 2-tile radius ammunition blast that damages all nearby units/buildings, and fires exactly ten random rounds (rockets, bullets, or artillery shells) in random directions that can damage any vehicles or buildings they strike regardless of ownership.
 
 #### FR-024: Ammunition Supply Truck Image Assets
 **Priority:** P1  

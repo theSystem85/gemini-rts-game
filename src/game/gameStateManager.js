@@ -23,6 +23,7 @@ import {
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
 
 /**
  * Updates map scrolling with inertia
@@ -209,8 +210,12 @@ export function cleanupDestroyedUnits(units, gameState) {
         })
       }
 
+      if (unit.type === 'ammunitionTruck') {
+        detonateAmmunitionTruck(unit, units, gameState.factories || [], gameState)
+      }
+
       // Register a wreck so the destroyed unit leaves recoverable remnants
-      if (unit.type !== 'apache') {
+      if (unit.type !== 'apache' && unit.type !== 'ammunitionTruck') {
         registerUnitWreck(unit, gameState)
       }
 

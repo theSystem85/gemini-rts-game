@@ -2,8 +2,9 @@
 import { AMMO_RESUPPLY_TIME, AMMO_TRUCK_RANGE, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { findPath } from '../units.js'
-import { stopUnitMovement } from './unifiedMovement.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
+import { triggerExplosion } from '../logic.js'
+import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 
 /**
  * Check if a unit is adjacent to any tile of a building
@@ -135,3 +136,110 @@ export const updateAmmunitionTruckLogic = logPerformance(function(units, gameSta
     }
   })
 })
+
+export function detonateAmmunitionTruck(unit, units, factories = [], gameState = null) {
+  if (!unit || unit.health > 0) {
+    return false
+  }
+
+  if (unit._ammoTruckDetonated) {
+    return false
+  }
+
+  const explosionX = unit.x + TILE_SIZE / 2
+  const explosionY = unit.y + TILE_SIZE / 2
+  const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+
+  const primaryRadius = TILE_SIZE * 2
+  const primaryDamage = 80
+
+  triggerExplosion(
+    explosionX,
+    explosionY,
+    primaryDamage,
+    units,
+    factories,
+    null,
+    now,
+    undefined,
+    primaryRadius,
+    true
+  )
+
+  if (gameState) {
+    triggerDistortionEffect(explosionX, explosionY, primaryRadius, gameState)
+  }
+
+  const roundTypes = [
+    {
+      name: 'bullet',
+      damage: 55,
+      radius: TILE_SIZE * 0.75,
+      constantDamage: true,
+      buildingDamageMultiplier: 0.7,
+      factoryDamageMultiplier: 0.7
+    },
+    {
+      name: 'rocket',
+      damage: 75,
+      radius: TILE_SIZE * 1.25,
+      constantDamage: false,
+      buildingDamageMultiplier: 0.9,
+      factoryDamageMultiplier: 0.9
+    },
+    {
+      name: 'artillery',
+      damage: 95,
+      radius: TILE_SIZE * 1.5,
+      constantDamage: false,
+      buildingDamageMultiplier: 1,
+      factoryDamageMultiplier: 1
+    }
+  ]
+
+  const randomBetween = (min, max) => Math.random() * (max - min) + min
+
+  for (let i = 0; i < 10; i++) {
+    const round = roundTypes[Math.floor(Math.random() * roundTypes.length)]
+    const angle = Math.random() * Math.PI * 2
+    const distance = TILE_SIZE * randomBetween(1.5, 4.5)
+    const impactX = explosionX + Math.cos(angle) * distance
+    const impactY = explosionY + Math.sin(angle) * distance
+    const delay = i * 30
+
+    triggerExplosion(
+      impactX,
+      impactY,
+      round.damage,
+      units,
+      factories,
+      null,
+      now + delay,
+      undefined,
+      round.radius,
+      round.constantDamage,
+      {
+        buildingDamageMultiplier: round.buildingDamageMultiplier,
+        factoryDamageMultiplier: round.factoryDamageMultiplier
+      }
+    )
+  }
+
+  unit._ammoTruckDetonated = true
+  unit.movement = unit.movement || {}
+  if (unit.movement.velocity) {
+    unit.movement.velocity.x = 0
+    unit.movement.velocity.y = 0
+  }
+  if (unit.movement.targetVelocity) {
+    unit.movement.targetVelocity.x = 0
+    unit.movement.targetVelocity.y = 0
+  }
+  unit.movement.isMoving = false
+  unit.movement.currentSpeed = 0
+
+  unit.health = 0
+  unit.ammoCargo = 0
+
+  return true
+}
