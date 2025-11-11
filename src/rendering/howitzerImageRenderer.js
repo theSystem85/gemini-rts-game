@@ -109,7 +109,7 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   ctx.translate(mountLocalX, mountLocalY)
 
   const barrelElevation = unit.barrelElevation || 0
-  ctx.rotate(-Math.PI / 2 - barrelElevation)
+  ctx.rotate(-barrelElevation)
 
   let recoilOffset = 0
   if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {

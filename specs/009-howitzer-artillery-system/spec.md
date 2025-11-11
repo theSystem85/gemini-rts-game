@@ -19,6 +19,7 @@ Key visual cues include a reinforced recoil motion, directional muzzle flash jet
 
 1. **Shared Barrel Asset**
    - Load `/public/images/map/units/tankV1_barrel.png` for every howitzer and align it with the map sprite using mount points (wagon: 30x30, barrel: 2x0).
+   - Rotate the reused barrel art 90° counter-clockwise so it remains parallel with the wagon's facing when rendered.
    - The base howitzer image continues to supply the chassis and carriage visuals.
 
 2. **Elevation Animation**

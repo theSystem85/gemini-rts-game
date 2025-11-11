@@ -4,6 +4,7 @@
 - [ ] Enemy AI should automatically build next what is the current production bottleneck regarding money supply. Highest prio is energy. When energy is too low it will build a power plant. When there is too little money it will build harvesters but only if there is less than 4 havesters per refinery otherwiese it will build a refinery but only if the money has reached 0 before. So whenevery the money supply reached 0 the highest prio is to build another refinery (given the power supply is sufficient). When money supply is sufficient focus on building a good base defence with at least 2 turrets and one tesla coil and one rocket launcher. If that is given focus on producing as many combat units as possible. When the money raises faster than tanks can be build then build more vehicle factories to speed up the production.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
+- [x] ✅ Rotate the howitzer barrel asset 90° counter-clockwise so it aligns with the wagon chassis.
 
 ## Features
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
