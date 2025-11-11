@@ -1,12 +1,19 @@
 // productionController.js
 // Handle production button setup and state management
 
+import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { unitCosts, buildingCosts } from '../main.js'
 import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
 import { buildingData } from '../buildings.js'
 import { playSound } from '../sound.js'
+import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
+
+const MOBILE_EDGE_SCROLL_THRESHOLD = 72
+const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.12
+const MOBILE_EDGE_SCROLL_DEFAULT_FRAME_MS = 16
+const MOBILE_EDGE_SCROLL_MAX_FRAME_MS = 64
 
 export class ProductionController {
   constructor() {
@@ -16,6 +23,9 @@ export class ProductionController {
     this.isSetup = false // Flag to prevent duplicate event listeners
     this.mobileDragState = null
     this.suppressNextClick = false
+    this.lastMobileEdgeScrollTime = null
+    this.mobileEdgeScrollContext = null
+    this.mobileEdgeScrollRaf = null
     this.mobileCategoryToggle = document.getElementById('mobileCategoryToggle')
     this.mobileCategoryToggleListenerAdded = false
 
@@ -1428,6 +1438,7 @@ export class ProductionController {
         state.scrollLocksApplied = false
 
         this.mobileDragState = null
+        this.stopMobileEdgeScrollLoop()
       }
 
       window.addEventListener('pointermove', handleMove, { passive: false, capture: true })
@@ -1593,6 +1604,8 @@ export class ProductionController {
     if (!gameCanvas) return
 
     const rect = gameCanvas.getBoundingClientRect()
+    this.updateMobileEdgeScrollPointer(gameCanvas, event)
+
     const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
       event.clientY >= rect.top && event.clientY <= rect.bottom
 
@@ -1612,5 +1625,176 @@ export class ProductionController {
       gameState.cursorX = event.clientX - rect.left + gameState.scrollOffset.x
       gameState.cursorY = event.clientY - rect.top + gameState.scrollOffset.y
     }
+  }
+
+  updateMobileEdgeScrollPointer(gameCanvas, sourceEvent) {
+    if (!gameCanvas || !gameCanvas.isConnected) {
+      this.mobileEdgeScrollContext = null
+      this.stopMobileEdgeScrollLoop()
+      return
+    }
+
+    const position = this.extractPointerPosition(sourceEvent)
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+      return
+    }
+
+    if (!this.mobileEdgeScrollContext || this.mobileEdgeScrollContext.canvas !== gameCanvas) {
+      this.mobileEdgeScrollContext = {
+        canvas: gameCanvas,
+        clientX: position.x,
+        clientY: position.y
+      }
+    } else {
+      this.mobileEdgeScrollContext.clientX = position.x
+      this.mobileEdgeScrollContext.clientY = position.y
+    }
+
+    this.applyMobileEdgeScrollTick(performance.now())
+    this.startMobileEdgeScrollLoop()
+  }
+
+  extractPointerPosition(event) {
+    if (!event) {
+      return { x: NaN, y: NaN }
+    }
+
+    if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+      return { x: event.clientX, y: event.clientY }
+    }
+
+    const touch = event.changedTouches?.[0] || event.touches?.[0]
+    if (touch && typeof touch.clientX === 'number' && typeof touch.clientY === 'number') {
+      return { x: touch.clientX, y: touch.clientY }
+    }
+
+    return { x: NaN, y: NaN }
+  }
+
+  startMobileEdgeScrollLoop() {
+    if (this.mobileEdgeScrollRaf !== null) {
+      return
+    }
+
+    const step = (timestamp) => {
+      this.mobileEdgeScrollRaf = null
+
+      if (!this.mobileDragState || this.mobileDragState.mode !== 'drag' || !this.mobileEdgeScrollContext) {
+        this.stopMobileEdgeScrollLoop()
+        return
+      }
+
+      const continueLoop = this.applyMobileEdgeScrollTick(timestamp)
+      if (continueLoop) {
+        this.mobileEdgeScrollRaf = window.requestAnimationFrame(step)
+      }
+    }
+
+    this.mobileEdgeScrollRaf = window.requestAnimationFrame(step)
+  }
+
+  stopMobileEdgeScrollLoop() {
+    if (this.mobileEdgeScrollRaf !== null) {
+      window.cancelAnimationFrame(this.mobileEdgeScrollRaf)
+      this.mobileEdgeScrollRaf = null
+    }
+    this.mobileEdgeScrollContext = null
+    this.lastMobileEdgeScrollTime = null
+  }
+
+  applyMobileEdgeScrollTick(timestamp) {
+    const context = this.mobileEdgeScrollContext
+    if (!context || !context.canvas || !context.canvas.isConnected) {
+      this.stopMobileEdgeScrollLoop()
+      return false
+    }
+
+    const pointerX = context.clientX
+    const pointerY = context.clientY
+    if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
+      return false
+    }
+
+    const mapGrid = gameState.mapGrid
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+      return false
+    }
+
+    const gameCanvas = context.canvas
+    const rect = gameCanvas.getBoundingClientRect()
+
+    const viewportWidth = getPlayableViewportWidth(gameCanvas)
+    const viewportHeight = getPlayableViewportHeight(gameCanvas)
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+      return false
+    }
+
+    const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
+    const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
+    if (maxScrollX <= 0 && maxScrollY <= 0) {
+      return false
+    }
+
+    const thresholdX = Math.min(MOBILE_EDGE_SCROLL_THRESHOLD, rect.width / 2)
+    const thresholdY = Math.min(MOBILE_EDGE_SCROLL_THRESHOLD, rect.height / 2)
+    const hasHorizontalScroll = maxScrollX > 0 && thresholdX > 0
+    const hasVerticalScroll = maxScrollY > 0 && thresholdY > 0
+
+    if (!hasHorizontalScroll && !hasVerticalScroll) {
+      return false
+    }
+
+    const timestampValue = Number.isFinite(timestamp) ? timestamp : performance.now()
+    let deltaMs = MOBILE_EDGE_SCROLL_DEFAULT_FRAME_MS
+    if (typeof this.lastMobileEdgeScrollTime === 'number') {
+      const elapsed = timestampValue - this.lastMobileEdgeScrollTime
+      if (Number.isFinite(elapsed) && elapsed > 0) {
+        deltaMs = Math.min(MOBILE_EDGE_SCROLL_MAX_FRAME_MS, elapsed)
+      }
+    }
+    this.lastMobileEdgeScrollTime = timestampValue
+
+    const nearLeft = hasHorizontalScroll && pointerX <= rect.left + thresholdX
+    const nearRight = hasHorizontalScroll && pointerX >= rect.right - thresholdX
+    const nearTop = hasVerticalScroll && pointerY <= rect.top + thresholdY
+    const nearBottom = hasVerticalScroll && pointerY >= rect.bottom - thresholdY
+    const nearAnyEdge = nearLeft || nearRight || nearTop || nearBottom
+
+    let scrollDeltaX = 0
+    let scrollDeltaY = 0
+
+    if (nearLeft) {
+      const distance = Math.max(0, (rect.left + thresholdX) - pointerX)
+      const ratio = Math.min(1, distance / thresholdX)
+      scrollDeltaX = -MOBILE_EDGE_SCROLL_SPEED_PER_MS * ratio * deltaMs
+    } else if (nearRight) {
+      const distance = Math.max(0, pointerX - (rect.right - thresholdX))
+      const ratio = Math.min(1, distance / thresholdX)
+      scrollDeltaX = MOBILE_EDGE_SCROLL_SPEED_PER_MS * ratio * deltaMs
+    }
+
+    if (nearTop) {
+      const distance = Math.max(0, (rect.top + thresholdY) - pointerY)
+      const ratio = Math.min(1, distance / thresholdY)
+      scrollDeltaY = -MOBILE_EDGE_SCROLL_SPEED_PER_MS * ratio * deltaMs
+    } else if (nearBottom) {
+      const distance = Math.max(0, pointerY - (rect.bottom - thresholdY))
+      const ratio = Math.min(1, distance / thresholdY)
+      scrollDeltaY = MOBILE_EDGE_SCROLL_SPEED_PER_MS * ratio * deltaMs
+    }
+
+    if (scrollDeltaX !== 0 || scrollDeltaY !== 0) {
+      const nextScrollX = Math.max(0, Math.min(gameState.scrollOffset.x + scrollDeltaX, maxScrollX))
+      const nextScrollY = Math.max(0, Math.min(gameState.scrollOffset.y + scrollDeltaY, maxScrollY))
+
+      if (nextScrollX !== gameState.scrollOffset.x || nextScrollY !== gameState.scrollOffset.y) {
+        gameState.scrollOffset.x = nextScrollX
+        gameState.scrollOffset.y = nextScrollY
+        gameState.dragVelocity.x = 0
+        gameState.dragVelocity.y = 0
+      }
+    }
+
+    return nearAnyEdge
   }
 }

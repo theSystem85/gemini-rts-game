@@ -202,6 +202,10 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-043**: System MUST save and load factory assembly points through save/load system
 - **FR-044**: System MUST apply building system enhancements to both player and AI (where applicable)
 
+**Mobile Drag Enhancements:**
+- **FR-045**: System MUST auto-scroll the map at a controlled, smooth pace when drag-to-build interactions on touch devices reach any canvas edge, including the lower edge.
+- **FR-046**: System MUST continue auto-scrolling while the drag pointer remains stationary within the edge threshold.
+
 ### Key Entities
 
 - **Blueprint**: Visual representation of pending building placement (blue overlay with name text), does not block tiles
@@ -268,6 +272,9 @@ As a player, I want to set unique rally points for each factory independently, s
 - **SC-033**: Chain build mode handles 50+ buildings without performance degradation
 - **SC-034**: Blueprint and assembly point data persist correctly through save/load operations
 - **SC-035**: Features integrate seamlessly with existing production queue and resource management
+
+**Mobile Drag Enhancements:**
+- **SC-041**: While dragging to build on touch devices, the viewport scrolls no faster than ~150px per second when the pointer is held against the map edge.
 
 **Usability:**
 - **SC-036**: Players can use any combination of features without conflicts (drag-and-drop + chain + blueprints)
