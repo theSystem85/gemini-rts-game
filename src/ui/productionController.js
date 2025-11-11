@@ -10,8 +10,8 @@ import { buildingData } from '../buildings.js'
 import { playSound } from '../sound.js'
 import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
 
-const MOBILE_EDGE_SCROLL_THRESHOLD = 72
-const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.12
+const MOBILE_EDGE_SCROLL_THRESHOLD = 20
+const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.14
 const MOBILE_EDGE_SCROLL_DEFAULT_FRAME_MS = 16
 const MOBILE_EDGE_SCROLL_MAX_FRAME_MS = 64
 
@@ -1670,11 +1670,13 @@ export class ProductionController {
       if (event.clientX <= rect.left + thresholdX) {
         const distance = Math.max(0, (rect.left + thresholdX) - event.clientX)
         const ratio = Math.min(1, distance / thresholdX)
-        scrollDeltaX = -speedPerMs * ratio * deltaMs
+        const intensity = ratio * (1 + ratio)
+        scrollDeltaX = -speedPerMs * intensity * deltaMs
       } else if (event.clientX >= rect.right - thresholdX) {
         const distance = Math.max(0, event.clientX - (rect.right - thresholdX))
         const ratio = Math.min(1, distance / thresholdX)
-        scrollDeltaX = speedPerMs * ratio * deltaMs
+        const intensity = ratio * (1 + ratio)
+        scrollDeltaX = speedPerMs * intensity * deltaMs
       }
     }
 
@@ -1682,11 +1684,13 @@ export class ProductionController {
       if (event.clientY <= rect.top + thresholdY) {
         const distance = Math.max(0, (rect.top + thresholdY) - event.clientY)
         const ratio = Math.min(1, distance / thresholdY)
-        scrollDeltaY = -speedPerMs * ratio * deltaMs
+        const intensity = ratio * (1 + ratio)
+        scrollDeltaY = -speedPerMs * intensity * deltaMs
       } else if (event.clientY >= rect.bottom - thresholdY) {
         const distance = Math.max(0, event.clientY - (rect.bottom - thresholdY))
         const ratio = Math.min(1, distance / thresholdY)
-        scrollDeltaY = speedPerMs * ratio * deltaMs
+        const intensity = ratio * (1 + ratio)
+        scrollDeltaY = speedPerMs * intensity * deltaMs
       }
     }
 

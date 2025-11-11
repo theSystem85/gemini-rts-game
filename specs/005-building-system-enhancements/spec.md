@@ -205,7 +205,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-045**: System MUST ensure factories spawn units only on passable, unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is located
 
 **Mobile Drag Enhancements:**
-- **FR-045**: System MUST auto-scroll the map at a controlled (slow) pace when drag-to-build interactions on touch devices reach the canvas edges.
+- **FR-045**: System MUST auto-scroll the map only within the final 20px band at the canvas edges during drag-to-build interactions on touch devices, with scroll speed increasing toward the edge and delivering roughly double the previous baseline pace while leaving the central area stationary.
 
 ### Key Entities
 
