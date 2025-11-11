@@ -6,6 +6,7 @@
 - [ ] **Refactor:** move all constants into config.
 
 ## Features
+- [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
 - [x] ✅ Ensure ammunition trucks leave no wrecks on destruction and detonate with scattered munitions that threaten all nearby units and buildings.
 - [ ] Danger Zone Map Feature (aka DZM): Let each enemy AI create a DZM where for each tile the damage per second is calculated based on the defence buildings of all non friendly other players on the map (including human and ai players). For each tile the damage per second will be calculated by checking which non allied defence buildings are in range and how much damage they could make based on their firing rate and damage per shot (also take burst shots into account). Whenever a new defence building is added to the map update that DZM. Ensure not to make this updates on a frame base in the game loop. Only do updates event based when new defence buildings get added or destroyed/sold. Also ensure this map is generated whenever a game is loaded (do not persist the DZM itself in save games). the DZM for each player can be show as an overlay on the map when pressing the z key. first time z key is pressed the DZM for the user player is shown. 2nd time the z key is pressed the DZM for the next player is shown and so on until all players were looped. Then it will hide the DZM overlay. Next time it will again start from user player DZM and so on.
 

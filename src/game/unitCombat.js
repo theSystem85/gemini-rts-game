@@ -12,6 +12,7 @@ import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 import { showNotification } from '../ui/notifications.js'
+import { isHowitzerGunReadyToFire, getHowitzerLaunchAngle } from './howitzerGunController.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -1496,7 +1497,14 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
     return
   }
 
-  if (distance <= effectiveRange && canAttack && targetVisible && unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
+  if (
+    distance <= effectiveRange &&
+    canAttack &&
+    targetVisible &&
+    unit.canFire !== false &&
+    isTurretAimedAtTarget(unit, unit.target) &&
+    isHowitzerGunReadyToFire(unit)
+  ) {
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
       return
     }
@@ -1608,12 +1616,16 @@ function isHowitzerTargetVisible(unit, target, mapGrid) {
 }
 
 function fireHowitzerShell(unit, aimTarget, bullets, now) {
+  if (!isHowitzerGunReadyToFire(unit)) {
+    return
+  }
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
 
   const dx = aimTarget.x - unitCenterX
   const dy = aimTarget.y - unitCenterY
   const distance = Math.hypot(dx, dy)
+  const launchAngle = getHowitzerLaunchAngle(unit)
 
   const projectile = {
     id: Date.now() + Math.random(),
@@ -1636,7 +1648,8 @@ function fireHowitzerShell(unit, aimTarget, bullets, now) {
     arcHeight: distance * 0.5,
     targetPosition: { x: aimTarget.x, y: aimTarget.y },
     explosionRadius: TILE_SIZE * HOWITZER_EXPLOSION_RADIUS_TILES,
-    projectileType: 'artillery'
+    projectileType: 'artillery',
+    launchAngle
   }
 
   bullets.push(projectile)

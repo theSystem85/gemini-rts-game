@@ -14,6 +14,7 @@ import { getCachedPath } from './pathfinding.js'
 import { selectedUnits, cleanupDestroyedSelectedUnits } from '../inputHandler.js'
 import { angleDiff, smoothRotateTowardsAngle, findAdjacentTile } from '../logic.js'
 import { updateUnitPosition, initializeUnitMovement } from './unifiedMovement.js'
+import { updateHowitzerGunState } from './howitzerGunController.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
 import { logPerformance } from '../performanceUtils.js'
 
@@ -368,5 +369,12 @@ function updateUnitRotation(unit, now) {
   } else {
     // For normal movement, only accelerate if facing the right way.
     unit.canAccelerate = !bodyNeedsRotation
+  }
+
+  if (isHowitzer) {
+    updateHowitzerGunState(unit, now)
+    if (!unit.isRetreating && unit.howitzerMovementLock) {
+      unit.canAccelerate = false
+    }
   }
 }
