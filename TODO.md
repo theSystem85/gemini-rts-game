@@ -6,6 +6,7 @@
 - [ ] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
+- [x] Ensure mobile drag-to-build interactions auto-scroll the map slowly near canvas edges on touch devices.
 
 ## Features
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.

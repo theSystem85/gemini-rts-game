@@ -1,12 +1,19 @@
 // productionController.js
 // Handle production button setup and state management
 
+import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { unitCosts, buildingCosts } from '../main.js'
 import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
 import { buildingData } from '../buildings.js'
 import { playSound } from '../sound.js'
+import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
+
+const MOBILE_EDGE_SCROLL_THRESHOLD = 72
+const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.12
+const MOBILE_EDGE_SCROLL_DEFAULT_FRAME_MS = 16
+const MOBILE_EDGE_SCROLL_MAX_FRAME_MS = 64
 
 export class ProductionController {
   constructor() {
@@ -16,6 +23,7 @@ export class ProductionController {
     this.isSetup = false // Flag to prevent duplicate event listeners
     this.mobileDragState = null
     this.suppressNextClick = false
+    this.lastMobileEdgeScrollTime = null
     this.mobileCategoryToggle = document.getElementById('mobileCategoryToggle')
     this.mobileCategoryToggleListenerAdded = false
 
@@ -1428,6 +1436,7 @@ export class ProductionController {
         state.scrollLocksApplied = false
 
         this.mobileDragState = null
+        this.lastMobileEdgeScrollTime = null
       }
 
       window.addEventListener('pointermove', handleMove, { passive: false, capture: true })
@@ -1593,6 +1602,8 @@ export class ProductionController {
     if (!gameCanvas) return
 
     const rect = gameCanvas.getBoundingClientRect()
+    this.applyMobileEdgeScroll(event, gameCanvas, rect)
+
     const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
       event.clientY >= rect.top && event.clientY <= rect.bottom
 
@@ -1611,6 +1622,84 @@ export class ProductionController {
     } else if (detail.kind === 'unit' && inside) {
       gameState.cursorX = event.clientX - rect.left + gameState.scrollOffset.x
       gameState.cursorY = event.clientY - rect.top + gameState.scrollOffset.y
+    }
+  }
+
+  applyMobileEdgeScroll(event, gameCanvas, rect) {
+    const mapGrid = gameState.mapGrid
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+      return
+    }
+
+    const viewportWidth = getPlayableViewportWidth(gameCanvas)
+    const viewportHeight = getPlayableViewportHeight(gameCanvas)
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+      return
+    }
+
+    const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
+    const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
+    if (maxScrollX <= 0 && maxScrollY <= 0) {
+      return
+    }
+
+    const thresholdX = Math.min(MOBILE_EDGE_SCROLL_THRESHOLD, rect.width / 2)
+    const thresholdY = Math.min(MOBILE_EDGE_SCROLL_THRESHOLD, rect.height / 2)
+    const hasHorizontalScroll = maxScrollX > 0 && thresholdX > 0
+    const hasVerticalScroll = maxScrollY > 0 && thresholdY > 0
+
+    if (!hasHorizontalScroll && !hasVerticalScroll) {
+      return
+    }
+
+    const timestamp = Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now()
+    let deltaMs = MOBILE_EDGE_SCROLL_DEFAULT_FRAME_MS
+    if (typeof this.lastMobileEdgeScrollTime === 'number') {
+      const elapsed = timestamp - this.lastMobileEdgeScrollTime
+      if (Number.isFinite(elapsed) && elapsed > 0) {
+        deltaMs = Math.min(MOBILE_EDGE_SCROLL_MAX_FRAME_MS, elapsed)
+      }
+    }
+    this.lastMobileEdgeScrollTime = timestamp
+
+    const speedPerMs = MOBILE_EDGE_SCROLL_SPEED_PER_MS
+    let scrollDeltaX = 0
+    let scrollDeltaY = 0
+
+    if (hasHorizontalScroll) {
+      if (event.clientX <= rect.left + thresholdX) {
+        const distance = Math.max(0, (rect.left + thresholdX) - event.clientX)
+        const ratio = Math.min(1, distance / thresholdX)
+        scrollDeltaX = -speedPerMs * ratio * deltaMs
+      } else if (event.clientX >= rect.right - thresholdX) {
+        const distance = Math.max(0, event.clientX - (rect.right - thresholdX))
+        const ratio = Math.min(1, distance / thresholdX)
+        scrollDeltaX = speedPerMs * ratio * deltaMs
+      }
+    }
+
+    if (hasVerticalScroll) {
+      if (event.clientY <= rect.top + thresholdY) {
+        const distance = Math.max(0, (rect.top + thresholdY) - event.clientY)
+        const ratio = Math.min(1, distance / thresholdY)
+        scrollDeltaY = -speedPerMs * ratio * deltaMs
+      } else if (event.clientY >= rect.bottom - thresholdY) {
+        const distance = Math.max(0, event.clientY - (rect.bottom - thresholdY))
+        const ratio = Math.min(1, distance / thresholdY)
+        scrollDeltaY = speedPerMs * ratio * deltaMs
+      }
+    }
+
+    if (scrollDeltaX !== 0 || scrollDeltaY !== 0) {
+      const nextScrollX = Math.max(0, Math.min(gameState.scrollOffset.x + scrollDeltaX, maxScrollX))
+      const nextScrollY = Math.max(0, Math.min(gameState.scrollOffset.y + scrollDeltaY, maxScrollY))
+
+      if (nextScrollX !== gameState.scrollOffset.x || nextScrollY !== gameState.scrollOffset.y) {
+        gameState.scrollOffset.x = nextScrollX
+        gameState.scrollOffset.y = nextScrollY
+        gameState.dragVelocity.x = 0
+        gameState.dragVelocity.y = 0
+      }
     }
   }
 }
