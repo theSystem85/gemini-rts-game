@@ -7,7 +7,7 @@ import {
 import { normalizeAngle } from '../logic.js'
 
 const MAX_ELEVATION_RAD = (65 * Math.PI) / 180
-const MIN_ELEVATION_RAD = 0
+const MIN_ELEVATION_RAD = -MAX_ELEVATION_RAD
 const LOWERED_THRESHOLD_RAD = (2.5 * Math.PI) / 180
 const MIN_ADJUST_DURATION_MS = 1400
 const MAX_ADJUST_DURATION_MS = 4000

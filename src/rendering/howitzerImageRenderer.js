@@ -17,6 +17,9 @@ const HOWITZER_BARREL_MOUNT = { x: 30, y: 30 }
 const BARREL_MOUNT_POINT = { x: 2, y: 0 }
 let barrelMuzzlePoint = { x: 2, y: 64 }
 const HOWITZER_RECOIL_MULTIPLIER = 1.4
+// Default barrel rotation offset in radians (adjust this to align barrel with driving direction)
+// 0 = pointing right, Math.PI/2 = pointing down, Math.PI = pointing left, -Math.PI/2 = pointing up
+const BARREL_DEFAULT_ROTATION_OFFSET = Math.PI
 
 function resolveCallbacks(success) {
   while (pendingCallbacks.length) {
@@ -109,7 +112,8 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   ctx.translate(mountLocalX, mountLocalY)
 
   const barrelElevation = unit.barrelElevation || 0
-  ctx.rotate(Math.PI / 2 - barrelElevation)
+  // Rotate barrel: apply default rotation offset, then subtract signed elevation
+  ctx.rotate(BARREL_DEFAULT_ROTATION_OFFSET - barrelElevation)
 
   let recoilOffset = 0
   if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
@@ -121,13 +125,15 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   const barrelScale = baseScale
   const barrelWidth = howitzerBarrelImg.width * barrelScale
   const barrelHeight = howitzerBarrelImg.height * barrelScale
-  const drawX = -BARREL_MOUNT_POINT.x * barrelScale + recoilOffset
-  const drawY = -BARREL_MOUNT_POINT.y * barrelScale
+  // After -90° rotation, recoil moves along Y-axis (back along barrel length)
+  const drawX = -BARREL_MOUNT_POINT.x * barrelScale
+  const drawY = -BARREL_MOUNT_POINT.y * barrelScale - recoilOffset
 
   ctx.drawImage(howitzerBarrelImg, drawX, drawY, barrelWidth, barrelHeight)
 
-  const muzzleLocalX = (barrelMuzzlePoint.x - BARREL_MOUNT_POINT.x) * barrelScale + recoilOffset
-  const muzzleLocalY = (barrelMuzzlePoint.y - BARREL_MOUNT_POINT.y) * barrelScale
+  // Muzzle position also shifts with recoil along Y-axis
+  const muzzleLocalX = (barrelMuzzlePoint.x - BARREL_MOUNT_POINT.x) * barrelScale
+  const muzzleLocalY = (barrelMuzzlePoint.y - BARREL_MOUNT_POINT.y) * barrelScale - recoilOffset
 
   if (unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
     const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
