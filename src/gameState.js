@@ -21,6 +21,11 @@ export const gameState = {
   totalMoneyEarned: 0,
   scrollOffset: { x: 0, y: 0 },
   dragVelocity: { x: 0, y: 0 },
+  smoothScroll: {
+    active: false,
+    targetX: 0,
+    targetY: 0
+  },
   mapTilesX: DEFAULT_MAP_TILES_X,
   mapTilesY: DEFAULT_MAP_TILES_Y,
   // Arrow key scrolling state

@@ -25,43 +25,95 @@ import {
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
 
+const MINIMAP_SCROLL_SMOOTHING = 0.2
+const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
+
 /**
  * Updates map scrolling with inertia
  * @param {Object} gameState - Game state object
  * @param {Array} mapGrid - 2D array representing the map
  */
 export function updateMapScrolling(gameState, mapGrid) {
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0]) || mapGrid[0].length === 0) {
+    return
+  }
+
+  const gameCanvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : null
+  const viewportWidth = getPlayableViewportWidth(gameCanvas)
+  const viewportHeight = getPlayableViewportHeight(gameCanvas)
+  const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
+  const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
+
+  const smoothState = gameState.smoothScroll
+  const keyScrollActive = gameState.keyScroll.left || gameState.keyScroll.right ||
+    gameState.keyScroll.up || gameState.keyScroll.down
+
+  if (smoothState) {
+    if (gameState.isRightDragging || keyScrollActive) {
+      smoothState.active = false
+    } else {
+      smoothState.targetX = Math.max(0, Math.min(smoothState.targetX, maxScrollX))
+      smoothState.targetY = Math.max(0, Math.min(smoothState.targetY, maxScrollY))
+    }
+  }
+
   if (!gameState.isRightDragging) {
-    const gameCanvas = document.getElementById('gameCanvas')
-    const viewportWidth = getPlayableViewportWidth(gameCanvas)
-    const viewportHeight = getPlayableViewportHeight(gameCanvas)
-    const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
-    const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
-    // Update velocity based on arrow key input
-    if (gameState.keyScroll.left) {
-      gameState.dragVelocity.x = KEYBOARD_SCROLL_SPEED
-    } else if (gameState.keyScroll.right) {
-      gameState.dragVelocity.x = -KEYBOARD_SCROLL_SPEED
+    const smoothingActive = !!(smoothState && smoothState.active)
+    if (!smoothingActive) {
+      if (gameState.keyScroll.left) {
+        gameState.dragVelocity.x = KEYBOARD_SCROLL_SPEED
+      } else if (gameState.keyScroll.right) {
+        gameState.dragVelocity.x = -KEYBOARD_SCROLL_SPEED
+      } else {
+        gameState.dragVelocity.x *= INERTIA_DECAY
+        if (Math.abs(gameState.dragVelocity.x) < INERTIA_STOP_THRESHOLD) {
+          gameState.dragVelocity.x = 0
+        }
+      }
+
+      if (gameState.keyScroll.up) {
+        gameState.dragVelocity.y = KEYBOARD_SCROLL_SPEED
+      } else if (gameState.keyScroll.down) {
+        gameState.dragVelocity.y = -KEYBOARD_SCROLL_SPEED
+      } else {
+        gameState.dragVelocity.y *= INERTIA_DECAY
+        if (Math.abs(gameState.dragVelocity.y) < INERTIA_STOP_THRESHOLD) {
+          gameState.dragVelocity.y = 0
+        }
+      }
+
+      gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX))
+      gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, maxScrollY))
     } else {
       gameState.dragVelocity.x *= INERTIA_DECAY
       if (Math.abs(gameState.dragVelocity.x) < INERTIA_STOP_THRESHOLD) {
         gameState.dragVelocity.x = 0
       }
-    }
-
-    if (gameState.keyScroll.up) {
-      gameState.dragVelocity.y = KEYBOARD_SCROLL_SPEED
-    } else if (gameState.keyScroll.down) {
-      gameState.dragVelocity.y = -KEYBOARD_SCROLL_SPEED
-    } else {
       gameState.dragVelocity.y *= INERTIA_DECAY
       if (Math.abs(gameState.dragVelocity.y) < INERTIA_STOP_THRESHOLD) {
         gameState.dragVelocity.y = 0
       }
     }
+  } else if (smoothState) {
+    smoothState.active = false
+  }
 
-    gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX))
-    gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, maxScrollY))
+  if (!gameState.isRightDragging && smoothState && smoothState.active) {
+    const dx = smoothState.targetX - gameState.scrollOffset.x
+    const dy = smoothState.targetY - gameState.scrollOffset.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance <= MINIMAP_SCROLL_STOP_DISTANCE) {
+      gameState.scrollOffset.x = smoothState.targetX
+      gameState.scrollOffset.y = smoothState.targetY
+      smoothState.active = false
+    } else {
+      gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x + dx * MINIMAP_SCROLL_SMOOTHING, maxScrollX))
+      gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y + dy * MINIMAP_SCROLL_SMOOTHING, maxScrollY))
+    }
+  } else {
+    gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x, maxScrollX))
+    gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y, maxScrollY))
   }
 }
 

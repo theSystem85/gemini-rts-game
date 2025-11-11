@@ -250,6 +250,9 @@ export class MouseHandler {
 
   handleRightMouseDown(e, gameCanvas, cursorManager) {
     gameState.isRightDragging = true
+    if (gameState.smoothScroll) {
+      gameState.smoothScroll.active = false
+    }
     this.rightDragStart = { x: e.clientX, y: e.clientY }
     this.rightWasDragging = false
     gameState.lastDragPos = { x: e.clientX, y: e.clientY }
