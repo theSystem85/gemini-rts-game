@@ -212,6 +212,9 @@ export class KeyboardHandler {
           }
           setRemoteControlAction('forward', 'keyboard', true)
         } else {
+          if (gameState.smoothScroll) {
+            gameState.smoothScroll.active = false
+          }
           gameState.keyScroll.up = true
           if (gameState.benchmarkActive) {
             notifyBenchmarkManualCameraControl()
@@ -228,6 +231,9 @@ export class KeyboardHandler {
           }
           setRemoteControlAction('backward', 'keyboard', true)
         } else {
+          if (gameState.smoothScroll) {
+            gameState.smoothScroll.active = false
+          }
           gameState.keyScroll.down = true
           if (gameState.benchmarkActive) {
             notifyBenchmarkManualCameraControl()
@@ -251,6 +257,9 @@ export class KeyboardHandler {
             setRemoteControlAction('turnLeft', 'keyboard', true)
           }
         } else {
+          if (gameState.smoothScroll) {
+            gameState.smoothScroll.active = false
+          }
           gameState.keyScroll.left = true
           if (gameState.benchmarkActive) {
             notifyBenchmarkManualCameraControl()
@@ -274,6 +283,9 @@ export class KeyboardHandler {
             setRemoteControlAction('turnRight', 'keyboard', true)
           }
         } else {
+          if (gameState.smoothScroll) {
+            gameState.smoothScroll.active = false
+          }
           gameState.keyScroll.right = true
           if (gameState.benchmarkActive) {
             notifyBenchmarkManualCameraControl()

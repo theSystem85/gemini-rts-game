@@ -21,24 +21,28 @@ export function setupMinimapHandlers(gameCanvas) {
   let isMinimapDragging = false
   let activeTouchId = null
 
-  const handlePointerNavigation = (point) => {
+  const handlePointerNavigation = (point, options = {}) => {
     if (!point) {
       return
     }
-    handleMinimapClick({ target: minimapElement, clientX: point.clientX, clientY: point.clientY }, gameCanvas)
+    handleMinimapClick(
+      { target: minimapElement, clientX: point.clientX, clientY: point.clientY },
+      gameCanvas,
+      options
+    )
   }
 
   minimapElement.addEventListener('mousedown', (e) => {
     if (e.button === 0 || e.button === 2) {
       e.preventDefault()
       isMinimapDragging = true
-      handlePointerNavigation(e)
+      handlePointerNavigation(e, { smooth: false })
     }
   })
 
   minimapElement.addEventListener('mousemove', (e) => {
     if (isMinimapDragging) {
-      handlePointerNavigation(e)
+      handlePointerNavigation(e, { smooth: false })
     }
   })
 
@@ -48,7 +52,7 @@ export function setupMinimapHandlers(gameCanvas) {
       // This is important - process one last time with the final cursor position
       // when it's still in drag mode before ending the drag
       if (e.target === minimapElement) {
-        handlePointerNavigation(e)
+        handlePointerNavigation(e, { smooth: false })
       }
       isMinimapDragging = false
     }
@@ -62,7 +66,7 @@ export function setupMinimapHandlers(gameCanvas) {
     activeTouchId = touch.identifier
     isMinimapDragging = true
     e.preventDefault()
-    handlePointerNavigation(touch)
+    handlePointerNavigation(touch, { smooth: true })
   }, { passive: false })
 
   minimapElement.addEventListener('touchmove', (e) => {
@@ -73,7 +77,7 @@ export function setupMinimapHandlers(gameCanvas) {
     const touch = touches.find(t => t.identifier === activeTouchId) || touches[0]
     if (touch) {
       e.preventDefault()
-      handlePointerNavigation(touch)
+      handlePointerNavigation(touch, { smooth: true })
     }
   }, { passive: false })
 
@@ -84,7 +88,7 @@ export function setupMinimapHandlers(gameCanvas) {
     const changedTouches = Array.from(e.changedTouches || [])
     const touch = changedTouches.find(t => t.identifier === activeTouchId) || changedTouches[0]
     if (touch) {
-      handlePointerNavigation(touch)
+      handlePointerNavigation(touch, { smooth: true })
     }
     isMinimapDragging = false
     activeTouchId = null
@@ -101,10 +105,17 @@ export function setupMinimapHandlers(gameCanvas) {
   })
 }
 
-export function handleMinimapClick(e, gameCanvas) {
+export function handleMinimapClick(e, gameCanvas, options = {}) {
+  const { smooth = false } = options
   // Get minimap dimensions
   const minimap = e.target
+  if (!minimap || typeof minimap.getBoundingClientRect !== 'function') {
+    return
+  }
   const minimapRect = minimap.getBoundingClientRect()
+  if (!minimapRect || minimapRect.width === 0 || minimapRect.height === 0) {
+    return
+  }
   // Device pixel ratio not needed for this calculation
   // const pixelRatio = window.devicePixelRatio || 1
 
@@ -119,12 +130,28 @@ export function handleMinimapClick(e, gameCanvas) {
   const logicalCanvasHeight = getPlayableViewportHeight(gameCanvas)
 
   // Calculate new scroll position
-  const newX = clickX * (MAP_TILES_X * TILE_SIZE - logicalCanvasWidth)
-  const newY = clickY * (MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight)
+  const maxScrollX = Math.max(0, MAP_TILES_X * TILE_SIZE - logicalCanvasWidth)
+  const maxScrollY = Math.max(0, MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight)
+  const newX = clickX * maxScrollX
+  const newY = clickY * maxScrollY
 
-  // Update gameState.scrollOffset
-  gameState.scrollOffset.x = Math.max(0, Math.min(newX, MAP_TILES_X * TILE_SIZE - logicalCanvasWidth))
-  gameState.scrollOffset.y = Math.max(0, Math.min(newY, MAP_TILES_Y * TILE_SIZE - logicalCanvasHeight))
+  const targetX = Math.max(0, Math.min(newX, maxScrollX))
+  const targetY = Math.max(0, Math.min(newY, maxScrollY))
+
+  gameState.dragVelocity.x = 0
+  gameState.dragVelocity.y = 0
+
+  if (smooth && gameState.smoothScroll) {
+    gameState.smoothScroll.targetX = targetX
+    gameState.smoothScroll.targetY = targetY
+    gameState.smoothScroll.active = true
+  } else {
+    gameState.scrollOffset.x = targetX
+    gameState.scrollOffset.y = targetY
+    if (gameState.smoothScroll) {
+      gameState.smoothScroll.active = false
+    }
+  }
 }
 
 const mobileMinimapState = {
@@ -375,7 +402,7 @@ function scheduleMobileOverlayPositionUpdate() {
   }
 }
 
-function forwardPointerToMinimap(clientX, clientY) {
+function forwardPointerToMinimap(clientX, clientY, options = {}) {
   if (!mobileMinimapState.layoutEnabled) {
     return
   }
@@ -389,14 +416,16 @@ function forwardPointerToMinimap(clientX, clientY) {
     return
   }
 
-  handleMinimapClick({ target: minimapElement, clientX, clientY }, gameCanvas)
+  handleMinimapClick({ target: minimapElement, clientX, clientY }, gameCanvas, options)
 }
 
 function startMobileMinimapDrag(event) {
   mobileMinimapState.activeDragPointerId = event.pointerId
 
+  const shouldSmooth = event.pointerType === 'touch' || event.pointerType === 'pen'
+
   const executeForwarding = () => {
-    forwardPointerToMinimap(event.clientX, event.clientY)
+    forwardPointerToMinimap(event.clientX, event.clientY, { smooth: shouldSmooth })
   }
 
   if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
@@ -420,7 +449,8 @@ function handleMobileMinimapPointerMove(event) {
   }
 
   event.preventDefault()
-  forwardPointerToMinimap(event.clientX, event.clientY)
+  const shouldSmooth = event.pointerType === 'touch' || event.pointerType === 'pen'
+  forwardPointerToMinimap(event.clientX, event.clientY, { smooth: shouldSmooth })
 }
 
 function endMobileMinimapHold(pointerId) {
