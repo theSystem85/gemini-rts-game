@@ -1602,6 +1602,38 @@ export class ProductionController {
     if (!gameCanvas) return
 
     const rect = gameCanvas.getBoundingClientRect()
+    
+    // Start continuous edge scrolling when drag enters edge zone
+    if (!this.edgeScrollAnimationFrame) {
+      const edgeScrollLoop = () => {
+      if (!this.mobileDragState || !this.mobileDragState.active) {
+        this.edgeScrollAnimationFrame = null
+        this.lastMobileEdgeScrollTime = null
+        return
+      }
+
+      // Use last known pointer position from drag state
+      const syntheticEvent = {
+        clientX: this.mobileDragState.lastClientX || event.clientX,
+        clientY: this.mobileDragState.lastClientY || event.clientY,
+        timeStamp: performance.now()
+      }
+
+      const currentRect = gameCanvas.getBoundingClientRect()
+      this.applyMobileEdgeScroll(syntheticEvent, gameCanvas, currentRect)
+
+      this.edgeScrollAnimationFrame = requestAnimationFrame(edgeScrollLoop)
+      }
+
+      this.edgeScrollAnimationFrame = requestAnimationFrame(edgeScrollLoop)
+    }
+
+    // Store last pointer position for edge scroll loop
+    if (this.mobileDragState) {
+      this.mobileDragState.lastClientX = event.clientX
+      this.mobileDragState.lastClientY = event.clientY
+    }
+
     this.applyMobileEdgeScroll(event, gameCanvas, rect)
 
     const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
@@ -1666,14 +1698,20 @@ export class ProductionController {
     let scrollDeltaX = 0
     let scrollDeltaY = 0
 
+    // Calculate effective edges accounting for mobile landscape sidebar
+    const effectiveLeft = rect.left
+    const effectiveRight = rect.left + viewportWidth
+    const effectiveTop = rect.top
+    const effectiveBottom = rect.top + viewportHeight
+
     if (hasHorizontalScroll) {
-      if (event.clientX <= rect.left + thresholdX) {
-        const distance = Math.max(0, (rect.left + thresholdX) - event.clientX)
+      if (event.clientX <= effectiveLeft + thresholdX) {
+        const distance = Math.max(0, (effectiveLeft + thresholdX) - event.clientX)
         const ratio = Math.min(1, distance / thresholdX)
         const intensity = ratio * (1 + ratio)
         scrollDeltaX = -speedPerMs * intensity * deltaMs
-      } else if (event.clientX >= rect.right - thresholdX) {
-        const distance = Math.max(0, event.clientX - (rect.right - thresholdX))
+      } else if (event.clientX >= effectiveRight - thresholdX) {
+        const distance = Math.max(0, event.clientX - (effectiveRight - thresholdX))
         const ratio = Math.min(1, distance / thresholdX)
         const intensity = ratio * (1 + ratio)
         scrollDeltaX = speedPerMs * intensity * deltaMs
@@ -1681,13 +1719,13 @@ export class ProductionController {
     }
 
     if (hasVerticalScroll) {
-      if (event.clientY <= rect.top + thresholdY) {
-        const distance = Math.max(0, (rect.top + thresholdY) - event.clientY)
+      if (event.clientY <= effectiveTop + thresholdY) {
+        const distance = Math.max(0, (effectiveTop + thresholdY) - event.clientY)
         const ratio = Math.min(1, distance / thresholdY)
         const intensity = ratio * (1 + ratio)
         scrollDeltaY = -speedPerMs * intensity * deltaMs
-      } else if (event.clientY >= rect.bottom - thresholdY) {
-        const distance = Math.max(0, event.clientY - (rect.bottom - thresholdY))
+      } else if (event.clientY >= effectiveBottom - thresholdY) {
+        const distance = Math.max(0, event.clientY - (effectiveBottom - thresholdY))
         const ratio = Math.min(1, distance / thresholdY)
         const intensity = ratio * (1 + ratio)
         scrollDeltaY = speedPerMs * intensity * deltaMs
