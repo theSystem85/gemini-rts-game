@@ -504,6 +504,8 @@ This specification documents the comprehensive multi-player AI system that power
 
 12. **Save/Load with AI State:** AI strategic state (timers, current focus) is reset on game load to prevent stale data, AI resumes normal decision-making from current game state, no long-term memory persists across sessions.
 
+13. **AI Bankruptcy Recovery:** When an AI player has no active ore refinery or no remaining harvesters and also lacks the funds to rebuild the missing structure, it automatically sells non-essential buildings (prioritizing defensive and auxiliary structures before extra factories/power plants) until it can afford the required refinery or harvester to restore ore income.
+
 ---
 
 ## Dependencies

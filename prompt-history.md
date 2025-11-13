@@ -27,6 +27,9 @@ ensure new units only spawn at unoccupied tiles (currently the vehicle factory s
 ## 2025-11-12 - gpt-5-codex
 Ensure enemy Ai repairs damaged building but under the same cooldown rule after an attack like for the human player. Ensure to prioritize critical buildings first when money is low.
 
+## 2025-11-13 - gpt-5-codex
+Ensure enemy AI sells buildings when out of money and having no more refinery or harvesters to build new refinery or harvesters depending on what is missing to get new money flow from harvesting
+
 ## 2025-11-11 - gpt-5-codex
 Make scrolling on the minimal on mobile super smooth!
 
