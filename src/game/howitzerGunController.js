@@ -66,10 +66,8 @@ export function updateHowitzerGunState(unit, now) {
     const distance = Math.hypot(dx, dy)
 
     if (distance > 1e-3) {
-      const arcHeight = distance * 0.5
-      const launchAngle = Math.atan2(dy - arcHeight * Math.PI, dx)
+      const launchAngle = Math.atan2(dy, dx)
       desiredWorldAngle = launchAngle
-
       const maxRange = (HOWITZER_FIRE_RANGE || 15) * TILE_SIZE * (unit.rangeMultiplier || 1)
       const minRange = (HOWITZER_MIN_RANGE || 2) * TILE_SIZE
       const clampedRange = clamp(distance, minRange, maxRange)

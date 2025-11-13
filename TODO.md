@@ -9,7 +9,6 @@
 ## Features
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
 - [x] ✅ Rotate the shared howitzer barrel sprite by 180° and realign recoil/muzzle effects so the muzzle matches the wagon's facing.
-- [x] ✅ Fix howitzer barrel default alignment to point in driving direction (rotate 90° counter-clockwise), update recoil and muzzle flash alignment accordingly.
 - [x] ✅ Ensure ammunition trucks leave no wrecks on destruction and detonate with scattered munitions that threaten all nearby units and buildings.
 - [ ] Danger Zone Map Feature (aka DZM): Let each enemy AI create a DZM where for each tile the damage per second is calculated based on the defence buildings of all non friendly other players on the map (including human and ai players). For each tile the damage per second will be calculated by checking which non allied defence buildings are in range and how much damage they could make based on their firing rate and damage per shot (also take burst shots into account). Whenever a new defence building is added to the map update that DZM. Ensure not to make this updates on a frame base in the game loop. Only do updates event based when new defence buildings get added or destroyed/sold. Also ensure this map is generated whenever a game is loaded (do not persist the DZM itself in save games). the DZM for each player can be show as an overlay on the map when pressing the z key. first time z key is pressed the DZM for the user player is shown. 2nd time the z key is pressed the DZM for the next player is shown and so on until all players were looped. Then it will hide the DZM overlay. Next time it will again start from user player DZM and so on.
 
@@ -124,6 +123,12 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] ✅ Fixed combat system not checking `rocketAmmo` field for Apache units
 - [x] ✅ Fixed cheat system using non-existent `window.debugGetSelectedUnits()` function
 - [x] ✅ Updated cheat system to use `this.selectedUnits` reference for all ammo/fuel/medic commands
+
+## Bug Fixes (2025-11-13)
+- [x] ✅ Fixed howitzer gun barrel alignment - now points in driving direction by default using same direction as bullet trajectory, updated recoil effect and muzzle flash accordingly
+- [x] ✅ Fixed howitzer aiming when target is below - barrel now points in correct launch direction with smooth transitions
+- [x] ✅ Fixed howitzer bullet starting from end of gun barrel instead of center of wagon, aligned muzzle flash accordingly
+- [x] ✅ Fixed howitzer recoil direction to align with barrel rotation
 
 ## Improvements
 - [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
