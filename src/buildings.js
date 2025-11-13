@@ -862,6 +862,57 @@ export function calculateRepairCost(building) {
   return repairCost
 }
 
+function isPlayerOwnedBuilding(building) {
+  if (!building) return true
+  const owner = building.owner
+  const humanPlayer = gameState.humanPlayer || 'player1'
+  if (!owner) return true
+  if (owner === humanPlayer) return true
+  // Older saves may still mark the human player as 'player'
+  if (owner === 'player' && humanPlayer === 'player1') return true
+  return false
+}
+
+function getBudgetControllerForBuilding(building) {
+  if (!building) return null
+
+  if (isPlayerOwnedBuilding(building)) {
+    return {
+      type: 'player',
+      available: () => gameState.money || 0,
+      hasFunds: amount => (gameState.money || 0) >= amount,
+      spend: amount => {
+        gameState.money = Math.max(0, (gameState.money || 0) - amount)
+      }
+    }
+  }
+
+  const ownerId = building.owner
+  if (!ownerId) return null
+
+  const ownerFactory = (gameState.factories || []).find(factory => {
+    if (!factory) return false
+    if (factory.owner === ownerId || factory.id === ownerId) {
+      return factory.health > 0
+    }
+    return false
+  })
+
+  if (ownerFactory && typeof ownerFactory.budget === 'number') {
+    return {
+      type: 'ai',
+      factory: ownerFactory,
+      available: () => ownerFactory.budget,
+      hasFunds: amount => ownerFactory.budget >= amount,
+      spend: amount => {
+        ownerFactory.budget = Math.max(0, ownerFactory.budget - amount)
+      }
+    }
+  }
+
+  return null
+}
+
 // Repair a building to full health
 export function repairBuilding(building, gameState) {
   if (building.type === 'concreteWall') {
@@ -928,10 +979,14 @@ export const updateBuildingsUnderRepair = logPerformance(function updateBuilding
 
   for (let i = gameState.buildingsUnderRepair.length - 1; i >= 0; i--) {
     const repairInfo = gameState.buildingsUnderRepair[i]
+    const building = repairInfo.building
+    const budgetController = getBudgetControllerForBuilding(building)
+    const isPlayerBuilding = isPlayerOwnedBuilding(building)
     let progress = (currentTime - repairInfo.startTime) / repairInfo.duration
 
     if (repairInfo.paused) {
-      if (gameState.money > 0) {
+      const availableFunds = budgetController ? budgetController.available() : 0
+      if (availableFunds > 0) {
         repairInfo.startTime = currentTime - progress * repairInfo.duration
         repairInfo.paused = false
       } else {
@@ -945,14 +1000,16 @@ export const updateBuildingsUnderRepair = logPerformance(function updateBuilding
     const expectedPaid = Math.min(progress, 1) * repairInfo.cost
     const deltaCost = expectedPaid - repairInfo.costPaid
     if (deltaCost > 0) {
-      if (gameState.money >= deltaCost) {
-        gameState.money -= deltaCost
+      if (budgetController && budgetController.hasFunds(deltaCost)) {
+        budgetController.spend(deltaCost)
         repairInfo.costPaid += deltaCost
       } else {
         repairInfo.paused = true
         repairInfo.startTime = currentTime - progress * repairInfo.duration
-        playSound('repairPaused', 1.0, 0, true)
-        showNotification('Repair paused: not enough money.')
+        if (isPlayerBuilding) {
+          playSound('repairPaused', 1.0, 0, true)
+          showNotification('Repair paused: not enough money.')
+        }
         continue
       }
     }
@@ -960,7 +1017,9 @@ export const updateBuildingsUnderRepair = logPerformance(function updateBuilding
     if (progress >= 1.0) {
       repairInfo.building.health = repairInfo.targetHealth
       gameState.buildingsUnderRepair.splice(i, 1)
-      playSound('repairFinished', 1.0, 0, true)
+      if (isPlayerBuilding) {
+        playSound('repairFinished', 1.0, 0, true)
+      }
     } else {
       const newHealth = repairInfo.startHealth + (repairInfo.healthToRepair * progress)
       repairInfo.building.health = newHealth
@@ -1031,11 +1090,14 @@ function actuallyPauseRepair(building, gameState, currentTime) {
           healthToRepair: remainingHealthToRepair,
           lastAttackedTime: building.lastAttackedTime || currentTime,
           isFactory: isFactory,
-          factoryCost: isFactory ? 5000 : undefined
+          factoryCost: isFactory ? 5000 : undefined,
+          initiatedByAI: !isPlayerOwnedBuilding(building)
         })
 
-        playSound('repairPaused', 1.0, 0, true)
-        showNotification('Repair paused due to attack!')
+        if (isPlayerOwnedBuilding(building)) {
+          playSound('repairPaused', 1.0, 0, true)
+          showNotification('Repair paused due to attack!')
+        }
       }
     }
   }
@@ -1061,8 +1123,10 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
     if (building.lastAttackedTime && building.lastAttackedTime > awaitingRepair.lastAttackedTime) {
       // Building was attacked again - reset the countdown
       awaitingRepair.lastAttackedTime = building.lastAttackedTime
-      playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
-      showNotification('Repair countdown reset - building under attack!')
+      if (!awaitingRepair.initiatedByAI && isPlayerOwnedBuilding(building)) {
+        playSound('Repair_impossible_when_under_attack', 1.0, 30, true)
+        showNotification('Repair countdown reset - building under attack!')
+      }
     }
 
     const timeSinceLastAttack = (currentTime - awaitingRepair.lastAttackedTime) / 1000
@@ -1097,8 +1161,10 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
             costPaid: 0
           })
 
-          showNotification(`Factory repair started for $${awaitingRepair.repairCost}`)
-          playSound('repairStarted', 1.0, 0, true)
+          if (!awaitingRepair.initiatedByAI && isPlayerOwnedBuilding(building)) {
+            showNotification(`Factory repair started for $${awaitingRepair.repairCost}`)
+            playSound('repairStarted', 1.0, 0, true)
+          }
         } else {
           // Start building repair manually (don't use repairBuilding as it starts immediately)
           if (!gameState.buildingsUnderRepair) {
@@ -1122,8 +1188,10 @@ export const updateBuildingsAwaitingRepair = logPerformance(function updateBuild
             costPaid: 0
           })
 
-          showNotification(`Building repair started for $${awaitingRepair.repairCost}`)
-          playSound('repairStarted', 1.0, 0, true)
+          if (!awaitingRepair.initiatedByAI && isPlayerOwnedBuilding(building)) {
+            showNotification(`Building repair started for $${awaitingRepair.repairCost}`)
+            playSound('repairStarted', 1.0, 0, true)
+          }
         }
       }
 

@@ -82,7 +82,8 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
             repairCost: repairCost,
             healthToRepair: building.maxHealth - building.health,
             lastAttackedTime: building.lastAttackedTime,
-            isFactory: false
+            isFactory: false,
+            initiatedByAI: false
           })
 
           showNotification(`Building repair pending - waiting ${Math.ceil(10 - timeSinceLastAttack)}s for attack cooldown`)
@@ -109,7 +110,8 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
           repairCost: repairCost,
           healthToRepair: building.maxHealth - building.health,
           lastAttackedTime: building.lastAttackedTime || 0,
-          isFactory: false
+          isFactory: false,
+          initiatedByAI: false
         })
 
         showNotification('Building repair initiated')

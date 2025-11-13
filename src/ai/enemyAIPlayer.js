@@ -6,7 +6,8 @@ import {
   manageAITankerTrucks,
   manageAIRecoveryTanks,
   manageAIAmmunitionTrucks,
-  manageAIAmmunitionMonitoring
+  manageAIAmmunitionMonitoring,
+  manageAIRepairs
 } from './enemyStrategies.js'
 import { getUnitCost } from '../utils.js'
 import { updateAIUnit } from './enemyUnitBehavior.js'
@@ -169,6 +170,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   if (!aiFactory) {
     return
   }
+
+  manageAIRepairs(aiPlayerId, aiFactory, gameState, now)
 
   // Define the keys we'll use for this AI player's state
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`

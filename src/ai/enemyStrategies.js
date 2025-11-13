@@ -5,6 +5,7 @@ import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 import { assignAmbulanceToHealUnit } from '../game/ambulanceSystem.js'
+import { calculateRepairCost } from '../buildings.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -26,6 +27,17 @@ const UNIT_DPS = {
   rocketTank: 120 / (12000 / 1000),
   howitzer: HOWITZER_FIREPOWER / (HOWITZER_FIRE_COOLDOWN / 1000)
 }
+
+const AI_REPAIR_COOLDOWN_SECONDS = 10
+const AI_LOW_BUDGET_THRESHOLD = 3500
+const AI_CRITICAL_BUILDINGS = new Set([
+  'constructionYard',
+  'powerPlant',
+  'oreRefinery',
+  'vehicleFactory',
+  'vehicleWorkshop',
+  'radarStation'
+])
 
 const RECOVERY_COMMAND_COOLDOWN = 2000
 const crewScanCooldowns = new Map()
@@ -138,6 +150,98 @@ function requestAmbulanceSupport(targetUnit, ambulances, mapGrid) {
   }
 
   return false
+}
+
+function hasPendingRepair(building, awaitingList, underRepairList) {
+  if (!building) return true
+  const awaiting = awaitingList?.some(entry => entry.building === building)
+  if (awaiting) return true
+  const repairing = underRepairList?.some(entry => entry.building === building)
+  return !!repairing
+}
+
+function compareRepairPriority(a, b, lowBudget) {
+  if (lowBudget) {
+    const aCritical = AI_CRITICAL_BUILDINGS.has(a.type)
+    const bCritical = AI_CRITICAL_BUILDINGS.has(b.type)
+    if (aCritical !== bCritical) {
+      return aCritical ? -1 : 1
+    }
+  }
+
+  const aDamage = (a.maxHealth - a.health) / a.maxHealth
+  const bDamage = (b.maxHealth - b.health) / b.maxHealth
+
+  if (bDamage !== aDamage) {
+    return bDamage - aDamage
+  }
+
+  return (a.health || 0) - (b.health || 0)
+}
+
+export function manageAIRepairs(aiPlayerId, aiFactory, gameState, now) {
+  if (!aiFactory || aiFactory.health <= 0) return
+  if (!Array.isArray(gameState.buildings) || gameState.buildings.length === 0) return
+
+  const aiBuildings = gameState.buildings.filter(building => (
+    building &&
+    building.owner === aiPlayerId &&
+    building.health > 0 &&
+    building.health < building.maxHealth &&
+    building.type !== 'concreteWall'
+  ))
+
+  if (aiBuildings.length === 0) {
+    return
+  }
+
+  if (!gameState.buildingsAwaitingRepair) {
+    gameState.buildingsAwaitingRepair = []
+  }
+  if (!gameState.buildingsUnderRepair) {
+    gameState.buildingsUnderRepair = []
+  }
+
+  const awaitingList = gameState.buildingsAwaitingRepair
+  const underRepairList = gameState.buildingsUnderRepair
+  const availableBudget = aiFactory.budget || 0
+  const lowBudget = availableBudget < AI_LOW_BUDGET_THRESHOLD
+  const hasCriticalDamage = aiBuildings.some(b => AI_CRITICAL_BUILDINGS.has(b.type))
+
+  aiBuildings.sort((a, b) => compareRepairPriority(a, b, lowBudget))
+
+  aiBuildings.forEach(building => {
+    if (lowBudget && hasCriticalDamage && !AI_CRITICAL_BUILDINGS.has(building.type)) {
+      return
+    }
+
+    if (hasPendingRepair(building, awaitingList, underRepairList)) {
+      return
+    }
+
+    const healthToRepair = building.maxHealth - building.health
+    if (healthToRepair <= 0) {
+      return
+    }
+
+    const repairCost = calculateRepairCost(building)
+    if (!repairCost || repairCost <= 0) {
+      return
+    }
+
+    const lastAttackedTime = (typeof building.lastAttackedTime === 'number')
+      ? building.lastAttackedTime
+      : (now - AI_REPAIR_COOLDOWN_SECONDS * 1000)
+
+    awaitingList.push({
+      building,
+      repairCost,
+      healthToRepair,
+      lastAttackedTime,
+      isFactory: false,
+      initiatedByAI: true
+    })
+  })
 }
 
 function computeDangerAtTarget(aiPlayerId, target, gameState) {

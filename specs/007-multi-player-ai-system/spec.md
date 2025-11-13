@@ -3,7 +3,7 @@
 **Branch:** `007-multi-player-ai-system`  
 **Status:** Implemented  
 **Created:** 2025-11-05  
-**Last Updated:** 2025-11-05
+**Last Updated:** 2025-11-12
 
 ---
 
@@ -196,10 +196,14 @@ This specification documents the comprehensive multi-player AI system that power
 **Description:** AI spaces production commands to avoid flooding queues. Allows factories to complete current production before queuing next batch. Maintains steady unit flow.
 
 #### FR-017: Harvester Production
-**Priority:** P1  
+**Priority:** P1
 **Description:** AI produces replacement harvesters when existing ones are destroyed or insufficient for optimal income. Targets 2-3 active harvesters per refinery.
 
-#### FR-018: Army Composition
+#### FR-018: Automated Building Repairs
+**Priority:** P1
+**Description:** AI players monitor their structures for damage and queue repairs using the same 10-second post-attack cooldown enforced on the human player. When available funds fall below a low-budget threshold, AI must prioritize repairing critical infrastructure (construction yard, power plants, refineries, vehicle factories/workshops, radar) before restoring non-essential defenses or tech buildings.
+
+#### FR-019: Army Composition
 **Priority:** P1  
 **Description:** AI maintains balanced army composition: ~70% combat vehicles (tanks, rocket tanks, apache), ~20% heavy units (howitzers, tank-v3), ~10% support units (harvesters, ambulances, tankers). Adjusts ratios based on game phase and threat assessment.
 
@@ -207,23 +211,23 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### Strategic Decision Making
 
-#### FR-019: Threat Assessment
+#### FR-020: Threat Assessment
 **Priority:** P1  
 **Description:** AI detects enemy units near its base by proximity checking. Assigns threat levels based on enemy unit count and types. Triggers defensive responses when threat exceeds threshold.
 
-#### FR-020: Attack Wave Generation
+#### FR-021: Attack Wave Generation
 **Priority:** P1  
 **Description:** AI periodically assembles attack groups (5-15 units) and sends toward enemy base locations. Attack frequency increases as AI army size grows. Groups prefer mixed unit compositions.
 
-#### FR-021: Base Defense Priority
+#### FR-022: Base Defense Priority
 **Priority:** P1  
 **Description:** When AI base is under attack, units retreat toward home base and engage attackers. Defensive turrets provide fire support. AI temporarily halts offensive operations during defense.
 
-#### FR-022: Expansion Strategy
+#### FR-023: Expansion Strategy
 **Priority:** P2  
 **Description:** AI expands base area by placing buildings progressively farther from Construction Yard. Secures ore fields by placing refineries and defensive structures nearby.
 
-#### FR-023: Critical Structure Rebuilding
+#### FR-024: Critical Structure Rebuilding
 **Priority:** P1  
 **Description:** AI detects destruction of critical buildings (Power Plant, War Factory, Refinery) and prioritizes rebuilding them. Rebuilds at original location if possible, otherwise finds new suitable position.
 
@@ -231,23 +235,23 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### Combat Behavior
 
-#### FR-024: Automatic Target Engagement
+#### FR-025: Automatic Target Engagement
 **Priority:** P0  
 **Description:** AI units automatically detect and engage enemy units within weapon range. Target selection prioritizes closest threats, then high-value targets (harvesters, damaged units).
 
-#### FR-025: Pursuit Logic
+#### FR-026: Pursuit Logic
 **Priority:** P1  
 **Description:** AI units pursue fleeing enemies up to maximum chase distance (5-10 tiles). Pursuit terminates if unit strays too far from assigned area or encounters stronger resistance.
 
-#### FR-026: Retreat Behavior
+#### FR-027: Retreat Behavior
 **Priority:** P1  
 **Description:** Damaged AI units (health < 30%) attempt to retreat toward friendly base or nearby defensive structures. Retreat overrides offensive commands temporarily.
 
-#### FR-027: Focus Fire Coordination
+#### FR-028: Focus Fire Coordination
 **Priority:** P2  
 **Description:** Multiple AI units in same area implicitly coordinate targeting by prioritizing same enemies. Creates focus fire effect without explicit communication system.
 
-#### FR-028: Anti-Air Targeting
+#### FR-029: Anti-Air Targeting
 **Priority:** P1  
 **Description:** AI Rocket Tanks and SAM Sites prioritize aircraft targets when detected. Ground units ignore aircraft to let specialized anti-air units handle them.
 
@@ -255,19 +259,19 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### Harvester Management
 
-#### FR-029: Harvester Pathfinding
+#### FR-030: Harvester Pathfinding
 **Priority:** P1  
 **Description:** AI harvesters automatically pathfind to nearest ore field, collect ore, and return to refinery. Pathfinding avoids combat zones and enemy base areas when possible.
 
-#### FR-030: Harvester Protection
+#### FR-031: Harvester Protection
 **Priority:** P1  
 **Description:** When AI harvester is attacked, nearby combat units move to protect it. Harvester attempts to flee toward base while escort engages attackers.
 
-#### FR-031: Ore Field Assignment
+#### FR-032: Ore Field Assignment
 **Priority:** P2  
 **Description:** AI assigns harvesters to different ore fields to maximize collection efficiency. Harvesters avoid clustering at same ore patch.
 
-#### FR-032: Harvester Replacement
+#### FR-033: Harvester Replacement
 **Priority:** P1  
 **Description:** AI tracks harvester count and produces replacements when destroyed. Ensures minimum 1 harvester per refinery to maintain economy.
 
@@ -275,15 +279,15 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### AI-to-AI Interaction
 
-#### FR-033: Multi-AI Coordination
+#### FR-034: Multi-AI Coordination
 **Priority:** P2  
 **Description:** Multiple AI players indirectly coordinate through shared enemy detection. All AI parties target human player, creating implicit alliance against human.
 
-#### FR-034: Resource Competition
+#### FR-035: Resource Competition
 **Priority:** P2  
 **Description:** AI players compete for ore fields on map. First AI to secure ore field with refinery gains economic advantage. AI avoids building too close to other AI bases.
 
-#### FR-035: Combat Between AI Players
+#### FR-036: Combat Between AI Players
 **Priority:** P2  
 **Description:** AI players can engage each other if units encounter in neutral territory, but prioritize human player as primary target. Reduces AI-vs-AI conflicts to keep focus on player.
 
@@ -291,15 +295,15 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### Performance & Optimization
 
-#### FR-036: AI Update Throttling
+#### FR-037: AI Update Throttling
 **Priority:** P1  
 **Description:** AI decision-making throttled to run at 3-second intervals (configurable) to reduce CPU load. Prevents performance degradation with multiple active AI players.
 
-#### FR-037: Unit Count Limits
+#### FR-038: Unit Count Limits
 **Priority:** P1  
 **Description:** AI respects global unit count limits (typically 100-200 units total across all parties). Prevents infinite unit production that could cause performance issues.
 
-#### FR-038: Spatial Queries Optimization
+#### FR-039: Spatial Queries Optimization
 **Priority:** P2  
 **Description:** AI uses spatial partitioning or proximity checks to efficiently find nearby units/buildings. Avoids O(n²) distance calculations every frame.
 
@@ -307,15 +311,15 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### AI Configuration & Tuning
 
-#### FR-039: Difficulty Settings (Future)
+#### FR-040: Difficulty Settings (Future)
 **Priority:** P2  
 **Description:** System designed to support difficulty levels (Easy/Medium/Hard) that adjust AI reaction times, production speed, and decision quality. Currently operates at single difficulty.
 
-#### FR-040: AI Personality Variants (Future)
+#### FR-041: AI Personality Variants (Future)
 **Priority:** P2  
 **Description:** Framework supports different AI personality types (aggressive, defensive, economic) with different strategic priorities. Currently all AI players use same strategy.
 
-#### FR-041: Configurable Timing Parameters
+#### FR-042: Configurable Timing Parameters
 **Priority:** P2  
 **Description:** AI timing parameters (update interval, attack frequency, build delays) are configurable constants rather than hardcoded values for easy tuning.
 
@@ -323,23 +327,23 @@ This specification documents the comprehensive multi-player AI system that power
 
 ### Integration & Coordination
 
-#### FR-042: Game State Integration
+#### FR-043: Game State Integration
 **Priority:** P0  
 **Description:** AI system reads from and writes to centralized gameState object. AI decisions affect units, buildings, and resources through standard game systems (same as player actions).
 
-#### FR-043: Enemy System Integration
+#### FR-044: Enemy System Integration
 **Priority:** P0  
 **Description:** AI integrates with enemy unit behavior system (src/enemy.js, src/ai/enemyUnitBehavior.js) to control unit movement and combat actions. All AI units follow same behavioral rules.
 
-#### FR-044: Building System Integration
+#### FR-045: Building System Integration
 **Priority:** P0  
 **Description:** AI uses standard building placement and construction systems (src/game/buildingSystem.js). AI construction follows same validation rules as player building.
 
-#### FR-045: Production Queue Integration
+#### FR-046: Production Queue Integration
 **Priority:** P0  
 **Description:** AI queues units through standard production system (src/productionQueue.js). Production timing and costs enforced by same system used for player.
 
-#### FR-046: Victory Condition Integration
+#### FR-047: Victory Condition Integration
 **Priority:** P0  
 **Description:** AI defeat occurs when all AI buildings and units are destroyed (same as player defeat). Game ends when only one party remains with buildings.
 
