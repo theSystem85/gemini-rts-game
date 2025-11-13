@@ -113,6 +113,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] only the host can start/pause the game
   - [ ] For the initial webRTC connection setup use a public STUN like some from google "stun:stun.l.google.com:19302"
 ## Bugs
+- [ ] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [ ] (still an issue?) When about 10 units get stuck the game slows down significantly.
 
 ### Closed Issues

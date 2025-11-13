@@ -132,6 +132,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - What happens if blueprint location becomes blocked before construction finishes? (Auto-placement fails, construction may be cancelled or paused, player notified)
 - Can chain build mode work with different building types? (No, chain is single building type; changing type ends chain)
 - What if unit deployment location is blocked? (Unit still attempts to path, may get stuck or path to nearby free tile using A1 algorithm)
+- What if the designated factory spawn tile is blocked by a building or unit? (Spawn logic cascades through neighboring tiles via breadth-first search until it finds the nearest passable, unoccupied tile for spawning)
 - Can blueprints be cancelled after placement? (Yes, right-click on sidebar build button cancels construction and removes blueprint)
 - What happens if player drags building onto invalid terrain? (Placement overlay shows red, release does not create blueprint)
 - Can construction animation be skipped? (No, animation always plays for visual consistency, but brief at 5s total)
@@ -201,6 +202,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-042**: System MUST save and load blueprint states through save/load system
 - **FR-043**: System MUST save and load factory assembly points through save/load system
 - **FR-044**: System MUST apply building system enhancements to both player and AI (where applicable)
+- **FR-045**: System MUST ensure factories spawn units only on passable, unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is located
 
 ### Key Entities
 

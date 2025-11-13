@@ -1003,38 +1003,39 @@ export function createUnit(factory, unitType, x, y, options = {}) {
 }
 
 // Find an available position near the factory center for unit spawn
-function findAvailableSpawnPosition(factoryX, factoryY, mapGrid, units) {
-  // First, try positions around the factory center in a spiral pattern
-
-  // Check immediate surrounding tiles first (1 tile away from center)
-  for (let distance = 1; distance <= 5; distance++) { // Check up to 5 tiles away initially
-    for (const dir of DIRECTIONS) {
-      const x = factoryX + dir.x * distance
-      const y = factoryY + dir.y * distance
-
-      // Check if position is valid (passable terrain, within bounds, not occupied)
-      if (isPositionValid(x, y, mapGrid, units)) {
-        return { x, y }
-      }
-    }
+function findAvailableSpawnPosition(startX, startY, mapGrid, units) {
+  if (typeof startX !== 'number' || typeof startY !== 'number') {
+    return null
   }
 
-  // If we couldn't find a position in the immediate vicinity,
-  // expand the search with a more thorough approach (larger radius)
-  for (let distance = 6; distance <= MAX_SPAWN_SEARCH_DISTANCE; distance++) {
-    // Check in a square pattern around the factory center
-    for (let dx = -distance; dx <= distance; dx++) {
-      for (let dy = -distance; dy <= distance; dy++) {
-        // Skip positions not on the perimeter of the current distance square
-        if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+  const rows = mapGrid.length
+  const cols = mapGrid[0]?.length || 0
+  const visited = new Set()
+  const queue = []
 
-        const x = factoryX + dx
-        const y = factoryY + dy
+  const enqueue = (x, y, distance) => {
+    if (x < 0 || y < 0 || y >= rows || x >= cols) {
+      return
+    }
+    const key = `${x},${y}`
+    if (visited.has(key) || distance > MAX_SPAWN_SEARCH_DISTANCE) {
+      return
+    }
+    visited.add(key)
+    queue.push({ x, y, distance })
+  }
 
-        if (isPositionValid(x, y, mapGrid, units)) {
-          return { x, y }
-        }
-      }
+  enqueue(startX, startY, 0)
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (isPositionValid(current.x, current.y, mapGrid, units)) {
+      return { x: current.x, y: current.y }
+    }
+
+    const nextDistance = current.distance + 1
+    for (const dir of DIRECTIONS) {
+      enqueue(current.x + dir.x, current.y + dir.y, nextDistance)
     }
   }
 
@@ -1055,6 +1056,10 @@ function isPositionValid(x, y, mapGrid, units) {
     mapGrid[y][x].type !== 'land' &&
     mapGrid[y][x].type !== 'street'
   ) {
+    return false
+  }
+
+  if (mapGrid[y][x].building) {
     return false
   }
 
