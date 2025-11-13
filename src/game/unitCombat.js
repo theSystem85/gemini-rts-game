@@ -12,6 +12,7 @@ import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 import { showNotification } from '../ui/notifications.js'
+import { isHowitzerGunReadyToFire, getHowitzerLaunchAngle } from './howitzerGunController.js'
 
 /**
  * Check if the turret is properly aimed at the target
@@ -1496,7 +1497,14 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
     return
   }
 
-  if (distance <= effectiveRange && canAttack && targetVisible && unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
+  if (
+    distance <= effectiveRange &&
+    canAttack &&
+    targetVisible &&
+    unit.canFire !== false &&
+    isTurretAimedAtTarget(unit, unit.target) &&
+    isHowitzerGunReadyToFire(unit)
+  ) {
     if (unit.crew && typeof unit.crew === 'object' && !unit.crew.loader) {
       return
     }
@@ -1608,35 +1616,46 @@ function isHowitzerTargetVisible(unit, target, mapGrid) {
 }
 
 function fireHowitzerShell(unit, aimTarget, bullets, now) {
+  if (!isHowitzerGunReadyToFire(unit)) {
+    return
+  }
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
 
-  const dx = aimTarget.x - unitCenterX
-  const dy = aimTarget.y - unitCenterY
+  const launchAngle = getHowitzerLaunchAngle(unit)
+  const muzzleDistance = TILE_SIZE
+  const muzzleX = unitCenterX + muzzleDistance * Math.cos(launchAngle)
+  const muzzleY = unitCenterY + muzzleDistance * Math.sin(launchAngle)
+
+  const dx = aimTarget.x - muzzleX
+  const dy = aimTarget.y - muzzleY
   const distance = Math.hypot(dx, dy)
+  const flightDuration = distance / HOWITZER_PROJECTILE_SPEED
+  const arcHeight = distance * 0.5
 
   const projectile = {
     id: Date.now() + Math.random(),
-    x: unitCenterX,
-    y: unitCenterY,
+    x: muzzleX,
+    y: muzzleY,
     speed: HOWITZER_PROJECTILE_SPEED,
     baseDamage: getHowitzerDamage(unit),
     active: true,
     shooter: unit,
     startTime: now,
     parabolic: true,
-    startX: unitCenterX,
-    startY: unitCenterY,
+    startX: muzzleX,
+    startY: muzzleY,
     targetX: aimTarget.x,
     targetY: aimTarget.y,
     dx,
     dy,
     distance,
-    flightDuration: distance / HOWITZER_PROJECTILE_SPEED,
-    arcHeight: distance * 0.5,
+    flightDuration,
+    arcHeight,
     targetPosition: { x: aimTarget.x, y: aimTarget.y },
     explosionRadius: TILE_SIZE * HOWITZER_EXPLOSION_RADIUS_TILES,
-    projectileType: 'artillery'
+    projectileType: 'artillery',
+    launchAngle
   }
 
   bullets.push(projectile)
@@ -1646,7 +1665,7 @@ function fireHowitzerShell(unit, aimTarget, bullets, now) {
     unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
   }
 
-  playPositionalSound('shoot_heavy', unitCenterX, unitCenterY, 0.5)
+  playPositionalSound('shoot_heavy', muzzleX, muzzleY, 0.5)
   unit.lastShotTime = now
   unit.recoilStartTime = now
   unit.muzzleFlashStartTime = now

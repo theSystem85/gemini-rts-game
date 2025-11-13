@@ -15,6 +15,7 @@ import {
 import { logPerformance } from './performanceUtils.js'
 import { getUniqueId, updateUnitSpeedModifier, getUnitCost, getBuildingIdentifier } from './utils.js'
 import { initializeUnitMovement } from './game/unifiedMovement.js'
+import { initializeHowitzerGun } from './game/howitzerGunController.js'
 import { gameState } from './gameState.js'
 import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
 
@@ -908,6 +909,7 @@ export function createUnit(factory, unitType, x, y, options = {}) {
 
   if (actualType === 'howitzer') {
     unit.isHowitzer = true
+    initializeHowitzerGun(unit)
   }
 
   if (actualType === 'apache') {
