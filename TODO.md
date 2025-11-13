@@ -11,6 +11,7 @@
 - [ ] Enemy AI building placement must enforce a 2-tile gap to other structures (except defence-with-defence and wall-to-wall placements that may touch), only relaxing to a 1-tile gap after all nearby 2-gap options are blocked.
 - [ ] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
 - [ ] Enemy AI must build Apaches (one per helipad), use them to strike unprotected harvesters and bases, and retreat from rocket-based air defenses before re-engaging.
+- [x] Ensure enemy AI sells non-essential buildings when broke and lacking refineries or harvesters so it can afford the missing structure and restart harvesting income.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
