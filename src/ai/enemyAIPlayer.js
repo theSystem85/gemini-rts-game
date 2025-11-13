@@ -13,8 +13,125 @@ import { updateAIUnit } from './enemyUnitBehavior.js'
 import { findBuildingPosition } from './enemyBuilding.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { logPerformance } from '../performanceUtils.js'
-import { RECOVERY_TANK_RATIO } from '../config.js'
+import { RECOVERY_TANK_RATIO, UNIT_COSTS } from '../config.js'
 import { gameState } from '../gameState.js'
+
+const AI_SELL_PRIORITY = [
+  'turretGunV1',
+  'turretGunV2',
+  'turretGunV3',
+  'rocketTurret',
+  'teslaCoil',
+  'artilleryTurret',
+  'radarStation',
+  'helipad',
+  'ammunitionFactory',
+  'gasStation',
+  'hospital',
+  'vehicleWorkshop',
+  'vehicleFactory',
+  'powerPlant'
+]
+
+const AI_SELL_PRIORITY_MAP = AI_SELL_PRIORITY.reduce((acc, type, index) => {
+  acc[type] = index
+  return acc
+}, {})
+
+const PROTECTED_AI_BUILDINGS = new Set(['constructionYard', 'oreRefinery'])
+
+function getSellPriorityIndex(type) {
+  return AI_SELL_PRIORITY_MAP[type] ?? AI_SELL_PRIORITY.length
+}
+
+function canSellBuildingType(type, counts) {
+  if (PROTECTED_AI_BUILDINGS.has(type)) {
+    return false
+  }
+
+  const count = counts[type] || 0
+
+  if (type === 'vehicleFactory' || type === 'powerPlant') {
+    return count > 1
+  }
+
+  return true
+}
+
+function sellBuildingsForEmergencyFunds(aiPlayerId, aiFactory, aiBuildings, requiredBudget) {
+  if (!aiFactory || !aiBuildings || requiredBudget <= 0) {
+    return false
+  }
+
+  if (aiFactory.budget >= requiredBudget) {
+    return false
+  }
+
+  const buildingCounts = aiBuildings.reduce((acc, building) => {
+    if (building.owner === aiPlayerId && !building.isBeingSold && building.health > 0) {
+      acc[building.type] = (acc[building.type] || 0) + 1
+    }
+    return acc
+  }, {})
+
+  const sellableBuildings = aiBuildings
+    .filter(
+      building =>
+        building.owner === aiPlayerId &&
+        !building.isBeingSold &&
+        building.health > 0 &&
+        buildingData[building.type] &&
+        canSellBuildingType(building.type, buildingCounts)
+    )
+    .sort((a, b) => getSellPriorityIndex(a.type) - getSellPriorityIndex(b.type))
+
+  let soldAny = false
+
+  for (const building of sellableBuildings) {
+    if (aiFactory.budget >= requiredBudget) {
+      break
+    }
+
+    const data = buildingData[building.type]
+    if (!data || !data.cost) {
+      continue
+    }
+
+    const sellValue = Math.floor(data.cost * 0.7)
+    building.isBeingSold = true
+    building.sellStartTime = performance.now()
+    aiFactory.budget += sellValue
+    buildingCounts[building.type] = (buildingCounts[building.type] || 1) - 1
+    soldAny = true
+  }
+
+  return soldAny
+}
+
+function ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters) {
+  if (!aiFactory) {
+    return
+  }
+
+  const hasRefinery = aiBuildings.some(
+    building => building.owner === aiPlayerId && building.type === 'oreRefinery' && !building.isBeingSold && building.health > 0
+  )
+
+  const needsRefinery = !hasRefinery
+  const needsHarvester = hasRefinery && aiHarvesters.length === 0
+
+  if (!needsRefinery && !needsHarvester) {
+    return
+  }
+
+  const requiredBudget = needsRefinery ? buildingData.oreRefinery.cost : UNIT_COSTS.harvester
+
+  if (requiredBudget <= 0) {
+    return
+  }
+
+  sellBuildingsForEmergencyFunds(aiPlayerId, aiFactory, aiBuildings, requiredBudget)
+}
 
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   // Validate inputs
@@ -214,6 +331,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       ? 1
       : 0
     const totalTanks = aiTanks.length + tanksInProduction
+
+    ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
 
     const REQUIRED_HARVESTERS = 4
     const harvesterGoalMet = aiHarvesters.length >= REQUIRED_HARVESTERS
