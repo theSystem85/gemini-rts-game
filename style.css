@@ -163,6 +163,11 @@ body.is-touch {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
+body.mobile-landscape .sidebar-toggle,
+body.mobile-portrait .sidebar-toggle {
+  display: inline-flex;
+}
+
 .sidebar-toggle:active {
   transform: scale(0.96);
 }
@@ -203,8 +208,11 @@ body.mobile-landscape #mobileSidebarControls[aria-hidden="false"] {
   display: flex;
 }
 
-body.mobile-landscape #mobileSidebarControls {
+body.mobile-portrait #mobileSidebarControls[aria-hidden="false"] {
   display: flex;
+}
+
+body.mobile-landscape #mobileSidebarControls {
   flex-direction: column;
   justify-content: flex-start;
   gap: 0;
@@ -218,6 +226,22 @@ body.mobile-landscape #mobileSidebarControls {
   z-index: 2000;
 }
 
+body.mobile-portrait #mobileSidebarControls {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  top: calc(var(--safe-area-top) + 12px);
+  bottom: auto;
+  left: calc(var(--safe-area-left) + 12px);
+  right: auto;
+  width: auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+  z-index: 2000;
+}
+
 body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   width: var(--mobile-action-size);
   height: var(--mobile-action-size);
@@ -225,6 +249,29 @@ body.mobile-landscape #mobileSidebarControls .sidebar-toggle {
   border-radius: 12px;
   position: relative;
   z-index: 2;
+}
+
+body.mobile-portrait #mobileSidebarControls .sidebar-toggle {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
+body.mobile-portrait #mobileSidebarControls #mobileActionsContainer {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle {
+  background-color: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+  color: #fff;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle:hover,
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle:active {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.9);
 }
 
 #mobileJoystickContainer {
@@ -631,6 +678,15 @@ body.mobile-landscape #gameCanvas {
   transition: left 0.25s ease, width 0.25s ease;
 }
 
+body.mobile-portrait #gameCanvas {
+  transition: left 0.25s ease, width 0.25s ease;
+}
+
+body.mobile-portrait:not(.sidebar-collapsed) #gameCanvas {
+  left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+}
+
 body.mobile-landscape.is-touch #gameCanvas {
   left: calc(-1 * var(--safe-area-left));
   right: calc(-1 * var(--safe-area-right));
@@ -646,6 +702,19 @@ body.mobile-landscape #sidebar {
 
 body.mobile-landscape.sidebar-collapsed #sidebar {
   transform: translateX(-100%);
+}
+
+body.mobile-portrait #sidebar {
+  transition: transform 0.25s ease;
+}
+
+body.mobile-portrait.sidebar-collapsed #sidebar {
+  transform: translateX(-100%);
+}
+
+body.mobile-portrait.sidebar-collapsed #gameCanvas {
+  left: 0;
+  width: 100%;
 }
 
 #mobileSidebarControls {
