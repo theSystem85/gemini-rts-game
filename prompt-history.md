@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-16 - gpt-5-codex
+Make the sidebar on the left toggleable in portrait mode on mobile
+
 ## 2025-11-15 - gpt-5-codex
 ensure new units only spawn at unoccupied tiles (currently the vehicle factory spawns vehicles also inside itself so on tiles that are occupied by the factory itself). when a tile that is a spawn target is occupied just take any neighbour tile instead and if all neighbour tiles of that are also occupied take their neighbour tiles and so on...
 

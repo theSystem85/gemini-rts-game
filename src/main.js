@@ -82,7 +82,7 @@ const mobileLayoutState = {
   originalNextSibling: null,
   mobileContainer: null,
   sidebarToggle: null,
-  isSidebarCollapsed: true,
+  isSidebarCollapsed: null,
   sidebarToggleListenerAttached: false,
   actions: null,
   actionsOriginalParent: null,
@@ -235,7 +235,11 @@ function ensureMobileLayoutElements() {
 
   if (mobileLayoutState.sidebarToggle && !mobileLayoutState.sidebarToggleListenerAttached) {
     mobileLayoutState.sidebarToggle.addEventListener('click', () => {
-      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+      if (
+        !document.body ||
+        (!document.body.classList.contains('mobile-landscape') &&
+          !document.body.classList.contains('mobile-portrait'))
+      ) {
         return
       }
       const currentlyCollapsed = document.body.classList.contains('sidebar-collapsed')
@@ -363,13 +367,15 @@ function ensureMobileStatusBar(container, orientation) {
   }
 }
 
-function setSidebarCollapsed(collapsed) {
+function setSidebarCollapsed(collapsed, options = {}) {
   if (!document.body) {
     return
   }
 
   document.body.classList.toggle('sidebar-collapsed', collapsed)
-  mobileLayoutState.isSidebarCollapsed = collapsed
+  if (!options.preservePreference) {
+    mobileLayoutState.isSidebarCollapsed = collapsed
+  }
 
   const toggleButton = mobileLayoutState.sidebarToggle
   if (toggleButton) {
@@ -653,21 +659,17 @@ function applyMobileSidebarLayout(mode) {
     return
   }
 
-  if (mode) {
+  const isLandscape = mode === 'landscape'
+  const isPortrait = mode === 'portrait'
+  const isMobile = isLandscape || isPortrait
+
+  if (isLandscape) {
     ensureMobileStatusBar(mobileContainer, mode)
     if (productionArea.parentNode !== mobileContainer) {
       mobileContainer.appendChild(productionArea)
     }
     mobileContainer.setAttribute('aria-hidden', 'false')
     mobileContainer.setAttribute('data-orientation', mode)
-    if (mobileControls) {
-      mobileControls.setAttribute('aria-hidden', 'false')
-      mobileControls.setAttribute('data-orientation', mode)
-    }
-    if (mobileJoystickContainer) {
-      mobileJoystickContainer.setAttribute('aria-hidden', 'false')
-      mobileJoystickContainer.setAttribute('data-orientation', mode)
-    }
     if (mobileActionsContainer && actions && actions.parentNode !== mobileActionsContainer) {
       mobileActionsContainer.appendChild(actions)
     }
@@ -695,20 +697,12 @@ function applyMobileSidebarLayout(mode) {
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
-    ensureSidebarSwipeHandlers(mode === 'landscape')
+    ensureSidebarSwipeHandlers(true)
   } else {
     restoreProductionArea()
     restoreActions()
     mobileContainer.setAttribute('aria-hidden', 'true')
     mobileContainer.removeAttribute('data-orientation')
-    if (mobileControls) {
-      mobileControls.setAttribute('aria-hidden', 'true')
-      mobileControls.removeAttribute('data-orientation')
-    }
-    if (mobileJoystickContainer) {
-      mobileJoystickContainer.setAttribute('aria-hidden', 'true')
-      mobileJoystickContainer.removeAttribute('data-orientation')
-    }
     if (sidebarUtilityContainer) {
       sidebarUtilityContainer.setAttribute('aria-hidden', 'true')
     }
@@ -741,15 +735,34 @@ function applyMobileSidebarLayout(mode) {
       sidebarMenuButton.setAttribute('aria-hidden', 'true')
       sidebarMenuButton.setAttribute('tabindex', '-1')
     }
-    document.body.classList.remove('sidebar-collapsed')
-    if (mobileLayoutState.sidebarToggle) {
-      mobileLayoutState.sidebarToggle.setAttribute('aria-expanded', 'true')
-      mobileLayoutState.sidebarToggle.setAttribute('aria-label', 'Collapse sidebar')
-    }
+    const shouldCollapse = isPortrait && typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
+      ? mobileLayoutState.isSidebarCollapsed
+      : false
+    setSidebarCollapsed(shouldCollapse, { preservePreference: !isPortrait })
     if (mobileLayoutState.mobileStatusBar) {
       mobileLayoutState.mobileStatusBar.removeAttribute('data-orientation')
     }
     ensureSidebarSwipeHandlers(false)
+  }
+
+  if (mobileControls) {
+    if (isMobile) {
+      mobileControls.setAttribute('aria-hidden', 'false')
+      mobileControls.setAttribute('data-orientation', mode)
+    } else {
+      mobileControls.setAttribute('aria-hidden', 'true')
+      mobileControls.removeAttribute('data-orientation')
+    }
+  }
+
+  if (mobileJoystickContainer) {
+    if (isLandscape) {
+      mobileJoystickContainer.setAttribute('aria-hidden', 'false')
+      mobileJoystickContainer.setAttribute('data-orientation', mode)
+    } else {
+      mobileJoystickContainer.setAttribute('aria-hidden', 'true')
+      mobileJoystickContainer.removeAttribute('data-orientation')
+    }
   }
 }
 
@@ -760,15 +773,14 @@ function updateMobileLayoutClasses() {
 
   const isTouch = document.body.classList.contains('is-touch') || !!lastIsTouchState
   const isPortrait = portraitQuery ? portraitQuery.matches : window.matchMedia('(orientation: portrait)').matches
-  const shouldApplyMobileLandscape = isTouch && !isPortrait
-  const mobileMode = shouldApplyMobileLandscape ? 'landscape' : null
+  const mobileMode = isTouch ? (isPortrait ? 'portrait' : 'landscape') : null
 
   if (document.body.classList.contains('mobile-sidebar-right')) {
     document.body.classList.remove('mobile-sidebar-right')
   }
 
   document.body.classList.toggle('mobile-landscape', mobileMode === 'landscape')
-  document.body.classList.remove('mobile-portrait')
+  document.body.classList.toggle('mobile-portrait', mobileMode === 'portrait')
 
   applyMobileSidebarLayout(mobileMode)
 
@@ -780,7 +792,7 @@ function updateMobileLayoutClasses() {
   }
 
   document.dispatchEvent(new CustomEvent('mobile-landscape-layout-changed', {
-    detail: { enabled: !!mobileMode, mode: mobileMode }
+    detail: { enabled: mobileMode === 'landscape', mode: mobileMode }
   }))
 }
 
