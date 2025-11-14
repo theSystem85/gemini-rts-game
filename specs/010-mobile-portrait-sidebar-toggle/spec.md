@@ -33,3 +33,11 @@ Touch users holding the device in portrait orientation need the ability to recla
 5. **Accessibility**
    - Update the toggle's `aria-label`/`aria-expanded` attributes to describe the sidebar state no matter the orientation.
    - Preserve Escape-key dismissal for the landscape modal while ensuring portrait mode never attempts to open it.
+
+---
+
+## Update 2025-11-17
+
+- **Canvas Fill Requirements**: When collapsing or expanding the sidebar in portrait orientation the game canvas must resize immediately (no blank strip) so the map is always visible along the left edge. Resizing the internal canvas dimensions should happen alongside the CSS transition to prevent jump cuts or large black bars.
+- **Gesture Closing**: While the sidebar is open in portrait, a leftward swipe starting on the sidebar itself or within roughly the first sidebar-width worth of screen space must close it so players can dismiss the menu without tapping the toggle.
+- **Minimal Toggle Presentation**: When the portrait sidebar is collapsed, the floating toggle button in the top-left corner should remain but lose its opaque background so the gameplay view is not obscured. Use a transparent background with just the outline/icon visible until the sidebar reopens.

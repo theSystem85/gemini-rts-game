@@ -1,5 +1,12 @@
 # Prompt History
 
+## 2025-11-17 - gpt-5-codex
+I dont want a black bar on the left when the sidebar is collapsed. Ensure I can see the map there and make sure there is no jumping of the map and the map is not hidden behind the sidebar when expanded.
+
+When open the sidebar should close by swiping to the left
+
+When closed there is the button on top left but with transparent BG
+
 ## 2025-11-16 - gpt-5-codex
 Make the sidebar on the left toggleable in portrait mode on mobile
 

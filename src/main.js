@@ -372,7 +372,9 @@ function setSidebarCollapsed(collapsed, options = {}) {
     return
   }
 
+  const previouslyCollapsed = document.body.classList.contains('sidebar-collapsed')
   document.body.classList.toggle('sidebar-collapsed', collapsed)
+  const nowCollapsed = document.body.classList.contains('sidebar-collapsed')
   if (!options.preservePreference) {
     mobileLayoutState.isSidebarCollapsed = collapsed
   }
@@ -381,6 +383,15 @@ function setSidebarCollapsed(collapsed, options = {}) {
   if (toggleButton) {
     toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
     toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
+  }
+
+  if (
+    previouslyCollapsed !== nowCollapsed &&
+    gameInstance &&
+    gameInstance.canvasManager &&
+    typeof gameInstance.canvasManager.resizeCanvases === 'function'
+  ) {
+    gameInstance.canvasManager.resizeCanvases()
   }
 }
 
@@ -408,7 +419,15 @@ function ensureSidebarSwipeHandlers(enable) {
   }
 
   const handleTouchStart = (event) => {
-    if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+    const body = document.body
+    if (!body) {
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    const isLandscape = body.classList.contains('mobile-landscape')
+    const isPortrait = body.classList.contains('mobile-portrait')
+    if (!isLandscape && !isPortrait) {
       mobileLayoutState.sidebarSwipeState = null
       return
     }
@@ -419,20 +438,61 @@ function ensureSidebarSwipeHandlers(enable) {
     }
 
     const touch = event.touches[0]
-    const collapsed = document.body.classList.contains('sidebar-collapsed')
+    const collapsed = body.classList.contains('sidebar-collapsed')
     const edgeThreshold = 28
     const activeThreshold = 140
-
-    if (collapsed && touch.clientX <= edgeThreshold) {
-      mobileLayoutState.sidebarSwipeState = {
-        type: 'open',
-        identifier: touch.identifier,
-        startX: touch.clientX,
-        startY: touch.clientY,
-        lastX: touch.clientX,
-        lastY: touch.clientY
+    const getSidebarWidthEstimate = () => {
+      let width = 250
+      if (typeof window !== 'undefined' && window.getComputedStyle) {
+        const rootStyles = window.getComputedStyle(document.documentElement)
+        if (rootStyles) {
+          const varValue = rootStyles.getPropertyValue('--sidebar-width')
+          const parsed = parseFloat(varValue)
+          if (!Number.isNaN(parsed)) {
+            width = parsed
+          }
+        }
       }
-    } else if (!collapsed && touch.clientX <= activeThreshold) {
+      return width
+    }
+    const portraitCloseThreshold = Math.max(96, Math.min(getSidebarWidthEstimate() + 40, 320))
+    const touchTarget = event.target
+    const startedInsideSidebar = !!(touchTarget && typeof touchTarget.closest === 'function' && touchTarget.closest('#sidebar'))
+
+    if (isLandscape) {
+      if (collapsed && touch.clientX <= edgeThreshold) {
+        mobileLayoutState.sidebarSwipeState = {
+          type: 'open',
+          identifier: touch.identifier,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastX: touch.clientX,
+          lastY: touch.clientY
+        }
+        return
+      }
+
+      if (!collapsed && touch.clientX <= activeThreshold) {
+        mobileLayoutState.sidebarSwipeState = {
+          type: 'close',
+          identifier: touch.identifier,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastX: touch.clientX,
+          lastY: touch.clientY
+        }
+        return
+      }
+
+      mobileLayoutState.sidebarSwipeState = null
+      return
+    }
+
+    if (
+      isPortrait &&
+      !collapsed &&
+      (startedInsideSidebar || touch.clientX <= portraitCloseThreshold)
+    ) {
       mobileLayoutState.sidebarSwipeState = {
         type: 'close',
         identifier: touch.identifier,
@@ -697,7 +757,6 @@ function applyMobileSidebarLayout(mode) {
       ? mobileLayoutState.isSidebarCollapsed
       : true
     setSidebarCollapsed(shouldCollapse)
-    ensureSidebarSwipeHandlers(true)
   } else {
     restoreProductionArea()
     restoreActions()
@@ -742,8 +801,9 @@ function applyMobileSidebarLayout(mode) {
     if (mobileLayoutState.mobileStatusBar) {
       mobileLayoutState.mobileStatusBar.removeAttribute('data-orientation')
     }
-    ensureSidebarSwipeHandlers(false)
   }
+
+  ensureSidebarSwipeHandlers(isMobile)
 
   if (mobileControls) {
     if (isMobile) {

@@ -261,6 +261,19 @@ body.mobile-portrait #mobileSidebarControls #mobileActionsContainer {
   display: none;
 }
 
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle {
+  background-color: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+  color: #fff;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle:hover,
+body.mobile-portrait.sidebar-collapsed #mobileSidebarControls .sidebar-toggle:active {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
 #mobileJoystickContainer {
   --joystick-base-size: calc(min(32vw, 180px) * 0.42);
   position: fixed;
@@ -667,6 +680,11 @@ body.mobile-landscape #gameCanvas {
 
 body.mobile-portrait #gameCanvas {
   transition: left 0.25s ease, width 0.25s ease;
+}
+
+body.mobile-portrait:not(.sidebar-collapsed) #gameCanvas {
+  left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
 }
 
 body.mobile-landscape.is-touch #gameCanvas {
