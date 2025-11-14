@@ -1704,14 +1704,16 @@ export class ProductionController {
     let scrollDeltaY = 0
 
     const safeLeftInset = getSafeAreaInset('left')
+    const safeTopInset = getSafeAreaInset('top')
+    const safeBottomInset = getSafeAreaInset('bottom')
     const actionBarInset = getMobileActionBarWidth()
     const horizontalViewport = Math.max(0, viewportWidth - actionBarInset)
 
     // Calculate effective edges accounting for mobile overlays and safe areas
     const effectiveLeft = rect.left + safeLeftInset + actionBarInset
     const effectiveRight = effectiveLeft + horizontalViewport
-    const effectiveTop = rect.top
-    const effectiveBottom = rect.top + viewportHeight
+    const effectiveTop = rect.top + safeTopInset
+    const effectiveBottom = Math.max(effectiveTop, rect.bottom - safeBottomInset)
 
     if (hasHorizontalScroll) {
       if (event.clientX <= effectiveLeft + thresholdX) {

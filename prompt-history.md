@@ -1,5 +1,10 @@
 # Prompt History
 
+## 2025-11-17 - gpt-5-codex
+In pwa mode only left, down and right scroll works correctly but not up. There is also an incorrect black bar at the bottom. Improve!
+
+In non pwa mobile landscape all is correct now
+
 ## 2025-11-16 - gpt-5-codex
 When in drag to build mode ensure the left edge of the screen gets an offset to determine when the scroll effect kicks in so the action bar and the notch protective area is taken into account for the offset.
 
