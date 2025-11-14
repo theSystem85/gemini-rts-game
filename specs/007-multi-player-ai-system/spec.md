@@ -58,7 +58,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI constructs initial base buildings (Construction Yard, Power Plant, War Factory)
 - [x] AI builds defensive structures (Gun Turrets, SAM Sites)
 - [x] AI places turrets at strategic positions around its base
-- [x] AI concentrates defensive buildings along the chokepoint where the tank pathfinding route from its base to the player's base leaves the base perimeter, ensuring that shortest-path approaches are heavily fortified
+- [x] AI concentrates defensive buildings along the chokepoint where the tank pathfinding route from its base to the player's base leaves the base perimeter, ensuring that shortest-path approaches are heavily fortified and the actual building footprints sit just outside the base boundary to create a forward-facing wall
 - [x] AI builds economy buildings (Ore Refineries, Silos) when needed
 - [x] AI expands base area when resources permit
 - [x] AI building placement avoids overlaps and invalid positions

@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-18 - gpt-5-codex
+I still see the defense buildings inside the enemy base and not on the outside frontiers. Improve!
+
 ## 2025-11-17 - gpt-5-codex
 Make sure enemy ai builds defence buildings at along the shortest route from its base to the players base according to the tanks pathfinding algo so the defence is concentrated there at intersection of the outer edges of the base and the path to the players base.
 

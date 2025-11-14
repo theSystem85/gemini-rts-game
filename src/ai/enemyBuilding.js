@@ -147,14 +147,19 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
     direction = { x: direction.x / mag, y: direction.y / mag }
   }
 
-  return { exitTile, direction }
+  return { exitTile, direction, aiBounds }
 }
 
 function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId) {
   if (!chokepoint || !chokepoint.exitTile) return null
 
-  const baseX = chokepoint.exitTile.x - Math.floor(buildingWidth / 2)
-  const baseY = chokepoint.exitTile.y - Math.floor(buildingHeight / 2)
+  const direction = chokepoint.direction || { x: 0, y: 0 }
+  const offsetDistance = Math.max(2, Math.ceil(Math.max(buildingWidth, buildingHeight) / 2) + 1)
+  const focusX = Math.round(chokepoint.exitTile.x + direction.x * offsetDistance)
+  const focusY = Math.round(chokepoint.exitTile.y + direction.y * offsetDistance)
+
+  const baseX = focusX - Math.floor(buildingWidth / 2)
+  const baseY = focusY - Math.floor(buildingHeight / 2)
   const searchRadius = Math.max(4, minSpaceBetweenBuildings + 2)
   const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 7 : 6
 
@@ -194,6 +199,10 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
 
         if (!isNearBase) continue
 
+        if (!isPlacementOnFrontier(candidateX, candidateY, buildingWidth, buildingHeight, chokepoint.aiBounds)) {
+          continue
+        }
+
         const hasClearPaths = ensurePathsAroundBuilding(
           candidateX,
           candidateY,
@@ -214,6 +223,34 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
   }
 
   return null
+}
+
+function isPlacementOnFrontier(x, y, width, height, bounds) {
+  if (!bounds) return true
+
+  const extendedBounds = {
+    minX: bounds.minX - 1,
+    minY: bounds.minY - 1,
+    maxX: bounds.maxX + 1,
+    maxY: bounds.maxY + 1
+  }
+
+  const totalTiles = width * height
+  let insideCount = 0
+  let touchesBoundary = false
+
+  for (let cy = y; cy < y + height; cy++) {
+    for (let cx = x; cx < x + width; cx++) {
+      const tile = { x: cx, y: cy }
+      if (isTileInsideBounds(tile, bounds)) insideCount++
+      if (!touchesBoundary && isTileInsideBounds(tile, extendedBounds)) {
+        touchesBoundary = true
+      }
+    }
+  }
+
+  const maxInsideTiles = Math.max(1, Math.floor(totalTiles * 0.25))
+  return touchesBoundary && insideCount <= maxInsideTiles
 }
 
 // Let's improve this function to fix issues with enemy building placement
