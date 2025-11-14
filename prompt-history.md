@@ -1,5 +1,10 @@
 # Prompt History
 
+## 2025-11-18 - gpt-5-codex
+When expanded the toggle button should be invisible.
+
+The map should be visible where the sidebar was when collapsed! Ensure it does!
+
 ## 2025-11-17 - gpt-5-codex
 In pwa mode only left, down and right scroll works correctly but not up. There is also an incorrect black bar at the bottom. Improve!
 
@@ -7,6 +12,14 @@ In non pwa mobile landscape all is correct now
 
 ## 2025-11-16 - gpt-5-codex
 When in drag to build mode ensure the left edge of the screen gets an offset to determine when the scroll effect kicks in so the action bar and the notch protective area is taken into account for the offset.
+I dont want a black bar on the left when the sidebar is collapsed. Ensure I can see the map there and make sure there is no jumping of the map and the map is not hidden behind the sidebar when expanded.
+
+When open the sidebar should close by swiping to the left
+
+When closed there is the button on top left but with transparent BG
+
+## 2025-11-16 - gpt-5-codex
+Make the sidebar on the left toggleable in portrait mode on mobile
 
 ## 2025-11-15 - gpt-5-codex
 ensure new units only spawn at unoccupied tiles (currently the vehicle factory spawns vehicles also inside itself so on tiles that are occupied by the factory itself). when a tile that is a spawn target is occupied just take any neighbour tile instead and if all neighbour tiles of that are also occupied take their neighbour tiles and so on...
