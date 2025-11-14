@@ -383,6 +383,15 @@ function setSidebarCollapsed(collapsed, options = {}) {
   if (toggleButton) {
     toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
     toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
+    const body = document.body
+    const hideToggle = !!(body && body.classList.contains('mobile-portrait') && !collapsed)
+    toggleButton.setAttribute('aria-hidden', hideToggle ? 'true' : 'false')
+    if (hideToggle) {
+      toggleButton.setAttribute('tabindex', '-1')
+    } else {
+      toggleButton.removeAttribute('tabindex')
+    }
+    toggleButton.classList.toggle('portrait-toggle-hidden', hideToggle)
   }
 
   if (

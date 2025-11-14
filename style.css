@@ -160,7 +160,8 @@ body.is-touch {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  opacity: 1;
 }
 
 body.mobile-landscape .sidebar-toggle,
@@ -255,6 +256,12 @@ body.mobile-portrait #mobileSidebarControls .sidebar-toggle {
   width: 56px;
   height: 56px;
   border-radius: 16px;
+}
+
+body.mobile-portrait .sidebar-toggle.portrait-toggle-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 body.mobile-portrait #mobileSidebarControls #mobileActionsContainer {

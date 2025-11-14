@@ -41,3 +41,8 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Canvas Fill Requirements**: When collapsing or expanding the sidebar in portrait orientation the game canvas must resize immediately (no blank strip) so the map is always visible along the left edge. Resizing the internal canvas dimensions should happen alongside the CSS transition to prevent jump cuts or large black bars.
 - **Gesture Closing**: While the sidebar is open in portrait, a leftward swipe starting on the sidebar itself or within roughly the first sidebar-width worth of screen space must close it so players can dismiss the menu without tapping the toggle.
 - **Minimal Toggle Presentation**: When the portrait sidebar is collapsed, the floating toggle button in the top-left corner should remain but lose its opaque background so the gameplay view is not obscured. Use a transparent background with just the outline/icon visible until the sidebar reopens.
+
+## Update 2025-11-18
+
+- **Invisible Toggle When Expanded**: In portrait mode the floating toggle must be hidden entirely whenever the sidebar is expanded. The open state is dismissed exclusively through leftward swipe gestures, so the toggle should not be focusable, clickable, or visually present until the sidebar collapses again.
+- **Map Coverage Guarantee**: Collapsing the portrait sidebar must immediately reclaim the entire viewport for the canvas at both the CSS and actual canvas resolution levels. This includes updating inline dimensions from the canvas manager so no residual left offset or reduced width leaves a black bar.

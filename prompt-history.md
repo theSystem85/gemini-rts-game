@@ -1,5 +1,10 @@
 # Prompt History
 
+## 2025-11-18 - gpt-5-codex
+When expanded the toggle button should be invisible.
+
+The map should be visible where the sidebar was when collapsed! Ensure it does!
+
 ## 2025-11-17 - gpt-5-codex
 In pwa mode only left, down and right scroll works correctly but not up. There is also an incorrect black bar at the bottom. Improve!
 
