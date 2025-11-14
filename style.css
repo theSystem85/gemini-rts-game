@@ -163,9 +163,12 @@ body.is-touch {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-body.mobile-landscape .sidebar-toggle,
 body.mobile-portrait .sidebar-toggle {
   display: inline-flex;
+}
+
+body.mobile-landscape .sidebar-toggle {
+  display: none;
 }
 
 .sidebar-toggle:active {

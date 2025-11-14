@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-18 - gpt-5-codex
+Ensure the new menu toggle button is hidden in landscape mode!
+
 ## 2025-11-17 - gpt-5-codex
 I dont want a black bar on the left when the sidebar is collapsed. Ensure I can see the map there and make sure there is no jumping of the map and the map is not hidden behind the sidebar when expanded.
 
