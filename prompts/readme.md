@@ -1,0 +1,1 @@
+This folder should contain all prompts from the game creation phase added as separate files by each LLM that processed the prompt.
