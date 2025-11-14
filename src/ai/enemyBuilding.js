@@ -2,6 +2,219 @@ import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearEx
 import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
+import { findPath } from '../units.js'
+
+const DEFENSIVE_BUILDING_TYPES = new Set(['rocketTurret', 'teslaCoil', 'artilleryTurret'])
+
+function isDefensiveBuildingType(buildingType) {
+  if (!buildingType) return false
+  return buildingType.startsWith('turretGun') || DEFENSIVE_BUILDING_TYPES.has(buildingType)
+}
+
+function getBaseBoundsForOwner(buildings, ownerId) {
+  const ownerBuildings = buildings.filter(b => b.owner === ownerId && b.health > 0)
+
+  if (ownerBuildings.length === 0) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  ownerBuildings.forEach(building => {
+    const data = buildingData[building.type] || {}
+    const width = building.width || data.width || 1
+    const height = building.height || data.height || 1
+    minX = Math.min(minX, building.x)
+    minY = Math.min(minY, building.y)
+    maxX = Math.max(maxX, building.x + width - 1)
+    maxY = Math.max(maxY, building.y + height - 1)
+  })
+
+  return { minX, minY, maxX, maxY }
+}
+
+function getBoundsFromFactory(factory) {
+  if (!factory) return null
+  return {
+    minX: factory.x,
+    minY: factory.y,
+    maxX: factory.x + factory.width - 1,
+    maxY: factory.y + factory.height - 1
+  }
+}
+
+function getBoundsCenter(bounds) {
+  if (!bounds) return null
+  return {
+    x: Math.floor((bounds.minX + bounds.maxX) / 2),
+    y: Math.floor((bounds.minY + bounds.maxY) / 2)
+  }
+}
+
+function isTileInsideBounds(tile, bounds) {
+  if (!tile || !bounds) return false
+  return tile.x >= bounds.minX && tile.x <= bounds.maxX && tile.y >= bounds.minY && tile.y <= bounds.maxY
+}
+
+function findNearestPassableTile(target, mapGrid, occupancyMap, maxDistance = 6) {
+  if (!target) return null
+  const startX = Math.round(target.x)
+  const startY = Math.round(target.y)
+
+  for (let distance = 0; distance <= maxDistance; distance++) {
+    for (let dx = -distance; dx <= distance; dx++) {
+      for (let dy = -distance; dy <= distance; dy++) {
+        if (Math.abs(dx) !== distance && Math.abs(dy) !== distance) continue
+
+        const x = startX + dx
+        const y = startY + dy
+
+        if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) continue
+
+        const tile = mapGrid[y][x]
+        const passable =
+          tile.type !== 'water' &&
+          tile.type !== 'rock' &&
+          !tile.building &&
+          !tile.seedCrystal
+        const occupied = occupancyMap && occupancyMap[y] && occupancyMap[y][x]
+
+        if (passable && !occupied) {
+          return { x, y }
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, factories) {
+  if (!mapGrid || mapGrid.length === 0) return null
+
+  const aiFactory = Array.isArray(factories) ? factories.find(f => f.id === aiPlayerId) : null
+  const aiBounds = getBaseBoundsForOwner(buildings, aiPlayerId) || getBoundsFromFactory(aiFactory)
+  if (!aiBounds) return null
+
+  const playerOwner = gameState.humanPlayer || 'player1'
+  const playerFactory = Array.isArray(factories) ? factories.find(f => f.id === playerOwner) : null
+  const playerBounds =
+    getBaseBoundsForOwner(buildings, playerOwner) ||
+    getBoundsFromFactory(playerFactory)
+
+  if (!playerBounds) return null
+
+  const aiCenter = getBoundsCenter(aiBounds)
+  const playerCenter = getBoundsCenter(playerBounds)
+  if (!aiCenter || !playerCenter) return null
+
+  const pathOccupancyMap = occupancyMap && occupancyMap.length ? occupancyMap : null
+  const pathStart = findNearestPassableTile(aiCenter, mapGrid, pathOccupancyMap) || aiCenter
+  const pathEnd = findNearestPassableTile(playerCenter, mapGrid, pathOccupancyMap) || playerCenter
+
+  const path = findPath(pathStart, pathEnd, mapGrid, pathOccupancyMap)
+  if (!path || path.length < 2) return null
+
+  let exitTile = null
+  let exitIndex = -1
+  let previous = { ...aiCenter }
+
+  for (let i = 0; i < path.length; i++) {
+    const current = path[i]
+    if (isTileInsideBounds(previous, aiBounds) && !isTileInsideBounds(current, aiBounds)) {
+      exitTile = current
+      exitIndex = i
+      break
+    }
+    previous = current
+  }
+
+  if (!exitTile) {
+    exitIndex = path.findIndex(tile => !isTileInsideBounds(tile, aiBounds))
+    if (exitIndex !== -1) {
+      exitTile = path[exitIndex]
+    } else {
+      exitTile = path[path.length - 1]
+      exitIndex = path.length - 1
+    }
+  }
+
+  const referenceTile = exitIndex > 0 ? path[exitIndex - 1] : aiCenter
+  let direction = { x: exitTile.x - referenceTile.x, y: exitTile.y - referenceTile.y }
+  const mag = Math.hypot(direction.x, direction.y)
+  if (mag > 0) {
+    direction = { x: direction.x / mag, y: direction.y / mag }
+  }
+
+  return { exitTile, direction }
+}
+
+function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId) {
+  if (!chokepoint || !chokepoint.exitTile) return null
+
+  const baseX = chokepoint.exitTile.x - Math.floor(buildingWidth / 2)
+  const baseY = chokepoint.exitTile.y - Math.floor(buildingHeight / 2)
+  const searchRadius = Math.max(4, minSpaceBetweenBuildings + 2)
+  const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 7 : 6
+
+  for (let radius = 0; radius <= searchRadius; radius++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue
+
+        const candidateX = baseX + dx
+        const candidateY = baseY + dy
+
+        if (candidateX < 0 || candidateY < 0 ||
+            candidateX + buildingWidth > mapGrid[0].length ||
+            candidateY + buildingHeight > mapGrid.length) {
+          continue
+        }
+
+        let valid = true
+        for (let cy = candidateY; cy < candidateY + buildingHeight && valid; cy++) {
+          for (let cx = candidateX; cx < candidateX + buildingWidth && valid; cx++) {
+            if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {
+              valid = false
+            }
+          }
+        }
+
+        if (!valid) continue
+
+        let isNearBase = false
+        for (let cy = candidateY; cy < candidateY + buildingHeight && !isNearBase; cy++) {
+          for (let cx = candidateX; cx < candidateX + buildingWidth && !isNearBase; cx++) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, connectionRange, aiPlayerId)) {
+              isNearBase = true
+            }
+          }
+        }
+
+        if (!isNearBase) continue
+
+        const hasClearPaths = ensurePathsAroundBuilding(
+          candidateX,
+          candidateY,
+          buildingWidth,
+          buildingHeight,
+          mapGrid,
+          buildings,
+          factories,
+          minSpaceBetweenBuildings,
+          aiPlayerId
+        )
+
+        if (!hasClearPaths) continue
+
+        return { x: candidateX, y: candidateY }
+      }
+    }
+  }
+
+  return null
+}
 
 // Let's improve this function to fix issues with enemy building placement
 // Modified to improve building placement with better spacing and factory avoidance
@@ -70,13 +283,20 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Determine direction vector - defensive structures should face the nearest ore field
   let directionVector = { x: 0, y: 0 }
-  const isDefensiveBuilding =
-    buildingType.startsWith('turretGun') ||
-    buildingType === 'rocketTurret' ||
-    buildingType === 'teslaCoil' ||
-    buildingType === 'artilleryTurret'
+  const isDefensiveBuilding = isDefensiveBuildingType(buildingType)
+  const defenseChokepoint = isDefensiveBuilding
+    ? findDefenseChokepoint(aiPlayerId, mapGrid, gameState.occupancyMap, buildings, factories)
+    : null
 
-  if (isDefensiveBuilding && closestOrePos) {
+  if (isDefensiveBuilding && defenseChokepoint?.exitTile) {
+    directionVector.x = defenseChokepoint.exitTile.x - factoryX
+    directionVector.y = defenseChokepoint.exitTile.y - factoryY
+    const mag = Math.hypot(directionVector.x, directionVector.y)
+    if (mag > 0) {
+      directionVector.x /= mag
+      directionVector.y /= mag
+    }
+  } else if (isDefensiveBuilding && closestOrePos) {
     // Face defenses towards the closest ore field to protect harvesters
     directionVector.x = closestOrePos.x - factoryX
     directionVector.y = closestOrePos.y - factoryY
@@ -112,12 +332,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
   } else if (buildingType === 'vehicleFactory') {
     minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
-  } else if (
-    buildingType.startsWith('turretGun') ||
-    buildingType === 'rocketTurret' ||
-    buildingType === 'teslaCoil' ||
-    buildingType === 'artilleryTurret'
-  ) {
+  } else if (isDefensiveBuilding) {
     minSpaceBetweenBuildings = 2 // Defense buildings standard spacing
   }
 
@@ -126,6 +341,25 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory')
     ? [4, 5, 6, 3]
     : [3, 4, 5, 2]
+
+  if (isDefensiveBuilding && defenseChokepoint) {
+    const chokepointPosition = tryPlaceNearChokepoint(
+      defenseChokepoint,
+      buildingType,
+      buildingWidth,
+      buildingHeight,
+      mapGrid,
+      units,
+      buildings,
+      factories,
+      minSpaceBetweenBuildings,
+      aiPlayerId
+    )
+
+    if (chokepointPosition) {
+      return chokepointPosition
+    }
+  }
 
   // First try placing along the line from the factory to the closest ore field
   if (isDefensiveBuilding && closestOrePos) {
@@ -464,11 +698,11 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   const playerFactory = factories.find(
     f => f.id === gameState.humanPlayer || f.id === 'player1'
   )
-  const isDefensiveBuilding =
-    buildingType.startsWith('turretGun') ||
-    buildingType === 'rocketTurret' ||
-    buildingType === 'teslaCoil' ||
-    buildingType === 'artilleryTurret'
+  const isDefensiveBuilding = isDefensiveBuildingType(buildingType)
+
+  if (isDefensiveBuilding && minSpaceBetweenBuildings < 2) {
+    minSpaceBetweenBuildings = 2
+  }
 
   // Calculate player direction for fallback
   let playerDirection = null
@@ -722,12 +956,7 @@ function completeEnemyBuilding(gameState, mapGrid) {
     const newBuilding = createBuilding(buildingType, x, y)
     newBuilding.owner = 'enemy'
 
-    if (
-      buildingType.startsWith('turretGun') ||
-      buildingType === 'rocketTurret' ||
-      buildingType === 'teslaCoil' ||
-      buildingType === 'artilleryTurret'
-    ) {
+    if (isDefensiveBuildingType(buildingType)) {
       const centerX = x + Math.floor(newBuilding.width / 2)
       const centerY = y + Math.floor(newBuilding.height / 2)
       const oreDir = directionToClosestOre(centerX, centerY, gameState.mapGrid || mapGrid)

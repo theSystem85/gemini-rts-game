@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-17 - gpt-5-codex
+Make sure enemy ai builds defence buildings at along the shortest route from its base to the players base according to the tanks pathfinding algo so the defence is concentrated there at intersection of the outer edges of the base and the path to the players base.
+
 ## 2025-11-15 - gpt-5-codex
 ensure new units only spawn at unoccupied tiles (currently the vehicle factory spawns vehicles also inside itself so on tiles that are occupied by the factory itself). when a tile that is a spawn target is occupied just take any neighbour tile instead and if all neighbour tiles of that are also occupied take their neighbour tiles and so on...
 
