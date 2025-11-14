@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-16 - gpt-5-codex
+When in drag to build mode ensure the left edge of the screen gets an offset to determine when the scroll effect kicks in so the action bar and the notch protective area is taken into account for the offset.
+
 ## 2025-11-15 - gpt-5-codex
 ensure new units only spawn at unoccupied tiles (currently the vehicle factory spawns vehicles also inside itself so on tiles that are occupied by the factory itself). when a tile that is a spawn target is occupied just take any neighbour tile instead and if all neighbour tiles of that are also occupied take their neighbour tiles and so on...
 

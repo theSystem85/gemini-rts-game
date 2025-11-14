@@ -7,6 +7,7 @@
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
+- [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
 ## Features
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
