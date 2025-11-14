@@ -231,8 +231,8 @@ body.mobile-portrait #mobileSidebarControls {
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  top: calc(var(--safe-area-top) + 12px);
-  bottom: auto;
+  top: auto;
+  bottom: calc(var(--safe-area-bottom) + 12px);
   left: calc(var(--safe-area-left) + 12px);
   right: auto;
   width: auto;
@@ -259,6 +259,12 @@ body.mobile-portrait #mobileSidebarControls .sidebar-toggle {
 }
 
 body.mobile-portrait .sidebar-toggle.portrait-toggle-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sidebar-toggle.portrait-toggle-hidden {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -460,6 +466,10 @@ body.mobile-landscape #actions {
 }
 
 body.mobile-landscape #actions .mobile-sidebar-menu-button {
+  display: inline-flex;
+}
+
+body.mobile-portrait #actions .mobile-sidebar-menu-button {
   display: inline-flex;
 }
 

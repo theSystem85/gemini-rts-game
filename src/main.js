@@ -251,7 +251,7 @@ function ensureMobileLayoutElements() {
   if (mobileLayoutState.sidebarMenuButton && !mobileLayoutState.sidebarMenuButtonListenerAttached) {
     mobileLayoutState.sidebarMenuButton.addEventListener('click', event => {
       event.preventDefault()
-      if (!document.body || !document.body.classList.contains('mobile-landscape')) {
+      if (!document.body || (!document.body.classList.contains('mobile-landscape') && !document.body.classList.contains('mobile-portrait'))) {
         return
       }
       if (mobileLayoutState.sidebarModalVisible) {
@@ -384,7 +384,7 @@ function setSidebarCollapsed(collapsed, options = {}) {
     toggleButton.setAttribute('aria-expanded', (!collapsed).toString())
     toggleButton.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar')
     const body = document.body
-    const hideToggle = !!(body && body.classList.contains('mobile-portrait') && !collapsed)
+    const hideToggle = !!(body && (body.classList.contains('mobile-portrait') && !collapsed) || body.classList.contains('mobile-landscape'))
     toggleButton.setAttribute('aria-hidden', hideToggle ? 'true' : 'false')
     if (hideToggle) {
       toggleButton.setAttribute('tabindex', '-1')
