@@ -110,6 +110,8 @@ export class CanvasManager {
       : Math.max(0, layoutViewportWidth - rawSidebarWidth)
     const canvasCssHeight = Math.max(0, baseCanvasHeight)
 
+    this.gameCanvas.style.position = mobileLandscape ? 'fixed' : 'absolute'
+
     if (mobileLandscape) {
       this.gameCanvas.style.left = `${-safeLeft}px`
       this.gameCanvas.style.right = `${-safeRight}px`

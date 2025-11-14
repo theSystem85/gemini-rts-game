@@ -4,6 +4,33 @@
 
 const DEFAULT_SIDEBAR_WIDTH = 250
 
+function getElementWidth(element) {
+  if (!element) {
+    return 0
+  }
+
+  if (typeof element.getBoundingClientRect === 'function') {
+    const rect = element.getBoundingClientRect()
+    if (rect && Number.isFinite(rect.width) && rect.width > 0) {
+      return rect.width
+    }
+  }
+
+  try {
+    const style = window.getComputedStyle ? window.getComputedStyle(element) : null
+    if (style) {
+      const width = parsePixelValue(style.width)
+      if (width > 0) {
+        return width
+      }
+    }
+  } catch {
+    // Ignore style access issues and fall back to zero.
+  }
+
+  return 0
+}
+
 function parsePixelValue(value) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : 0
@@ -52,6 +79,23 @@ export function getSafeAreaInset(side) {
     return 0
   }
   return parsePixelValue(bodyStyle.getPropertyValue(`--safe-area-${side}`))
+}
+
+export function getMobileActionBarWidth() {
+  if (typeof document === 'undefined' || !document.body) {
+    return 0
+  }
+
+  if (!document.body.classList.contains('mobile-landscape')) {
+    return 0
+  }
+
+  const controls = document.getElementById('mobileSidebarControls')
+  if (!controls || controls.getAttribute('aria-hidden') === 'true') {
+    return 0
+  }
+
+  return Math.max(0, getElementWidth(controls))
 }
 
 export function getCanvasLogicalWidth(gameCanvas) {

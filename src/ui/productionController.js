@@ -8,7 +8,12 @@ import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
 import { buildingData } from '../buildings.js'
 import { playSound } from '../sound.js'
-import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
+import {
+  getPlayableViewportHeight,
+  getPlayableViewportWidth,
+  getSafeAreaInset,
+  getMobileActionBarWidth
+} from '../utils/layoutMetrics.js'
 
 const MOBILE_EDGE_SCROLL_THRESHOLD = 20
 const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.14
@@ -1698,11 +1703,17 @@ export class ProductionController {
     let scrollDeltaX = 0
     let scrollDeltaY = 0
 
-    // Calculate effective edges accounting for mobile landscape sidebar
-    const effectiveLeft = rect.left
-    const effectiveRight = rect.left + viewportWidth
-    const effectiveTop = rect.top
-    const effectiveBottom = rect.top + viewportHeight
+    const safeLeftInset = getSafeAreaInset('left')
+    const safeTopInset = getSafeAreaInset('top')
+    const safeBottomInset = getSafeAreaInset('bottom')
+    const actionBarInset = getMobileActionBarWidth()
+    const horizontalViewport = Math.max(0, viewportWidth - actionBarInset)
+
+    // Calculate effective edges accounting for mobile overlays and safe areas
+    const effectiveLeft = rect.left + safeLeftInset + actionBarInset
+    const effectiveRight = effectiveLeft + horizontalViewport
+    const effectiveTop = rect.top + safeTopInset
+    const effectiveBottom = Math.max(effectiveTop, rect.bottom - safeBottomInset)
 
     if (hasHorizontalScroll) {
       if (event.clientX <= effectiveLeft + thresholdX) {

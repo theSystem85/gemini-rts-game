@@ -7,6 +7,7 @@
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
+- [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
 ## Features
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
@@ -248,6 +249,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [x] Ensure the standalone/PWA mobile landscape layout can scroll upward while dragging to build and does not leave a stray black bar along the bottom edge of the viewport.
 - [x] Enemy units seem to aim at my units but they do not attack (means fire) at my units when in range. Also they do not fire at my buildings when the attack my base.
 - [x] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low or it does not have the party flag like other buildings. Ensure the there is not separate redundant code for the initial factory since it should be the same as any other later build additional building factory. Ensure when the map is generated with that factory already there is is as if the user has build the factory there. Before you make code changes make sure to find out everything so far what is different about the initial building factory compared to the ones that can be build later by the user. Then refactor the code to make everything coherent.
 - [x] when a construction process runs out of money and then new money comes in by cheat code make sure the construction process is continued.
