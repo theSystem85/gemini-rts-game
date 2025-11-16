@@ -4,7 +4,7 @@
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
-- [ ] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.
+- [x] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.
 - [ ] Enemy AI should automatically build next what is the current production bottleneck regarding money supply. Highest prio is energy. When energy is too low it will build a power plant. When there is too little money it will build harvesters but only if there is less than 4 havesters per refinery otherwiese it will build a refinery but only if the money has reached 0 before. So whenevery the money supply reached 0 the highest prio is to build another refinery (given the power supply is sufficient). When money supply is sufficient focus on building a good base defence with at least 2 turrets and one tesla coil and one rocket launcher. If that is given focus on producing as many combat units as possible. When the money raises faster than tanks can be build then build more vehicle factories to speed up the production.
 - [ ] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
@@ -57,9 +57,9 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] ✅ 8.4 when an ambulance is selected and the mouse hovers over a friendly unit with missing crew members than the cursor turns into a "moveInto" cursor and the user can left click to command the ambulance to go to the target unit to restore the missing crew members.
 - [x] ✅ 8.5 the ambulance has a loading bar (like the harvester) that correlates to the amount of loaded people (10 people equals 100%)
 - [x] ✅ 8.6 the restore process starts when the ambulance is assigned to the unit and it is within 1 tile range. It takes 2 seconds for each person to go from the ambulance to the target unit. Make sure to update the loading bar of the ambulance during this process and add the mannequinns to the target unit.
-- [ ] 8.7 The mannequinns are added in this order: driver, commander, loader, gunner
+- [x] 8.7 The mannequinns are added in this order: driver, commander, loader, gunner
 
-- [ ] Add a gas station to the game
+- [x] Add a gas station to the game
   1) add the image asset for the sidebar to the build button (images/sidebar/gas_station.webp)
   2) add the image asset for the building on the map (images/map/buildings/gas_station.webp)
   3) the building has 50hp and consumes 30MW and costs 2000
@@ -74,7 +74,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
      9.3 rocket_tank gas tank same as tank_v1
      9.4 harvester gas tank is 2.650l and consumes 30l/100km gas when moving AND 100l per harvested ore tile
      9.5 ambulance gas tank is 75l and consumes 25l/100km
-- [ ] Add a mobile tanker truck to the game
+- [x] Add a mobile tanker truck to the game
   1) add the image asset for the sidebar to the unit build button (images/sidebar/tanker_truck.webp)
   2) add the image asset for the unit on the map (images/map/units/tanker_truck.webp)
   3) the tanker truck has 20hp and costs 300. It moves twice as fast as a tank_v1.
@@ -88,22 +88,25 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [ ] Add AI policy scripts: Make sure to come up with a sophisticated modular extensible unit AI policy architecture that can be used for humand and AI players' units. Create and integreate some JSON policy script to manage the AI's combat behaviour including priorities and another one to manage the AI's base build und unit production behaviour. Add the following initial scripts for this behaviour:
   - [ ] when player attacks -> defend or retreat into base if the unit under attack is too weak (havesters or combat units that are outnumbered) to regroup in the protection of the base defence. When attack was defended strike back.
 - [ ] Expand the sell buildings function so that also unit can be sold when they are in the repair workshop and fully repaired and the player clicks on them while in repair mode. When in repair mode and the user hovers over a unit that does not fulfill these conditions show the selling_blocked cursor instead of the sell cursor.
-- [ ] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
-- [ ] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
-- [ ] **Spec 008** Add Ammunition Factory & Supply Truck System (see `specs/008-ammunition-system/spec.md`)
-  - [ ] Ammunition Factory building: $2000 cost, 3x3 tiles, 250 health, 40MW power, resupplies units within 2 tiles in 7s
-  - [ ] Ammunition Supply Truck: $800 cost, 30 health, 2x tank speed, 500 rounds cargo, resupplies within 1 tile
+- [x] Add a unit repair building to the buildings menu. It costs 3000$ and has 3 times the armor of a tank. Any unit can be directed to move there when selected and player clicks on the building. Then the unit will move to any surrounding tile and stays there. As long as the unit is close to the repair building it will get repaired (restore healthbar) gradually 2% every second.
+- [x] Add artillery unit with 100% more range than tank and a radius of 3 tiles damage area around the impact. The accuracy is only 25% of hitting the target tile directly but 100% of hitting any tile in the radius of 3 tiles around the targetted tile.
+- [x] **Spec 008** Add Ammunition Factory & Supply Truck System (see `specs/008-ammunition-system/spec.md`)
+  - [x] Ammunition Factory building: $2000 cost, 3x3 tiles, 250 health, 40MW power, resupplies units within 2 tiles in 7s
+  - [x] Ammunition Supply Truck: $800 cost, 30 health, 2x tank speed, 500 rounds cargo, resupplies within 1 tile
   - [x] ✅ All combat units have limited ammunition (Tank V1/V2: 42 rounds, Tank V3: 50 rounds, Rocket Tank: 21 rockets, Howitzer: 30 rounds, Apache: 38 rounds)
-  - [ ] Orange ammunition bar on left side of HUD (health top, fuel right, ammo left)
-  - [ ] Ammunition Factory explosion: 2-tile initial blast + 30-50 scattering particles dealing 30-50 damage each for 5 seconds
+  - [x] Orange ammunition bar on left side of HUD (health top, fuel right, ammo left)
+  - [x] Ammunition Factory explosion: 2-tile initial blast + 30-50 scattering particles dealing 30-50 damage each for 5 seconds
   - [x] ✅ Helipad ammunition reserves: 250 rounds capacity (50% of truck cargo), resupplied by Ammunition Supply Truck, transfers to landed helicopters
-  - [ ] Enemy AI builds ammunition factories, produces supply trucks, and manages unit resupply automatically
+  - [ ] Enemy AI builds
+    - [x] ammunition factories
+    - [x] produces supply trucks
+    - [?] and manages unit resupply automatically
   - [x] ✅ Units with 0 ammunition cannot fire, display "No Ammunition" notification when attack commanded
   - [x] ✅ Apache helicopter ammunition system implemented with `rocketAmmo` field (38 rounds capacity)
   - [x] ✅ Apache combat system checks `rocketAmmo` before firing, enforces 300ms volley delay
   - [x] ✅ Helipad ammunition transfer to landed Apache helicopters implemented
   - [x] ✅ Cheat system supports ammunition manipulation for all unit types including Apache
-  - [ ] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`
+  - [x] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`
 - [ ] Add online multiplayer support where humans can join an existing game and take over an AI party.
   - [ ] The interface should be minimalistic
   - [ ] in the sidebar below the "Players: " input there will be a label for each active party in the game like "Red: NameOfRedPlayer" and so on. Each row has another party listed.
@@ -118,8 +121,8 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] only the host can start/pause the game
   - [ ] For the initial webRTC connection setup use a public STUN like some from google "stun:stun.l.google.com:19302"
 ## Bugs
-- [ ] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
-- [ ] (still an issue?) When about 10 units get stuck the game slows down significantly.
+- [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
+- [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
 
 ### Closed Issues
 
