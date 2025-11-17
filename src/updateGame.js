@@ -2,7 +2,9 @@
 import {
   TILE_SIZE,
   SMOKE_EMIT_INTERVAL,
-  BUILDING_SMOKE_EMIT_INTERVAL
+  BUILDING_SMOKE_EMIT_INTERVAL,
+  UNIT_SMOKE_SOFT_CAP_RATIO,
+  MAX_SMOKE_PARTICLES
 } from './config.js'
 
 import { emitSmokeParticles } from './utils/smokeUtils.js'
@@ -109,17 +111,23 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     })
 
     // Emit smoke for heavily damaged tanks
+    const unitSmokeLimit = MAX_SMOKE_PARTICLES * UNIT_SMOKE_SOFT_CAP_RATIO
+
     units.forEach(unit => {
       if (
         unit.maxHealth &&
         unit.health / unit.maxHealth < 0.25 &&
         (unit.type.includes('tank') || unit.type === 'harvester')
       ) {
+        if (gameState.smokeParticles.length >= unitSmokeLimit) {
+          return
+        }
+
         if (!unit.lastSmokeTime || now - unit.lastSmokeTime > SMOKE_EMIT_INTERVAL) {
           const offsetX = -Math.cos(unit.direction) * TILE_SIZE * 0.4
           const offsetY = -Math.sin(unit.direction) * TILE_SIZE * 0.4
 
-          const particleCount = 1 + Math.floor(Math.random() * 2)
+          const particleCount = 1
           emitSmokeParticles(
             gameState,
             unit.x + TILE_SIZE / 2 + offsetX,
