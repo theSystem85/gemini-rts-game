@@ -967,6 +967,16 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.maxAmmoCargo = AMMO_TRUCK_CARGO
     unit.ammoCargo = AMMO_TRUCK_CARGO
   }
+  if (actualType === 'mineLayer') {
+    const mineCapacity = unitProps.mineCapacity || 20
+    unit.mineCapacity = mineCapacity
+    unit.remainingMines = mineCapacity
+  }
+  if (actualType === 'mineSweeper') {
+    unit.sweeping = false // Track if currently in sweeping mode
+    unit.normalSpeed = unitProps.speed
+    unit.sweepingSpeed = unitProps.sweepingSpeed || unitProps.speed * 0.3
+  }
   if (actualType === 'recoveryTank') {
     unit.repairTarget = null
     unit.towedUnit = null

@@ -38,6 +38,7 @@ import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { getMineAtTile, detonateMine } from './mineSystem.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
@@ -69,6 +70,28 @@ function calculatePositionalAudio(x, y) {
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
+}
+
+/**
+ * Check if a unit entering a tile triggers mine detonation
+ * @param {object} unit - The unit entering the tile
+ * @param {number} tileX - Tile X coordinate
+ * @param {number} tileY - Tile Y coordinate
+ */
+function checkMineDetonation(unit, tileX, tileY) {
+  const mine = getMineAtTile(tileX, tileY)
+  
+  // Only detonate if mine is active and unit is not in sweeping mode
+  if (mine && mine.active) {
+    // Mine sweepers can safely trigger mines while sweeping
+    if (unit.type === 'mineSweeper' && unit.sweeping) {
+      // Detonation happens but doesn't damage the sweeper
+      detonateMine(mine, gameState.units, gameState.buildings)
+    } else {
+      // Normal detonation - damages everything including the unit
+      detonateMine(mine, gameState.units, gameState.buildings)
+    }
+  }
 }
 
 export function hasFriendlyUnitOnTile(unit, tileX, tileY, units = []) {
@@ -614,6 +637,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       // Update tile position
       unit.tileX = nextTile.x
       unit.tileY = nextTile.y
+
+      // Check for mine detonation when unit enters new tile
+      checkMineDetonation(unit, nextTile.x, nextTile.y)
 
       // If no more waypoints, start deceleration
       if (unit.path.length === 0) {
