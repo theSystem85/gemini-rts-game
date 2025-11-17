@@ -337,6 +337,10 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.ammoCargo || 0) / (unit.maxAmmoCargo || 500)
       barColor = '#FFA500' // Orange for ammunition
+    } else if (unit.type === 'mineLayer') {
+      shouldShowBar = true
+      progress = (unit.remainingMines || 0) / (unit.mineCapacity || 20)
+      barColor = '#8B4513' // Brown for mines
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
