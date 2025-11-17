@@ -19,6 +19,8 @@ import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
 import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
 import { preloadRecoveryTankImage } from './recoveryTankImageRenderer.js'
 import { preloadAmmunitionTruckImage } from './ammunitionTruckImageRenderer.js'
+import { preloadMineLayerImage } from './mineLayerImageRenderer.js'
+import { preloadMineSweeperImage } from './mineSweeperImageRenderer.js'
 import { preloadHowitzerImage } from './howitzerImageRenderer.js'
 import { WreckRenderer } from './wreckRenderer.js'
 
@@ -52,9 +54,11 @@ export class Renderer {
     let recoveryTankLoaded = false
     let ammunitionLoaded = false
     let howitzerLoaded = false
+    let mineLayerLoaded = false
+    let mineSweeperLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded && ammunitionLoaded && howitzerLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded && ammunitionLoaded && howitzerLoaded && mineLayerLoaded && mineSweeperLoaded) {
         if (callback) callback()
       }
     }
@@ -127,6 +131,22 @@ export class Renderer {
         console.warn('Howitzer image failed to load')
       }
       howitzerLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadMineLayerImage((success) => {
+      if (!success) {
+        console.warn('Mine layer image failed to load')
+      }
+      mineLayerLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadMineSweeperImage((success) => {
+      if (!success) {
+        console.warn('Mine sweeper image failed to load')
+      }
+      mineSweeperLoaded = true
       checkAllLoaded()
     })
   }

@@ -10,6 +10,8 @@ import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceIma
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
 import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
+import { renderMineLayerWithImage, isMineLayerImageLoaded } from './mineLayerImageRenderer.js'
+import { renderMineSweeperWithImage, isMineSweeperImageLoaded } from './mineSweeperImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling, getBuildingIdentifier } from '../utils.js'
 
@@ -801,6 +803,24 @@ export class UnitRenderer {
       const ok = renderAmmunitionTruckWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'mineLayer' && isMineLayerImageLoaded()) {
+      const ok = renderMineLayerWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'mineSweeper' && isMineSweeperImageLoaded()) {
+      const ok = renderMineSweeperWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return
