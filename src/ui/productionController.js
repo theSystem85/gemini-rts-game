@@ -1166,6 +1166,11 @@ export class ProductionController {
 
     if (hasFactory && hasWorkshop) {
       this.forceUnlockUnitType('recoveryTank')
+      this.forceUnlockUnitType('mineSweeper')
+    }
+
+    if (hasFactory && hasWorkshop && hasAmmunitionFactory) {
+      this.forceUnlockUnitType('mineLayer')
     }
 
     if (hasHelipad) {
