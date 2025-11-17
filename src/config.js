@@ -538,8 +538,9 @@ export const MUZZLE_FLASH_DURATION = 150 // milliseconds
 export const MUZZLE_FLASH_SIZE = 12 // radius of muzzle flash
 export const TURRET_RECOIL_DISTANCE = 6 // pixels for building turrets
 export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longer-lasting building smoke)
-export const SMOKE_EMIT_INTERVAL = 120 // milliseconds between puffs (slightly less frequent)
+export const SMOKE_EMIT_INTERVAL = 320 // milliseconds between puffs for unit fumes (throttled for performance)
 export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
+export const UNIT_SMOKE_SOFT_CAP_RATIO = 0.6 // stop emitting unit fumes once 60% of the smoke budget is reached
 export let MAX_SMOKE_PARTICLES = 600 // Upper limit to keep smoke rendering performant
 
 export function setMaxSmokeParticles(value) {
@@ -1283,6 +1284,8 @@ const EXPORTED_CONFIG_VARIABLES = [
   'SMOKE_PARTICLE_LIFETIME',
   'SMOKE_EMIT_INTERVAL',
   'SMOKE_PARTICLE_SIZE',
+  'UNIT_SMOKE_SOFT_CAP_RATIO',
+  'MAX_SMOKE_PARTICLES',
   'BUILDING_SELL_DURATION',
   'WIND_DIRECTION',
   'WIND_STRENGTH',
