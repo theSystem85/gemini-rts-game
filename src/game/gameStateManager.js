@@ -24,6 +24,7 @@ import {
 } from '../utils/layoutMetrics.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
+import { distributeMineLayerPayload } from './mineSystem.js'
 
 const MINIMAP_SCROLL_SMOOTHING = 0.2
 const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
@@ -264,6 +265,10 @@ export function cleanupDestroyedUnits(units, gameState) {
 
       if (unit.type === 'ammunitionTruck') {
         detonateAmmunitionTruck(unit, units, gameState.factories || [], gameState)
+      }
+
+      if (unit.type === 'mineLayer') {
+        distributeMineLayerPayload(unit, units, gameState.buildings)
       }
 
       // Register a wreck so the destroyed unit leaves recoverable remnants
