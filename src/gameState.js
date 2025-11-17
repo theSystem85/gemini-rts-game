@@ -41,6 +41,7 @@ export const gameState = {
   smokeParticlePool: [], // Reusable pool to avoid allocations during heavy smoke
   unitWrecks: [], // Destroyed unit remnants that can be recovered or recycled
   selectedWreckId: null, // Currently selected wreck (for UI feedback)
+  mines: [], // Deployed land mines with position, owner, health, and arming status
   speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],
