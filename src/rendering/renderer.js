@@ -23,7 +23,7 @@ import { preloadMineLayerImage } from './mineLayerImageRenderer.js'
 import { preloadMineSweeperImage } from './mineSweeperImageRenderer.js'
 import { preloadHowitzerImage } from './howitzerImageRenderer.js'
 import { WreckRenderer } from './wreckRenderer.js'
-import { renderMineIndicators } from './mineRenderer.js'
+import { renderMineIndicators, renderMineDeploymentPreview, renderSweepAreaPreview } from './mineRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -193,6 +193,14 @@ export class Renderer {
     
     // Render mine indicators (skull overlays)
     renderMineIndicators(gameCtx, scrollOffset)
+
+    // Render mine deployment and sweep previews
+    if (gameState.mineDeploymentPreview) {
+      renderMineDeploymentPreview(gameCtx, gameState.mineDeploymentPreview, scrollOffset)
+    }
+    if (gameState.sweepAreaPreview) {
+      renderSweepAreaPreview(gameCtx, gameState.sweepAreaPreview, scrollOffset)
+    }
 
     // Render movement target indicators (green triangles)
     this.movementTargetRenderer.render(gameCtx, units, scrollOffset)
