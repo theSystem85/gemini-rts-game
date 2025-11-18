@@ -39,7 +39,7 @@ export function renderMineLayerWithImage(ctx, unit, centerX, centerY) {
   ctx.translate(centerX, centerY)
 
   // Image faces upward by default. Rotate so unit.direction=0 faces right.
-  const rotation = unit.direction - Math.PI / 2
+  const rotation = unit.direction + Math.PI / 2
   ctx.rotate(rotation)
 
   const scale = TILE_SIZE / Math.max(mineLayerImg.width, mineLayerImg.height)
