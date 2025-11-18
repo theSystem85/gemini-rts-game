@@ -38,9 +38,9 @@ function executeAction(unit, action, mapGrid, unitCommands) {
     case 'deployMine':
       // Move to deployment location, then deploy
       if (!unit.deployingMine) {
-        // Convert tile coordinates to world coordinates
-        const worldX = action.x * TILE_SIZE
-        const worldY = action.y * TILE_SIZE
+        // Convert tile coordinates to world coordinates (center of tile)
+        const worldX = action.x * TILE_SIZE + TILE_SIZE / 2
+        const worldY = action.y * TILE_SIZE + TILE_SIZE / 2
         unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
       }
       break
@@ -69,22 +69,33 @@ function isActionComplete(unit, action) {
     case 'deployMine':
       // Check if at deployment location and deployment is not in progress
       if (unit.deployingMine) return false
+      
+      // Check if unit is close to the target tile (within 0.5 tiles)
       const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
       const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-      const atLocation = unitTileX === action.x && unitTileY === action.y
-      if (atLocation && !unit.deployingMine) {
+      const distanceToTarget = Math.hypot(unitTileX - action.x, unitTileY - action.y)
+      const atLocation = distanceToTarget < 0.6 // Within ~0.6 tiles (accounting for formation spread)
+      
+      // Also check if unit has no path and no move target (movement complete)
+      const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
+      
+      if ((atLocation || movementComplete) && !unit.deployingMine) {
         // Start deployment
         startMineDeployment(unit, action.x, action.y, performance.now())
         return false
       }
-      return atLocation && !unit.deployingMine
+      return false // Keep command active until deployment completes
     case 'sweepArea':
       // Check if all tiles in path have been swept
       if (action.path && action.path.length > 0) {
         const currentTile = action.path[0]
         const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
         const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-        if (unitTileX === currentTile.x && unitTileY === currentTile.y) {
+        const distanceToTarget = Math.hypot(unitTileX - currentTile.x, unitTileY - currentTile.y)
+        const atTile = distanceToTarget < 0.6 // Within ~0.6 tiles
+        const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
+        
+        if (atTile || movementComplete) {
           action.path.shift() // Remove completed tile
           return action.path.length === 0
         }

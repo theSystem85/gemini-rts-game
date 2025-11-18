@@ -1,4 +1,4 @@
 {
-  "commit": "6e5eab7",
-  "message": "Fix coordinate transformation bug in mine deployment commands"
+  "commit": "99dddfe",
+  "message": "Fix Mine Layer HUD display and add deployment progress indicator"
 }
