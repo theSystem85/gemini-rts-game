@@ -32,6 +32,8 @@ import { updateTankerTruckLogic } from './game/tankerTruckLogic.js'
 import { updateAmmunitionTruckLogic } from './game/ammunitionTruckLogic.js'
 import { updateRecoveryTankLogic } from './game/recoveryTankSystem.js'
 import { updateMines } from './game/mineSystem.js'
+import { updateMineLayerBehavior } from './game/mineLayerBehavior.js'
+import { updateMineSweeperBehavior } from './game/mineSweeperBehavior.js'
 import { updateBuildings, updateTeslaCoilEffects } from './game/buildingSystem.js'
 import { cleanupSoundCooldowns } from './game/soundCooldownManager.js'
 import { processCommandQueues } from './game/commandQueue.js'
@@ -106,6 +108,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateAmmunitionTruckLogic(units, gameState, delta)
     // Update mine system (arming, etc.)
     updateMines(now)
+    // Update mine layer behavior (deployment, auto-refill)
+    updateMineLayerBehavior(units, now)
+    // Update mine sweeper behavior (sweeping mode, speed)
+    updateMineSweeperBehavior(units)
     // Handle self-repair for level 3 units
     units.forEach(unit => {
       handleSelfRepair(unit, now)
