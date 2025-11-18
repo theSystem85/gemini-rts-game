@@ -17,6 +17,7 @@ import {
 } from '../utils/layoutMetrics.js'
 import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
 import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
+import * as mineInput from './mineInputHandler.js'
 
 export class MouseHandler {
   constructor() {
@@ -573,6 +574,34 @@ export class MouseHandler {
       if (!this.wasDragging && (Math.abs(this.selectionEnd.x - this.selectionStart.x) > 3 || Math.abs(this.selectionEnd.y - this.selectionStart.y) > 3)) {
         this.wasDragging = true
       }
+
+      // Generate mine deployment or sweep preview during drag
+      if (this.wasDragging) {
+        const selectedUnits = gameState.selectedUnits || []
+        
+        // Mine Layer deployment preview (checkerboard pattern)
+        if (mineInput.hasMineLayerSelected(selectedUnits)) {
+          const area = {
+            startX: Math.floor(this.selectionStart.x / TILE_SIZE),
+            startY: Math.floor(this.selectionStart.y / TILE_SIZE),
+            endX: Math.floor(this.selectionEnd.x / TILE_SIZE),
+            endY: Math.floor(this.selectionEnd.y / TILE_SIZE)
+          }
+          gameState.mineDeploymentPreview = area
+          gameState.sweepAreaPreview = null
+        }
+        // Mine Sweeper sweep preview
+        else if (mineInput.hasMineSweeperSelected(selectedUnits)) {
+          const area = {
+            startX: Math.floor(this.selectionStart.x / TILE_SIZE),
+            startY: Math.floor(this.selectionStart.y / TILE_SIZE),
+            endX: Math.floor(this.selectionEnd.x / TILE_SIZE),
+            endY: Math.floor(this.selectionEnd.y / TILE_SIZE)
+          }
+          gameState.sweepAreaPreview = area
+          gameState.mineDeploymentPreview = null
+        }
+      }
     }
   }
 
@@ -728,8 +757,57 @@ export class MouseHandler {
       guardHandled = this.handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid)
     }
 
-    // If we handled Force Attack, skip normal selection/command processing
-    if (!forceAttackHandled && !guardHandled) {
+    // Handle mine deployment for Mine Layer units (Ctrl+Click)
+    let mineDeploymentHandled = false
+    if (selectedUnits.length > 0 && !this.wasDragging && e.ctrlKey && mineInput.hasMineLayerSelected(selectedUnits)) {
+      const tileX = Math.floor(worldX / TILE_SIZE)
+      const tileY = Math.floor(worldY / TILE_SIZE)
+      mineInput.handleMineLayerClick(selectedUnits, tileX, tileY, e.shiftKey)
+      mineDeploymentHandled = true
+      playSound('movement', 0.5)
+    }
+
+    // Handle area mine deployment or sweep operations (drag completed)
+    let mineAreaHandled = false
+    if (this.wasDragging && selectedUnits.length > 0) {
+      const area = {
+        startX: Math.floor(this.selectionStart.x / TILE_SIZE),
+        startY: Math.floor(this.selectionStart.y / TILE_SIZE),
+        endX: Math.floor(this.selectionEnd.x / TILE_SIZE),
+        endY: Math.floor(this.selectionEnd.y / TILE_SIZE)
+      }
+
+      // Mine Layer area deployment (not Ctrl - use regular drag)
+      if (!e.ctrlKey && mineInput.hasMineLayerSelected(selectedUnits)) {
+        mineInput.handleMineLayerAreaDeploy(selectedUnits, area, e.shiftKey)
+        mineAreaHandled = true
+        playSound('movement', 0.5)
+      }
+      // Mine Sweeper rectangle sweep (not Ctrl)
+      else if (!e.ctrlKey && mineInput.hasMineSweeperSelected(selectedUnits)) {
+        mineInput.handleMineSweeperRectangleSweep(selectedUnits, area, e.shiftKey)
+        mineAreaHandled = true
+        playSound('movement', 0.5)
+      }
+      // Mine Sweeper freeform sweep (Ctrl+Drag)
+      else if (e.ctrlKey && mineInput.hasMineSweeperSelected(selectedUnits) && gameState.mineFreeformPaint) {
+        mineInput.handleMineSweeperFreeformSweep(selectedUnits, gameState.mineFreeformPaint, e.shiftKey)
+        mineAreaHandled = true
+        playSound('movement', 0.5)
+        gameState.mineFreeformPaint = null
+      }
+    }
+
+    // Clear mine preview states
+    if (gameState.mineDeploymentPreview) {
+      gameState.mineDeploymentPreview = null
+    }
+    if (gameState.sweepAreaPreview) {
+      gameState.sweepAreaPreview = null
+    }
+
+    // If we handled Force Attack, Guard, or Mine operations, skip normal selection/command processing
+    if (!forceAttackHandled && !guardHandled && !mineDeploymentHandled && !mineAreaHandled) {
       // Normal selection and command handling - always check for unit selection first
       if (this.wasDragging) {
         selectionManager.handleBoundingBoxSelection(units, factories, selectedUnits, this.selectionStart, this.selectionEnd)
