@@ -1,3 +1,5 @@
+import { startMineDeployment } from './mineLayerBehavior.js'
+
 export function processCommandQueues(units, mapGrid, unitCommands) {
   units.forEach(unit => {
     if (!unit.commandQueue || unit.commandQueue.length === 0) return
@@ -32,6 +34,19 @@ function executeAction(unit, action, mapGrid, unitCommands) {
     case 'workshopRepair':
       unitCommands.handleWorkshopRepairHotkey([unit], mapGrid, false, true)
       break
+    case 'deployMine':
+      // Move to deployment location, then deploy
+      if (!unit.deployingMine) {
+        unitCommands.handleMovementCommand([unit], action.x, action.y, mapGrid, true)
+      }
+      break
+    case 'sweepArea':
+      // Move along sweep path
+      if (action.path && action.path.length > 0) {
+        const nextTile = action.path[0]
+        unitCommands.handleMovementCommand([unit], nextTile.x, nextTile.y, mapGrid, true)
+      }
+      break
   }
 }
 
@@ -44,6 +59,30 @@ function isActionComplete(unit, action) {
       return (!unit.target || unit.target.health <= 0) && (!unit.attackQueue || unit.attackQueue.length === 0)
     case 'workshopRepair':
       return !unit.targetWorkshop && !unit.repairingAtWorkshop && !unit.returningFromWorkshop && (!unit.moveTarget && (!unit.path || unit.path.length === 0))
+    case 'deployMine':
+      // Check if at deployment location and deployment is not in progress
+      if (unit.deployingMine) return false
+      const unitTileX = Math.floor((unit.x + 16) / 32) // TILE_SIZE/2
+      const unitTileY = Math.floor((unit.y + 16) / 32)
+      const atLocation = unitTileX === action.x && unitTileY === action.y
+      if (atLocation && !unit.deployingMine) {
+        // Start deployment
+        startMineDeployment(unit, action.x, action.y, performance.now())
+        return false
+      }
+      return atLocation && !unit.deployingMine
+    case 'sweepArea':
+      // Check if all tiles in path have been swept
+      if (action.path && action.path.length > 0) {
+        const currentTile = action.path[0]
+        const unitTileX = Math.floor((unit.x + 16) / 32)
+        const unitTileY = Math.floor((unit.y + 16) / 32)
+        if (unitTileX === currentTile.x && unitTileY === currentTile.y) {
+          action.path.shift() // Remove completed tile
+          return action.path.length === 0
+        }
+      }
+      return (!unit.path || unit.path.length === 0) && !unit.moveTarget
   }
   return true
 }
