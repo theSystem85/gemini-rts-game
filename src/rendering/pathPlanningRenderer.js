@@ -166,7 +166,7 @@ export class PathPlanningRenderer {
 
         // Special rendering for sweep area commands - show entire path
         if (action.type === 'sweepArea' && action.path && action.path.length > 0) {
-          // Render orange markers for each tile in the sweep path
+          // Render yellow markers for each tile in the sweep path (matching spec FR-019)
           let sweepPrevX = prevX
           let sweepPrevY = prevY
 
@@ -178,17 +178,17 @@ export class PathPlanningRenderer {
             const sweepScreenPrevX = sweepPrevX - scrollOffset.x
             const sweepScreenPrevY = sweepPrevY - scrollOffset.y
 
-            // Draw line from previous position
-            ctx.strokeStyle = 'rgba(255, 140, 0, 0.5)' // Orange line
+            // Draw line from previous position (yellow like other PPF markers)
+            ctx.strokeStyle = 'rgba(255, 165, 0, 0.5)' // Yellow line
             ctx.lineWidth = 1
             ctx.beginPath()
             ctx.moveTo(sweepScreenPrevX, sweepScreenPrevY)
             ctx.lineTo(sweepScreenX, sweepScreenY)
             ctx.stroke()
 
-            // Draw orange triangle marker
-            ctx.fillStyle = 'rgba(255, 140, 0, 0.6)' // Orange fill
-            ctx.strokeStyle = 'rgba(230, 100, 0, 0.9)' // Dark orange outline
+            // Draw yellow triangle marker (consistent with spec requirement for yellow markers)
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.6)' // Yellow fill
+            ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)' // Dark yellow outline
             ctx.beginPath()
             ctx.moveTo(sweepScreenX, sweepScreenY + half)
             ctx.lineTo(sweepScreenX - half, sweepScreenY - half)

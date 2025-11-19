@@ -1,4 +1,4 @@
 {
-  "commit": "833fcd7",
-  "message": "Add dust particle effects for Mine Sweeper sweeping mode"
+  "commit": "68fe687",
+  "message": "Add freeform sweep painting feature for Mine Sweeper (Ctrl+Drag)"
 }
