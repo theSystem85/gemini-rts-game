@@ -43,6 +43,7 @@ import {
   updateOreSpread,
   updateExplosions,
   updateSmokeParticles,
+  updateDustParticles,
   cleanupDestroyedUnits,
   updateUnitCollisions,
   updateGameTime,
@@ -110,8 +111,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateMines(now)
     // Update mine layer behavior (deployment, auto-refill)
     updateMineLayerBehavior(units, now)
-    // Update mine sweeper behavior (sweeping mode, speed)
-    updateMineSweeperBehavior(units)
+    // Update mine sweeper behavior (sweeping mode, speed, dust)
+    updateMineSweeperBehavior(units, gameState, now)
     // Handle self-repair for level 3 units
     units.forEach(unit => {
       handleSelfRepair(unit, now)
@@ -218,6 +219,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Explosion effects
     updateExplosions(gameState)
     updateSmokeParticles(gameState)
+    updateDustParticles(gameState)
 
     // Unit collision resolution
     updateUnitCollisions(units, mapGrid)

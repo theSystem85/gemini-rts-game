@@ -244,6 +244,41 @@ export function updateSmokeParticles(gameState) {
 }
 
 /**
+ * Updates dust particle effects
+ * @param {Object} gameState - Game state object
+ */
+export function updateDustParticles(gameState) {
+  const now = performance.now()
+
+  if (!gameState.dustParticles) return
+
+  for (let i = gameState.dustParticles.length - 1; i >= 0; i--) {
+    const p = gameState.dustParticles[i]
+
+    if (!p || typeof p.startTime !== 'number' || typeof p.lifetime !== 'number') {
+      gameState.dustParticles.splice(i, 1)
+      continue
+    }
+
+    const progress = (now - p.startTime) / p.lifetime
+    if (progress >= 1) {
+      gameState.dustParticles.splice(i, 1)
+      continue
+    } else {
+      // Update position
+      p.x += p.velocity.x
+      p.y += p.velocity.y
+
+      // Fade out alpha
+      p.alpha = 1 - progress
+      
+      // Expand size slightly
+      p.currentSize = p.size * (1 + progress * 0.5)
+    }
+  }
+}
+
+/**
  * Cleans up destroyed units from the game
  * @param {Array} units - Array of unit objects
  * @param {Object} gameState - Game state object

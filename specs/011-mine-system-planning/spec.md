@@ -11,6 +11,8 @@
 
 Introduce a complete land-mine gameplay system with two new units (Mine Layer truck and Mine Sweeper tank), new HUD indicators, area-deployment tooling, AI behaviors, and visual indicators that integrate with existing ammunition and gas mechanics. The Mine Layer deploys mines that block friendly pathing, damage units/buildings on contact, trigger chain reactions, and display skull overlays. The Mine Sweeper clears mines via planned sweep patterns without taking damage while sweeping. Enemy AI must leverage both units strategically.
 
+> **2025-11-19 Directive**: Resume implementation after Phase 5 with emphasis on finishing all optional steps and verifying Path Planning Feature (PPF) integration for both Mine Layer and Mine Sweeper command flows before advancing to subsequent phases.
+
 ---
 
 ## Image Assets

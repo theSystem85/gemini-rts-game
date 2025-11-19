@@ -207,6 +207,24 @@ export class EffectsRenderer {
     }
   }
 
+  renderDust(ctx, gameState, scrollOffset) {
+    if (gameState?.dustParticles && gameState.dustParticles.length > 0) {
+      gameState.dustParticles.forEach(p => {
+        ctx.save()
+        ctx.globalAlpha = p.alpha
+        const x = p.x - scrollOffset.x
+        const y = p.y - scrollOffset.y
+        const size = p.currentSize || p.size
+
+        ctx.fillStyle = p.color || '#D2B48C'
+        ctx.beginPath()
+        ctx.arc(x, y, size, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      })
+    }
+  }
+
   renderExplosions(ctx, gameState, scrollOffset) {
     // Draw explosion effects.
     if (gameState?.explosions && gameState?.explosions.length > 0) {
@@ -270,6 +288,7 @@ export class EffectsRenderer {
   render(ctx, bullets, gameState, units, scrollOffset) {
     this.renderBullets(ctx, bullets, scrollOffset)
     this.renderSmoke(ctx, gameState, scrollOffset)
+    this.renderDust(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
   }

@@ -124,6 +124,19 @@ export class PathPlanningRenderer {
             targetY = (nearest.y + nearest.height) * TILE_SIZE
             break
           }
+          case 'deployMine':
+            targetX = action.x * TILE_SIZE + TILE_SIZE / 2
+            targetY = action.y * TILE_SIZE + TILE_SIZE / 2
+            break
+          case 'sweepArea':
+            // For sweep area, we point to the first point in the path
+            if (action.path && action.path.length > 0) {
+              targetX = action.path[0].x * TILE_SIZE + TILE_SIZE / 2
+              targetY = action.path[0].y * TILE_SIZE + TILE_SIZE / 2
+            } else {
+              return // No path left
+            }
+            break
           case 'utility': {
             const t = action.target
             if (!t) return
@@ -153,6 +166,16 @@ export class PathPlanningRenderer {
         if (action.type !== 'utility') {
           ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
           ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
+          
+          // Custom colors for mine commands
+          if (action.type === 'deployMine') {
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines
+            ctx.strokeStyle = 'rgba(200, 0, 0, 0.9)'
+          } else if (action.type === 'sweepArea') {
+            ctx.fillStyle = 'rgba(200, 200, 50, 0.6)' // Yellowish for sweep
+            ctx.strokeStyle = 'rgba(180, 180, 0, 0.9)'
+          }
+
           ctx.beginPath()
           ctx.moveTo(screenX, screenY + half)
           ctx.lineTo(screenX - half, screenY - half)

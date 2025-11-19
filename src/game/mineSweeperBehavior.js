@@ -2,10 +2,12 @@
 import { UNIT_PROPERTIES } from '../config.js'
 
 /**
- * Update Mine Sweeper behaviors - sweeping mode toggle, speed modulation
+ * Update Mine Sweeper behaviors - sweeping mode toggle, speed modulation, dust emission
  * @param {Array} units - All game units
+ * @param {Object} gameState - Game state object
+ * @param {number} now - Current timestamp
  */
-export function updateMineSweeperBehavior(units) {
+export function updateMineSweeperBehavior(units, gameState, now) {
   units.forEach(unit => {
     if (unit.type !== 'mineSweeper') return
 
@@ -19,6 +21,19 @@ export function updateMineSweeperBehavior(units) {
     } else if (!isSweeping && unit.sweeping) {
       unit.sweeping = false
       unit.speed = unit.normalSpeed
+    }
+
+    // Generate dust if sweeping and moving
+    if (unit.sweeping && (unit.velocityX !== 0 || unit.velocityY !== 0)) {
+      // Limit dust emission rate (e.g., every 100ms)
+      if (!unit.lastDustTime || now - unit.lastDustTime > 100) {
+        const dust = generateSweepDust(unit, now)
+        if (dust) {
+          if (!gameState.dustParticles) gameState.dustParticles = []
+          gameState.dustParticles.push(dust)
+          unit.lastDustTime = now
+        }
+      }
     }
   })
 }

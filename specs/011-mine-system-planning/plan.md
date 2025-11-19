@@ -78,3 +78,12 @@ public/images/
 ## Complexity Tracking
 
 No constitution violations anticipated; table not required.
+
+## 2025-11-19 Status & Next Steps
+
+- **Phase 1 docs outstanding**: `quickstart.md` (T001) and `data-model.md` (T002) still missing; draft both before expanding implementation.
+- **Persistence gap**: Mines/payload/sweeper state are absent from `saveGame.js`, `loadGame.js`, and `savePlayerBuildPatterns.js` (T004/T021); design serialization schema that preserves owner, arming timers, `remainingMines`, and sweeper commands.
+- **Movement/safety rules**: Friendly avoidance currently relies on occupancy counts, blocking everyone; update `units.js` + `game/pathfinding.js` so only owner/allies treat own mines as blocked while enemies remain willing to path through (T006/T018).
+- **Mine Layer behavior polish**: Auto-refill sets `refillTarget` but never hands off to ammo system or resumes queued deployments; integrate with `ammunitionSystem` (T015/T031) and ensure HUD updates on refill completion.
+- **Mine Sweeper workflows**: Freeform painting states are never collected, `sweepArea` PPF visuals only show the first waypoint, and clearing mines simply deletes them without detonations; flesh out `mouseHandler` painting, `pathPlanningRenderer` polyline/indices, and `mineSystem` helpers that trigger explosions but grant sweepers immunity (T022–T026).
+- **Rendering/UI chores**: Render orange overlays for Ctrl-painted sweeps, persist preview data in `gameState`, and remove stray console logging to keep production clean.
