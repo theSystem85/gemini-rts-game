@@ -26,6 +26,7 @@
   - [ ] Add cheat codes `mine [party]` and `mines [WxH][gG]` so testers can drop a single mine or a patterned field (e.g., `mines 2x3g1` or shorthand `3x1` which equals `3x1g0`) and document the usage in specs.
     - Must also make sure enemy units trigger detonations when entering armed tiles and friendly units treat their own mine tiles as blocked in pathfinding/occupancy calculations.
     - Current focus: propagate owner-aware `findPath` options through AI behaviors/strategies and path caching so every path request knows the unit owner.
+  - [ ] Make the occupancy map player-aware: `o` cycles between `Players` and individual player views, shows a notification for the current overlay, and only highlights each party's mines on their own occupancy map.
   - Minesweeper uses gas only (no ammo), mine deploy indicators persist until destruction
   - Enemy AI deploys mines (ore fields + approach roads) once ammo factory + truck exist and fields ammo, AI builds sweeper units when mines destroy their units
     - [ ] Continue post-Phase-5 mine-system implementation per latest directive: finish optional steps, ensure Mine Layer and Mine Sweeper PPF flows are fully integrated before moving forward.

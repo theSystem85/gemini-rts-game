@@ -72,6 +72,7 @@
 - [ ] T019 [US3] Render skull overlays and active mine indicators via `src/rendering/mineRenderer.js` and call from `src/rendering/renderer.js`
 - [ ] T020 [US3] Apply remaining payload explosion on Mine Layer destruction in `src/game/gameStateManager.js` (cleanupDestroyedUnits) using helper from `mineSystem`
 - [ ] T021 [US3] Ensure save/load captures mine HP and state transitions in `src/saveGame.js` and `src/loadGame.js`
+- [ ] T021a [US3] Make the occupancy overlay toggle cycles through `Players` and individual players when pressing `o`, shows which view is active, and highlights that player's mines only on their own occupancy map so mining zones stay private.
 
 ---
 

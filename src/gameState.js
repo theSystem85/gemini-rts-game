@@ -53,6 +53,8 @@ export const gameState = {
   factories: [], // Add factories array to gameState
   mapGrid: [], // Add mapGrid array to gameState
   occupancyMap: [], // Global occupancy map updated incrementally
+  occupancyMapViewIndex: 0,
+  occupancyMapViewMode: 'off',
   powerSupply: 0,
   // Separate power tracking for each side
   playerPowerSupply: 0,

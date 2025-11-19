@@ -603,26 +603,43 @@ export class MapRenderer {
   }
 
   renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState) {
-    // Draw occupancy map overlay only if enabled
-    if (gameState.occupancyVisible && occupancyMap) {
-      // Set up the red glow effect
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.3)' // Semi-transparent red
+    if (!gameState.occupancyVisible || !occupancyMap) return
 
-      // Draw occupied tiles with red glow
-      for (let y = startTileY; y < endTileY; y++) {
-        for (let x = startTileX; x < endTileX; x++) {
-          // Check bounds
-          if (y >= 0 && y < occupancyMap.length && x >= 0 && x < occupancyMap[0].length) {
-            // Only draw if tile is occupied
-            if (occupancyMap[y][x]) {
-              const tileX = Math.floor(x * TILE_SIZE - scrollOffset.x)
-              const tileY = Math.floor(y * TILE_SIZE - scrollOffset.y)
-              ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE)
-            }
-          }
+    const mode = gameState.occupancyMapViewMode || 'players'
+    const mineOverlay = this.buildMineOverlay(mode, gameState.mines)
+
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        if (y < 0 || y >= occupancyMap.length || x < 0 || x >= occupancyMap[0].length) continue
+
+        const tileOccupied = Boolean(occupancyMap[y][x])
+        const tileKey = `${x},${y}`
+        const mineBlocked = mineOverlay && mineOverlay.has(tileKey)
+        if (tileOccupied || mineBlocked) {
+          const tileX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+          const tileY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+          ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE)
         }
       }
     }
+  }
+
+  buildMineOverlay(mode, mines) {
+    if (!mode || mode === 'off' || !Array.isArray(mines) || mines.length === 0) return null
+
+    const overlay = new Set()
+    const showAll = mode === 'players'
+    const specialOwner = showAll ? null : mode
+
+    mines.forEach(mine => {
+      if (!mine || !mine.active) return
+      if (showAll || mine.owner === specialOwner) {
+        overlay.add(`${mine.tileX},${mine.tileY}`)
+      }
+    })
+
+    return overlay
   }
 
   render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null) {
