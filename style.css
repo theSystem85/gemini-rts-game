@@ -988,6 +988,10 @@ body.mobile-landscape .energy-bar-value {
 }
 
 body.mobile-landscape #moneyBarContainer {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none;
+  opacity: 0;
   height: 28px; /* Same as energy bar for mobile */
   background: transparent;
   overflow: visible;
