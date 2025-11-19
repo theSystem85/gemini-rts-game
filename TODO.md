@@ -22,6 +22,9 @@
     - dust animation while sweeping, negates mine damage while sweeping
   - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines
   - [ ] Owner-aware mine avoidance (in progress 2025-11-19): ensure occupancy/pathfinding/movement block only the owning party while other players can traverse and trigger mines.
+  - [ ] Adjust mine explosions so damage falls off over a 2-tile radius (full damage on the mine tile down to zero at the border) instead of targeting individual orthogonal tiles.
+  - [ ] Add cheat codes `mine [party]` and `mines [WxH][gG]` so testers can drop a single mine or a patterned field (e.g., `mines 2x3g1` or shorthand `3x1` which equals `3x1g0`) and document the usage in specs.
+    - Must also make sure enemy units trigger detonations when entering armed tiles and friendly units treat their own mine tiles as blocked in pathfinding/occupancy calculations.
     - Current focus: propagate owner-aware `findPath` options through AI behaviors/strategies and path caching so every path request knows the unit owner.
   - Minesweeper uses gas only (no ammo), mine deploy indicators persist until destruction
   - Enemy AI deploys mines (ore fields + approach roads) once ammo factory + truck exist and fields ammo, AI builds sweeper units when mines destroy their units

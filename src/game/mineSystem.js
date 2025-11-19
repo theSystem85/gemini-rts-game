@@ -5,7 +5,7 @@ import {
   TILE_SIZE,
   MINE_HEALTH,
   MINE_DAMAGE_CENTER,
-  MINE_DAMAGE_ORTHOGONAL,
+  MINE_EXPLOSION_RADIUS,
   MINE_ARM_DELAY
 } from '../config.js'
 
@@ -120,22 +120,30 @@ export function detonateMine(mine, units, buildings) {
     duration: 300
   })
 
-  // Apply damage to center tile (90 damage)
-  applyMineDamageToTile(mine.tileX, mine.tileY, MINE_DAMAGE_CENTER, units, buildings)
+  const radius = Math.max(0, MINE_EXPLOSION_RADIUS)
+  const maxOffset = Math.ceil(radius)
+  const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
+  const mapWidth = mapGrid.length > 0 ? mapGrid[0].length : 0
+  const mapHeight = mapGrid.length
+  const hasBounds = mapWidth > 0 && mapHeight > 0
 
-  // Apply damage to orthogonal neighbors (50 damage each)
-  const orthogonalOffsets = [
-    { dx: 0, dy: -1 },  // North
-    { dx: 1, dy: 0 },   // East
-    { dx: 0, dy: 1 },   // South
-    { dx: -1, dy: 0 }   // West
-  ]
-
-  orthogonalOffsets.forEach(({ dx, dy }) => {
-    const neighborX = mine.tileX + dx
-    const neighborY = mine.tileY + dy
-    applyMineDamageToTile(neighborX, neighborY, MINE_DAMAGE_ORTHOGONAL, units, buildings)
-  })
+  for (let dx = -maxOffset; dx <= maxOffset; dx++) {
+    for (let dy = -maxOffset; dy <= maxOffset; dy++) {
+      const targetX = mine.tileX + dx
+      const targetY = mine.tileY + dy
+      if (hasBounds && (targetX < 0 || targetY < 0 || targetX >= mapWidth || targetY >= mapHeight)) {
+        continue
+      }
+      const distance = Math.hypot(dx, dy)
+      if (distance > radius) {
+        continue
+      }
+      const falloff = radius > 0 ? Math.max(0, 1 - distance / radius) : 1
+      const damage = MINE_DAMAGE_CENTER * falloff
+      if (damage <= 0) continue
+      applyMineDamageToTile(targetX, targetY, damage, units, buildings)
+    }
+  }
 
   // Remove the detonated mine
   const mineIndex = gameState.mines.indexOf(mine)
@@ -157,7 +165,8 @@ export function detonateMine(mine, units, buildings) {
  * @param {array} buildings - Array of all buildings
  */
 function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
-  // Damage units on this tile
+  if (damage <= 0) return
+
   units.forEach(unit => {
     const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)

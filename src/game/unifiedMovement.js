@@ -938,6 +938,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE))
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE))
 
+  const tileChanged = prevTileX !== unit.tileX || prevTileY !== unit.tileY
+  if (tileChanged) {
+    const buildings = gameState?.buildings || []
+    checkMineDetonation(unit, unit.tileX, unit.tileY, units, buildings)
+  }
+
   if (unit.type === 'apache') {
     updateApacheFlightState(unit, movement, occupancyMap, now)
   }

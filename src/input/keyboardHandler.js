@@ -1,7 +1,7 @@
 // keyboardHandler.js
 import { gameState } from '../gameState.js'
 import { TILE_SIZE } from '../config.js'
-import { findPath } from '../units.js'
+import { findPathForOwner } from '../units.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
@@ -673,7 +673,13 @@ export class KeyboardHandler {
         unit.dodgeEndTime = performance.now() + 3000 // Dodge lasts up to 3 seconds
 
         // Compute a new path to the dodge destination
-        const newPath = findPath({ x: tileX, y: tileY }, dodgeTarget, mapGrid, null)
+        const newPath = findPathForOwner(
+          { x: tileX, y: tileY },
+          dodgeTarget,
+          mapGrid,
+          null,
+          unit.owner
+        )
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
           dodgeSuccessCount++

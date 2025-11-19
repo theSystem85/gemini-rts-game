@@ -458,6 +458,15 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   return smoothPath(chosenPath, mapGrid, occupancyMap, pathContext)
 })
 
+export function findPathForOwner(start, end, mapGrid, occupancyMap = null, owner = null, options = null) {
+  const startNode = (owner && start)
+    ? { ...start, owner }
+    : start
+  const baseOptions = owner ? { unitOwner: owner } : {}
+  const mergedOptions = options ? { ...baseOptions, ...options } : baseOptions
+  return findPath(startNode, end, mapGrid, occupancyMap, undefined, mergedOptions)
+}
+
 function isTileWithinBounds(mapGrid, x, y) {
   return y >= 0 && y < mapGrid.length && x >= 0 && x < mapGrid[0].length
 }

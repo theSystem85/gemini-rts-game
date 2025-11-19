@@ -1011,8 +1011,8 @@ export function setAmmoFactoryParticleCount(value) {
 // Mine system constants
 export let MINE_CAPACITY = 20 // Mine Layer payload capacity
 export let MINE_HEALTH = 10 // Health points of deployed mine
-export let MINE_DAMAGE_CENTER = 90 // Damage on mine tile
-export let MINE_DAMAGE_ORTHOGONAL = 50 // Damage on adjacent orthogonal tiles
+export let MINE_DAMAGE_CENTER = 90 // Maximum damage at the mine tile
+export let MINE_EXPLOSION_RADIUS = 2 // Tile radius over which damage falls off
 export let MINE_DEPLOY_STOP_TIME = 4000 // ms Mine Layer must stop to deploy
 export let MINE_ARM_DELAY = 4000 // ms delay after truck vacates before mine arms
 
@@ -1028,16 +1028,16 @@ export function setMineDamageCenter(value) {
   MINE_DAMAGE_CENTER = value
 }
 
-export function setMineDamageOrthogonal(value) {
-  MINE_DAMAGE_ORTHOGONAL = value
-}
-
 export function setMineDeployStopTime(value) {
   MINE_DEPLOY_STOP_TIME = value
 }
 
 export function setMineArmDelay(value) {
   MINE_ARM_DELAY = value
+}
+
+export function setMineExplosionRadius(value) {
+  MINE_EXPLOSION_RADIUS = value
 }
 
 export let AMMO_PARTICLE_DAMAGE = 40 // average damage per ammunition particle

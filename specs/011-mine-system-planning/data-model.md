@@ -16,9 +16,12 @@ This file captures the additional entities and fields required to support mines,
 
 **Derived data**: Rendering uses `gameState.mines` directly (skull overlays); occupancy/pathfinding treat tiles as blocked for the owning player once the mine is active.
 
+**Explosion radius**: Mine detonations now examine every tile within a 2-tile radius (`MINE_EXPLOSION_RADIUS`) and apply damage that fades linearly from 100% on the origin tile down to 0% on the boundary. Units, buildings, and adjacent mines all receive scaled damage depending on their distance to the blast center, so overlapping mines or clustered units feel the same explosive field irrespective of whether they are orthogonal or diagonal neighbors.
+
 **Friendly avoidance lookup**: `mineSystem` maintains a tile-keyed lookup map rebuilt after loads so helpers such as `isFriendlyMineBlocking(tileX, tileY, owner)` can run in O(1). Pathfinding, movement, and collision checks call this helper to block only the owning party while keeping enemy routes passable (so they can intentionally drive through and trigger detonations).
 
 - All modules that call `findPath` / `getCachedPath` must pass `{ unitOwner: <ownerId> }` (or set `start.owner`) so the helper knows whose mines to consider. This includes AI strategies, logistic scripts (harvesters, tankers, ammo trucks), and ambulance/hospital flows. Tracking this requirement here keeps the implementation work visible while propagation is still in progress.
+  - Movement/collision/retreat systems must also trigger mine detonation whenever a tile with an armed mine is entered by a non-owner so enemies provoke explosions, while friendly units skip damage and respect the kinetic safe path checks.
 
 ## Mine Layer Unit Extensions
 
@@ -92,3 +95,8 @@ Two new action payloads live in each unit’s `commandQueue`/`currentCommand`:
 3. **`savePlayerBuildPatterns.js` / `savePlayerBuildPatterns` consumer**: Only needs awareness of new building/unit unlock side effects; no schema change required, but document that mine-related unlocks should append to the same history array so analytics remain intact.
 
 With this data model solidified, subsequent tasks (persistence wiring, owner-aware avoidance, PPF rendering) have an explicit contract to target.
+
+## Cheat Command Support
+
+- Add a `mine [party]` cheat command to the existing `/cheatSystem.js` console. The command should deploy an armed mine at the current cursor tile, defaulting to the human player's party if no argument is provided, and enforce the same tile validity rules as regular deployments so it is useful for testing owner-aware mine behavior without breaking the data model.
+- Introduce a companion `mines [WxH][gG] [party]` (or direct `WxHgG`) command that drops a rectangular pattern of mines relative to the cursor. The `g` suffix defines the spacing between mines, so `mines 2x3g1` creates a 2×3 grid with one empty tile gap, while `mines 3x1` (shorthand for `3x1g0`) spawns three contiguous mines. This command should reuse the same validations, notify success/skipped tiles, and allow an optional party alias so the field can be placed for any owner during testing.
