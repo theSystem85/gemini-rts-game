@@ -686,7 +686,10 @@ body.mobile-landscape #mobileEnergyValue {
 }
 
 body.mobile-landscape #energyBarContainer {
-  display: none;
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none;
+  opacity: 0;
 }
 
 body.mobile-landscape #gameCanvas {
