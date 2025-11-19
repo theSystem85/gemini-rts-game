@@ -169,7 +169,7 @@ export class PathPlanningRenderer {
           // Render orange markers for each tile in the sweep path
           let sweepPrevX = prevX
           let sweepPrevY = prevY
-          
+
           action.path.forEach((tile, pathIdx) => {
             const sweepX = tile.x * TILE_SIZE + TILE_SIZE / 2
             const sweepY = tile.y * TILE_SIZE + TILE_SIZE / 2
@@ -225,7 +225,7 @@ export class PathPlanningRenderer {
         } else if (action.type !== 'utility') {
           // Standard marker for other command types
           const isDeployMine = action.type === 'deployMine'
-          
+
           // Yellow for normal commands, slightly different yellow for mine deployment
           ctx.fillStyle = isDeployMine ? 'rgba(255, 200, 0, 0.7)' : 'rgba(255, 165, 0, 0.6)'
           ctx.strokeStyle = isDeployMine ? 'rgba(230, 180, 0, 0.9)' : 'rgba(230, 150, 0, 0.9)'
@@ -243,7 +243,7 @@ export class PathPlanningRenderer {
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
-          
+
           prevX = targetX
           prevY = targetY
         } else {

@@ -1,11 +1,13 @@
 // mineSweeperBehavior.js - Mine Sweeper unit behaviors
-import { UNIT_PROPERTIES } from '../config.js'
+import { UNIT_PROPERTIES, TILE_SIZE } from '../config.js'
 
 /**
- * Update Mine Sweeper behaviors - sweeping mode toggle, speed modulation
+ * Update Mine Sweeper behaviors - sweeping mode toggle, speed modulation, dust particles
  * @param {Array} units - All game units
+ * @param {number} now - Current timestamp
+ * @param {object} gameState - Game state for particle emission
  */
-export function updateMineSweeperBehavior(units) {
+export function updateMineSweeperBehavior(units, now, gameState) {
   units.forEach(unit => {
     if (unit.type !== 'mineSweeper') return
 
@@ -20,7 +22,46 @@ export function updateMineSweeperBehavior(units) {
       unit.sweeping = false
       unit.speed = unit.normalSpeed
     }
+
+    // Generate dust particles while sweeping and moving
+    if (unit.sweeping && (unit.path && unit.path.length > 0 || unit.moveTarget)) {
+      // Emit dust particles at regular intervals
+      if (!unit.lastDustEmit || now - unit.lastDustEmit > 100) { // Every 100ms
+        const dustParticle = generateSweepDust(unit, now)
+        if (dustParticle && gameState) {
+          // Use the smoke particle system for dust
+          emitDustParticle(gameState, dustParticle)
+        }
+        unit.lastDustEmit = now
+      }
+    }
   })
+}
+
+/**
+ * Emit a dust particle (using smoke particle system with dust-like properties)
+ * @param {object} gameState - Game state
+ * @param {object} dustData - Dust particle data
+ */
+function emitDustParticle(gameState, dustData) {
+  if (!gameState.smokeParticles) {
+    gameState.smokeParticles = []
+  }
+
+  // Create a dust particle using the smoke particle structure but with dust-like properties
+  const particle = {
+    x: dustData.x,
+    y: dustData.y,
+    vx: dustData.velocity.x,
+    vy: dustData.velocity.y - 0.3, // Slight upward drift
+    size: dustData.size,
+    startTime: dustData.startTime,
+    duration: dustData.lifetime,
+    alpha: 0.4, // More transparent than smoke
+    color: dustData.color // Tan/sandy color for dust
+  }
+
+  gameState.smokeParticles.push(particle)
 }
 
 /**
@@ -111,7 +152,6 @@ export function calculateFreeformSweepPath(paintedTiles) {
 export function generateSweepDust(unit, now) {
   if (!unit.sweeping) return null
 
-  const TILE_SIZE = 32 // Should import from config but avoiding circular dependency
   const dustOffsetDistance = TILE_SIZE * 0.8
 
   // Calculate position in front of unit based on direction

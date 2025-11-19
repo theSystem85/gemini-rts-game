@@ -110,8 +110,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     updateMines(now)
     // Update mine layer behavior (deployment, auto-refill)
     updateMineLayerBehavior(units, now)
-    // Update mine sweeper behavior (sweeping mode, speed)
-    updateMineSweeperBehavior(units)
+    // Update mine sweeper behavior (sweeping mode, speed, dust particles)
+    updateMineSweeperBehavior(units, now, gameState)
     // Handle self-repair for level 3 units
     units.forEach(unit => {
       handleSelfRepair(unit, now)

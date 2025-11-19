@@ -179,12 +179,28 @@ export class EffectsRenderer {
         // Ensure size is positive for gradient creation
         const safeSize = Math.max(0.1, p.size)
 
-        // Create a more balanced gradient
+        // Support custom color for dust particles, default to smoke gray
+        const particleColor = p.color || 'gray'
+
+        // Parse color and create gradient based on it
+        let baseR, baseG, baseB
+        if (particleColor.startsWith('#')) {
+          // Hex color (e.g., #D2B48C for tan/dust)
+          const hex = particleColor.slice(1)
+          baseR = parseInt(hex.slice(0, 2), 16)
+          baseG = parseInt(hex.slice(2, 4), 16)
+          baseB = parseInt(hex.slice(4, 6), 16)
+        } else {
+          // Default gray for smoke
+          baseR = baseG = baseB = 70
+        }
+
+        // Create a more balanced gradient with custom color
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, safeSize)
-        gradient.addColorStop(0, 'rgba(70,70,70,0.7)') // Slightly lighter center
-        gradient.addColorStop(0.4, 'rgba(85,85,85,0.5)') // Mid-tone
-        gradient.addColorStop(0.8, 'rgba(100,100,100,0.3)') // Lighter edge
-        gradient.addColorStop(1, 'rgba(110,110,110,0)') // Transparent edge
+        gradient.addColorStop(0, `rgba(${baseR},${baseG},${baseB},0.7)`)
+        gradient.addColorStop(0.4, `rgba(${Math.min(baseR + 15, 255)},${Math.min(baseG + 15, 255)},${Math.min(baseB + 15, 255)},0.5)`)
+        gradient.addColorStop(0.8, `rgba(${Math.min(baseR + 30, 255)},${Math.min(baseG + 30, 255)},${Math.min(baseB + 30, 255)},0.3)`)
+        gradient.addColorStop(1, `rgba(${Math.min(baseR + 40, 255)},${Math.min(baseG + 40, 255)},${Math.min(baseB + 40, 255)},0)`)
 
         ctx.fillStyle = gradient
         ctx.beginPath()
@@ -192,11 +208,14 @@ export class EffectsRenderer {
         ctx.fill()
 
         // Add a more subtle dark core
-        ctx.globalAlpha = p.alpha * 0.4 // Reduced opacity for core
-        const coreSize = Math.max(0.1, safeSize * 0.25) // Ensure core size is also positive
+        ctx.globalAlpha = p.alpha * 0.4
+        const coreSize = Math.max(0.1, safeSize * 0.25)
         const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize)
-        coreGradient.addColorStop(0, 'rgba(50,50,50,0.6)') // Lighter dark core
-        coreGradient.addColorStop(1, 'rgba(50,50,50,0)')
+        const coreR = Math.max(baseR - 20, 0)
+        const coreG = Math.max(baseG - 20, 0)
+        const coreB = Math.max(baseB - 20, 0)
+        coreGradient.addColorStop(0, `rgba(${coreR},${coreG},${coreB},0.6)`)
+        coreGradient.addColorStop(1, `rgba(${coreR},${coreG},${coreB},0)`)
         ctx.fillStyle = coreGradient
         ctx.beginPath()
         ctx.arc(x, y, coreSize, 0, Math.PI * 2)
