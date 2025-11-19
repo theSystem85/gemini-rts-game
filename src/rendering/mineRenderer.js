@@ -146,3 +146,26 @@ export function renderSweepAreaPreview(ctx, area, scrollOffset) {
 
   ctx.restore()
 }
+
+/**
+ * Render preview overlay for freeform painted sweep tiles
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {Set} paintedTiles - Set of painted tile coordinates as "x,y" strings
+ * @param {object} scrollOffset - Current scroll offset {x, y}
+ */
+export function renderFreeformSweepPreview(ctx, paintedTiles, scrollOffset) {
+  if (!paintedTiles || paintedTiles.size === 0) return
+
+  ctx.save()
+  ctx.globalAlpha = 0.3
+  ctx.fillStyle = '#FF8800' // Orange
+
+  paintedTiles.forEach(tileKey => {
+    const [x, y] = tileKey.split(',').map(Number)
+    const screenX = x * TILE_SIZE - scrollOffset.x
+    const screenY = y * TILE_SIZE - scrollOffset.y
+    ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+  })
+
+  ctx.restore()
+}

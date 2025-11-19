@@ -578,7 +578,7 @@ export class MouseHandler {
       // Generate mine deployment or sweep preview during drag
       if (this.wasDragging) {
         const selectedUnits = gameState.selectedUnits || []
-        
+
         // Mine Layer deployment preview (checkerboard pattern)
         if (mineInput.hasMineLayerSelected(selectedUnits)) {
           const area = {
@@ -589,8 +589,26 @@ export class MouseHandler {
           }
           gameState.mineDeploymentPreview = area
           gameState.sweepAreaPreview = null
+          gameState.mineFreeformPaint = null
         }
-        // Mine Sweeper sweep preview
+        // Mine Sweeper freeform sweep preview (Ctrl+Drag paints tiles)
+        else if (e.ctrlKey && mineInput.hasMineSweeperSelected(selectedUnits)) {
+          // Initialize freeform paint set if needed
+          if (!gameState.mineFreeformPaint) {
+            gameState.mineFreeformPaint = new Set()
+          }
+
+          // Add current tile to painted tiles
+          const currentTileX = Math.floor(worldX / TILE_SIZE)
+          const currentTileY = Math.floor(worldY / TILE_SIZE)
+          const tileKey = `${currentTileX},${currentTileY}`
+          gameState.mineFreeformPaint.add(tileKey)
+
+          // Clear other previews
+          gameState.sweepAreaPreview = null
+          gameState.mineDeploymentPreview = null
+        }
+        // Mine Sweeper rectangle sweep preview (normal drag)
         else if (mineInput.hasMineSweeperSelected(selectedUnits)) {
           const area = {
             startX: Math.floor(this.selectionStart.x / TILE_SIZE),
@@ -600,6 +618,7 @@ export class MouseHandler {
           }
           gameState.sweepAreaPreview = area
           gameState.mineDeploymentPreview = null
+          gameState.mineFreeformPaint = null
         }
       }
     }
