@@ -257,6 +257,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 
 ## Bugs
 - [x] Hide the desktop energy bar while in the mobile landscape layout so only the dedicated mobile status bar energy indicator is visible.
+- [x] Hide the desktop money bar while in the mobile landscape layout so only the dedicated mobile HUD money indicator is visible.
 - [x] Ensure the standalone/PWA mobile landscape layout can scroll upward while dragging to build and does not leave a stray black bar along the bottom edge of the viewport.
 - [x] Enemy units seem to aim at my units but they do not attack (means fire) at my units when in range. Also they do not fire at my buildings when the attack my base.
 - [x] initial building factory is still treated differently than other buildings. For example the health bar is not changing color when low or it does not have the party flag like other buildings. Ensure the there is not separate redundant code for the initial factory since it should be the same as any other later build additional building factory. Ensure when the map is generated with that factory already there is is as if the user has build the factory there. Before you make code changes make sure to find out everything so far what is different about the initial building factory compared to the ones that can be build later by the user. Then refactor the code to make everything coherent.
