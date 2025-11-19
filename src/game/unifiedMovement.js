@@ -78,7 +78,7 @@ function calculatePositionalAudio(x, y) {
  * @param {number} tileX - Tile X coordinate
  * @param {number} tileY - Tile Y coordinate
  */
-function checkMineDetonation(unit, tileX, tileY) {
+function checkMineDetonation(unit, tileX, tileY, units, buildings) {
   const mine = getMineAtTile(tileX, tileY)
   
   // Only detonate if mine is active and unit is not in sweeping mode
@@ -86,10 +86,10 @@ function checkMineDetonation(unit, tileX, tileY) {
     // Mine sweepers can safely trigger mines while sweeping
     if (unit.type === 'mineSweeper' && unit.sweeping) {
       // Detonation happens but doesn't damage the sweeper
-      detonateMine(mine, gameState.units, gameState.buildings)
+      detonateMine(mine, units, buildings)
     } else {
       // Normal detonation - damages everything including the unit
-      detonateMine(mine, gameState.units, gameState.buildings)
+      detonateMine(mine, units, buildings)
     }
   }
 }
@@ -639,7 +639,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       unit.tileY = nextTile.y
 
       // Check for mine detonation when unit enters new tile
-      checkMineDetonation(unit, nextTile.x, nextTile.y)
+      checkMineDetonation(unit, nextTile.x, nextTile.y, units, gameState.buildings)
 
       // If no more waypoints, start deceleration
       if (unit.path.length === 0) {

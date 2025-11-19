@@ -47,6 +47,12 @@ export function deployMine(tileX, tileY, owner) {
 
   const mine = createMine(tileX, tileY, owner)
   gameState.mines.push(mine)
+
+  // Update occupancy map to block pathfinding through this mine
+  if (gameState.occupancyMap && gameState.occupancyMap[tileY] && gameState.occupancyMap[tileY][tileX] !== undefined) {
+    gameState.occupancyMap[tileY][tileX] = (gameState.occupancyMap[tileY][tileX] || 0) + 1
+  }
+
   return mine
 }
 
@@ -125,6 +131,11 @@ export function detonateMine(mine, units, buildings) {
   const mineIndex = gameState.mines.indexOf(mine)
   if (mineIndex !== -1) {
     gameState.mines.splice(mineIndex, 1)
+
+    // Update occupancy map to unblock pathfinding
+    if (gameState.occupancyMap && gameState.occupancyMap[mine.tileY] && gameState.occupancyMap[mine.tileY][mine.tileX] !== undefined) {
+      gameState.occupancyMap[mine.tileY][mine.tileX] = Math.max(0, (gameState.occupancyMap[mine.tileY][mine.tileX] || 0) - 1)
+    }
   }
 
   // Check for chain reactions with adjacent mines
@@ -204,6 +215,11 @@ export function removeMine(mine) {
   const index = gameState.mines.indexOf(mine)
   if (index !== -1) {
     gameState.mines.splice(index, 1)
+
+    // Update occupancy map to unblock pathfinding
+    if (gameState.occupancyMap && gameState.occupancyMap[mine.tileY] && gameState.occupancyMap[mine.tileY][mine.tileX] !== undefined) {
+      gameState.occupancyMap[mine.tileY][mine.tileX] = Math.max(0, (gameState.occupancyMap[mine.tileY][mine.tileX] || 0) - 1)
+    }
   }
 }
 

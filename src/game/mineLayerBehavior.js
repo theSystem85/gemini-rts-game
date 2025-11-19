@@ -37,6 +37,10 @@ export function updateMineLayerBehavior(units, now) {
             unit.remainingMines--
             unit.deployingMine = false
             unit.deployStartTime = null
+            unit.deploymentCompleted = true // Mark deployment as completed
+            
+            // Move away from the mined tile to avoid triggering the mine
+            moveAwayFromMinedTile(unit, tileCenterX, tileCenterY)
             
             // Check if we need to auto-refill
             if (unit.remainingMines === 0 && unit.commandQueue && unit.commandQueue.length > 0) {
@@ -44,14 +48,15 @@ export function updateMineLayerBehavior(units, now) {
               initiateAutoRefill(unit)
             }
           } else {
-            // Failed to deploy (maybe already a mine there)
             unit.deployingMine = false
             unit.deployStartTime = null
+            unit.deploymentCompleted = true // Mark as completed even on failure
           }
         } else {
           // Out of mines
           unit.deployingMine = false
           unit.deployStartTime = null
+          unit.deploymentCompleted = true // Mark as completed
           initiateAutoRefill(unit)
         }
       }
@@ -68,7 +73,9 @@ export function updateMineLayerBehavior(units, now) {
  * @returns {boolean} True if deployment started
  */
 export function startMineDeployment(unit, tileX, tileY, now) {
-  if (unit.type !== 'mineLayer') return false
+  if (unit.type !== 'mineLayer') {
+    return false
+  }
   if (unit.remainingMines <= 0) {
     initiateAutoRefill(unit)
     return false
@@ -78,6 +85,7 @@ export function startMineDeployment(unit, tileX, tileY, now) {
   unit.deployStartTime = now
   unit.deployTargetX = tileX
   unit.deployTargetY = tileY
+  unit.deploymentCompleted = false // Reset completion flag
 
   // Stop unit movement during deployment
   unit.path = []
@@ -168,10 +176,97 @@ function initiateAutoRefill(unit) {
 }
 
 /**
- * Check if Mine Layer needs mine refill
+ * Move Mine Layer away from a newly mined tile to avoid triggering it
  * @param {object} unit - Mine Layer unit
- * @returns {boolean} True if needs refill
+ * @param {number} minedTileX - X coordinate of the mined tile
+ * @param {number} minedTileY - Y coordinate of the mined tile
  */
-export function needsMineRefill(unit) {
-  return unit.type === 'mineLayer' && unit.remainingMines === 0
+function moveAwayFromMinedTile(unit, minedTileX, minedTileY) {
+  // Find adjacent tiles (up to 1 tile away in any direction)
+  const adjacentOffsets = [
+    { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
+    { x: -1, y: 0 },                     { x: 1, y: 0 },
+    { x: -1, y: 1 },  { x: 0, y: 1 },  { x: 1, y: 1 }
+  ]
+
+  // Shuffle the offsets to randomize direction preference
+  const shuffledOffsets = [...adjacentOffsets].sort(() => Math.random() - 0.5)
+
+  for (const offset of shuffledOffsets) {
+    const targetTileX = minedTileX + offset.x
+    const targetTileY = minedTileY + offset.y
+
+    // Check if this tile is safe (no mines, within map bounds, not blocked)
+    const isSafe = isTileSafeForMineLayer(targetTileX, targetTileY)
+
+    if (isSafe) {
+      // Move to this safe tile
+      const worldX = targetTileX * TILE_SIZE + TILE_SIZE / 2
+      const worldY = targetTileY * TILE_SIZE + TILE_SIZE / 2
+
+      unit.moveTarget = { x: targetTileX, y: targetTileY }
+      unit.path = [] // Clear any existing path
+
+      // Calculate simple path to the target
+      const currentTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const currentTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+      if (currentTileX !== targetTileX || currentTileY !== targetTileY) {
+        unit.path = [{ x: targetTileX, y: targetTileY }]
+      }
+
+      break // Found a safe tile, stop looking
+    }
+  }
+}
+
+/**
+ * Check if a tile is safe for Mine Layer movement (no mines, within bounds, not blocked)
+ * @param {number} tileX - Tile X coordinate
+ * @param {number} tileY - Tile Y coordinate
+ * @returns {boolean} True if tile is safe
+ */
+function isTileSafeForMineLayer(tileX, tileY) {
+  // Check map bounds
+  if (tileX < 0 || tileY < 0 || tileX >= gameState.mapTilesX || tileY >= gameState.mapTilesY) {
+    return false
+  }
+
+  // Check for existing mines
+  if (gameState.mines) {
+    const hasMine = gameState.mines.some(mine =>
+      mine.x === tileX && mine.y === tileY && mine.active
+    )
+    if (hasMine) {
+      return false
+    }
+  }
+
+  // Check map grid for blocking terrain
+  if (gameState.mapGrid && gameState.mapGrid[tileY] && gameState.mapGrid[tileY][tileX]) {
+    const tile = gameState.mapGrid[tileY][tileX]
+    if (typeof tile === 'number') {
+      if (tile === 1) return false // Rock
+    } else {
+      if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+        return false
+      }
+    }
+  }
+
+  // Check for buildings
+  if (gameState.buildings) {
+    const hasBuilding = gameState.buildings.some(building =>
+      building.health > 0 &&
+      tileX >= building.x &&
+      tileX < building.x + building.width &&
+      tileY >= building.y &&
+      tileY < building.y + building.height
+    )
+    if (hasBuilding) {
+      return false
+    }
+  }
+
+  return true
 }

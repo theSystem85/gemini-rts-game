@@ -45,6 +45,7 @@ export const gameState = {
   speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],
+  units: [], // Add units array to gameState
   factories: [], // Add factories array to gameState
   mapGrid: [], // Add mapGrid array to gameState
   occupancyMap: [], // Global occupancy map updated incrementally

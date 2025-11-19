@@ -29,6 +29,7 @@ export function hasMineSweeperSelected(selectedUnits) {
  */
 export function handleMineLayerClick(selectedUnits, tileX, tileY, shiftKey) {
   const mineLayers = selectedUnits.filter(unit => unit.type === 'mineLayer' && unit.health > 0)
+  console.log('handleMineLayerClick called with', mineLayers.length, 'mine layers')
   if (mineLayers.length === 0) return false
 
   mineLayers.forEach(unit => {
@@ -37,6 +38,7 @@ export function handleMineLayerClick(selectedUnits, tileX, tileY, shiftKey) {
       x: tileX,
       y: tileY
     }
+    console.log('Adding deployMine command to unit:', unit.id, command)
 
     if (shiftKey) {
       // Queue command

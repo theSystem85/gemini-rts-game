@@ -14,11 +14,12 @@
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:
-  - Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
-  - 20-mine capacity using ammo HUD bar, refilled by ammo truck/factory, 20% slower than tanker (half speed while deploying)
-  - Deploy mines via ctrl+click stacking or drag-area checkerboard auto-deploy with chain-of-commands markers, auto-refill + resume if mines depleted, mines arm after unit leaves tile
-  - Mines: skull tile indicator (70% opacity), friendly occupancy only, 10 HP, 90 damage center + 50 orthogonal neighbors, chain reactions for contiguous lines, explode on any unit, remaining payload explodes on truck death
-  - Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping), dust animation while sweeping, negates mine damage while sweeping
+  - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
+  - [x] ✅ 20-mine capacity using ammo HUD bar, refilled by ammo truck/factory, 20% slower than tanker (half speed while deploying)
+  - [x] ✅ Deploy mines via ctrl+click stacking or drag-area checkerboard auto-deploy with chain-of-commands markers, auto-refill + resume if mines depleted, mines arm after unit leaves tile
+  - [x] ✅ Mines: skull tile indicator (70% opacity), friendly occupancy only, 10 HP, 90 damage center + 50 orthogonal neighbors, chain reactions for contiguous lines, explode on any unit, remaining payload explodes on truck death
+  - [x] ✅ Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping)
+    - dust animation while sweeping, negates mine damage while sweeping
   - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines
   - Minesweeper uses gas only (no ammo), mine deploy indicators persist until destruction
   - Enemy AI deploys mines (ore fields + approach roads) once ammo factory + truck exist and fields ammo, AI builds sweeper units when mines destroy their units

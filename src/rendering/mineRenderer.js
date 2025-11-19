@@ -24,8 +24,8 @@ export function renderMineIndicators(ctx, scrollOffset) {
       return
     }
 
-    // Draw skull indicator (light gray, 70% opacity)
-    ctx.globalAlpha = 0.7
+    // Draw skull indicator (light gray, 70% transparency = 30% opacity)
+    ctx.globalAlpha = 0.3
     ctx.fillStyle = '#CCCCCC'
     ctx.strokeStyle = '#888888'
     ctx.lineWidth = 1

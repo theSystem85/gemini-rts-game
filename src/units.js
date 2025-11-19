@@ -86,6 +86,22 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
       }
     })
   }
+
+  // Add mines to occupancy map so units avoid driving over them
+  if (gameState && Array.isArray(gameState.mines)) {
+    gameState.mines.forEach(mine => {
+      const tileX = mine.tileX
+      const tileY = mine.tileY
+      if (
+        tileY >= 0 &&
+        tileY < mapGrid.length &&
+        tileX >= 0 &&
+        tileX < mapGrid[0].length
+      ) {
+        occupancy[tileY][tileX] = (occupancy[tileY][tileX] || 0) + 1
+      }
+    })
+  }
   return occupancy
 }
 
@@ -971,6 +987,9 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     const mineCapacity = unitProps.mineCapacity || 20
     unit.mineCapacity = mineCapacity
     unit.remainingMines = mineCapacity
+    unit.deployingMine = false
+    unit.deployStartTime = null
+    unit.deploymentCompleted = false
   }
   if (actualType === 'mineSweeper') {
     unit.sweeping = false // Track if currently in sweeping mode

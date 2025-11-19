@@ -1,16 +1,18 @@
 import { startMineDeployment } from './mineLayerBehavior.js'
+import { removeMine, getMineAtTile } from './mineSystem.js'
 import { TILE_SIZE } from '../config.js'
 
 export function processCommandQueues(units, mapGrid, unitCommands) {
   units.forEach(unit => {
-    if (!unit.commandQueue || unit.commandQueue.length === 0) return
+    if ((!unit.commandQueue || unit.commandQueue.length === 0) && !unit.currentCommand) return
 
     if (!unit.currentCommand) {
       const action = unit.commandQueue.shift()
       unit.currentCommand = action
       executeAction(unit, action, mapGrid, unitCommands)
     } else {
-      if (isActionComplete(unit, unit.currentCommand)) {
+      const complete = isActionComplete(unit, unit.currentCommand)
+      if (complete) {
         unit.currentCommand = null
       }
     }
@@ -67,8 +69,16 @@ function isActionComplete(unit, action) {
     case 'workshopRepair':
       return !unit.targetWorkshop && !unit.repairingAtWorkshop && !unit.returningFromWorkshop && (!unit.moveTarget && (!unit.path || unit.path.length === 0))
     case 'deployMine':
+      // Check if deployment has completed
+      if (unit.deploymentCompleted) {
+        unit.deploymentCompleted = false // Reset for next command
+        return true
+      }
+      
       // Check if at deployment location and deployment is not in progress
-      if (unit.deployingMine) return false
+      if (unit.deployingMine) {
+        return false
+      }
       
       // Check if unit is close to the target tile (within 0.5 tiles)
       const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
@@ -96,6 +106,11 @@ function isActionComplete(unit, action) {
         const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
         
         if (atTile || movementComplete) {
+          // Clear any mines on this tile (regardless of ownership)
+          const mine = getMineAtTile(currentTile.x, currentTile.y)
+          if (mine) {
+            removeMine(mine)
+          }
           action.path.shift() // Remove completed tile
           return action.path.length === 0
         }
