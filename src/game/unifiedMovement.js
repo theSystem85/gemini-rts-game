@@ -2253,10 +2253,12 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
 
     // Create path to dodge position using pathfinding
     const dodgePath = findPath(
-      { x: currentTileX, y: currentTileY },
+      { x: currentTileX, y: currentTileY, owner: unit.owner },
       dodgePos,
       mapGrid,
-      null // Don't use occupancy map for dodge movement to avoid other stuck units
+      null, // Don't use occupancy map for dodge movement to avoid other stuck units
+      undefined,
+      { unitOwner: unit.owner }
     )
 
     if (dodgePath.length > 1) {

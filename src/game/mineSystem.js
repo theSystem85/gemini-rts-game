@@ -9,6 +9,20 @@ import {
   MINE_ARM_DELAY
 } from '../config.js'
 
+const mineLookup = new Map()
+
+function getTileKey(tileX, tileY) {
+  return `${tileX},${tileY}`
+}
+
+function registerMine(mine) {
+  mineLookup.set(getTileKey(mine.tileX, mine.tileY), mine)
+}
+
+function unregisterMine(mine) {
+  mineLookup.delete(getTileKey(mine.tileX, mine.tileY))
+}
+
 /**
  * Create a new mine entity
  * @param {number} tileX - Tile X coordinate
@@ -47,11 +61,7 @@ export function deployMine(tileX, tileY, owner) {
 
   const mine = createMine(tileX, tileY, owner)
   gameState.mines.push(mine)
-
-  // Update occupancy map to block pathfinding through this mine
-  if (gameState.occupancyMap && gameState.occupancyMap[tileY] && gameState.occupancyMap[tileY][tileX] !== undefined) {
-    gameState.occupancyMap[tileY][tileX] = (gameState.occupancyMap[tileY][tileX] || 0) + 1
-  }
+  registerMine(mine)
 
   return mine
 }
@@ -75,7 +85,7 @@ export function updateMines(currentTime) {
  * @returns {object|null} Mine entity or null
  */
 export function getMineAtTile(tileX, tileY) {
-  return gameState.mines.find(m => m.tileX === tileX && m.tileY === tileY) || null
+  return mineLookup.get(getTileKey(tileX, tileY)) || null
 }
 
 /**
@@ -131,11 +141,7 @@ export function detonateMine(mine, units, buildings) {
   const mineIndex = gameState.mines.indexOf(mine)
   if (mineIndex !== -1) {
     gameState.mines.splice(mineIndex, 1)
-
-    // Update occupancy map to unblock pathfinding
-    if (gameState.occupancyMap && gameState.occupancyMap[mine.tileY] && gameState.occupancyMap[mine.tileY][mine.tileX] !== undefined) {
-      gameState.occupancyMap[mine.tileY][mine.tileX] = Math.max(0, (gameState.occupancyMap[mine.tileY][mine.tileX] || 0) - 1)
-    }
+    unregisterMine(mine)
   }
 
   // Check for chain reactions with adjacent mines
@@ -215,11 +221,7 @@ export function removeMine(mine) {
   const index = gameState.mines.indexOf(mine)
   if (index !== -1) {
     gameState.mines.splice(index, 1)
-
-    // Update occupancy map to unblock pathfinding
-    if (gameState.occupancyMap && gameState.occupancyMap[mine.tileY] && gameState.occupancyMap[mine.tileY][mine.tileX] !== undefined) {
-      gameState.occupancyMap[mine.tileY][mine.tileX] = Math.max(0, (gameState.occupancyMap[mine.tileY][mine.tileX] || 0) - 1)
-    }
+    unregisterMine(mine)
   }
 }
 
@@ -271,6 +273,23 @@ export function distributeMineLayerPayload(unit, units, buildings) {
       radius: TILE_SIZE * 0.8,
       startTime: performance.now() + i * 50,
       duration: 300
+    })
+  }
+}
+
+export function isFriendlyMineBlocking(tileX, tileY, owner) {
+  if (!owner) return false
+  const mine = getMineAtTile(tileX, tileY)
+  return Boolean(mine && mine.active && mine.owner === owner)
+}
+
+export function rebuildMineLookup() {
+  mineLookup.clear()
+  if (Array.isArray(gameState.mines)) {
+    gameState.mines.forEach(mine => {
+      if (Number.isFinite(mine.tileX) && Number.isFinite(mine.tileY)) {
+        registerMine(mine)
+      }
     })
   }
 }

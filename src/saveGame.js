@@ -36,6 +36,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
 import { ensurePlayerBuildHistoryLoaded } from './savePlayerBuildPatterns.js'
 import { getUniqueId } from './utils.js'
+import { rebuildMineLookup } from './game/mineSystem.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
 
@@ -599,6 +600,8 @@ export function loadGame(key) {
     } else {
       gameState.mines = []
     }
+
+    rebuildMineLookup()
 
     const loadedWrecks = Array.isArray(loaded.unitWrecks) ? loaded.unitWrecks : []
     gameState.unitWrecks = loadedWrecks.map(wreck => {

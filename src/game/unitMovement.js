@@ -109,10 +109,11 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
           unit.lastAttackPathCalcTime = now
           // Use proper pathfinding with occupancy map for attack movement
           const path = getCachedPath(
-            { x: unit.tileX, y: unit.tileY },
+            { x: unit.tileX, y: unit.tileY, owner: unit.owner },
             { x: targetTileX, y: targetTileY },
             mapGrid,
-            occupancyMap
+            occupancyMap,
+            { unitOwner: unit.owner }
           )
           if (path.length > 1) {
             unit.path = path.slice(1)
@@ -191,9 +192,11 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
         // For regular movement commands, use occupancy map for close range, ignore for long distance
         const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
         const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
+        const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+        const pathOptions = { unitOwner: unit.owner }
         const newPath = useOccupancyMap
-          ? findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
-          : findPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+          ? findPath(startNode, adjustedTarget, mapGrid, occupancyMap, undefined, pathOptions)
+          : findPath(startNode, adjustedTarget, mapGrid, null, undefined, pathOptions)
 
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
@@ -235,7 +238,14 @@ export function updateSpawnExit(units, factories, mapGrid, occupancyMap) {
         unit.tileY >= factory.y && unit.tileY < factory.y + factory.height) {
         const exitTile = findAdjacentTile(factory, mapGrid)
         if (exitTile) {
-          const exitPath = findPath({ x: unit.tileX, y: unit.tileY }, exitTile, mapGrid, occupancyMap)
+          const exitPath = findPath(
+            { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+            exitTile,
+            mapGrid,
+            occupancyMap,
+            undefined,
+            { unitOwner: unit.owner }
+          )
           if (exitPath && exitPath.length > 1) {
             unit.path = exitPath.slice(1)
           }

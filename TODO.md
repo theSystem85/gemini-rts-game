@@ -21,6 +21,8 @@
   - [x] ✅ Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping)
     - dust animation while sweeping, negates mine damage while sweeping
   - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines
+  - [ ] Owner-aware mine avoidance (in progress 2025-11-19): ensure occupancy/pathfinding/movement block only the owning party while other players can traverse and trigger mines.
+    - Current focus: propagate owner-aware `findPath` options through AI behaviors/strategies and path caching so every path request knows the unit owner.
   - Minesweeper uses gas only (no ammo), mine deploy indicators persist until destruction
   - Enemy AI deploys mines (ore fields + approach roads) once ammo factory + truck exist and fields ammo, AI builds sweeper units when mines destroy their units
     - [ ] Continue post-Phase-5 mine-system implementation per latest directive: finish optional steps, ensure Mine Layer and Mine Sweeper PPF flows are fully integrated before moving forward.

@@ -497,7 +497,7 @@ export const productionQueue = {
               gameState.targetedOreTiles[tileKey] = newUnit.id
             }
 
-            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, gameState.mapGrid, null)
+            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY, owner: newUnit.owner }, orePos, gameState.mapGrid, null, undefined, { unitOwner: newUnit.owner })
             if (newPath.length > 1) {
               newUnit.path = newPath.slice(1)
               newUnit.oreField = orePos // Set initial ore field target

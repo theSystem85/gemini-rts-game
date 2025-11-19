@@ -16,6 +16,10 @@ This file captures the additional entities and fields required to support mines,
 
 **Derived data**: Rendering uses `gameState.mines` directly (skull overlays); occupancy/pathfinding treat tiles as blocked for the owning player once the mine is active.
 
+**Friendly avoidance lookup**: `mineSystem` maintains a tile-keyed lookup map rebuilt after loads so helpers such as `isFriendlyMineBlocking(tileX, tileY, owner)` can run in O(1). Pathfinding, movement, and collision checks call this helper to block only the owning party while keeping enemy routes passable (so they can intentionally drive through and trigger detonations).
+
+- All modules that call `findPath` / `getCachedPath` must pass `{ unitOwner: <ownerId> }` (or set `start.owner`) so the helper knows whose mines to consider. This includes AI strategies, logistic scripts (harvesters, tankers, ammo trucks), and ambulance/hospital flows. Tracking this requirement here keeps the implementation work visible while propagation is still in progress.
+
 ## Mine Layer Unit Extensions
 
 Existing unit objects gain the following fields when `unit.type === 'mineLayer'`:

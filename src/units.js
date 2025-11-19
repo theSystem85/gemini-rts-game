@@ -18,6 +18,7 @@ import { initializeUnitMovement } from './game/unifiedMovement.js'
 import { initializeHowitzerGun } from './game/howitzerGunController.js'
 import { gameState } from './gameState.js'
 import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
+import { isFriendlyMineBlocking } from './game/mineSystem.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -87,21 +88,6 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
     })
   }
 
-  // Add mines to occupancy map so units avoid driving over them
-  if (gameState && Array.isArray(gameState.mines)) {
-    gameState.mines.forEach(mine => {
-      const tileX = mine.tileX
-      const tileY = mine.tileY
-      if (
-        tileY >= 0 &&
-        tileY < mapGrid.length &&
-        tileX >= 0 &&
-        tileX < mapGrid[0].length
-      ) {
-        occupancy[tileY][tileX] = (occupancy[tileY][tileX] || 0) + 1
-      }
-    })
-  }
   return occupancy
 }
 
@@ -232,7 +218,7 @@ class MinHeap {
 
 // Locate the nearest passable and unoccupied tile to the given coordinates.
 // Searches in expanding squares up to a limited radius.
-function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
+function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5, options = {}) {
   for (let distance = 0; distance <= maxDistance; distance++) {
     for (let dx = -distance; dx <= distance; dx++) {
       for (let dy = -distance; dy <= distance; dy++) {
@@ -254,7 +240,7 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
             tile.type !== 'rock' &&
             !tile.building &&
             !tile.seedCrystal
-          const occupied = occupancyMap && occupancyMap[checkY][checkX]
+          const occupied = isTileBlockedForUnit(occupancyMap, checkX, checkY, options)
           if (passable && !occupied) {
             return { x: checkX, y: checkY }
           }
@@ -267,7 +253,7 @@ function findNearestFreeTile(x, y, mapGrid, occupancyMap, maxDistance = 5) {
 
 // A* pathfinding with diagonal movement and cost advantage for street tiles.
 // Early exits if destination is out of bounds or impassable.
-export const findPath = logPerformance(function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT) {
+export const findPath = logPerformance(function findPath(start, end, mapGrid, occupancyMap = null, pathFindingLimit = PATHFINDING_LIMIT, options = null) {
   // Validate input coordinates
   if (!start || !end ||
       typeof start.x !== 'number' || typeof start.y !== 'number' ||
@@ -296,16 +282,19 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     }
     return []
   }
+  const contextOptions = options || {}
+  const unitOwner = contextOptions.unitOwner ?? start.owner ?? start.ownerId ?? start.playerId ?? start.unitOwner ?? null
+  const ignoreFriendlyMines = Boolean(contextOptions.ignoreFriendlyMines)
+  const pathContext = { unitOwner, ignoreFriendlyMines }
+
   // Begin destination adjustment if blocked or occupied
   let adjustedEnd = { ...end }
   const destTile = mapGrid[adjustedEnd.y][adjustedEnd.x]
   const destType = destTile.type
   const destHasBuilding = destTile.building
   const destSeedCrystal = destTile.seedCrystal
-  const destOccupied =
-    occupancyMap &&
-    !(adjustedEnd.x === start.x && adjustedEnd.y === start.y) &&
-    occupancyMap[adjustedEnd.y][adjustedEnd.x]
+  const destinationIsStart = adjustedEnd.x === start.x && adjustedEnd.y === start.y
+  const destOccupied = !destinationIsStart && isTileBlockedForUnit(occupancyMap, adjustedEnd.x, adjustedEnd.y, pathContext)
   if (
     destType === 'water' ||
     destType === 'rock' ||
@@ -313,7 +302,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     destSeedCrystal ||
     destOccupied
   ) {
-    const alt = findNearestFreeTile(adjustedEnd.x, adjustedEnd.y, mapGrid, occupancyMap)
+    const alt = findNearestFreeTile(adjustedEnd.x, adjustedEnd.y, mapGrid, occupancyMap, 5, pathContext)
     if (alt) {
       adjustedEnd = alt
     } else {
@@ -389,15 +378,14 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     for (const neighbor of neighbors) {
       const neighborKey = `${neighbor.x},${neighbor.y}`
       if (closedSet.has(neighborKey)) continue
-      if (hasDiagonalCornerBlocker(currentNode, neighbor, mapGrid, occupancyMap, start)) {
+      if (hasDiagonalCornerBlocker(currentNode, neighbor, mapGrid, occupancyMap, start, pathContext)) {
         continue
       }
       // Skip if occupancyMap is provided and the tile is occupied,
       // except when the tile is the starting tile for this path.
       if (
-        occupancyMap &&
         !(neighbor.x === start.x && neighbor.y === start.y) &&
-        isTileOccupied(occupancyMap, neighbor.x, neighbor.y)
+        isTileOccupied(occupancyMap, neighbor.x, neighbor.y, pathContext)
       ) {
         continue
       }
@@ -454,7 +442,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   // If direct line is available, compare costs
   let directPath = null
   let directCost = Infinity
-  if (isDirectPathClear(start, adjustedEnd, mapGrid, occupancyMap)) {
+  if (isDirectPathClear(start, adjustedEnd, mapGrid, occupancyMap, pathContext)) {
     directPath = getLineTiles(start, adjustedEnd)
     directCost = calculatePathCost(directPath, mapGrid)
   }
@@ -467,7 +455,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     chosenPath = directPath
   }
 
-  return smoothPath(chosenPath, mapGrid, occupancyMap)
+  return smoothPath(chosenPath, mapGrid, occupancyMap, pathContext)
 })
 
 function isTileWithinBounds(mapGrid, x, y) {
@@ -486,11 +474,24 @@ function isTilePassable(mapGrid, x, y) {
   return !isTerrainBlocked(tile)
 }
 
-function isTileOccupied(occupancyMap, x, y) {
-  return Boolean(occupancyMap && occupancyMap[y] && occupancyMap[y][x])
+function isTileBlockedForUnit(occupancyMap, x, y, options = {}) {
+  if (occupancyMap && occupancyMap[y] && occupancyMap[y][x]) {
+    return true
+  }
+
+  const owner = options.unitOwner || null
+  if (!options.ignoreFriendlyMines && owner && isFriendlyMineBlocking(x, y, owner)) {
+    return true
+  }
+
+  return false
 }
 
-function hasDiagonalCornerBlocker(current, candidate, mapGrid, occupancyMap, start) {
+function isTileOccupied(occupancyMap, x, y, options = {}) {
+  return isTileBlockedForUnit(occupancyMap, x, y, options)
+}
+
+function hasDiagonalCornerBlocker(current, candidate, mapGrid, occupancyMap, start, options = {}) {
   const dx = candidate.x - current.x
   const dy = candidate.y - current.y
   if (Math.abs(dx) !== 1 || Math.abs(dy) !== 1) {
@@ -509,7 +510,7 @@ function hasDiagonalCornerBlocker(current, candidate, mapGrid, occupancyMap, sta
     if (
       occupancyMap &&
       !(start && check.x === start.x && check.y === start.y) &&
-      isTileOccupied(occupancyMap, check.x, check.y)
+      isTileOccupied(occupancyMap, check.x, check.y, options)
     ) {
       return true
     }
@@ -582,7 +583,7 @@ function getLineTiles(start, end) {
 }
 
 // Check if direct line between tiles is clear of obstacles/units
-function isDirectPathClear(start, end, mapGrid, occupancyMap) {
+function isDirectPathClear(start, end, mapGrid, occupancyMap, options = {}) {
   const tiles = getLineTiles(start, end)
   for (let i = 1; i < tiles.length; i++) {
     const { x, y } = tiles[i]
@@ -593,11 +594,11 @@ function isDirectPathClear(start, end, mapGrid, occupancyMap) {
     if (isTerrainBlocked(tile)) {
       return false
     }
-    if (occupancyMap && isTileOccupied(occupancyMap, x, y)) {
+    if (isTileOccupied(occupancyMap, x, y, options)) {
       return false
     }
     const prev = tiles[i - 1]
-    if (hasDiagonalCornerBlocker(prev, { x, y }, mapGrid, occupancyMap, start)) {
+    if (hasDiagonalCornerBlocker(prev, { x, y }, mapGrid, occupancyMap, start, options)) {
       return false
     }
   }
@@ -620,7 +621,7 @@ function calculatePathCost(path, mapGrid) {
 }
 
 // Reduce a tile path into straight-line segments for smoother movement
-function smoothPath(path, mapGrid, occupancyMap) {
+function smoothPath(path, mapGrid, occupancyMap, options = {}) {
   if (!path || path.length <= 2) return path
 
   const smoothed = [path[0]]
@@ -629,7 +630,7 @@ function smoothPath(path, mapGrid, occupancyMap) {
   while (currentIndex < path.length - 1) {
     let nextIndex = path.length - 1
     for (let i = path.length - 1; i > currentIndex; i--) {
-      if (isDirectPathClear(path[currentIndex], path[i], mapGrid, occupancyMap)) {
+      if (isDirectPathClear(path[currentIndex], path[i], mapGrid, occupancyMap, options)) {
         const directSegment = getLineTiles(path[currentIndex], path[i])
         const directCost = calculatePathCost(directSegment, mapGrid)
         const originalCost = calculatePathCost(path.slice(currentIndex, i + 1), mapGrid)

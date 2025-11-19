@@ -477,10 +477,12 @@ export function handleRetreatToBase(unit, gameState, mapGrid) {
 
   if (retreatTarget) {
     const path = findPath(
-      { x: unit.tileX, y: unit.tileY },
+      { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       retreatTarget,
       mapGrid,
-      null
+      null,
+      undefined,
+      { unitOwner: unit.owner }
     )
 
     if (path.length > 1) {
@@ -551,10 +553,12 @@ export function handleHarvesterRetreat(harvester, gameState, mapGrid) {
 
   if (retreatTarget) {
     const path = findPath(
-      { x: harvester.tileX, y: harvester.tileY },
+      { x: harvester.tileX, y: harvester.tileY, owner: harvester.owner },
       retreatTarget,
       mapGrid,
-      null
+      null,
+      undefined,
+      { unitOwner: harvester.owner }
     )
 
     if (path.length > 1) {
@@ -636,7 +640,14 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
   const waitingY = nearest.y + nearest.height + 1
   const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
   const targetTile = { x: waitingX, y: waitingY }
-  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  const path = findPath(
+    { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+    targetTile,
+    mapGrid,
+    gameState.occupancyMap,
+    undefined,
+    { unitOwner: unit.owner }
+  )
   if (path && path.length > 0) {
     unit.path = path.slice(1)
     unit.moveTarget = targetTile
@@ -1019,10 +1030,12 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     if (pathRecalcNeeded) {
       const occupancyMap = gameState.occupancyMap
       const path = findPath(
-        { x: unit.tileX, y: unit.tileY },
+        { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         unit.approachPosition,
         mapGrid,
-        occupancyMap
+        occupancyMap,
+        undefined,
+        { unitOwner: unit.owner }
       )
 
       if (path.length > 1) {
@@ -1055,10 +1068,12 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     unit.lastDirectionAssignment = now
     const occupancyMap = gameState.occupancyMap
     const path = findPath(
-      { x: unit.tileX, y: unit.tileY },
+      { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       globalPoint,
       mapGrid,
-      occupancyMap
+      occupancyMap,
+      undefined,
+      { unitOwner: unit.owner }
     )
     if (path.length > 1) {
       unit.path = path.slice(1)
@@ -1095,10 +1110,12 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     // Always respect the occupancy map for attack movement
     const occupancyMap = gameState.occupancyMap
     const path = findPath(
-      { x: unit.tileX, y: unit.tileY },
+      { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       approachPos,
       mapGrid,
-      occupancyMap
+      occupancyMap,
+      undefined,
+      { unitOwner: unit.owner }
     )
 
     if (path.length > 1) {
@@ -1248,9 +1265,10 @@ function sendUnitToHospital(unit, hospital, mapGrid, now) {
   ]
 
   // Find best position
+  const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
   for (const pos of refillPositions) {
     if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-      const path = findPath(unit, pos.x, pos.y, mapGrid)
+      const path = findPath(startNode, pos, mapGrid, null, undefined, { unitOwner: unit.owner })
       if (path && path.length > 0) {
         unit.path = path
         unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
@@ -1270,7 +1288,8 @@ function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
   const hospitalCenterX = hospital.x + Math.floor(hospital.width / 2)
   const refillY = hospital.y + hospital.height + 1
 
-  const path = findPath(ambulance, hospitalCenterX, refillY, mapGrid)
+  const startNode = { x: ambulance.tileX, y: ambulance.tileY, owner: ambulance.owner }
+  const path = findPath(startNode, { x: hospitalCenterX, y: refillY }, mapGrid, null, undefined, { unitOwner: ambulance.owner })
   if (path && path.length > 0) {
     ambulance.path = path
     ambulance.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
@@ -1659,7 +1678,8 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
 function sendTankerToGasStation(tanker, station, mapGrid) {
   const cx = station.x + Math.floor(station.width / 2)
   const cy = station.y + station.height + 1
-  const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: cx, y: cy }, mapGrid)
+  const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
+  const path = findPath(startNode, { x: cx, y: cy }, mapGrid, null, undefined, { unitOwner: tanker.owner })
   if (path && path.length > 1) {
     tanker.path = path.slice(1)
     tanker.moveTarget = { x: cx, y: cy }
@@ -1681,12 +1701,13 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
     { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
   ]
 
+  const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
   let pathFound = false
   for (const dir of directions) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
     if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
-      const path = findPath({ x: tanker.tileX, y: tanker.tileY }, { x: destX, y: destY }, mapGrid, occupancyMap)
+      const path = findPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, undefined, { unitOwner: tanker.owner })
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
         tanker.moveTarget = { x: destX, y: destY }
@@ -1813,7 +1834,8 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
           const targetY = Math.floor(centerY + Math.sin(angle) * 5)
           
           if (targetX >= 0 && targetY >= 0 && targetX < mapGrid[0].length && targetY < mapGrid.length) {
-            const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: targetX, y: targetY }, mapGrid)
+            const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
+            const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, null, undefined, { unitOwner: truck.owner })
             if (path && path.length > 1) {
               truck.path = path.slice(1)
               truck.moveTarget = { x: targetX, y: targetY }
@@ -1828,7 +1850,8 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
 function sendAmmoTruckToFactory(truck, factory, mapGrid) {
   const cx = factory.x + Math.floor(factory.width / 2)
   const cy = factory.y + factory.height + 1
-  const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: cx, y: cy }, mapGrid)
+  const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
+  const path = findPath(startNode, { x: cx, y: cy }, mapGrid, null, undefined, { unitOwner: truck.owner })
   if (path && path.length > 1) {
     truck.path = path.slice(1)
     truck.moveTarget = { x: cx, y: cy }
@@ -1850,12 +1873,13 @@ function sendAmmoTruckToUnit(truck, unit, mapGrid, occupancyMap) {
     { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
   ]
 
+  const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
   let pathFound = false
   for (const dir of directions) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
     if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
-      const path = findPath({ x: truck.tileX, y: truck.tileY }, { x: destX, y: destY }, mapGrid, occupancyMap)
+      const path = findPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, undefined, { unitOwner: truck.owner })
       if (path && path.length > 0) {
         truck.path = path.slice(1)
         truck.moveTarget = { x: destX, y: destY }
@@ -1931,7 +1955,8 @@ export function manageAIAmmunitionMonitoring(units, gameState, mapGrid) {
             targetY = nearestResupply.target.tileY
           }
 
-          const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: targetX, y: targetY }, mapGrid)
+          const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+          const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, gameState.occupancyMap, undefined, { unitOwner: unit.owner })
           if (path && path.length > 1) {
             // Cancel current attack/move commands
             unit.target = null

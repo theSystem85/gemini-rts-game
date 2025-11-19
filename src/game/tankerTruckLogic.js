@@ -475,10 +475,12 @@ function assignTankerToEmergencyUnit(tanker, emergencyUnit, gameState) {
     const destY = targetTileY + dir.y
     if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
       const path = findPath(
-        { x: tanker.tileX, y: tanker.tileY },
+        { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner },
         { x: destX, y: destY },
         mapGrid,
-        gameState.occupancyMap
+        gameState.occupancyMap,
+        undefined,
+        { unitOwner: tanker.owner }
       )
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
