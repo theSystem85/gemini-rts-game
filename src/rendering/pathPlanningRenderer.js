@@ -131,6 +131,20 @@ export class PathPlanningRenderer {
             targetY = t.y
             break
           }
+          case 'deployMine': {
+            // Mine deployment command - show marker at tile center
+            targetX = action.x * TILE_SIZE + TILE_SIZE / 2
+            targetY = action.y * TILE_SIZE + TILE_SIZE / 2
+            break
+          }
+          case 'sweepArea': {
+            // Sweep area command - show first tile in sweep path
+            if (!action.path || action.path.length === 0) return
+            const firstTile = action.path[0]
+            targetX = firstTile.x * TILE_SIZE + TILE_SIZE / 2
+            targetY = firstTile.y * TILE_SIZE + TILE_SIZE / 2
+            break
+          }
           default:
             return
         }
@@ -150,9 +164,71 @@ export class PathPlanningRenderer {
 
         const half = MOVE_TARGET_INDICATOR_SIZE / 2
 
-        if (action.type !== 'utility') {
-          ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
-          ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
+        // Special rendering for sweep area commands - show entire path
+        if (action.type === 'sweepArea' && action.path && action.path.length > 0) {
+          // Render orange markers for each tile in the sweep path
+          let sweepPrevX = prevX
+          let sweepPrevY = prevY
+          
+          action.path.forEach((tile, pathIdx) => {
+            const sweepX = tile.x * TILE_SIZE + TILE_SIZE / 2
+            const sweepY = tile.y * TILE_SIZE + TILE_SIZE / 2
+            const sweepScreenX = sweepX - scrollOffset.x
+            const sweepScreenY = sweepY - scrollOffset.y
+            const sweepScreenPrevX = sweepPrevX - scrollOffset.x
+            const sweepScreenPrevY = sweepPrevY - scrollOffset.y
+
+            // Draw line from previous position
+            ctx.strokeStyle = 'rgba(255, 140, 0, 0.5)' // Orange line
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(sweepScreenPrevX, sweepScreenPrevY)
+            ctx.lineTo(sweepScreenX, sweepScreenY)
+            ctx.stroke()
+
+            // Draw orange triangle marker
+            ctx.fillStyle = 'rgba(255, 140, 0, 0.6)' // Orange fill
+            ctx.strokeStyle = 'rgba(230, 100, 0, 0.9)' // Dark orange outline
+            ctx.beginPath()
+            ctx.moveTo(sweepScreenX, sweepScreenY + half)
+            ctx.lineTo(sweepScreenX - half, sweepScreenY - half)
+            ctx.lineTo(sweepScreenX + half, sweepScreenY - half)
+            ctx.closePath()
+            ctx.fill()
+            ctx.stroke()
+
+            // Draw sub-index number (show position within sweep path)
+            if (pathIdx < 99) { // Only show numbers for first 99 positions to avoid clutter
+              ctx.fillStyle = '#000'
+              ctx.font = '7px Arial'
+              ctx.textAlign = 'center'
+              ctx.textBaseline = 'middle'
+              ctx.fillText(String(pathIdx + 1), sweepScreenX, sweepScreenY - half / 2 + 2)
+            }
+
+            sweepPrevX = sweepX
+            sweepPrevY = sweepY
+          })
+
+          // Update prevX/Y to end of sweep path
+          const lastTile = action.path[action.path.length - 1]
+          prevX = lastTile.x * TILE_SIZE + TILE_SIZE / 2
+          prevY = lastTile.y * TILE_SIZE + TILE_SIZE / 2
+
+          // Draw the main command number at the start
+          ctx.fillStyle = '#000'
+          ctx.font = '10px Arial'
+          ctx.fontWeight = 'bold'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(String(idx + 1), screenX, screenY - half - 8)
+        } else if (action.type !== 'utility') {
+          // Standard marker for other command types
+          const isDeployMine = action.type === 'deployMine'
+          
+          // Yellow for normal commands, slightly different yellow for mine deployment
+          ctx.fillStyle = isDeployMine ? 'rgba(255, 200, 0, 0.7)' : 'rgba(255, 165, 0, 0.6)'
+          ctx.strokeStyle = isDeployMine ? 'rgba(230, 180, 0, 0.9)' : 'rgba(230, 150, 0, 0.9)'
           ctx.beginPath()
           ctx.moveTo(screenX, screenY + half)
           ctx.lineTo(screenX - half, screenY - half)
@@ -160,18 +236,22 @@ export class PathPlanningRenderer {
           ctx.closePath()
           ctx.fill()
           ctx.stroke()
+
+          // Draw command number
+          ctx.fillStyle = '#000'
+          ctx.font = '8px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
+          
+          prevX = targetX
+          prevY = targetY
+        } else {
+          prevX = targetX
+          prevY = targetY
         }
 
-        ctx.fillStyle = '#000'
-        ctx.font = '8px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        // Keep the label slightly offset so it sits nicely within the indicator footprint
-        ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
         ctx.restore()
-
-        prevX = targetX
-        prevY = targetY
       })
     })
   }
