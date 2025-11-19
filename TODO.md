@@ -18,6 +18,7 @@
   - [x] ✅ 20-mine capacity using ammo HUD bar, refilled by ammo truck/factory, 20% slower than tanker (half speed while deploying)
   - [x] ✅ Deploy mines via ctrl+click stacking or drag-area checkerboard auto-deploy with chain-of-commands markers, auto-refill + resume if mines depleted, mines arm after unit leaves tile
   - [x] ✅ Mines: skull tile indicator (70% opacity), friendly occupancy only, 10 HP, 90 damage center + 50 orthogonal neighbors, chain reactions for contiguous lines, explode on any unit, remaining payload explodes on truck death
+  - [ ] Mines detonate only when a unit’s center lands inside the deploying tile’s inner circle so grazing the edge doesn’t trigger the blast.
   - [x] ✅ Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping)
     - dust animation while sweeping, negates mine damage while sweeping
   - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines

@@ -17,6 +17,7 @@ This file captures the additional entities and fields required to support mines,
 **Derived data**: Rendering uses `gameState.mines` directly (skull overlays); occupancy/pathfinding treat tiles as blocked for the owning player once the mine is active.
 
 **Explosion radius**: Mine detonations now examine every tile within a 2-tile radius (`MINE_EXPLOSION_RADIUS`) and apply damage that fades linearly from 100% on the origin tile down to 0% on the boundary. Units, buildings, and adjacent mines all receive scaled damage depending on their distance to the blast center, so overlapping mines or clustered units feel the same explosive field irrespective of whether they are orthogonal or diagonal neighbors.
+Detonations only fire once a unit’s center lands inside the mine tile’s inner circle (configurable via `MINE_TRIGGER_RADIUS`), preventing grazes from triggering explosions when the unit is merely brushing the tile edge.
 
 **Friendly avoidance lookup**: `mineSystem` maintains a tile-keyed lookup map rebuilt after loads so helpers such as `isFriendlyMineBlocking(tileX, tileY, owner)` can run in O(1). Pathfinding, movement, and collision checks call this helper to block only the owning party while keeping enemy routes passable (so they can intentionally drive through and trigger detonations).
 

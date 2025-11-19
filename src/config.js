@@ -1015,6 +1015,7 @@ export let MINE_DAMAGE_CENTER = 90 // Maximum damage at the mine tile
 export let MINE_EXPLOSION_RADIUS = 2 // Tile radius over which damage falls off
 export let MINE_DEPLOY_STOP_TIME = 4000 // ms Mine Layer must stop to deploy
 export let MINE_ARM_DELAY = 4000 // ms delay after truck vacates before mine arms
+export let MINE_TRIGGER_RADIUS = TILE_SIZE * 0.45 // Unit center must fall within this circle to trip a mine
 
 export function setMineCapacity(value) {
   MINE_CAPACITY = value
@@ -1038,6 +1039,10 @@ export function setMineArmDelay(value) {
 
 export function setMineExplosionRadius(value) {
   MINE_EXPLOSION_RADIUS = value
+}
+
+export function setMineTriggerRadius(value) {
+  MINE_TRIGGER_RADIUS = value
 }
 
 export let AMMO_PARTICLE_DAMAGE = 40 // average damage per ammunition particle

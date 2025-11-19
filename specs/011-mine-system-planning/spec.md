@@ -54,6 +54,7 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 ### Story 3 – Mine Mechanics & Indicators (Priority P0)
 - Mines have 10 HP, track ownership, and block friendly occupancy so allied units avoid them.
 - Any unit entering the tile detonates the mine: 90 damage on the tile, 50 damage to orthogonal neighbors.
+- Mines only detonate once a unit’s center moves inside the tile’s inner circle (radius defined by `MINE_TRIGGER_RADIUS`) so grazing the edges no longer triggers explosions instantly.
 - Chain reaction: contiguous mines (horizontal/vertical) trigger sequentially when neighbor damage occurs.
 - Skull overlay (light gray, 70% opacity) renders on deployed tile until mine destroyed or detonated.
 - Destroyed Mine Layer transfers remaining mine payload damage evenly to surrounding tiles upon death.
@@ -91,7 +92,7 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 | FR-011 | Mine Layer capacity 20; ammo HUD shows remaining mines; refills via ammo truck/factory; consumes 1 ammo per deployment.
 | FR-012 | Mine Layer normal speed = tanker_speed × 0.8; deploy-mode speed = tanker_speed × 0.4; must stop 4s per deployment.
 | FR-013 | Mine indicator overlay renders skull icon with 70% opacity; persists until mine removed.
-| FR-014 | Mines block friendly occupancy map entries but remain passable to enemies; explosion triggers 90/50 damage pattern; chain reaction for adjacent mines.
+| FR-014 | Mines block friendly occupancy map entries but remain passable to enemies; explosion triggers 90/50 damage when a unit center passes through the mine tile's inner circle; chain reaction for adjacent mines.
 | FR-015 | Mine Layer destruction deals remaining payload damage evenly to surrounding tiles (including units/buildings).
 | FR-016 | Area mining uses checkerboard coverage and PPF chain markers; auto-refill/resume behavior when mines depleted mid-plan.
 | FR-017 | Mine Sweeper inherits tank chassis stats (except turret) with 2× armor; speed modifiers 0.7/0.3 vs baseline tank.

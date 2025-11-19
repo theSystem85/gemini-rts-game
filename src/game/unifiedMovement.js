@@ -1,6 +1,7 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import {
   TILE_SIZE,
+  MINE_TRIGGER_RADIUS,
   STUCK_CHECK_INTERVAL,
   STUCK_THRESHOLD,
   STUCK_HANDLING_COOLDOWN,
@@ -80,18 +81,28 @@ function calculatePositionalAudio(x, y) {
  */
 function checkMineDetonation(unit, tileX, tileY, units, buildings) {
   const mine = getMineAtTile(tileX, tileY)
-  
-  // Only detonate if mine is active and unit is not in sweeping mode
-  if (mine && mine.active) {
-    // Mine sweepers can safely trigger mines while sweeping
-    if (unit.type === 'mineSweeper' && unit.sweeping) {
-      // Detonation happens but doesn't damage the sweeper
-      detonateMine(mine, units, buildings)
-    } else {
-      // Normal detonation - damages everything including the unit
-      detonateMine(mine, units, buildings)
-    }
+  if (!mine || !mine.active || !isUnitCenterInsideMineCircle(unit, tileX, tileY)) {
+    return
   }
+  if (unit.type === 'mineSweeper' && unit.sweeping) {
+    // Sweeping mine sweepers still trigger the explosion but take no damage
+    detonateMine(mine, units, buildings)
+    return
+  }
+  detonateMine(mine, units, buildings)
+}
+
+function isUnitCenterInsideMineCircle(unit, tileX, tileY) {
+  if (!unit || typeof tileX !== 'number' || typeof tileY !== 'number') return false
+  const offset = TILE_SIZE / 2
+  const unitCenterX = unit.x + offset
+  const unitCenterY = unit.y + offset
+  const tileCenterX = tileX * TILE_SIZE + offset
+  const tileCenterY = tileY * TILE_SIZE + offset
+  const dx = unitCenterX - tileCenterX
+  const dy = unitCenterY - tileCenterY
+  const radiusSq = MINE_TRIGGER_RADIUS * MINE_TRIGGER_RADIUS
+  return dx * dx + dy * dy <= radiusSq
 }
 
 export function hasFriendlyUnitOnTile(unit, tileX, tileY, units = []) {
