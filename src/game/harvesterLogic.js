@@ -213,7 +213,14 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
         }
       } else {
         // Try to path to the ore field again
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, unit.oreField, mapGrid, occupancyMap)
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+          unit.oreField,
+          mapGrid,
+          occupancyMap,
+          undefined,
+          { unitOwner: unit.owner }
+        )
         if (path.length > 1) {
           unit.path = path.slice(1)
           unit.moveTarget = unit.oreField // Set move target so the harvester actually moves
@@ -423,7 +430,14 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     } else {
       // **DIRECT MOVEMENT WITH UNLOAD PRIORITY** - Go straight to refinery, but stick around once there
       if (!unit.path || unit.path.length === 0) {
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, targetUnloadTile, mapGrid, occupancyMap)
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+          targetUnloadTile,
+          mapGrid,
+          occupancyMap,
+          undefined,
+          { unitOwner: unit.owner }
+        )
         if (path.length > 1) {
           unit.path = path.slice(1)
           unit.moveTarget = targetUnloadTile // Set move target so the harvester actually moves
@@ -538,7 +552,14 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
     targetedOreTiles[tileKey] = unit.id
     unit.oreField = orePos
 
-    const path = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, occupancyMap)
+    const path = findPath(
+      { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+      orePos,
+      mapGrid,
+      occupancyMap,
+      undefined,
+      { unitOwner: unit.owner }
+    )
     if (path.length > 1) {
       unit.path = path.slice(1)
       unit.moveTarget = orePos // Set move target so the harvester actually moves
@@ -875,7 +896,14 @@ function sendUnitToWorkshop(unit, gameState, mapGrid) {
   const waitingY = nearest.y + nearest.height + 1
   const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
   const targetTile = { x: waitingX, y: waitingY }
-  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  const path = findPath(
+    { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+    targetTile,
+    mapGrid,
+    gameState.occupancyMap,
+    undefined,
+    { unitOwner: unit.owner }
+  )
   if (path && path.length > 0) {
     unit.path = path.slice(1)
     unit.moveTarget = targetTile
@@ -1003,7 +1031,14 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
   unit.oreField = target
 
   // Calculate path to manual target
-  const path = findPath({ x: unit.tileX, y: unit.tileY }, target, mapGrid, occupancyMap)
+  const path = findPath(
+    { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+    target,
+    mapGrid,
+    occupancyMap,
+    undefined,
+    { unitOwner: unit.owner }
+  )
   if (path.length > 1) {
     unit.path = path.slice(1)
     unit.moveTarget = target // Set move target so the harvester actually moves
@@ -1112,7 +1147,14 @@ function handleStuckHarvesterUnloading(unit, mapGrid, gameState, factories, occu
       // Try to path to the new refinery
       const unloadTile = findAdjacentTile(closestRefinery, mapGrid)
       if (unloadTile) {
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, unloadTile, mapGrid, occupancyMap)
+        const path = findPath(
+          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+          unloadTile,
+          mapGrid,
+          occupancyMap,
+          undefined,
+          { unitOwner: unit.owner }
+        )
         if (path.length > 1) {
           unit.path = path.slice(1)
           unit.moveTarget = unloadTile // Set move target so the harvester actually moves
@@ -1166,7 +1208,14 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
     oreOptions.sort((a, b) => a.distance - b.distance)
 
     for (const orePos of oreOptions) {
-      const path = findPath({ x: unitTileX, y: unitTileY }, orePos, mapGrid, occupancyMap)
+      const path = findPath(
+        { x: unitTileX, y: unitTileY, owner: unit.owner },
+        orePos,
+        mapGrid,
+        occupancyMap,
+        undefined,
+        { unitOwner: unit.owner }
+      )
       if (path.length > 1) {
         // Found a pathable ore tile
         const tileKey = `${orePos.x},${orePos.y}`

@@ -22,7 +22,7 @@ const MOBILE_EDGE_SCROLL_MAX_FRAME_MS = 64
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank', 'mineLayer', 'mineSweeper']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -125,6 +125,22 @@ export class ProductionController {
         } else {
           button.classList.add('disabled')
           button.title = 'Requires Helipad'
+        }
+      } else if (unitType === 'mineLayer') {
+        if (hasVehicleFactory && hasWorkshop && hasAmmunitionFactory) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory, Workshop & Ammunition Factory'
+        }
+      } else if (unitType === 'mineSweeper') {
+        if (hasVehicleFactory && hasWorkshop) {
+          button.classList.remove('disabled')
+          button.title = ''
+        } else {
+          button.classList.add('disabled')
+          button.title = 'Requires Vehicle Factory & Workshop'
         }
       } else if (this.vehicleUnitTypes.includes(unitType)) {
         if (hasVehicleFactory) {
@@ -1150,6 +1166,11 @@ export class ProductionController {
 
     if (hasFactory && hasWorkshop) {
       this.forceUnlockUnitType('recoveryTank')
+      this.forceUnlockUnitType('mineSweeper')
+    }
+
+    if (hasFactory && hasWorkshop && hasAmmunitionFactory) {
+      this.forceUnlockUnitType('mineLayer')
     }
 
     if (hasHelipad) {

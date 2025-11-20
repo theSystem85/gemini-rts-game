@@ -1,6 +1,7 @@
 // unifiedMovement.js - Unified movement system for all ground units
 import {
   TILE_SIZE,
+  MINE_TRIGGER_RADIUS,
   STUCK_CHECK_INTERVAL,
   STUCK_THRESHOLD,
   STUCK_HANDLING_COOLDOWN,
@@ -38,6 +39,7 @@ import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
+import { getMineAtTile, detonateMine } from './mineSystem.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
@@ -69,6 +71,38 @@ function calculatePositionalAudio(x, y) {
   const volumeFactor = Math.max(0, 1 - distance / maxDistance)
   const pan = Math.max(-1, Math.min(1, dx / maxDistance))
   return { pan, volumeFactor }
+}
+
+/**
+ * Check if a unit entering a tile triggers mine detonation
+ * @param {object} unit - The unit entering the tile
+ * @param {number} tileX - Tile X coordinate
+ * @param {number} tileY - Tile Y coordinate
+ */
+function checkMineDetonation(unit, tileX, tileY, units, buildings) {
+  const mine = getMineAtTile(tileX, tileY)
+  if (!mine || !mine.active || !isUnitCenterInsideMineCircle(unit, tileX, tileY)) {
+    return
+  }
+  if (unit.type === 'mineSweeper' && unit.sweeping) {
+    // Sweeping mine sweepers still trigger the explosion but take no damage
+    detonateMine(mine, units, buildings)
+    return
+  }
+  detonateMine(mine, units, buildings)
+}
+
+function isUnitCenterInsideMineCircle(unit, tileX, tileY) {
+  if (!unit || typeof tileX !== 'number' || typeof tileY !== 'number') return false
+  const offset = TILE_SIZE / 2
+  const unitCenterX = unit.x + offset
+  const unitCenterY = unit.y + offset
+  const tileCenterX = tileX * TILE_SIZE + offset
+  const tileCenterY = tileY * TILE_SIZE + offset
+  const dx = unitCenterX - tileCenterX
+  const dy = unitCenterY - tileCenterY
+  const radiusSq = MINE_TRIGGER_RADIUS * MINE_TRIGGER_RADIUS
+  return dx * dx + dy * dy <= radiusSq
 }
 
 export function hasFriendlyUnitOnTile(unit, tileX, tileY, units = []) {
@@ -615,6 +649,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
       unit.tileX = nextTile.x
       unit.tileY = nextTile.y
 
+      // Check for mine detonation when unit enters new tile
+      checkMineDetonation(unit, nextTile.x, nextTile.y, units, gameState.buildings)
+
       // If no more waypoints, start deceleration
       if (unit.path.length === 0) {
         movement.targetVelocity.x = 0
@@ -911,6 +948,12 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   unit.tileY = Math.max(0, Math.min(unit.tileY, mapGrid.length - 1))
   unit.x = Math.max(0, Math.min(unit.x, (mapGrid[0].length - 1) * TILE_SIZE))
   unit.y = Math.max(0, Math.min(unit.y, (mapGrid.length - 1) * TILE_SIZE))
+
+  const tileChanged = prevTileX !== unit.tileX || prevTileY !== unit.tileY
+  if (tileChanged) {
+    const buildings = gameState?.buildings || []
+    checkMineDetonation(unit, unit.tileX, unit.tileY, units, buildings)
+  }
 
   if (unit.type === 'apache') {
     updateApacheFlightState(unit, movement, occupancyMap, now)
@@ -2227,10 +2270,12 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
 
     // Create path to dodge position using pathfinding
     const dodgePath = findPath(
-      { x: currentTileX, y: currentTileY },
+      { x: currentTileX, y: currentTileY, owner: unit.owner },
       dodgePos,
       mapGrid,
-      null // Don't use occupancy map for dodge movement to avoid other stuck units
+      null, // Don't use occupancy map for dodge movement to avoid other stuck units
+      undefined,
+      { unitOwner: unit.owner }
     )
 
     if (dodgePath.length > 1) {

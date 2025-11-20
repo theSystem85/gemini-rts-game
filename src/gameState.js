@@ -39,14 +39,22 @@ export const gameState = {
   explosions: [],  // Initialized empty explosions array for visual effects.
   smokeParticles: [], // Smoke particles emitted by damaged units
   smokeParticlePool: [], // Reusable pool to avoid allocations during heavy smoke
+  dustParticles: [], // Dust particles emitted by mine sweepers
+  mineDeploymentPreview: null, // Active checkerboard drag rectangle (ephemeral)
+  sweepAreaPreview: null, // Active sweep drag rectangle (ephemeral)
+  mineFreeformPaint: null, // Set of painted tiles while Ctrl-dragging sweeps
   unitWrecks: [], // Destroyed unit remnants that can be recovered or recycled
   selectedWreckId: null, // Currently selected wreck (for UI feedback)
+  mines: [], // Deployed land mines with position, owner, health, and arming status
   speedMultiplier: 1.0,  // Set to 1.0 as requested
   // Building related properties
   buildings: [],
+  units: [], // Add units array to gameState
   factories: [], // Add factories array to gameState
   mapGrid: [], // Add mapGrid array to gameState
   occupancyMap: [], // Global occupancy map updated incrementally
+  occupancyMapViewIndex: 0,
+  occupancyMapViewMode: 'off',
   powerSupply: 0,
   // Separate power tracking for each side
   playerPowerSupply: 0,

@@ -1,6 +1,6 @@
 // unitCommands.js
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
-import { findPath } from '../units.js'
+import { findPathForOwner } from '../units.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { cancelRetreatForUnits } from '../behaviours/retreat.js'
@@ -96,7 +96,7 @@ function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTil
       if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
         return
       }
-      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, null)
+      const path = findPathForOwner(startTile, { x: destX, y: destY }, mapGrid, null, serviceUnit.owner)
       if (path && path.length > 0) {
         bestPlan = buildResult(path, { x: destX, y: destY }, { x: destX, y: destY })
       }
@@ -119,7 +119,7 @@ function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTil
         if (pos.x < 0 || pos.y < 0 || pos.y >= mapGrid.length || pos.x >= mapGrid[0].length) {
           return
         }
-        const path = findPath(startTile, pos, mapGrid, gameState.occupancyMap)
+        const path = findPathForOwner(startTile, pos, mapGrid, gameState.occupancyMap, serviceUnit.owner)
         if (path && path.length > 0) {
           const plan = buildResult(path, { x: pos.x, y: pos.y }, { x: pos.x, y: pos.y })
           if (!bestPlan || plan.cost < bestPlan.cost) {
@@ -137,7 +137,7 @@ function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTil
       if (destX < 0 || destY < 0 || destY >= mapGrid.length || destX >= mapGrid[0].length) {
         return
       }
-      const path = findPath(startTile, { x: destX, y: destY }, mapGrid, gameState.occupancyMap)
+      const path = findPathForOwner(startTile, { x: destX, y: destY }, mapGrid, gameState.occupancyMap, serviceUnit.owner)
       if (path && path.length > 0) {
         const plan = buildResult(path, { x: destX, y: destY }, { x: destX * TILE_SIZE, y: destY * TILE_SIZE })
         if (!bestPlan || plan.cost < bestPlan.cost) {
@@ -492,11 +492,12 @@ export class UnitCommandsHandler {
       const destX = tile.x
       const destY = tile.y
       if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
-        const path = findPath(
+        const path = findPathForOwner(
           { x: ammoTruck.tileX, y: ammoTruck.tileY },
           { x: destX, y: destY },
           mapGrid,
-          gameState.occupancyMap
+          gameState.occupancyMap,
+          ammoTruck.owner
         )
         if (path && path.length > 0) {
           ammoTruck.path = path.slice(1)
@@ -1081,11 +1082,12 @@ export class UnitCommandsHandler {
       const path =
         gasDepleted
           ? null
-          : findPath(
+          : findPathForOwner(
             { x: unit.tileX, y: unit.tileY },
             destTile,
             mapGrid,
-            gameState.occupancyMap
+            gameState.occupancyMap,
+            unit.owner
           )
 
       if (path && path.length > 0) {
@@ -1245,7 +1247,7 @@ export class UnitCommandsHandler {
       }
 
       const occupancyMap = gameState.occupancyMap
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, occupancyMap)
+      const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, desiredTile, mapGrid, occupancyMap, unit.owner)
 
       if (path && path.length > 0 && (unit.tileX !== desiredTile.x || unit.tileY !== desiredTile.y)) {
         unit.path = path.slice(1)
@@ -1293,14 +1295,15 @@ export class UnitCommandsHandler {
           forceHarvesterUnloadPriority(unit, refinery, units)
 
           // Path the harvester to the refinery immediately
-          const path = findPath(
+          const path = findPathForOwner(
             { x: unit.tileX, y: unit.tileY },
             {
               x: refinery.x + Math.floor(refinery.width / 2),
               y: refinery.y + Math.floor(refinery.height / 2)
             },
             mapGrid,
-            gameState.occupancyMap
+            gameState.occupancyMap,
+            unit.owner
           )
 
           if (path && path.length > 0) {
@@ -1332,11 +1335,12 @@ export class UnitCommandsHandler {
       if (unit.type === 'harvester') {
         unit.guardTarget = null
         unit.guardMode = false
-        const path = findPath(
+        const path = findPathForOwner(
           { x: unit.tileX, y: unit.tileY },
           oreTarget,
           mapGrid,
-          gameState.occupancyMap
+          gameState.occupancyMap,
+          unit.owner
         )
 
         if (path && path.length > 0) {
@@ -1378,7 +1382,7 @@ export class UnitCommandsHandler {
       const waitingX = workshop.x + (index % workshop.width)
       const targetTile = { x: waitingX, y: waitingY }
 
-      const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+      const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap, unit.owner)
       if (path && path.length > 0) {
         unit.path = path.length > 1 ? path.slice(1) : path
         unit.moveTarget = targetTile
@@ -1431,7 +1435,7 @@ export class UnitCommandsHandler {
         const waitingY = nearest.y + nearest.height + 1
         const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
         const targetTile = { x: waitingX, y: waitingY }
-        const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+        const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap, unit.owner)
         if (path && path.length > 0) {
           unit.path = path.slice(1)
           unit.moveTarget = targetTile
@@ -1630,11 +1634,12 @@ export class UnitCommandsHandler {
       let destinationFound = false
       for (const pos of refillPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = findPath(
+          const path = findPathForOwner(
             { x: ambulance.tileX, y: ambulance.tileY },
             { x: pos.x, y: pos.y },
             mapGrid,
-            gameState.occupancyMap
+            gameState.occupancyMap,
+            ambulance.owner
           )
           if (path && path.length > 0) {
             ambulance.path = path
@@ -1679,11 +1684,12 @@ export class UnitCommandsHandler {
 
     unitsNeedingGas.forEach((unit, index) => {
       const pos = positions[index % positions.length]
-      const path = findPath(
+      const path = findPathForOwner(
         { x: unit.tileX, y: unit.tileY },
         { x: pos.x, y: pos.y },
         mapGrid,
-        gameState.occupancyMap
+        gameState.occupancyMap,
+        unit.owner
       )
       if (path && path.length > 0) {
         unit.path = path
@@ -1888,7 +1894,7 @@ export class UnitCommandsHandler {
       let destinationFound = false
       for (const pos of repairPositions) {
         if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = findPath({ x: unit.tileX, y: unit.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap)
+          const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap, unit.owner)
           if (path && path.length > 0) {
             unit.path = path.slice(1) // Remove the first node (current position)
             unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }

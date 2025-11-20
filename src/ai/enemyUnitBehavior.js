@@ -163,10 +163,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         if (targetPos && !unit.isDodging) {
           const occupancyMap = gameState.occupancyMap
           const path = getCachedPath(
-            { x: unit.tileX, y: unit.tileY },
+            { x: unit.tileX, y: unit.tileY, owner: unit.owner },
             targetPos,
             mapGrid,
-            occupancyMap
+            occupancyMap,
+            { unitOwner: unit.owner }
           )
           if (path.length > 1) {
             unit.path = path.slice(1)
@@ -482,10 +483,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
             // Use occupancy map in attack mode to prevent moving through occupied tiles
             const occupancyMap = gameState.occupancyMap
             const path = getCachedPath(
-              { x: unit.tileX, y: unit.tileY },
+              { x: unit.tileX, y: unit.tileY, owner: unit.owner },
               targetPos,
               mapGrid,
-              occupancyMap
+              occupancyMap,
+              { unitOwner: unit.owner }
             )
             if (path.length > 1) {
               unit.path = path.slice(1)
@@ -536,10 +538,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         // Use occupancy map in attack mode to prevent moving through occupied tiles
         const occupancyMap = gameState.occupancyMap
         const path = getCachedPath(
-          { x: unit.tileX, y: unit.tileY },
+          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
           targetPos,
           mapGrid,
-          occupancyMap
+          occupancyMap,
+          { unitOwner: unit.owner }
         )
         if (path.length > 1) {
           unit.path = path.slice(1)
@@ -595,10 +598,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
                   unit.dodgeEndTime = now + dodgeTimeDelay
                 }
                 const newPath = getCachedPath(
-                  { x: unit.tileX, y: unit.tileY },
+                  { x: unit.tileX, y: unit.tileY, owner: unit.owner },
                   { x: destTileX, y: destTileY },
                   mapGrid,
-                  gameState.occupancyMap
+                  gameState.occupancyMap,
+                  { unitOwner: unit.owner }
                 )
                 if (newPath.length > 1) {
                   unit.isDodging = true
@@ -663,10 +667,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
               // Use occupancy map for tactical retreat movement to avoid moving through units
               const occupancyMap = gameState.occupancyMap
               const newPath = getCachedPath(
-                { x: unit.tileX, y: unit.tileY },
+                { x: unit.tileX, y: unit.tileY, owner: unit.owner },
                 { x: destTileX, y: destTileY },
                 mapGrid,
-                occupancyMap
+                occupancyMap,
+                { unitOwner: unit.owner }
               )
               if (newPath.length > 1) {
                 unit.path = newPath.slice(1)
@@ -795,7 +800,9 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
       const hospitalCenterX = hospitals[0].x + Math.floor(hospitals[0].width / 2)
       const refillY = hospitals[0].y + hospitals[0].height + 1
 
-      const path = findPath(unit, hospitalCenterX, refillY, mapGrid)
+      const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+      const targetTile = { x: hospitalCenterX, y: refillY }
+      const path = findPath(startNode, targetTile, mapGrid, gameState.occupancyMap, undefined, { unitOwner: unit.owner })
       if (path && path.length > 0) {
         unit.path = path
         unit.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
@@ -921,10 +928,11 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
         (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
       ) {
         const path = getCachedPath(
-          { x: unit.tileX, y: unit.tileY },
+          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
           retreatTile,
           mapGrid,
-          gameState.occupancyMap
+          gameState.occupancyMap,
+          { unitOwner: unit.owner }
         )
         unit.path = path.length > 1 ? path.slice(1) : []
         unit.lastPathCalcTime = now
@@ -1032,10 +1040,11 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
     ) {
       const path = getCachedPath(
-        { x: unit.tileX, y: unit.tileY },
+        { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         desiredTile,
         mapGrid,
-        gameState.occupancyMap
+        gameState.occupancyMap,
+        { unitOwner: unit.owner }
       )
       unit.path = path.length > 1 ? path.slice(1) : []
       unit.lastPathCalcTime = now
@@ -1077,10 +1086,11 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
       (unit.lastPathCalcTime && now - unit.lastPathCalcTime > HARVESTER_HUNTER_PATH_REFRESH)
     ) {
       const path = getCachedPath(
-        { x: unit.tileX, y: unit.tileY },
+        { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         unit.lastSafeTile,
         mapGrid,
-        gameState.occupancyMap
+        gameState.occupancyMap,
+        { unitOwner: unit.owner }
       )
       unit.path = path.length > 1 ? path.slice(1) : []
       unit.lastPathCalcTime = now

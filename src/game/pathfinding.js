@@ -12,8 +12,12 @@ const PATH_CACHE_TTL = PATH_CALC_INTERVAL
  * from another unit if available. If a cached path doesn't exist,
  * calculate a new one and store it.
  */
-function getCachedPath(start, end, mapGrid, occupancyMap) {
-  const endKey = `${end.x},${end.y}-${occupancyMap ? 1 : 0}`
+function getCachedPath(start, end, mapGrid, occupancyMap, options = null) {
+  const contextOptions = options || {}
+  const derivedOwner = contextOptions.unitOwner ?? start.owner ?? start.ownerId ?? start.playerId ?? null
+  const ownerKey = derivedOwner || 'any'
+  const ignoreKey = contextOptions.ignoreFriendlyMines ? 'ignoreFriendly' : 'respectFriendly'
+  const endKey = `${end.x},${end.y}-${occupancyMap ? 1 : 0}-${ownerKey}-${ignoreKey}`
   const now = performance.now()
   let entries = pathCache.get(endKey)
 
@@ -36,7 +40,11 @@ function getCachedPath(start, end, mapGrid, occupancyMap) {
     }
   }
 
-  const path = findPath(start, end, mapGrid, occupancyMap)
+  const pathOptions = { ...contextOptions }
+  if (!pathOptions.unitOwner && derivedOwner) {
+    pathOptions.unitOwner = derivedOwner
+  }
+  const path = findPath(start, end, mapGrid, occupancyMap, undefined, pathOptions)
   if (path && path.length > 0) {
     if (!entries) {
       entries = []
@@ -151,9 +159,11 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
           // For regular movement commands, use occupancy map for close range, ignore for long distance
           const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
           const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
+          const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+          const cacheOptions = { unitOwner: unit.owner }
           const newPath = useOccupancyMap
-            ? getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, occupancyMap)
-            : getCachedPath({ x: unit.tileX, y: unit.tileY }, adjustedTarget, mapGrid, null)
+            ? getCachedPath(startNode, adjustedTarget, mapGrid, occupancyMap, cacheOptions)
+            : getCachedPath(startNode, adjustedTarget, mapGrid, null, cacheOptions)
 
           if (newPath.length > 1) {
             unit.path = newPath.slice(1)

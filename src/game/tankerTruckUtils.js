@@ -16,7 +16,8 @@ export function computeTankerKamikazeApproach(tanker, target, mapGrid, occupancy
 
   const startTile = {
     x: typeof tanker.tileX === 'number' ? tanker.tileX : Math.floor((tanker.x + TILE_SIZE / 2) / TILE_SIZE),
-    y: typeof tanker.tileY === 'number' ? tanker.tileY : Math.floor((tanker.y + TILE_SIZE / 2) / TILE_SIZE)
+    y: typeof tanker.tileY === 'number' ? tanker.tileY : Math.floor((tanker.y + TILE_SIZE / 2) / TILE_SIZE),
+    owner: tanker.owner
   }
 
   const targetTile = getTargetTile(target)
@@ -39,13 +40,13 @@ export function computeTankerKamikazeApproach(tanker, target, mapGrid, occupancy
       continue
     }
 
-    const path = findPath(startTile, dest, mapGrid, occupancyMap)
+    const path = findPath(startTile, dest, mapGrid, occupancyMap, undefined, { unitOwner: tanker.owner })
     if (path && path.length > 0) {
       return buildResult(path, dest)
     }
   }
 
-  const fallbackPath = findPath(startTile, targetTile, mapGrid, null)
+  const fallbackPath = findPath(startTile, targetTile, mapGrid, null, undefined, { unitOwner: tanker.owner })
   if (fallbackPath && fallbackPath.length > 0) {
     return buildResult(fallbackPath, targetTile)
   }

@@ -207,6 +207,24 @@ export class EffectsRenderer {
     }
   }
 
+  renderDust(ctx, gameState, scrollOffset) {
+    if (gameState?.dustParticles && gameState.dustParticles.length > 0) {
+      gameState.dustParticles.forEach(p => {
+        ctx.save()
+        ctx.globalAlpha = p.alpha
+        const x = p.x - scrollOffset.x
+        const y = p.y - scrollOffset.y
+        const size = p.currentSize || p.size
+
+        ctx.fillStyle = p.color || '#D2B48C'
+        ctx.beginPath()
+        ctx.arc(x, y, size, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      })
+    }
+  }
+
   renderExplosions(ctx, gameState, scrollOffset) {
     // Draw explosion effects.
     if (gameState?.explosions && gameState?.explosions.length > 0) {
@@ -247,6 +265,42 @@ export class EffectsRenderer {
     }
   }
 
+  renderDustParticles(ctx, gameState, scrollOffset) {
+    // Draw dust particles from Mine Sweeper
+    if (gameState?.dustParticles && gameState?.dustParticles.length > 0) {
+      const currentTime = performance.now()
+      
+      // Clean up expired particles
+      gameState.dustParticles = gameState.dustParticles.filter(dust => {
+        const age = currentTime - dust.startTime
+        return age < dust.lifetime
+      })
+      
+      // Render active particles
+      gameState.dustParticles.forEach(dust => {
+        if (!dust) return
+        
+        const age = currentTime - dust.startTime
+        const progress = age / dust.lifetime
+        const alpha = Math.max(0, 1 - progress)
+        
+        const screenX = dust.x - scrollOffset.x
+        const screenY = dust.y - scrollOffset.y
+        
+        // Particle expands and fades
+        const currentSize = dust.size * (1 + progress * 0.5)
+        
+        ctx.save()
+        ctx.globalAlpha = alpha * 0.4
+        ctx.fillStyle = dust.color || '#D2B48C'
+        ctx.beginPath()
+        ctx.arc(screenX, screenY, currentSize, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      })
+    }
+  }
+
   renderTeslaLightning(ctx, units, scrollOffset) {
     // Render Tesla Coil Lightning Effects ON TOP
     if (units && units.length > 0) {
@@ -270,6 +324,8 @@ export class EffectsRenderer {
   render(ctx, bullets, gameState, units, scrollOffset) {
     this.renderBullets(ctx, bullets, scrollOffset)
     this.renderSmoke(ctx, gameState, scrollOffset)
+    this.renderDust(ctx, gameState, scrollOffset)
+    this.renderDustParticles(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
   }

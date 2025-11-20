@@ -1,7 +1,7 @@
 // keyboardHandler.js
 import { gameState } from '../gameState.js'
 import { TILE_SIZE } from '../config.js'
-import { findPath } from '../units.js'
+import { findPathForOwner } from '../units.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { HelpSystem } from './helpSystem.js'
 import { CheatSystem } from './cheatSystem.js'
@@ -673,7 +673,13 @@ export class KeyboardHandler {
         unit.dodgeEndTime = performance.now() + 3000 // Dodge lasts up to 3 seconds
 
         // Compute a new path to the dodge destination
-        const newPath = findPath({ x: tileX, y: tileY }, dodgeTarget, mapGrid, null)
+        const newPath = findPathForOwner(
+          { x: tileX, y: tileY },
+          dodgeTarget,
+          mapGrid,
+          null,
+          unit.owner
+        )
         if (newPath.length > 1) {
           unit.path = newPath.slice(1)
           dodgeSuccessCount++
@@ -921,15 +927,35 @@ export class KeyboardHandler {
   }
 
   handleOccupancyMapToggle() {
-    // Toggle occupancy map visibility
-    gameState.occupancyVisible = !gameState.occupancyVisible
+    const modes = this.getOccupancyViewModes()
+    if (modes.length === 0) return
 
-    // Show notification to user
-    const status = gameState.occupancyVisible ? 'ON' : 'OFF'
-    this.showNotification(`Occupancy map: ${status}`, 2000)
+    const nextIndex = (gameState.occupancyMapViewIndex + 1) % modes.length
+    const mode = modes[nextIndex]
+    gameState.occupancyMapViewIndex = nextIndex
+    gameState.occupancyMapViewMode = mode
+    const enabled = mode !== 'off'
+    gameState.occupancyVisible = enabled
 
-    // Play a sound for feedback
+    const label = this.formatOccupancyModeLabel(mode)
+    this.showNotification(`Occupancy map: ${label}`, 2000)
     playSound('confirmed', 0.5)
+  }
+
+  getOccupancyViewModes() {
+    const configuredPlayers = Math.max(1, gameState.playerCount || 1)
+    const playerIds = ['player1', 'player2', 'player3', 'player4'].slice(0, Math.min(4, configuredPlayers))
+    return ['off', 'players', ...playerIds]
+  }
+
+  formatOccupancyModeLabel(mode) {
+    if (mode === 'off') return 'OFF'
+    if (mode === 'players') return 'Players'
+    if (mode && mode.startsWith('player')) {
+      const number = mode.replace('player', '')
+      return `Player ${number || 'Unknown'}`
+    }
+    return mode
   }
 
   handleDzmToggle() {

@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, MINE_DEPLOY_STOP_TIME } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -10,6 +10,8 @@ import { renderAmbulanceWithImage, isAmbulanceImageLoaded } from './ambulanceIma
 import { renderTankerTruckWithImage, isTankerTruckImageLoaded } from './tankerTruckImageRenderer.js'
 import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recoveryTankImageRenderer.js'
 import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
+import { renderMineLayerWithImage, isMineLayerImageLoaded } from './mineLayerImageRenderer.js'
+import { renderMineSweeperWithImage, isMineSweeperImageLoaded } from './mineSweeperImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling, getBuildingIdentifier } from '../utils.js'
 
@@ -335,6 +337,14 @@ export class UnitRenderer {
       shouldShowBar = true
       progress = (unit.ammoCargo || 0) / (unit.maxAmmoCargo || 500)
       barColor = '#FFA500' // Orange for ammunition
+    } else if (unit.type === 'mineLayer') {
+      // Mine Layer - show deployment progress when deploying
+      if (unit.deployingMine && unit.deployStartTime) {
+        shouldShowBar = true
+        progress = Math.min((performance.now() - unit.deployStartTime) / MINE_DEPLOY_STOP_TIME, 1)
+        barColor = '#FFFF00' // Yellow for deployment progress
+      }
+      // Don't show mine capacity here - it's on the left ammunition bar
     } else {
       // Combat unit experience progress
       initializeUnitLeveling(unit)
@@ -431,6 +441,10 @@ export class UnitRenderer {
     } else if (typeof unit.maxAmmunition === 'number') {
       // Regular units
       ratio = unit.ammunition / unit.maxAmmunition
+      hasAmmo = true
+    } else if (unit.type === 'mineLayer' && typeof unit.mineCapacity === 'number') {
+      // Mine Layer - show mine capacity on left bar
+      ratio = (unit.remainingMines || 0) / unit.mineCapacity
       hasAmmo = true
     }
 
@@ -801,6 +815,24 @@ export class UnitRenderer {
       const ok = renderAmmunitionTruckWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'mineLayer' && isMineLayerImageLoaded()) {
+      const ok = renderMineLayerWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'mineSweeper' && isMineSweeperImageLoaded()) {
+      const ok = renderMineSweeperWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
         this.renderSelection(ctx, unit, centerX, centerY)
         this.renderAlertMode(ctx, unit, centerX, centerY)
         return

@@ -12,7 +12,10 @@ import {
   DEFAULT_MAP_TILES_X,
   DEFAULT_MAP_TILES_Y,
   AMMO_TRUCK_CARGO,
-  HELIPAD_AMMO_RESERVE
+  HELIPAD_AMMO_RESERVE,
+  MINE_HEALTH,
+  MINE_ARM_DELAY,
+  MINE_DEPLOY_STOP_TIME
 } from './config.js'
 import { enforceSmokeParticleCapacity } from './utils/smokeUtils.js'
 import { createUnit } from './units.js'
@@ -31,6 +34,9 @@ import {
 } from './main.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { getKeyboardHandler } from './inputHandler.js'
+import { ensurePlayerBuildHistoryLoaded } from './savePlayerBuildPatterns.js'
+import { getUniqueId } from './utils.js'
+import { rebuildMineLookup } from './game/mineSystem.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
 
@@ -157,6 +163,11 @@ export function getSaveGames() {
 }
 
 export function saveGame(label) {
+  ensurePlayerBuildHistoryLoaded()
+  const perfNow = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now()
+
   // Gather AI player money (budget) from all AI factories
   const aiFactoryBudgets = {}
   factories.forEach(factory => {
@@ -166,52 +177,70 @@ export function saveGame(label) {
   })
 
   // Gather all units (human player and AI players)
-  const allUnits = units.map(u => ({
-    type: u.type,
-    owner: u.owner,
-    x: u.x,
-    y: u.y,
-    tileX: u.tileX,
-    tileY: u.tileY,
-    health: u.health,
-    maxHealth: u.maxHealth,
-    id: u.id,
-    gas: u.gas,
-    maxGas: u.maxGas,
-    supplyGas: u.supplyGas,
-    maxSupplyGas: u.maxSupplyGas,
-    gasRefillTimer: u.gasRefillTimer,
-    refueling: u.refueling,
-    outOfGasPlayed: u.outOfGasPlayed,
-    // Ammunition system properties
-    ammunition: u.ammunition,
-    maxAmmunition: u.maxAmmunition,
-    ammoCargo: u.ammoCargo,
-    maxAmmoCargo: u.maxAmmoCargo,
-    rocketAmmo: u.rocketAmmo,
-    maxRocketAmmo: u.maxRocketAmmo,
-    apacheAmmoEmpty: u.apacheAmmoEmpty,
-    canFire: u.canFire,
-    // Harvester-specific properties
-    oreCarried: u.oreCarried,
-    assignedRefinery: u.assignedRefinery,
-    oreField: u.oreField,
-    path: u.path || [],
-    // Save target as ID only to avoid circular references
-    targetId: u.target?.id || null,
-    targetType: u.target ? (u.target.type || 'unknown') : null,
-    groupNumber: u.groupNumber,
-    // Experience/Leveling system properties
-    level: u.level || 0,
-    experience: u.experience || 0,
-    baseCost: u.baseCost,
-    rangeMultiplier: u.rangeMultiplier,
-    fireRateMultiplier: u.fireRateMultiplier,
-    armor: u.armor,
-    selfRepair: u.selfRepair
-    // Note: lastAttacker is excluded to prevent circular references
-    // Add more fields if needed
-  }))
+  const allUnits = units.map(u => {
+    const serialized = {
+      type: u.type,
+      owner: u.owner,
+      x: u.x,
+      y: u.y,
+      tileX: u.tileX,
+      tileY: u.tileY,
+      health: u.health,
+      maxHealth: u.maxHealth,
+      id: u.id,
+      gas: u.gas,
+      maxGas: u.maxGas,
+      supplyGas: u.supplyGas,
+      maxSupplyGas: u.maxSupplyGas,
+      gasRefillTimer: u.gasRefillTimer,
+      refueling: u.refueling,
+      outOfGasPlayed: u.outOfGasPlayed,
+      // Ammunition system properties
+      ammunition: u.ammunition,
+      maxAmmunition: u.maxAmmunition,
+      ammoCargo: u.ammoCargo,
+      maxAmmoCargo: u.maxAmmoCargo,
+      rocketAmmo: u.rocketAmmo,
+      maxRocketAmmo: u.maxRocketAmmo,
+      apacheAmmoEmpty: u.apacheAmmoEmpty,
+      canFire: u.canFire,
+      // Harvester-specific properties
+      oreCarried: u.oreCarried,
+      assignedRefinery: u.assignedRefinery,
+      oreField: u.oreField,
+      path: u.path || [],
+      // Save target as ID only to avoid circular references
+      targetId: u.target?.id || null,
+      targetType: u.target ? (u.target.type || 'unknown') : null,
+      groupNumber: u.groupNumber,
+      // Experience/Leveling system properties
+      level: u.level || 0,
+      experience: u.experience || 0,
+      baseCost: u.baseCost,
+      rangeMultiplier: u.rangeMultiplier,
+      fireRateMultiplier: u.fireRateMultiplier,
+      armor: u.armor,
+      selfRepair: u.selfRepair
+      // Note: lastAttacker is excluded to prevent circular references
+      // Add more fields if needed
+    }
+
+    if (u.type === 'mineLayer') {
+      serialized.mineCapacity = u.mineCapacity
+      serialized.remainingMines = u.remainingMines
+      serialized.deployTargetX = Number.isFinite(u.deployTargetX) ? u.deployTargetX : null
+      serialized.deployTargetY = Number.isFinite(u.deployTargetY) ? u.deployTargetY : null
+      serialized.mineDeployRemaining = u.deployingMine && typeof u.deployStartTime === 'number'
+        ? Math.max(0, MINE_DEPLOY_STOP_TIME - (perfNow - u.deployStartTime))
+        : 0
+    }
+
+    if (u.type === 'mineSweeper') {
+      serialized.sweeping = Boolean(u.sweeping)
+    }
+
+    return serialized
+  })
 
   const allWrecks = Array.isArray(gameState.unitWrecks)
     ? gameState.unitWrecks.map(wreck => ({
@@ -342,7 +371,40 @@ export function saveGame(label) {
           x: Number.isFinite(bp.x) ? bp.x : 0,
           y: Number.isFinite(bp.y) ? bp.y : 0
         }))
-        : []
+        : [],
+      mines: Array.isArray(gameState.mines)
+        ? gameState.mines.map(mine => ({
+          id: mine.id,
+          tileX: mine.tileX,
+          tileY: mine.tileY,
+          owner: mine.owner,
+          health: mine.health,
+          maxHealth: mine.maxHealth,
+          active: Boolean(mine.active),
+          armDelayRemaining: !mine.active && typeof mine.armedAt === 'number'
+            ? Math.max(0, mine.armedAt - perfNow)
+            : 0
+        }))
+        : [],
+      mineDeploymentPreview: gameState.mineDeploymentPreview
+        ? {
+            startX: gameState.mineDeploymentPreview.startX,
+            startY: gameState.mineDeploymentPreview.startY,
+            endX: gameState.mineDeploymentPreview.endX,
+            endY: gameState.mineDeploymentPreview.endY
+          }
+        : null,
+      sweepAreaPreview: gameState.sweepAreaPreview
+        ? {
+            startX: gameState.sweepAreaPreview.startX,
+            startY: gameState.sweepAreaPreview.startY,
+            endX: gameState.sweepAreaPreview.endX,
+            endY: gameState.sweepAreaPreview.endY
+          }
+        : null,
+      mineFreeformPaint: gameState.mineFreeformPaint instanceof Set
+        ? Array.from(gameState.mineFreeformPaint)
+        : (Array.isArray(gameState.mineFreeformPaint) ? [...gameState.mineFreeformPaint] : null)
     },
     aiFactoryBudgets, // Save AI player budgets
     units: allUnits,
@@ -467,6 +529,25 @@ export function loadGame(key) {
     gameState.draggedUnitButton = null
     gameState.chainBuildingButton = null
 
+    const sanitizeRect = rect => {
+      if (!rect || typeof rect !== 'object') return null
+      const startX = Number.isFinite(rect.startX) ? rect.startX : 0
+      const startY = Number.isFinite(rect.startY) ? rect.startY : 0
+      const endX = Number.isFinite(rect.endX) ? rect.endX : startX
+      const endY = Number.isFinite(rect.endY) ? rect.endY : startY
+      return { startX, startY, endX, endY }
+    }
+
+    gameState.mineDeploymentPreview = sanitizeRect(loaded.gameState?.mineDeploymentPreview)
+    gameState.sweepAreaPreview = sanitizeRect(loaded.gameState?.sweepAreaPreview)
+
+    const savedFreeformPaint = loaded.gameState?.mineFreeformPaint
+    if (Array.isArray(savedFreeformPaint) && savedFreeformPaint.length > 0) {
+      gameState.mineFreeformPaint = new Set(savedFreeformPaint)
+    } else {
+      gameState.mineFreeformPaint = null
+    }
+
     // Rehydrate Set from saved array
     if (Array.isArray(loaded.gameState.defeatedPlayers)) {
       gameState.defeatedPlayers = new Set(loaded.gameState.defeatedPlayers)
@@ -487,6 +568,40 @@ export function loadGame(key) {
     if (Array.isArray(loaded.gameState.newBuildingTypes)) {
       gameState.newBuildingTypes = new Set(loaded.gameState.newBuildingTypes)
     }
+
+    const perfNowAfterLoad = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+      ? performance.now()
+      : Date.now()
+
+    if (Array.isArray(loaded.gameState?.mines)) {
+      gameState.mines = loaded.gameState.mines.map(savedMine => {
+        const tileX = Number.isFinite(savedMine.tileX) ? savedMine.tileX : 0
+        const tileY = Number.isFinite(savedMine.tileY) ? savedMine.tileY : 0
+        const health = Number.isFinite(savedMine.health) ? savedMine.health : MINE_HEALTH
+        const maxHealth = Number.isFinite(savedMine.maxHealth) ? savedMine.maxHealth : MINE_HEALTH
+        const armDelayRemaining = Number.isFinite(savedMine.armDelayRemaining)
+          ? Math.max(0, savedMine.armDelayRemaining)
+          : 0
+        const armedAt = perfNowAfterLoad + armDelayRemaining
+        const deployTime = armedAt - MINE_ARM_DELAY
+        const active = armDelayRemaining <= 0 ? true : Boolean(savedMine.active)
+        return {
+          id: savedMine.id || getUniqueId(),
+          tileX,
+          tileY,
+          owner: savedMine.owner || gameState.humanPlayer,
+          health,
+          maxHealth,
+          deployTime,
+          armedAt,
+          active
+        }
+      })
+    } else {
+      gameState.mines = []
+    }
+
+    rebuildMineLookup()
 
     const loadedWrecks = Array.isArray(loaded.unitWrecks) ? loaded.unitWrecks : []
     gameState.unitWrecks = loadedWrecks.map(wreck => {
@@ -669,6 +784,32 @@ export function loadGame(key) {
 
         console.log(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
       }
+
+        if (hydrated.type === 'mineLayer') {
+          if (typeof u.remainingMines === 'number') {
+            hydrated.remainingMines = u.remainingMines
+          }
+          if (typeof u.mineCapacity === 'number') {
+            hydrated.mineCapacity = u.mineCapacity
+          }
+          hydrated.deployTargetX = Number.isFinite(u.deployTargetX) ? u.deployTargetX : null
+          hydrated.deployTargetY = Number.isFinite(u.deployTargetY) ? u.deployTargetY : null
+
+          if (typeof u.mineDeployRemaining === 'number' && u.mineDeployRemaining > 0) {
+            const remaining = Math.min(MINE_DEPLOY_STOP_TIME, u.mineDeployRemaining)
+            hydrated.deployingMine = true
+            hydrated.deployStartTime = perfNowAfterLoad - (MINE_DEPLOY_STOP_TIME - remaining)
+          } else {
+            hydrated.deployingMine = false
+            hydrated.deployStartTime = null
+          }
+        }
+
+        delete hydrated.mineDeployRemaining
+
+        if (hydrated.type === 'mineSweeper') {
+          hydrated.sweeping = Boolean(u.sweeping)
+        }
 
       // Restore harvester-specific properties and re-assign to refineries if needed
       if (hydrated.type === 'harvester') {

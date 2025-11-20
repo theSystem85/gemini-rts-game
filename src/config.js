@@ -673,7 +673,9 @@ export const UNIT_COSTS = {
   ammunitionTruck: 800,
   recoveryTank: 3000,
   apache: 3000,
-  howitzer: HOWITZER_COST
+  howitzer: HOWITZER_COST,
+  mineLayer: 1000,
+  mineSweeper: 1000
 }
 
 // Unit properties
@@ -777,6 +779,24 @@ export const UNIT_PROPERTIES = {
     turretRotationSpeed: 0.04,
     accelerationMultiplier: 0.75,
     armor: 2
+  },
+  mineLayer: {
+    health: 30,
+    maxHealth: 30,
+    speed: 0.528, // 80% of tanker truck speed (0.66 * 0.8)
+    deploySpeed: 0.264, // 40% of tanker truck speed (0.66 * 0.4)
+    rotationSpeed: 0.04,
+    turretRotationSpeed: 0,
+    mineCapacity: 20
+  },
+  mineSweeper: {
+    health: 200,
+    maxHealth: 200,
+    speed: 0.231, // 70% of tank_v1 speed (0.33 * 0.7)
+    sweepingSpeed: 0.099, // 30% of tank_v1 speed (0.33 * 0.3)
+    rotationSpeed: TANK_WAGON_ROT,
+    turretRotationSpeed: 0,
+    armor: 6 // 2x tank armor (tank_v1 has no explicit armor, so using base of 3 * 2)
   }
 }
 
@@ -900,7 +920,9 @@ export const UNIT_TYPE_COLORS = {
   tankerTruck: '#FFA500',
   recoveryTank: '#FFD700', // Gold
   howitzer: '#D2691E',    // Chocolate
-  apache: '#556B2F'       // Dark olive green
+  apache: '#556B2F',       // Dark olive green
+  mineLayer: '#A0522D',    // Sienna (brownish)
+  mineSweeper: '#4682B4'   // Steel blue
 }
 
 // Party/owner colors for indicators (4 distinct colors for multiplayer)
@@ -985,6 +1007,43 @@ export let AMMO_FACTORY_PARTICLE_COUNT = 40 // average number of particles on fa
 
 export function setAmmoFactoryParticleCount(value) {
   AMMO_FACTORY_PARTICLE_COUNT = value
+}
+
+// Mine system constants
+export let MINE_CAPACITY = 20 // Mine Layer payload capacity
+export let MINE_HEALTH = 10 // Health points of deployed mine
+export let MINE_DAMAGE_CENTER = 90 // Maximum damage at the mine tile
+export let MINE_EXPLOSION_RADIUS = 2 // Tile radius over which damage falls off
+export let MINE_DEPLOY_STOP_TIME = 4000 // ms Mine Layer must stop to deploy
+export let MINE_ARM_DELAY = 4000 // ms delay after truck vacates before mine arms
+export let MINE_TRIGGER_RADIUS = TILE_SIZE * 0.45 // Unit center must fall within this circle to trip a mine
+
+export function setMineCapacity(value) {
+  MINE_CAPACITY = value
+}
+
+export function setMineHealth(value) {
+  MINE_HEALTH = value
+}
+
+export function setMineDamageCenter(value) {
+  MINE_DAMAGE_CENTER = value
+}
+
+export function setMineDeployStopTime(value) {
+  MINE_DEPLOY_STOP_TIME = value
+}
+
+export function setMineArmDelay(value) {
+  MINE_ARM_DELAY = value
+}
+
+export function setMineExplosionRadius(value) {
+  MINE_EXPLOSION_RADIUS = value
+}
+
+export function setMineTriggerRadius(value) {
+  MINE_TRIGGER_RADIUS = value
 }
 
 export let AMMO_PARTICLE_DAMAGE = 40 // average damage per ammunition particle
@@ -1203,7 +1262,9 @@ export const UNIT_GAS_PROPERTIES = {
   harvester: { tankSize: 2650, consumption: 30, harvestConsumption: 100 },
   ambulance: { tankSize: 75, consumption: 25 },
   tankerTruck: { tankSize: 700, consumption: 150 },
-  apache: { tankSize: 5200, consumption: 120 }
+  apache: { tankSize: 5200, consumption: 120 },
+  mineLayer: { tankSize: 700, consumption: 150 },
+  mineSweeper: { tankSize: 1900, consumption: 450 }
 }
 
 const EXPORTED_CONFIG_VARIABLES = [

@@ -14,6 +14,30 @@
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
 ## Features
+- [ ] **Spec 011** Land mine system planning:
+  - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
+  - [x] ✅ 20-mine capacity using ammo HUD bar, refilled by ammo truck/factory, 20% slower than tanker (half speed while deploying)
+  - [x] ✅ Deploy mines via ctrl+click stacking or drag-area checkerboard auto-deploy with chain-of-commands markers, auto-refill + resume if mines depleted, mines arm after unit leaves tile
+  - [x] ✅ Mines: skull tile indicator (70% opacity), friendly occupancy only, 10 HP, 90 damage center + 50 orthogonal neighbors, chain reactions for contiguous lines, explode on any unit, remaining payload explodes on truck death
+  - [ ] Mines detonate only when a unit’s center lands inside the deploying tile’s inner circle so grazing the edge doesn’t trigger the blast.
+  - [x] ✅ Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping)
+    - dust animation while sweeping, negates mine damage while sweeping
+  - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines
+  - [x] ✅ Mine sweeper must physically traverse every sweep tile before disarming (no remote area clears when merely entering the field) — enforced via tile-by-tile movement reissue in `commandQueue.js`.
+  - [x] ✅ Keep mine sweepers locked in sweeping mode and moving in straight serpentine lanes without re-pathing detours by overriding movement during sweep commands (see `commandQueue.js` + `unitMovement.js`).
+  - [x] ✅ Mine Layer drag deployments now reuse the Mine Sweeper serpentine path ordering so trucks follow the same efficient lanes when planting checkerboard fields (`mineInputHandler.js`).
+  - [x] ✅ When multiple Mine Layers or Mine Sweepers receive the same area command, automatically split the serpentine path into contiguous segments so each unit handles its share without overlap (`mineInputHandler.js`).
+  - [ ] Owner-aware mine avoidance (in progress 2025-11-19): ensure occupancy/pathfinding/movement block only the owning party while other players can traverse and trigger mines.
+  - [ ] Adjust mine explosions so damage falls off over a 2-tile radius (full damage on the mine tile down to zero at the border) instead of targeting individual orthogonal tiles.
+  - [ ] Add cheat codes `mine [party]` and `mines [WxH][gG]` so testers can drop a single mine or a patterned field (e.g., `mines 2x3g1` or shorthand `3x1` which equals `3x1g0`) and document the usage in specs.
+    - Must also make sure enemy units trigger detonations when entering armed tiles and friendly units treat their own mine tiles as blocked in pathfinding/occupancy calculations.
+    - Current focus: propagate owner-aware `findPath` options through AI behaviors/strategies and path caching so every path request knows the unit owner.
+  - [ ] Make the occupancy map player-aware: `o` cycles between `Players` and individual player views, shows a notification for the current overlay, and only highlights each party's mines on their own occupancy map.
+  - Minesweeper uses gas only (no ammo), mine deploy indicators persist until destruction
+  - Enemy AI deploys mines (ore fields + approach roads) once ammo factory + truck exist and fields ammo, AI builds sweeper units when mines destroy their units
+    - [ ] Continue post-Phase-5 mine-system implementation per latest directive: finish optional steps, ensure Mine Layer and Mine Sweeper PPF flows are fully integrated before moving forward.
+  - [ ] Play `AllMinesOnTheFieldAreDisarmed.mp3` when an area sweep completes and `The_mine_field_has_been_deployed_and_armed.mp3` when a Mine Layer finishes arming every tile of a dragged minefield.
+  - [ ] Make rectangle sweep commands route the sweeper to the nearest entry tile, flip to clearance mode with dust and 30% speed before entering, and pick the serpentine order (left-right/top-to-bottom versus reverse) that minimizes the approach distance while covering every tile.
 - [x] ✅ Implement articulated howitzer gun using the tankV1 barrel asset with ballistic elevation, directional muzzle flash, stronger recoil, and movement/firing lockouts while the barrel adjusts.
 - [x] ✅ Rotate the shared howitzer barrel sprite by 180° and realign recoil/muzzle effects so the muzzle matches the wagon's facing.
 - [x] ✅ Ensure ammunition trucks leave no wrecks on destruction and detonate with scattered munitions that threaten all nearby units and buildings.

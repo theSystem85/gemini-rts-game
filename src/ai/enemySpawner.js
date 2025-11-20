@@ -170,7 +170,14 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       if (gameState?.targetedOreTiles) {
         gameState.targetedOreTiles[tileKey] = unit.id
       }
-      const newPath = findPath({ x: unit.tileX, y: unit.tileY }, orePos, mapGrid, null)
+      const newPath = findPath(
+        { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+        orePos,
+        mapGrid,
+        null,
+        undefined,
+        { unitOwner: unit.owner }
+      )
       if (newPath.length > 1) {
         unit.path = newPath.slice(1)
         unit.oreField = orePos

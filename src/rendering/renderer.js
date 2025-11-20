@@ -19,8 +19,11 @@ import { preloadAmbulanceImage } from './ambulanceImageRenderer.js'
 import { preloadTankerTruckImage } from './tankerTruckImageRenderer.js'
 import { preloadRecoveryTankImage } from './recoveryTankImageRenderer.js'
 import { preloadAmmunitionTruckImage } from './ammunitionTruckImageRenderer.js'
+import { preloadMineLayerImage } from './mineLayerImageRenderer.js'
+import { preloadMineSweeperImage } from './mineSweeperImageRenderer.js'
 import { preloadHowitzerImage } from './howitzerImageRenderer.js'
 import { WreckRenderer } from './wreckRenderer.js'
+import { renderMineIndicators, renderMineDeploymentPreview, renderSweepAreaPreview, renderFreeformSweepPreview } from './mineRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -52,9 +55,11 @@ export class Renderer {
     let recoveryTankLoaded = false
     let ammunitionLoaded = false
     let howitzerLoaded = false
+    let mineLayerLoaded = false
+    let mineSweeperLoaded = false
 
     const checkAllLoaded = () => {
-      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded && ammunitionLoaded && howitzerLoaded) {
+      if (texturesLoaded && tankImagesLoaded && harvesterLoaded && rocketTankLoaded && ambulanceLoaded && tankerLoaded && recoveryTankLoaded && ammunitionLoaded && howitzerLoaded && mineLayerLoaded && mineSweeperLoaded) {
         if (callback) callback()
       }
     }
@@ -129,6 +134,22 @@ export class Renderer {
       howitzerLoaded = true
       checkAllLoaded()
     })
+
+    preloadMineLayerImage((success) => {
+      if (!success) {
+        console.warn('Mine layer image failed to load')
+      }
+      mineLayerLoaded = true
+      checkAllLoaded()
+    })
+
+    preloadMineSweeperImage((success) => {
+      if (!success) {
+        console.warn('Mine sweeper image failed to load')
+      }
+      mineSweeperLoaded = true
+      checkAllLoaded()
+    })
   }
 
   renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
@@ -169,6 +190,20 @@ export class Renderer {
     this.wreckRenderer.render(gameCtx, gameState.unitWrecks || [], scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
+    
+    // Render mine indicators (skull overlays)
+    renderMineIndicators(gameCtx, scrollOffset)
+
+    // Render mine deployment and sweep previews
+    if (gameState.mineDeploymentPreview) {
+      renderMineDeploymentPreview(gameCtx, gameState.mineDeploymentPreview, scrollOffset)
+    }
+    if (gameState.sweepAreaPreview) {
+      renderSweepAreaPreview(gameCtx, gameState.sweepAreaPreview, scrollOffset)
+    }
+    if (gameState.mineFreeformPaint) {
+      renderFreeformSweepPreview(gameCtx, gameState.mineFreeformPaint, scrollOffset)
+    }
 
     // Render movement target indicators (green triangles)
     this.movementTargetRenderer.render(gameCtx, units, scrollOffset)

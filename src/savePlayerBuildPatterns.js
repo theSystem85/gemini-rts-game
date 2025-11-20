@@ -1,45 +1,63 @@
 import { gameState } from './gameState.js'
 
+function readHistoryFromStorage() {
+  if (typeof localStorage === 'undefined') {
+    return []
+  }
+
+  try {
+    const savedHistory = localStorage.getItem('playerBuildHistory')
+    return savedHistory ? JSON.parse(savedHistory) : []
+  } catch (error) {
+    console.warn('Failed to parse playerBuildHistory from storage:', error)
+    return []
+  }
+}
+
+export function ensurePlayerBuildHistoryLoaded() {
+  if (!Array.isArray(gameState.playerBuildHistory)) {
+    gameState.playerBuildHistory = readHistoryFromStorage()
+  }
+
+  if (!Array.isArray(gameState.playerBuildHistory)) {
+    gameState.playerBuildHistory = []
+  }
+
+  return gameState.playerBuildHistory
+}
+
+function ensureSessionId() {
+  if (!gameState.currentSessionId) {
+    gameState.currentSessionId = Date.now().toString()
+  }
+  return gameState.currentSessionId
+}
+
 // Add function to save player building patterns to localStorage
 export function savePlayerBuildPatterns(buildingType) {
   try {
-    // Initialize player build history if it doesn't exist
-    if (!gameState.playerBuildHistory) {
-      // First try to load from localStorage
-      const savedHistory = localStorage.getItem('playerBuildHistory')
-      gameState.playerBuildHistory = savedHistory ? JSON.parse(savedHistory) : []
-    }
+    const history = ensurePlayerBuildHistoryLoaded()
+    const sessionId = ensureSessionId()
 
-    // Get current game session ID (create one if it doesn't exist)
-    if (!gameState.currentSessionId) {
-      gameState.currentSessionId = Date.now().toString()
-    }
-
-    // Get the current session's build order
-    let currentSession = gameState.playerBuildHistory.find(session =>
-      session.id === gameState.currentSessionId
-    )
+    let currentSession = history.find(session => session.id === sessionId)
 
     if (!currentSession) {
-      // Create a new session
       currentSession = {
-        id: gameState.currentSessionId,
+        id: sessionId,
         buildings: []
       }
-      gameState.playerBuildHistory.push(currentSession)
+      history.push(currentSession)
     }
 
-    // Add this building to the current session
     currentSession.buildings.push(buildingType)
 
-    // Limit to last 20 sessions
-    if (gameState.playerBuildHistory.length > 20) {
-      gameState.playerBuildHistory = gameState.playerBuildHistory.slice(-20)
+    if (history.length > 20) {
+      gameState.playerBuildHistory = history.slice(-20)
     }
 
-    // Save to localStorage
-    localStorage.setItem('playerBuildHistory', JSON.stringify(gameState.playerBuildHistory))
-
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('playerBuildHistory', JSON.stringify(gameState.playerBuildHistory))
+    }
   } catch (error) {
     console.error('Error saving player build patterns:', error)
   }

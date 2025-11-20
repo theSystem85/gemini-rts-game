@@ -11,7 +11,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
-const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer']
+const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer', 'mineLayer', 'mineSweeper']
 
 // Enhanced production queue system
 export const productionQueue = {
@@ -497,7 +497,7 @@ export const productionQueue = {
               gameState.targetedOreTiles[tileKey] = newUnit.id
             }
 
-            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY }, orePos, gameState.mapGrid, null)
+            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY, owner: newUnit.owner }, orePos, gameState.mapGrid, null, undefined, { unitOwner: newUnit.owner })
             if (newPath.length > 1) {
               newUnit.path = newPath.slice(1)
               newUnit.oreField = orePos // Set initial ore field target

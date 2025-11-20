@@ -16,6 +16,7 @@ import {
 import { createUnit, updateUnitOccupancy } from '../units.js'
 import { updatePowerSupply } from '../buildings.js'
 import { updateUnitSpeedModifier } from '../utils.js'
+import { deployMine } from '../game/mineSystem.js'
 
 export class CheatSystem {
   constructor() {
@@ -216,7 +217,9 @@ export class CheatSystem {
           <li><code>kill</code> - Destroy all selected units or buildings</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
-          <li><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
+          <li title="Supported unit types: harvester, tank_v1, tank-v2, tank-v3, rocketTank, recoveryTank, ambulance, tankerTruck, ammunitionTruck, apache, howitzer, mineLayer, mineSweeper"><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
+          <li><code>mine [party]</code> - Deploy a mine at the cursor for the specified party (defaults to player)</li>
+          <li><code>mines [WxH][gG] [party]</code> or <code>WxHgG</code> - Drop a minefield pattern (e.g., <code>mines 2x3g1</code>, <code>3x1</code> for a continuous row) with optional gaps</li>
         </ul>
       </div>
     `
@@ -300,6 +303,12 @@ export class CheatSystem {
 
   processCheatCode(code) {
     const normalizedCode = code.toLowerCase().trim()
+
+    const mineFieldArgs = this.parseMineFieldCommand(normalizedCode)
+    if (mineFieldArgs) {
+      this.deployMineFieldPattern(mineFieldArgs)
+      return
+    }
 
     try {
       // God mode commands
@@ -393,6 +402,18 @@ export class CheatSystem {
         }
       } else if (normalizedCode === 'kill') {
         this.killSelectedTargets()
+      } else if (normalizedCode.split(/\s+/)[0] === 'mine') {
+        const tokens = normalizedCode.split(/\s+/)
+        let owner = gameState.humanPlayer
+        if (tokens.length >= 2 && tokens[1]) {
+          const resolvedOwner = this.resolvePartyAlias(tokens[1])
+          if (!resolvedOwner) {
+            this.showError('Unknown party. Use: red, green, blue, or yellow')
+            return
+          }
+          owner = resolvedOwner
+        }
+        this.placeMineAtCursor(owner)
       } else {
         const spawn = this.parseSpawnCommand(code)
         if (spawn) {
@@ -619,6 +640,118 @@ export class CheatSystem {
     } else {
       this.showError('No valid spawn position found')
     }
+  }
+
+  placeMineAtCursor(owner) {
+    const tileX = Math.floor(gameState.cursorX / TILE_SIZE)
+    const tileY = Math.floor(gameState.cursorY / TILE_SIZE)
+    const targetOwner = owner || gameState.humanPlayer
+    const result = this.tryDeployMineAt(tileX, tileY, targetOwner)
+
+    if (!result.success) {
+      this.showError(result.reason || 'Cannot place a mine here')
+      return
+    }
+
+    showNotification(`💣 Mine deployed for ${this.getPartyDisplayName(targetOwner)}`, 3000)
+    playSound('confirmed', 0.5)
+  }
+
+  deployMineFieldPattern({ width, height, gap, owner }) {
+    const baseX = Math.floor(gameState.cursorX / TILE_SIZE)
+    const baseY = Math.floor(gameState.cursorY / TILE_SIZE)
+    let placed = 0
+    let skipped = 0
+    const skipReasons = new Set()
+    const patternOwner = owner || gameState.humanPlayer
+
+    for (let row = 0; row < height; row++) {
+      const targetY = baseY + row * (1 + gap)
+      for (let col = 0; col < width; col++) {
+        const targetX = baseX + col * (1 + gap)
+        const result = this.tryDeployMineAt(targetX, targetY, patternOwner)
+        if (result.success) {
+          placed++
+        } else {
+          skipped++
+          if (result.reason) {
+            skipReasons.add(result.reason)
+          }
+        }
+      }
+    }
+
+    const ownerLabel = this.getPartyDisplayName(patternOwner)
+    if (placed > 0) {
+      let message = `💣 Deployed ${placed} mine${placed === 1 ? '' : 's'} for ${ownerLabel}`
+      if (skipped > 0) {
+        message += ` (+${skipped} skipped` +
+          (skipReasons.size > 0 ? `: ${[...skipReasons].join(', ')}` : '') +
+          ')'
+      }
+      showNotification(message, 4000)
+      playSound('confirmed', 0.5)
+    } else {
+      const reason = skipReasons.values().next().value || 'No valid tiles available'
+      this.showError(`No mines placed (${reason})`)
+    }
+  }
+
+  parseMineFieldCommand(input) {
+    const tokens = input.split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return null
+
+    let patternToken = tokens[0]
+    if (patternToken === 'mines') {
+      tokens.shift()
+      if (tokens.length === 0) return null
+      patternToken = tokens.shift()
+    } else {
+      tokens.shift()
+    }
+
+    const pattern = this.parseMineFieldPattern(patternToken)
+    if (!pattern) return null
+
+    const ownerAlias = tokens.length > 0 ? tokens[0] : null
+    const owner = this.resolvePartyAlias(ownerAlias) || gameState.humanPlayer
+
+    return { ...pattern, owner }
+  }
+
+  parseMineFieldPattern(token) {
+    if (!token) return null
+    const match = token.match(/^(\d+)x(\d+)(?:g(\d+))?$/)
+    if (!match) return null
+    const width = Math.max(1, parseInt(match[1], 10))
+    const height = Math.max(1, parseInt(match[2], 10))
+    const gap = match[3] ? Math.max(0, parseInt(match[3], 10)) : 0
+    return { width, height, gap }
+  }
+
+  tryDeployMineAt(tileX, tileY, owner) {
+    const mapGrid = gameState.mapGrid
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+      return { success: false, reason: 'Map is not ready for mine placement' }
+    }
+
+    const mapWidth = mapGrid[0].length
+    const mapHeight = mapGrid.length
+    if (tileX < 0 || tileY < 0 || tileX >= mapWidth || tileY >= mapHeight) {
+      return { success: false, reason: 'Cursor is outside playable terrain' }
+    }
+
+    const tile = mapGrid[tileY][tileX]
+    if (!tile || tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal || tile.building) {
+      return { success: false, reason: 'Cannot place a mine on this tile' }
+    }
+
+    const mine = deployMine(tileX, tileY, owner)
+    if (!mine) {
+      return { success: false, reason: 'A mine already exists on this tile' }
+    }
+
+    return { success: true, mine }
   }
 
   enableGodMode() {

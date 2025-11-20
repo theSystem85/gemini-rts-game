@@ -124,6 +124,19 @@ export class PathPlanningRenderer {
             targetY = (nearest.y + nearest.height) * TILE_SIZE
             break
           }
+          case 'deployMine':
+            targetX = action.x * TILE_SIZE + TILE_SIZE / 2
+            targetY = action.y * TILE_SIZE + TILE_SIZE / 2
+            break
+          case 'sweepArea':
+            // For sweep area, we point to the first point in the path
+            if (action.path && action.path.length > 0) {
+              targetX = action.path[0].x * TILE_SIZE + TILE_SIZE / 2
+              targetY = action.path[0].y * TILE_SIZE + TILE_SIZE / 2
+            } else {
+              return // No path left
+            }
+            break
           case 'utility': {
             const t = action.target
             if (!t) return
@@ -153,6 +166,16 @@ export class PathPlanningRenderer {
         if (action.type !== 'utility') {
           ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
           ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
+          
+          // Custom colors for mine commands
+          if (action.type === 'deployMine') {
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines
+            ctx.strokeStyle = 'rgba(200, 0, 0, 0.9)'
+          } else if (action.type === 'sweepArea') {
+            ctx.fillStyle = 'rgba(200, 200, 50, 0.6)' // Yellowish for sweep
+            ctx.strokeStyle = 'rgba(180, 180, 0, 0.9)'
+          }
+
           ctx.beginPath()
           ctx.moveTo(screenX, screenY + half)
           ctx.lineTo(screenX - half, screenY - half)
@@ -172,6 +195,60 @@ export class PathPlanningRenderer {
 
         prevX = targetX
         prevY = targetY
+      })
+    })
+    
+    // Render detailed sweep paths for sweepArea commands
+    units.forEach(unit => {
+      if (!unit.selected || !unit.commandQueue) return
+      
+      unit.commandQueue.forEach((action, cmdIdx) => {
+        if (action.type === 'sweepArea' && action.path && action.path.length > 1) {
+          // Draw path line
+          ctx.save()
+          ctx.strokeStyle = 'rgba(255, 200, 0, 0.4)'
+          ctx.lineWidth = 2
+          ctx.setLineDash([4, 4])
+          ctx.beginPath()
+          
+          action.path.forEach((tile, idx) => {
+            const screenX = tile.x * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.x
+            const screenY = tile.y * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.y
+            if (idx === 0) {
+              ctx.moveTo(screenX, screenY)
+            } else {
+              ctx.lineTo(screenX, screenY)
+            }
+          })
+          ctx.stroke()
+          ctx.setLineDash([])
+          
+          // Draw small numbered markers along the path (only show first 10 for clarity)
+          const maxToShow = Math.min(action.path.length, 10)
+          const step = Math.max(1, Math.floor(action.path.length / maxToShow))
+          
+          for (let i = 0; i < action.path.length; i += step) {
+            if (i >= maxToShow) break
+            const tile = action.path[i]
+            const screenX = tile.x * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.x
+            const screenY = tile.y * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.y
+            
+            // Small circle
+            ctx.fillStyle = 'rgba(255, 200, 0, 0.5)'
+            ctx.beginPath()
+            ctx.arc(screenX, screenY, 4, 0, Math.PI * 2)
+            ctx.fill()
+            
+            // Number
+            ctx.fillStyle = '#000'
+            ctx.font = '7px Arial'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(String(i + 1), screenX, screenY)
+          }
+          
+          ctx.restore()
+        }
       })
     })
   }

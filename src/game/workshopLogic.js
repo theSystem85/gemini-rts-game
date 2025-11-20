@@ -201,10 +201,12 @@ function assignUnitsToSlots(workshop, mapGrid) {
       unit.repairSlot = slot
 
       const path = findPath(
-        { x: unit.tileX, y: unit.tileY },
+        { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         { x: slot.x, y: slot.y },
         mapGrid,
-        gameState.occupancyMap
+        gameState.occupancyMap,
+        undefined,
+        { unitOwner: unit.owner }
       )
 
       if (path && path.length > 1) {
@@ -308,10 +310,12 @@ function processWorkshopRestoration(workshop, units, mapGrid, delta) {
 
       if (moveTarget) {
         const path = findPath(
-          { x: spawnTile.x, y: spawnTile.y },
+          { x: spawnTile.x, y: spawnTile.y, owner: restored.owner },
           moveTarget,
           mapGrid,
-          occupancyMap
+          occupancyMap,
+          undefined,
+          { unitOwner: restored.owner }
         )
 
         if (path && path.length > 1) {
@@ -565,7 +569,14 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
           delete unit.targetWorkshop // Clear workshop assignment
 
           if (unit.returnTile) {
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, unit.returnTile, mapGrid, gameState.occupancyMap)
+            const path = findPath(
+              { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+              unit.returnTile,
+              mapGrid,
+              gameState.occupancyMap,
+              undefined,
+              { unitOwner: unit.owner }
+            )
             if (path && path.length > 1) {
               unit.path = path.slice(1)
               unit.moveTarget = { x: unit.returnTile.x, y: unit.returnTile.y }
@@ -575,7 +586,14 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
               unit.returnTile = null
             }
           } else if (workshop.rallyPoint) {
-            const path = findPath({ x: unit.tileX, y: unit.tileY }, workshop.rallyPoint, mapGrid, gameState.occupancyMap)
+            const path = findPath(
+              { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+              workshop.rallyPoint,
+              mapGrid,
+              gameState.occupancyMap,
+              undefined,
+              { unitOwner: unit.owner }
+            )
             if (path && path.length > 1) {
               unit.path = path.slice(1)
               unit.moveTarget = { x: workshop.rallyPoint.x, y: workshop.rallyPoint.y }
