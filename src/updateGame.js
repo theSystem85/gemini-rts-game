@@ -83,7 +83,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
 
     // Process queued unit commands before running unit systems
     const unitCommands = getUnitCommandsHandler()
-    processCommandQueues(units, mapGrid, unitCommands)
+    processCommandQueues(units, mapGrid, unitCommands, gameState.buildings)
 
     // Apply remote control inputs for selected tanks
     updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap)

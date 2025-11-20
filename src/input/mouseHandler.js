@@ -273,6 +273,9 @@ export class MouseHandler {
   handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager) {
     // Track mouse down time and position
     this.mouseDownTime = performance.now()
+    
+    // Track if Ctrl key is pressed for freeform sweep painting
+    this.ctrlKeyPressed = e.ctrlKey
 
     // Determine if this click should issue a force attack command
     this.forceAttackClick = selectedUnits.length > 0 && isForceAttackModifierActive(e)
@@ -589,17 +592,38 @@ export class MouseHandler {
           }
           gameState.mineDeploymentPreview = area
           gameState.sweepAreaPreview = null
+          gameState.mineFreeformPaint = null
         }
         // Mine Sweeper sweep preview
         else if (mineInput.hasMineSweeperSelected(selectedUnits)) {
-          const area = {
-            startX: Math.floor(this.selectionStart.x / TILE_SIZE),
-            startY: Math.floor(this.selectionStart.y / TILE_SIZE),
-            endX: Math.floor(this.selectionEnd.x / TILE_SIZE),
-            endY: Math.floor(this.selectionEnd.y / TILE_SIZE)
+          // Ctrl+Drag for freeform painting
+          if (this.ctrlKeyPressed) {
+            // Initialize freeform paint set if needed
+            if (!gameState.mineFreeformPaint) {
+              gameState.mineFreeformPaint = new Set()
+            }
+            
+            // Collect tiles from current position
+            const currentTileX = Math.floor(this.selectionEnd.x / TILE_SIZE)
+            const currentTileY = Math.floor(this.selectionEnd.y / TILE_SIZE)
+            const tileKey = `${currentTileX},${currentTileY}`
+            gameState.mineFreeformPaint.add(tileKey)
+            
+            // Clear rectangle preview when doing freeform
+            gameState.sweepAreaPreview = null
+            gameState.mineDeploymentPreview = null
+          } else {
+            // Normal rectangle sweep
+            const area = {
+              startX: Math.floor(this.selectionStart.x / TILE_SIZE),
+              startY: Math.floor(this.selectionStart.y / TILE_SIZE),
+              endX: Math.floor(this.selectionEnd.x / TILE_SIZE),
+              endY: Math.floor(this.selectionEnd.y / TILE_SIZE)
+            }
+            gameState.sweepAreaPreview = area
+            gameState.mineDeploymentPreview = null
+            gameState.mineFreeformPaint = null
           }
-          gameState.sweepAreaPreview = area
-          gameState.mineDeploymentPreview = null
         }
       }
     }

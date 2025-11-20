@@ -1,8 +1,8 @@
 import { startMineDeployment } from './mineLayerBehavior.js'
-import { removeMine, getMineAtTile } from './mineSystem.js'
+import { safeSweeperDetonation, getMineAtTile } from './mineSystem.js'
 import { TILE_SIZE } from '../config.js'
 
-export function processCommandQueues(units, mapGrid, unitCommands) {
+export function processCommandQueues(units, mapGrid, unitCommands, buildings = []) {
   units.forEach(unit => {
     if ((!unit.commandQueue || unit.commandQueue.length === 0) && !unit.currentCommand) return
 
@@ -11,7 +11,7 @@ export function processCommandQueues(units, mapGrid, unitCommands) {
       unit.currentCommand = action
       executeAction(unit, action, mapGrid, unitCommands)
     } else {
-      const complete = isActionComplete(unit, unit.currentCommand)
+      const complete = isActionComplete(unit, unit.currentCommand, units, buildings)
       if (complete) {
         unit.currentCommand = null
       }
@@ -59,7 +59,7 @@ function executeAction(unit, action, mapGrid, unitCommands) {
   }
 }
 
-function isActionComplete(unit, action) {
+function isActionComplete(unit, action, units = [], buildings = []) {
   switch (action.type) {
     case 'move':
       return (!unit.path || unit.path.length === 0) && !unit.moveTarget
@@ -106,10 +106,10 @@ function isActionComplete(unit, action) {
         const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
         
         if (atTile || movementComplete) {
-          // Clear any mines on this tile (regardless of ownership)
+          // Safely detonate any mines on this tile with sweeper immunity
           const mine = getMineAtTile(currentTile.x, currentTile.y)
           if (mine) {
-            removeMine(mine)
+            safeSweeperDetonation(mine, units, buildings)
           }
           action.path.shift() // Remove completed tile
           return action.path.length === 0
