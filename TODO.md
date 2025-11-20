@@ -25,6 +25,7 @@
   - [x] ✅ Mine sweeper must physically traverse every sweep tile before disarming (no remote area clears when merely entering the field) — enforced via tile-by-tile movement reissue in `commandQueue.js`.
   - [x] ✅ Keep mine sweepers locked in sweeping mode and moving in straight serpentine lanes without re-pathing detours by overriding movement during sweep commands (see `commandQueue.js` + `unitMovement.js`).
   - [x] ✅ Mine Layer drag deployments now reuse the Mine Sweeper serpentine path ordering so trucks follow the same efficient lanes when planting checkerboard fields (`mineInputHandler.js`).
+  - [x] ✅ When multiple Mine Layers or Mine Sweepers receive the same area command, automatically split the serpentine path into contiguous segments so each unit handles its share without overlap (`mineInputHandler.js`).
   - [ ] Owner-aware mine avoidance (in progress 2025-11-19): ensure occupancy/pathfinding/movement block only the owning party while other players can traverse and trigger mines.
   - [ ] Adjust mine explosions so damage falls off over a 2-tile radius (full damage on the mine tile down to zero at the border) instead of targeting individual orthogonal tiles.
   - [ ] Add cheat codes `mine [party]` and `mines [WxH][gG]` so testers can drop a single mine or a patterned field (e.g., `mines 2x3g1` or shorthand `3x1` which equals `3x1g0`) and document the usage in specs.

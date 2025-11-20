@@ -104,6 +104,7 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 | FR-022 | Mine sweepers must physically traverse each sweep tile before a mine is cleared—no remote detonations triggered solely by entering the sweep area. *Implemented 2025-11-20 via per-tile movement reissue in `commandQueue.js` so mines only clear after the wagon reaches each waypoint.*
 | FR-023 | Sweep completions play `AllMinesOnTheFieldAreDisarmed.mp3`, and full mine-field deployments play `The_mine_field_has_been_deployed_and_armed.mp3` when the final tile in the dragged area is armed.
 | FR-024 | Sweep commands must lock the Mine Sweeper into sweeping mode and override standard pathfinding so it drives straight serpentine lanes without detouring around friendly mines, preventing damage from mid-sweep reassignments. *Implemented 2025-11-20 via `sweepingOverrideMovement` handling in `commandQueue.js` and `unitMovement.js`.*
+| FR-025 | When issuing a single drag-area command to multiple Mine Layers or Mine Sweepers, split the serpentine path into contiguous segments so each unit handles a unique slice without overlap, maximizing throughput. *Implemented 2025-11-20 in `mineInputHandler.js` by partitioning checkerboard paths and sweep paths per unit.*
 
 ---
 
