@@ -95,13 +95,15 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 | FR-013 | Mine indicator overlay renders skull icon with 70% opacity; persists until mine removed.
 | FR-014 | Mines block friendly occupancy map entries but remain passable to enemies; explosion triggers 90/50 damage when a unit center passes through the mine tile's inner circle; chain reaction for adjacent mines.
 | FR-015 | Mine Layer destruction deals remaining payload damage evenly to surrounding tiles (including units/buildings).
-| FR-016 | Area mining uses checkerboard coverage and PPF chain markers; auto-refill/resume behavior when mines depleted mid-plan.
+| FR-016 | Area mining uses checkerboard coverage and PPF chain markers; auto-refill/resume behavior when mines depleted mid-plan. *Updated 2025-11-20 so Mine Layer trucks follow the same serpentine lane ordering as the Mine Sweeper for efficient routing.*
 | FR-017 | Mine Sweeper inherits tank chassis stats (except turret) with 2× armor; speed modifiers 0.7/0.3 vs baseline tank.
 | FR-018 | Sweeper dust animation plays in front when sweeping; sweeping over mine causes detonation without sweeper damage.
 | FR-019 | Sweeper rectangle sweep uses PPF-generated zig-zag paths covering all tiles; ctrl-draw sweep paints orange overlay before committing.
 | FR-020 | AI builds/uses Mine Layers and Mine Sweepers following specified triggers and priorities.
 | FR-021 | Rectangle sweep commands route the sweeper to the nearest entry tile, activate clearance mode (30% speed + dust) before crossing the boundary, and choose the serpentine coverage direction based on the approach side so every marked tile is cleared systematically.
-| FR-022 | Sweep completions play `AllMinesOnTheFieldAreDisarmed.mp3`, and full mine-field deployments play `The_mine_field_has_been_deployed_and_armed.mp3` when the final tile in the dragged area is armed.
+| FR-022 | Mine sweepers must physically traverse each sweep tile before a mine is cleared—no remote detonations triggered solely by entering the sweep area. *Implemented 2025-11-20 via per-tile movement reissue in `commandQueue.js` so mines only clear after the wagon reaches each waypoint.*
+| FR-023 | Sweep completions play `AllMinesOnTheFieldAreDisarmed.mp3`, and full mine-field deployments play `The_mine_field_has_been_deployed_and_armed.mp3` when the final tile in the dragged area is armed.
+| FR-024 | Sweep commands must lock the Mine Sweeper into sweeping mode and override standard pathfinding so it drives straight serpentine lanes without detouring around friendly mines, preventing damage from mid-sweep reassignments. *Implemented 2025-11-20 via `sweepingOverrideMovement` handling in `commandQueue.js` and `unitMovement.js`.*
 
 ---
 

@@ -18,7 +18,8 @@ export class AttackGroupHandler {
 
     // Treat utility/service vehicles as non-combat for AGF: they should not trigger AGF on drag
     const isServiceVehicle = (u) => (
-      u.type === 'ambulance' || u.type === 'tankerTruck' || u.type === 'recoveryTank'
+      u.type === 'ambulance' || u.type === 'tankerTruck' || u.type === 'recoveryTank' ||
+      u.type === 'mineSweeper' || u.type === 'mineLayer'
     )
 
     // Combat units are human-owned, not buildings, and not utility/service or harvesters

@@ -13,7 +13,7 @@ export function processCommandQueues(units, mapGrid, unitCommands, buildings = [
       unit.currentCommand = action
       executeAction(unit, action, mapGrid, unitCommands)
     } else {
-      const complete = isActionComplete(unit, unit.currentCommand, units, buildings)
+      const complete = isActionComplete(unit, unit.currentCommand, units, buildings, mapGrid, unitCommands)
       if (complete) {
         handleCommandCompletion(unit, unit.currentCommand)
         unit.currentCommand = null
@@ -23,6 +23,12 @@ export function processCommandQueues(units, mapGrid, unitCommands, buildings = [
 }
 
 function executeAction(unit, action, mapGrid, unitCommands) {
+  if (!action) return
+
+  if (action.type !== 'sweepArea') {
+    clearSweepingOverride(unit)
+  }
+
   switch (action.type) {
     case 'move':
       unitCommands.handleMovementCommand([unit], action.x, action.y, mapGrid, true)
@@ -41,51 +47,36 @@ function executeAction(unit, action, mapGrid, unitCommands) {
       unitCommands.handleWorkshopRepairHotkey([unit], mapGrid, false, true)
       break
     case 'deployMine':
-      // Move to deployment location, then deploy
       if (!unit.deployingMine) {
-        // Convert tile coordinates to world coordinates (center of tile)
         const worldX = action.x * TILE_SIZE + TILE_SIZE / 2
         const worldY = action.y * TILE_SIZE + TILE_SIZE / 2
         unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
       }
       break
     case 'sweepArea':
-      // Move along sweep path
       if (action.path && action.path.length > 0) {
         if (!unit.sweeping) {
           activateSweepingMode(unit)
         }
-        const nextTile = action.path[0]
-        const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-        const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-        if (unitTileX === nextTile.x && unitTileY === nextTile.y) {
-          // Already at the tile, detonate mine if any, shift path
-          const mine = getMineAtTile(nextTile.x, nextTile.y)
-          if (mine) {
-            safeSweeperDetonation(mine, units, buildings)
-          }
-          action.path.shift()
-          if (action.path.length === 0) {
-            // Completed
-            return
-          }
-          // Continue to next tile
-          const newNextTile = action.path[0]
-          const worldX = newNextTile.x * TILE_SIZE + TILE_SIZE / 2
-          const worldY = newNextTile.y * TILE_SIZE + TILE_SIZE / 2
-          unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
-        } else {
-          // Move to next tile
-          const worldX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
-          const worldY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
-          unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
-        }
+        issueNextSweepMovement(unit, action)
       }
       break
   }
 }
 
-function isActionComplete(unit, action, units = [], buildings = []) {
+function issueNextSweepMovement(unit, action) {
+  if (!action.path || action.path.length === 0) return
+  const nextTile = action.path[0]
+  unit.sweepingOverrideMovement = true
+  unit.target = null
+  unit.attackQueue = []
+  unit.moveTarget = { x: nextTile.x, y: nextTile.y }
+  unit.path = [{ x: nextTile.x, y: nextTile.y }]
+  unit.originalPath = null
+  unit.originalTarget = null
+}
+
+function isActionComplete(unit, action, units = [], buildings = [], mapGrid, unitCommands) {
   switch (action.type) {
     case 'move':
       return (!unit.path || unit.path.length === 0) && !unit.moveTarget
@@ -94,69 +85,83 @@ function isActionComplete(unit, action, units = [], buildings = []) {
       return (!unit.target || unit.target.health <= 0) && (!unit.attackQueue || unit.attackQueue.length === 0)
     case 'workshopRepair':
       return !unit.targetWorkshop && !unit.repairingAtWorkshop && !unit.returningFromWorkshop && (!unit.moveTarget && (!unit.path || unit.path.length === 0))
-    case 'deployMine':
-      // Check if deployment has completed
+    case 'deployMine': {
       if (unit.deploymentCompleted) {
-        unit.deploymentCompleted = false // Reset for next command
+        unit.deploymentCompleted = false
         return true
       }
-      
-      // Check if at deployment location and deployment is not in progress
-      if (unit.deployingMine) {
-        return false
-      }
-      
-      // Check if unit is close to the target tile (within 0.5 tiles)
+
       const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
       const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
       const distanceToTarget = Math.hypot(unitTileX - action.x, unitTileY - action.y)
-      const atLocation = distanceToTarget < 0.6 // Within ~0.6 tiles (accounting for formation spread)
-      
-      // Also check if unit has no path and no move target (movement complete)
+      const atLocation = distanceToTarget < 0.6
       const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
-      
+
       if ((atLocation || movementComplete) && !unit.deployingMine) {
-        // Start deployment
         startMineDeployment(unit, action.x, action.y, performance.now())
         return false
       }
-      return false // Keep command active until deployment completes
+
+      return false
+    }
     case 'sweepArea':
-      // Check if all tiles in path have been swept
-      if (action.path && action.path.length > 0) {
-        const currentTile = action.path[0]
-        const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-        const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-        const distanceToTarget = Math.hypot(unitTileX - currentTile.x, unitTileY - currentTile.y)
-        const atTile = distanceToTarget < 0.6 // Within ~0.6 tiles
-        const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
-        
-        if (atTile || movementComplete) {
-          // Safely detonate any mines on this tile with sweeper immunity
-          const mine = getMineAtTile(currentTile.x, currentTile.y)
-          if (mine) {
-            safeSweeperDetonation(mine, units, buildings)
-          }
-          action.path.shift() // Remove completed tile
-          return action.path.length === 0
-        }
+    {
+      if (!action.path || action.path.length === 0) {
+        clearSweepingOverride(unit)
+        return true
       }
-      return (!unit.path || unit.path.length === 0) && !unit.moveTarget
+
+      const currentTile = action.path[0]
+      const sweeperTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+      const sweeperTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+      const distanceToTarget = Math.hypot(sweeperTileX - currentTile.x, sweeperTileY - currentTile.y)
+      const atTile = distanceToTarget < 0.35 || (sweeperTileX === currentTile.x && sweeperTileY === currentTile.y)
+
+      if (!atTile) {
+        return false
+      }
+
+      const mine = getMineAtTile(currentTile.x, currentTile.y)
+      if (mine) {
+        safeSweeperDetonation(mine, units, buildings)
+      }
+
+      action.path.shift()
+
+      if (action.path.length > 0) {
+        issueNextSweepMovement(unit, action)
+        return false
+      }
+
+      clearSweepingOverride(unit)
+      unit.moveTarget = null
+      unit.path = []
+      return true
+    }
   }
+
   return true
 }
 
 function handleCommandCompletion(unit, action) {
   if (!action) return
 
-  if (action.type === 'sweepArea' && (!action.path || action.path.length === 0) && !action._sweepSoundPlayed) {
-    playSound('AllMinesOnTheFieldAreDisarmed', 1.0, 0, true)
-    action._sweepSoundPlayed = true
+  if (action.type === 'sweepArea') {
+    if ((!action.path || action.path.length === 0) && !action._sweepSoundPlayed) {
+      playSound('AllMinesOnTheFieldAreDisarmed', 1.0, 0, true)
+      action._sweepSoundPlayed = true
+    }
+    clearSweepingOverride(unit)
   }
 
   if (action.type === 'deployMine' && action.areaFieldId) {
     notifyMineFieldDeployed(unit, action.areaFieldId)
   }
+}
+
+function clearSweepingOverride(unit) {
+  if (!unit) return
+  unit.sweepingOverrideMovement = false
 }
 
 function notifyMineFieldDeployed(unit, fieldId) {
