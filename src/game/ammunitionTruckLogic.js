@@ -18,7 +18,7 @@ function isUnitAdjacentToBuilding(unit, building, range = 1) {
   const unitTileY = unit.tileY
   const buildingWidth = building.width || 1
   const buildingHeight = building.height || 1
-  
+
   // Check if unit is within range of any tile occupied by the building
   for (let bx = building.x; bx < building.x + buildingWidth; bx++) {
     for (let by = building.y; by < building.y + buildingHeight; by++) {
@@ -69,7 +69,7 @@ export const updateAmmunitionTruckLogic = logPerformance(function(units, gameSta
           // For buildings: check adjacency to any building tile
           inRange = isUnitAdjacentToBuilding(ammoTruck, target, AMMO_TRUCK_RANGE)
         }
-        
+
         if (inRange && !(ammoTruck.movement && ammoTruck.movement.isMoving)) {
           // Start resupplying
           ammoTruck.ammoResupplyTimer = (ammoTruck.ammoResupplyTimer || 0) + delta

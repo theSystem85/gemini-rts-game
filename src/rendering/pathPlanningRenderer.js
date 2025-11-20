@@ -166,7 +166,7 @@ export class PathPlanningRenderer {
         if (action.type !== 'utility') {
           ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
           ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
-          
+
           // Custom colors for mine commands
           if (action.type === 'deployMine') {
             ctx.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines

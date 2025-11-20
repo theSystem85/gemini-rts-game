@@ -578,7 +578,7 @@ export class MouseHandler {
       // Generate mine deployment or sweep preview during drag
       if (this.wasDragging) {
         const selectedUnits = gameState.selectedUnits || []
-        
+
         // Mine Layer deployment preview (checkerboard pattern)
         if (mineInput.hasMineLayerSelected(selectedUnits)) {
           const area = {

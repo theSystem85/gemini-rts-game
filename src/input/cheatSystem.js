@@ -944,7 +944,7 @@ export class CheatSystem {
         if (typeof unit.maxAmmoCargo !== 'number') {
           unit.maxAmmoCargo = 500 // Default AMMO_TRUCK_CARGO value
         }
-        
+
         const target = isPercent ? unit.maxAmmoCargo * value : value
         const clamped = Math.max(0, Math.min(target, unit.maxAmmoCargo))
         unit.ammoCargo = clamped
@@ -954,7 +954,7 @@ export class CheatSystem {
         if (typeof unit.maxAmmo !== 'number') {
           unit.maxAmmo = HELIPAD_AMMO_RESERVE
         }
-        
+
         const target = isPercent ? unit.maxAmmo * value : value
         const clamped = Math.max(0, Math.min(target, unit.maxAmmo))
         unit.ammo = clamped

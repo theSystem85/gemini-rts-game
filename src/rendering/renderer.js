@@ -190,7 +190,7 @@ export class Renderer {
     this.wreckRenderer.render(gameCtx, gameState.unitWrecks || [], scrollOffset)
     this.unitRenderer.renderBases(gameCtx, units, scrollOffset)
     this.effectsRenderer.render(gameCtx, bullets, gameState, units, scrollOffset)
-    
+
     // Render mine indicators (skull overlays)
     renderMineIndicators(gameCtx, scrollOffset)
 

@@ -111,7 +111,7 @@ export function detonateMine(mine, units, buildings) {
   // Create explosion effect at mine location
   const explosionX = mine.tileX * TILE_SIZE + TILE_SIZE / 2
   const explosionY = mine.tileY * TILE_SIZE + TILE_SIZE / 2
-  
+
   gameState.explosions.push({
     x: explosionX,
     y: explosionY,
@@ -170,7 +170,7 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
   units.forEach(unit => {
     const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
     const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-    
+
     if (unitTileX === tileX && unitTileY === tileY) {
       // Mine sweepers in sweeping mode are immune to mine damage
       if (unit.type === 'mineSweeper' && unit.sweeping) {
@@ -218,7 +218,7 @@ function checkChainReaction(sourceTileX, sourceTileY, units, buildings) {
     const neighborX = sourceTileX + dx
     const neighborY = sourceTileY + dy
     const adjacentMine = getMineAtTile(neighborX, neighborY)
-    
+
     if (adjacentMine && adjacentMine.active && adjacentMine.health <= 0) {
       // This mine was destroyed by the explosion, trigger chain reaction
       detonateMine(adjacentMine, units, buildings)
@@ -279,7 +279,7 @@ export function distributeMineLayerPayload(unit, units, buildings) {
     const offset = surroundingOffsets[i % surroundingOffsets.length]
     const explosionX = (unitTileX + offset.dx) * TILE_SIZE + TILE_SIZE / 2
     const explosionY = (unitTileY + offset.dy) * TILE_SIZE + TILE_SIZE / 2
-    
+
     gameState.explosions.push({
       x: explosionX,
       y: explosionY,

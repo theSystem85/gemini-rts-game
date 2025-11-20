@@ -388,19 +388,19 @@ export function saveGame(label) {
         : [],
       mineDeploymentPreview: gameState.mineDeploymentPreview
         ? {
-            startX: gameState.mineDeploymentPreview.startX,
-            startY: gameState.mineDeploymentPreview.startY,
-            endX: gameState.mineDeploymentPreview.endX,
-            endY: gameState.mineDeploymentPreview.endY
-          }
+          startX: gameState.mineDeploymentPreview.startX,
+          startY: gameState.mineDeploymentPreview.startY,
+          endX: gameState.mineDeploymentPreview.endX,
+          endY: gameState.mineDeploymentPreview.endY
+        }
         : null,
       sweepAreaPreview: gameState.sweepAreaPreview
         ? {
-            startX: gameState.sweepAreaPreview.startX,
-            startY: gameState.sweepAreaPreview.startY,
-            endX: gameState.sweepAreaPreview.endX,
-            endY: gameState.sweepAreaPreview.endY
-          }
+          startX: gameState.sweepAreaPreview.startX,
+          startY: gameState.sweepAreaPreview.startY,
+          endX: gameState.sweepAreaPreview.endX,
+          endY: gameState.sweepAreaPreview.endY
+        }
         : null,
       mineFreeformPaint: gameState.mineFreeformPaint instanceof Set
         ? Array.from(gameState.mineFreeformPaint)
@@ -721,7 +721,7 @@ export function loadGame(key) {
       hydrated.gasRefillTimer = u.gasRefillTimer
       hydrated.refueling = u.refueling
       hydrated.outOfGasPlayed = u.outOfGasPlayed
-      
+
       // Restore ammunition system properties
       if (typeof u.ammunition === 'number') {
         hydrated.ammunition = u.ammunition
@@ -762,7 +762,7 @@ export function loadGame(key) {
         // Fallback - assume can fire if not saved
         hydrated.canFire = true
       }
-      
+
       // Ensure path is always an array
       if (!Array.isArray(hydrated.path)) hydrated.path = []
 
@@ -785,31 +785,31 @@ export function loadGame(key) {
         console.log(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
       }
 
-        if (hydrated.type === 'mineLayer') {
-          if (typeof u.remainingMines === 'number') {
-            hydrated.remainingMines = u.remainingMines
-          }
-          if (typeof u.mineCapacity === 'number') {
-            hydrated.mineCapacity = u.mineCapacity
-          }
-          hydrated.deployTargetX = Number.isFinite(u.deployTargetX) ? u.deployTargetX : null
-          hydrated.deployTargetY = Number.isFinite(u.deployTargetY) ? u.deployTargetY : null
-
-          if (typeof u.mineDeployRemaining === 'number' && u.mineDeployRemaining > 0) {
-            const remaining = Math.min(MINE_DEPLOY_STOP_TIME, u.mineDeployRemaining)
-            hydrated.deployingMine = true
-            hydrated.deployStartTime = perfNowAfterLoad - (MINE_DEPLOY_STOP_TIME - remaining)
-          } else {
-            hydrated.deployingMine = false
-            hydrated.deployStartTime = null
-          }
+      if (hydrated.type === 'mineLayer') {
+        if (typeof u.remainingMines === 'number') {
+          hydrated.remainingMines = u.remainingMines
         }
-
-        delete hydrated.mineDeployRemaining
-
-        if (hydrated.type === 'mineSweeper') {
-          hydrated.sweeping = Boolean(u.sweeping)
+        if (typeof u.mineCapacity === 'number') {
+          hydrated.mineCapacity = u.mineCapacity
         }
+        hydrated.deployTargetX = Number.isFinite(u.deployTargetX) ? u.deployTargetX : null
+        hydrated.deployTargetY = Number.isFinite(u.deployTargetY) ? u.deployTargetY : null
+
+        if (typeof u.mineDeployRemaining === 'number' && u.mineDeployRemaining > 0) {
+          const remaining = Math.min(MINE_DEPLOY_STOP_TIME, u.mineDeployRemaining)
+          hydrated.deployingMine = true
+          hydrated.deployStartTime = perfNowAfterLoad - (MINE_DEPLOY_STOP_TIME - remaining)
+        } else {
+          hydrated.deployingMine = false
+          hydrated.deployStartTime = null
+        }
+      }
+
+      delete hydrated.mineDeployRemaining
+
+      if (hydrated.type === 'mineSweeper') {
+        hydrated.sweeping = Boolean(u.sweeping)
+      }
 
       // Restore harvester-specific properties and re-assign to refineries if needed
       if (hydrated.type === 'harvester') {

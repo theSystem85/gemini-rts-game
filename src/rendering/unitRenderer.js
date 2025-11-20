@@ -432,7 +432,7 @@ export class UnitRenderer {
           hasAmmo = true
         }
       }
-      
+
       // If not landed or no helipad ammo, show unit ammo
       if (!hasAmmo && typeof unit.maxRocketAmmo === 'number') {
         ratio = Math.max(0, Math.min(1, (unit.rocketAmmo ?? 0) / unit.maxRocketAmmo))

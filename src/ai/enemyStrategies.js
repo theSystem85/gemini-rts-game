@@ -1744,14 +1744,14 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
     const lowAmmoUnits = []
     aiUnits.forEach(u => {
       if (u.type === 'ammunitionTruck' || u.health <= 0) return
-      
+
       // Check for units with ammunition system (maxAmmunition or maxRocketAmmo)
       const hasAmmoSystem = typeof u.maxAmmunition === 'number' || typeof u.maxRocketAmmo === 'number'
       if (!hasAmmoSystem) return
 
       const maxAmmo = u.type === 'apache' ? u.maxRocketAmmo : u.maxAmmunition
       const currentAmmo = u.type === 'apache' ? u.rocketAmmo : u.ammunition
-      
+
       if (currentAmmo <= 0) {
         criticalUnits.push(u)
       } else if (currentAmmo / maxAmmo < 0.2) { // 20% threshold for low ammunition
@@ -1810,7 +1810,7 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
       }
 
       // Fourth priority: follow combat groups at safe distance
-      const combatUnits = aiUnits.filter(u => 
+      const combatUnits = aiUnits.filter(u =>
         (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
         u.health > 0
       )
@@ -1832,7 +1832,7 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
           const angle = Math.atan2(truck.tileY - centerY, truck.tileX - centerX)
           const targetX = Math.floor(centerX + Math.cos(angle) * 5)
           const targetY = Math.floor(centerY + Math.sin(angle) * 5)
-          
+
           if (targetX >= 0 && targetY >= 0 && targetX < mapGrid[0].length && targetY < mapGrid.length) {
             const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
             const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, null, undefined, { unitOwner: truck.owner })
@@ -1916,7 +1916,7 @@ export function manageAIAmmunitionMonitoring(units, gameState, mapGrid) {
       // FR-033: Retreat logic when ammunition falls below 20%
       if (ammoPercentage < 0.2 && !unit.retreatingForAmmo) {
         unit.retreatingForAmmo = true
-        
+
         // Find nearest resupply point (factory or truck)
         let nearestResupply = null
         let nearestDistance = Infinity

@@ -25,12 +25,12 @@ export function updateMineLayerBehavior(units, now) {
     // Handle active mine deployment
     if (unit.deployingMine) {
       const elapsedTime = now - unit.deployStartTime
-      
+
       if (elapsedTime >= MINE_DEPLOY_STOP_TIME) {
         // Deployment time complete - deploy the mine
         const tileCenterX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
         const tileCenterY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-        
+
         if (unit.remainingMines > 0) {
           const mine = deployMine(tileCenterX, tileCenterY, unit.owner)
           if (mine) {
@@ -38,10 +38,10 @@ export function updateMineLayerBehavior(units, now) {
             unit.deployingMine = false
             unit.deployStartTime = null
             unit.deploymentCompleted = true // Mark deployment as completed
-            
+
             // Move away from the mined tile to avoid triggering the mine
             moveAwayFromMinedTile(unit, tileCenterX, tileCenterY)
-            
+
             // Check if we need to auto-refill
             if (unit.remainingMines === 0 && unit.commandQueue && unit.commandQueue.length > 0) {
               // Still has commands but no mines - need to refill
@@ -147,7 +147,7 @@ function initiateAutoRefill(unit) {
   let closestDistance = Infinity
 
   ammoSources.forEach(source => {
-    const sourceCenterX = source.type === 'building' 
+    const sourceCenterX = source.type === 'building'
       ? source.x + Math.floor(source.width / 2)
       : source.x
     const sourceCenterY = source.type === 'building'

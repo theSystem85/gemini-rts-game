@@ -125,7 +125,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             initialRadius,
             false
           )
-          
+
           // Create scattering ammunition particles
           const particleCount = 40 // Average of 30-50
           for (let i = 0; i < particleCount; i++) {
@@ -133,7 +133,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             const speed = 0.5 + Math.random() * 1.5 // 0.5-2.0 tiles per second
             const lifetime = 5000 // 5 seconds
             const damage = 30 + Math.random() * 20 // 30-50 damage
-            
+
             const particle = {
               id: Date.now() + Math.random(),
               x: buildingCenterX,
@@ -149,10 +149,10 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
               projectileType: 'ammoParticle',
               size: 4
             }
-            
+
             bullets.push(particle)
           }
-          
+
           playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.7)
         } else {
           // Add standard explosion effect

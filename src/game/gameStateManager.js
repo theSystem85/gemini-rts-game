@@ -271,7 +271,7 @@ export function updateDustParticles(gameState) {
 
       // Fade out alpha
       p.alpha = 1 - progress
-      
+
       // Expand size slightly
       p.currentSize = p.size * (1 + progress * 0.5)
     }

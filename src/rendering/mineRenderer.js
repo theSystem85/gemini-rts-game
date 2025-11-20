@@ -32,7 +32,7 @@ export function renderMineIndicators(ctx, scrollOffset) {
 
     // Simple skull shape using basic geometry
     const size = TILE_SIZE * 0.6
-    
+
     // Skull circle (head)
     ctx.beginPath()
     ctx.arc(screenX, screenY - size * 0.1, size * 0.35, 0, Math.PI * 2)

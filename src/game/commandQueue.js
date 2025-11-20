@@ -1,5 +1,5 @@
 import { startMineDeployment } from './mineLayerBehavior.js'
-import { removeMine, getMineAtTile, detonateMine } from './mineSystem.js'
+import { getMineAtTile, detonateMine } from './mineSystem.js'
 import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 
@@ -75,21 +75,21 @@ function isActionComplete(unit, action) {
         unit.deploymentCompleted = false // Reset for next command
         return true
       }
-      
+
       // Check if at deployment location and deployment is not in progress
       if (unit.deployingMine) {
         return false
       }
-      
+
       // Check if unit is close to the target tile (within 0.5 tiles)
       const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
       const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
       const distanceToTarget = Math.hypot(unitTileX - action.x, unitTileY - action.y)
       const atLocation = distanceToTarget < 0.6 // Within ~0.6 tiles (accounting for formation spread)
-      
+
       // Also check if unit has no path and no move target (movement complete)
       const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
-      
+
       if ((atLocation || movementComplete) && !unit.deployingMine) {
         // Start deployment
         startMineDeployment(unit, action.x, action.y, performance.now())
@@ -105,7 +105,7 @@ function isActionComplete(unit, action) {
         const distanceToTarget = Math.hypot(unitTileX - currentTile.x, unitTileY - currentTile.y)
         const atTile = distanceToTarget < 0.6 // Within ~0.6 tiles
         const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
-        
+
         if (atTile || movementComplete) {
           // Detonate any mines on this tile safely (sweeper takes no damage)
           const mine = getMineAtTile(currentTile.x, currentTile.y)
