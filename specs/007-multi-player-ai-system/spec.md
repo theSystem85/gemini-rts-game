@@ -498,6 +498,7 @@ This specification documents the comprehensive multi-player AI system that power
 11. **AI Tries to Produce Unit Without Prerequisites:** Production system validates tech tree requirements before queuing, AI receives failure callback, adds prerequisite building to construction queue first, retries unit production on subsequent cycles.
 
 12. **Save/Load with AI State:** AI strategic state (timers, current focus) is reset on game load to prevent stale data, AI resumes normal decision-making from current game state, no long-term memory persists across sessions.
+13. **AI Building Spacing:** AI construction enforces at least a one-tile gap from other structures before starting builds, except when placing walls or when defensive buildings are adjacent to other defensive buildings.
 
 ---
 

@@ -256,6 +256,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Ensure enemy AI enforces a minimum one-tile gap between buildings before construction starts, except for walls and adjacent defensive structures.
 - [x] Hide the desktop energy bar while in the mobile landscape layout so only the dedicated mobile status bar energy indicator is visible.
 - [x] Hide the desktop money bar while in the mobile landscape layout so only the dedicated mobile HUD money indicator is visible.
 - [x] Ensure the standalone/PWA mobile landscape layout can scroll upward while dragging to build and does not leave a stray black bar along the bottom edge of the viewport.
