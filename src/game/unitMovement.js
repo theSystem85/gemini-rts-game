@@ -170,6 +170,9 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
   // Update pathfinding for units with movement targets
   if (selectedUnits && selectedUnits.length > 0) {
     selectedUnits.forEach(unit => {
+      if (unit.sweepingOverrideMovement) {
+        return
+      }
       if (unit.moveTarget && (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)) {
         const targetPos = unit.moveTarget
         let adjustedTarget = targetPos

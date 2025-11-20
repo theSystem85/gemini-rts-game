@@ -256,7 +256,7 @@ export function safeSweeperDetonation(mine, units, buildings) {
     duration: 300
   })
 
-  const radius = Math.max(0, MINE_EXPLOSION_RADIUS)
+  const radius = 1 // Reduced radius for sweeper detonations to prevent chain reactions
   const maxOffset = Math.ceil(radius)
   const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
   const mapWidth = mapGrid.length > 0 ? mapGrid[0].length : 0
@@ -330,11 +330,7 @@ function applyMineDamageWithSweeperImmunity(tileX, tileY, damage, units, buildin
     }
   })
 
-  // Check if there's a mine on this tile and damage it
-  const mine = getMineAtTile(tileX, tileY)
-  if (mine && mine.active) {
-    mine.health = Math.max(0, mine.health - damage)
-  }
+  // Note: Mines are not damaged by other mine explosions to prevent chain reactions
 }
 
 /**

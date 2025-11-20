@@ -22,6 +22,9 @@
   - [x] ✅ Mine sweeper tank (workshop + vehicle factory, 1000 cost) inherits tank stats sans turret, double armor, 70% tank speed (normal) / 30% (sweeping)
     - dust animation while sweeping, negates mine damage while sweeping
   - Sweeper controls: click to move, drag rectangle to sweep zig-zag with PPF markers, ctrl+paint area with orange overlay then PPF lines
+  - [x] ✅ Mine sweeper must physically traverse every sweep tile before disarming (no remote area clears when merely entering the field) — enforced via tile-by-tile movement reissue in `commandQueue.js`.
+  - [x] ✅ Keep mine sweepers locked in sweeping mode and moving in straight serpentine lanes without re-pathing detours by overriding movement during sweep commands (see `commandQueue.js` + `unitMovement.js`).
+  - [x] ✅ Mine Layer drag deployments now reuse the Mine Sweeper serpentine path ordering so trucks follow the same efficient lanes when planting checkerboard fields (`mineInputHandler.js`).
   - [ ] Owner-aware mine avoidance (in progress 2025-11-19): ensure occupancy/pathfinding/movement block only the owning party while other players can traverse and trigger mines.
   - [ ] Adjust mine explosions so damage falls off over a 2-tile radius (full damage on the mine tile down to zero at the border) instead of targeting individual orthogonal tiles.
   - [ ] Add cheat codes `mine [party]` and `mines [WxH][gG]` so testers can drop a single mine or a patterned field (e.g., `mines 2x3g1` or shorthand `3x1` which equals `3x1g0`) and document the usage in specs.

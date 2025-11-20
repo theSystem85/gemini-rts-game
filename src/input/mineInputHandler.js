@@ -116,11 +116,17 @@ export function handleMineLayerAreaDeploy(selectedUnits, area, shiftKey) {
   // Calculate checkerboard pattern
   const deploymentTiles = calculateCheckerboardPattern(area)
   if (deploymentTiles.length === 0) return []
+  const deploymentTileSet = new Set(deploymentTiles.map(tile => `${tile.x},${tile.y}`))
   const fieldId = getUniqueId()
 
   mineLayers.forEach(unit => {
-    registerFieldDeployment(unit, fieldId, deploymentTiles.length)
-    const commands = deploymentTiles.map(tile => ({
+    const orientation = determineSweepOrientation(area, getUnitTilePosition(unit))
+    const serpentinePath = calculateZigZagSweepPath(area, orientation) || []
+    const orderedTiles = serpentinePath.filter(tile => deploymentTileSet.has(`${tile.x},${tile.y}`))
+    if (!orderedTiles.length) return
+
+    registerFieldDeployment(unit, fieldId, orderedTiles.length)
+    const commands = orderedTiles.map(tile => ({
       type: 'deployMine',
       x: tile.x,
       y: tile.y,
