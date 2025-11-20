@@ -10,6 +10,14 @@ import { UNIT_PROPERTIES } from '../config.js'
 export function updateMineSweeperBehavior(units, gameState, now) {
   units.forEach(unit => {
     if (unit.type !== 'mineSweeper') return
+    
+    // Initialize speed properties if not set
+    if (!unit.normalSpeed) {
+      unit.normalSpeed = UNIT_PROPERTIES.mineSweeper.speed
+    }
+    if (!unit.sweepingSpeed) {
+      unit.sweepingSpeed = UNIT_PROPERTIES.mineSweeper.sweepingSpeed
+    }
 
     // Check if unit is in sweeping mode (has sweep commands queued)
     const isSweeping = unit.commandQueue && unit.commandQueue.some(cmd => cmd.type === 'sweep' || cmd.type === 'sweepArea')

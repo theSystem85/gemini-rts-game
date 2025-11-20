@@ -50,9 +50,9 @@ function executeAction(unit, action, mapGrid, unitCommands) {
       // Move along sweep path
       if (action.path && action.path.length > 0) {
         const nextTile = action.path[0]
-        // Convert tile coordinates to world coordinates
-        const worldX = nextTile.x * TILE_SIZE
-        const worldY = nextTile.y * TILE_SIZE
+        // Convert tile coordinates to world coordinates (center of tile)
+        const worldX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
+        const worldY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
         unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
       }
       break
