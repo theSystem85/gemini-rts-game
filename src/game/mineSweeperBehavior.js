@@ -1,5 +1,5 @@
 // mineSweeperBehavior.js - Mine Sweeper unit behaviors
-import { UNIT_PROPERTIES } from '../config.js'
+import { UNIT_PROPERTIES, TILE_SIZE } from '../config.js'
 
 /**
  * Update Mine Sweeper behaviors - sweeping mode toggle, speed modulation, dust emission
@@ -19,16 +19,17 @@ export function updateMineSweeperBehavior(units, gameState, now) {
       unit.sweepingSpeed = UNIT_PROPERTIES.mineSweeper.sweepingSpeed
     }
 
-    // Check if unit is in sweeping mode (has sweep commands queued)
-    const isSweeping = unit.commandQueue && unit.commandQueue.some(cmd => cmd.type === 'sweep' || cmd.type === 'sweepArea')
+    // Determine if there is an active sweep command
+    const isActiveSweep = unit.currentCommand && unit.currentCommand.type === 'sweepArea'
 
-    // Update sweeping flag and speed
-    if (isSweeping && !unit.sweeping) {
+    // Update sweeping flag and speed only when actually sweeping
+    if (isActiveSweep && !unit.sweeping) {
       unit.sweeping = true
       unit.speed = unit.sweepingSpeed
-    } else if (!isSweeping && unit.sweeping) {
+    } else if (!isActiveSweep && unit.sweeping) {
       unit.sweeping = false
       unit.speed = unit.normalSpeed
+      unit.lastDustTime = 0
     }
 
     // Generate dust if sweeping and moving
@@ -53,6 +54,13 @@ export function updateMineSweeperBehavior(units, gameState, now) {
 export function activateSweepingMode(unit) {
   if (unit.type !== 'mineSweeper') return
 
+  if (!unit.normalSpeed) {
+    unit.normalSpeed = UNIT_PROPERTIES.mineSweeper.speed
+  }
+  if (!unit.sweepingSpeed) {
+    unit.sweepingSpeed = UNIT_PROPERTIES.mineSweeper.sweepingSpeed
+  }
+
   unit.sweeping = true
   unit.speed = unit.sweepingSpeed || UNIT_PROPERTIES.mineSweeper.sweepingSpeed
 }
@@ -64,6 +72,13 @@ export function activateSweepingMode(unit) {
 export function deactivateSweepingMode(unit) {
   if (unit.type !== 'mineSweeper') return
 
+  if (!unit.normalSpeed) {
+    unit.normalSpeed = UNIT_PROPERTIES.mineSweeper.speed
+  }
+  if (!unit.sweepingSpeed) {
+    unit.sweepingSpeed = UNIT_PROPERTIES.mineSweeper.sweepingSpeed
+  }
+
   unit.sweeping = false
   unit.speed = unit.normalSpeed || UNIT_PROPERTIES.mineSweeper.speed
 }
@@ -73,28 +88,35 @@ export function deactivateSweepingMode(unit) {
  * @param {object} area - Area bounds {startX, startY, endX, endY} in tile coordinates
  * @returns {Array} Array of tile coordinates for serpentine path
  */
-export function calculateZigZagSweepPath(area) {
+export function calculateZigZagSweepPath(area, orientation = { horizontal: 'left', vertical: 'top' }) {
+  if (!area) return []
+
   const minX = Math.min(area.startX, area.endX)
   const maxX = Math.max(area.startX, area.endX)
   const minY = Math.min(area.startY, area.endY)
   const maxY = Math.max(area.startY, area.endY)
 
   const path = []
-  let direction = 1 // 1 for left-to-right, -1 for right-to-left
+  const horizontalDirection = orientation.horizontal === 'right' ? -1 : 1
+  const verticalFromBottom = orientation.vertical === 'bottom'
+  const rowStart = verticalFromBottom ? maxY : minY
+  const rowEnd = verticalFromBottom ? minY : maxY
+  const rowStep = verticalFromBottom ? -1 : 1
+  const rowCondition = verticalFromBottom ? (y) => y >= rowEnd : (y) => y <= rowEnd
 
-  for (let y = minY; y <= maxY; y++) {
+  let direction = horizontalDirection
+
+  for (let y = rowStart; rowCondition(y); y += rowStep) {
     if (direction === 1) {
-      // Left to right
       for (let x = minX; x <= maxX; x++) {
         path.push({ x, y })
       }
     } else {
-      // Right to left
       for (let x = maxX; x >= minX; x--) {
         path.push({ x, y })
       }
     }
-    direction *= -1 // Reverse direction for next row
+    direction *= -1
   }
 
   return path
@@ -134,7 +156,6 @@ export function calculateFreeformSweepPath(paintedTiles) {
 export function generateSweepDust(unit, now) {
   if (!unit.sweeping) return null
 
-  const TILE_SIZE = 32 // Should import from config but avoiding circular dependency
   const dustOffsetDistance = TILE_SIZE * 0.8
 
   // Calculate position in front of unit based on direction
