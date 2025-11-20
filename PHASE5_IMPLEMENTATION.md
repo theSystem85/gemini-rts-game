@@ -1,8 +1,8 @@
-# Phase 5 Mine System - Implementation Summary
+# Phase 5 & 6 Mine System - Implementation Summary
 
-## Status: Core Implementation Complete ✅
+## Status: Phase 5 & 6 Complete ✅
 
-This document summarizes the Phase 5 implementation of the land mine system.
+This document summarizes the Phase 5 and Phase 6 implementation of the land mine system.
 
 ## What Was Implemented
 
@@ -249,15 +249,49 @@ Estimated time to complete integration:
 
 ## Next Steps
 
-1. Integrate mouse handler checks for mine controls
-2. Add preview rendering to main render loop
-3. Extend PPF renderer for mine command markers
+1. ~~Integrate mouse handler checks for mine controls~~ ✅ COMPLETE
+2. ~~Add preview rendering to main render loop~~ ✅ COMPLETE
+3. Extend PPF renderer for mine command markers (optional enhancement)
 4. Manual testing of all scenarios
 5. Performance validation with many mines
 6. Consider AI integration (separate task)
 
 ---
 
-**Implementation Date**: 2025-11-18
-**Status**: Core behaviors complete, ready for UI integration
+## Phase 6 Update: Mine Sweeper Operations (2025-11-20)
+
+### Critical Bug Fixes
+
+**Issue 1: Mine Detonation**
+- **Problem**: `sweepArea` command was using `removeMine()` which silently deleted mines without explosions
+- **Fix**: Changed to `detonateMine()` in `src/game/commandQueue.js`
+- **Impact**: Mines now properly explode with visual effects and area damage when swept
+
+**Issue 2: Sweeper Damage Immunity**
+- **Problem**: Mine sweepers were taking damage from mines while sweeping, violating spec requirements
+- **Fix**: Added immunity check in `applyMineDamageToTile()` in `src/game/mineSystem.js`
+- **Impact**: Sweepers in sweeping mode (`unit.sweeping === true`) now take zero damage from mine explosions
+- **Note**: Other units still take full damage from swept mine explosions
+
+### Phase 6 Status: ✅ COMPLETE
+
+All User Story 4 requirements implemented:
+- ✅ Zig-zag sweep path calculation
+- ✅ Rectangle sweep command handling
+- ✅ Sweeping mode speed reduction (30% while sweeping)
+- ✅ Dust particle generation and rendering
+- ✅ Mine detonation on sweep (with explosions)
+- ✅ Damage immunity for sweepers while sweeping
+- ✅ Preview overlays (orange rectangle)
+- ✅ Command queue integration
+
+**Known Limitations**:
+- Freeform Ctrl+Drag sweep painting not yet implemented (future enhancement)
+- PPF visual markers for sweep paths optional enhancement
+
+---
+
+**Phase 5 Implementation Date**: 2025-11-18
+**Phase 6 Implementation Date**: 2025-11-20
+**Status**: Phase 6 complete, ready for manual testing
 **Build**: Passing ✅
