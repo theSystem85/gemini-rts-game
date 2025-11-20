@@ -172,6 +172,10 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
     const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
     
     if (unitTileX === tileX && unitTileY === tileY) {
+      // Mine sweepers in sweeping mode are immune to mine damage
+      if (unit.type === 'mineSweeper' && unit.sweeping) {
+        return // Skip damage for sweeping mine sweepers
+      }
       unit.health = Math.max(0, unit.health - damage)
     }
   })

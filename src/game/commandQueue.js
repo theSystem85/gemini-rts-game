@@ -1,6 +1,7 @@
 import { startMineDeployment } from './mineLayerBehavior.js'
-import { removeMine, getMineAtTile } from './mineSystem.js'
+import { removeMine, getMineAtTile, detonateMine } from './mineSystem.js'
 import { TILE_SIZE } from '../config.js'
+import { gameState } from '../gameState.js'
 
 export function processCommandQueues(units, mapGrid, unitCommands) {
   units.forEach(unit => {
@@ -106,10 +107,11 @@ function isActionComplete(unit, action) {
         const movementComplete = (!unit.path || unit.path.length === 0) && !unit.moveTarget
         
         if (atTile || movementComplete) {
-          // Clear any mines on this tile (regardless of ownership)
+          // Detonate any mines on this tile safely (sweeper takes no damage)
           const mine = getMineAtTile(currentTile.x, currentTile.y)
           if (mine) {
-            removeMine(mine)
+            // Detonate the mine - sweeper immunity handled in applyMineDamageToTile
+            detonateMine(mine, gameState.units, gameState.buildings)
           }
           action.path.shift() // Remove completed tile
           return action.path.length === 0
