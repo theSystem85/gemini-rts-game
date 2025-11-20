@@ -1,6 +1,54 @@
 // mineInputHandler.js - Input handling for Mine Layer deployment
 import { TILE_SIZE } from '../config.js'
 import { calculateZigZagSweepPath } from '../game/mineSweeperBehavior.js'
+import { getUniqueId } from '../utils.js'
+
+function createEntryMoveCommand(tile) {
+  if (!tile) return null
+  return {
+    type: 'move',
+    x: tile.x * TILE_SIZE + TILE_SIZE / 2,
+    y: tile.y * TILE_SIZE + TILE_SIZE / 2
+  }
+}
+
+function registerFieldDeployment(unit, fieldId, tileCount) {
+  if (!unit || !fieldId || typeof tileCount !== 'number' || tileCount <= 0) return
+  if (!unit.pendingMineFieldDeployments) {
+    unit.pendingMineFieldDeployments = {}
+  }
+  unit.pendingMineFieldDeployments[fieldId] = {
+    remaining: (unit.pendingMineFieldDeployments[fieldId]?.remaining || 0) + tileCount,
+    notified: false
+  }
+}
+
+function getUnitTilePosition(unit) {
+  if (!unit) return { x: 0, y: 0 }
+  return {
+    x: Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE),
+    y: Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  }
+}
+
+function determineSweepOrientation(area, referenceTile) {
+  const minX = Math.min(area.startX, area.endX)
+  const maxX = Math.max(area.startX, area.endX)
+  const minY = Math.min(area.startY, area.endY)
+  const maxY = Math.max(area.startY, area.endY)
+
+  const tileX = referenceTile && Number.isFinite(referenceTile.x)
+    ? referenceTile.x
+    : Math.round((minX + maxX) / 2)
+  const tileY = referenceTile && Number.isFinite(referenceTile.y)
+    ? referenceTile.y
+    : Math.round((minY + maxY) / 2)
+
+  const horizontal = Math.abs(tileX - minX) <= Math.abs(tileX - maxX) ? 'left' : 'right'
+  const vertical = Math.abs(tileY - minY) <= Math.abs(tileY - maxY) ? 'top' : 'bottom'
+
+  return { horizontal, vertical }
+}
 
 /**
  * Check if any selected units are Mine Layers
@@ -67,12 +115,16 @@ export function handleMineLayerAreaDeploy(selectedUnits, area, shiftKey) {
 
   // Calculate checkerboard pattern
   const deploymentTiles = calculateCheckerboardPattern(area)
+  if (deploymentTiles.length === 0) return []
+  const fieldId = getUniqueId()
 
   mineLayers.forEach(unit => {
+    registerFieldDeployment(unit, fieldId, deploymentTiles.length)
     const commands = deploymentTiles.map(tile => ({
       type: 'deployMine',
       x: tile.x,
-      y: tile.y
+      y: tile.y,
+      areaFieldId: fieldId
     }))
 
     if (shiftKey) {
@@ -125,30 +177,36 @@ export function handleMineSweeperRectangleSweep(selectedUnits, area, shiftKey) {
   const mineSweepers = selectedUnits.filter(unit => unit.type === 'mineSweeper' && unit.health > 0)
   if (mineSweepers.length === 0) return []
 
-  // Calculate zig-zag sweep path
-  const sweepPath = calculateZigZagSweepPath(area)
-
-  mineSweepers.forEach(unit => {
-    const command = {
+  const unitSweepData = mineSweepers.map(unit => {
+    const orientation = determineSweepOrientation(area, getUnitTilePosition(unit))
+    const path = calculateZigZagSweepPath(area, orientation)
+    if (!path || path.length === 0) {
+      return { unit, commands: [] }
+    }
+    const moveCommand = createEntryMoveCommand(path[0])
+    const sweepCommand = {
       type: 'sweepArea',
-      path: [...sweepPath] // Clone path for each unit
+      path
     }
-
-    if (shiftKey) {
-      // Queue command
-      if (!unit.commandQueue) unit.commandQueue = []
-      unit.commandQueue.push(command)
-    } else {
-      // Replace commands
-      unit.commandQueue = [command]
-      unit.currentCommand = null
-    }
-
-    // Activate sweeping mode
-    unit.sweeping = true
+    const commands = []
+    if (moveCommand) commands.push(moveCommand)
+    commands.push(sweepCommand)
+    return { unit, commands }
   })
 
-  return sweepPath
+  unitSweepData.forEach(({ unit, commands }) => {
+    if (!commands || commands.length === 0) return
+    if (shiftKey) {
+      if (!unit.commandQueue) unit.commandQueue = []
+      unit.commandQueue.push(...commands)
+    } else {
+      unit.commandQueue = [...commands]
+      unit.currentCommand = null
+    }
+  })
+
+  const firstSweep = unitSweepData.find(entry => entry.commands && entry.commands.some(cmd => cmd.type === 'sweepArea'))
+  return firstSweep ? firstSweep.commands.find(cmd => cmd.type === 'sweepArea').path : []
 }
 
 /**
@@ -176,23 +234,25 @@ export function handleMineSweeperFreeformSweep(selectedUnits, paintedTiles, shif
   })
 
   mineSweepers.forEach(unit => {
-    const command = {
+    if (!tiles.length) return
+    const path = tiles.map(tile => ({ ...tile }))
+    const moveCommand = createEntryMoveCommand(path[0])
+    const sweepCommand = {
       type: 'sweepArea',
-      path: [...tiles] // Clone path for each unit
+      path
     }
+
+    const commands = []
+    if (moveCommand) commands.push(moveCommand)
+    commands.push(sweepCommand)
 
     if (shiftKey) {
-      // Queue command
       if (!unit.commandQueue) unit.commandQueue = []
-      unit.commandQueue.push(command)
+      unit.commandQueue.push(...commands)
     } else {
-      // Replace commands
-      unit.commandQueue = [command]
+      unit.commandQueue = [...commands]
       unit.currentCommand = null
     }
-
-    // Activate sweeping mode
-    unit.sweeping = true
   })
 
   return tiles

@@ -66,11 +66,12 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 
 **Acceptance**:
 1. Mine Sweeper inherits tank movement/armor traits (no turret) with 2× tank armor.
-2. Speed is 70% of base tank speed normally, 30% while sweeping; sweeping mode toggles automatically during sweep commands and shows dust animation in front of unit.
+2. Speed is 70% of base tank speed normally, 30% while sweeping; sweeping mode toggles automatically at the start of a sweep rectangle command (before the sweeper enters the marked tile), slowing movement and emitting dust to signal clearance mode.
 3. Single click commands standard movement (non-sweeping).
-4. Drag rectangle (AGF-style) orders PPF zig-zag sweep covering all non-occupied tiles in the area (left-right serpentine with yellow markers).
+4. Drag rectangle (AGF-style) orders a PPF zig-zag sweep that first approaches the closest edge, then follows a serpentine pass covering every tile; the sweep order flips between left-to-right/top-to-bottom and right-to-left/bottom-to-top depending on which side of the rectangle the sweeper is arriving from so the entry distance stays minimal.
 5. Ctrl + Left Click drag paints a freeform area, previewed with orange tile overlay; releasing button locks sweep path using PPF markers only.
 6. Mines detonated while sweeper is in sweeping mode deal no damage to the unit; explosions still damage other units/buildings.
+7. When a dragged sweep/clear command finishes, play `AllMinesOnTheFieldAreDisarmed.mp3`, and when a Mine Layer completes every tile of a dragged minefield deployment play `The_mine_field_has_been_deployed_and_armed.mp3`.
 
 ### Story 5 – Production, Resources, and HUD (Priority P1)
 - Mine Layer: cost 1000, 30 HP, rotationSpeed 0.04, uses ammo-truck gas stats, unlocked when Workshop + Ammunition Factory + Vehicle Factory exist.
@@ -99,6 +100,8 @@ Introduce a complete land-mine gameplay system with two new units (Mine Layer tr
 | FR-018 | Sweeper dust animation plays in front when sweeping; sweeping over mine causes detonation without sweeper damage.
 | FR-019 | Sweeper rectangle sweep uses PPF-generated zig-zag paths covering all tiles; ctrl-draw sweep paints orange overlay before committing.
 | FR-020 | AI builds/uses Mine Layers and Mine Sweepers following specified triggers and priorities.
+| FR-021 | Rectangle sweep commands route the sweeper to the nearest entry tile, activate clearance mode (30% speed + dust) before crossing the boundary, and choose the serpentine coverage direction based on the approach side so every marked tile is cleared systematically.
+| FR-022 | Sweep completions play `AllMinesOnTheFieldAreDisarmed.mp3`, and full mine-field deployments play `The_mine_field_has_been_deployed_and_armed.mp3` when the final tile in the dragged area is armed.
 
 ---
 

@@ -68,6 +68,8 @@ const soundFiles = {
   building: ['building.mp3'],
   buildingPlaced: ['buildingPlaced.mp3'],
   harvest: ['harvest.mp3'],
+  AllMinesOnTheFieldAreDisarmed: ['AllMinesOnTheFieldAreDisarmed.mp3'],
+  The_mine_field_has_been_deployed_and_armed: ['The_mine_field_has_been_deployed_and_armed.mp3'],
   unitLost: ['unit_lost.mp3'],
   attacking: ['attacking.mp3'],
   enemyUnitDestroyed: ['enemy_unit_destroyed.mp3'],

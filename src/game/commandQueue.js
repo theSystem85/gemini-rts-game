@@ -1,6 +1,8 @@
 import { startMineDeployment } from './mineLayerBehavior.js'
 import { safeSweeperDetonation, getMineAtTile } from './mineSystem.js'
+import { activateSweepingMode } from './mineSweeperBehavior.js'
 import { TILE_SIZE } from '../config.js'
+import { playSound } from '../sound.js'
 
 export function processCommandQueues(units, mapGrid, unitCommands, buildings = []) {
   units.forEach(unit => {
@@ -13,6 +15,7 @@ export function processCommandQueues(units, mapGrid, unitCommands, buildings = [
     } else {
       const complete = isActionComplete(unit, unit.currentCommand, units, buildings)
       if (complete) {
+        handleCommandCompletion(unit, unit.currentCommand)
         unit.currentCommand = null
       }
     }
@@ -49,11 +52,34 @@ function executeAction(unit, action, mapGrid, unitCommands) {
     case 'sweepArea':
       // Move along sweep path
       if (action.path && action.path.length > 0) {
+        if (!unit.sweeping) {
+          activateSweepingMode(unit)
+        }
         const nextTile = action.path[0]
-        // Convert tile coordinates to world coordinates (center of tile)
-        const worldX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
-        const worldY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
-        unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
+        const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+        const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+        if (unitTileX === nextTile.x && unitTileY === nextTile.y) {
+          // Already at the tile, detonate mine if any, shift path
+          const mine = getMineAtTile(nextTile.x, nextTile.y)
+          if (mine) {
+            safeSweeperDetonation(mine, units, buildings)
+          }
+          action.path.shift()
+          if (action.path.length === 0) {
+            // Completed
+            return
+          }
+          // Continue to next tile
+          const newNextTile = action.path[0]
+          const worldX = newNextTile.x * TILE_SIZE + TILE_SIZE / 2
+          const worldY = newNextTile.y * TILE_SIZE + TILE_SIZE / 2
+          unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
+        } else {
+          // Move to next tile
+          const worldX = nextTile.x * TILE_SIZE + TILE_SIZE / 2
+          const worldY = nextTile.y * TILE_SIZE + TILE_SIZE / 2
+          unitCommands.handleMovementCommand([unit], worldX, worldY, mapGrid, true)
+        }
       }
       break
   }
@@ -118,4 +144,32 @@ function isActionComplete(unit, action, units = [], buildings = []) {
       return (!unit.path || unit.path.length === 0) && !unit.moveTarget
   }
   return true
+}
+
+function handleCommandCompletion(unit, action) {
+  if (!action) return
+
+  if (action.type === 'sweepArea' && (!action.path || action.path.length === 0) && !action._sweepSoundPlayed) {
+    playSound('AllMinesOnTheFieldAreDisarmed', 1.0, 0, true)
+    action._sweepSoundPlayed = true
+  }
+
+  if (action.type === 'deployMine' && action.areaFieldId) {
+    notifyMineFieldDeployed(unit, action.areaFieldId)
+  }
+}
+
+function notifyMineFieldDeployed(unit, fieldId) {
+  if (!unit || !fieldId || !unit.pendingMineFieldDeployments) return
+  const entry = unit.pendingMineFieldDeployments[fieldId]
+  if (!entry) return
+
+  entry.remaining = Math.max(0, (entry.remaining || 1) - 1)
+  if (entry.remaining === 0 && !entry.notified) {
+    playSound('The_mine_field_has_been_deployed_and_armed', 1.0, 0, true)
+    entry.notified = true
+  }
+  if (entry.remaining === 0) {
+    delete unit.pendingMineFieldDeployments[fieldId]
+  }
 }
