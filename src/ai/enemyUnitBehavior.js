@@ -3,6 +3,7 @@ import { getCachedPath } from '../game/pathfinding.js'
 import { findPath } from '../units.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth, shouldAIStartAttacking } from './enemyStrategies.js'
 import { isEnemyTo } from './enemyUtils.js'
+import { buildingData } from '../buildings.js'
 
 const ENABLE_DODGING = false
 const lastPositionCheckTimeDelay = 3000
@@ -18,7 +19,11 @@ const PLAYER_DEFENSE_BUILDINGS = new Set([
   'teslaCoil',
   'artilleryTurret'
 ])
+const AIR_DEFENSE_TYPES = new Set(['rocketTank'])
+const AIR_DEFENSE_BUILDINGS = new Set(['rocketTurret'])
 const HARVESTER_HUNTER_PATH_REFRESH = 2000
+const ROCKET_TURRET_RANGE = (buildingData.rocketTurret?.fireRange || 16) * TILE_SIZE
+const AIR_DEFENSE_RADIUS = TANK_FIRE_RANGE * TILE_SIZE * 1.2
 
 function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targetedOreTiles, bullets) {
   // Reset being attacked flag if enough time has passed since last damage
@@ -125,6 +130,11 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
       unit.spawnedInFactory = false
     }
     updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlayerId)
+    return
+  }
+
+  if (unit.type === 'apache') {
+    updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId)
     return
   }
 
@@ -1220,6 +1230,138 @@ function findNearestAIBuildingTile(unit, gameState, aiPlayerId) {
   })
 
   return closestTile
+}
+
+function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
+  const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
+  const unitCenter = getUnitCenter(unit)
+  const nearDefense = isAirDefenseNearby(unitCenter, units, gameState)
+
+  if (nearDefense || unit.airDefenseRetreating) {
+    const safeTile = findNearestAIBuildingTile(unit, gameState, aiPlayerId)
+    unit.airDefenseRetreating = true
+    unit.target = null
+
+    if (safeTile) {
+      const retreatPath = findPath({ x: unit.tileX, y: unit.tileY }, safeTile, mapGrid, gameState.occupancyMap)
+      unit.path = retreatPath && retreatPath.length > 1 ? retreatPath.slice(1) : []
+      unit.moveTarget = {
+        x: (safeTile.x + 0.5) * TILE_SIZE,
+        y: (safeTile.y + 0.5) * TILE_SIZE
+      }
+      unit.lastDecisionTime = now
+
+      const distanceToBase = Math.hypot(unit.moveTarget.x - unitCenter.x, unit.moveTarget.y - unitCenter.y)
+      if (!nearDefense && distanceToBase < TILE_SIZE * 2) {
+        unit.airDefenseRetreating = false
+      }
+    } else {
+      unit.airDefenseRetreating = false
+    }
+    return
+  }
+
+  if (!allowDecision) {
+    return
+  }
+
+  const target = findApacheStrikeTarget(units, gameState, unit)
+
+  if (!target) {
+    unit.target = null
+    unit.moveTarget = null
+    unit.path = []
+    unit.lastDecisionTime = now
+    return
+  }
+
+  unit.target = target
+  unit.lastTargetChangeTime = now
+  unit.lastDecisionTime = now
+
+  const targetTile = target.tileX !== undefined
+    ? { x: target.tileX, y: target.tileY }
+    : { x: target.x, y: target.y }
+
+  const targetPixel = target.tileX !== undefined
+    ? { x: (target.tileX + 0.5) * TILE_SIZE, y: (target.tileY + 0.5) * TILE_SIZE }
+    : { x: (target.x + (target.width || 1) / 2) * TILE_SIZE, y: (target.y + (target.height || 1) / 2) * TILE_SIZE }
+
+  unit.moveTarget = targetPixel
+
+  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  unit.path = path && path.length > 1 ? path.slice(1) : []
+}
+
+function getUnitCenter(unit) {
+  return {
+    x: unit.x + TILE_SIZE / 2,
+    y: unit.y + TILE_SIZE / 2
+  }
+}
+
+function isAirDefenseNearby(position, units, gameState) {
+  const player = gameState.humanPlayer
+  const nearbyRocketTanks = units.some(u =>
+    u.owner === player &&
+    AIR_DEFENSE_TYPES.has(u.type) &&
+    u.health > 0 &&
+    Math.hypot((u.x + TILE_SIZE / 2) - position.x, (u.y + TILE_SIZE / 2) - position.y) <= AIR_DEFENSE_RADIUS
+  )
+
+  if (nearbyRocketTanks) return true
+
+  const nearbyTurrets = (gameState.buildings || []).some(building => {
+    if (building.owner !== player || !AIR_DEFENSE_BUILDINGS.has(building.type) || building.health <= 0) return false
+
+    const centerX = (building.x + (building.width || 1) / 2) * TILE_SIZE
+    const centerY = (building.y + (building.height || 1) / 2) * TILE_SIZE
+    const distance = Math.hypot(centerX - position.x, centerY - position.y)
+    return distance <= ROCKET_TURRET_RANGE + TILE_SIZE
+  })
+
+  return nearbyTurrets
+}
+
+function findApacheStrikeTarget(units, gameState, seeker) {
+  const player = gameState.humanPlayer
+  const playerHarvesters = units.filter(u => u.owner === player && u.type === 'harvester' && u.health > 0)
+  const seekerCenter = getUnitCenter(seeker)
+
+  const unprotectedHarvesters = playerHarvesters.filter(harvester => {
+    const center = getUnitCenter(harvester)
+    return !isAirDefenseNearby(center, units, gameState)
+  })
+
+  if (unprotectedHarvesters.length > 0) {
+    unprotectedHarvesters.sort((a, b) => {
+      const aCenter = getUnitCenter(a)
+      const bCenter = getUnitCenter(b)
+      return Math.hypot(aCenter.x - seekerCenter.x, aCenter.y - seekerCenter.y) - Math.hypot(bCenter.x - seekerCenter.x, bCenter.y - seekerCenter.y)
+    })
+    return unprotectedHarvesters[0]
+  }
+
+  const priorityBuildings = ['constructionYard', 'oreRefinery', 'vehicleFactory', 'powerPlant']
+  const playerBuildings = (gameState.buildings || []).filter(b => b.owner === player && b.health > 0)
+
+  for (const type of priorityBuildings) {
+    const candidate = playerBuildings
+      .filter(b => b.type === type)
+      .find(b => !isAirDefenseNearby({
+        x: (b.x + (b.width || 1) / 2) * TILE_SIZE,
+        y: (b.y + (b.height || 1) / 2) * TILE_SIZE
+      }, units, gameState))
+
+    if (candidate) return candidate
+  }
+
+  const fallback = playerBuildings.find(b => !isAirDefenseNearby({
+    x: (b.x + (b.width || 1) / 2) * TILE_SIZE,
+    y: (b.y + (b.height || 1) / 2) * TILE_SIZE
+  }, units, gameState))
+
+  return fallback || null
 }
 
 export { updateAIUnit }
