@@ -7,24 +7,25 @@ layout(location = 0) in vec2 aPosition;
 layout(location = 1) in vec2 aTranslation;
 layout(location = 2) in vec4 aUVRect;
 layout(location = 3) in vec4 aColor;
-layout(location = 4) in float aUseTexture;
+layout(location = 4) in float aTextureType;
 
 uniform vec2 uResolution;
 uniform vec2 uScroll;
 uniform float uTileSize;
+uniform float uTileStep;
 
 out vec2 vUV;
 out vec4 vColor;
-out float vUseTexture;
+out float vTextureType;
 
 void main() {
-  vec2 worldPos = aTranslation * uTileSize - uScroll + aPosition * uTileSize;
+  vec2 worldPos = aTranslation * uTileStep - uScroll + aPosition * uTileSize;
   vec2 zeroToOne = worldPos / uResolution;
   vec2 clipSpace = zeroToOne * 2.0 - 1.0;
   gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
   vUV = mix(aUVRect.xy, aUVRect.zw, aPosition);
   vColor = aColor;
-  vUseTexture = aUseTexture;
+  vTextureType = aTextureType;
 }
 `
 
@@ -32,17 +33,19 @@ const FRAGMENT_SHADER_SOURCE = `#version 300 es
 precision highp float;
 
 uniform sampler2D uAtlas;
+uniform sampler2D uWater;
 
 in vec2 vUV;
 in vec4 vColor;
-in float vUseTexture;
+in float vTextureType;
 
 out vec4 outColor;
 
 void main() {
-  if (vUseTexture > 0.5) {
-    vec4 texColor = texture(uAtlas, vUV);
-    outColor = texColor;
+  if (vTextureType > 1.5) {
+    outColor = texture(uWater, vUV);
+  } else if (vTextureType > 0.5) {
+    outColor = texture(uAtlas, vUV);
   } else {
     outColor = vColor;
   }
@@ -119,6 +122,8 @@ export class GameWebGLRenderer {
     this.buffers = {}
     this.instanceCapacity = 0
     this.atlasTexture = null
+    this.waterTexture = null
+    this.lastWaterFrame = null
     this.atlasSize = { ...DEFAULT_ATLAS_SIZE }
     this.colorCache = new Map()
     this.pixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
@@ -131,6 +136,8 @@ export class GameWebGLRenderer {
     this.buffers = {}
     this.instanceCapacity = 0
     this.atlasTexture = null
+    this.waterTexture = null
+    this.lastWaterFrame = null
     this.atlasSize = { ...DEFAULT_ATLAS_SIZE }
   }
 
@@ -166,10 +173,11 @@ export class GameWebGLRenderer {
     this.buffers.translation = gl.createBuffer()
     this.buffers.uv = gl.createBuffer()
     this.buffers.color = gl.createBuffer()
-    this.buffers.useTexture = gl.createBuffer()
+    this.buffers.textureType = gl.createBuffer()
 
     gl.useProgram(this.program)
     gl.uniform1i(gl.getUniformLocation(this.program, 'uAtlas'), 0)
+    gl.uniform1i(gl.getUniformLocation(this.program, 'uWater'), 1)
     gl.useProgram(null)
 
     gl.enable(gl.BLEND)
@@ -204,6 +212,34 @@ export class GameWebGLRenderer {
     }
   }
 
+  syncWaterTexture() {
+    if (!this.gl || !this.textureManager?.waterFrames?.length) return null
+
+    const frame = this.textureManager.getCurrentWaterFrame()
+    if (!frame) return null
+
+    const gl = this.gl
+    if (!this.waterTexture) {
+      this.waterTexture = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, this.waterTexture)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    } else {
+      gl.bindTexture(gl.TEXTURE_2D, this.waterTexture)
+    }
+
+    if (frame !== this.lastWaterFrame) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frame)
+      this.lastWaterFrame = frame
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    return this.waterTexture
+  }
+
   getColor(type) {
     if (!this.colorCache.has(type)) {
       this.colorCache.set(type, parseColor(TILE_COLORS[type]))
@@ -214,18 +250,19 @@ export class GameWebGLRenderer {
   buildTileInstances(mapGrid, startX, startY, endX, endY) {
     const instances = []
     const canUseTextures = USE_TEXTURES && this.textureManager?.allTexturesLoaded
+    const hasAnimatedWater = !!this.waterTexture
 
     for (let y = startY; y < endY; y++) {
       const row = mapGrid[y]
       for (let x = startX; x < endX; x++) {
         const tile = row[x]
         if (!tile) continue
-        instances.push(this.createInstance(tile.type, x, y, canUseTextures))
+        instances.push(this.createInstance(tile.type, x, y, canUseTextures, hasAnimatedWater))
 
         if (tile.seedCrystal) {
-          instances.push(this.createInstance('seedCrystal', x, y, canUseTextures))
+          instances.push(this.createInstance('seedCrystal', x, y, canUseTextures, hasAnimatedWater))
         } else if (tile.ore) {
-          instances.push(this.createInstance('ore', x, y, canUseTextures))
+          instances.push(this.createInstance('ore', x, y, canUseTextures, hasAnimatedWater))
         }
       }
     }
@@ -233,10 +270,13 @@ export class GameWebGLRenderer {
     return instances.filter(Boolean)
   }
 
-  createInstance(type, tileX, tileY, canUseTextures) {
+  createInstance(type, tileX, tileY, canUseTextures, hasAnimatedWater) {
     const useTexture = canUseTextures && this.textureManager.tileTextureCache?.[type]?.length
+    const isWaterAnimated = type === 'water' && hasAnimatedWater
     let uvRect = [0, 0, 0, 0]
-    if (useTexture) {
+    if (isWaterAnimated) {
+      uvRect = [0, 0, 1, 1]
+    } else if (useTexture) {
       const cache = this.textureManager.tileTextureCache[type]
       const idx = this.textureManager.getTileVariation(type, tileX, tileY)
       const info = cache[idx % cache.length]
@@ -253,7 +293,7 @@ export class GameWebGLRenderer {
       translation: [tileX, tileY],
       uvRect,
       color: this.getColor(type),
-      useTexture: useTexture ? 1 : 0
+      textureType: isWaterAnimated ? 2 : useTexture ? 1 : 0
     }
   }
 
@@ -266,17 +306,20 @@ export class GameWebGLRenderer {
     if (!this.gl || !mapGrid?.length || !canvas) return false
     if (!this.ensureInitialized()) return false
     this.syncAtlasTexture()
+    this.syncWaterTexture()
 
     const gl = this.gl
     const pixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || this.pixelRatio || 1
+    const tileStep = TILE_SIZE * pixelRatio
     const tileSize = (TILE_SIZE + 1) * pixelRatio
     const scrollX = (scrollOffset?.x || 0) * pixelRatio
     const scrollY = (scrollOffset?.y || 0) * pixelRatio
 
-    const tilesX = Math.ceil(canvas.width / tileSize) + 1
-    const tilesY = Math.ceil(canvas.height / tileSize) + 1
-    const startTileX = Math.max(0, Math.floor((scrollOffset?.x || 0) / TILE_SIZE))
-    const startTileY = Math.max(0, Math.floor((scrollOffset?.y || 0) / TILE_SIZE))
+    const bufferTiles = 2
+    const tilesX = Math.ceil(canvas.width / tileStep) + bufferTiles * 2 + 1
+    const tilesY = Math.ceil(canvas.height / tileStep) + bufferTiles * 2 + 1
+    const startTileX = Math.max(0, Math.floor(scrollX / tileStep) - bufferTiles)
+    const startTileY = Math.max(0, Math.floor(scrollY / tileStep) - bufferTiles)
     const endTileX = Math.min(mapGrid[0].length, startTileX + tilesX)
     const endTileY = Math.min(mapGrid.length, startTileY + tilesY)
 
@@ -288,7 +331,7 @@ export class GameWebGLRenderer {
     const translations = new Float32Array(instances.length * 2)
     const uvData = new Float32Array(instances.length * 4)
     const colors = new Float32Array(instances.length * 4)
-    const useTexture = new Float32Array(instances.length)
+    const textureType = new Float32Array(instances.length)
 
     for (let i = 0; i < instances.length; i++) {
       const inst = instances[i]
@@ -302,11 +345,11 @@ export class GameWebGLRenderer {
       colors[i * 4 + 1] = inst.color[1]
       colors[i * 4 + 2] = inst.color[2]
       colors[i * 4 + 3] = inst.color[3]
-      useTexture[i] = inst.useTexture
+      textureType[i] = inst.textureType
     }
 
     gl.viewport(0, 0, canvas.width, canvas.height)
-    gl.clearColor(0, 0, 0, 1)
+    gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.useProgram(this.program)
@@ -314,13 +357,19 @@ export class GameWebGLRenderer {
     const resolutionLocation = gl.getUniformLocation(this.program, 'uResolution')
     const scrollLocation = gl.getUniformLocation(this.program, 'uScroll')
     const tileSizeLocation = gl.getUniformLocation(this.program, 'uTileSize')
+    const tileStepLocation = gl.getUniformLocation(this.program, 'uTileStep')
 
     gl.uniform2f(resolutionLocation, canvas.width, canvas.height)
     gl.uniform2f(scrollLocation, scrollX, scrollY)
     gl.uniform1f(tileSizeLocation, tileSize)
+    gl.uniform1f(tileStepLocation, tileStep)
 
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTexture)
+    if (this.waterTexture) {
+      gl.activeTexture(gl.TEXTURE1)
+      gl.bindTexture(gl.TEXTURE_2D, this.waterTexture)
+    }
 
     // Base quad vertices
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.quad)
@@ -349,9 +398,9 @@ export class GameWebGLRenderer {
     gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0)
     gl.vertexAttribDivisor(3, 1)
 
-    // Texture usage flags
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.useTexture)
-    gl.bufferData(gl.ARRAY_BUFFER, useTexture, gl.DYNAMIC_DRAW)
+    // Texture type flags
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.textureType)
+    gl.bufferData(gl.ARRAY_BUFFER, textureType, gl.DYNAMIC_DRAW)
     gl.enableVertexAttribArray(4)
     gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 0, 0)
     gl.vertexAttribDivisor(4, 1)
@@ -359,6 +408,9 @@ export class GameWebGLRenderer {
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, instances.length)
 
     gl.bindTexture(gl.TEXTURE_2D, null)
+    gl.activeTexture(gl.TEXTURE1)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    gl.activeTexture(gl.TEXTURE0)
     gl.useProgram(null)
 
     return true

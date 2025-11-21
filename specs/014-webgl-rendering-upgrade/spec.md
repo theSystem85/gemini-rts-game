@@ -31,6 +31,10 @@ Upgrade the rendering stack to prioritize GPU-backed pipelines for the main play
 6. **Performance Goals**
    - Reduce per-frame CPU draw overhead for terrain to a single instanced draw per frame (per layer) and eliminate redundant state changes.
    - Keep GPU submission resilient to changing map sizes and visibility windows without reallocating buffers each frame.
+7. **Viewport Coverage**
+   - Draw a buffer of off-screen tiles beyond the visible viewport (accounting for device pixel ratios) so no gaps or black bars appear when panning to any map edge.
+8. **Animated Tiles**
+   - Preserve animated terrain (e.g., water) in the GPU path by sampling the existing water animation frames; fall back to atlas UVs only when animation frames are unavailable.
 
 ---
 
