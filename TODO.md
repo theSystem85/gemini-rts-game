@@ -285,6 +285,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 
 ## Bugs
 - [x] Prevent Apache rockets from damaging ground units or buildings when engaging airborne targets.
+- [x] Clear restoration move overrides when new movement commands are issued so restored crewless units can't roam indefinitely.
 - [x] Hide the desktop energy bar while in the mobile landscape layout so only the dedicated mobile status bar energy indicator is visible.
 - [x] Hide the desktop money bar while in the mobile landscape layout so only the dedicated mobile HUD money indicator is visible.
 - [x] Ensure the standalone/PWA mobile landscape layout can scroll upward while dragging to build and does not leave a stray black bar along the bottom edge of the viewport.
