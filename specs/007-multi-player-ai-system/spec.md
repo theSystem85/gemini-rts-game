@@ -173,11 +173,15 @@ This specification documents the comprehensive multi-player AI system that power
 **Description:** AI constructs Gun Turrets and SAM Sites at strategic positions around base perimeter. Turret placement prioritizes coverage of entry points and high-value buildings.
 
 #### FR-012: Building Placement Algorithm
-**Priority:** P0  
+**Priority:** P0
 **Description:** AI places buildings near existing structures to create compact base layout. Validates tile availability, checks for overlaps, ensures buildings are on valid terrain.
 
+#### FR-012a: Building Spacing Rules
+**Priority:** P0
+**Description:** Enemy AI keeps a default 2-tile gap to neighboring structures during placement; defensive structures may touch other defensive structures and wall segments may be contiguous. A 1-tile gap is only allowed after all nearby 2-gap options have been checked and blocked.
+
 #### FR-013: Building Prerequisites
-**Priority:** P0  
+**Priority:** P0
 **Description:** AI respects technology tree prerequisites (e.g., Advanced structures require Tech Center). Builds prerequisite structures before advanced ones.
 
 ---
