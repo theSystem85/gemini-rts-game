@@ -309,7 +309,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   // Debug logging (enable temporarily to debug building issues)
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
   // Building construction runs independently from unit production
-  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 &&
+  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory.budget > 1000 &&
       !aiFactory.currentlyBuilding)
   {
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
