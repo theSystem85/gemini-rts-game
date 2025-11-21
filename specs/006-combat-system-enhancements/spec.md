@@ -384,6 +384,15 @@ As a player, I want to see visual indicators showing where my units are moving a
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
+### Additional Behavior - Apache Rockets (Priority: Bugfix)
+
+As a player, I want Apache air-to-air rockets to avoid harming ground units or buildings so that aerial duels do not cause collateral ground damage.
+
+**Acceptance Scenarios**
+
+1. **Given** an Apache fires at an airborne Apache, **When** the rocket detonates, **Then** only the airborne target is damaged and no ground units within the blast area lose health.
+2. **Given** an Apache fires at an airborne Apache, **When** the rocket detonates above a building, **Then** that building receives no damage from the airburst.
+
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
