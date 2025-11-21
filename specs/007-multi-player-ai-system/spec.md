@@ -61,7 +61,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI builds economy buildings (Ore Refineries, Silos) when needed
 - [x] AI expands base area when resources permit
 - [x] AI building placement avoids overlaps and invalid positions
-- [ ] AI base expansion obeys the same 2-tile maximum gap rule as player construction so buildings stay connected
+- [ ] AI base expansion prefers to keep core buildings separated by exactly 2 tiles when space permits, while allowing defensive structures and walls to remain adjacent for coverage
 - [x] AI maintains balanced building ratios (defense, economy, production)
 
 ---
@@ -175,6 +175,10 @@ This specification documents the comprehensive multi-player AI system that power
 #### FR-012: Building Placement Algorithm
 **Priority:** P0  
 **Description:** AI places buildings near existing structures to create compact base layout. Validates tile availability, checks for overlaps, ensures buildings are on valid terrain.
+
+#### FR-048: Base Building Gap Preference
+**Priority:** P1  
+**Description:** Core base buildings (construction yard, factories, refineries, power plants) should be placed using a two-tile separation whenever the map provides enough room; the AI only relaxes this spacing when no valid two-tile gap exists or when placing defensive structures/walls that may touch.
 
 #### FR-013: Building Prerequisites
 **Priority:** P0  
@@ -499,7 +503,7 @@ This specification documents the comprehensive multi-player AI system that power
 11. **AI Tries to Produce Unit Without Prerequisites:** Production system validates tech tree requirements before queuing, AI receives failure callback, adds prerequisite building to construction queue first, retries unit production on subsequent cycles.
 
 12. **Save/Load with AI State:** AI strategic state (timers, current focus) is reset on game load to prevent stale data, AI resumes normal decision-making from current game state, no long-term memory persists across sessions.
-13. **AI Building Spacing:** AI construction enforces at least a one-tile gap from other structures before starting builds, except when placing walls or when defensive buildings are adjacent to other defensive buildings.
+13. **AI Building Spacing:** AI construction prefers a two-tile gap between core base buildings and only relaxes to one tile when no two-tile position exists; walls and defensive structures may still be placed adjacent to each other when necessary.
 
 ---
 

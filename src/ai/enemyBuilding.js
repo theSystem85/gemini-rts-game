@@ -10,6 +10,23 @@ function isDefensiveBuildingType(buildingType) {
   return buildingType?.startsWith('turretGun') || DEFENSIVE_BUILDINGS.has(buildingType)
 }
 
+const CORE_BASE_BUILDING_TYPES = new Set([
+  'constructionYard',
+  'powerPlant',
+  'oreRefinery',
+  'vehicleFactory',
+  'vehicleWorkshop',
+  'radarStation',
+  'hospital',
+  'helipad',
+  'gasStation',
+  'ammunitionFactory'
+])
+
+function isCoreBaseBuildingType(buildingType) {
+  return CORE_BASE_BUILDING_TYPES.has(buildingType)
+}
+
 function isSpacingExempt(candidateType, otherBuildingType) {
   if (!otherBuildingType) return false
 
@@ -128,14 +145,13 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Special case for walls - they can be placed closer together
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 1 // Default spacing - ensure at least 1-tile gap
+  let minSpaceBetweenBuildings = isCoreBaseBuildingType(buildingType) ? 2 : 1 // Prefer larger gaps for base core buildings
 
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 0 // Walls are exempt from gap requirements
   }
 
-  // Keep enemy buildings clustered like player bases (max 2-tile gap)
-  const preferredDistances = [1, 2]
+  const preferredDistances = isCoreBaseBuildingType(buildingType) ? [2, 1] : [1, 2]
 
   // First try placing along the line from the factory to the closest ore field
   if (isDefensiveBuilding && closestOrePos) {
@@ -451,12 +467,12 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
   const buildingHeight = buildingData[buildingType].height
 
   // Special spacing requirements for different building types
-  let minSpaceBetweenBuildings = 1 // Default spacing ensures at least a single-tile gap
-  let preferredDistances = [1, 2] // Default distances keep buildings clustered
+  let minSpaceBetweenBuildings = isCoreBaseBuildingType(buildingType) ? 2 : 1 // Default spacing (core bases prefer 2 tiles)
+  let preferredDistances = isCoreBaseBuildingType(buildingType) ? [2, 1] : [1, 2]
 
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 0 // Walls are exempt from spacing requirements
-    preferredDistances = [1, 2] // Updated to maintain consistent spacing
+    preferredDistances = [1, 2] // Return to default spacing order for walls
   }
 
   // Get human player factory for directional placement of defensive buildings
