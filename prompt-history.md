@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-19 - gpt-5-codex
+Make the base frontier visible with an  orange overlay that is visible by default. Build the defence along that frontier. I hereby clarify that base does not just mean the initial factory building bit the entirety of all ai buildings.
+
 ## 2025-11-18 - gpt-5-codex
 I still see the defense buildings inside the enemy base and not on the outside frontiers. Improve!
 

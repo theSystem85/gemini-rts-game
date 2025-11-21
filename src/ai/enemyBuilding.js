@@ -3,45 +3,13 @@ import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { findPath } from '../units.js'
+import { getBaseLayout, getBaseFrontierTiles, makeTileKey } from '../utils/baseLayout.js'
 
 const DEFENSIVE_BUILDING_TYPES = new Set(['rocketTurret', 'teslaCoil', 'artilleryTurret'])
 
 function isDefensiveBuildingType(buildingType) {
   if (!buildingType) return false
   return buildingType.startsWith('turretGun') || DEFENSIVE_BUILDING_TYPES.has(buildingType)
-}
-
-function getBaseBoundsForOwner(buildings, ownerId) {
-  const ownerBuildings = buildings.filter(b => b.owner === ownerId && b.health > 0)
-
-  if (ownerBuildings.length === 0) return null
-
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-
-  ownerBuildings.forEach(building => {
-    const data = buildingData[building.type] || {}
-    const width = building.width || data.width || 1
-    const height = building.height || data.height || 1
-    minX = Math.min(minX, building.x)
-    minY = Math.min(minY, building.y)
-    maxX = Math.max(maxX, building.x + width - 1)
-    maxY = Math.max(maxY, building.y + height - 1)
-  })
-
-  return { minX, minY, maxX, maxY }
-}
-
-function getBoundsFromFactory(factory) {
-  if (!factory) return null
-  return {
-    minX: factory.x,
-    minY: factory.y,
-    maxX: factory.x + factory.width - 1,
-    maxY: factory.y + factory.height - 1
-  }
 }
 
 function getBoundsCenter(bounds) {
@@ -52,8 +20,27 @@ function getBoundsCenter(bounds) {
   }
 }
 
-function isTileInsideBounds(tile, bounds) {
-  if (!tile || !bounds) return false
+function getFootprintCenter(footprint) {
+  if (!footprint || !footprint.size) return null
+  let sumX = 0
+  let sumY = 0
+  footprint.forEach(key => {
+    const [xStr, yStr] = key.split(',')
+    sumX += Number(xStr)
+    sumY += Number(yStr)
+  })
+  const count = footprint.size
+  return { x: Math.round(sumX / count), y: Math.round(sumY / count) }
+}
+
+function isTileInsideBase(tile, baseLayout) {
+  if (!tile || !baseLayout) return false
+  const key = makeTileKey(Math.round(tile.x), Math.round(tile.y))
+  if (baseLayout.footprint && baseLayout.footprint.has(key)) {
+    return true
+  }
+  const bounds = baseLayout.bounds
+  if (!bounds) return false
   return tile.x >= bounds.minX && tile.x <= bounds.maxX && tile.y >= bounds.minY && tile.y <= bounds.maxY
 }
 
@@ -93,20 +80,18 @@ function findNearestPassableTile(target, mapGrid, occupancyMap, maxDistance = 6)
 function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, factories) {
   if (!mapGrid || mapGrid.length === 0) return null
 
-  const aiFactory = Array.isArray(factories) ? factories.find(f => f.id === aiPlayerId) : null
-  const aiBounds = getBaseBoundsForOwner(buildings, aiPlayerId) || getBoundsFromFactory(aiFactory)
+  const aiBaseLayout = getBaseLayout(aiPlayerId, buildings, factories)
+  const aiBounds = aiBaseLayout.bounds
   if (!aiBounds) return null
 
   const playerOwner = gameState.humanPlayer || 'player1'
-  const playerFactory = Array.isArray(factories) ? factories.find(f => f.id === playerOwner) : null
-  const playerBounds =
-    getBaseBoundsForOwner(buildings, playerOwner) ||
-    getBoundsFromFactory(playerFactory)
+  const playerBaseLayout = getBaseLayout(playerOwner, buildings, factories)
+  const playerBounds = playerBaseLayout.bounds
 
   if (!playerBounds) return null
 
-  const aiCenter = getBoundsCenter(aiBounds)
-  const playerCenter = getBoundsCenter(playerBounds)
+  const aiCenter = getBoundsCenter(aiBounds) || getFootprintCenter(aiBaseLayout.footprint)
+  const playerCenter = getBoundsCenter(playerBounds) || getFootprintCenter(playerBaseLayout.footprint)
   if (!aiCenter || !playerCenter) return null
 
   const pathOccupancyMap = occupancyMap && occupancyMap.length ? occupancyMap : null
@@ -120,9 +105,11 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
   let exitIndex = -1
   let previous = { ...aiCenter }
 
+  const isInside = tile => isTileInsideBase(tile, aiBaseLayout)
+
   for (let i = 0; i < path.length; i++) {
     const current = path[i]
-    if (isTileInsideBounds(previous, aiBounds) && !isTileInsideBounds(current, aiBounds)) {
+    if (isInside(previous) && !isInside(current)) {
       exitTile = current
       exitIndex = i
       break
@@ -131,7 +118,7 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
   }
 
   if (!exitTile) {
-    exitIndex = path.findIndex(tile => !isTileInsideBounds(tile, aiBounds))
+    exitIndex = path.findIndex(tile => !isInside(tile))
     if (exitIndex !== -1) {
       exitTile = path[exitIndex]
     } else {
@@ -147,7 +134,10 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
     direction = { x: direction.x / mag, y: direction.y / mag }
   }
 
-  return { exitTile, direction, aiBounds }
+  const frontierTiles = getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, aiBaseLayout)
+  const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
+
+  return { exitTile, direction, aiBounds, frontierSet, baseLayout: aiBaseLayout }
 }
 
 function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId) {
@@ -199,7 +189,7 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
 
         if (!isNearBase) continue
 
-        if (!isPlacementOnFrontier(candidateX, candidateY, buildingWidth, buildingHeight, chokepoint.aiBounds)) {
+        if (!isPlacementOnFrontier(candidateX, candidateY, buildingWidth, buildingHeight, chokepoint.frontierSet)) {
           continue
         }
 
@@ -225,32 +215,18 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
   return null
 }
 
-function isPlacementOnFrontier(x, y, width, height, bounds) {
-  if (!bounds) return true
-
-  const extendedBounds = {
-    minX: bounds.minX - 1,
-    minY: bounds.minY - 1,
-    maxX: bounds.maxX + 1,
-    maxY: bounds.maxY + 1
-  }
-
-  const totalTiles = width * height
-  let insideCount = 0
-  let touchesBoundary = false
+function isPlacementOnFrontier(x, y, width, height, frontierSet) {
+  if (!frontierSet || frontierSet.size === 0) return true
 
   for (let cy = y; cy < y + height; cy++) {
     for (let cx = x; cx < x + width; cx++) {
-      const tile = { x: cx, y: cy }
-      if (isTileInsideBounds(tile, bounds)) insideCount++
-      if (!touchesBoundary && isTileInsideBounds(tile, extendedBounds)) {
-        touchesBoundary = true
+      if (frontierSet.has(makeTileKey(cx, cy))) {
+        return true
       }
     }
   }
 
-  const maxInsideTiles = Math.max(1, Math.floor(totalTiles * 0.25))
-  return touchesBoundary && insideCount <= maxInsideTiles
+  return false
 }
 
 // Let's improve this function to fix issues with enemy building placement

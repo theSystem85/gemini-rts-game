@@ -1,5 +1,6 @@
 // rendering/mapRenderer.js
 import { TILE_SIZE, TILE_COLORS, USE_TEXTURES } from '../config.js'
+import { getBaseFrontierTiles } from '../utils/baseLayout.js'
 
 const UNDISCOVERED_COLOR = '#111111'
 const FOG_OVERLAY_STYLE = 'rgba(30, 30, 30, 0.6)'
@@ -625,6 +626,55 @@ export class MapRenderer {
     }
   }
 
+  renderBaseFrontierOverlay(ctx, mapGrid, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState) {
+    if (!gameState || !Array.isArray(mapGrid) || mapGrid.length === 0) {
+      return
+    }
+
+    const buildings = Array.isArray(gameState.buildings) ? gameState.buildings : []
+    const factories = Array.isArray(gameState.factories) ? gameState.factories : []
+    if (buildings.length === 0 && factories.length === 0) {
+      return
+    }
+
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const aiOwners = new Set()
+
+    const registerOwner = ownerId => {
+      if (!ownerId || ownerId === humanPlayer) return
+      aiOwners.add(ownerId)
+    }
+
+    for (const building of buildings) {
+      registerOwner(building?.owner)
+    }
+
+    for (const factory of factories) {
+      registerOwner(factory?.owner || factory?.id)
+    }
+
+    if (aiOwners.size === 0) {
+      return
+    }
+
+    ctx.save()
+    ctx.fillStyle = 'rgba(255, 140, 0, 0.35)'
+
+    for (const ownerId of aiOwners) {
+      const frontierTiles = getBaseFrontierTiles(ownerId, buildings, factories, mapGrid)
+      for (const tile of frontierTiles) {
+        if (tile.x < startTileX - 1 || tile.x > endTileX + 1 || tile.y < startTileY - 1 || tile.y > endTileY + 1) {
+          continue
+        }
+        const screenX = tile.x * TILE_SIZE - scrollOffset.x
+        const screenY = tile.y * TILE_SIZE - scrollOffset.y
+        ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+      }
+    }
+
+    ctx.restore()
+  }
+
   render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null) {
     // Calculate visible tile range - improved for better performance
     const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE))
@@ -637,5 +687,6 @@ export class MapRenderer {
     this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
+    this.renderBaseFrontierOverlay(ctx, mapGrid, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
   }
 }
