@@ -170,10 +170,12 @@ export function getPlayableViewportWidth(gameCanvas) {
 
   const safeLeft = getSafeAreaInset('left')
   const safeRight = getSafeAreaInset('right')
+  const leftUiWidth = getMobileActionBarWidth()
   const rightUiWidth = getMobileLandscapeRightUiWidth()
-  const rightObstruction = Math.max(safeRight, rightUiWidth)
+  const leftObstruction = safeLeft + leftUiWidth
+  const rightObstruction = safeRight + rightUiWidth
 
-  return Math.max(0, logicalWidth - safeLeft - rightObstruction)
+  return Math.max(0, logicalWidth - leftObstruction - rightObstruction)
 }
 
 export function getPlayableViewportHeight(gameCanvas) {
