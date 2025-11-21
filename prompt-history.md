@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-20 - gpt-5.1-codex-max
+Review the current frontier overlay and defense logic to ensure it truly builds on the base perimeter where the shortest tank path to the player's base exits the combined AI footprint, and rework it if needed so the feature actually works after rebasing on the latest main branch.
+
 ## 2025-11-19 - gpt-5-codex
 Make the base frontier visible with an  orange overlay that is visible by default. Build the defence along that frontier. I hereby clarify that base does not just mean the initial factory building bit the entirety of all ai buildings.
 

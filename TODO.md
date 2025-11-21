@@ -7,6 +7,7 @@
 - [x] Ensure enemy AI concentrates defensive building placements where the shortest tank path from its base to the player's base leaves the AI base perimeter so chokepoints stay fortified.
 - [x] Fine tune chokepoint turret placement so footprints sit outside the AI base perimeter along the player-bound path exit, forming a true frontline wall.
 - [x] Visualize aggregated AI base frontiers with a default orange overlay and force defensive buildings to snap to those frontier tiles derived from every AI-owned structure, not just the initial factory.
+- [x] Re-evaluate frontier chokepoint selection so defenses anchor to passable frontier tiles that sit on the actual shortest tank route from the combined AI footprint toward the player base rather than relying on bounding-box exits.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.

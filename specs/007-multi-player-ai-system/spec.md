@@ -3,7 +3,7 @@
 **Branch:** `007-multi-player-ai-system`  
 **Status:** Implemented  
 **Created:** 2025-11-05  
-**Last Updated:** 2025-11-19
+**Last Updated:** 2025-11-20
 
 ---
 
@@ -58,7 +58,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI constructs initial base buildings (Construction Yard, Power Plant, War Factory)
 - [x] AI builds defensive structures (Gun Turrets, SAM Sites)
 - [x] AI places turrets at strategic positions around its base
-- [x] AI concentrates defensive buildings along the chokepoint where the tank pathfinding route from its base to the player's base leaves the base perimeter, ensuring that shortest-path approaches are heavily fortified and the actual building footprints sit just outside the base boundary to create a forward-facing wall
+- [x] AI concentrates defensive buildings along the chokepoint where the tank pathfinding route from its base to the player's base exits on a passable frontier tile derived from the combined AI footprint, ensuring that shortest-path approaches are heavily fortified and the actual building footprints sit just outside the base boundary to create a forward-facing wall.
 - [x] AI base frontiers are defined by the combined footprint of all AI-owned structures (factories plus constructed buildings), are visualized with an always-on orange overlay, and defensive placements snap to those highlighted frontier tiles.
 - [x] AI builds economy buildings (Ore Refineries, Silos) when needed
 - [x] AI expands base area when resources permit

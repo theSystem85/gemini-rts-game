@@ -33,17 +33,6 @@ function getFootprintCenter(footprint) {
   return { x: Math.round(sumX / count), y: Math.round(sumY / count) }
 }
 
-function isTileInsideBase(tile, baseLayout) {
-  if (!tile || !baseLayout) return false
-  const key = makeTileKey(Math.round(tile.x), Math.round(tile.y))
-  if (baseLayout.footprint && baseLayout.footprint.has(key)) {
-    return true
-  }
-  const bounds = baseLayout.bounds
-  if (!bounds) return false
-  return tile.x >= bounds.minX && tile.x <= bounds.maxX && tile.y >= bounds.minY && tile.y <= bounds.maxY
-}
-
 function findNearestPassableTile(target, mapGrid, occupancyMap, maxDistance = 6) {
   if (!target) return null
   const startX = Math.round(target.x)
@@ -77,6 +66,29 @@ function findNearestPassableTile(target, mapGrid, occupancyMap, maxDistance = 6)
   return null
 }
 
+function isTilePassable(x, y, mapGrid, occupancyMap = null) {
+  if (!mapGrid || !mapGrid.length || !mapGrid[0]?.length) return false
+  if (x < 0 || y < 0 || y >= mapGrid.length || x >= mapGrid[0].length) return false
+
+  const tile = mapGrid[y][x]
+  if (!tile) return false
+
+  const blocked =
+    tile.type === 'water' ||
+    tile.type === 'rock' ||
+    tile.noBuild ||
+    tile.building ||
+    tile.seedCrystal
+
+  if (blocked) return false
+
+  if (occupancyMap && occupancyMap[y] && occupancyMap[y][x]) {
+    return false
+  }
+
+  return true
+}
+
 function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, factories) {
   if (!mapGrid || mapGrid.length === 0) return null
 
@@ -95,49 +107,51 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
   if (!aiCenter || !playerCenter) return null
 
   const pathOccupancyMap = occupancyMap && occupancyMap.length ? occupancyMap : null
-  const pathStart = findNearestPassableTile(aiCenter, mapGrid, pathOccupancyMap) || aiCenter
-  const pathEnd = findNearestPassableTile(playerCenter, mapGrid, pathOccupancyMap) || playerCenter
+  const playerPassableCenter = findNearestPassableTile(playerCenter, mapGrid, pathOccupancyMap) || playerCenter
 
-  const path = findPath(pathStart, pathEnd, mapGrid, pathOccupancyMap)
-  if (!path || path.length < 2) return null
+  const frontierTiles = getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, aiBaseLayout)
+  const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
 
-  let exitTile = null
-  let exitIndex = -1
-  let previous = { ...aiCenter }
+  const passableFrontierTiles = frontierTiles.filter(tile =>
+    isTilePassable(tile.x, tile.y, mapGrid, pathOccupancyMap)
+  )
 
-  const isInside = tile => isTileInsideBase(tile, aiBaseLayout)
+  const candidates = passableFrontierTiles
+    .map(tile => ({
+      tile,
+      distanceToPlayer: Math.hypot(tile.x - playerPassableCenter.x, tile.y - playerPassableCenter.y)
+    }))
+    .sort((a, b) => a.distanceToPlayer - b.distanceToPlayer)
+    .slice(0, 60)
 
-  for (let i = 0; i < path.length; i++) {
-    const current = path[i]
-    if (isInside(previous) && !isInside(current)) {
-      exitTile = current
-      exitIndex = i
-      break
-    }
-    previous = current
-  }
+  let bestExit = null
+  let bestPath = null
 
-  if (!exitTile) {
-    exitIndex = path.findIndex(tile => !isInside(tile))
-    if (exitIndex !== -1) {
-      exitTile = path[exitIndex]
-    } else {
-      exitTile = path[path.length - 1]
-      exitIndex = path.length - 1
+  for (const candidate of candidates) {
+    const path = findPath(candidate.tile, playerPassableCenter, mapGrid, pathOccupancyMap)
+    if (!path || path.length === 0) continue
+
+    if (!bestPath || path.length < bestPath.length) {
+      bestExit = candidate.tile
+      bestPath = path
     }
   }
 
-  const referenceTile = exitIndex > 0 ? path[exitIndex - 1] : aiCenter
-  let direction = { x: exitTile.x - referenceTile.x, y: exitTile.y - referenceTile.y }
+  if (!bestExit) {
+    bestExit = passableFrontierTiles[0] || null
+    bestPath = bestExit ? findPath(bestExit, playerPassableCenter, mapGrid, pathOccupancyMap) : null
+  }
+
+  if (!bestExit || !bestPath || bestPath.length === 0) return null
+
+  const referenceTile = bestPath.length > 1 ? bestPath[1] : playerPassableCenter
+  let direction = { x: referenceTile.x - bestExit.x, y: referenceTile.y - bestExit.y }
   const mag = Math.hypot(direction.x, direction.y)
   if (mag > 0) {
     direction = { x: direction.x / mag, y: direction.y / mag }
   }
 
-  const frontierTiles = getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, aiBaseLayout)
-  const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
-
-  return { exitTile, direction, aiBounds, frontierSet, baseLayout: aiBaseLayout }
+  return { exitTile: bestExit, direction, aiBounds, frontierSet, baseLayout: aiBaseLayout }
 }
 
 function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId) {
