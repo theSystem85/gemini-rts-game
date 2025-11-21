@@ -2,6 +2,7 @@ import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearEx
 import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
+import { MAX_BUILDING_GAP_TILES } from '../config.js'
 
 const DEFENSIVE_BUILDINGS = new Set(['rocketTurret', 'teslaCoil', 'artilleryTurret'])
 
@@ -131,23 +132,14 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 0 // Walls are exempt from gap requirements
-  } else if (buildingType === 'oreRefinery') {
-    minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
-  } else if (buildingType === 'vehicleFactory') {
-    minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
-  } else if (isDefensiveBuilding) {
-    minSpaceBetweenBuildings = 2 // Defense buildings standard spacing
   }
 
-  // Preferred placement distances - increased to ensure more space between buildings
-  // For refineries and factories, use larger distances
-  const preferredDistances = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory')
-    ? [4, 5, 6, 3]
-    : [3, 4, 5, 2]
+  // Keep enemy buildings clustered like player bases (max 2-tile gap)
+  const preferredDistances = [1, 2]
 
   // First try placing along the line from the factory to the closest ore field
   if (isDefensiveBuilding && closestOrePos) {
-    const lineDistances = preferredDistances.concat([6, 7])
+    const lineDistances = preferredDistances
     for (const distance of lineDistances) {
       const x = factory.x + Math.round(directionVector.x * distance)
       const y = factory.y + Math.round(directionVector.y * distance)
@@ -249,8 +241,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
       // Check if ANY tile of the building is within range of an existing enemy building
       // This means we're connected to the base, but not too close
-      // Use different connection ranges for different building types
-      const connectionRange = (buildingType === 'oreRefinery' || buildingType === 'vehicleFactory') ? 7 : 6
+      const connectionRange = MAX_BUILDING_GAP_TILES
 
       let isNearBase = false
       for (let checkY = y; checkY < y + buildingHeight && !isNearBase; checkY++) {
@@ -461,17 +452,11 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
   // Special spacing requirements for different building types
   let minSpaceBetweenBuildings = 1 // Default spacing ensures at least a single-tile gap
-  let preferredDistances = [3, 4, 5, 2] // Default distances
+  let preferredDistances = [1, 2] // Default distances keep buildings clustered
 
   if (buildingType === 'concreteWall') {
     minSpaceBetweenBuildings = 0 // Walls are exempt from spacing requirements
-    preferredDistances = [3, 4, 5, 2] // Updated to maintain consistent spacing
-  } else if (buildingType === 'oreRefinery') {
-    minSpaceBetweenBuildings = 3 // Refineries need extra space for harvester movement
-    preferredDistances = [4, 5, 6, 3] // Place them further away
-  } else if (buildingType === 'vehicleFactory') {
-    minSpaceBetweenBuildings = 3 // Vehicle factories need space for unit spawning
-    preferredDistances = [4, 5, 6, 3]
+    preferredDistances = [1, 2] // Updated to maintain consistent spacing
   }
 
   // Get human player factory for directional placement of defensive buildings
@@ -625,7 +610,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         let isNearBase = false
         for (let cy = y; cy < y + buildingHeight && !isNearBase; cy++) {
           for (let cx = x; cx < x + buildingWidth && !isNearBase; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 6, aiPlayerId)) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, MAX_BUILDING_GAP_TILES, aiPlayerId)) {
               isNearBase = true
             }
           }
@@ -704,7 +689,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         for (let cy = y; cy < y + buildingHeight; cy++) {
           for (let cx = x; cx < x + buildingWidth; cx++) {
-            if (isNearExistingBuilding(cx, cy, buildings, factories, 6, aiPlayerId)) {
+            if (isNearExistingBuilding(cx, cy, buildings, factories, MAX_BUILDING_GAP_TILES, aiPlayerId)) {
               isNearBase = true
             }
             if (!isTileValid(cx, cy, mapGrid, units, buildings, factories, buildingType)) {

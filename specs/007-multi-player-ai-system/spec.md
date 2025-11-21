@@ -61,6 +61,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI builds economy buildings (Ore Refineries, Silos) when needed
 - [x] AI expands base area when resources permit
 - [x] AI building placement avoids overlaps and invalid positions
+- [ ] AI base expansion obeys the same 2-tile maximum gap rule as player construction so buildings stay connected
 - [x] AI maintains balanced building ratios (defense, economy, production)
 
 ---

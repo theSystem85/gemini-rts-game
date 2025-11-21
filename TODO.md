@@ -3,6 +3,7 @@
 - [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
+- [ ] Keep enemy AI building placement within the same 2-tile maximum gap rule used for player construction.
 - [ ] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
 - [x] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.

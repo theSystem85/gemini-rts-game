@@ -466,7 +466,7 @@ export function setServiceServingRange(value) {
 }
 
 // Maximum allowed empty tile gap between connected buildings (Chebyshev distance)
-export const MAX_BUILDING_GAP_TILES = 3
+export const MAX_BUILDING_GAP_TILES = 2
 // Backwards-compatible export for systems that still consume the old name
 export const BUILDING_PROXIMITY_RANGE = MAX_BUILDING_GAP_TILES
 
