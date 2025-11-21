@@ -107,13 +107,10 @@ export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) 
 export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(unit, prevTileX, prevTileY, occupancyMap) {
   if (!occupancyMap) return
 
-  if (unit.isAirUnit && unit.flightState !== 'grounded') {
-    return
-  }
-
-  // For air units that are grounded, only update occupancy if they actually have ground occupancy applied
-  // This prevents helipad Apaches from incorrectly adding occupancy when moving while grounded
-  if (unit.isAirUnit && unit.groundedOccupancyApplied === false) {
+  // Skip occupancy updates for air units that are:
+  // 1. Not grounded (airborne), OR
+  // 2. Grounded but don't have ground occupancy applied (helipad Apaches)
+  if (unit.isAirUnit && (unit.flightState !== 'grounded' || unit.groundedOccupancyApplied === false)) {
     return
   }
 
