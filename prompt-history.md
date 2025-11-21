@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-22 - gpt-5.1-codex-max
+Ensure the AI defines its base as every AI-owned building, builds defenses only on the player-facing inner edge of that combined base (not deep inside or outside the map edge), maintains a balanced mix of Tesla coil, turret gun, and rocket turret at each defended front, and remove the orange frontier overlay.
+
 ## 2025-11-21 - gpt-5.1-codex-max
 Ensure the defense buildings are built on the outer edges of the base, not inside the base itself, but on the outer edge, this is really important
 

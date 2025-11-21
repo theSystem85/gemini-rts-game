@@ -6,9 +6,10 @@
 - [ ] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
 - [x] Ensure enemy AI concentrates defensive building placements where the shortest tank path from its base to the player's base leaves the AI base perimeter so chokepoints stay fortified.
 - [x] Fine tune chokepoint turret placement so footprints sit outside the AI base perimeter along the player-bound path exit, forming a true frontline wall.
-- [x] Visualize aggregated AI base frontiers with a default orange overlay and force defensive buildings to snap to those frontier tiles derived from every AI-owned structure, not just the initial factory.
+- [x] Remove the orange frontier overlay while still deriving frontier tiles from every AI-owned structure so defenses snap only to that player-facing perimeter instead of interior spots.
 - [x] Re-evaluate frontier chokepoint selection so defenses anchor to passable frontier tiles that sit on the actual shortest tank route from the combined AI footprint toward the player base rather than relying on bounding-box exits.
 - [x] Require every defensive building footprint to live on the outer frontier ring of the aggregated AI base, never inside the base interior, so the wall sits on the perimeter.
+- [x] Ensure frontier-facing defenses use the side of the aggregated base pointing toward the player and keep a balanced mix of Tesla Coils, Gun Turrets, and Rocket Turrets instead of clustering a single type.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [ ] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.

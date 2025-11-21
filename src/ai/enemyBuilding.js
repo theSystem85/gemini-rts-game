@@ -3,9 +3,15 @@ import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { findPath } from '../units.js'
-import { getBaseLayout, getBaseFrontierTiles, makeTileKey } from '../utils/baseLayout.js'
+import {
+  getBaseLayout,
+  getPlayerFacingFrontier,
+  makeTileKey
+} from '../utils/baseLayout.js'
 
 const DEFENSIVE_BUILDING_TYPES = new Set(['rocketTurret', 'teslaCoil', 'artilleryTurret'])
+
+const DEFENSE_MIX_TYPES = ['teslaCoil', 'turretGun', 'rocketTurret']
 
 function isDefensiveBuildingType(buildingType) {
   if (!buildingType) return false
@@ -31,6 +37,55 @@ function getFootprintCenter(footprint) {
   })
   const count = footprint.size
   return { x: Math.round(sumX / count), y: Math.round(sumY / count) }
+}
+
+function normalizeDefenseCategory(buildingType) {
+  if (!buildingType) return null
+  if (buildingType.startsWith('turretGun')) return 'turretGun'
+  if (buildingType === 'artilleryTurret' || buildingType === 'rocketTurret') return 'rocketTurret'
+  if (buildingType === 'teslaCoil') return 'teslaCoil'
+  return null
+}
+
+function isBalancedFrontDefense(buildingType, centerX, centerY, buildings, aiPlayerId, radius = 7) {
+  const category = normalizeDefenseCategory(buildingType)
+  if (!category || !DEFENSE_MIX_TYPES.includes(category)) return true
+
+  const counts = { teslaCoil: 0, rocketTurret: 0, turretGun: 0 }
+
+  for (const building of buildings) {
+    if (!building) continue
+    if (!isDefensiveBuildingType(building.type)) continue
+    const owner = building.owner || building.id
+    if (owner !== aiPlayerId) continue
+
+    const width = Math.max(1, Math.round(building.width || buildingData[building.type]?.width || 1))
+    const height = Math.max(1, Math.round(building.height || buildingData[building.type]?.height || 1))
+    const bx = building.x + width / 2
+    const by = building.y + height / 2
+
+    if (Math.hypot(bx - centerX, by - centerY) > radius) continue
+
+    const categoryKey = normalizeDefenseCategory(building.type)
+    if (categoryKey && counts[categoryKey] !== undefined) {
+      counts[categoryKey] += 1
+    }
+  }
+
+  const values = Object.values(counts)
+  const minCount = Math.min(...values)
+  const maxCount = Math.max(...values)
+  const missingCategories = DEFENSE_MIX_TYPES.filter(type => counts[type] === minCount && minCount === 0)
+
+  if (missingCategories.length > 0 && !missingCategories.includes(category)) {
+    return false
+  }
+
+  if (counts[category] > minCount + 1 && counts[category] >= maxCount) {
+    return false
+  }
+
+  return true
 }
 
 function findNearestPassableTile(target, mapGrid, occupancyMap, maxDistance = 6) {
@@ -92,24 +147,31 @@ function isTilePassable(x, y, mapGrid, occupancyMap = null) {
 function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, factories) {
   if (!mapGrid || mapGrid.length === 0) return null
 
-  const aiBaseLayout = getBaseLayout(aiPlayerId, buildings, factories)
-  const aiBounds = aiBaseLayout.bounds
-  if (!aiBounds) return null
-
   const playerOwner = gameState.humanPlayer || 'player1'
   const playerBaseLayout = getBaseLayout(playerOwner, buildings, factories)
   const playerBounds = playerBaseLayout.bounds
 
   if (!playerBounds) return null
 
-  const aiCenter = getBoundsCenter(aiBounds) || getFootprintCenter(aiBaseLayout.footprint)
   const playerCenter = getBoundsCenter(playerBounds) || getFootprintCenter(playerBaseLayout.footprint)
-  if (!aiCenter || !playerCenter) return null
+  if (!playerCenter) return null
 
   const pathOccupancyMap = occupancyMap && occupancyMap.length ? occupancyMap : null
   const playerPassableCenter = findNearestPassableTile(playerCenter, mapGrid, pathOccupancyMap) || playerCenter
 
-  const frontierTiles = getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, aiBaseLayout)
+  const { tiles: frontierTiles, set: playerFacingFrontierSet, baseLayout } = getPlayerFacingFrontier(
+    aiPlayerId,
+    buildings,
+    factories,
+    mapGrid,
+    playerPassableCenter
+  )
+
+  if (!baseLayout?.bounds) return null
+
+  const aiCenter = getBoundsCenter(baseLayout.bounds) || getFootprintCenter(baseLayout.footprint)
+  if (!aiCenter) return null
+
   const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
 
   const passableFrontierTiles = frontierTiles.filter(tile =>
@@ -151,10 +213,10 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
     direction = { x: direction.x / mag, y: direction.y / mag }
   }
 
-  return { exitTile: bestExit, direction, aiBounds, frontierSet, baseLayout: aiBaseLayout }
+  return { exitTile: bestExit, direction, aiBounds: baseLayout.bounds, frontierSet: playerFacingFrontierSet, baseLayout }
 }
 
-function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId, baseFrontierSet, baseFootprint) {
+function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId, baseFrontierSet, baseFootprint, playerFacingFrontierSet) {
   if (!chokepoint || !chokepoint.exitTile) return null
 
   const direction = chokepoint.direction || { x: 0, y: 0 }
@@ -210,7 +272,8 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
             buildingWidth,
             buildingHeight,
             baseFrontierSet || chokepoint.frontierSet,
-            baseFootprint
+            baseFootprint,
+            playerFacingFrontierSet || baseFrontierSet || chokepoint.frontierSet
           )
         ) {
           continue
@@ -230,6 +293,16 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
 
         if (!hasClearPaths) continue
 
+        const centerX = candidateX + buildingWidth / 2
+        const centerY = candidateY + buildingHeight / 2
+
+        if (
+          isDefensiveBuildingType(buildingType) &&
+          !isBalancedFrontDefense(buildingType, centerX, centerY, buildings, aiPlayerId)
+        ) {
+          continue
+        }
+
         return { x: candidateX, y: candidateY }
       }
     }
@@ -238,7 +311,7 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
   return null
 }
 
-function isPlacementOnFrontierEdge(x, y, width, height, frontierSet, baseFootprint) {
+function isPlacementOnFrontierEdge(x, y, width, height, frontierSet, baseFootprint, playerFacingFrontierSet = null) {
   if (!frontierSet || frontierSet.size === 0) return true
 
   let touchesFrontier = false
@@ -246,7 +319,9 @@ function isPlacementOnFrontierEdge(x, y, width, height, frontierSet, baseFootpri
     for (let cx = x; cx < x + width; cx++) {
       const key = makeTileKey(cx, cy)
       if (baseFootprint?.has(key)) return false
-      if (frontierSet.has(key)) touchesFrontier = true
+      if (!frontierSet.has(key)) continue
+      if (playerFacingFrontierSet && !playerFacingFrontierSet.has(key)) continue
+      touchesFrontier = true
     }
   }
 
@@ -284,16 +359,25 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   const isDefensiveBuilding = isDefensiveBuildingType(buildingType)
 
+  const playerOwner = gameState.humanPlayer || 'player1'
+  const playerBaseLayout = getBaseLayout(playerOwner, buildings, factories)
+  const playerBaseCenter = getBoundsCenter(playerBaseLayout.bounds) || getFootprintCenter(playerBaseLayout.footprint)
+
   const defenseChokepoint = isDefensiveBuilding
     ? findDefenseChokepoint(aiPlayerId, mapGrid, gameState.occupancyMap, buildings, factories)
     : null
 
-  const baseLayout = defenseChokepoint?.baseLayout || getBaseLayout(aiPlayerId, buildings, factories)
-  const baseFrontierSet = defenseChokepoint?.frontierSet || new Set(
-    getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, baseLayout).map(tile =>
-      makeTileKey(tile.x, tile.y)
-    )
+  const frontierData = getPlayerFacingFrontier(
+    aiPlayerId,
+    buildings,
+    factories,
+    mapGrid,
+    playerBaseCenter
   )
+
+  const baseLayout = defenseChokepoint?.baseLayout || frontierData.baseLayout
+  const baseFrontierSet = defenseChokepoint?.frontierSet || frontierData.set
+  const playerFacingFrontierSet = frontierData.set
   const baseFootprint = baseLayout?.footprint || new Set()
 
   // Get human player factory for directional placement (to build defenses toward them)
@@ -402,7 +486,8 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       minSpaceBetweenBuildings,
       aiPlayerId,
       baseFrontierSet,
-      baseFootprint
+      baseFootprint,
+      playerFacingFrontierSet
     )
 
     if (chokepointPosition) {
@@ -457,8 +542,10 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
             buildingWidth,
             buildingHeight,
             baseFrontierSet,
-            baseFootprint
-          ))
+            baseFootprint,
+            playerFacingFrontierSet
+          )) &&
+          (!isDefensiveBuilding || isBalancedFrontDefense(buildingType, x + buildingWidth / 2, y + buildingHeight / 2, buildings, aiPlayerId))
         ) {
           return { x, y }
         }
@@ -545,7 +632,8 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
           buildingWidth,
           buildingHeight,
           baseFrontierSet,
-          baseFootprint
+          baseFootprint,
+          playerFacingFrontierSet
         )
       ) {
         continue
@@ -556,13 +644,20 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
       if (!hasClearPaths) continue
 
+      if (
+        isDefensiveBuilding &&
+        !isBalancedFrontDefense(buildingType, x + buildingWidth / 2, y + buildingHeight / 2, buildings, aiPlayerId)
+      ) {
+        continue
+      }
+
       // If we got here, the position is valid
       return { x, y }
     }
   }
 
   // If we couldn't find a position with our preferred approach, try the fallback
-  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet, baseFootprint)
+  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet, baseFootprint, playerFacingFrontierSet)
 }
 
 // New helper function to ensure there are clear paths around a potential building placement
@@ -733,7 +828,7 @@ function directionToClosestOre(x, y, mapGrid) {
 }
 
 // Fallback position search with the original spiral pattern
-function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet = null, baseFootprint = null) {
+function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet = null, baseFootprint = null, playerFacingFrontierSet = null) {
   // Validate inputs
   if (!buildingType) {
     console.warn('fallbackBuildingPosition called with undefined buildingType')
@@ -871,8 +966,10 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
           buildingWidth,
           buildingHeight,
           baseFrontierSet,
-          baseFootprint
-        ))
+          baseFootprint,
+          playerFacingFrontierSet
+        )) &&
+        (!isDefensiveBuilding || isBalancedFrontDefense(buildingType, x + buildingWidth / 2, y + buildingHeight / 2, buildings, aiPlayerId))
       ) {
         return { x, y }
       }
@@ -959,7 +1056,8 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
             buildingWidth,
             buildingHeight,
             baseFrontierSet,
-            baseFootprint
+            baseFootprint,
+            playerFacingFrontierSet
           )
         ) {
           continue
@@ -969,6 +1067,13 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
         if (!hasClearPaths) continue
+
+        if (
+          isDefensiveBuilding &&
+          !isBalancedFrontDefense(buildingType, x + buildingWidth / 2, y + buildingHeight / 2, buildings, aiPlayerId)
+        ) {
+          continue
+        }
 
         return { x, y }
       }
@@ -1032,7 +1137,8 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
             buildingWidth,
             buildingHeight,
             baseFrontierSet,
-            baseFootprint
+            baseFootprint,
+            playerFacingFrontierSet
           )
         ) {
           continue
@@ -1042,6 +1148,13 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
         if (!hasClearPaths) continue
+
+        if (
+          isDefensiveBuilding &&
+          !isBalancedFrontDefense(buildingType, x + buildingWidth / 2, y + buildingHeight / 2, buildings, aiPlayerId)
+        ) {
+          continue
+        }
 
         return { x, y }
       }

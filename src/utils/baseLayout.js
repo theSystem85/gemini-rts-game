@@ -115,3 +115,62 @@ export function getBaseFrontierTiles(ownerId, buildings = [], factories = [], ma
     return { x: Number(xStr), y: Number(yStr) }
   })
 }
+
+function getFootprintCenter(footprint) {
+  if (!footprint || footprint.size === 0) return null
+
+  let sumX = 0
+  let sumY = 0
+  footprint.forEach(key => {
+    const [xStr, yStr] = key.split(',')
+    sumX += Number(xStr)
+    sumY += Number(yStr)
+  })
+
+  const count = footprint.size
+  return { x: sumX / count, y: sumY / count }
+}
+
+export function getPlayerFacingFrontier(ownerId, buildings = [], factories = [], mapGrid = null, playerCenter = null) {
+  const baseLayout = getBaseLayout(ownerId, buildings, factories)
+  const frontierTiles = getBaseFrontierTiles(ownerId, buildings, factories, mapGrid, baseLayout)
+
+  if (!playerCenter || frontierTiles.length === 0 || !baseLayout.footprint || baseLayout.footprint.size === 0) {
+    const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
+    return { tiles: frontierTiles, set: frontierSet, baseLayout }
+  }
+
+  const baseCenter = getFootprintCenter(baseLayout.footprint)
+  if (!baseCenter) {
+    const frontierSet = new Set(frontierTiles.map(tile => makeTileKey(tile.x, tile.y)))
+    return { tiles: frontierTiles, set: frontierSet, baseLayout }
+  }
+
+  const direction = {
+    x: playerCenter.x - baseCenter.x,
+    y: playerCenter.y - baseCenter.y
+  }
+
+  const magnitude = Math.hypot(direction.x, direction.y) || 1
+  direction.x /= magnitude
+  direction.y /= magnitude
+
+  const scored = frontierTiles.map(tile => {
+    const offset = { x: tile.x - baseCenter.x, y: tile.y - baseCenter.y }
+    const offsetMagnitude = Math.hypot(offset.x, offset.y) || 1
+    const projection = (offset.x * direction.x + offset.y * direction.y) / offsetMagnitude
+    const distanceToPlayer = Math.hypot(tile.x - playerCenter.x, tile.y - playerCenter.y)
+    return { tile, projection, distanceToPlayer }
+  })
+
+  scored.sort((a, b) => {
+    if (b.projection !== a.projection) return b.projection - a.projection
+    return a.distanceToPlayer - b.distanceToPlayer
+  })
+
+  const keepCount = Math.max(6, Math.ceil(scored.length * 0.35))
+  const filtered = scored.slice(0, keepCount).map(entry => entry.tile)
+  const frontierSet = new Set(filtered.map(tile => makeTileKey(tile.x, tile.y)))
+
+  return { tiles: filtered, set: frontierSet, baseLayout }
+}
