@@ -992,6 +992,8 @@ export class UnitCommandsHandler {
       if (unit.type === 'tankerTruck') {
         clearTankerKamikazeState(unit)
       }
+      unit.restorationMoveOverride = false
+      unit.restorationMoveTarget = null
       let formationOffset = { x: 0, y: 0 }
 
       const colsCount = Math.ceil(Math.sqrt(count))
