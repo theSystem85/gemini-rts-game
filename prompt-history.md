@@ -1,5 +1,8 @@
 # Prompt History
 
+## 2025-11-21 - gpt-5.1-codex-max
+Ensure the defense buildings are built on the outer edges of the base, not inside the base itself, but on the outer edge, this is really important
+
 ## 2025-11-20 - gpt-5.1-codex-max
 Review the current frontier overlay and defense logic to ensure it truly builds on the base perimeter where the shortest tank path to the player's base exits the combined AI footprint, and rework it if needed so the feature actually works after rebasing on the latest main branch.
 

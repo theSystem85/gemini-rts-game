@@ -154,7 +154,7 @@ function findDefenseChokepoint(aiPlayerId, mapGrid, occupancyMap, buildings, fac
   return { exitTile: bestExit, direction, aiBounds, frontierSet, baseLayout: aiBaseLayout }
 }
 
-function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId) {
+function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildingHeight, mapGrid, units, buildings, factories, minSpaceBetweenBuildings, aiPlayerId, baseFrontierSet, baseFootprint) {
   if (!chokepoint || !chokepoint.exitTile) return null
 
   const direction = chokepoint.direction || { x: 0, y: 0 }
@@ -203,7 +203,16 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
 
         if (!isNearBase) continue
 
-        if (!isPlacementOnFrontier(candidateX, candidateY, buildingWidth, buildingHeight, chokepoint.frontierSet)) {
+        if (
+          !isPlacementOnFrontierEdge(
+            candidateX,
+            candidateY,
+            buildingWidth,
+            buildingHeight,
+            baseFrontierSet || chokepoint.frontierSet,
+            baseFootprint
+          )
+        ) {
           continue
         }
 
@@ -229,18 +238,19 @@ function tryPlaceNearChokepoint(chokepoint, buildingType, buildingWidth, buildin
   return null
 }
 
-function isPlacementOnFrontier(x, y, width, height, frontierSet) {
+function isPlacementOnFrontierEdge(x, y, width, height, frontierSet, baseFootprint) {
   if (!frontierSet || frontierSet.size === 0) return true
 
+  let touchesFrontier = false
   for (let cy = y; cy < y + height; cy++) {
     for (let cx = x; cx < x + width; cx++) {
-      if (frontierSet.has(makeTileKey(cx, cy))) {
-        return true
-      }
+      const key = makeTileKey(cx, cy)
+      if (baseFootprint?.has(key)) return false
+      if (frontierSet.has(key)) touchesFrontier = true
     }
   }
 
-  return false
+  return touchesFrontier
 }
 
 // Let's improve this function to fix issues with enemy building placement
@@ -271,6 +281,20 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   const buildingWidth = buildingData[buildingType].width
   const buildingHeight = buildingData[buildingType].height
+
+  const isDefensiveBuilding = isDefensiveBuildingType(buildingType)
+
+  const defenseChokepoint = isDefensiveBuilding
+    ? findDefenseChokepoint(aiPlayerId, mapGrid, gameState.occupancyMap, buildings, factories)
+    : null
+
+  const baseLayout = defenseChokepoint?.baseLayout || getBaseLayout(aiPlayerId, buildings, factories)
+  const baseFrontierSet = defenseChokepoint?.frontierSet || new Set(
+    getBaseFrontierTiles(aiPlayerId, buildings, factories, mapGrid, baseLayout).map(tile =>
+      makeTileKey(tile.x, tile.y)
+    )
+  )
+  const baseFootprint = baseLayout?.footprint || new Set()
 
   // Get human player factory for directional placement (to build defenses toward them)
   const humanPlayerFactory = factories.find(f => f.id === gameState.humanPlayer || f.id === 'player1') // Use gameState.humanPlayer
@@ -310,10 +334,6 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
   // Determine direction vector - defensive structures should face the nearest ore field
   let directionVector = { x: 0, y: 0 }
-  const isDefensiveBuilding = isDefensiveBuildingType(buildingType)
-  const defenseChokepoint = isDefensiveBuilding
-    ? findDefenseChokepoint(aiPlayerId, mapGrid, gameState.occupancyMap, buildings, factories)
-    : null
 
   if (isDefensiveBuilding && defenseChokepoint?.exitTile) {
     directionVector.x = defenseChokepoint.exitTile.x - factoryX
@@ -380,7 +400,9 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       buildings,
       factories,
       minSpaceBetweenBuildings,
-      aiPlayerId
+      aiPlayerId,
+      baseFrontierSet,
+      baseFootprint
     )
 
     if (chokepointPosition) {
@@ -427,7 +449,17 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
           aiPlayerId
         )
 
-        if (hasClearPaths) {
+        if (
+          hasClearPaths &&
+          (!isDefensiveBuilding || isPlacementOnFrontierEdge(
+            x,
+            y,
+            buildingWidth,
+            buildingHeight,
+            baseFrontierSet,
+            baseFootprint
+          ))
+        ) {
           return { x, y }
         }
       }
@@ -505,6 +537,20 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
 
       if (!isNearBase) continue
 
+      if (
+        isDefensiveBuilding &&
+        !isPlacementOnFrontierEdge(
+          x,
+          y,
+          buildingWidth,
+          buildingHeight,
+          baseFrontierSet,
+          baseFootprint
+        )
+      ) {
+        continue
+      }
+
       // NEW: Check if this building would create a bottleneck by being too close to other buildings
       const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
@@ -516,7 +562,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
   }
 
   // If we couldn't find a position with our preferred approach, try the fallback
-  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId)
+  return fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet, baseFootprint)
 }
 
 // New helper function to ensure there are clear paths around a potential building placement
@@ -687,7 +733,7 @@ function directionToClosestOre(x, y, mapGrid) {
 }
 
 // Fallback position search with the original spiral pattern
-function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId) {
+function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, baseFrontierSet = null, baseFootprint = null) {
   // Validate inputs
   if (!buildingType) {
     console.warn('fallbackBuildingPosition called with undefined buildingType')
@@ -813,10 +859,21 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         mapGrid,
         buildings,
         factories,
-        minSpaceBetweenBuildings
+        minSpaceBetweenBuildings,
+        aiPlayerId
       )
 
-      if (hasClearPaths) {
+      if (
+        hasClearPaths &&
+        (!isDefensiveBuilding || isPlacementOnFrontierEdge(
+          x,
+          y,
+          buildingWidth,
+          buildingHeight,
+          baseFrontierSet,
+          baseFootprint
+        ))
+      ) {
         return { x, y }
       }
     }
@@ -894,6 +951,20 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
 
         if (!isValid) continue
 
+        if (
+          isDefensiveBuilding &&
+          !isPlacementOnFrontierEdge(
+            x,
+            y,
+            buildingWidth,
+            buildingHeight,
+            baseFrontierSet,
+            baseFootprint
+          )
+        ) {
+          continue
+        }
+
         // Use the same path checking as in the main function
         const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
 
@@ -952,6 +1023,20 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
         }
 
         if (!isNearBase || !allTilesValid) continue
+
+        if (
+          isDefensiveBuilding &&
+          !isPlacementOnFrontierEdge(
+            x,
+            y,
+            buildingWidth,
+            buildingHeight,
+            baseFrontierSet,
+            baseFootprint
+          )
+        ) {
+          continue
+        }
 
         // Final check for pathfinding
         const hasClearPaths = ensurePathsAroundBuilding(x, y, buildingWidth, buildingHeight, mapGrid, buildings, factories, minSpaceBetweenBuildings, aiPlayerId)
