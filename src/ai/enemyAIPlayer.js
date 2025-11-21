@@ -291,6 +291,16 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`
   const lastProductionKey = `${aiPlayerId}LastProductionTime`
 
+  // Ensure AI can recover from economic collapse by selling buildings if needed
+  // This must run BEFORE the budget check so it can execute when budget is low/zero
+  if (gameState.buildings) {
+    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+    const aiHarvesters = units.filter(
+      u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
+    )
+    ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
+  }
+
   // Debug logging (enable temporarily to debug building issues)
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
   // Building construction runs independently from unit production
@@ -331,8 +341,6 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       ? 1
       : 0
     const totalTanks = aiTanks.length + tanksInProduction
-
-    ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
 
     const REQUIRED_HARVESTERS = 4
     const harvesterGoalMet = aiHarvesters.length >= REQUIRED_HARVESTERS
