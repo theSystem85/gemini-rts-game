@@ -2389,7 +2389,8 @@ function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
       const awayX = unitCenterX - obstacleCenterX
       const awayY = unitCenterY - obstacleCenterY
       const awayDist = Math.hypot(awayX, awayY) || 1
-      const weight = Math.max(0, (maxLookAhead - distance) / maxLookAhead)
+      // Ensure non-zero weight even for furthest probe by adding small epsilon
+      const weight = Math.max(0.1, (maxLookAhead - distance) / maxLookAhead)
       const avoidanceStrength = weight * LOCAL_LOOKAHEAD_STRENGTH * MOVEMENT_CONFIG.AVOIDANCE_FORCE
 
       avoidanceX += (awayX / awayDist) * avoidanceStrength
