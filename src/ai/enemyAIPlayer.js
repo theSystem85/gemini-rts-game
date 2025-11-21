@@ -604,11 +604,13 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       const aiAmbulances = units.filter(u => u.owner === aiPlayerId && u.type === 'ambulance')
       const aiTankers = units.filter(u => u.owner === aiPlayerId && u.type === 'tankerTruck')
       const aiAmmoTrucks = units.filter(u => u.owner === aiPlayerId && u.type === 'ammunitionTruck')
+      const aiApaches = units.filter(u => u.owner === aiPlayerId && u.type === 'apache' && u.health > 0)
       const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
       const aiRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
       const gasStations = aiBuildings.filter(b => b.type === 'gasStation')
       const ammunitionFactoriesForProduction = aiBuildings.filter(b => b.type === 'ammunitionFactory')
       const hasHospital = aiBuildings.some(b => b.type === 'hospital')
+      const helipadsForProduction = aiBuildings.filter(b => b.type === 'helipad' && b.health > 0)
       const rocketTurretsBuilt = aiBuildings.filter(b => b.type === 'rocketTurret').length
       const teslaCoilsBuilt = aiBuildings.filter(b => b.type === 'teslaCoil').length
       const artilleryTurretsBuilt = aiBuildings.filter(b => b.type === 'artilleryTurret').length
@@ -629,10 +631,13 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       const MAX_HARVESTERS = aiRefineries.length * 4 // Strict 4 harvesters per refinery limit
       const harvesterCountInProduction = aiFactory.currentlyProducingUnit === 'harvester' ? 1 : 0
       const currentHarvesterTotal = aiHarvesters.length + harvesterCountInProduction
+      const apacheCountInProduction = aiFactory.currentlyProducingUnit === 'apache' ? 1 : 0
       const HIGH_BUDGET_THRESHOLD = 12000
       const VERY_HIGH_BUDGET_THRESHOLD = 20000
       const isHighBudget = aiFactory.budget >= HIGH_BUDGET_THRESHOLD
       const isVeryHighBudget = aiFactory.budget >= VERY_HIGH_BUDGET_THRESHOLD
+      const apacheCapacity = helipadsForProduction.length
+      const needApache = apacheCapacity > 0 && (aiApaches.length + apacheCountInProduction) < apacheCapacity
 
       // Check if we need to force the harvester hunter (use variables from above)
       if (needsHarvesterHunter) {
@@ -655,6 +660,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       } else if (hasHospital && aiAmbulances.length === 0) {
         // Always ensure at least one ambulance exists if hospital is available
         unitType = 'ambulance'
+      } else if (needApache && aiFactory.budget >= getUnitCost('apache')) {
+        unitType = 'apache'
       } else {
         // Check if we need recovery tanks based on combat unit ratio
         const aiRecoveryTanks = units.filter(u => u.owner === aiPlayerId && u.type === 'recoveryTank' && u.health > 0)
@@ -729,6 +736,17 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
           } else {
             console.error(`Cannot spawn ${unitType}: AI player ${aiPlayerId} has no Vehicle Factory.`)
             // Skip this production cycle and try again later
+            gameState[lastProductionKey] = now
+            return
+          }
+        } else if (unitType === 'apache') {
+          if (helipadsForProduction.length > 0) {
+            const helipadIndexKey = `next${aiPlayerId}HelipadIndex`
+            gameState[helipadIndexKey] = gameState[helipadIndexKey] ?? 0
+            spawnFactory = helipadsForProduction[gameState[helipadIndexKey] % helipadsForProduction.length]
+            gameState[helipadIndexKey]++
+          } else {
+            console.error(`Cannot spawn apache: AI player ${aiPlayerId} has no Helipad.`)
             gameState[lastProductionKey] = now
             return
           }

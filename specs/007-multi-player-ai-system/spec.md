@@ -78,6 +78,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI respects production costs and prerequisites
 - [x] AI army composition adapts to game state (early/mid/late game)
 - [x] AI replaces destroyed units to maintain army strength
+- [ ] AI maintains a one-apache-per-helipad ratio and only commits helicopters against targets lacking rocket tank or rocket turret protection
 - [x] AI also tries to resotre wrecks (using recovery tanks) from any party to maintain army strength
 
 ---
