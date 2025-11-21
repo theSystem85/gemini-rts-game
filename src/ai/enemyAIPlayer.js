@@ -291,23 +291,27 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   const lastBuildingTimeKey = `${aiPlayerId}LastBuildingTime`
   const lastProductionKey = `${aiPlayerId}LastProductionTime`
 
+  // Early return if no buildings exist in game state
+  if (!gameState.buildings) {
+    return
+  }
+
+  // Calculate AI's current buildings and harvesters (used by both recovery and building logic)
+  const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
+  const aiHarvesters = units.filter(
+    u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
+  )
+
   // Ensure AI can recover from economic collapse by selling buildings if needed
   // This must run BEFORE the budget check so it can execute when budget is low/zero
-  if (gameState.buildings) {
-    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
-    const aiHarvesters = units.filter(
-      u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
-    )
-    ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
-  }
+  ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
 
   // Debug logging (enable temporarily to debug building issues)
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
   // Building construction runs independently from unit production
   if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory && aiFactory.budget > 1000 &&
-      gameState.buildings && !aiFactory.currentlyBuilding)
+      !aiFactory.currentlyBuilding)
   {
-    const aiBuildings = gameState.buildings.filter(b => b.owner === aiPlayerId)
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
     const oreRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
@@ -326,9 +330,6 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     const vehicleWorkshops = aiBuildings.filter(b => b.type === 'vehicleWorkshop')
     const helipads = aiBuildings.filter(b => b.type === 'helipad')
     const ammunitionFactories = aiBuildings.filter(b => b.type === 'ammunitionFactory')
-    const aiHarvesters = units.filter(
-      u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
-    )
     const turretGunCount = aiBuildings.filter(b => b.type.startsWith('turretGun')).length
     const aiTanks = units.filter(
       u =>
