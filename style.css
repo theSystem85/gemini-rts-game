@@ -128,18 +128,29 @@ body.is-touch {
   background: #666; /* Lighter on hover for better interaction feedback */
 }
 
+#gameCanvasGL,
 #gameCanvas {
   position: absolute;
   top: 0;
   left: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
   height: 100%;
-  background: #000;
-  cursor: var(--game-default-cursor);
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+#gameCanvasGL {
+  z-index: 0;
+  background: #000;
+  pointer-events: none;
+}
+
+#gameCanvas {
+  z-index: 1;
+  background: transparent;
+  cursor: var(--game-default-cursor);
 }
 
 #mobileBuildMenuContainer {
@@ -692,22 +703,26 @@ body.mobile-landscape #energyBarContainer {
   opacity: 0;
 }
 
-body.mobile-landscape #gameCanvas {
+body.mobile-landscape #gameCanvas,
+body.mobile-landscape #gameCanvasGL {
   left: 0;
   width: 100%;
   transition: left 0.25s ease, width 0.25s ease;
 }
 
-body.mobile-portrait #gameCanvas {
+body.mobile-portrait #gameCanvas,
+body.mobile-portrait #gameCanvasGL {
   transition: left 0.25s ease, width 0.25s ease;
 }
 
-body.mobile-portrait:not(.sidebar-collapsed) #gameCanvas {
+body.mobile-portrait:not(.sidebar-collapsed) #gameCanvas,
+body.mobile-portrait:not(.sidebar-collapsed) #gameCanvasGL {
   left: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
 }
 
-body.mobile-landscape.is-touch #gameCanvas {
+body.mobile-landscape.is-touch #gameCanvas,
+body.mobile-landscape.is-touch #gameCanvasGL {
   left: calc(-1 * var(--safe-area-left));
   right: calc(-1 * var(--safe-area-right));
   width: calc(100% + var(--safe-area-left) + var(--safe-area-right));
@@ -732,7 +747,8 @@ body.mobile-portrait.sidebar-collapsed #sidebar {
   transform: translateX(-100%);
 }
 
-body.mobile-portrait.sidebar-collapsed #gameCanvas {
+body.mobile-portrait.sidebar-collapsed #gameCanvas,
+body.mobile-portrait.sidebar-collapsed #gameCanvasGL {
   left: 0;
   width: 100%;
 }

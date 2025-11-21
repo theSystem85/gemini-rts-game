@@ -194,16 +194,6 @@ export class MapRenderer {
         useTexture,
         currentWaterFrame
       )
-      this.applyVisibilityOverlay(
-        ctx,
-        mapGrid,
-        startTileX,
-        startTileY,
-        endTileX,
-        endTileY,
-        scrollOffset,
-        gameState
-      )
       ctx.imageSmoothingEnabled = true
       return
     }
@@ -253,17 +243,6 @@ export class MapRenderer {
         ctx.drawImage(chunk.canvas, drawX, drawY)
       }
     }
-
-    this.applyVisibilityOverlay(
-      ctx,
-      mapGrid,
-      startTileX,
-      startTileY,
-      endTileX,
-      endTileY,
-      scrollOffset,
-      gameState
-    )
 
     // Re-enable image smoothing for other rendering
     ctx.imageSmoothingEnabled = true
@@ -642,7 +621,8 @@ export class MapRenderer {
     return overlay
   }
 
-  render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null) {
+  render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null, options = {}) {
+    const { skipBaseLayer = false } = options || {}
     // Calculate visible tile range - improved for better performance
     const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE))
     const startTileY = Math.max(0, Math.floor(scrollOffset.y / TILE_SIZE))
@@ -651,7 +631,10 @@ export class MapRenderer {
     const endTileX = Math.min(mapGrid[0].length, startTileX + tilesX)
     const endTileY = Math.min(mapGrid.length, startTileY + tilesY)
 
-    this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
+    if (!skipBaseLayer) {
+      this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
+    }
+    this.applyVisibilityOverlay(ctx, mapGrid, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderOccupancyMap(ctx, occupancyMap, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
   }
