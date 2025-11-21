@@ -1286,6 +1286,7 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
   }
 
   unit.target = target
+  unit.allowedToAttack = true
   unit.lastTargetChangeTime = now
   unit.lastDecisionTime = now
 
