@@ -331,6 +331,43 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           // 8 rockets * 15 ~= 120 damage (tough tanks now survive a full volley)
           const baseDamage = bullet.baseDamage * 0.9
 
+          const targetIsAirborneApache =
+            apacheTargetUnit && apacheTargetUnit.type === 'apache' && apacheTargetUnit.flightState !== 'grounded'
+
+          if (targetIsAirborneApache) {
+            let directDamage = Math.round(baseDamage)
+
+            if (window.cheatSystem) {
+              directDamage = window.cheatSystem.preventDamage(apacheTargetUnit, directDamage)
+            }
+
+            if (directDamage > 0) {
+              const adjustedDamage = apacheTargetUnit.armor
+                ? Math.max(1, Math.round(directDamage / apacheTargetUnit.armor))
+                : directDamage
+
+              apacheTargetUnit.health -= adjustedDamage
+              updateUnitSpeedModifier(apacheTargetUnit)
+
+              if (bullet.shooter && bullet.shooter.owner !== apacheTargetUnit.owner) {
+                apacheTargetUnit.lastDamageTime = now
+                apacheTargetUnit.lastAttacker = bullet.shooter
+                if (apacheTargetUnit.owner !== gameState.humanPlayer) {
+                  apacheTargetUnit.isBeingAttacked = true
+                }
+                handleAttackNotification(apacheTargetUnit, bullet.shooter, now)
+
+                if (apacheTargetUnit.health <= 0 && bullet.shooter.type !== 'harvester') {
+                  awardExperience(bullet.shooter, apacheTargetUnit)
+                }
+              }
+            }
+
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.7)
+            bullets.splice(i, 1)
+            continue
+          }
+
           // Apply tank damage multiplier for direct unit hits
           let damageMultiplier = 1.0
           if (apacheTargetUnit && ['tank', 'tank_v1', 'tank-v2', 'tank-v3'].includes(apacheTargetUnit.type)) {
