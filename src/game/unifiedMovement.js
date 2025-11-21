@@ -435,6 +435,9 @@ const MOVEMENT_CONFIG = {
   BACKWARD_MOVE_THRESHOLD: 0.5  // When to allow backward movement when stuck
 }
 
+const LOCAL_LOOKAHEAD_STEPS = [0.35, 0.7] // In tiles, short-range probes to deflect before collisions
+const LOCAL_LOOKAHEAD_STRENGTH = 0.55     // Multiplier for obstacle lookahead avoidance
+
 export const UNIT_COLLISION_MIN_DISTANCE = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
 
 /**
@@ -767,7 +770,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   let avoidanceForce = { x: 0, y: 0 }
   if (movement.isMoving && canAccelerate) {
     const skipAvoidance = unit.type === 'apache' && unit.flightState !== 'grounded'
-    avoidanceForce = skipAvoidance ? { x: 0, y: 0 } : calculateCollisionAvoidance(unit, units)
+    avoidanceForce = skipAvoidance
+      ? { x: 0, y: 0 }
+      : calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap)
   }
 
   // Determine acceleration rate based on whether we should accelerate or decelerate
@@ -2355,15 +2360,15 @@ function findFreeDirection(unit, mapGrid, occupancyMap, units) {
 /**
  * Calculate collision avoidance force to prevent units from getting too close
  */
-function calculateCollisionAvoidance(unit, units) {
-  if (!units) return { x: 0, y: 0 }
+function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
+  if (!unit) return { x: 0, y: 0 }
 
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
   let avoidanceX = 0
   let avoidanceY = 0
 
-  for (const otherUnit of units) {
+  for (const otherUnit of units || []) {
     if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
 
     const otherCenterX = otherUnit.x + TILE_SIZE / 2
@@ -2380,6 +2385,61 @@ function calculateCollisionAvoidance(unit, units) {
 
       avoidanceX += normalizedDx * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE
       avoidanceY += normalizedDy * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE
+    }
+  }
+
+  const movement = unit.movement || {}
+  const lookAheadVelX = movement.targetVelocity?.x ?? movement.velocity?.x ?? 0
+  const lookAheadVelY = movement.targetVelocity?.y ?? movement.velocity?.y ?? 0
+  const lookAheadSpeed = Math.hypot(lookAheadVelX, lookAheadVelY)
+
+  if (lookAheadSpeed > 0.0001 && mapGrid) {
+    const dirX = lookAheadVelX / lookAheadSpeed
+    const dirY = lookAheadVelY / lookAheadSpeed
+    const maxLookAhead = Math.max(...LOCAL_LOOKAHEAD_STEPS) * TILE_SIZE
+
+    for (const step of LOCAL_LOOKAHEAD_STEPS) {
+      const distance = step * TILE_SIZE
+      const sampleX = unitCenterX + dirX * distance
+      const sampleY = unitCenterY + dirY * distance
+      const tileX = Math.floor(sampleX / TILE_SIZE)
+      const tileY = Math.floor(sampleY / TILE_SIZE)
+
+      let blocked = isTileBlockedForCollision(mapGrid, tileX, tileY)
+
+      if (!blocked && occupancyMap && occupancyMap[tileY]) {
+        let occupancy = occupancyMap[tileY][tileX] || 0
+        const currentTileX = Math.floor(unitCenterX / TILE_SIZE)
+        const currentTileY = Math.floor(unitCenterY / TILE_SIZE)
+        if (tileX === currentTileX && tileY === currentTileY) {
+          occupancy = Math.max(0, occupancy - 1)
+        }
+        blocked = occupancy > 0
+      }
+
+      if (!blocked && units) {
+        blocked = units.some(other => {
+          if (!other || other.id === unit.id || other.health <= 0) return false
+          if (!isGroundUnit(other)) return false
+          const otherTileX = Math.floor((other.x + TILE_SIZE / 2) / TILE_SIZE)
+          const otherTileY = Math.floor((other.y + TILE_SIZE / 2) / TILE_SIZE)
+          return otherTileX === tileX && otherTileY === tileY
+        })
+      }
+
+      if (!blocked) continue
+
+      const obstacleCenterX = (tileX + 0.5) * TILE_SIZE
+      const obstacleCenterY = (tileY + 0.5) * TILE_SIZE
+      const awayX = unitCenterX - obstacleCenterX
+      const awayY = unitCenterY - obstacleCenterY
+      const awayDist = Math.hypot(awayX, awayY) || 1
+      // Ensure non-zero weight even for furthest probe by adding small epsilon
+      const weight = Math.max(0.1, (maxLookAhead - distance) / maxLookAhead)
+      const avoidanceStrength = weight * LOCAL_LOOKAHEAD_STRENGTH * MOVEMENT_CONFIG.AVOIDANCE_FORCE
+
+      avoidanceX += (awayX / awayDist) * avoidanceStrength
+      avoidanceY += (awayY / awayDist) * avoidanceStrength
     }
   }
 
