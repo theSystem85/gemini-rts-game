@@ -111,6 +111,12 @@ export const updateUnitOccupancy = logPerformance(function updateUnitOccupancy(u
     return
   }
 
+  // For air units that are grounded, only update occupancy if they actually have ground occupancy applied
+  // This prevents helipad Apaches from incorrectly adding occupancy when moving while grounded
+  if (unit.isAirUnit && unit.groundedOccupancyApplied === false) {
+    return
+  }
+
   // Remove occupancy from previous position (using center coordinates)
   if (
     prevTileY >= 0 &&
