@@ -217,6 +217,10 @@ const COMBAT_CONFIG = {
     STANDARD: 4000,  // Doubled from 2000ms to 4000ms
     ROCKET: 12000    // Doubled from 6000ms to 12000ms
   },
+  APACHE: {
+    VOLLEY_DELAY: 180,
+    FIRE_RATE: 8400 // 30% faster than standard rocket cadence (12000ms)
+  },
   DAMAGE: {
     STANDARD: 25,
     TANK_V3: 30,
@@ -476,7 +480,7 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
       leftRemaining: leftCount,
       rightRemaining: rightCount,
       lastRocketTime: 0,
-      delay: 300,
+      delay: COMBAT_CONFIG.APACHE.VOLLEY_DELAY,
       nextSide: 'left',
       totalInVolley: rocketsThisVolley
     }
@@ -1374,7 +1378,7 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
 
   if (distance <= effectiveRange && canAttack) {
     if (!unit.volleyState && !unit.apacheAmmoEmpty) {
-      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
+      const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.APACHE.FIRE_RATE)
       if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
         if (unit.canFire !== false) {
           const rocketsThisVolley = Math.min(8, ammoRemaining)
@@ -1385,7 +1389,7 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
             leftRemaining: leftCount,
             rightRemaining: rightCount,
             lastRocketTime: 0,
-            delay: 120,
+            delay: COMBAT_CONFIG.APACHE.VOLLEY_DELAY,
             nextSide: 'left',
             totalInVolley: rocketsThisVolley
           }

@@ -288,6 +288,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Slow Apache rocket volley cadence by 50% and shorten the reload cooldown between volleys by 30% so bursts fire slower but rearm faster.
 - [x] Prevent Apache rockets from damaging ground units or buildings when engaging airborne targets.
 - [x] Clear restoration move overrides when new movement commands are issued so restored crewless units can't roam indefinitely.
 - [x] Hide the desktop energy bar while in the mobile landscape layout so only the dedicated mobile status bar energy indicator is visible.

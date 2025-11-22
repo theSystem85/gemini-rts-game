@@ -608,7 +608,7 @@ This specification defines a comprehensive ammunition management system for the 
 - **src/ui/notifications.js** - Add "No Ammunition" notification display
 - **src/sound.js** - Add sound effects (ammo_depleted.mp3, ammo_factory_explosion.mp3, ammo_scatter.mp3, ammo_impact.mp3)
 - **src/game/helipadLogic.js** - Extend Helipad with ammunition reserve storage (250 rounds) and transfer logic to landed helicopters
-- **src/game/unitCombat.js** - Implement Apache-specific ammo checking using `rocketAmmo` field, enforce 300ms volley delay
+- **src/game/unitCombat.js** - Implement Apache-specific ammo checking using `rocketAmmo` field, enforce 180ms volley delay
 - **src/input/cheatSystem.js** - Support ammo manipulation for both `ammunition` and `rocketAmmo` fields, handle Apache helicopters correctly
 - **src/saveGame.js** - Serialize/deserialize ammunition states, truck cargo, Helipad reserves
 - **public/images/map/buildings/ammunition_factory_map.webp** - Ammunition Factory map sprite
@@ -696,7 +696,7 @@ Apache helicopters use a separate `rocketAmmo` field instead of `ammunition` for
 - Ammo depletion sets `apacheAmmoEmpty = true` and `canFire = false` when rockets depleted
 - Helipad logic transfers ammunition from helipad reserves to landed Apache helicopters
 - Cheat system handles both `ammunition` and `rocketAmmo` fields appropriately
-- Apache volley firing controlled by 300ms delay between rockets to prevent rapid-fire exploits
+- Apache volley firing controlled by 180ms delay between rockets (50% slower cadence), with 30% shorter cooldown to start the next volley (8.4s base reload)
 
 ### Visual Design Consistency
 - Ammunition bar uses same styling as existing fuel bar (orange instead of blue)
@@ -731,7 +731,7 @@ Apache helicopters use a separate `rocketAmmo` field instead of `ammunition` for
 ### Implementation Status Updates (2025-11-07)
 - ✅ Apache helicopter ammunition system fully implemented with `rocketAmmo` field
 - ✅ Combat system properly checks Apache ammo before firing rockets
-- ✅ Apache volley delay enforced at 300ms to prevent rapid-fire exploits
+- ✅ Apache volley delay tuned to 180ms with a 30% faster volley reload cycle (8.4s base)
 - ✅ Helipad ammunition transfer logic implemented in helipadLogic.js
 - ✅ Cheat system updated to handle both `ammunition` and `rocketAmmo` fields
 - ✅ False "out of ammo" notifications for Apache helicopters fixed
