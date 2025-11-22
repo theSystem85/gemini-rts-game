@@ -4,7 +4,7 @@ import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
-import { updatePowerSupply, clearBuildingFromMapGrid } from '../buildings.js'
+import { updatePowerSupply, clearBuildingFromMapGrid, buildingData } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { updateDangerZoneMaps } from './dangerZoneMap.js'
@@ -106,7 +106,12 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             now,
             undefined,
             radius,
-            true
+            true,
+            {
+              buildingDamageCaps: {
+                constructionYard: Math.round(buildingData.constructionYard.health * 0.9)
+              }
+            }
           )
           triggerDistortionEffect(buildingCenterX, buildingCenterY, radius, gameState)
         } else if (building.type === 'ammunitionFactory') {

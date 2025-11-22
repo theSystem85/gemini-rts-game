@@ -30,7 +30,11 @@ export function triggerExplosion(
   options = {}
 ) {
   const explosionRadius = radius
-  const { buildingDamageMultiplier = 1, factoryDamageMultiplier = 1 } = options || {}
+  const {
+    buildingDamageMultiplier = 1,
+    factoryDamageMultiplier = 1,
+    buildingDamageCaps = {}
+  } = options || {}
 
   // Add explosion visual effect
   explosions.push({
@@ -222,6 +226,12 @@ export function triggerExplosion(
 
         if (buildingDamageMultiplier !== 1) {
           damage = Math.round(damage * buildingDamageMultiplier)
+        }
+
+        // Apply per-building damage caps when provided
+        if (buildingDamageCaps && buildingDamageCaps[building.type] !== undefined) {
+          const maxDamage = buildingDamageCaps[building.type]
+          damage = Math.min(damage, maxDamage)
         }
 
         // Check for god mode protection for player buildings
