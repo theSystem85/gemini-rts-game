@@ -24,6 +24,7 @@ import { preloadMineSweeperImage } from './mineSweeperImageRenderer.js'
 import { preloadHowitzerImage } from './howitzerImageRenderer.js'
 import { WreckRenderer } from './wreckRenderer.js'
 import { renderMineIndicators, renderMineDeploymentPreview, renderSweepAreaPreview, renderFreeformSweepPreview } from './mineRenderer.js'
+import { GameWebGLRenderer } from './webglRenderer.js'
 
 export class Renderer {
   constructor() {
@@ -41,6 +42,7 @@ export class Renderer {
     this.harvesterHUD = new HarvesterHUD()
     this.dangerZoneRenderer = new DangerZoneRenderer()
     this.wreckRenderer = new WreckRenderer()
+    this.gpuRenderer = null
   }
 
   // Initialize texture loading
@@ -152,7 +154,7 @@ export class Renderer {
     })
   }
 
-  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState) {
+  renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState, gpuContext = null, gpuCanvas = null) {
     if (!gameState) {
       return
     }
@@ -170,6 +172,15 @@ export class Renderer {
     }
 
     // Render all game elements in order
+    let gpuRendered = false
+    if (gpuContext && gpuCanvas) {
+      if (!this.gpuRenderer) {
+        this.gpuRenderer = new GameWebGLRenderer(gpuContext, this.textureManager)
+      } else {
+        this.gpuRenderer.setContext(gpuContext)
+      }
+      gpuRendered = this.gpuRenderer.render(mapGrid, scrollOffset, gpuCanvas)
+    }
 
     // Build occupancy map for visualization if needed
     let occupancyMap = null
@@ -177,7 +188,15 @@ export class Renderer {
       occupancyMap = gameState.occupancyMap
     }
 
-    this.mapRenderer.render(gameCtx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap)
+    this.mapRenderer.render(
+      gameCtx,
+      mapGrid,
+      scrollOffset,
+      gameCanvas,
+      gameState,
+      occupancyMap,
+      { skipBaseLayer: gpuRendered }
+    )
     if (gameState.dzmOverlayIndex !== -1) {
       const ids = Object.keys(gameState.dangerZoneMaps || {})
       const pid = ids[gameState.dzmOverlayIndex]

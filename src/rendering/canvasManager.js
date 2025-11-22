@@ -5,10 +5,31 @@ export class CanvasManager {
   constructor() {
     this.gameCanvas = document.getElementById('gameCanvas')
     this.gameCtx = this.gameCanvas.getContext('2d')
+    this.gameGlCanvas = document.getElementById('gameCanvasGL')
+    this.gameGl = this.initializeGlContext()
     this.minimapCanvas = document.getElementById('minimap')
     this.minimapCtx = this.minimapCanvas.getContext('2d')
+    this.pixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
 
     this.setupEventListeners()
+  }
+
+  initializeGlContext() {
+    if (!this.gameGlCanvas || typeof this.gameGlCanvas.getContext !== 'function') return null
+
+    const attributes = {
+      alpha: true,
+      antialias: false,
+      premultipliedAlpha: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: false
+    }
+
+    let gl = this.gameGlCanvas.getContext('webgl2', attributes)
+    if (!gl) {
+      gl = this.gameGlCanvas.getContext('webgl', attributes)
+    }
+    return gl
   }
 
   setupEventListeners() {
@@ -18,6 +39,7 @@ export class CanvasManager {
 
   resizeCanvases() {
     const pixelRatio = window.devicePixelRatio || 1
+    this.pixelRatio = pixelRatio
     const body = document.body
     const bodyStyle = body ? window.getComputedStyle(body) : null
     const parseSafeInset = (value) => {
@@ -114,23 +136,39 @@ export class CanvasManager {
       : Math.max(0, layoutViewportWidth - effectiveSidebarWidth)
     const canvasCssHeight = Math.max(0, baseCanvasHeight)
 
-    this.gameCanvas.style.position = mobileLandscape ? 'fixed' : 'absolute'
-
-    if (mobileLandscape) {
-      this.gameCanvas.style.left = `${-safeLeft}px`
-      this.gameCanvas.style.right = `${-safeRight}px`
-    } else {
-      this.gameCanvas.style.left = `${effectiveSidebarWidth}px`
-      this.gameCanvas.style.right = 'auto'
+    const applyCanvasLayout = (canvas) => {
+      if (!canvas) return
+      canvas.style.position = mobileLandscape ? 'fixed' : 'absolute'
+      if (mobileLandscape) {
+        canvas.style.left = `${-safeLeft}px`
+        canvas.style.right = `${-safeRight}px`
+      } else {
+        canvas.style.left = `${effectiveSidebarWidth}px`
+        canvas.style.right = 'auto'
+      }
+      canvas.style.width = `${canvasCssWidth}px`
+      canvas.style.height = `${canvasCssHeight}px`
+      canvas.style.top = mobileLandscape ? `${-safeTop}px` : '0px'
+      canvas.style.bottom = mobileLandscape ? `${-safeBottom}px` : 'auto'
     }
-    this.gameCanvas.style.width = `${canvasCssWidth}px`
-    this.gameCanvas.style.height = `${canvasCssHeight}px`
-    this.gameCanvas.style.top = mobileLandscape ? `${-safeTop}px` : '0px'
-    this.gameCanvas.style.bottom = mobileLandscape ? `${-safeBottom}px` : 'auto'
+
+    applyCanvasLayout(this.gameGlCanvas)
+    applyCanvasLayout(this.gameCanvas)
 
     // Set actual pixel size scaled by device pixel ratio
-    this.gameCanvas.width = Math.max(1, Math.round(canvasCssWidth * pixelRatio))
-    this.gameCanvas.height = Math.max(1, Math.round(canvasCssHeight * pixelRatio))
+    const targetWidth = Math.max(1, Math.round(canvasCssWidth * pixelRatio))
+    const targetHeight = Math.max(1, Math.round(canvasCssHeight * pixelRatio))
+
+    if (this.gameGlCanvas) {
+      this.gameGlCanvas.width = targetWidth
+      this.gameGlCanvas.height = targetHeight
+      if (this.gameGl) {
+        this.gameGl.viewport(0, 0, targetWidth, targetHeight)
+      }
+    }
+
+    this.gameCanvas.width = targetWidth
+    this.gameCanvas.height = targetHeight
 
     // Scale the drawing context to counter the device pixel ratio
     this.gameCtx.setTransform(1, 0, 0, 1, 0, 0)
@@ -161,6 +199,14 @@ export class CanvasManager {
 
   getGameContext() {
     return this.gameCtx
+  }
+
+  getGameGlContext() {
+    return this.gameGl
+  }
+
+  getGameGlCanvas() {
+    return this.gameGlCanvas
   }
 
   getMinimapCanvas() {

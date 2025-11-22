@@ -123,6 +123,9 @@ export class GameLoop {
   handlePausedFrame(now, gameCtx, gameCanvas, pauseStateChanged) {
     this.lastFrameTime = null
 
+    const gameGl = this.canvasManager.getGameGlContext()
+    const gameGlCanvas = this.canvasManager.getGameGlCanvas()
+
     const minimapCtx = this.canvasManager.getMinimapContext()
     const minimapCanvas = this.canvasManager.getMinimapCanvas()
 
@@ -157,7 +160,9 @@ export class GameLoop {
         gameState.selectionActive,
         gameState.selectionStart,
         gameState.selectionEnd,
-        gameState
+        gameState,
+        gameGl,
+        gameGlCanvas
       )
 
       renderMinimap(
@@ -193,6 +198,8 @@ export class GameLoop {
     const now = timestamp || performance.now()
     const gameCtx = this.canvasManager.getGameContext()
     const gameCanvas = this.canvasManager.getGameCanvas()
+    const gameGl = this.canvasManager.getGameGlContext()
+    const gameGlCanvas = this.canvasManager.getGameGlCanvas()
 
     // Always update FPS tracking
     this.fpsDisplay.updateFPS(now)
@@ -277,7 +284,7 @@ export class GameLoop {
 
     renderGame(gameCtx, gameCanvas, this.mapGrid, this.factories, this.units, this.bullets, gameState.buildings,
       gameState.scrollOffset, gameState.selectionActive,
-      gameState.selectionStart, gameState.selectionEnd, gameState)
+      gameState.selectionStart, gameState.selectionEnd, gameState, gameGl, gameGlCanvas)
 
     // Render minimap with low energy effects if applicable
     renderMinimap(minimapCtx, minimapCanvas, this.mapGrid,
@@ -377,10 +384,12 @@ export class GameLoop {
 
     const gameCtx = this.canvasManager.getGameContext()
     const gameCanvas = this.canvasManager.getGameCanvas()
+    const gameGl = this.canvasManager.getGameGlContext()
+    const gameGlCanvas = this.canvasManager.getGameGlCanvas()
     const minimapCtx = this.canvasManager.getMinimapContext()
     const minimapCanvas = this.canvasManager.getMinimapCanvas()
 
-    renderGame(gameCtx, gameCanvas, this.mapGrid, this.factories, this.units, this.bullets, gameState.buildings, gameState.scrollOffset, gameState.selectionActive, gameState.selectionStart, gameState.selectionEnd, gameState)
+    renderGame(gameCtx, gameCanvas, this.mapGrid, this.factories, this.units, this.bullets, gameState.buildings, gameState.scrollOffset, gameState.selectionActive, gameState.selectionStart, gameState.selectionEnd, gameState, gameGl, gameGlCanvas)
     renderMinimap(minimapCtx, minimapCanvas, this.mapGrid, gameState.scrollOffset, gameCanvas, this.units, gameState.buildings, gameState)
 
     // Render FPS overlay on top of everything in legacy loop too
