@@ -40,7 +40,7 @@ description: "Task list for implementing online multiplayer takeover"
 - [x] T008 [US1] Render party list rows below the `Players:` input in `src/ui/sidebarMultiplayer.js` using `PartyState` data so each row shows color, owner label, and invite button
 - [x] T009 [US1] Implement invite button flow in `src/ui/sidebarMultiplayer.js` that calls `src/network/multiplayerStore.js` to build the link and logs it to `src/network/hostNotifications.js` so the host sees a confirmation
 - [x] T010 [US1] Wire `src/network/multiplayerStore.js` link builder to `server/stun.js` via fetch POST to `/signalling/offer` so the generated token matches the Express helper contract
-- [ ] T011 [US1] Persist host invite visibility state in `src/gameState.js` so the party rows stay minimalistic while the host uses the invite immediately
+	- [x] T011 [US1] Persist host invite visibility state in `src/gameState.js` so the party rows stay minimalistic while the host uses the invite immediately
 
 **Checkpoint**: Party invites can be generated and shared without blocking gameplay; host sees notifications confirming invite creation.
 

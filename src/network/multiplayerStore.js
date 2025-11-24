@@ -11,7 +11,7 @@ import { STUN_HOST } from './signalling.js'
 
 const inviteRecords = new Map()
 
-function generateRandomId(prefix = 'id') {
+export function generateRandomId(prefix = 'id') {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
@@ -35,6 +35,14 @@ function ensurePartyStates() {
     })
   }
   return gameState.partyStates
+}
+
+function getInviteStatusStorage() {
+  ensureMultiplayerState()
+  if (!gameState.hostInviteStatus || typeof gameState.hostInviteStatus !== 'object') {
+    gameState.hostInviteStatus = {}
+  }
+  return gameState.hostInviteStatus
 }
 
 function ensureGameInstanceId() {
@@ -185,4 +193,15 @@ export function markPartyControlledByAi(partyId) {
 export function getInviteRecords() {
   purgeExpiredInvites()
   return Array.from(inviteRecords.values())
+}
+
+export function getHostInviteStatus(partyId) {
+  const storage = getInviteStatusStorage()
+  return storage[partyId] || 'idle'
+}
+
+export function setHostInviteStatus(partyId, status) {
+  const storage = getInviteStatusStorage()
+  storage[partyId] = status
+  return storage[partyId]
 }

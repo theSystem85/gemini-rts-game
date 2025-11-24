@@ -21,6 +21,10 @@
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
+## Current Multiplayer Work
+- [x] T011 persist host invite UI state so party rows keep their button visibility state
+- [ ] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
+
 ## Features
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory

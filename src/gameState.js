@@ -118,6 +118,9 @@ export const gameState = {
   repairMode: false,
   buildingsUnderRepair: [],
 
+  // Track active invite buttons per party so UI state persists after re-render
+  hostInviteStatus: {},
+
   // Enemy AI learning
   playerBuildHistory: null,  // Will be initialized from localStorage if available
   currentSessionId: null,    // Will be set when first building is placed
@@ -192,6 +195,13 @@ export const gameState = {
   partyStates: [], // Tracks per-party metadata for invites and AI/human control
   gameInstanceId: null, // UUID tied to this running match
   hostId: null, // Identifier for the current host browser/session
+  multiplayerSession: {
+    isRemote: false,
+    alias: null,
+    inviteToken: null,
+    status: 'idle',
+    connectedAt: null
+  },
 
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),
