@@ -12,9 +12,9 @@ description: "Task list for implementing online multiplayer takeover"
 
 **Purpose**: Prepare the project structure and minimal backend helper referenced by the plan.
 
-- [ ] T001 Create `src/network` directory and placeholder `invites.js`, `signalling.js`, `hostNotifications.js` entry modules per implementation plan
-- [ ] T002 Add `server/stun.js` Express helper that exposes `/signalling/offer`, `/signalling/answer`, `/signalling/candidate`, `/game-instance/:instanceId/invite-regenerate` endpoints as documented in `specs/001-add-online-multiplayer/contracts/multiplayer-api.yaml`
-- [ ] T003 Update `package.json` scripts and dev tooling notes (in `package.json` and `Documentation.md`) to mention how to start the Express STUN helper alongside the Vite dev server
+- [x] T001 Create `src/network` directory and placeholder `invites.js`, `signalling.js`, `hostNotifications.js` entry modules per implementation plan
+- [x] T002 Add `server/stun.js` Express helper that exposes `/signalling/offer`, `/signalling/answer`, `/signalling/candidate`, `/game-instance/:instanceId/invite-regenerate` endpoints as documented in `specs/001-add-online-multiplayer/contracts/multiplayer-api.yaml`
+- [x] T003 Update `package.json` scripts and dev tooling notes (in `package.json` and `Documentation.md`) to mention how to start the Express STUN helper alongside the Vite dev server
 
 ---
 
