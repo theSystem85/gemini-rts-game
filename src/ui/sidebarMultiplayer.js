@@ -83,7 +83,7 @@ async function handleInviteClick(partyState, button, status) {
   status.classList.remove('success')
 
   try {
-    const { url } = generateInviteForParty(partyState.partyId)
+    const { url } = await generateInviteForParty(partyState.partyId)
     status.textContent = 'Invite ready'
     status.classList.add('success')
     await tryCopyToClipboard(url)

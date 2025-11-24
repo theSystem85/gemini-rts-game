@@ -1,4 +1,4 @@
-const STUN_HOST = process.env.STUN_HOST || 'http://localhost:3333'
+export const STUN_HOST = process.env.STUN_HOST || 'http://localhost:3333'
 
 async function postJson(endpoint, payload) {
   const response = await fetch(`${STUN_HOST}${endpoint}`, {

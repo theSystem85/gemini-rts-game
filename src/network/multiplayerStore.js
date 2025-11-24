@@ -7,6 +7,7 @@ import {
 } from '../config.js'
 import { composeInviteToken, buildInviteUrl, humanReadablePartyLabel } from './invites.js'
 import { showHostNotification } from './hostNotifications.js'
+import { STUN_HOST } from './signalling.js'
 
 const inviteRecords = new Map()
 
@@ -83,14 +84,49 @@ export function listPartyStates() {
   return ensurePartyStates()
 }
 
-export function generateInviteForParty(partyId) {
+async function requestServerInviteToken(partyId) {
+  const instanceId = ensureGameInstanceId()
+  if (!STUN_HOST || !instanceId) {
+    return null
+  }
+
+  if (typeof fetch !== 'function') {
+    return null
+  }
+
+  try {
+    const response = await fetch(
+      `${STUN_HOST}/game-instance/${encodeURIComponent(instanceId)}/invite-regenerate`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partyId })
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`)
+    }
+
+    const payload = await response.json()
+    return payload?.inviteToken || null
+  } catch (err) {
+    console.warn('Could not sync invite token with STUN helper:', err)
+    return null
+  }
+}
+
+export async function generateInviteForParty(partyId) {
   ensureMultiplayerState()
   const party = getPartyState(partyId)
   if (!party) {
     throw new Error(`Unknown party: ${partyId}`)
   }
 
-  const token = composeInviteToken(gameState.gameInstanceId, partyId)
+  let token = await requestServerInviteToken(partyId)
+  if (!token) {
+    token = composeInviteToken(gameState.gameInstanceId, partyId)
+  }
   const expiresAt = Date.now() + INVITE_TOKEN_TTL_MS
   inviteRecords.set(token, {
     token,
