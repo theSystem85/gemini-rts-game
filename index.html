@@ -42,6 +42,19 @@
     </style>
   </head>
   <body>
+    <div id="remoteInviteLanding" class="remote-invite-overlay remote-invite-overlay--hidden" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="remote-invite-card">
+        <h2>Join Remote Match</h2>
+        <p class="remote-invite-description">You were invited to control a party. Enter your alias to start the connection with the host.</p>
+        <p class="remote-invite-token">Invite token: <span id="remoteInviteTokenText">loading...</span></p>
+        <form id="remoteInviteForm">
+          <label for="remoteAliasInput">Alias</label>
+          <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Your alias" required>
+          <button id="remoteInviteSubmit" type="submit">Join game</button>
+        </form>
+        <p id="remoteInviteStatus" class="remote-invite-status" aria-live="polite"></p>
+      </div>
+    </div>
     <div id="mobileSidebarControls" aria-hidden="true">
       <button
         id="sidebarToggle"

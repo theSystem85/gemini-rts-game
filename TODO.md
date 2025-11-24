@@ -24,7 +24,7 @@
 ## Current Multiplayer Work
 - [x] T011 persist host invite UI state so party rows keep their button visibility state
 - [ ] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
-  - in progress: add `src/network/remoteConnection.js` to manage alias/offer polling and ICE exchange
+  - in progress: add `src/network/remoteConnection.js` and expose the remote landing alias form so invite links call `createRemoteConnection` to begin the offer/answer loop
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

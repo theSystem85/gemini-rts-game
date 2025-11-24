@@ -2258,3 +2258,101 @@ body.mobile-sidebar-modal-open #sidebar,
 body.mobile-sidebar-modal-open #sidebarScroll {
   pointer-events: none;
 }
+
+/* Remote invite landing overlay */
+.remote-invite-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  padding: 20px;
+}
+
+.remote-invite-overlay--hidden {
+  display: none;
+}
+
+.remote-invite-card {
+  width: min(360px, 100%);
+  background: #0f0f15;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font-family: 'Segoe UI', sans-serif;
+  text-align: center;
+}
+
+.remote-invite-card h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.4rem;
+  letter-spacing: 0.4px;
+}
+
+.remote-invite-description {
+  margin: 0 0 12px;
+  color: #dfe3f1;
+  line-height: 1.4;
+}
+
+.remote-invite-token {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: #99a3b6;
+}
+
+.remote-invite-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.remote-invite-card label {
+  font-size: 0.85rem;
+  color: #b0b9cf;
+}
+
+.remote-invite-card input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.remote-invite-card input:focus {
+  outline: 2px solid rgba(110, 251, 160, 0.8);
+}
+
+.remote-invite-card button {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(180deg, #2ee38a, #07b16e);
+  color: #030803;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.remote-invite-card button:hover {
+  opacity: 0.9;
+}
+
+.remote-invite-status {
+  min-height: 20px;
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: #dfe3f1;
+}
+
+.remote-invite-status--error {
+  color: #ff6b6b;
+}

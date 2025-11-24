@@ -54,7 +54,7 @@ description: "Task list for implementing online multiplayer takeover"
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Create `src/network/remoteConnection.js` that handles alias form, POSTs to `/signalling/offer`, polls `/signalling/answer`, and manages ICE candidate exchange according to `contracts/multiplayer-api.yaml`
+- [ ] T012 [US2] Create `src/network/remoteConnection.js` and deliver the invite landing alias UI so that invite links collect a name and call `createRemoteConnection` to post the offer, poll answers, and exchange ICE candidates per `contracts/multiplayer-api.yaml`
 - [ ] T013 [US2] Add WebRTC DataChannel synchronization in `src/network/webrtcSession.js` so remote commands stream to the host and host commands include metadata about the running/paused flag (per research decision)
 - [ ] T014 [US2] Update `src/ui/sidebarMultiplayer.js` and `src/input/inputHandler.js` to respect host-only start/pause/cheat rights by disabling those buttons for non-host sessions while still allowing remote control inputs to transmit through WebRTC
 - [ ] T015 [US2] Emit join notification from `src/network/hostNotifications.js` when `WebRTCSession` connection goes from `pending` to `connected`, honoring the spec requirement for host alerts

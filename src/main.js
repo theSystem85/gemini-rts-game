@@ -19,6 +19,7 @@ import {
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
+import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -1778,6 +1779,7 @@ document.addEventListener('DOMContentLoaded', async() => {
   updateMobileLayoutClasses()
   setupDoubleTapPrevention()
   loadPersistedSettings()
+  initRemoteInviteLanding()
   gameInstance = new Game()
 
   // Also make it available globally for debugging
