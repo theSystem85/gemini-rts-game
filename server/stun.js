@@ -1,7 +1,10 @@
 import express from 'express'
 
+import cors from 'cors'
+
 const PORT = process.env.STUN_PORT ?? 3333
 const app = express()
+app.use(cors({ origin: true, credentials: true }))
 app.use(express.json())
 
 const sessions = new Map()

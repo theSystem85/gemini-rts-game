@@ -1,20 +1,3 @@
-import { listPartyStates, generateInviteForParty } from '../network/multiplayerStore.js'
-import { showHostNotification } from '../network/hostNotifications.js'
-
-const PARTY_LIST_ID = 'multiplayerPartyList'
-const PARTY_DISPLAY_NAMES = {
-  player1: 'Green',
-  player2: 'Red',
-  player3: 'Blue',
-  player4: 'Yellow'
-}
-
-let partyListContainer = null
-
-export function initSidebarMultiplayer() {
-  partyListContainer = document.getElementById(PARTY_LIST_ID)
-  refreshSidebarMultiplayer()
-}
 import {
   listPartyStates,
   generateInviteForParty,
@@ -94,7 +77,7 @@ function getPartyDisplayName(partyId, color) {
 function formatStatusText(statusKey, partyState) {
   switch (statusKey) {
     case 'generating':
-      return 'Generating invite…'
+      return 'Generating invite...'
     case 'copied':
       return 'Copied!'
     case 'error':

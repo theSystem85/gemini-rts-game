@@ -297,4 +297,3 @@ export function createRemoteConnection(options) {
 export function getActiveRemoteConnection() {
   return activeRemoteConnection
 }
-*** End Patch

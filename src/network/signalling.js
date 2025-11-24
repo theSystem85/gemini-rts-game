@@ -1,4 +1,15 @@
-export const STUN_HOST = process.env.STUN_HOST || 'http://localhost:3333'
+const DEFAULT_STUN_HOST = 'http://localhost:3333'
+const detectStunHost = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STUN_HOST) {
+    return import.meta.env.VITE_STUN_HOST
+  }
+  if (typeof window !== 'undefined' && window.STUN_HOST) {
+    return window.STUN_HOST
+  }
+  return DEFAULT_STUN_HOST
+}
+
+export const STUN_HOST = detectStunHost()
 
 async function postJson(endpoint, payload) {
   const response = await fetch(`${STUN_HOST}${endpoint}`, {
