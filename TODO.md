@@ -152,7 +152,8 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] the invite link is specific to a game instance and a party
   - [ ] any party can save the game but when a non host will load the game this non host will be the new host and the game instance will be different and also the invite links will be different from the original.
   - [ ] only the host can start/pause the game
-  - [ ] For the initial webRTC connection setup use a public STUN like some from google "stun:stun.l.google.com:19302"
+  - [ ] For the initial webRTC connection setup use a small express server that provides STUN services to connect peers
+  - [ ] only the host can start/pause the game or use cheats, even after other players join
 ## Bugs
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
