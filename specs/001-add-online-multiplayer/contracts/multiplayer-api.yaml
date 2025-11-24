@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: Multiplayer Signalling API
+  version: 1.0.0
+  description: Minimal Express-powered STUN/signalling helper for the online multiplayer takeover feature.
+servers:
+  - url: http://localhost:3333
+paths:
+  /signalling/offer:
+    post:
+      summary: Submit a WebRTC offer from a connecting peer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inviteToken:
+                  type: string
+                  description: Game-instance+party token shared over the invite link
+                alias:
+                  type: string
+                  description: Remote player's chosen name before taking over
+                peerId:
+                  type: string
+                  description: Generated identifier for this peer session
+                offer:
+                  type: string
+                  description: Base64 encoded SDP offer
+              required: [inviteToken, alias, peerId, offer]
+      responses:
+        '200':
+          description: Offer accepted and queued for the host to answer
+  /signalling/answer:
+    post:
+      summary: Host posts the WebRTC answer for a pending peer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inviteToken:
+                  type: string
+                peerId:
+                  type: string
+                answer:
+                  type: string
+              required: [inviteToken, peerId, answer]
+      responses:
+        '200':
+          description: Answer relayed back to the connecting peer
+  /signalling/candidate:
+    post:
+      summary: Exchange ICE candidates between host and peer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inviteToken:
+                  type: string
+                peerId:
+                  type: string
+                candidate:
+                  type: string
+                  description: JSON string of RTCIceCandidate
+              required: [inviteToken, peerId, candidate]
+      responses:
+        '204':
+          description: Candidate stored for the matching peer
+  /game-instance/:instanceId/invite-regenerate:
+    post:
+      summary: Generate new invite tokens when a non-host loads a save
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                partyId:
+                  type: string
+                  description: Party that needs a new invite/token
+              required: [partyId]
+      responses:
+        '200':
+          description: Returns new inviteToken tied to the instance+party
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inviteToken:
+                    type: string
+**NOTE**: This API lives inside the minimal Express helper and is used only for the initial WebRTC handshake; all actual game state remains inside the host browser.

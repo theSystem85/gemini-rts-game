@@ -221,3 +221,10 @@ When in doubt, examine existing similar implementations in the codebase and foll
 ## Additional Rules
 
 - Do not use `require` anywhere in the codebase. Always use ES6 `import` statements for all module imports, including dynamic or conditional imports. This applies to all files, including AI and pathfinding logic.
+
+## Active Technologies
+- Vanilla JavaScript (ES2020+) across the Vite build environment and minimal Express.js for STUN signalling + Vite (build/dev), Canvas + WebRTC browser APIs, Express (only for STUN/signalling), native DOM/Fetch APIs (001-add-online-multiplayer)
+- LocalStorage for saves + in-memory `gameState` metadata per party (001-add-online-multiplayer)
+
+## Recent Changes
+- 001-add-online-multiplayer: Added Vanilla JavaScript (ES2020+) across the Vite build environment and minimal Express.js for STUN signalling + Vite (build/dev), Canvas + WebRTC browser APIs, Express (only for STUN/signalling), native DOM/Fetch APIs
