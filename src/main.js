@@ -18,6 +18,7 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
+import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -1218,6 +1219,8 @@ class Game {
 
     // Setup map settings
     this.setupMapSettings()
+
+    initSidebarMultiplayer()
 
     // Setup production tabs and buttons
     this.productionController.initProductionTabs()

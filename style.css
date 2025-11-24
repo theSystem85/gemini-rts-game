@@ -64,6 +64,82 @@ body.is-touch {
   -webkit-touch-callout: none;
 }
 
+.multiplayer-party-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.multiplayer-party-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.multiplayer-party-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.multiplayer-party-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  display: inline-flex;
+}
+
+.multiplayer-party-label {
+  color: #ddd;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.multiplayer-party-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.multiplayer-party-status {
+  font-size: 11px;
+  color: #a8a8a8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.multiplayer-party-status.success {
+  color: #6efc4b;
+}
+
+.multiplayer-invite-button {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.multiplayer-invite-button:hover:not([disabled]) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.multiplayer-invite-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 #sidebarScroll {
   flex: 1;
   overflow-y: auto;
