@@ -189,6 +189,9 @@ export const gameState = {
   // Multiplayer settings
   playerCount: 2,  // Number of players (2-4)
   humanPlayer: 'player1',  // Which player is controlled by human
+  partyStates: [], // Tracks per-party metadata for invites and AI/human control
+  gameInstanceId: null, // UUID tied to this running match
+  hostId: null, // Identifier for the current host browser/session
 
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),

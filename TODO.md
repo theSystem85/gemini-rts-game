@@ -154,6 +154,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] only the host can start/pause the game
   - [ ] For the initial webRTC connection setup use a small express server that provides STUN services to connect peers
   - [ ] only the host can start/pause the game or use cheats, even after other players join
+  - [ ] Phase 2: foundation state, UI rows, invite/notification wiring still pending
 ## Bugs
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.

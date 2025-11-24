@@ -22,10 +22,10 @@ description: "Task list for implementing online multiplayer takeover"
 
 **Purpose**: Wire shared game state, config updates, and session tracking that underpin all user stories.
 
-- [ ] T004 Introduce multiplayer constants in `src/config.js` (invite token TTL, max parties, party colors) referenced by `data-model.md`
-- [ ] T005 Extend `src/gameState.js` to track `partyStates`, `gameInstanceId`, and the host identifier used by `PartyState` and `InviteLink` entries in `data-model.md`
-- [ ] T006 Implement `src/network/webrtcSession.js` to manage `WebRTCSession` lifecycles (offer/answer storage, ICE candidates, lastHeartbeat) using the structures in `data-model.md`
-- [ ] T007 Create `src/network/multiplayerStore.js` that exposes helpers to generate/validate invite tokens per `InviteLink` rules and to notify `PartyState` about AI/human ownership changes
+- [x] T004 Introduce multiplayer constants in `src/config.js` (invite token TTL, max parties, party colors) referenced by `data-model.md`
+- [x] T005 Extend `src/gameState.js` to track `partyStates`, `gameInstanceId`, and the host identifier used by `PartyState` and `InviteLink` entries in `data-model.md`
+- [x] T006 Implement `src/network/webrtcSession.js` to manage `WebRTCSession` lifecycles (offer/answer storage, ICE candidates, lastHeartbeat) using the structures in `data-model.md`
+- [x] T007 Create `src/network/multiplayerStore.js` that exposes helpers to generate/validate invite tokens per `InviteLink` rules and to notify `PartyState` about AI/human ownership changes
 
 ---
 
