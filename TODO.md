@@ -27,6 +27,8 @@
   - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE
 - [x] T013 start User Story 2 host WebRTC handling
   - done: host now polls `/signalling/pending`, answers offers, consumes remote control snapshots, and broadcasts pause/running updates via the data channel
+- [x] ✅ T014 enforce host-only start/pause/cheat controls when a remote client is connected
+  - done: session events disable pause/cheat buttons in `src/ui/sidebarMultiplayer.js` and the cheat hotkey is blocked in `src/inputHandler.js`
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

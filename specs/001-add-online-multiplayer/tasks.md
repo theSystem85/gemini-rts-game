@@ -57,7 +57,7 @@ description: "Task list for implementing online multiplayer takeover"
 - [x] T012 [US2] Create `src/network/remoteConnection.js` and deliver the invite landing alias UI so that invite links collect a name and call `createRemoteConnection` to post the offer, poll answers, and exchange ICE candidates per `contracts/multiplayer-api.yaml`
 - [x] T013 [US2] Add WebRTC DataChannel synchronization in `src/network/webrtcSession.js` so remote commands stream to the host and host commands include metadata about the running/paused flag (per research decision)
 	- done: the host polls `/signalling/pending`, answers offers, consumes remote input, and broadcasts the pause/running state back to each peer
-- [ ] T014 [US2] Update `src/ui/sidebarMultiplayer.js` and `src/input/inputHandler.js` to respect host-only start/pause/cheat rights by disabling those buttons for non-host sessions while still allowing remote control inputs to transmit through WebRTC
+- [x] T014 [US2] Update `src/ui/sidebarMultiplayer.js` and `src/input/inputHandler.js` to respect host-only start/pause/cheat rights by disabling those buttons for non-host sessions while still allowing remote control inputs to transmit through WebRTC (host-only controls now listen for session events)
 - [x] T015 [US2] Emit join notification from `src/network/hostNotifications.js` when `WebRTCSession` connection goes from `pending` to `connected`, honoring the spec requirement for host alerts
 
 **Checkpoint**: Remote player can join seamlessly, issue commands, and host remains the sole authority for game control actions.

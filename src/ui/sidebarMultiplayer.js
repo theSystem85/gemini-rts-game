@@ -6,6 +6,8 @@ import {
 } from '../network/multiplayerStore.js'
 import { watchHostInvite } from '../network/webrtcSession.js'
 import { showHostNotification } from '../network/hostNotifications.js'
+import { gameState } from '../gameState.js'
+import { observeMultiplayerSession } from '../network/multiplayerSessionEvents.js'
 
 const PARTY_LIST_ID = 'multiplayerPartyList'
 const PARTY_DISPLAY_NAMES = {
@@ -15,11 +17,18 @@ const PARTY_DISPLAY_NAMES = {
   player4: 'Yellow'
 }
 
+const HOST_CONTROL_BUTTONS = [
+  { id: 'pauseBtn', label: 'Start/Pause' },
+  { id: 'cheatMenuBtn', label: 'Cheat Console' }
+]
+
 let partyListContainer = null
+let sessionObserverCleanup = null
 
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
+  setupHostControlWatcher()
   listPartyStates().forEach((partyState) => {
     if (partyState.inviteToken) {
       watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
@@ -36,6 +45,58 @@ export function refreshSidebarMultiplayer() {
   const partyStates = listPartyStates()
   partyStates.forEach((partyState) => {
     partyListContainer.appendChild(createPartyRow(partyState))
+  })
+}
+
+function setupHostControlWatcher() {
+  if (sessionObserverCleanup) {
+    sessionObserverCleanup()
+  }
+  updateHostControlAccessibility(gameState.multiplayerSession)
+  sessionObserverCleanup = observeMultiplayerSession((event) => {
+    updateHostControlAccessibility(event?.detail)
+  })
+}
+
+function isLocalClientSession(session = {}) {
+  return Boolean(session.isRemote && session.localRole === 'client')
+}
+
+function updateHostControlAccessibility(session) {
+  HOST_CONTROL_BUTTONS.forEach(({ id, label }) => {
+    const button = document.getElementById(id)
+    if (!button) {
+      return
+    }
+
+    if (!button.dataset.originalTitle) {
+      button.dataset.originalTitle = button.title || ''
+    }
+
+    if (isLocalClientSession(session)) {
+      button.disabled = true
+      button.classList.add('multiplayer-locked')
+      const fallbackTitle = button.dataset.originalTitle || label
+      button.title = `${fallbackTitle || label} (host only)`
+      button.setAttribute('aria-label', `${label} (host only)`)
+      button.dataset.remoteLocked = 'true'
+      if (!button.dataset.originalDisplay) {
+        button.dataset.originalDisplay = button.style.display || ''
+      }
+      button.style.display = 'none'
+    } else {
+      button.disabled = false
+      button.classList.remove('multiplayer-locked')
+      button.title = button.dataset.originalTitle || label
+      button.removeAttribute('aria-label')
+      delete button.dataset.remoteLocked
+      if (button.dataset.originalDisplay !== undefined) {
+        button.style.display = button.dataset.originalDisplay
+        delete button.dataset.originalDisplay
+      } else {
+        button.style.display = ''
+      }
+    }
   })
 }
 

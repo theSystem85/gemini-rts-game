@@ -200,7 +200,8 @@ export const gameState = {
     alias: null,
     inviteToken: null,
     status: 'idle',
-    connectedAt: null
+    connectedAt: null,
+    localRole: 'host'
   },
 
   // Track defeated players for sound effects

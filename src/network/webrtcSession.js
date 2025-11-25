@@ -2,6 +2,7 @@ import { gameState } from '../gameState.js'
 import { markPartyControlledByHuman, markPartyControlledByAi } from './multiplayerStore.js'
 import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
+import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import { fetchPendingSessions, postAnswer, postCandidate } from './signalling.js'
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
@@ -20,6 +21,7 @@ function updateGlobalSession(updates) {
     ...gameState.multiplayerSession,
     ...updates
   }
+  emitMultiplayerSessionChange()
 }
 
 class HostSession {

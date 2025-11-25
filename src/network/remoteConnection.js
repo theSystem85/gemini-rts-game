@@ -1,5 +1,6 @@
 import { gameState } from '../gameState.js'
 import { generateRandomId } from './multiplayerStore.js'
+import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import {
   postOffer,
   postCandidate,
@@ -32,6 +33,7 @@ function updateSessionState(updates) {
     ...gameState.multiplayerSession,
     ...updates
   }
+  emitMultiplayerSessionChange()
 }
 
 class RemoteConnection {
@@ -178,7 +180,8 @@ class RemoteConnection {
       alias: this.alias,
       inviteToken: this.inviteToken,
       status: RemoteConnectionStatus.CONNECTING,
-      connectedAt: null
+      connectedAt: null,
+      localRole: 'client'
     })
   }
 
@@ -242,8 +245,21 @@ class RemoteConnection {
       const candidateValue = candidates[i]
       const parsed = typeof candidateValue === 'string' ? JSON.parse(candidateValue) : candidateValue
       this.remoteCandidateIndex += 1
-      await this._addRemoteCandidate(parsed)
+      await this._safeAddRemoteCandidate(parsed)
     }
+  }
+
+  async _safeAddRemoteCandidate(candidate) {
+    if (!candidate || !this.pc) {
+      return
+    }
+
+    if (!candidate.sdpMid && candidate.sdpMLineIndex == null) {
+      console.warn('Skipping ICE candidate without sdpMid/mLineIndex', candidate)
+      return
+    }
+
+    await this._addRemoteCandidate(candidate)
   }
 
   async _addRemoteCandidate(candidate) {
@@ -269,6 +285,10 @@ class RemoteConnection {
     }
 
     this.pendingRemoteCandidates.forEach((candidate) => {
+      if (!candidate.sdpMid && candidate.sdpMLineIndex == null) {
+        console.warn('Skipping queued ICE candidate without sdpMid/mLineIndex', candidate)
+        return
+      }
       this.pc.addIceCandidate(candidate).catch((err) => {
         console.warn('Failed to add queued ICE candidate:', err)
       })
