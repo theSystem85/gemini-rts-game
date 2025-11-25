@@ -29,6 +29,10 @@
   - done: host now polls `/signalling/pending`, answers offers, consumes remote control snapshots, and broadcasts pause/running updates via the data channel
 - [x] ✅ T014 enforce host-only start/pause/cheat controls when a remote client is connected
   - done: session events disable pause/cheat buttons in `src/ui/sidebarMultiplayer.js` and the cheat hotkey is blocked in `src/inputHandler.js`
+- [x] ✅ T015 emit join notification when a remote WebRTC session flips to connected (host alert)
+- [ ] T016 [US3] detect remote disconnects/host drops, flip `aiActive` back on, and keep invite usable within seconds of failure
+- [ ] T017 [US3] regenerate `/invite-regenerate` when a non-host loads a save so the loader becomes new host and sidebar invites refresh
+- [ ] T018 [US3] sync host metadata (start/pause/cheat authority, party state) during save/load handover so the new host gains exclusive controls
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

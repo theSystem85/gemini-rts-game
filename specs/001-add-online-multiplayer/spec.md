@@ -86,6 +86,13 @@ If a human player disconnects or a save is loaded by a non-host, the party must 
 - **SC-003**: When a human-controlled party disconnects, the AI reclaims control within two seconds and the same invite link remains usable for the next browser session to reclaim the party.
 - **SC-004**: Any party save loaded by a non-host elects that player as the new host, regenerates the invite links for the fresh instance, and strictly grants start/pause/cheat controls only to the current host.
 
+## Implementation Plan (Live Work)
+
+- Track the remaining User Story 3 work via tasks T016–T018 so the autop-run detection, invite regeneration, and host metadata sync remain visible to the team.
+- T016: detect remote disconnects or WebRTC failures, flip `aiActive` on immediately, and keep the party’s invite token reusable while notifying the UI of the handoff.
+- T017: when a non-host loads a save, call `/game-instance/:instanceId/invite-regenerate`, update the sidebar rows, and persist the loader as the new host in `multiplayerStore`.
+- T018: ensure the new host is the only party allowed to start/pause/cheat after a load, and mirror the host/party metadata across `gameState` + `multiplayerSession` so future handovers stay consistent.
+
 ## Assumptions
 
 - The existing sidebar can accommodate the new rows without a full redesign, and party colors/labels can be reused for clarity.
