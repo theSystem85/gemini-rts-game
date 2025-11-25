@@ -105,6 +105,15 @@ export function initRemoteInviteLanding() {
     aliasInput.focus()
   }
 
+  const handleDataChannelMessage = (payload) => {
+    if (!payload || payload.type !== 'host-status') {
+      return
+    }
+    const running = Boolean(payload.running)
+    const message = running ? 'Host resumed the game.' : 'Host paused the game.'
+    updateStatus(statusElement, message, !running)
+  }
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
     const alias = aliasInput.value.trim()
@@ -123,7 +132,8 @@ export function initRemoteInviteLanding() {
         alias,
         onStatusChange: handleStatusChange,
         onDataChannelOpen: handleDataChannelOpen,
-        onDataChannelClose: handleDataChannelClose
+        onDataChannelClose: handleDataChannelClose,
+        onDataChannelMessage: handleDataChannelMessage
       })
       await connection.start()
     } catch (error) {

@@ -37,6 +37,19 @@ export function postCandidate(payload) {
   return postJson('/signalling/candidate', payload)
 }
 
+export function fetchPendingSessions(inviteToken) {
+  if (!inviteToken) {
+    throw new Error('Invite token is required to fetch pending sessions')
+  }
+
+  return fetch(`${STUN_HOST}/signalling/pending/${encodeURIComponent(inviteToken)}`).then((response) => {
+    if (!response.ok) {
+      throw new Error(`Failed to fetch pending sessions (${response.status})`)
+    }
+    return response.json().catch(() => [])
+  })
+}
+
 export async function fetchSessionStatus(inviteToken, peerId) {
   if (!inviteToken || !peerId) {
     throw new Error('Invite token and peerId are required to fetch signalling session data')

@@ -22,8 +22,9 @@ app.post('/signalling/offer', (req, res) => {
     peerId,
     alias,
     offer,
-    answer: null,
-    candidates: []
+     answer: null,
+     candidates: [],
+     createdAt: Date.now()
   })
 
   res.status(200).json({ message: 'offer stored' })
@@ -55,10 +56,35 @@ app.post('/signalling/candidate', (req, res) => {
     return res.status(404).json({ error: 'session not found' })
   }
 
-  session.candidates.push(candidate)
+  session.candidates.push({
+    candidate,
+    origin: req.body.origin || 'peer',
+    timestamp: Date.now()
+  })
   res.sendStatus(204)
 })
 
+app.get('/signalling/pending/:inviteToken', (req, res) => {
+  const { inviteToken } = req.params
+  const matches = Array.from(sessions.values()).filter(
+    (session) => session.inviteToken === inviteToken
+  )
+
+  if (!matches.length) {
+    return res.status(404).json({ error: 'no pending sessions' })
+  }
+
+  const payload = matches.map((session) => ({
+    peerId: session.peerId,
+    alias: session.alias,
+    offer: session.offer,
+    answer: session.answer,
+    candidates: session.candidates,
+    connectionState: session.answer ? 'connected' : 'pending'
+  }))
+
+  res.json(payload)
+})
 app.get('/signalling/session/:inviteToken/:peerId', (req, res) => {
   const { inviteToken, peerId } = req.params
   const session = sessions.get(sessionKey(inviteToken, peerId))

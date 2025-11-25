@@ -4,6 +4,7 @@ import {
   getHostInviteStatus,
   setHostInviteStatus
 } from '../network/multiplayerStore.js'
+import { watchHostInvite } from '../network/webrtcSession.js'
 import { showHostNotification } from '../network/hostNotifications.js'
 
 const PARTY_LIST_ID = 'multiplayerPartyList'
@@ -19,6 +20,11 @@ let partyListContainer = null
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
+  listPartyStates().forEach((partyState) => {
+    if (partyState.inviteToken) {
+      watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
+    }
+  })
 }
 
 export function refreshSidebarMultiplayer() {
@@ -107,6 +113,7 @@ async function handleInviteClick(partyState, button, status) {
 
   try {
     const { url } = await generateInviteForParty(partyState.partyId)
+    watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
     status.classList.add('success')
     await tryCopyToClipboard(url)
     showHostNotification('Invite link copied to clipboard')

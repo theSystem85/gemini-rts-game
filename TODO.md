@@ -23,8 +23,10 @@
 
 ## Current Multiplayer Work
 - [x] T011 persist host invite UI state so party rows keep their button visibility state
-- [ ] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
-  - in progress: add `src/network/remoteConnection.js` and expose the remote landing alias form so invite links call `createRemoteConnection` to begin the offer/answer loop
+- [x] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
+  - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE
+- [x] T013 start User Story 2 host WebRTC handling
+  - done: host now polls `/signalling/pending`, answers offers, consumes remote control snapshots, and broadcasts pause/running updates via the data channel
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:
