@@ -20,6 +20,10 @@ import {
   clearTankerKamikazeState,
   updateKamikazeTargetPoint
 } from '../game/tankerTruckUtils.js'
+import {
+  broadcastUnitMove,
+  broadcastUnitAttack
+} from '../network/gameCommandSync.js'
 
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
@@ -1121,6 +1125,9 @@ export class UnitCommandsHandler {
       const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
       const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
       playPositionalSound('movement', avgX, avgY, 0.5)
+      
+      // Broadcast movement command to other players
+      broadcastUnitMove(unitsToCommand, targetX, targetY)
     }
   }
 
@@ -1275,6 +1282,9 @@ export class UnitCommandsHandler {
 
     // Play attacking sound for user-initiated attack commands
     playSound('attacking', 1.0)
+    
+    // Broadcast attack command to other players
+    broadcastUnitAttack(selectedUnits, target)
   }
 
   handleRefineryUnloadCommand(selectedUnits, refinery, mapGrid) {

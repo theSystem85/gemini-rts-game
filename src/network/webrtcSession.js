@@ -4,10 +4,15 @@ import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import { fetchPendingSessions, postAnswer, postCandidate } from './signalling.js'
+import { handleReceivedCommand, startGameStateSync, stopGameStateSync } from './gameCommandSync.js'
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_HOST_STATUS_INTERVAL_MS = 1500
 const DEFAULT_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const AI_FALLBACK_DELAY_MS = 2000 // 2 seconds per spec requirement
+
+// Event type for AI reactivation
+export const AI_REACTIVATION_EVENT = 'partyAiReactivated'
 
 const SESSION_STATES = {
   PENDING: 'pending',
@@ -22,6 +27,32 @@ function updateGlobalSession(updates) {
     ...updates
   }
   emitMultiplayerSessionChange()
+}
+
+/**
+ * Emit an AI reactivation event so AI controllers can reinitialize
+ * @param {string} partyId - The party that has returned to AI control
+ */
+function emitAiReactivation(partyId) {
+  if (typeof document === 'undefined') {
+    return
+  }
+  document.dispatchEvent(new CustomEvent(AI_REACTIVATION_EVENT, {
+    detail: { partyId, timestamp: Date.now() }
+  }))
+}
+
+/**
+ * Subscribe to AI reactivation events
+ * @param {Function} handler - Callback function receiving the event
+ * @returns {Function} Cleanup function to unsubscribe
+ */
+export function observeAiReactivation(handler) {
+  if (typeof document === 'undefined' || typeof handler !== 'function') {
+    return () => {}
+  }
+  document.addEventListener(AI_REACTIVATION_EVENT, handler)
+  return () => document.removeEventListener(AI_REACTIVATION_EVENT, handler)
 }
 
 class HostSession {
@@ -286,6 +317,11 @@ class HostInviteMonitor {
       const entries = await fetchPendingSessions(this.inviteToken)
       entries.forEach((entry) => this._processEntry(entry))
     } catch (err) {
+      // 404 is expected when no client has joined yet - suppress the warning
+      if (err?.message?.includes('404')) {
+        // No pending sessions yet - this is normal before any client joins
+        return
+      }
       console.warn('Host polling failed:', err)
     }
   }
@@ -327,21 +363,56 @@ class HostInviteMonitor {
         status: SESSION_STATES.CONNECTED,
         connectedAt: Date.now()
       })
+      
+      // Start game state synchronization when a player connects
+      startGameStateSync()
     } else if (state === SESSION_STATES.DISCONNECTED || state === SESSION_STATES.FAILED) {
-      if (this.activeSession === session) {
+      const wasActiveSession = this.activeSession === session
+      if (wasActiveSession) {
         this.activeSession = null
       }
       releaseRemoteControlSource(session.sourceId)
+      
+      // T016: AI fallback on disconnect - flip aiActive to true and emit event
+      const previousAlias = session.alias || 'Remote client'
       markPartyControlledByAi(this.partyId)
-      showHostNotification(`Remote session for party ${this.partyId} ended`)
+      
+      // Emit AI reactivation event so AI controllers can reinitialize immediately
+      emitAiReactivation(this.partyId)
+      
+      // Show re-activation notification per spec requirement
+      showHostNotification(`${previousAlias} disconnected from party ${this.partyId} - AI has resumed control`)
+      
       updateGlobalSession({ alias: null, isRemote: false, status: SESSION_STATES.DISCONNECTED })
       session.dispose()
       this.sessions.delete(session.peerId)
+      
+      // Check if any sessions are still active, if not stop the game state sync
+      const hasActiveSessions = Array.from(this.sessions.values()).some(
+        s => s.connectionState === SESSION_STATES.CONNECTED
+      )
+      if (!hasActiveSessions) {
+        stopGameStateSync()
+      }
+      
+      // The invite token remains valid - new players can rejoin immediately
+      // No need to regenerate tokens on disconnect, only on save/load handover
     }
   }
 
   _handleControlMessage(session, payload) {
-    if (!payload || payload.type !== 'remote-control') {
+    if (!payload) {
+      return
+    }
+    
+    // Handle game command synchronization messages
+    if (payload.type === 'game-command') {
+      handleReceivedCommand(payload, session.sourceId)
+      return
+    }
+    
+    // Handle remote control messages
+    if (payload.type !== 'remote-control') {
       return
     }
     applyRemoteControlSnapshot(session.sourceId, payload)

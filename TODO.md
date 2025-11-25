@@ -30,9 +30,14 @@
 - [x] ✅ T014 enforce host-only start/pause/cheat controls when a remote client is connected
   - done: session events disable pause/cheat buttons in `src/ui/sidebarMultiplayer.js` and the cheat hotkey is blocked in `src/inputHandler.js`
 - [x] ✅ T015 emit join notification when a remote WebRTC session flips to connected (host alert)
-- [ ] T016 [US3] detect remote disconnects/host drops, flip `aiActive` back on, and keep invite usable within seconds of failure
-- [ ] T017 [US3] regenerate `/invite-regenerate` when a non-host loads a save so the loader becomes new host and sidebar invites refresh
-- [ ] T018 [US3] sync host metadata (start/pause/cheat authority, party state) during save/load handover so the new host gains exclusive controls
+- [x] ✅ T016 [US3] detect remote disconnects/host drops, flip `aiActive` back on, and keep invite usable within seconds of failure
+  - done: HostSession state change handler detects DISCONNECTED/FAILED, calls markPartyControlledByAi, emits AI_REACTIVATION_EVENT, and shows notification
+- [x] ✅ T017 [US3] regenerate `/invite-regenerate` when a non-host loads a save so the loader becomes new host and sidebar invites refresh
+  - done: multiplayerStore exports regenerateAllInviteTokens() and isHost(); saveGame.js calls regeneration on load
+- [x] ✅ T018 [US3] sync host metadata (start/pause/cheat authority, party state) during save/load handover so the new host gains exclusive controls
+  - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
+- [x] ✅ T019 Game command synchronization - broadcast unit commands (move, attack) and build commands between multiplayer players via WebRTC DataChannel
+  - done: gameCommandSync.js module created with broadcastUnitMove/broadcastUnitAttack, integrated into unitCommands.js and webrtcSession.js/remoteConnection.js
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

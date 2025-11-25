@@ -37,6 +37,9 @@ import { getKeyboardHandler } from './inputHandler.js'
 import { ensurePlayerBuildHistoryLoaded } from './savePlayerBuildPatterns.js'
 import { getUniqueId } from './utils.js'
 import { rebuildMineLookup } from './game/mineSystem.js'
+import { regenerateAllInviteTokens, isHost } from './network/multiplayerStore.js'
+import { refreshSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
+import { stopHostInvite } from './network/webrtcSession.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
 
@@ -1147,6 +1150,25 @@ export function loadGame(key) {
         gameInstance.centerOnPlayerFactory()
       }
     }
+
+    // T017: Regenerate invite tokens and establish new host on save load
+    // Stop any existing invite monitors before regenerating
+    if (Array.isArray(gameState.partyStates)) {
+      gameState.partyStates.forEach(party => {
+        stopHostInvite(party.partyId)
+      })
+    }
+    
+    // Clear party states to force fresh regeneration
+    gameState.partyStates = []
+    
+    // Regenerate all invite tokens - the loader becomes the new host
+    regenerateAllInviteTokens().then(() => {
+      // Refresh the sidebar UI after tokens are regenerated
+      refreshSidebarMultiplayer()
+    }).catch(err => {
+      console.warn('Failed to regenerate multiplayer tokens on load:', err)
+    })
 
     showNotification('Game loaded: ' + (saveObj.label || key))
   }

@@ -1,4 +1,5 @@
 import { createRemoteConnection, RemoteConnectionStatus } from '../network/remoteConnection.js'
+import { handleReceivedCommand } from '../network/gameCommandSync.js'
 
 const STATUS_MESSAGES = {
   [RemoteConnectionStatus.IDLE]: 'Awaiting alias submission.',
@@ -105,8 +106,28 @@ export function initRemoteInviteLanding() {
     aliasInput.focus()
   }
 
-  const handleDataChannelMessage = (payload) => {
-    if (!payload || payload.type !== 'host-status') {
+  const handleDataChannelMessage = (rawPayload) => {
+    let payload = rawPayload
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload)
+      } catch (err) {
+        return
+      }
+    }
+    
+    if (!payload) {
+      return
+    }
+    
+    // Handle game command synchronization messages
+    if (payload.type === 'game-command') {
+      handleReceivedCommand(payload, 'host')
+      return
+    }
+    
+    // Handle host status messages
+    if (payload.type !== 'host-status') {
       return
     }
     const running = Boolean(payload.running)

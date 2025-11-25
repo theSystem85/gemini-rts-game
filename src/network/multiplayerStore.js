@@ -159,6 +159,60 @@ export function regenerateInviteToken(partyId) {
   return generateInviteForParty(partyId)
 }
 
+/**
+ * T017: Regenerate all invite tokens for the current game instance
+ * Called when a save is loaded to refresh tokens and establish new host
+ * @returns {Promise<void>}
+ */
+export async function regenerateAllInviteTokens() {
+  const parties = ensureMultiplayerState()
+  
+  // Generate a new game instance ID for the freshly loaded save
+  gameState.gameInstanceId = generateRandomId('game-instance')
+  gameState.hostId = generateRandomId('host')
+  
+  // Set the local session as the new host
+  gameState.multiplayerSession = {
+    ...gameState.multiplayerSession,
+    isRemote: false,
+    localRole: 'host',
+    status: 'idle',
+    alias: null,
+    inviteToken: null,
+    connectedAt: null
+  }
+  
+  // Regenerate tokens for all non-host parties
+  const regenerationPromises = parties
+    .filter(party => party.partyId !== gameState.humanPlayer)
+    .map(async (party) => {
+      // Reset party to AI control initially
+      party.owner = 'AI'
+      party.aiActive = true
+      party.lastConnectedAt = null
+      party.inviteToken = null
+      
+      // Generate new invite token
+      try {
+        await generateInviteForParty(party.partyId)
+      } catch (err) {
+        console.warn(`Failed to regenerate invite token for party ${party.partyId}:`, err)
+      }
+    })
+  
+  await Promise.all(regenerationPromises)
+  
+  showHostNotification('Multiplayer tokens regenerated - you are now the host')
+}
+
+/**
+ * Check if the current session is the host
+ * @returns {boolean}
+ */
+export function isHost() {
+  return gameState.multiplayerSession?.localRole === 'host' || !gameState.multiplayerSession?.isRemote
+}
+
 export function validateInviteToken(token) {
   purgeExpiredInvites()
   return inviteRecords.get(token) || null

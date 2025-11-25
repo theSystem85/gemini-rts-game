@@ -1,6 +1,7 @@
 import { gameState } from '../gameState.js'
 import { generateRandomId } from './multiplayerStore.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
+import { handleReceivedCommand } from './gameCommandSync.js'
 import {
   postOffer,
   postCandidate,

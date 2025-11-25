@@ -20,6 +20,7 @@ import {
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
+import { initAiPartySync } from './network/aiPartySync.js'
 import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -1222,6 +1223,9 @@ class Game {
     this.setupMapSettings()
 
     initSidebarMultiplayer()
+    
+    // T018: Initialize AI party sync observer for disconnect handling
+    initAiPartySync()
 
     // Setup production tabs and buttons
     this.productionController.initProductionTabs()

@@ -72,9 +72,12 @@ description: "Task list for implementing online multiplayer takeover"
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Detect WebRTC disconnects in `src/network/webrtcSession.js`, flip `aiActive` to true in `src/network/multiplayerStore.js`, and display a re-activation notification in `src/network/hostNotifications.js`
-- [ ] T017 [US3] Trigger `/game-instance/:instanceId/invite-regenerate` from `src/saveGame.js` when a save loads under a non-host, update `gameInstanceId`, regenerate tokens via `src/network/multiplayerStore.js`, and refresh the sidebar invite UI
-- [ ] T018 [US3] Ensure AI controllers in `src/ai/` reinitialize party assignments when `multiStore` reports `aiActive`, so gameplay continues immediately if a remote disconnect occurs before the next invite is consumed
+- [x] T016 [US3] Detect WebRTC disconnects in `src/network/webrtcSession.js`, flip `aiActive` to true in `src/network/multiplayerStore.js`, and display a re-activation notification in `src/network/hostNotifications.js`
+  - done: HostSession state change handler detects DISCONNECTED/FAILED, calls markPartyControlledByAi, emits AI_REACTIVATION_EVENT, and shows notification
+- [x] T017 [US3] Trigger `/game-instance/:instanceId/invite-regenerate` from `src/saveGame.js` when a save loads under a non-host, update `gameInstanceId`, regenerate tokens via `src/network/multiplayerStore.js`, and refresh the sidebar invite UI
+  - done: multiplayerStore exports regenerateAllInviteTokens() and isHost(); saveGame.js calls regeneration on load
+- [x] T018 [US3] Ensure AI controllers in `src/ai/` reinitialize party assignments when `multiStore` reports `aiActive`, so gameplay continues immediately if a remote disconnect occurs before the next invite is consumed
+  - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
 
 **Checkpoint**: Invite links survive disconnects, saves reload with new hosts/tokens, and AI immediately retakes disconnected parties.
 
