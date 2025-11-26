@@ -64,6 +64,8 @@
   - done: Fixed tank barrel disappearing on client by converting animation timestamps (recoilStartTime, muzzleFlashStartTime) to elapsed times for cross-machine sync; Added level, bountyCounter, baseCost to unit snapshot for promotion stars; Added broadcastUnitStop() and integrated into handleStopAttacking(); Fixed UNIT_STOP handler on host to clear target property
 - [ ] T032 Multiplayer network stats + bullets
   - TODO: finish host/client byte tracking for WebRTC data channels, display send/receive rates & totals inside FPS overlay/perf widget, and ensure bullet interpolation updates alongside unit interpolation on clients
+- [x] ✅ T033 Fix client building sync when host loads save game
+  - done: Added mapTilesX/mapTilesY to game state snapshot so client knows map dimensions; Added ensureClientMapGridInitialized() to initialize client mapGrid/occupancyMap before building placement; Fixed building placement bounds checking with proper mapGrid readiness validation; Added mainFactories sync to keep factories array from main.js in sync with gameState.factories
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

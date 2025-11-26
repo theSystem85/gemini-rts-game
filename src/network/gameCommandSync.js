@@ -7,7 +7,7 @@ import { gameState } from '../gameState.js'
 import { getActiveRemoteConnection } from './remoteConnection.js'
 import { getActiveHostMonitor } from './webrtcSession.js'
 import { placeBuilding } from '../buildings.js'
-import { units as mainUnits, bullets as mainBullets } from '../main.js'
+import { units as mainUnits, bullets as mainBullets, factories as mainFactories } from '../main.js'
 
 // Command types for synchronization
 export const COMMAND_TYPES = {
@@ -868,8 +868,52 @@ function createGameStateSnapshot() {
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
     partyStates: gameState.partyStates,
+    // Include map dimensions so client can initialize mapGrid
+    mapTilesX: gameState.mapTilesX,
+    mapTilesY: gameState.mapTilesY,
     timestamp: Date.now()
   }
+}
+
+/**
+ * Ensure mapGrid is initialized with proper dimensions on client
+ * @param {number} width - Map width in tiles
+ * @param {number} height - Map height in tiles
+ */
+function ensureClientMapGridInitialized(width, height) {
+  if (!width || !height) {
+    return false
+  }
+  
+  // Initialize mapGrid if empty or wrong dimensions
+  if (!gameState.mapGrid || gameState.mapGrid.length !== height || 
+      (gameState.mapGrid[0] && gameState.mapGrid[0].length !== width)) {
+    console.log('[GameCommandSync] Initializing client mapGrid:', width, 'x', height)
+    gameState.mapGrid = []
+    for (let y = 0; y < height; y++) {
+      gameState.mapGrid[y] = []
+      for (let x = 0; x < width; x++) {
+        gameState.mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
+      }
+    }
+    gameState.mapTilesX = width
+    gameState.mapTilesY = height
+  }
+  
+  // Initialize occupancyMap if empty or wrong dimensions
+  if (!gameState.occupancyMap || gameState.occupancyMap.length !== height ||
+      (gameState.occupancyMap[0] && gameState.occupancyMap[0].length !== width)) {
+    console.log('[GameCommandSync] Initializing client occupancyMap:', width, 'x', height)
+    gameState.occupancyMap = []
+    for (let y = 0; y < height; y++) {
+      gameState.occupancyMap[y] = []
+      for (let x = 0; x < width; x++) {
+        gameState.occupancyMap[y][x] = 0
+      }
+    }
+  }
+  
+  return true
 }
 
 /**
@@ -890,6 +934,9 @@ function applyGameStateSnapshot(snapshot) {
     clientInitialized = true
   }
   
+  // Get current time for animation timestamp conversions (used by units and buildings)
+  const now = performance.now()
+  
   // Note: Money is NOT synced from host to client because each player has their own money!
   // The client manages their own gameState.money based on their actions.
   // If in the future we want to display other players' money, we'd use per-party tracking.
@@ -909,12 +956,16 @@ function applyGameStateSnapshot(snapshot) {
     gameState.partyStates = snapshot.partyStates
   }
   
+  // Initialize client's mapGrid and occupancyMap from host's dimensions
+  // This must happen before syncing buildings so placeBuilding can work
+  if (snapshot.mapTilesX && snapshot.mapTilesY) {
+    ensureClientMapGridInitialized(snapshot.mapTilesX, snapshot.mapTilesY)
+  }
+  
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)
   // This ensures all units from all parties are visible
   // Use interpolation for smooth movement between snapshots
   if (Array.isArray(snapshot.units)) {
-    const now = performance.now()
-    
     // Create a map of existing units by ID for merging non-serialized properties
     const existingById = new Map()
     mainUnits.forEach(u => {
@@ -1058,9 +1109,19 @@ function applyGameStateSnapshot(snapshot) {
     })
     
     // Place new buildings in the map grid and occupancy map
-    if (newBuildings.length > 0 && gameState.mapGrid) {
+    // Must check that mapGrid is properly initialized (not just truthy but has rows/columns)
+    const mapGridReady = gameState.mapGrid && gameState.mapGrid.length > 0 && 
+                         Array.isArray(gameState.mapGrid[0]) && gameState.mapGrid[0].length > 0
+    if (newBuildings.length > 0 && mapGridReady) {
+      console.log('[GameCommandSync] Placing', newBuildings.length, 'new buildings in client mapGrid')
       newBuildings.forEach(building => {
-        placeBuilding(building, gameState.mapGrid, gameState.occupancyMap)
+        // Verify building position is within map bounds before placing
+        if (building.y >= 0 && building.y + (building.height || 1) <= gameState.mapGrid.length &&
+            building.x >= 0 && building.x + (building.width || 1) <= (gameState.mapGrid[0]?.length || 0)) {
+          placeBuilding(building, gameState.mapGrid, gameState.occupancyMap)
+        } else {
+          console.warn('[GameCommandSync] Building outside map bounds:', building.type, 'at', building.x, building.y)
+        }
       })
       
       // Trigger tech tree sync after buildings are added
@@ -1068,10 +1129,12 @@ function applyGameStateSnapshot(snapshot) {
         needsTechTreeSync = false
         requestTechTreeSync()
       }
+    } else if (newBuildings.length > 0) {
+      console.warn('[GameCommandSync] Cannot place buildings - mapGrid not ready. newBuildings:', newBuildings.length, 'mapGrid length:', gameState.mapGrid?.length)
     }
   }
   
-  // Sync factories
+  // Sync factories - update both gameState.factories and mainFactories from main.js
   if (Array.isArray(snapshot.factories)) {
     const existingFactories = gameState.factories || []
     const snapshotFactoryIds = new Set(snapshot.factories.map(f => f.id))
@@ -1090,6 +1153,10 @@ function applyGameStateSnapshot(snapshot) {
         gameState.factories.push(snapshotFactory)
       }
     })
+    
+    // Also sync mainFactories array from main.js for compatibility
+    mainFactories.length = 0
+    mainFactories.push(...gameState.factories)
   }
   
   // Sync bullets - update the mainBullets array from main.js with interpolation
