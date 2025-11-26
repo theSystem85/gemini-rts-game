@@ -124,6 +124,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           // Apply unit attack command from client
           const { unitIds, targetId, targetX, targetY } = cmd.payload
           const partyId = cmd.sourcePartyId
+          console.log('[Host] Processing UNIT_ATTACK from party:', partyId, 'unitIds:', unitIds, 'targetId:', targetId)
           unitIds.forEach(unitId => {
             const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
             if (unit) {
@@ -132,13 +133,23 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
                              gameState.buildings.find(b => b.id === targetId) ||
                              factories.find(f => f.id === targetId)
               if (target) {
-                unit.attackTarget = target
+                // Combat system uses unit.target, not unit.attackTarget
+                unit.target = target
+                unit.moveTarget = null
                 unit.guardPosition = null
+                unit.path = null // Clear path so unit stops and attacks
+                console.log('[Host] Unit', unitId, 'target set to', target.id || target.type)
               } else if (targetX !== undefined && targetY !== undefined) {
-                // Attack move to position
-                unit.moveTarget = { x: targetX, y: targetY }
-                unit.attackTarget = null
+                // Attack move to position - convert pixels to tiles
+                const tileX = Math.floor(targetX / TILE_SIZE)
+                const tileY = Math.floor(targetY / TILE_SIZE)
+                unit.moveTarget = { x: tileX, y: tileY }
+                unit.target = null
+              } else {
+                console.warn('[Host] Target not found:', targetId)
               }
+            } else {
+              console.warn('[Host] Unit not found or owner mismatch:', unitId, partyId)
             }
           })
         } else if (cmd.commandType === COMMAND_TYPES.UNIT_STOP && cmd.payload) {
@@ -211,7 +222,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Update unit interpolation for smooth movement on remote clients
     // This must be called every frame to interpolate between host snapshots
     if (isRemoteClient) {
-      updateUnitInterpolation()
+      updateUnitInterpolation() // Also handles bullet interpolation
     }
 
     // Update movement speeds for all units based on speed multiplier

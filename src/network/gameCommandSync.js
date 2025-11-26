@@ -61,8 +61,55 @@ let productionControllerRef = null
 // ============ INTERPOLATION STATE ============
 // Track unit positions for smooth interpolation between snapshots
 const unitInterpolationState = new Map() // unitId -> { prevX, prevY, targetX, targetY, prevDir, targetDir, startTime }
+// Track bullet positions for smooth interpolation between snapshots
+const bulletInterpolationState = new Map() // bulletId -> { prevX, prevY, targetX, targetY }
 let lastSnapshotTime = 0
 const INTERPOLATION_DURATION_MS = GAME_STATE_SYNC_INTERVAL_MS // Match the sync interval
+
+// ============ NETWORK STATS ============
+let networkStats = {
+  bytesSent: 0,
+  bytesReceived: 0,
+  lastBytesSent: 0,
+  lastBytesReceived: 0,
+  sendRate: 0,    // bytes per second
+  receiveRate: 0, // bytes per second
+  lastRateUpdate: 0
+}
+
+/**
+ * Get current network statistics
+ * @returns {Object} Network stats object
+ */
+export function getNetworkStats() {
+  return { ...networkStats }
+}
+
+/**
+ * Update network stats with bytes sent/received
+ * @param {number} sent - Bytes sent
+ * @param {number} received - Bytes received
+ */
+export function updateNetworkStats(sent = 0, received = 0) {
+  networkStats.bytesSent += sent
+  networkStats.bytesReceived += received
+  
+  const now = performance.now()
+  const elapsed = now - networkStats.lastRateUpdate
+  
+  // Update rate every second
+  if (elapsed >= 1000) {
+    const sentDiff = networkStats.bytesSent - networkStats.lastBytesSent
+    const receivedDiff = networkStats.bytesReceived - networkStats.lastBytesReceived
+    
+    networkStats.sendRate = Math.round((sentDiff / elapsed) * 1000) // bytes per second
+    networkStats.receiveRate = Math.round((receivedDiff / elapsed) * 1000)
+    
+    networkStats.lastBytesSent = networkStats.bytesSent
+    networkStats.lastBytesReceived = networkStats.bytesReceived
+    networkStats.lastRateUpdate = now
+  }
+}
 
 /**
  * Set the production controller reference for tech tree syncing
@@ -86,7 +133,7 @@ function requestTechTreeSync() {
 }
 
 /**
- * Update unit interpolation for smooth movement between snapshots (client only)
+ * Update unit and bullet interpolation for smooth movement between snapshots (client only)
  * Call this every frame from the game loop
  */
 export function updateUnitInterpolation() {
@@ -129,6 +176,18 @@ export function updateUnitInterpolation() {
       if (diff < -Math.PI) diff += Math.PI * 2
       unit.turretDirection = state.prevTurretDir + diff * t
     }
+  })
+  
+  // Interpolate each bullet's position
+  mainBullets.forEach(bullet => {
+    const state = bulletInterpolationState.get(bullet.id)
+    if (!state) {
+      return // No interpolation state for this bullet
+    }
+    
+    // Linear interpolation for position
+    bullet.x = state.prevX + (state.targetX - state.prevX) * t
+    bullet.y = state.prevY + (state.targetY - state.prevY) * t
   })
 }
 
@@ -221,7 +280,10 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
     isHost: isHost()
   }
   
-  console.log('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
+  // Only log non-snapshot commands to reduce console noise
+  if (commandType !== COMMAND_TYPES.GAME_STATE_SNAPSHOT) {
+    console.log('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
+  }
   
   if (isHost()) {
     // Host broadcasts to all connected peers
@@ -968,11 +1030,59 @@ function applyGameStateSnapshot(snapshot) {
     })
   }
   
-  // Sync bullets - update the mainBullets array from main.js
+  // Sync bullets - update the mainBullets array from main.js with interpolation
   if (Array.isArray(snapshot.bullets)) {
+    // Create a map of existing bullets by ID
+    const existingById = new Map()
+    mainBullets.forEach(b => {
+      if (b.id) existingById.set(b.id, b)
+    })
+    
+    // Track which bullet IDs are in this snapshot
+    const snapshotBulletIds = new Set()
+    
+    // Build the updated bullets array with interpolation
+    const updatedBullets = snapshot.bullets.map(snapshotBullet => {
+      snapshotBulletIds.add(snapshotBullet.id)
+      const existing = existingById.get(snapshotBullet.id)
+      
+      if (existing) {
+        // Set up interpolation for existing bullet
+        bulletInterpolationState.set(snapshotBullet.id, {
+          prevX: existing.x,
+          prevY: existing.y,
+          targetX: snapshotBullet.x,
+          targetY: snapshotBullet.y
+        })
+        
+        // Merge non-position data
+        const { x, y, ...nonPositionData } = snapshotBullet
+        Object.assign(existing, nonPositionData)
+        existing._targetX = x
+        existing._targetY = y
+        return existing
+      } else {
+        // New bullet - no interpolation needed
+        bulletInterpolationState.set(snapshotBullet.id, {
+          prevX: snapshotBullet.x,
+          prevY: snapshotBullet.y,
+          targetX: snapshotBullet.x,
+          targetY: snapshotBullet.y
+        })
+        return { ...snapshotBullet }
+      }
+    })
+    
+    // Clean up interpolation state for bullets that no longer exist
+    for (const bulletId of bulletInterpolationState.keys()) {
+      if (!snapshotBulletIds.has(bulletId)) {
+        bulletInterpolationState.delete(bulletId)
+      }
+    }
+    
     // Replace contents of mainBullets array in-place
     mainBullets.length = 0
-    mainBullets.push(...snapshot.bullets)
+    mainBullets.push(...updatedBullets)
     
     // Also keep gameState.bullets in sync
     gameState.bullets = mainBullets
@@ -1087,8 +1197,9 @@ function createClientStateUpdate() {
 
 /**
  * Send client state update to host (client only)
+ * Currently unused - reserved for future client->host state updates
  */
-function sendClientStateUpdate() {
+function _sendClientStateUpdate() {
   if (isHost() || !hasActiveRemoteSession()) {
     return
   }

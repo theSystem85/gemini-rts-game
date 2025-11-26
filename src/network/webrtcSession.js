@@ -4,12 +4,12 @@ import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import { fetchPendingSessions, postAnswer, postCandidate } from './signalling.js'
-import { handleReceivedCommand, startGameStateSync, stopGameStateSync } from './gameCommandSync.js'
+import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNetworkStats } from './gameCommandSync.js'
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_HOST_STATUS_INTERVAL_MS = 1500
 const DEFAULT_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
-const AI_FALLBACK_DELAY_MS = 2000 // 2 seconds per spec requirement
+const _AI_FALLBACK_DELAY_MS = 2000 // 2 seconds per spec requirement
 
 // Event type for AI reactivation
 export const AI_REACTIVATION_EVENT = 'partyAiReactivated'
@@ -110,7 +110,10 @@ class HostSession {
       return
     }
     try {
-      this.dataChannel.send(JSON.stringify(payload))
+      const message = JSON.stringify(payload)
+      const byteLength = message.length
+      updateNetworkStats(byteLength, 0)
+      this.dataChannel.send(message)
     } catch (err) {
       console.warn('Failed to send host status message:', err)
     }
@@ -177,6 +180,10 @@ class HostSession {
     this.dataChannel = channel
     this.dataChannel.addEventListener('message', (event) => {
       console.log('[HostSession] Raw message received from client:', event.data?.substring?.(0, 200) || event.data)
+      // Track bytes received
+      const byteLength = typeof event.data === 'string' ? event.data.length : event.data.byteLength || 0
+      updateNetworkStats(0, byteLength)
+      
       let payload = event.data
       if (typeof payload === 'string') {
         try {
@@ -232,7 +239,7 @@ class HostSession {
           candidate: JSON.parse(entry),
           origin: 'peer'
         }
-      } catch (err) {
+      } catch {
         return null
       }
     }

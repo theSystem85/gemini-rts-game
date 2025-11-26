@@ -1,7 +1,7 @@
 import { gameState } from '../gameState.js'
 import { generateRandomId } from './multiplayerStore.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
-import { handleReceivedCommand } from './gameCommandSync.js'
+import { updateNetworkStats } from './gameCommandSync.js'
 import {
   postOffer,
   postCandidate,
@@ -102,7 +102,10 @@ class RemoteConnection {
     console.log('[RemoteConnection] send() called, dataChannel state:', this.dataChannel?.readyState)
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       try {
-        this.dataChannel.send(typeof data === 'string' ? data : JSON.stringify(data))
+        const payload = typeof data === 'string' ? data : JSON.stringify(data)
+        this.dataChannel.send(payload)
+        // Track bytes sent for network stats
+        updateNetworkStats(payload.length, 0)
         console.log('[RemoteConnection] Data sent successfully')
       } catch (err) {
         console.warn('Failed to send remote data:', err)
@@ -159,6 +162,9 @@ class RemoteConnection {
       this.onDataChannelOpen()
     })
     this.dataChannel.addEventListener('message', (event) => {
+      // Track bytes received for network stats
+      const dataSize = typeof event.data === 'string' ? event.data.length : (event.data?.byteLength || 0)
+      updateNetworkStats(0, dataSize)
       this.onDataChannelMessage(event.data)
     })
     this.dataChannel.addEventListener('close', () => {

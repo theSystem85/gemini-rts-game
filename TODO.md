@@ -60,6 +60,8 @@
   - done: Fixed updateUnitPathfinding() in unitMovement.js to iterate over ALL units with moveTarget, not just selectedUnits; Previously host would receive UNIT_MOVE and set moveTarget but pathfinding only ran for local player's selected units; Now any unit with moveTarget gets path calculated
 - [x] ✅ T030 Client movement interpolation
   - done: Added linear interpolation for smooth unit movement on client between 100ms host snapshots; unitInterpolationState Map tracks prev/target positions per unit; updateUnitInterpolation() called every frame interpolates x, y, direction, turretDirection; Handles angle wraparound for rotation
+- [ ] T031 Multiplayer network stats + bullets
+  - TODO: finish host/client byte tracking for WebRTC data channels, display send/receive rates & totals inside FPS overlay/perf widget, and ensure bullet interpolation updates alongside unit interpolation on clients
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:
