@@ -99,12 +99,16 @@ class RemoteConnection {
   }
 
   send(data) {
+    console.log('[RemoteConnection] send() called, dataChannel state:', this.dataChannel?.readyState)
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       try {
         this.dataChannel.send(typeof data === 'string' ? data : JSON.stringify(data))
+        console.log('[RemoteConnection] Data sent successfully')
       } catch (err) {
         console.warn('Failed to send remote data:', err)
       }
+    } else {
+      console.warn('[RemoteConnection] Cannot send - dataChannel not open:', this.dataChannel?.readyState)
     }
   }
 

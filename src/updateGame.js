@@ -98,13 +98,26 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           // Apply unit move command from client
           const { unitIds, targetX, targetY } = cmd.payload
           const partyId = cmd.sourcePartyId
+          // Convert pixel coordinates to tile coordinates
+          const tileX = Math.floor(targetX / TILE_SIZE)
+          const tileY = Math.floor(targetY / TILE_SIZE)
+          console.log('[Host] Processing UNIT_MOVE from party:', partyId, 'unitIds:', unitIds, 'target pixels:', targetX, targetY, 'tiles:', tileX, tileY)
           unitIds.forEach(unitId => {
-            const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
+            // Find unit by ID - owner check is implicit since client can only select their own units
+            const unit = mainUnits.find(u => u.id === unitId)
             if (unit) {
-              // Set movement target - the movement system will handle pathfinding
-              unit.moveTarget = { x: targetX, y: targetY }
-              unit.attackTarget = null
-              unit.guardPosition = null
+              // Verify ownership before applying command
+              if (unit.owner === partyId) {
+                // Set movement target in TILE coordinates - the movement system will handle pathfinding
+                unit.moveTarget = { x: tileX, y: tileY }
+                unit.attackTarget = null
+                unit.guardPosition = null
+                console.log('[Host] Unit', unitId, 'moveTarget set to tile', tileX, tileY)
+              } else {
+                console.warn('[Host] Unit', unitId, 'owner mismatch:', unit.owner, '!==', partyId)
+              }
+            } else {
+              console.warn('[Host] Unit not found:', unitId)
             }
           })
         } else if (cmd.commandType === COMMAND_TYPES.UNIT_ATTACK && cmd.payload) {
@@ -195,7 +208,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Update game time (both host and client need this for animations)
     updateGameTime(gameState, delta)
 
-    // Update unit position interpolation for smooth movement (client only)
+    // Update unit interpolation for smooth movement on remote clients
+    // This must be called every frame to interpolate between host snapshots
     if (isRemoteClient) {
       updateUnitInterpolation()
     }

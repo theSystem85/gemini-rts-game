@@ -176,15 +176,18 @@ class HostSession {
     }
     this.dataChannel = channel
     this.dataChannel.addEventListener('message', (event) => {
+      console.log('[HostSession] Raw message received from client:', event.data?.substring?.(0, 200) || event.data)
       let payload = event.data
       if (typeof payload === 'string') {
         try {
           payload = JSON.parse(payload)
         } catch (err) {
+          console.warn('[HostSession] Failed to parse message as JSON:', err)
           payload = null
         }
       }
       if (payload) {
+        console.log('[HostSession] Parsed payload type:', payload.type)
         this.onControlMessage?.(this, payload)
       }
     })
@@ -405,8 +408,11 @@ class HostInviteMonitor {
       return
     }
     
+    console.log('[Host WebRTC] Received control message:', payload.type, payload)
+    
     // Handle game command synchronization messages
     if (payload.type === 'game-command') {
+      console.log('[Host WebRTC] Forwarding game-command to handleReceivedCommand')
       handleReceivedCommand(payload, session.sourceId)
       return
     }

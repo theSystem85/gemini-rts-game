@@ -54,6 +54,12 @@
   - done: Implemented proper host-authoritative architecture where host runs all game logic and clients only render + send user commands; Fixed updateGame.js to skip game logic on remote clients (early return after visual updates); Removed CLIENT_STATE_UPDATE sending from client in gameCommandSync.js; This fixes: HP oscillation (only host computes damage), turret rotation sync (only host updates), bullets visibility (mainBullets synced via snapshot), bidirectional unit production (all units synced via snapshot)
 - [x] ✅ T027 Client unit spawn and smooth movement fix
   - done: Client no longer spawns units locally - sends UNIT_SPAWN command to host; Host processes UNIT_SPAWN and creates unit; Added easeOutQuad interpolation for smooth unit movement between 500ms snapshots; Movement interpolation runs each frame on client via updateUnitInterpolation()
+- [x] ✅ T028 Client commands, wrecks sync, and remove interpolation
+  - done: Added debug logging for client UNIT_MOVE commands; Removed interpolation entirely - using faster 100ms sync interval instead; Added unitWrecks to snapshot and applyGameStateSnapshot(); Direct position sync for consistent rendering with host
+- [x] ✅ T029 Fix client unit movement not working on host
+  - done: Fixed updateUnitPathfinding() in unitMovement.js to iterate over ALL units with moveTarget, not just selectedUnits; Previously host would receive UNIT_MOVE and set moveTarget but pathfinding only ran for local player's selected units; Now any unit with moveTarget gets path calculated
+- [x] ✅ T030 Client movement interpolation
+  - done: Added linear interpolation for smooth unit movement on client between 100ms host snapshots; unitInterpolationState Map tracks prev/target positions per unit; updateUnitInterpolation() called every frame interpolates x, y, direction, turretDirection; Handles angle wraparound for rotation
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

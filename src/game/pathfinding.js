@@ -66,6 +66,34 @@ export const updateGlobalPathfinding = logPerformance(_updateGlobalPathfinding, 
 function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
   const now = performance.now()
 
+  // IMMEDIATE path calculation for units with moveTarget but no path
+  // This ensures remote player units get paths right away without waiting for the interval
+  const unitsNeedingImmediatePath = units.filter(u => 
+    u.moveTarget && 
+    (!u.path || u.path.length === 0) &&
+    !u.lastPathCalcTime // Only units that haven't had paths calculated yet
+  )
+  
+  unitsNeedingImmediatePath.forEach(unit => {
+    const targetPos = unit.moveTarget
+    const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+    const cacheOptions = { unitOwner: unit.owner }
+    const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
+    const useOccupancyMap = distance <= PATHFINDING_THRESHOLD
+    
+    const newPath = useOccupancyMap
+      ? getCachedPath(startNode, targetPos, mapGrid, occupancyMap, cacheOptions)
+      : getCachedPath(startNode, targetPos, mapGrid, null, cacheOptions)
+    
+    if (newPath.length > 1) {
+      unit.path = newPath.slice(1)
+      unit.lastPathCalcTime = now
+      console.log('[Pathfinding] IMMEDIATE path assigned to unit', unit.id, 'owner:', unit.owner, 'path length:', unit.path.length)
+    } else {
+      console.log('[Pathfinding] IMMEDIATE - no valid path for unit', unit.id, 'from', startNode, 'to', targetPos)
+    }
+  })
+
   if (!gameState.lastGlobalPathCalc || now - gameState.lastGlobalPathCalc > PATH_CALC_INTERVAL) {
     gameState.lastGlobalPathCalc = now
 
@@ -167,6 +195,7 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
 
           if (newPath.length > 1) {
             unit.path = newPath.slice(1)
+            console.log('[Pathfinding] Path assigned to unit', unit.id, 'owner:', unit.owner, 'path length:', unit.path.length)
             // Update path calculation time - use attack-specific timer for attacking units
             if (isAttackMode) {
               unit.lastAttackPathCalcTime = now
@@ -176,6 +205,8 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
           } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
             // Clear moveTarget if we've reached destination
             unit.moveTarget = null
+          } else {
+            console.log('[Pathfinding] No valid path for unit', unit.id, 'from', startNode, 'to', adjustedTarget, 'newPath:', newPath)
           }
         }
       }

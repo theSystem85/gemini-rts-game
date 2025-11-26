@@ -24,21 +24,18 @@ export const COMMAND_TYPES = {
   GAME_PAUSE: 'game-pause',
   GAME_RESUME: 'game-resume',
   GAME_STATE_SNAPSHOT: 'game-state-snapshot',
-  GAME_STATE_DELTA: 'game-state-delta',  // Delta updates for efficiency
+  GAME_STATE_DELTA: 'game-state-delta',  // Delta updates for efficiency (future use)
   CLIENT_STATE_UPDATE: 'client-state-update'
 }
-
-// Interpolation state for smooth movement on clients
-const unitInterpolationState = new Map()  // unitId -> { targetX, targetY, startX, startY, startTime, duration }
-const INTERPOLATION_DURATION_MS = 450  // Slightly less than sync interval for smooth transitions
 
 // Last snapshot hash for delta sync (future use)
 let _lastSnapshotHash = null
 
 const GAME_COMMAND_MESSAGE_TYPE = 'game-command'
 
-// Interval for game state snapshots (ms)
-const GAME_STATE_SYNC_INTERVAL_MS = 500
+// Interval for game state snapshots (ms) - 100ms for smoother movement sync
+// Note: This is a tradeoff between network bandwidth and visual smoothness
+const GAME_STATE_SYNC_INTERVAL_MS = 100
 
 // Queue for commands received from remote players (processed by host)
 const pendingRemoteCommands = []
@@ -61,6 +58,12 @@ let needsTechTreeSync = true
 // Reference to production controller for tech tree sync
 let productionControllerRef = null
 
+// ============ INTERPOLATION STATE ============
+// Track unit positions for smooth interpolation between snapshots
+const unitInterpolationState = new Map() // unitId -> { prevX, prevY, targetX, targetY, prevDir, targetDir, startTime }
+let lastSnapshotTime = 0
+const INTERPOLATION_DURATION_MS = GAME_STATE_SYNC_INTERVAL_MS // Match the sync interval
+
 /**
  * Set the production controller reference for tech tree syncing
  * @param {Object} controller - ProductionController instance
@@ -80,6 +83,53 @@ function requestTechTreeSync() {
       console.log('[GameCommandSync] Tech tree synced with existing buildings')
     }, 100)
   }
+}
+
+/**
+ * Update unit interpolation for smooth movement between snapshots (client only)
+ * Call this every frame from the game loop
+ */
+export function updateUnitInterpolation() {
+  if (isHost()) {
+    return // Host doesn't need interpolation - it has the authoritative state
+  }
+  
+  const now = performance.now()
+  const elapsed = now - lastSnapshotTime
+  const t = Math.min(1, elapsed / INTERPOLATION_DURATION_MS) // Clamp to 0-1
+  
+  // Interpolate each unit's position
+  mainUnits.forEach(unit => {
+    const state = unitInterpolationState.get(unit.id)
+    if (!state) {
+      return // No interpolation state for this unit
+    }
+    
+    // Linear interpolation for position
+    unit.x = state.prevX + (state.targetX - state.prevX) * t
+    unit.y = state.prevY + (state.targetY - state.prevY) * t
+    
+    // Update tile position based on interpolated position
+    unit.tileX = Math.floor(unit.x / 32) // TILE_SIZE = 32
+    unit.tileY = Math.floor(unit.y / 32)
+    
+    // Interpolate direction (handle wraparound for angles)
+    if (state.targetDir !== undefined && state.prevDir !== undefined) {
+      let diff = state.targetDir - state.prevDir
+      // Handle wraparound (angles go from 0 to 2*PI)
+      if (diff > Math.PI) diff -= Math.PI * 2
+      if (diff < -Math.PI) diff += Math.PI * 2
+      unit.direction = state.prevDir + diff * t
+    }
+    
+    // Interpolate turret direction if present
+    if (state.targetTurretDir !== undefined && state.prevTurretDir !== undefined) {
+      let diff = state.targetTurretDir - state.prevTurretDir
+      if (diff > Math.PI) diff -= Math.PI * 2
+      if (diff < -Math.PI) diff += Math.PI * 2
+      unit.turretDirection = state.prevTurretDir + diff * t
+    }
+  })
 }
 
 /**
@@ -122,7 +172,14 @@ export function isHost() {
  * @returns {boolean}
  */
 function hasActiveRemoteSession() {
-  return Boolean(gameState.multiplayerSession?.isRemote || getActiveConnection())
+  const isRemote = Boolean(gameState.multiplayerSession?.isRemote)
+  const activeConn = getActiveConnection()
+  const result = isRemote || Boolean(activeConn)
+  // Debug log to understand session state
+  if (!result) {
+    console.log('[hasActiveRemoteSession] No active session - isRemote:', isRemote, 'activeConn:', activeConn)
+  }
+  return result
 }
 
 /**
@@ -164,18 +221,24 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
     isHost: isHost()
   }
   
+  console.log('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
+  
   if (isHost()) {
     // Host broadcasts to all connected peers
     broadcastToAllPeers(command)
   } else {
     // Remote client sends to host
     const remoteConn = getActiveRemoteConnection()
+    console.log('[GameCommandSync] Client sending to host, connection:', remoteConn ? 'active' : 'null')
     if (remoteConn) {
       try {
         remoteConn.send(command)
+        console.log('[GameCommandSync] Command sent successfully')
       } catch (err) {
         console.warn('Failed to send game command to host:', err)
       }
+    } else {
+      console.warn('[GameCommandSync] No active remote connection to send command')
     }
   }
 }
@@ -225,10 +288,22 @@ export function handleReceivedCommand(command, _sourceId) {
   
   if (isHost()) {
     // Host validates and processes/re-broadcasts the command
-    // Only accept commands from the party that the remote player controls
+    // Only accept commands from the party that the remote player controls (aiActive === false)
     const partyState = gameState.partyStates?.find(p => p.partyId === sourceParty)
-    if (!partyState || partyState.aiActive) {
-      console.warn('Received command from unauthorized party:', sourceParty)
+    
+    console.log('[Host] Received command from party:', sourceParty, 'type:', command.commandType)
+    console.log('[Host] PartyState found:', partyState ? { partyId: partyState.partyId, aiActive: partyState.aiActive, owner: partyState.owner } : 'NOT FOUND')
+    console.log('[Host] All partyStates:', gameState.partyStates?.map(p => ({ partyId: p.partyId, aiActive: p.aiActive })))
+    
+    if (!partyState) {
+      console.warn('Received command from unknown party:', sourceParty)
+      return
+    }
+    
+    // Only reject if aiActive is explicitly true (AI controlled)
+    // Accept if aiActive is false or undefined (human controlled)
+    if (partyState.aiActive === true) {
+      console.warn('Received command from AI-controlled party:', sourceParty)
       return
     }
     
@@ -237,6 +312,7 @@ export function handleReceivedCommand(command, _sourceId) {
       ...command,
       receivedAt: Date.now()
     })
+    console.log('[Host] Command queued for processing, queue length:', pendingRemoteCommands.length)
     
     // Re-broadcast to other peers so they stay in sync
     broadcastToAllPeers(command)
@@ -672,12 +748,30 @@ function createGameStateSnapshot() {
     maxRadius: exp.maxRadius
   }))
   
+  // Serialize unit wrecks
+  const unitWrecks = (gameState.unitWrecks || []).map(wreck => ({
+    id: wreck.id,
+    sourceUnitId: wreck.sourceUnitId,
+    type: wreck.type,
+    x: wreck.x,
+    y: wreck.y,
+    tileX: wreck.tileX,
+    tileY: wreck.tileY,
+    direction: wreck.direction,
+    turretDirection: wreck.turretDirection,
+    createdAt: wreck.createdAt,
+    owner: wreck.owner,
+    health: wreck.health,
+    maxHealth: wreck.maxHealth
+  }))
+  
   return {
     units,
     buildings,
     bullets,
     factories,
     explosions,
+    unitWrecks,
     money: gameState.money,
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
@@ -725,7 +819,7 @@ function applyGameStateSnapshot(snapshot) {
   
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)
   // This ensures all units from all parties are visible
-  // Use interpolation for smooth movement
+  // Use interpolation for smooth movement between snapshots
   if (Array.isArray(snapshot.units)) {
     const now = performance.now()
     
@@ -735,56 +829,67 @@ function applyGameStateSnapshot(snapshot) {
       if (u.id) existingById.set(u.id, u)
     })
     
-    // Track which units are in the snapshot (to remove units that are gone)
-    const snapshotUnitIds = new Set(snapshot.units.map(u => u.id))
+    // Track which unit IDs are in this snapshot (to clean up removed units from interpolation state)
+    const snapshotUnitIds = new Set()
     
-    // Build the updated units array, preserving local-only properties
+    // Build the updated units array, preserving local-only properties (like cached sprites)
     const updatedUnits = snapshot.units.map(snapshotUnit => {
+      snapshotUnitIds.add(snapshotUnit.id)
       const existing = existingById.get(snapshotUnit.id)
       
       if (existing) {
-        // Set up interpolation for position changes
-        const positionChanged = existing.x !== snapshotUnit.x || existing.y !== snapshotUnit.y
+        // Set up interpolation: store current position as prev, snapshot as target
+        unitInterpolationState.set(snapshotUnit.id, {
+          prevX: existing.x,
+          prevY: existing.y,
+          targetX: snapshotUnit.x,
+          targetY: snapshotUnit.y,
+          prevDir: existing.direction,
+          targetDir: snapshotUnit.direction,
+          prevTurretDir: existing.turretDirection,
+          targetTurretDir: snapshotUnit.turretDirection
+        })
         
-        if (positionChanged) {
-          // Store interpolation target
-          unitInterpolationState.set(snapshotUnit.id, {
-            startX: existing.x,
-            startY: existing.y,
-            targetX: snapshotUnit.x,
-            targetY: snapshotUnit.y,
-            startTime: now,
-            duration: INTERPOLATION_DURATION_MS
-          })
-          
-          // Don't immediately update position - let interpolation handle it
-          // Destructure to exclude x and y, apply rest of properties
-          const { x: _x, y: _y, ...restOfSnapshot } = snapshotUnit
-          Object.assign(existing, restOfSnapshot)
-          // Keep current position for interpolation
-        } else {
-          // No position change, apply directly
-          Object.assign(existing, snapshotUnit)
-          // Clear any interpolation for this unit
-          unitInterpolationState.delete(snapshotUnit.id)
-        }
+        // Merge all snapshot data EXCEPT position (which we'll interpolate)
+        const { x, y, tileX, tileY, direction, turretDirection, ...nonPositionData } = snapshotUnit
+        Object.assign(existing, nonPositionData)
+        // Store target position for when interpolation completes
+        existing._targetX = x
+        existing._targetY = y
+        existing._targetTileX = tileX
+        existing._targetTileY = tileY
+        existing._targetDirection = direction
+        existing._targetTurretDirection = turretDirection
         return existing
       } else {
-        // New unit from host - no interpolation needed
+        // New unit from host - no interpolation, just place it
+        unitInterpolationState.set(snapshotUnit.id, {
+          prevX: snapshotUnit.x,
+          prevY: snapshotUnit.y,
+          targetX: snapshotUnit.x,
+          targetY: snapshotUnit.y,
+          prevDir: snapshotUnit.direction,
+          targetDir: snapshotUnit.direction,
+          prevTurretDir: snapshotUnit.turretDirection,
+          targetTurretDir: snapshotUnit.turretDirection
+        })
         return { ...snapshotUnit }
       }
     })
     
-    // Replace contents of mainUnits array in-place (so GameLoop reference stays valid)
-    mainUnits.length = 0
-    mainUnits.push(...updatedUnits)
-    
-    // Clean up interpolation state for removed units
+    // Clean up interpolation state for units that no longer exist
     for (const unitId of unitInterpolationState.keys()) {
       if (!snapshotUnitIds.has(unitId)) {
         unitInterpolationState.delete(unitId)
       }
     }
+    
+    // Update snapshot time for interpolation
+    lastSnapshotTime = now
+    
+    // Replace contents of mainUnits array in-place (so GameLoop reference stays valid)
+    mainUnits.length = 0
+    mainUnits.push(...updatedUnits)
     
     // Also keep gameState.units in sync
     gameState.units = mainUnits
@@ -886,6 +991,36 @@ function applyGameStateSnapshot(snapshot) {
       }
     })
     gameState.explosions = existingExplosions
+  }
+  
+  // Sync unit wrecks
+  if (Array.isArray(snapshot.unitWrecks)) {
+    // Initialize if needed
+    if (!gameState.unitWrecks) {
+      gameState.unitWrecks = []
+    }
+    
+    // Create a map of existing wrecks by ID
+    const existingById = new Map()
+    gameState.unitWrecks.forEach(w => {
+      if (w.id) existingById.set(w.id, w)
+    })
+    
+    // Sync wrecks from snapshot
+    const updatedWrecks = snapshot.unitWrecks.map(snapshotWreck => {
+      const existing = existingById.get(snapshotWreck.id)
+      if (existing) {
+        // Update existing wreck
+        Object.assign(existing, snapshotWreck)
+        return existing
+      } else {
+        // New wreck from host
+        return { ...snapshotWreck }
+      }
+    })
+    
+    // Replace wrecks array
+    gameState.unitWrecks = updatedWrecks
   }
 }
 
@@ -1019,44 +1154,7 @@ export function stopGameStateSync() {
   }
 }
 
-/**
- * Update unit positions using interpolation (called on client each frame)
- * This provides smooth movement between state snapshots
- */
-export function updateUnitInterpolation() {
-  if (isHost()) {
-    return  // Host doesn't need interpolation
-  }
-  
-  const now = performance.now()
-  
-  for (const [unitId, interp] of unitInterpolationState.entries()) {
-    const unit = mainUnits.find(u => u.id === unitId)
-    if (!unit) {
-      unitInterpolationState.delete(unitId)
-      continue
-    }
-    
-    const elapsed = now - interp.startTime
-    const progress = Math.min(1, elapsed / interp.duration)
-    
-    // Use easeOutQuad for natural deceleration
-    const eased = 1 - (1 - progress) * (1 - progress)
-    
-    // Interpolate position
-    unit.x = interp.startX + (interp.targetX - interp.startX) * eased
-    unit.y = interp.startY + (interp.targetY - interp.startY) * eased
-    
-    // Update tile position
-    unit.tileX = Math.floor(unit.x)
-    unit.tileY = Math.floor(unit.y)
-    
-    // Remove completed interpolations
-    if (progress >= 1) {
-      unitInterpolationState.delete(unitId)
-    }
-  }
-}
+// Note: Interpolation removed - using faster sync interval (100ms) for smooth movement
 
 /**
  * Check if this client is in a multiplayer session as a remote player
