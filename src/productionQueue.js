@@ -8,7 +8,7 @@ import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
-import { broadcastBuildingPlace } from './network/gameCommandSync.js'
+import { broadcastBuildingPlace, broadcastUnitSpawn, isHost } from './network/gameCommandSync.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
@@ -464,54 +464,69 @@ export const productionQueue = {
     }
 
     if (spawnFactory) {
-      // Pass the specific factory's rally point to spawnUnit
-      const newUnit = spawnUnit(
-        spawnFactory,
-        unitType,
-        units,
-        gameState.mapGrid,
-        rallyPointTarget,
-        gameState.occupancyMap,
-        { buildDuration: this.currentUnit.duration }
-      )
-      if (newUnit) {
-        units.push(newUnit)
-        // Play random unit ready sound
+      // Check if we're in multiplayer as a client (not the host)
+      const isRemoteClient = !isHost() && gameState.multiplayerSession?.isRemote
+      
+      if (isRemoteClient) {
+        // Client: Send spawn request to host - don't spawn locally
+        // The host will spawn the unit and it will appear in the next snapshot
+        broadcastUnitSpawn(unitType, spawnFactory.id, rallyPointTarget)
+        
+        // Play sound locally for feedback
         const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
         const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
         playSound(randomSound, 1.0, 0, true)
+      } else {
+        // Host or single player: Spawn unit locally
+        // Pass the specific factory's rally point to spawnUnit
+        const newUnit = spawnUnit(
+          spawnFactory,
+          unitType,
+          units,
+          gameState.mapGrid,
+          rallyPointTarget,
+          gameState.occupancyMap,
+          { buildDuration: this.currentUnit.duration }
+        )
+        if (newUnit) {
+          units.push(newUnit)
+          // Play random unit ready sound
+          const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
+          const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
+          playSound(randomSound, 1.0, 0, true)
 
-        // If the produced unit is a harvester and no custom rally point was set, automatically send it to harvest
-        if (newUnit.type === 'harvester' && !rallyPointTarget) {
-          // Assign harvester to optimal refinery for even distribution
-          assignHarvesterToOptimalRefinery(newUnit, gameState)
+          // If the produced unit is a harvester and no custom rally point was set, automatically send it to harvest
+          if (newUnit.type === 'harvester' && !rallyPointTarget) {
+            // Assign harvester to optimal refinery for even distribution
+            assignHarvesterToOptimalRefinery(newUnit, gameState)
 
-          // Access the targetedOreTiles from the imported module
-          const targetedOreTiles = gameState?.targetedOreTiles || {}
+            // Access the targetedOreTiles from the imported module
+            const targetedOreTiles = gameState?.targetedOreTiles || {}
 
-          // Find closest ore, considering assigned refinery if applicable
-          const orePos = findClosestOre(newUnit, gameState.mapGrid, targetedOreTiles, newUnit.assignedRefinery)
-          if (orePos) {
-            // Register this ore tile as targeted by this unit
-            const tileKey = `${orePos.x},${orePos.y}`
-            if (gameState?.targetedOreTiles) {
-              gameState.targetedOreTiles[tileKey] = newUnit.id
-            }
+            // Find closest ore, considering assigned refinery if applicable
+            const orePos = findClosestOre(newUnit, gameState.mapGrid, targetedOreTiles, newUnit.assignedRefinery)
+            if (orePos) {
+              // Register this ore tile as targeted by this unit
+              const tileKey = `${orePos.x},${orePos.y}`
+              if (gameState?.targetedOreTiles) {
+                gameState.targetedOreTiles[tileKey] = newUnit.id
+              }
 
-            const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY, owner: newUnit.owner }, orePos, gameState.mapGrid, null, undefined, { unitOwner: newUnit.owner })
-            if (newPath.length > 1) {
-              newUnit.path = newPath.slice(1)
-              newUnit.oreField = orePos // Set initial ore field target
+              const newPath = findPath({ x: newUnit.tileX, y: newUnit.tileY, owner: newUnit.owner }, orePos, gameState.mapGrid, null, undefined, { unitOwner: newUnit.owner })
+              if (newPath.length > 1) {
+                newUnit.path = newPath.slice(1)
+                newUnit.oreField = orePos // Set initial ore field target
+              }
             }
           }
+        } else {
+          // Handle spawn failure (e.g., no valid position)
+          console.warn(`Failed to spawn ${unitType} from factory ${spawnFactory.id || spawnFactory.type}`)
+          // Optional: Refund cost?
+          // gameState.money += unitCosts[unitType] || 0;
+          // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible
+          showNotification(`Spawn failed for ${unitType}. Area might be blocked.`)
         }
-      } else {
-        // Handle spawn failure (e.g., no valid position)
-        console.warn(`Failed to spawn ${unitType} from factory ${spawnFactory.id || spawnFactory.type}`)
-        // Optional: Refund cost?
-        // gameState.money += unitCosts[unitType] || 0;
-        // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible
-        showNotification(`Spawn failed for ${unitType}. Area might be blocked.`)
       }
     } else {
       console.error(`Could not find appropriate factory to spawn ${unitType}.`)

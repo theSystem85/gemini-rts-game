@@ -46,6 +46,14 @@
   - done: Added broadcastBuildingPlace() calls to eventHandlers.js, buildingRepairHandler.js, and productionQueue.js; Added isHost() check in enemy.js to disable AI on clients; Added processPendingRemoteCommands() in updateGame.js to process BUILDING_PLACE commands from clients on host
 - [x] ✅ T023 Enhanced multiplayer sync - tech tree, building damage, occupancy, animations
   - done: Tech tree syncs on client join via setProductionControllerRef() and requestTechTreeSync(); Building damage broadcasts bi-directionally via broadcastBuildingDamage(); New buildings from network placed in occupancy map via placeBuilding(); Building construction animation triggered for network buildings; Milestone video volume reduced by 60%
+- [x] ✅ T024 Comprehensive multiplayer sync - all units, buildings, bullets, explosions
+  - done: Extended unit snapshot with muzzleFlashStartTime, recoilStartTime, path, vx/vy, attackTarget, guardPosition, isMoving, isAttacking, remainingMines, sweeping; Extended building snapshot with constructionStartTime, constructionFinished, turretDirection, muzzleFlashStartTime; Extended bullet snapshot with full trajectory properties; Added explosions to snapshot; Added CLIENT_STATE_UPDATE command type for bidirectional sync; Client now sends owned entity updates to host; Host merges client updates into authoritative state
+- [x] ✅ T025 Unit visibility, building sell, and money sync fixes
+  - done: Fixed unit array sync by using mainUnits from main.js (the actual rendering array) instead of gameState.units; Bullets now sync to mainBullets array; Added broadcastBuildingSell() for building sell action sync with sellStartTime in snapshot; Removed incorrect money sync from snapshot (each player manages own money)
+- [x] ✅ T026 Host-authoritative architecture fix
+  - done: Implemented proper host-authoritative architecture where host runs all game logic and clients only render + send user commands; Fixed updateGame.js to skip game logic on remote clients (early return after visual updates); Removed CLIENT_STATE_UPDATE sending from client in gameCommandSync.js; This fixes: HP oscillation (only host computes damage), turret rotation sync (only host updates), bullets visibility (mainBullets synced via snapshot), bidirectional unit production (all units synced via snapshot)
+- [x] ✅ T027 Client unit spawn and smooth movement fix
+  - done: Client no longer spawns units locally - sends UNIT_SPAWN command to host; Host processes UNIT_SPAWN and creates unit; Added easeOutQuad interpolation for smooth unit movement between 500ms snapshots; Movement interpolation runs each frame on client via updateUnitInterpolation()
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

@@ -17,6 +17,7 @@ import { cleanupDestroyedSelectedUnits, getUnitCommandsHandler } from './inputHa
 import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
 import { updateGuardBehavior } from './behaviours/guard.js'
+import { units as mainUnits } from './main.js'
 
 // Import modular game systems
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
@@ -57,15 +58,19 @@ import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
 import { updateRemoteControlledUnits } from './game/remoteControl.js'
 import { updateShadowOfWar } from './game/shadowOfWar.js'
-import { processPendingRemoteCommands, isHost, COMMAND_TYPES } from './network/gameCommandSync.js'
+import { processPendingRemoteCommands, isHost, COMMAND_TYPES, updateUnitInterpolation } from './network/gameCommandSync.js'
 import { createBuilding, placeBuilding, updatePowerSupply } from './buildings.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
+import { spawnUnit } from './units.js'
 
 export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
     if (gameState.gamePaused) return
     const now = performance.now()
     const occupancyMap = gameState.occupancyMap
+    
+    // Check if we're a remote client (not the host)
+    const isRemoteClient = !isHost() && gameState.multiplayerSession?.isRemote
 
     // Process pending remote commands from clients (host only)
     if (isHost()) {
@@ -81,20 +86,119 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           updateDangerZoneMaps(gameState)
           placeBuilding(newBuilding, mapGrid)
           updatePowerSupply(gameState.buildings, gameState)
-        } else if (cmd.commandType === COMMAND_TYPES.BUILDING_DAMAGE && cmd.payload) {
-          // Apply building damage reported by client
-          const { buildingId, newHealth } = cmd.payload
+        } else if (cmd.commandType === COMMAND_TYPES.BUILDING_SELL && cmd.payload) {
+          // Apply building sell from client
+          const { buildingId, sellStartTime } = cmd.payload
           const building = gameState.buildings.find(b => b.id === buildingId)
-          if (building && typeof newHealth === 'number') {
-            building.health = Math.max(0, newHealth)
+          if (building && !building.isBeingSold) {
+            building.isBeingSold = true
+            building.sellStartTime = sellStartTime
+          }
+        } else if (cmd.commandType === COMMAND_TYPES.UNIT_MOVE && cmd.payload) {
+          // Apply unit move command from client
+          const { unitIds, targetX, targetY } = cmd.payload
+          const partyId = cmd.sourcePartyId
+          unitIds.forEach(unitId => {
+            const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
+            if (unit) {
+              // Set movement target - the movement system will handle pathfinding
+              unit.moveTarget = { x: targetX, y: targetY }
+              unit.attackTarget = null
+              unit.guardPosition = null
+            }
+          })
+        } else if (cmd.commandType === COMMAND_TYPES.UNIT_ATTACK && cmd.payload) {
+          // Apply unit attack command from client
+          const { unitIds, targetId, targetX, targetY } = cmd.payload
+          const partyId = cmd.sourcePartyId
+          unitIds.forEach(unitId => {
+            const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
+            if (unit) {
+              // Find the target
+              const target = mainUnits.find(u => u.id === targetId) ||
+                             gameState.buildings.find(b => b.id === targetId) ||
+                             factories.find(f => f.id === targetId)
+              if (target) {
+                unit.attackTarget = target
+                unit.guardPosition = null
+              } else if (targetX !== undefined && targetY !== undefined) {
+                // Attack move to position
+                unit.moveTarget = { x: targetX, y: targetY }
+                unit.attackTarget = null
+              }
+            }
+          })
+        } else if (cmd.commandType === COMMAND_TYPES.UNIT_STOP && cmd.payload) {
+          // Apply unit stop command from client
+          const { unitIds } = cmd.payload
+          const partyId = cmd.sourcePartyId
+          unitIds.forEach(unitId => {
+            const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
+            if (unit) {
+              unit.path = null
+              unit.moveTarget = null
+              unit.attackTarget = null
+              unit.guardPosition = null
+            }
+          })
+        } else if (cmd.commandType === COMMAND_TYPES.UNIT_GUARD && cmd.payload) {
+          // Apply unit guard command from client
+          const { unitIds, guardX, guardY } = cmd.payload
+          const partyId = cmd.sourcePartyId
+          unitIds.forEach(unitId => {
+            const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
+            if (unit) {
+              unit.guardPosition = { x: guardX, y: guardY }
+              unit.attackTarget = null
+            }
+          })
+        } else if (cmd.commandType === COMMAND_TYPES.UNIT_SPAWN && cmd.payload) {
+          // Client requests host to spawn a unit
+          const { unitType, factoryId, rallyPoint } = cmd.payload
+          const partyId = cmd.sourcePartyId
+          
+          // Find the factory for spawning
+          let spawnFactory = null
+          if (factoryId) {
+            spawnFactory = gameState.buildings.find(b => b.id === factoryId && b.owner === partyId)
+          }
+          
+          // Fallback to finding appropriate factory by type
+          if (!spawnFactory) {
+            const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer', 'mineLayer', 'mineSweeper']
+            if (vehicleUnitTypes.includes(unitType)) {
+              spawnFactory = gameState.buildings.find(b => b.type === 'vehicleFactory' && b.owner === partyId)
+            } else if (unitType === 'apache') {
+              spawnFactory = gameState.buildings.find(b => b.type === 'helipad' && b.owner === partyId)
+            }
+          }
+          
+          if (spawnFactory) {
+            const newUnit = spawnUnit(
+              spawnFactory,
+              unitType,
+              mainUnits,
+              mapGrid,
+              rallyPoint,
+              gameState.occupancyMap
+            )
+            if (newUnit) {
+              newUnit.owner = partyId
+              mainUnits.push(newUnit)
+            }
           }
         }
-        // Other command types can be handled here as needed
+        // Note: CLIENT_STATE_UPDATE is no longer processed - host is authoritative
       })
     }
 
-    // Update game time
+    // Update game time (both host and client need this for animations)
     updateGameTime(gameState, delta)
+
+    // Update unit position interpolation for smooth movement (client only)
+    if (isRemoteClient) {
+      updateUnitInterpolation()
+    }
 
     // Update movement speeds for all units based on speed multiplier
     units.forEach(unit => {
@@ -107,48 +211,101 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Handle right-click deselection
     handleRightClickDeselect(gameState, units)
 
-    // Map scrolling with inertia
+    // Map scrolling with inertia (client needs this for UI)
     updateMapScrolling(gameState, mapGrid)
     // Keep camera focused on followed unit when enabled
     updateCameraFollow(gameState, units, mapGrid)
 
-    // Process queued unit commands before running unit systems
-    const unitCommands = getUnitCommandsHandler()
-    processCommandQueues(units, mapGrid, unitCommands, gameState.buildings)
+    // === HOST-ONLY GAME LOGIC ===
+    // Remote clients skip all game simulation - they receive state from host
+    if (!isRemoteClient) {
+      // Process queued unit commands before running unit systems
+      const unitCommands = getUnitCommandsHandler()
+      processCommandQueues(units, mapGrid, unitCommands, gameState.buildings)
 
-    // Apply remote control inputs for selected tanks
-    updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap)
+      // Apply remote control inputs for selected tanks
+      updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMap)
 
-    // Unit system updates
-    units.forEach(unit => {
-      updateGuardBehavior(unit, mapGrid, occupancyMap, now)
-    })
-    updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories)
-    updateSpawnExit(units, factories, mapGrid, occupancyMap)
-    updateUnitCombat(units, bullets, mapGrid, gameState, now)
-    updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
-    updateWorkshopLogic(units, gameState.buildings, mapGrid, delta)
+      // Unit system updates
+      units.forEach(unit => {
+        updateGuardBehavior(unit, mapGrid, occupancyMap, now)
+      })
+      updateUnitMovement(units, mapGrid, occupancyMap, gameState, now, factories)
+      updateSpawnExit(units, factories, mapGrid, occupancyMap)
+      updateUnitCombat(units, bullets, mapGrid, gameState, now)
+      updateHarvesterLogic(units, mapGrid, occupancyMap, gameState, factories, now)
+      updateWorkshopLogic(units, gameState.buildings, mapGrid, delta)
 
-    updateRecoveryTankLogic(units, gameState, delta)
+      updateRecoveryTankLogic(units, gameState, delta)
 
-    updateHospitalLogic(units, gameState.buildings, gameState, delta)
-    updateAmbulanceLogic(units, gameState, delta)
-    updateGasStationLogic(units, gameState.buildings, gameState, delta)
-    updateAmmunitionSystem(units, gameState.buildings, gameState, delta)
-    updateHelipadLogic(units, gameState.buildings, gameState, delta)
-    updateTankerTruckLogic(units, gameState, delta)
-    updateAmmunitionTruckLogic(units, gameState, delta)
-    // Update mine system (arming, etc.)
-    updateMines(now)
-    // Update mine layer behavior (deployment, auto-refill)
-    updateMineLayerBehavior(units, now)
-    // Update mine sweeper behavior (sweeping mode, speed, dust)
-    updateMineSweeperBehavior(units, gameState, now)
-    // Handle self-repair for level 3 units
-    units.forEach(unit => {
-      handleSelfRepair(unit, now)
-    })
+      updateHospitalLogic(units, gameState.buildings, gameState, delta)
+      updateAmbulanceLogic(units, gameState, delta)
+      updateGasStationLogic(units, gameState.buildings, gameState, delta)
+      updateAmmunitionSystem(units, gameState.buildings, gameState, delta)
+      updateHelipadLogic(units, gameState.buildings, gameState, delta)
+      updateTankerTruckLogic(units, gameState, delta)
+      updateAmmunitionTruckLogic(units, gameState, delta)
+      // Update mine system (arming, etc.)
+      updateMines(now)
+      // Update mine layer behavior (deployment, auto-refill)
+      updateMineLayerBehavior(units, now)
+      // Update mine sweeper behavior (sweeping mode, speed, dust)
+      updateMineSweeperBehavior(units, gameState, now)
+      // Handle self-repair for level 3 units
+      units.forEach(unit => {
+        handleSelfRepair(unit, now)
+      })
 
+      // Global pathfinding recalculation
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Bullet system updates
+      updateBullets(bullets, units, factories, gameState, mapGrid)
+
+      // Update wreck inertia and drift after impacts
+      updateWreckPhysics(gameState, units, delta)
+
+      // Building system updates
+      updateBuildings(gameState, units, bullets, factories, mapGrid, delta)
+
+      // Tesla Coil effects
+      updateTeslaCoilEffects(units)
+
+      // Unit collision resolution
+      updateUnitCollisions(units, mapGrid)
+
+      // Ore spreading mechanism
+      updateOreSpread(gameState, mapGrid, factories)
+
+      // Cleanup destroyed units
+      cleanupDestroyedUnits(units, gameState)
+
+      // Cleanup destroyed factories
+      cleanupDestroyedFactories(factories, mapGrid, gameState)
+
+      // Cleanup sound cooldowns for destroyed units
+      cleanupSoundCooldowns(units)
+
+      // Check for game end conditions after factory/building destruction
+      checkGameEndConditions(factories, gameState)
+
+      // Enemy AI updates
+      updateEnemyAI(units, factories, bullets, mapGrid, gameState)
+
+      // Update buildings under repair
+      if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
+        updateBuildingsUnderRepair(gameState, now)
+      }
+
+      // Update buildings awaiting repair (countdown for buildings under attack)
+      updateBuildingsAwaitingRepair(gameState, now)
+
+      // Self-repair for level 3 units
+      handleSelfRepair(units, now)
+    }
+    // === END HOST-ONLY GAME LOGIC ===
+
+    // === VISUAL UPDATES (both host and client) ===
     // Emit smoke for heavily damaged tanks
     const unitSmokeLimit = MAX_SMOKE_PARTICLES * UNIT_SMOKE_SOFT_CAP_RATIO
 
@@ -235,63 +392,16 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
       })
     }
 
-    // Cleanup destroyed attack group targets
+    // Cleanup destroyed attack group targets (visual cleanup, safe for client)
     cleanupAttackGroupTargets(gameState)
 
-    // Global pathfinding recalculation
-    updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
-
-    // Bullet system updates
-    updateBullets(bullets, units, factories, gameState, mapGrid)
-
-    // Update wreck inertia and drift after impacts
-    updateWreckPhysics(gameState, units, delta)
-
-    // Building system updates
-    updateBuildings(gameState, units, bullets, factories, mapGrid, delta)
-
-    // Tesla Coil effects
-    updateTeslaCoilEffects(units)
-
-    // Explosion effects
+    // Explosion effects (visual, both need this)
     updateExplosions(gameState)
     updateSmokeParticles(gameState)
     updateDustParticles(gameState)
 
-    // Unit collision resolution
-    updateUnitCollisions(units, mapGrid)
-
-    // Ore spreading mechanism
-    updateOreSpread(gameState, mapGrid, factories)
-
-    // Cleanup destroyed units
-    cleanupDestroyedUnits(units, gameState)
-
-    // Cleanup destroyed factories
-    cleanupDestroyedFactories(factories, mapGrid, gameState)
-
-    // Update fog of war visibility after unit and building changes
+    // Update fog of war visibility (visual, both need this)
     updateShadowOfWar(gameState, units, mapGrid, factories)
-
-    // Cleanup sound cooldowns for destroyed units
-    cleanupSoundCooldowns(units)
-
-    // Check for game end conditions after factory/building destruction
-    checkGameEndConditions(factories, gameState)
-
-    // Enemy AI updates
-    updateEnemyAI(units, factories, bullets, mapGrid, gameState)
-
-    // Update buildings under repair
-    if (gameState.buildingsUnderRepair && gameState.buildingsUnderRepair.length > 0) {
-      updateBuildingsUnderRepair(gameState, now)
-    }
-
-    // Update buildings awaiting repair (countdown for buildings under attack)
-    updateBuildingsAwaitingRepair(gameState, now)
-
-    // Self-repair for level 3 units
-    handleSelfRepair(units, now)
 
     // Log status changes for units with logging enabled
     units.forEach(unit => {

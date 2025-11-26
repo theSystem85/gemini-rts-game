@@ -1,5 +1,5 @@
 import { createRemoteConnection, RemoteConnectionStatus } from '../network/remoteConnection.js'
-import { handleReceivedCommand, setClientPartyId, resetClientState } from '../network/gameCommandSync.js'
+import { handleReceivedCommand, setClientPartyId, resetClientState, startGameStateSync, stopGameStateSync } from '../network/gameCommandSync.js'
 import { parsePartyIdFromToken } from '../network/invites.js'
 import { gameState } from '../gameState.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from '../config.js'
@@ -163,6 +163,9 @@ export function initRemoteInviteLanding() {
       gameState.humanPlayer = partyId
       console.log('[RemoteInviteLanding] Client party set to:', partyId)
       
+      // Start client state sync to send updates to host
+      startGameStateSync()
+      
       // Center camera on the client's base after a short delay to allow state sync
       setTimeout(() => {
         centerCameraOnPartyBase(partyId)
@@ -175,7 +178,8 @@ export function initRemoteInviteLanding() {
     updateStatus(statusElement, 'Connection closed. Enter your alias to retry.', true)
     setFormDisabled(false)
     aliasInput.focus()
-    // Reset client state on disconnect
+    // Stop client state sync and reset client state on disconnect
+    stopGameStateSync()
     resetClientState()
   }
 

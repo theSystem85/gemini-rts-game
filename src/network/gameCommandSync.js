@@ -7,6 +7,7 @@ import { gameState } from '../gameState.js'
 import { getActiveRemoteConnection } from './remoteConnection.js'
 import { getActiveHostMonitor } from './webrtcSession.js'
 import { placeBuilding } from '../buildings.js'
+import { units as mainUnits, bullets as mainBullets } from '../main.js'
 
 // Command types for synchronization
 export const COMMAND_TYPES = {
@@ -19,10 +20,20 @@ export const COMMAND_TYPES = {
   BUILDING_DAMAGE: 'building-damage',
   PRODUCTION_START: 'production-start',
   PRODUCTION_CANCEL: 'production-cancel',
+  UNIT_SPAWN: 'unit-spawn',  // Client requests host to spawn a unit
   GAME_PAUSE: 'game-pause',
   GAME_RESUME: 'game-resume',
-  GAME_STATE_SNAPSHOT: 'game-state-snapshot'
+  GAME_STATE_SNAPSHOT: 'game-state-snapshot',
+  GAME_STATE_DELTA: 'game-state-delta',  // Delta updates for efficiency
+  CLIENT_STATE_UPDATE: 'client-state-update'
 }
+
+// Interpolation state for smooth movement on clients
+const unitInterpolationState = new Map()  // unitId -> { targetX, targetY, startX, startY, startTime, duration }
+const INTERPOLATION_DURATION_MS = 450  // Slightly less than sync interval for smooth transitions
+
+// Last snapshot hash for delta sync (future use)
+let _lastSnapshotHash = null
 
 const GAME_COMMAND_MESSAGE_TYPE = 'game-command'
 
@@ -272,6 +283,19 @@ function applyCommand(command) {
     case COMMAND_TYPES.GAME_STATE_SNAPSHOT:
       applyGameStateSnapshot(command.payload)
       break
+    
+    case COMMAND_TYPES.BUILDING_SELL:
+      // Apply building sell command from remote player
+      if (command.payload) {
+        const { buildingId, sellStartTime } = command.payload
+        const building = gameState.buildings.find(b => b.id === buildingId)
+        if (building && !building.isBeingSold) {
+          building.isBeingSold = true
+          building.sellStartTime = sellStartTime
+          // Note: Money is handled by the selling party, we just sync the visual state
+        }
+      }
+      break
       
     // Other command types are handled by the existing game logic
     // through the command listeners
@@ -455,6 +479,24 @@ export function broadcastBuildingDamage(buildingId, damage, newHealth) {
 }
 
 /**
+ * Broadcast building sell action to other players
+ * @param {string} buildingId - ID of the building being sold
+ * @param {number} sellValue - Money received from selling
+ * @param {number} sellStartTime - Time when sell animation started
+ */
+export function broadcastBuildingSell(buildingId, sellValue, sellStartTime) {
+  if (!hasActiveRemoteSession()) {
+    return
+  }
+  
+  broadcastGameCommand(
+    COMMAND_TYPES.BUILDING_SELL,
+    { buildingId, sellValue, sellStartTime },
+    gameState.humanPlayer
+  )
+}
+
+/**
  * Broadcast a production start command
  * @param {string} productionType - 'unit' or 'building'
  * @param {string} itemType - Type of item
@@ -470,6 +512,24 @@ export function broadcastProductionStart(productionType, itemType, factoryId, pa
     COMMAND_TYPES.PRODUCTION_START,
     createProductionCommand(productionType, itemType, factoryId),
     partyId || gameState.humanPlayer
+  )
+}
+
+/**
+ * Broadcast a unit spawn request (client to host)
+ * @param {string} unitType - Type of unit to spawn
+ * @param {string} factoryId - ID of the factory to spawn from
+ * @param {Object} rallyPoint - Optional rally point {x, y}
+ */
+export function broadcastUnitSpawn(unitType, factoryId, rallyPoint) {
+  if (!hasActiveRemoteSession()) {
+    return
+  }
+  
+  broadcastGameCommand(
+    COMMAND_TYPES.UNIT_SPAWN,
+    { unitType, factoryId, rallyPoint },
+    gameState.humanPlayer
   )
 }
 
@@ -495,8 +555,8 @@ export function broadcastGamePauseState(paused) {
  * @returns {Object}
  */
 function createGameStateSnapshot() {
-  // Serialize units with essential properties only
-  const units = (gameState.units || []).map(unit => ({
+  // Serialize units with essential properties - use mainUnits from main.js as that's the authoritative array
+  const units = (mainUnits || []).map(unit => ({
     id: unit.id,
     type: unit.type,
     owner: unit.owner,
@@ -508,14 +568,32 @@ function createGameStateSnapshot() {
     maxHealth: unit.maxHealth,
     direction: unit.direction,
     turretDirection: unit.turretDirection,
-    target: unit.target ? { id: unit.target.id } : null,
+    target: unit.target ? { id: unit.target.id, x: unit.target.x, y: unit.target.y } : null,
     moveTarget: unit.moveTarget,
     gas: unit.gas,
     maxGas: unit.maxGas,
     ammunition: unit.ammunition,
     maxAmmunition: unit.maxAmmunition,
     oreCarried: unit.oreCarried,
-    crew: unit.crew
+    crew: unit.crew,
+    // Animation/firing state
+    muzzleFlashStartTime: unit.muzzleFlashStartTime,
+    recoilStartTime: unit.recoilStartTime,
+    lastShotTime: unit.lastShotTime,
+    // Movement state
+    path: unit.path,
+    pathIndex: unit.pathIndex,
+    vx: unit.vx,
+    vy: unit.vy,
+    speed: unit.speed,
+    // Combat state
+    attackTarget: unit.attackTarget ? { id: unit.attackTarget.id } : null,
+    guardPosition: unit.guardPosition,
+    // Status effects
+    isMoving: unit.isMoving,
+    isAttacking: unit.isAttacking,
+    remainingMines: unit.remainingMines,
+    sweeping: unit.sweeping
   }))
   
   // Serialize buildings with essential properties
@@ -530,22 +608,43 @@ function createGameStateSnapshot() {
     health: building.health,
     maxHealth: building.maxHealth,
     constructionProgress: building.constructionProgress,
+    constructionStartTime: building.constructionStartTime,
+    constructionFinished: building.constructionFinished,
     isBeingBuilt: building.isBeingBuilt,
     isBeingSold: building.isBeingSold,
+    sellStartTime: building.sellStartTime,
     ammo: building.ammo,
-    maxAmmo: building.maxAmmo
+    maxAmmo: building.maxAmmo,
+    turretDirection: building.turretDirection,
+    muzzleFlashStartTime: building.muzzleFlashStartTime
   }))
   
-  // Serialize bullets/projectiles
-  const bullets = (gameState.bullets || []).map(bullet => ({
+  // Serialize bullets/projectiles with full properties - use mainBullets from main.js as that's the authoritative array
+  const bullets = (mainBullets || []).map(bullet => ({
     id: bullet.id,
     x: bullet.x,
     y: bullet.y,
+    startX: bullet.startX,
+    startY: bullet.startY,
     targetX: bullet.targetX,
     targetY: bullet.targetY,
+    vx: bullet.vx,
+    vy: bullet.vy,
     owner: bullet.owner,
     damage: bullet.damage,
-    type: bullet.type
+    type: bullet.type,
+    projectileType: bullet.projectileType,
+    originType: bullet.originType,
+    speed: bullet.speed,
+    startTime: bullet.startTime,
+    ballistic: bullet.ballistic,
+    homing: bullet.homing,
+    dx: bullet.dx,
+    dy: bullet.dy,
+    distance: bullet.distance,
+    flightDuration: bullet.flightDuration,
+    ballisticDuration: bullet.ballisticDuration,
+    arcHeight: bullet.arcHeight
   }))
   
   // Serialize factories (construction yards) with essential properties
@@ -564,11 +663,21 @@ function createGameStateSnapshot() {
     productionCountdown: factory.productionCountdown
   }))
   
+  // Serialize explosions
+  const explosions = (gameState.explosions || []).map(exp => ({
+    x: exp.x,
+    y: exp.y,
+    startTime: exp.startTime,
+    duration: exp.duration,
+    maxRadius: exp.maxRadius
+  }))
+  
   return {
     units,
     buildings,
     bullets,
     factories,
+    explosions,
     money: gameState.money,
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
@@ -595,10 +704,9 @@ function applyGameStateSnapshot(snapshot) {
     clientInitialized = true
   }
   
-  // Update money for the local player's party
-  if (typeof snapshot.money === 'number') {
-    gameState.money = snapshot.money
-  }
+  // Note: Money is NOT synced from host to client because each player has their own money!
+  // The client manages their own gameState.money based on their actions.
+  // If in the future we want to display other players' money, we'd use per-party tracking.
   
   // Sync game pause state
   if (typeof snapshot.gamePaused === 'boolean') {
@@ -615,28 +723,71 @@ function applyGameStateSnapshot(snapshot) {
     gameState.partyStates = snapshot.partyStates
   }
   
-  // Sync units - replace entire array from host snapshot
+  // Sync units - update the mainUnits array from main.js (which is what rendering uses)
   // This ensures all units from all parties are visible
+  // Use interpolation for smooth movement
   if (Array.isArray(snapshot.units)) {
+    const now = performance.now()
+    
     // Create a map of existing units by ID for merging non-serialized properties
     const existingById = new Map()
-    ;(gameState.units || []).forEach(u => {
+    mainUnits.forEach(u => {
       if (u.id) existingById.set(u.id, u)
     })
     
-    // Replace units array with snapshot data, preserving any local-only properties
-    gameState.units = snapshot.units.map(snapshotUnit => {
+    // Track which units are in the snapshot (to remove units that are gone)
+    const snapshotUnitIds = new Set(snapshot.units.map(u => u.id))
+    
+    // Build the updated units array, preserving local-only properties
+    const updatedUnits = snapshot.units.map(snapshotUnit => {
       const existing = existingById.get(snapshotUnit.id)
       
       if (existing) {
-        // Merge snapshot data into existing unit to preserve non-synced properties (like sprites)
-        Object.assign(existing, snapshotUnit)
+        // Set up interpolation for position changes
+        const positionChanged = existing.x !== snapshotUnit.x || existing.y !== snapshotUnit.y
+        
+        if (positionChanged) {
+          // Store interpolation target
+          unitInterpolationState.set(snapshotUnit.id, {
+            startX: existing.x,
+            startY: existing.y,
+            targetX: snapshotUnit.x,
+            targetY: snapshotUnit.y,
+            startTime: now,
+            duration: INTERPOLATION_DURATION_MS
+          })
+          
+          // Don't immediately update position - let interpolation handle it
+          // Destructure to exclude x and y, apply rest of properties
+          const { x: _x, y: _y, ...restOfSnapshot } = snapshotUnit
+          Object.assign(existing, restOfSnapshot)
+          // Keep current position for interpolation
+        } else {
+          // No position change, apply directly
+          Object.assign(existing, snapshotUnit)
+          // Clear any interpolation for this unit
+          unitInterpolationState.delete(snapshotUnit.id)
+        }
         return existing
       } else {
-        // New unit from host
+        // New unit from host - no interpolation needed
         return { ...snapshotUnit }
       }
     })
+    
+    // Replace contents of mainUnits array in-place (so GameLoop reference stays valid)
+    mainUnits.length = 0
+    mainUnits.push(...updatedUnits)
+    
+    // Clean up interpolation state for removed units
+    for (const unitId of unitInterpolationState.keys()) {
+      if (!snapshotUnitIds.has(unitId)) {
+        unitInterpolationState.delete(unitId)
+      }
+    }
+    
+    // Also keep gameState.units in sync
+    gameState.units = mainUnits
   }
   
   // Sync buildings - replace entire array from host snapshot
@@ -659,16 +810,18 @@ function applyGameStateSnapshot(snapshot) {
       
       if (existing) {
         // Merge snapshot data into existing building to preserve non-synced properties
+        // But respect construction animation state from snapshot
         Object.assign(existing, snapshotBuilding)
         return existing
       } else {
-        // New building from host - ensure it has required properties
-        // Set construction animation for newly synced buildings
+        // New building from host - use snapshot's construction state if available
+        // Otherwise start construction animation
+        const now = performance.now()
         const newBuilding = {
           ...snapshotBuilding,
           isBuilding: true,
-          constructionFinished: false,
-          constructionStartTime: performance.now()
+          constructionFinished: snapshotBuilding.constructionFinished === true,
+          constructionStartTime: snapshotBuilding.constructionStartTime || now
         }
         newBuildings.push(newBuilding)
         return newBuilding
@@ -710,10 +863,107 @@ function applyGameStateSnapshot(snapshot) {
     })
   }
   
-  // Sync bullets
+  // Sync bullets - update the mainBullets array from main.js
   if (Array.isArray(snapshot.bullets)) {
-    gameState.bullets = snapshot.bullets
+    // Replace contents of mainBullets array in-place
+    mainBullets.length = 0
+    mainBullets.push(...snapshot.bullets)
+    
+    // Also keep gameState.bullets in sync
+    gameState.bullets = mainBullets
   }
+  
+  // Sync explosions
+  if (Array.isArray(snapshot.explosions)) {
+    // Merge explosions - add new ones that don't exist locally
+    const existingExplosions = gameState.explosions || []
+    const existingKeys = new Set(existingExplosions.map(e => `${e.x}_${e.y}_${e.startTime}`))
+    
+    snapshot.explosions.forEach(exp => {
+      const key = `${exp.x}_${exp.y}_${exp.startTime}`
+      if (!existingKeys.has(key)) {
+        existingExplosions.push(exp)
+      }
+    })
+    gameState.explosions = existingExplosions
+  }
+}
+
+/**
+ * Create a client state update for the host
+ * Only includes units and buildings owned by this client
+ * @returns {Object}
+ */
+function createClientStateUpdate() {
+  const partyId = gameState.humanPlayer
+  
+  // Only include units owned by this client - use mainUnits as that's authoritative
+  const units = mainUnits
+    .filter(u => u.owner === partyId)
+    .map(unit => ({
+      id: unit.id,
+      x: unit.x,
+      y: unit.y,
+      health: unit.health,
+      direction: unit.direction,
+      turretDirection: unit.turretDirection,
+      gas: unit.gas,
+      ammunition: unit.ammunition,
+      crew: unit.crew,
+      muzzleFlashStartTime: unit.muzzleFlashStartTime,
+      recoilStartTime: unit.recoilStartTime,
+      target: unit.target ? { id: unit.target.id } : null,
+      moveTarget: unit.moveTarget,
+      path: unit.path,
+      remainingMines: unit.remainingMines,
+      sweeping: unit.sweeping
+    }))
+  
+  // Only include buildings owned by this client
+  const buildings = (gameState.buildings || [])
+    .filter(b => b.owner === partyId)
+    .map(building => ({
+      id: building.id,
+      health: building.health,
+      constructionStartTime: building.constructionStartTime,
+      constructionFinished: building.constructionFinished,
+      ammo: building.ammo,
+      turretDirection: building.turretDirection,
+      muzzleFlashStartTime: building.muzzleFlashStartTime
+    }))
+  
+  // Include explosions created by this client's units
+  const explosions = (gameState.explosions || []).map(exp => ({
+    x: exp.x,
+    y: exp.y,
+    startTime: exp.startTime,
+    duration: exp.duration,
+    maxRadius: exp.maxRadius
+  }))
+  
+  return {
+    partyId,
+    units,
+    buildings,
+    explosions,
+    timestamp: Date.now()
+  }
+}
+
+/**
+ * Send client state update to host (client only)
+ */
+function sendClientStateUpdate() {
+  if (isHost() || !hasActiveRemoteSession()) {
+    return
+  }
+  
+  const update = createClientStateUpdate()
+  broadcastGameCommand(
+    COMMAND_TYPES.CLIENT_STATE_UPDATE,
+    update,
+    gameState.humanPlayer
+  )
 }
 
 /**
@@ -732,19 +982,27 @@ function broadcastGameStateSnapshot() {
   )
 }
 
+// Handle for client state sync
+let clientSyncHandle = null
+
 /**
- * Start periodic game state synchronization (host only)
+ * Start periodic game state synchronization
+ * Host broadcasts full snapshots to clients
+ * Clients do NOT send state updates - they only send user commands
  */
 export function startGameStateSync() {
-  if (!isHost() || stateSyncHandle) {
-    return
+  if (isHost()) {
+    // Host: broadcast full snapshots
+    if (stateSyncHandle) return
+    
+    stateSyncHandle = setInterval(() => {
+      if (hasActiveRemoteSession()) {
+        broadcastGameStateSnapshot()
+      }
+    }, GAME_STATE_SYNC_INTERVAL_MS)
   }
-  
-  stateSyncHandle = setInterval(() => {
-    if (hasActiveRemoteSession()) {
-      broadcastGameStateSnapshot()
-    }
-  }, GAME_STATE_SYNC_INTERVAL_MS)
+  // Note: Client no longer sends periodic state updates
+  // Client only sends user commands (move, attack, build, etc.)
 }
 
 /**
@@ -755,4 +1013,55 @@ export function stopGameStateSync() {
     clearInterval(stateSyncHandle)
     stateSyncHandle = null
   }
+  if (clientSyncHandle) {
+    clearInterval(clientSyncHandle)
+    clientSyncHandle = null
+  }
+}
+
+/**
+ * Update unit positions using interpolation (called on client each frame)
+ * This provides smooth movement between state snapshots
+ */
+export function updateUnitInterpolation() {
+  if (isHost()) {
+    return  // Host doesn't need interpolation
+  }
+  
+  const now = performance.now()
+  
+  for (const [unitId, interp] of unitInterpolationState.entries()) {
+    const unit = mainUnits.find(u => u.id === unitId)
+    if (!unit) {
+      unitInterpolationState.delete(unitId)
+      continue
+    }
+    
+    const elapsed = now - interp.startTime
+    const progress = Math.min(1, elapsed / interp.duration)
+    
+    // Use easeOutQuad for natural deceleration
+    const eased = 1 - (1 - progress) * (1 - progress)
+    
+    // Interpolate position
+    unit.x = interp.startX + (interp.targetX - interp.startX) * eased
+    unit.y = interp.startY + (interp.targetY - interp.startY) * eased
+    
+    // Update tile position
+    unit.tileX = Math.floor(unit.x)
+    unit.tileY = Math.floor(unit.y)
+    
+    // Remove completed interpolations
+    if (progress >= 1) {
+      unitInterpolationState.delete(unitId)
+    }
+  }
+}
+
+/**
+ * Check if this client is in a multiplayer session as a remote player
+ * @returns {boolean}
+ */
+export function isRemoteClient() {
+  return !isHost() && gameState.multiplayerSession?.isRemote === true
 }
