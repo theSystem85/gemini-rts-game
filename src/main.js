@@ -1763,6 +1763,47 @@ export const factories = []
 export const units = []
 export const bullets = []
 
+/**
+ * Regenerate the map for a client using the host's seed and dimensions
+ * Called by gameCommandSync when the client receives the first game state snapshot
+ * @param {string} seed - The map seed from the host
+ * @param {number} widthTiles - Map width in tiles
+ * @param {number} heightTiles - Map height in tiles
+ */
+export function regenerateMapForClient(seed, widthTiles, heightTiles) {
+  console.log('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles)
+  
+  // Update map dimensions in config
+  setMapDimensions(widthTiles, heightTiles)
+  
+  // Store the seed
+  gameState.mapSeed = seed
+  gameState.mapTilesX = widthTiles
+  gameState.mapTilesY = heightTiles
+  
+  // Clear and regenerate the map grid
+  mapGrid.length = 0
+  generateMapFromSetup(seed, mapGrid, widthTiles, heightTiles)
+  
+  // Sync mapGrid with gameState
+  gameState.mapGrid.length = 0
+  gameState.mapGrid.push(...mapGrid)
+  
+  // Rebuild occupancy map for the new map
+  gameState.occupancyMap = []
+  for (let y = 0; y < heightTiles; y++) {
+    gameState.occupancyMap[y] = []
+    for (let x = 0; x < widthTiles; x++) {
+      gameState.occupancyMap[y][x] = 0
+    }
+  }
+  
+  // Initialize shadow of war for the new map
+  initializeShadowOfWar(gameState, mapGrid)
+  
+  console.log('[Main] Client map regeneration complete')
+}
+
 // Add buildingCosts based on our building data
 export const buildingCosts = {}
 for (const [type, data] of Object.entries(buildingData)) {

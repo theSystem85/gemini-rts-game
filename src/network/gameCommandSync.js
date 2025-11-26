@@ -7,7 +7,8 @@ import { gameState } from '../gameState.js'
 import { getActiveRemoteConnection } from './remoteConnection.js'
 import { getActiveHostMonitor } from './webrtcSession.js'
 import { placeBuilding } from '../buildings.js'
-import { units as mainUnits, bullets as mainBullets, factories as mainFactories } from '../main.js'
+import { units as mainUnits, bullets as mainBullets, factories as mainFactories, regenerateMapForClient } from '../main.js'
+import { setMapDimensions } from '../config.js'
 
 // Command types for synchronization
 export const COMMAND_TYPES = {
@@ -54,6 +55,9 @@ let clientPartyId = null
 
 // Track if tech tree needs to be synced (after first buildings sync)
 let needsTechTreeSync = true
+
+// Track if map has been synced from host (for client map regeneration)
+let mapSynced = false
 
 // Reference to production controller for tech tree sync
 let productionControllerRef = null
@@ -216,6 +220,7 @@ export function resetClientState() {
   clientPartyId = null
   clientInitialized = false
   needsTechTreeSync = true
+  mapSynced = false
 }
 
 /**
@@ -868,7 +873,8 @@ function createGameStateSnapshot() {
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
     partyStates: gameState.partyStates,
-    // Include map dimensions so client can initialize mapGrid
+    // Include map seed and dimensions so client can generate matching map
+    mapSeed: gameState.mapSeed,
     mapTilesX: gameState.mapTilesX,
     mapTilesY: gameState.mapTilesY,
     timestamp: Date.now()
@@ -876,19 +882,38 @@ function createGameStateSnapshot() {
 }
 
 /**
- * Ensure mapGrid is initialized with proper dimensions on client
+ * Sync the map from host (seed, dimensions) and regenerate if needed
+ * @param {string} seed - Map seed from host
  * @param {number} width - Map width in tiles
  * @param {number} height - Map height in tiles
  */
-function ensureClientMapGridInitialized(width, height) {
-  if (!width || !height) {
+function syncClientMap(seed, width, height) {
+  if (!seed || !width || !height) {
     return false
   }
   
-  // Initialize mapGrid if empty or wrong dimensions
-  if (!gameState.mapGrid || gameState.mapGrid.length !== height || 
-      (gameState.mapGrid[0] && gameState.mapGrid[0].length !== width)) {
-    console.log('[GameCommandSync] Initializing client mapGrid:', width, 'x', height)
+  // Only regenerate map once per connection
+  if (mapSynced) {
+    return true
+  }
+  
+  console.log('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height)
+  
+  // Update map dimensions in config module
+  setMapDimensions(width, height)
+  
+  // Store the host's map seed
+  gameState.mapSeed = seed
+  gameState.mapTilesX = width
+  gameState.mapTilesY = height
+  
+  // Call main.js function to regenerate map with host's seed and dimensions
+  if (typeof regenerateMapForClient === 'function') {
+    regenerateMapForClient(seed, width, height)
+    console.log('[GameCommandSync] Client map regenerated with host seed:', seed)
+  } else {
+    // Fallback: Initialize empty map grid if regenerateMapForClient is not available
+    console.warn('[GameCommandSync] regenerateMapForClient not available, creating empty map grid')
     gameState.mapGrid = []
     for (let y = 0; y < height; y++) {
       gameState.mapGrid[y] = []
@@ -896,11 +921,9 @@ function ensureClientMapGridInitialized(width, height) {
         gameState.mapGrid[y][x] = { type: 'land', ore: false, seedCrystal: false, noBuild: 0 }
       }
     }
-    gameState.mapTilesX = width
-    gameState.mapTilesY = height
   }
   
-  // Initialize occupancyMap if empty or wrong dimensions
+  // Initialize occupancyMap
   if (!gameState.occupancyMap || gameState.occupancyMap.length !== height ||
       (gameState.occupancyMap[0] && gameState.occupancyMap[0].length !== width)) {
     console.log('[GameCommandSync] Initializing client occupancyMap:', width, 'x', height)
@@ -913,6 +936,7 @@ function ensureClientMapGridInitialized(width, height) {
     }
   }
   
+  mapSynced = true
   return true
 }
 
@@ -956,10 +980,10 @@ function applyGameStateSnapshot(snapshot) {
     gameState.partyStates = snapshot.partyStates
   }
   
-  // Initialize client's mapGrid and occupancyMap from host's dimensions
+  // Sync map seed and dimensions from host, regenerate map if needed
   // This must happen before syncing buildings so placeBuilding can work
-  if (snapshot.mapTilesX && snapshot.mapTilesY) {
-    ensureClientMapGridInitialized(snapshot.mapTilesX, snapshot.mapTilesY)
+  if (snapshot.mapSeed && snapshot.mapTilesX && snapshot.mapTilesY) {
+    syncClientMap(snapshot.mapSeed, snapshot.mapTilesX, snapshot.mapTilesY)
   }
   
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)

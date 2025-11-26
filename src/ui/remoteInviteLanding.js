@@ -14,6 +14,44 @@ const STATUS_MESSAGES = {
 
 const DEFAULT_STATUS = 'Enter your alias to claim the invited party.'
 
+/**
+ * Hide map settings UI for remote clients since map is determined by host
+ */
+function hideMapSettingsForClient() {
+  const mapSettingsContainer = document.querySelector('#mapSettingsContent')?.parentElement
+  const mapSettingsToggle = document.getElementById('mapSettingsToggle')
+  const mapSettingsContent = document.getElementById('mapSettingsContent')
+  
+  if (mapSettingsContainer) {
+    mapSettingsContainer.style.display = 'none'
+  }
+  if (mapSettingsToggle) {
+    mapSettingsToggle.style.display = 'none'
+  }
+  if (mapSettingsContent) {
+    mapSettingsContent.style.display = 'none'
+  }
+  
+  console.log('[RemoteInviteLanding] Map settings hidden for client')
+}
+
+/**
+ * Show map settings UI (for when client disconnects)
+ */
+function showMapSettings() {
+  const mapSettingsContainer = document.querySelector('#mapSettingsContent')?.parentElement
+  const mapSettingsToggle = document.getElementById('mapSettingsToggle')
+  
+  if (mapSettingsContainer) {
+    mapSettingsContainer.style.display = ''
+  }
+  if (mapSettingsToggle) {
+    mapSettingsToggle.style.display = ''
+  }
+  
+  console.log('[RemoteInviteLanding] Map settings restored')
+}
+
 function getInviteTokenFromUrl() {
   if (typeof window === 'undefined') {
     return null
@@ -125,6 +163,10 @@ export function initRemoteInviteLanding() {
     return
   }
 
+  // Hide map settings immediately when joining as a client
+  // The host determines the map settings
+  hideMapSettingsForClient()
+
   tokenText.textContent = inviteToken
   showOverlay(overlay, statusElement)
   aliasInput.value = ''
@@ -157,6 +199,9 @@ export function initRemoteInviteLanding() {
     hideOverlay(overlay)
     updateStatus(statusElement, 'Connected. Remote controls are live.', false)
     
+    // Hide map settings since client uses host's map
+    hideMapSettingsForClient()
+    
     // Set the client's partyId and humanPlayer when connected
     if (partyId) {
       setClientPartyId(partyId)
@@ -181,6 +226,8 @@ export function initRemoteInviteLanding() {
     // Stop client state sync and reset client state on disconnect
     stopGameStateSync()
     resetClientState()
+    // Restore map settings UI
+    showMapSettings()
   }
 
   const handleDataChannelMessage = (rawPayload) => {

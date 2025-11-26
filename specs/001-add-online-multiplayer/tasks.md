@@ -94,6 +94,15 @@ description: "Task list for implementing online multiplayer takeover"
 
 ---
 
+## Phase 7: Map Synchronization & Client UI
+
+**Purpose**: Ensure clients receive and use the host's map configuration rather than their own local settings.
+
+- [x] T034 [US2] Sync map seed and dimensions from host to client
+  - done: Added mapSeed to game state snapshot; Client regenerates map using host's seed via regenerateMapForClient() in main.js; Map settings UI hidden for clients when invite token detected and when connected; Settings restored on disconnect
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
