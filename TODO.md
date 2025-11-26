@@ -42,6 +42,10 @@
   - done: invites.js exports parsePartyIdFromToken(); remoteInviteLanding.js sets humanPlayer and centers camera; gameCommandSync.js syncs factories in snapshots
 - [x] ✅ T021 Fix multiplayer sync issues - building IDs, unit visibility, render loop resume, building disappearance
   - done: buildings.js now assigns unique IDs via getUniqueId(); gameCommandSync.js uses full array replacement for buildings/units with position-based fallback; gameLoop.js always schedules frame when paused
+- [x] ✅ T022 Fix client→host building sync and AI on client issues
+  - done: Added broadcastBuildingPlace() calls to eventHandlers.js, buildingRepairHandler.js, and productionQueue.js; Added isHost() check in enemy.js to disable AI on clients; Added processPendingRemoteCommands() in updateGame.js to process BUILDING_PLACE commands from clients on host
+- [x] ✅ T023 Enhanced multiplayer sync - tech tree, building damage, occupancy, animations
+  - done: Tech tree syncs on client join via setProductionControllerRef() and requestTechTreeSync(); Building damage broadcasts bi-directionally via broadcastBuildingDamage(); New buildings from network placed in occupancy map via placeBuilding(); Building construction animation triggered for network buildings; Milestone video volume reduced by 60%
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

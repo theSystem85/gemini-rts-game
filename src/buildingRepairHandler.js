@@ -6,6 +6,7 @@ import { buildingData } from './buildings.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
 import { updateMoneyBar } from './ui/moneyBar.js'
+import { broadcastBuildingPlace } from './network/gameCommandSync.js'
 
 export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl) {
   // If repair mode is active, check for buildings and factories to repair
@@ -155,6 +156,9 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
 
         // Update power supply
         updatePowerSupply(gameState.buildings, gameState)
+
+        // Broadcast building placement to other players in multiplayer
+        broadcastBuildingPlace(buildingType, tileX, tileY, gameState.humanPlayer)
 
         // Exit placement mode
         gameState.buildingPlacementMode = false

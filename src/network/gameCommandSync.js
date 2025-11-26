@@ -6,6 +6,7 @@
 import { gameState } from '../gameState.js'
 import { getActiveRemoteConnection } from './remoteConnection.js'
 import { getActiveHostMonitor } from './webrtcSession.js'
+import { placeBuilding } from '../buildings.js'
 
 // Command types for synchronization
 export const COMMAND_TYPES = {
@@ -15,6 +16,7 @@ export const COMMAND_TYPES = {
   UNIT_GUARD: 'unit-guard',
   BUILDING_PLACE: 'building-place',
   BUILDING_SELL: 'building-sell',
+  BUILDING_DAMAGE: 'building-damage',
   PRODUCTION_START: 'production-start',
   PRODUCTION_CANCEL: 'production-cancel',
   GAME_PAUSE: 'game-pause',
@@ -42,6 +44,33 @@ let clientInitialized = false
 // Store the client's partyId (for remote clients)
 let clientPartyId = null
 
+// Track if tech tree needs to be synced (after first buildings sync)
+let needsTechTreeSync = true
+
+// Reference to production controller for tech tree sync
+let productionControllerRef = null
+
+/**
+ * Set the production controller reference for tech tree syncing
+ * @param {Object} controller - ProductionController instance
+ */
+export function setProductionControllerRef(controller) {
+  productionControllerRef = controller
+}
+
+/**
+ * Request tech tree sync after buildings are synced from host
+ */
+function requestTechTreeSync() {
+  if (productionControllerRef && typeof productionControllerRef.syncTechTreeWithBuildings === 'function') {
+    // Delay slightly to ensure all buildings are fully initialized
+    setTimeout(() => {
+      productionControllerRef.syncTechTreeWithBuildings()
+      console.log('[GameCommandSync] Tech tree synced with existing buildings')
+    }, 100)
+  }
+}
+
 /**
  * Set the client's party ID (called when remote client connects)
  * @param {string} partyId - The partyId this client controls
@@ -49,6 +78,7 @@ let clientPartyId = null
 export function setClientPartyId(partyId) {
   clientPartyId = partyId
   clientInitialized = false // Reset initialization flag for new connection
+  needsTechTreeSync = true // Reset tech tree sync flag for new connection
 }
 
 /**
@@ -65,13 +95,14 @@ export function getClientPartyId() {
 export function resetClientState() {
   clientPartyId = null
   clientInitialized = false
+  needsTechTreeSync = true
 }
 
 /**
  * Check if the current session is the host
  * @returns {boolean}
  */
-function isHost() {
+export function isHost() {
   return gameState.multiplayerSession?.localRole === 'host' || !gameState.multiplayerSession?.isRemote
 }
 
@@ -406,6 +437,24 @@ export function broadcastBuildingPlace(buildingType, x, y, partyId) {
 }
 
 /**
+ * Broadcast building damage from client to host
+ * @param {string} buildingId - ID of damaged building
+ * @param {number} damage - Amount of damage dealt
+ * @param {number} newHealth - New health value after damage
+ */
+export function broadcastBuildingDamage(buildingId, damage, newHealth) {
+  if (!hasActiveRemoteSession() || isHost()) {
+    return // Only clients need to report damage to host
+  }
+  
+  broadcastGameCommand(
+    COMMAND_TYPES.BUILDING_DAMAGE,
+    { buildingId, damage, newHealth },
+    gameState.humanPlayer
+  )
+}
+
+/**
  * Broadcast a production start command
  * @param {string} productionType - 'unit' or 'building'
  * @param {string} itemType - Type of item
@@ -600,6 +649,9 @@ function applyGameStateSnapshot(snapshot) {
       existingByIdOrPos.set(key, b)
     })
     
+    // Track new buildings for occupancy map update
+    const newBuildings = []
+    
     // Replace buildings array with snapshot data, preserving any local-only properties
     gameState.buildings = snapshot.buildings.map(snapshotBuilding => {
       const key = snapshotBuilding.id || `${snapshotBuilding.type}_${snapshotBuilding.x}_${snapshotBuilding.y}`
@@ -611,13 +663,30 @@ function applyGameStateSnapshot(snapshot) {
         return existing
       } else {
         // New building from host - ensure it has required properties
-        return {
+        // Set construction animation for newly synced buildings
+        const newBuilding = {
           ...snapshotBuilding,
           isBuilding: true,
-          constructionFinished: snapshotBuilding.constructionFinished !== false
+          constructionFinished: false,
+          constructionStartTime: performance.now()
         }
+        newBuildings.push(newBuilding)
+        return newBuilding
       }
     })
+    
+    // Place new buildings in the map grid and occupancy map
+    if (newBuildings.length > 0 && gameState.mapGrid) {
+      newBuildings.forEach(building => {
+        placeBuilding(building, gameState.mapGrid, gameState.occupancyMap)
+      })
+      
+      // Trigger tech tree sync after buildings are added
+      if (needsTechTreeSync) {
+        needsTechTreeSync = false
+        requestTechTreeSync()
+      }
+    }
   }
   
   // Sync factories

@@ -2,6 +2,7 @@
 import { updateAIPlayer } from './ai/enemyAIPlayer.js'
 import { computeLeastDangerAttackPoint } from './ai/enemyStrategies.js'
 import { logPerformance } from './performanceUtils.js'
+import { isHost } from './network/gameCommandSync.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
 
 /**
@@ -27,6 +28,11 @@ function isPartyAiControlled(partyId, gameState) {
 }
 
 export const updateEnemyAI = logPerformance(function updateEnemyAI(units, factories, bullets, mapGrid, gameState) {
+  // AI only runs on the host - clients receive state via sync
+  if (!isHost()) {
+    return
+  }
+  
   const occupancyMap = gameState.occupancyMap
   const now = performance.now()
   const humanPlayer = gameState.humanPlayer || 'player1'

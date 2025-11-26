@@ -57,12 +57,41 @@ import { updateGlobalPathfinding } from './game/pathfinding.js'
 import { logUnitStatus } from './utils/logger.js'
 import { updateRemoteControlledUnits } from './game/remoteControl.js'
 import { updateShadowOfWar } from './game/shadowOfWar.js'
+import { processPendingRemoteCommands, isHost, COMMAND_TYPES } from './network/gameCommandSync.js'
+import { createBuilding, placeBuilding, updatePowerSupply } from './buildings.js'
+import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 
 export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
     if (gameState.gamePaused) return
     const now = performance.now()
     const occupancyMap = gameState.occupancyMap
+
+    // Process pending remote commands from clients (host only)
+    if (isHost()) {
+      const remoteCommands = processPendingRemoteCommands()
+      remoteCommands.forEach(cmd => {
+        if (cmd.commandType === COMMAND_TYPES.BUILDING_PLACE && cmd.payload) {
+          const { buildingType, x, y } = cmd.payload
+          const owner = cmd.sourcePartyId
+          const newBuilding = createBuilding(buildingType, x, y)
+          newBuilding.owner = owner
+          if (!gameState.buildings) gameState.buildings = []
+          gameState.buildings.push(newBuilding)
+          updateDangerZoneMaps(gameState)
+          placeBuilding(newBuilding, mapGrid)
+          updatePowerSupply(gameState.buildings, gameState)
+        } else if (cmd.commandType === COMMAND_TYPES.BUILDING_DAMAGE && cmd.payload) {
+          // Apply building damage reported by client
+          const { buildingId, newHealth } = cmd.payload
+          const building = gameState.buildings.find(b => b.id === buildingId)
+          if (building && typeof newHealth === 'number') {
+            building.health = Math.max(0, newHealth)
+          }
+        }
+        // Other command types can be handled here as needed
+      })
+    }
 
     // Update game time
     updateGameTime(gameState, delta)

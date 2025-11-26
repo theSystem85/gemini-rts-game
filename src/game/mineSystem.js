@@ -8,6 +8,7 @@ import {
   MINE_EXPLOSION_RADIUS,
   MINE_ARM_DELAY
 } from '../config.js'
+import { broadcastBuildingDamage } from '../network/gameCommandSync.js'
 
 const mineLookup = new Map()
 
@@ -182,6 +183,10 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
       for (let bx = building.x; bx < building.x + building.width; bx++) {
         if (bx === tileX && by === tileY) {
           building.health = Math.max(0, building.health - damage)
+          // Broadcast building damage to host in multiplayer
+          if (building.id) {
+            broadcastBuildingDamage(building.id, damage, building.health)
+          }
           return // Only damage once per building
         }
       }
@@ -324,6 +329,10 @@ function applyMineDamageWithSweeperImmunity(tileX, tileY, damage, units, buildin
       for (let bx = building.x; bx < building.x + building.width; bx++) {
         if (bx === tileX && by === tileY) {
           building.health = Math.max(0, building.health - damage)
+          // Broadcast building damage to host in multiplayer
+          if (building.id) {
+            broadcastBuildingDamage(building.id, damage, building.health)
+          }
           return // Only damage once per building
         }
       }

@@ -8,6 +8,7 @@ import { unitCosts } from './units.js'
 import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
+import { broadcastBuildingPlace } from './network/gameCommandSync.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
@@ -549,6 +550,9 @@ export const productionQueue = {
         updatePowerSupply(gameState.buildings, gameState)
         playSound('buildingPlaced')
         showNotification(`${buildingData[this.currentBuilding.type].displayName} constructed`)
+
+        // Broadcast building placement to other players in multiplayer
+        broadcastBuildingPlace(this.currentBuilding.type, blueprint.x, blueprint.y, gameState.humanPlayer)
 
         // Update building button states after construction
         if (this.productionController) {
