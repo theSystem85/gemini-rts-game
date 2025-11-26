@@ -1,5 +1,8 @@
 import { createRemoteConnection, RemoteConnectionStatus } from '../network/remoteConnection.js'
-import { handleReceivedCommand } from '../network/gameCommandSync.js'
+import { handleReceivedCommand, setClientPartyId, resetClientState } from '../network/gameCommandSync.js'
+import { parsePartyIdFromToken } from '../network/invites.js'
+import { gameState } from '../gameState.js'
+import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from '../config.js'
 
 const STATUS_MESSAGES = {
   [RemoteConnectionStatus.IDLE]: 'Awaiting alias submission.',
@@ -51,6 +54,57 @@ function hideOverlay(overlay) {
   overlay.setAttribute('aria-hidden', 'true')
 }
 
+/**
+ * Center the camera on the party's construction yard
+ * @param {string} partyId - The partyId to center on
+ */
+function centerCameraOnPartyBase(partyId) {
+  if (!partyId) {
+    return
+  }
+  
+  // Find the construction yard belonging to this party
+  const factory = gameState.buildings?.find(b => 
+    b.type === 'constructionYard' && 
+    (b.owner === partyId || b.id === partyId)
+  ) || gameState.factories?.find(f => 
+    f.id === partyId || f.owner === partyId
+  )
+  
+  if (!factory) {
+    console.warn('[RemoteInviteLanding] Could not find factory for party:', partyId)
+    return
+  }
+  
+  // Calculate pixel position
+  const factoryPixelX = factory.x * TILE_SIZE
+  const factoryPixelY = factory.y * TILE_SIZE
+  
+  // Get viewport dimensions
+  const gameCanvas = document.getElementById('gameCanvas')
+  if (!gameCanvas) {
+    return
+  }
+  
+  // Use a reasonable default viewport size if canvas dimensions aren't available
+  const viewportWidth = gameCanvas.clientWidth || 800
+  const viewportHeight = gameCanvas.clientHeight || 600
+  
+  // Center the camera on the factory
+  gameState.scrollOffset.x = Math.max(0, Math.min(
+    factoryPixelX - viewportWidth / 2,
+    MAP_TILES_X * TILE_SIZE - viewportWidth
+  ))
+  gameState.scrollOffset.y = Math.max(0, Math.min(
+    factoryPixelY - viewportHeight / 2,
+    MAP_TILES_Y * TILE_SIZE - viewportHeight
+  ))
+  
+  console.log('[RemoteInviteLanding] Camera centered on party base:', partyId, 
+    'at', factory.x, factory.y, 
+    'scroll:', gameState.scrollOffset.x, gameState.scrollOffset.y)
+}
+
 export function initRemoteInviteLanding() {
   if (typeof document === 'undefined') {
     return
@@ -91,12 +145,29 @@ export function initRemoteInviteLanding() {
       showOverlay(overlay, statusElement)
       setFormDisabled(false)
       aliasInput.focus()
+      // Reset client state on disconnect
+      resetClientState()
     }
   }
 
+  // Parse the partyId from the invite token
+  const partyId = parsePartyIdFromToken(inviteToken)
+  
   const handleDataChannelOpen = () => {
     hideOverlay(overlay)
     updateStatus(statusElement, 'Connected. Remote controls are live.', false)
+    
+    // Set the client's partyId and humanPlayer when connected
+    if (partyId) {
+      setClientPartyId(partyId)
+      gameState.humanPlayer = partyId
+      console.log('[RemoteInviteLanding] Client party set to:', partyId)
+      
+      // Center camera on the client's base after a short delay to allow state sync
+      setTimeout(() => {
+        centerCameraOnPartyBase(partyId)
+      }, 500)
+    }
   }
 
   const handleDataChannelClose = () => {
@@ -104,6 +175,8 @@ export function initRemoteInviteLanding() {
     updateStatus(statusElement, 'Connection closed. Enter your alias to retry.', true)
     setFormDisabled(false)
     aliasInput.focus()
+    // Reset client state on disconnect
+    resetClientState()
   }
 
   const handleDataChannelMessage = (rawPayload) => {

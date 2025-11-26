@@ -36,6 +36,37 @@ const commandListeners = new Set()
 // Handle for periodic state sync
 let stateSyncHandle = null
 
+// Track if client has been initialized (first snapshot received)
+let clientInitialized = false
+
+// Store the client's partyId (for remote clients)
+let clientPartyId = null
+
+/**
+ * Set the client's party ID (called when remote client connects)
+ * @param {string} partyId - The partyId this client controls
+ */
+export function setClientPartyId(partyId) {
+  clientPartyId = partyId
+  clientInitialized = false // Reset initialization flag for new connection
+}
+
+/**
+ * Get the client's party ID
+ * @returns {string|null}
+ */
+export function getClientPartyId() {
+  return clientPartyId
+}
+
+/**
+ * Reset client state (called on disconnect)
+ */
+export function resetClientState() {
+  clientPartyId = null
+  clientInitialized = false
+}
+
 /**
  * Check if the current session is the host
  * @returns {boolean}
@@ -136,9 +167,9 @@ function broadcastToAllPeers(message) {
 /**
  * Handle a received game command
  * @param {Object} command - The received command
- * @param {string} sourceId - Identifier of the message source
+ * @param {string} _sourceId - Identifier of the message source (unused but kept for API compatibility)
  */
-export function handleReceivedCommand(command, sourceId) {
+export function handleReceivedCommand(command, _sourceId) {
   if (!command || command.type !== GAME_COMMAND_MESSAGE_TYPE) {
     return
   }
@@ -468,10 +499,27 @@ function createGameStateSnapshot() {
     type: bullet.type
   }))
   
+  // Serialize factories (construction yards) with essential properties
+  const factories = (gameState.factories || []).map(factory => ({
+    id: factory.id,
+    type: factory.type,
+    owner: factory.owner,
+    x: factory.x,
+    y: factory.y,
+    width: factory.width,
+    height: factory.height,
+    health: factory.health,
+    maxHealth: factory.maxHealth,
+    budget: factory.budget,
+    rallyPoint: factory.rallyPoint,
+    productionCountdown: factory.productionCountdown
+  }))
+  
   return {
     units,
     buildings,
     bullets,
+    factories,
     money: gameState.money,
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
@@ -487,6 +535,15 @@ function createGameStateSnapshot() {
 function applyGameStateSnapshot(snapshot) {
   if (!snapshot || isHost()) {
     return
+  }
+  
+  // On first snapshot, initialize client with their partyId
+  if (!clientInitialized && clientPartyId) {
+    gameState.humanPlayer = clientPartyId
+    console.log('[GameCommandSync] Client initialized as party:', clientPartyId)
+    
+    // Mark as initialized so we only do this once
+    clientInitialized = true
   }
   
   // Update money for the local player's party
@@ -509,44 +566,77 @@ function applyGameStateSnapshot(snapshot) {
     gameState.partyStates = snapshot.partyStates
   }
   
-  // Sync units - update existing units or add new ones
+  // Sync units - replace entire array from host snapshot
+  // This ensures all units from all parties are visible
   if (Array.isArray(snapshot.units)) {
-    const existingUnits = gameState.units || []
-    const snapshotUnitIds = new Set(snapshot.units.map(u => u.id))
+    // Create a map of existing units by ID for merging non-serialized properties
+    const existingById = new Map()
+    ;(gameState.units || []).forEach(u => {
+      if (u.id) existingById.set(u.id, u)
+    })
     
-    // Remove units that no longer exist
-    gameState.units = existingUnits.filter(u => snapshotUnitIds.has(u.id))
-    
-    // Update or add units
-    snapshot.units.forEach(snapshotUnit => {
-      const existing = gameState.units.find(u => u.id === snapshotUnit.id)
+    // Replace units array with snapshot data, preserving any local-only properties
+    gameState.units = snapshot.units.map(snapshotUnit => {
+      const existing = existingById.get(snapshotUnit.id)
+      
       if (existing) {
-        // Update existing unit properties
+        // Merge snapshot data into existing unit to preserve non-synced properties (like sprites)
         Object.assign(existing, snapshotUnit)
+        return existing
       } else {
-        // Add new unit
-        gameState.units.push(snapshotUnit)
+        // New unit from host
+        return { ...snapshotUnit }
       }
     })
   }
   
-  // Sync buildings - update existing or add new ones
+  // Sync buildings - replace entire array from host snapshot
+  // This ensures all buildings (including new ones) are properly synced
   if (Array.isArray(snapshot.buildings)) {
-    const existingBuildings = gameState.buildings || []
-    const snapshotBuildingIds = new Set(snapshot.buildings.map(b => b.id))
+    // Create a map of existing buildings by ID and position for merging non-serialized properties
+    const existingByIdOrPos = new Map()
+    ;(gameState.buildings || []).forEach(b => {
+      const key = b.id || `${b.type}_${b.x}_${b.y}`
+      existingByIdOrPos.set(key, b)
+    })
     
-    // Remove buildings that no longer exist
-    gameState.buildings = existingBuildings.filter(b => snapshotBuildingIds.has(b.id))
-    
-    // Update or add buildings
-    snapshot.buildings.forEach(snapshotBuilding => {
-      const existing = gameState.buildings.find(b => b.id === snapshotBuilding.id)
+    // Replace buildings array with snapshot data, preserving any local-only properties
+    gameState.buildings = snapshot.buildings.map(snapshotBuilding => {
+      const key = snapshotBuilding.id || `${snapshotBuilding.type}_${snapshotBuilding.x}_${snapshotBuilding.y}`
+      const existing = existingByIdOrPos.get(key)
+      
       if (existing) {
-        // Update existing building properties
+        // Merge snapshot data into existing building to preserve non-synced properties
         Object.assign(existing, snapshotBuilding)
+        return existing
       } else {
-        // Add new building
-        gameState.buildings.push(snapshotBuilding)
+        // New building from host - ensure it has required properties
+        return {
+          ...snapshotBuilding,
+          isBuilding: true,
+          constructionFinished: snapshotBuilding.constructionFinished !== false
+        }
+      }
+    })
+  }
+  
+  // Sync factories
+  if (Array.isArray(snapshot.factories)) {
+    const existingFactories = gameState.factories || []
+    const snapshotFactoryIds = new Set(snapshot.factories.map(f => f.id))
+    
+    // Remove factories that no longer exist
+    gameState.factories = existingFactories.filter(f => snapshotFactoryIds.has(f.id))
+    
+    // Update or add factories
+    snapshot.factories.forEach(snapshotFactory => {
+      const existing = gameState.factories.find(f => f.id === snapshotFactory.id)
+      if (existing) {
+        // Update existing factory properties
+        Object.assign(existing, snapshotFactory)
+      } else {
+        // Add new factory
+        gameState.factories.push(snapshotFactory)
       }
     })
   }

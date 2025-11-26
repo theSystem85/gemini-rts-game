@@ -38,6 +38,10 @@
   - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
 - [x] ✅ T019 Game command synchronization - broadcast unit commands (move, attack) and build commands between multiplayer players via WebRTC DataChannel
   - done: gameCommandSync.js module created with broadcastUnitMove/broadcastUnitAttack, integrated into unitCommands.js and webrtcSession.js/remoteConnection.js
+- [x] ✅ T020 Client initialization fixes - parse partyId from invite token, set humanPlayer, center camera on party's base
+  - done: invites.js exports parsePartyIdFromToken(); remoteInviteLanding.js sets humanPlayer and centers camera; gameCommandSync.js syncs factories in snapshots
+- [x] ✅ T021 Fix multiplayer sync issues - building IDs, unit visibility, render loop resume, building disappearance
+  - done: buildings.js now assigns unique IDs via getUniqueId(); gameCommandSync.js uses full array replacement for buildings/units with position-based fallback; gameLoop.js always schedules frame when paused
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

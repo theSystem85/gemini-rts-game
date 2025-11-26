@@ -14,6 +14,7 @@ import {
 } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { ensureServiceRadius } from './utils/serviceRadius.js'
+import { getUniqueId } from './utils.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -262,6 +263,7 @@ export function createBuilding(type, x, y) {
   const data = buildingData[type]
 
   const building = {
+    id: getUniqueId(), // Generate unique ID for syncing
     type,
     x,
     y,
