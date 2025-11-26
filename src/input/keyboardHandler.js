@@ -13,6 +13,7 @@ import { performanceDialog } from '../ui/performanceDialog.js'
 import { runtimeConfigDialog } from '../ui/runtimeConfigDialog.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 import { setRemoteControlAction, getRemoteControlActionState } from './remoteControlState.js'
+import { broadcastUnitStop } from '../network/gameCommandSync.js'
 import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
@@ -1078,6 +1079,7 @@ export class KeyboardHandler {
     }
 
     let stoppedCount = 0
+    const unitsToStop = []
 
     // Stop attacking for all selected units or buildings
     this.selectedUnits.forEach(unit => {
@@ -1114,7 +1116,17 @@ export class KeyboardHandler {
       if (unit.attackGroupTargets) {
         unit.attackGroupTargets = []
       }
+      
+      // Track units owned by this player for network sync
+      if (unit.owner === gameState.humanPlayer) {
+        unitsToStop.push(unit)
+      }
     })
+
+    // Broadcast stop command to host in multiplayer
+    if (unitsToStop.length > 0) {
+      broadcastUnitStop(unitsToStop)
+    }
 
     if (stoppedCount > 0) {
       this.showNotification(`${stoppedCount} unit${stoppedCount > 1 ? 's' : ''} stopped attacking`, 2000)

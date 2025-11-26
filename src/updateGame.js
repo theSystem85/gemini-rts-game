@@ -163,6 +163,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
               unit.moveTarget = null
               unit.attackTarget = null
               unit.guardPosition = null
+              unit.target = null  // Clear the combat target to stop firing
+              unit.forcedAttack = false
+              unit.attackQueue = []
+              unit.attackGroupTargets = []
             }
           })
         } else if (cmd.commandType === COMMAND_TYPES.UNIT_GUARD && cmd.payload) {

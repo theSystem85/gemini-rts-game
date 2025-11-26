@@ -60,7 +60,9 @@
   - done: Fixed updateUnitPathfinding() in unitMovement.js to iterate over ALL units with moveTarget, not just selectedUnits; Previously host would receive UNIT_MOVE and set moveTarget but pathfinding only ran for local player's selected units; Now any unit with moveTarget gets path calculated
 - [x] ✅ T030 Client movement interpolation
   - done: Added linear interpolation for smooth unit movement on client between 100ms host snapshots; unitInterpolationState Map tracks prev/target positions per unit; updateUnitInterpolation() called every frame interpolates x, y, direction, turretDirection; Handles angle wraparound for rotation
-- [ ] T031 Multiplayer network stats + bullets
+- [x] ✅ T031 Fix multiplayer client issues: tank barrel, promotion stars, stop command
+  - done: Fixed tank barrel disappearing on client by converting animation timestamps (recoilStartTime, muzzleFlashStartTime) to elapsed times for cross-machine sync; Added level, bountyCounter, baseCost to unit snapshot for promotion stars; Added broadcastUnitStop() and integrated into handleStopAttacking(); Fixed UNIT_STOP handler on host to clear target property
+- [ ] T032 Multiplayer network stats + bullets
   - TODO: finish host/client byte tracking for WebRTC data channels, display send/receive rates & totals inside FPS overlay/perf widget, and ensure bullet interpolation updates alongside unit interpolation on clients
 
 ## Features

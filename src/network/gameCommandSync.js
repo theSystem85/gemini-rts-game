@@ -531,6 +531,28 @@ export function createProductionCommand(productionType, itemType, factoryId) {
 }
 
 /**
+ * Broadcast a unit stop command (clears attack target and movement)
+ * @param {Array} units - Units to stop
+ */
+export function broadcastUnitStop(units) {
+  if (!hasActiveRemoteSession()) {
+    return
+  }
+  
+  const unitIds = units.map(u => u.id).filter(Boolean)
+  if (unitIds.length === 0) {
+    return
+  }
+  
+  const partyId = units[0]?.owner || gameState.humanPlayer
+  broadcastGameCommand(
+    COMMAND_TYPES.UNIT_STOP,
+    { unitIds },
+    partyId
+  )
+}
+
+/**
  * Broadcast a unit move command
  * @param {Array} units - Units to move
  * @param {number} targetX - Target X
@@ -693,6 +715,8 @@ export function broadcastGamePauseState(paused) {
  * @returns {Object}
  */
 function createGameStateSnapshot() {
+  const now = performance.now()
+  
   // Serialize units with essential properties - use mainUnits from main.js as that's the authoritative array
   const units = (mainUnits || []).map(unit => ({
     id: unit.id,
@@ -714,9 +738,9 @@ function createGameStateSnapshot() {
     maxAmmunition: unit.maxAmmunition,
     oreCarried: unit.oreCarried,
     crew: unit.crew,
-    // Animation/firing state
-    muzzleFlashStartTime: unit.muzzleFlashStartTime,
-    recoilStartTime: unit.recoilStartTime,
+    // Animation/firing state - convert to elapsed time for cross-machine sync
+    muzzleFlashElapsed: unit.muzzleFlashStartTime ? now - unit.muzzleFlashStartTime : null,
+    recoilElapsed: unit.recoilStartTime ? now - unit.recoilStartTime : null,
     lastShotTime: unit.lastShotTime,
     // Movement state
     path: unit.path,
@@ -727,6 +751,10 @@ function createGameStateSnapshot() {
     // Combat state
     attackTarget: unit.attackTarget ? { id: unit.attackTarget.id } : null,
     guardPosition: unit.guardPosition,
+    // Leveling/experience state
+    level: unit.level,
+    bountyCounter: unit.bountyCounter,
+    baseCost: unit.baseCost,
     // Status effects
     isMoving: unit.isMoving,
     isAttacking: unit.isAttacking,
@@ -754,7 +782,9 @@ function createGameStateSnapshot() {
     ammo: building.ammo,
     maxAmmo: building.maxAmmo,
     turretDirection: building.turretDirection,
-    muzzleFlashStartTime: building.muzzleFlashStartTime
+    // Animation state - convert to elapsed time for cross-machine sync
+    muzzleFlashElapsed: building.muzzleFlashStartTime ? now - building.muzzleFlashStartTime : null,
+    recoilElapsed: building.recoilStartTime ? now - building.recoilStartTime : null
   }))
   
   // Serialize bullets/projectiles with full properties - use mainBullets from main.js as that's the authoritative array
@@ -899,6 +929,15 @@ function applyGameStateSnapshot(snapshot) {
       snapshotUnitIds.add(snapshotUnit.id)
       const existing = existingById.get(snapshotUnit.id)
       
+      // Convert elapsed times back to absolute start times for animations
+      // This allows animations to work correctly across machines with different performance.now() bases
+      const muzzleFlashStartTime = snapshotUnit.muzzleFlashElapsed != null 
+        ? now - snapshotUnit.muzzleFlashElapsed 
+        : null
+      const recoilStartTime = snapshotUnit.recoilElapsed != null 
+        ? now - snapshotUnit.recoilElapsed 
+        : null
+      
       if (existing) {
         // Set up interpolation: store current position as prev, snapshot as target
         unitInterpolationState.set(snapshotUnit.id, {
@@ -912,9 +951,12 @@ function applyGameStateSnapshot(snapshot) {
           targetTurretDir: snapshotUnit.turretDirection
         })
         
-        // Merge all snapshot data EXCEPT position (which we'll interpolate)
-        const { x, y, tileX, tileY, direction, turretDirection, ...nonPositionData } = snapshotUnit
+        // Merge all snapshot data EXCEPT position (which we'll interpolate) and elapsed times (already converted)
+        const { x, y, tileX, tileY, direction, turretDirection, muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...nonPositionData } = snapshotUnit
         Object.assign(existing, nonPositionData)
+        // Apply converted animation times
+        existing.muzzleFlashStartTime = muzzleFlashStartTime
+        existing.recoilStartTime = recoilStartTime
         // Store target position for when interpolation completes
         existing._targetX = x
         existing._targetY = y
@@ -935,7 +977,13 @@ function applyGameStateSnapshot(snapshot) {
           prevTurretDir: snapshotUnit.turretDirection,
           targetTurretDir: snapshotUnit.turretDirection
         })
-        return { ...snapshotUnit }
+        // Create new unit with converted animation times
+        const { muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...unitData } = snapshotUnit
+        return { 
+          ...unitData, 
+          muzzleFlashStartTime,
+          recoilStartTime
+        }
       }
     })
     
@@ -975,17 +1023,31 @@ function applyGameStateSnapshot(snapshot) {
       const key = snapshotBuilding.id || `${snapshotBuilding.type}_${snapshotBuilding.x}_${snapshotBuilding.y}`
       const existing = existingByIdOrPos.get(key)
       
+      // Convert elapsed times back to absolute start times for animations
+      const muzzleFlashStartTime = snapshotBuilding.muzzleFlashElapsed != null 
+        ? now - snapshotBuilding.muzzleFlashElapsed 
+        : null
+      const recoilStartTime = snapshotBuilding.recoilElapsed != null 
+        ? now - snapshotBuilding.recoilElapsed 
+        : null
+      
       if (existing) {
         // Merge snapshot data into existing building to preserve non-synced properties
         // But respect construction animation state from snapshot
-        Object.assign(existing, snapshotBuilding)
+        const { muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...buildingData } = snapshotBuilding
+        Object.assign(existing, buildingData)
+        // Apply converted animation times
+        existing.muzzleFlashStartTime = muzzleFlashStartTime
+        existing.recoilStartTime = recoilStartTime
         return existing
       } else {
         // New building from host - use snapshot's construction state if available
         // Otherwise start construction animation
-        const now = performance.now()
+        const { muzzleFlashElapsed: _mfe2, recoilElapsed: _re2, ...buildingData } = snapshotBuilding
         const newBuilding = {
-          ...snapshotBuilding,
+          ...buildingData,
+          muzzleFlashStartTime,
+          recoilStartTime,
           isBuilding: true,
           constructionFinished: snapshotBuilding.constructionFinished === true,
           constructionStartTime: snapshotBuilding.constructionStartTime || now
