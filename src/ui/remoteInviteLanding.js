@@ -1,8 +1,10 @@
-import { createRemoteConnection, RemoteConnectionStatus } from '../network/remoteConnection.js'
+import { createRemoteConnection, RemoteConnectionStatus, getActiveRemoteConnection } from '../network/remoteConnection.js'
 import { handleReceivedCommand, setClientPartyId, resetClientState, startGameStateSync, stopGameStateSync } from '../network/gameCommandSync.js'
 import { parsePartyIdFromToken } from '../network/invites.js'
 import { gameState } from '../gameState.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from '../config.js'
+import { showHostNotification } from '../network/hostNotifications.js'
+import { ensureMultiplayerState, generateRandomId } from '../network/multiplayerStore.js'
 
 const STATUS_MESSAGES = {
   [RemoteConnectionStatus.IDLE]: 'Awaiting alias submission.',
@@ -143,6 +145,162 @@ function centerCameraOnPartyBase(partyId) {
     'scroll:', gameState.scrollOffset.x, gameState.scrollOffset.y)
 }
 
+/**
+ * Handle being kicked from the session by the host
+ * Shows a modal with options to continue with AI or start a new game
+ * @param {Object} payload - The kick message payload
+ * @param {HTMLElement} overlay - The invite overlay element
+ */
+function handleKickedFromSession(payload, overlay) {
+  console.log('[RemoteInviteLanding] Kicked from session:', payload)
+  
+  // Stop the remote connection
+  const connection = getActiveRemoteConnection()
+  if (connection) {
+    connection.stop()
+  }
+  
+  // Stop game state sync
+  stopGameStateSync()
+  resetClientState()
+  
+  // Hide the invite overlay
+  hideOverlay(overlay)
+  
+  // Show map settings again since we're now the host
+  showMapSettings()
+  
+  // Pause the game while modal is open
+  gameState.gamePaused = true
+  
+  // Remove invite token from URL to prevent re-join attempts
+  if (typeof window !== 'undefined' && window.history) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('invite')
+    window.history.replaceState({}, '', url.toString())
+  }
+  
+  // Show the kicked modal
+  showKickedModal(payload)
+  
+  console.log('[RemoteInviteLanding] Showing kicked modal')
+}
+
+/**
+ * Show the kicked modal with options to continue or start new game
+ * @param {Object} payload - The kick message payload
+ */
+function showKickedModal(payload) {
+  const modal = document.getElementById('kickedModal')
+  const messageEl = document.getElementById('kickedModalMessage')
+  const continueBtn = document.getElementById('kickedContinueBtn')
+  const newGameBtn = document.getElementById('kickedNewGameBtn')
+  
+  if (!modal) {
+    // Fallback if modal doesn't exist - just continue with AI
+    convertToStandaloneHost()
+    gameState.gamePaused = false
+    showHostNotification(payload.reason || 'You were kicked from the session.')
+    showHostNotification('You are now the host of your own game. All other parties are AI.')
+    return
+  }
+  
+  // Set the kick message
+  if (messageEl) {
+    messageEl.textContent = payload.reason || 'You were kicked from the session by the host.'
+  }
+  
+  // Show modal
+  modal.classList.add('kicked-modal--open')
+  modal.setAttribute('aria-hidden', 'false')
+  document.body.classList.add('kicked-modal-open')
+  
+  // Handle continue button
+  const handleContinue = () => {
+    hideKickedModal()
+    convertToStandaloneHost()
+    gameState.gamePaused = false
+    showHostNotification('You are now the host of your own game. All other parties are AI.')
+    cleanup()
+  }
+  
+  // Handle new game button
+  const handleNewGame = () => {
+    hideKickedModal()
+    // Get the game instance and reset
+    const gameInstance = window.gameInstance
+    if (gameInstance && typeof gameInstance.resetGame === 'function') {
+      gameInstance.resetGame()
+    } else {
+      // Fallback: reload the page
+      window.location.href = window.location.origin + window.location.pathname
+    }
+    cleanup()
+  }
+  
+  // Cleanup function to remove event listeners
+  const cleanup = () => {
+    if (continueBtn) continueBtn.removeEventListener('click', handleContinue)
+    if (newGameBtn) newGameBtn.removeEventListener('click', handleNewGame)
+  }
+  
+  // Add event listeners
+  if (continueBtn) continueBtn.addEventListener('click', handleContinue)
+  if (newGameBtn) newGameBtn.addEventListener('click', handleNewGame)
+}
+
+/**
+ * Hide the kicked modal
+ */
+function hideKickedModal() {
+  const modal = document.getElementById('kickedModal')
+  if (modal) {
+    modal.classList.remove('kicked-modal--open')
+    modal.setAttribute('aria-hidden', 'true')
+    document.body.classList.remove('kicked-modal-open')
+  }
+}
+
+/**
+ * Convert the client to a standalone host with all AI parties
+ */
+function convertToStandaloneHost() {
+  // Generate new game instance ID so this is a separate game
+  gameState.gameInstanceId = generateRandomId('game-instance')
+  gameState.hostId = generateRandomId('host')
+  
+  // Set up multiplayer session as host
+  gameState.multiplayerSession = {
+    isRemote: false,
+    localRole: 'host',
+    status: 'idle',
+    alias: null,
+    inviteToken: null,
+    connectedAt: null
+  }
+  
+  // Make all other parties AI-controlled
+  // Keep the current humanPlayer as the player's party
+  const currentParty = gameState.humanPlayer
+  ensureMultiplayerState()
+  
+  if (gameState.partyStates) {
+    gameState.partyStates.forEach(party => {
+      if (party.partyId !== currentParty) {
+        party.owner = 'AI'
+        party.aiActive = true
+        party.lastConnectedAt = null
+        party.inviteToken = null
+      } else {
+        party.owner = 'Human (Host)'
+        party.aiActive = false
+      }
+    })
+  }
+  
+  console.log('[RemoteInviteLanding] Converted to standalone host mode')
+}
+
 export function initRemoteInviteLanding() {
   if (typeof document === 'undefined') {
     return
@@ -155,6 +313,9 @@ export function initRemoteInviteLanding() {
   const tokenText = document.getElementById('remoteInviteTokenText')
   const submitButton = document.getElementById('remoteInviteSubmit')
   const inviteToken = getInviteTokenFromUrl()
+
+  // Flag to track if client was kicked (to prevent showing reconnect screen)
+  let wasKicked = false
 
   if (!overlay || !form || !aliasInput || !statusElement || !submitButton || !inviteToken) {
     if (overlay) {
@@ -219,6 +380,11 @@ export function initRemoteInviteLanding() {
   }
 
   const handleDataChannelClose = () => {
+    // Don't show reconnect screen if we were kicked - game continues standalone
+    if (wasKicked) {
+      return
+    }
+    
     showOverlay(overlay, statusElement)
     updateStatus(statusElement, 'Connection closed. Enter your alias to retry.', true)
     setFormDisabled(false)
@@ -235,12 +401,19 @@ export function initRemoteInviteLanding() {
     if (typeof payload === 'string') {
       try {
         payload = JSON.parse(payload)
-      } catch (err) {
+      } catch {
         return
       }
     }
     
     if (!payload) {
+      return
+    }
+    
+    // Handle kick message from host
+    if (payload.type === 'kicked') {
+      wasKicked = true
+      handleKickedFromSession(payload, overlay)
       return
     }
     

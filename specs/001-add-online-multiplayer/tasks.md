@@ -78,6 +78,12 @@ description: "Task list for implementing online multiplayer takeover"
   - done: multiplayerStore exports regenerateAllInviteTokens() and isHost(); saveGame.js calls regeneration on load
 - [x] T018 [US3] Ensure AI controllers in `src/ai/` reinitialize party assignments when `multiStore` reports `aiActive`, so gameplay continues immediately if a remote disconnect occurs before the next invite is consumed
   - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
+- [x] T037 [US3] Update sidebar party display when party ownership changes
+  - done: Added PARTY_OWNERSHIP_CHANGED_EVENT in multiplayerStore.js; markPartyControlledByHuman() and markPartyControlledByAi() now emit ownership change events; sidebarMultiplayer.js subscribes via observePartyOwnershipChange() and refreshes the party list display showing player names on takeover and AI when players disconnect
+- [x] T038 [US3] Add kick button for connected players
+  - done: Added kickPlayer() function in webrtcSession.js that disconnects WebRTC session and returns party to AI control; sidebarMultiplayer.js shows "Kick" button (red-styled) instead of "Invite" when a human player is connected; status text cleared when player connected
+- [x] T039 [US3] Kick invalidates invite, regenerates token, client becomes standalone host
+  - done: kickPlayer() sends 'kicked' message before disconnecting; invalidates old token and generates new invite; client handles kick message by stopping connection, converting to standalone host mode with all AI parties; invite URL cleared from browser
 
 **Checkpoint**: Invite links survive disconnects, saves reload with new hosts/tokens, and AI immediately retakes disconnected parties.
 

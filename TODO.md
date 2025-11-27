@@ -72,6 +72,12 @@
   - done: Added playerCount to game state snapshot; Updated syncClientMap() and regenerateMapForClient() to accept and set playerCount before map generation; Fixed issue where roads were generated differently due to different player positions being used in street network generation
 - [x] ✅ T036 Fix wreck unitType not syncing to clients
   - done: Fixed wreck serialization in createGameStateSnapshot() to use `unitType: wreck.unitType` instead of incorrect `type: wreck.type`; Also added spriteCacheKey to wreck snapshot for proper sprite lookup on client
+- [x] ✅ T037 Update sidebar party display when player takes over AI or disconnects
+  - done: Added PARTY_OWNERSHIP_CHANGED_EVENT in multiplayerStore.js; markPartyControlledByHuman() and markPartyControlledByAi() now emit ownership change events; sidebarMultiplayer.js subscribes to these events and refreshes the party list display when ownership changes
+- [x] ✅ T038 Add kick button for connected players
+  - done: Added kickPlayer() function in webrtcSession.js; sidebarMultiplayer.js shows "Kick" button instead of "Invite" when a human player is connected; kick disconnects the WebRTC session and returns party to AI control; red-styled button in CSS
+- [x] ✅ T039 Kick invalidates invite, regenerates token, client becomes standalone host
+  - done: kickPlayer() now sends kick message before disconnecting, invalidates old token, generates new invite; client handles kick message by converting to standalone host with all AI parties; invite URL cleared from browser
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

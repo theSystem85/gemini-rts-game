@@ -600,6 +600,27 @@
       </div>
     </div>
 
+    <!-- Kicked from session modal -->
+    <div id="kickedModal" class="kicked-modal" aria-hidden="true">
+      <div class="kicked-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="kickedModalTitle">
+        <div class="kicked-modal__header">
+          <h2 id="kickedModalTitle">Disconnected from Game</h2>
+        </div>
+        <div class="kicked-modal__body">
+          <p id="kickedModalMessage" class="kicked-modal__message">You were kicked from the session by the host.</p>
+          <p class="kicked-modal__info">You can continue playing locally with AI opponents, or start a fresh game.</p>
+          <div class="kicked-modal__actions">
+            <button id="kickedContinueBtn" class="kicked-modal__button kicked-modal__button--primary" type="button">
+              Continue with AI
+            </button>
+            <button id="kickedNewGameBtn" class="kicked-modal__button kicked-modal__button--secondary" type="button">
+              Start New Game
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="benchmarkModal" class="benchmark-modal" aria-hidden="true">
       <div class="benchmark-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkModalTitle">
         <div class="benchmark-modal__header">

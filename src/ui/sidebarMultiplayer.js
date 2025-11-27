@@ -2,9 +2,10 @@ import {
   listPartyStates,
   generateInviteForParty,
   getHostInviteStatus,
-  setHostInviteStatus
+  setHostInviteStatus,
+  observePartyOwnershipChange
 } from '../network/multiplayerStore.js'
-import { watchHostInvite } from '../network/webrtcSession.js'
+import { watchHostInvite, kickPlayer } from '../network/webrtcSession.js'
 import { showHostNotification } from '../network/hostNotifications.js'
 import { gameState } from '../gameState.js'
 import { observeMultiplayerSession } from '../network/multiplayerSessionEvents.js'
@@ -24,11 +25,13 @@ const HOST_CONTROL_BUTTONS = [
 
 let partyListContainer = null
 let sessionObserverCleanup = null
+let partyOwnershipCleanup = null
 
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
   setupHostControlWatcher()
+  setupPartyOwnershipWatcher()
   listPartyStates().forEach((partyState) => {
     if (partyState.inviteToken) {
       watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
@@ -45,6 +48,16 @@ export function refreshSidebarMultiplayer() {
   const partyStates = listPartyStates()
   partyStates.forEach((partyState) => {
     partyListContainer.appendChild(createPartyRow(partyState))
+  })
+}
+
+function setupPartyOwnershipWatcher() {
+  if (partyOwnershipCleanup) {
+    partyOwnershipCleanup()
+  }
+  partyOwnershipCleanup = observePartyOwnershipChange(() => {
+    // Refresh the entire party list when any party ownership changes
+    refreshSidebarMultiplayer()
   })
 }
 
@@ -123,15 +136,33 @@ function createPartyRow(partyState) {
   const status = document.createElement('span')
   status.className = 'multiplayer-party-status'
   status.setAttribute('aria-live', 'polite')
-  updateStatusText(status, partyState)
-  controls.appendChild(status)
+  
+  // Check if a human player is connected (not AI and not the host)
+  const isHumanConnected = !partyState.aiActive && partyState.partyId !== gameState.humanPlayer
+  
+  if (isHumanConnected) {
+    // Human player is connected - show empty status and kick button
+    status.textContent = ''
+    controls.appendChild(status)
 
-  const inviteButton = document.createElement('button')
-  inviteButton.type = 'button'
-  inviteButton.className = 'multiplayer-invite-button'
-  inviteButton.textContent = 'Invite'
-  inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
-  controls.appendChild(inviteButton)
+    const kickButton = document.createElement('button')
+    kickButton.type = 'button'
+    kickButton.className = 'multiplayer-invite-button multiplayer-kick-button'
+    kickButton.textContent = 'Kick'
+    kickButton.addEventListener('click', () => handleKickClick(partyState, kickButton))
+    controls.appendChild(kickButton)
+  } else {
+    // AI controlled or host party - show normal invite flow
+    updateStatusText(status, partyState)
+    controls.appendChild(status)
+
+    const inviteButton = document.createElement('button')
+    inviteButton.type = 'button'
+    inviteButton.className = 'multiplayer-invite-button'
+    inviteButton.textContent = 'Invite'
+    inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
+    controls.appendChild(inviteButton)
+  }
 
   row.append(info, controls)
   return row
@@ -195,6 +226,26 @@ async function handleInviteClick(partyState, button, status) {
       status.classList.remove('success')
     }, 2500)
   }
+}
+
+function handleKickClick(partyState, button) {
+  button.disabled = true
+  button.textContent = 'Kicking…'
+  
+  // kickPlayer is now async
+  kickPlayer(partyState.partyId).then(success => {
+    if (!success) {
+      showHostNotification(`Failed to kick player from ${partyState.partyId}`)
+      button.disabled = false
+      button.textContent = 'Kick'
+    }
+    // If successful, the ownership change event will refresh the sidebar
+  }).catch(err => {
+    console.warn('Kick failed:', err)
+    showHostNotification(`Failed to kick player from ${partyState.partyId}`)
+    button.disabled = false
+    button.textContent = 'Kick'
+  })
 }
 
 async function tryCopyToClipboard(text) {

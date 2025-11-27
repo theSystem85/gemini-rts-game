@@ -1,5 +1,5 @@
 import { gameState } from '../gameState.js'
-import { markPartyControlledByHuman, markPartyControlledByAi } from './multiplayerStore.js'
+import { markPartyControlledByHuman, markPartyControlledByAi, invalidateInviteToken, generateInviteForParty, getPartyState } from './multiplayerStore.js'
 import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
@@ -489,6 +489,73 @@ export function stopHostInvite(partyId) {
     monitor.stop()
     inviteMonitors.delete(partyId)
   }
+}
+
+/**
+ * Kick a connected player from a party, returning control to AI
+ * @param {string} partyId - The party to kick the player from
+ * @returns {Promise<boolean>} True if a player was kicked
+ */
+export async function kickPlayer(partyId) {
+  const monitor = inviteMonitors.get(partyId)
+  if (!monitor || !monitor.activeSession) {
+    return false
+  }
+  
+  const session = monitor.activeSession
+  const alias = session.alias || 'Remote player'
+  
+  // Send kick message to the client before disconnecting
+  if (session.dataChannel && session.dataChannel.readyState === 'open') {
+    try {
+      const kickMessage = JSON.stringify({
+        type: 'kicked',
+        reason: 'You were kicked from the session by the host.',
+        partyId: partyId,
+        timestamp: Date.now()
+      })
+      session.dataChannel.send(kickMessage)
+      // Small delay to ensure message is sent before disconnect
+      await new Promise(resolve => setTimeout(resolve, 100))
+    } catch (err) {
+      console.warn('Failed to send kick message:', err)
+    }
+  }
+  
+  // Dispose the session
+  session.dispose()
+  monitor.sessions.delete(session.peerId)
+  monitor.activeSession = null
+  
+  // Manually trigger the state change to ensure AI takeover
+  releaseRemoteControlSource(session.sourceId)
+  markPartyControlledByAi(partyId)
+  emitAiReactivation(partyId)
+  
+  // Invalidate old token and regenerate a new one
+  invalidateInviteToken(partyId)
+  
+  showHostNotification(`${alias} was kicked from party ${partyId} - AI has resumed control`)
+  updateGlobalSession({ alias: null, isRemote: false, status: SESSION_STATES.DISCONNECTED })
+  
+  // Stop game state sync if no active sessions remain
+  const hasActiveSessions = Array.from(monitor.sessions.values()).some(
+    s => s.connectionState === SESSION_STATES.CONNECTED
+  )
+  if (!hasActiveSessions) {
+    stopGameStateSync()
+  }
+  
+  // Generate new invite token after kick
+  try {
+    await generateInviteForParty(partyId)
+    watchHostInvite({ partyId, inviteToken: getPartyState(partyId)?.inviteToken })
+    showHostNotification(`New invite ready for party ${partyId}`)
+  } catch (err) {
+    console.warn('Failed to generate new invite after kick:', err)
+  }
+  
+  return true
 }
 
 export function getActiveHostMonitor(partyId) {

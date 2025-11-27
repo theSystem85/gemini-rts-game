@@ -11,6 +11,37 @@ import { STUN_HOST } from './signalling.js'
 
 const inviteRecords = new Map()
 
+// Event type for party ownership changes
+export const PARTY_OWNERSHIP_CHANGED_EVENT = 'partyOwnershipChanged'
+
+/**
+ * Emit a party ownership change event so UI components can update
+ * @param {string} partyId - The party whose ownership changed
+ * @param {string} newOwner - The new owner (alias or 'AI')
+ * @param {boolean} aiActive - Whether AI is now controlling the party
+ */
+function emitPartyOwnershipChange(partyId, newOwner, aiActive) {
+  if (typeof document === 'undefined') {
+    return
+  }
+  document.dispatchEvent(new CustomEvent(PARTY_OWNERSHIP_CHANGED_EVENT, {
+    detail: { partyId, owner: newOwner, aiActive, timestamp: Date.now() }
+  }))
+}
+
+/**
+ * Subscribe to party ownership change events
+ * @param {Function} handler - Callback function receiving the event
+ * @returns {Function} Cleanup function to unsubscribe
+ */
+export function observePartyOwnershipChange(handler) {
+  if (typeof document === 'undefined' || typeof handler !== 'function') {
+    return () => {}
+  }
+  document.addEventListener(PARTY_OWNERSHIP_CHANGED_EVENT, handler)
+  return () => document.removeEventListener(PARTY_OWNERSHIP_CHANGED_EVENT, handler)
+}
+
 export function generateRandomId(prefix = 'id') {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -160,6 +191,21 @@ export function regenerateInviteToken(partyId) {
 }
 
 /**
+ * Invalidate an existing invite token for a party
+ * @param {string} partyId - The party whose token should be invalidated
+ */
+export function invalidateInviteToken(partyId) {
+  const party = getPartyState(partyId)
+  if (!party || !party.inviteToken) {
+    return
+  }
+  
+  // Remove from local records
+  inviteRecords.delete(party.inviteToken)
+  party.inviteToken = null
+}
+
+/**
  * T017: Regenerate all invite tokens for the current game instance
  * Called when a save is loaded to refresh tokens and establish new host
  * @returns {Promise<void>}
@@ -228,6 +274,10 @@ export function markPartyControlledByHuman(partyId, alias) {
   party.aiActive = false
   party.lastConnectedAt = Date.now()
   showHostNotification(`Party ${partyId} taken over by ${party.owner}`)
+  
+  // Emit event so UI components can update
+  emitPartyOwnershipChange(partyId, party.owner, false)
+  
   return party
 }
 
@@ -241,6 +291,10 @@ export function markPartyControlledByAi(partyId) {
   party.aiActive = true
   party.lastConnectedAt = null
   showHostNotification(`Party ${partyId} returned to AI control`)
+  
+  // Emit event so UI components can update
+  emitPartyOwnershipChange(partyId, 'AI', true)
+  
   return party
 }
 
