@@ -300,9 +300,8 @@ export class UIRenderer {
     
     // Stats layout
     const statsStartY = headingY + headingFontSize + padding * 0.5
-    const statsCount = 5
     const statsSpacing = Math.max(statsFontSize * 1.3, 20)
-    const statsTotalHeight = statsCount * statsSpacing
+    // statsTotalHeight not needed here; stats startY will be adjusted dynamically during rendering
 
     // Position buttons at bottom of modal
     const buttonsStartY = modalY + modalHeight - padding - totalButtonsHeight
@@ -365,7 +364,6 @@ export class UIRenderer {
 
       // Draw modal background with rounded corners effect
       const { modal } = layout
-      const cornerRadius = 12
       
       // Modal shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
@@ -407,24 +405,38 @@ export class UIRenderer {
       ctx.font = `${subtitleFontSize}px Arial`
       ctx.fillStyle = '#ccc'
       
-      // Wrap subtitle text if needed
+      // Wrap subtitle text into lines (don't rely on layout.stats.startY yet)
       const maxTextWidth = modal.width - layout.padding * 2
       const words = subMessage.split(' ')
-      let line = ''
-      let lineY = subtitleY
-      
+      const subtitleLines = []
+      let currentLine = ''
+      let measured
+
       for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' '
-        const metrics = ctx.measureText(testLine)
-        if (metrics.width > maxTextWidth && i > 0) {
-          ctx.fillText(line.trim(), layout.heading.x, lineY)
-          line = words[i] + ' '
-          lineY += subtitleFontSize + 4
+        const testLine = (currentLine + words[i] + ' ').trimEnd() + ' '
+        measured = ctx.measureText(testLine)
+        if (measured.width > maxTextWidth && currentLine.length > 0) {
+          subtitleLines.push(currentLine.trim())
+          currentLine = words[i] + ' '
         } else {
-          line = testLine
+          currentLine = (currentLine + words[i] + ' ').trimEnd() + ' '
         }
       }
-      ctx.fillText(line.trim(), layout.heading.x, lineY)
+      if (currentLine.trim().length > 0) subtitleLines.push(currentLine.trim())
+
+      // Draw subtitle lines and compute final Y for stats layout
+      let lineY = subtitleY
+      const subtitleLineSpacing = subtitleFontSize + 4
+      subtitleLines.forEach((ln) => {
+        ctx.fillText(ln, layout.heading.x, lineY)
+        lineY += subtitleLineSpacing
+      })
+
+      // Ensure statistics block starts below subtitle (with a comfortable gap)
+      const minStatsStart = lineY + Math.max(8, layout.padding * 0.25)
+      if (layout.stats && typeof layout.stats.startY === 'number') {
+        layout.stats.startY = Math.max(layout.stats.startY, minStatsStart)
+      }
 
       // Render statistics with icons/styling
       ctx.font = `${layout.stats.fontSize}px Arial`

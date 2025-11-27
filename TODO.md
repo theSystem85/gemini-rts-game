@@ -251,6 +251,9 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] ✅ Fixed howitzer bullet starting from end of gun barrel instead of center of wagon, aligned muzzle flash accordingly
 - [x] ✅ Fixed howitzer recoil direction to align with barrel rotation
 
+## Bug Fixes (2025-11-27)
+- [x] ✅ Defeat modal subtitle overlapping statistics — now subtitle lines are wrapped and stats start below the subtitle (fix: `src/rendering/uiRenderer.js`)
+
 ## Improvements
 - [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
 - [x] Make sure narrated sounds like (unitReady) can be chained and will not be played at the same time but one after another up until a stacking size of 3 everything after that will be skipped if it comes before the stackable sounds are finished playing. So for all playSound calls in the code that play a "narrated sound" make sure to add the new stacking boolean to true and update playSound so it is able to provide stacking behaviour as described.
