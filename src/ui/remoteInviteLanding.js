@@ -18,11 +18,42 @@ const DEFAULT_STATUS = 'Enter your alias to claim the invited party.'
 
 /**
  * Hide map settings UI for remote clients since map is determined by host
+ * Also disables ore spread and shadow of war checkboxes since these are host-controlled
  */
 function hideMapSettingsForClient() {
   const mapSettingsContainer = document.querySelector('#mapSettingsContent')?.parentElement
   const mapSettingsToggle = document.getElementById('mapSettingsToggle')
   const mapSettingsContent = document.getElementById('mapSettingsContent')
+  
+  // Disable ore spread and shadow of war checkboxes - these settings come from host
+  const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+  const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
+  
+  if (oreCheckbox) {
+    oreCheckbox.disabled = true
+    // Add visual indication that it's host-controlled
+    const label = oreCheckbox.parentElement
+    if (label && !label.querySelector('.host-controlled')) {
+      const indicator = document.createElement('span')
+      indicator.className = 'host-controlled'
+      indicator.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;'
+      indicator.textContent = '(host setting)'
+      label.appendChild(indicator)
+    }
+  }
+  
+  if (shadowCheckbox) {
+    shadowCheckbox.disabled = true
+    // Add visual indication that it's host-controlled
+    const label = shadowCheckbox.parentElement
+    if (label && !label.querySelector('.host-controlled')) {
+      const indicator = document.createElement('span')
+      indicator.className = 'host-controlled'
+      indicator.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;'
+      indicator.textContent = '(host setting)'
+      label.appendChild(indicator)
+    }
+  }
   
   if (mapSettingsContainer) {
     mapSettingsContainer.style.display = 'none'
@@ -34,15 +65,40 @@ function hideMapSettingsForClient() {
     mapSettingsContent.style.display = 'none'
   }
   
-  console.log('[RemoteInviteLanding] Map settings hidden for client')
+  console.log('[RemoteInviteLanding] Map settings hidden for client, ore/shadow controls disabled')
 }
 
 /**
  * Show map settings UI (for when client disconnects)
+ * Also re-enables ore spread and shadow of war checkboxes
  */
 function showMapSettings() {
   const mapSettingsContainer = document.querySelector('#mapSettingsContent')?.parentElement
   const mapSettingsToggle = document.getElementById('mapSettingsToggle')
+  
+  // Re-enable ore spread and shadow of war checkboxes
+  const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+  const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
+  
+  if (oreCheckbox) {
+    oreCheckbox.disabled = false
+    // Remove host-controlled indicator
+    const label = oreCheckbox.parentElement
+    const indicator = label?.querySelector('.host-controlled')
+    if (indicator) {
+      indicator.remove()
+    }
+  }
+  
+  if (shadowCheckbox) {
+    shadowCheckbox.disabled = false
+    // Remove host-controlled indicator
+    const label = shadowCheckbox.parentElement
+    const indicator = label?.querySelector('.host-controlled')
+    if (indicator) {
+      indicator.remove()
+    }
+  }
   
   if (mapSettingsContainer) {
     mapSettingsContainer.style.display = ''
@@ -51,7 +107,7 @@ function showMapSettings() {
     mapSettingsToggle.style.display = ''
   }
   
-  console.log('[RemoteInviteLanding] Map settings restored')
+  console.log('[RemoteInviteLanding] Map settings restored, ore/shadow controls re-enabled')
 }
 
 function getInviteTokenFromUrl() {

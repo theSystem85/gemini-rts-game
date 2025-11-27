@@ -229,8 +229,43 @@ export class EffectsRenderer {
     // Draw explosion effects.
     if (gameState?.explosions && gameState?.explosions.length > 0) {
       const currentTime = performance.now()
+      
+      // Check shadow of war visibility
+      const visibilityMap = gameState?.visibilityMap
+      const shadowEnabled = Boolean(gameState?.shadowOfWarEnabled && visibilityMap && visibilityMap.length)
+      
+      const isExplosionVisible = explosion => {
+        if (!shadowEnabled) {
+          return true
+        }
+        
+        if (!explosion) {
+          return false
+        }
+        
+        const tileX = Math.floor(explosion.x / TILE_SIZE)
+        const tileY = Math.floor(explosion.y / TILE_SIZE)
+        
+        if (!visibilityMap || tileY < 0 || tileY >= visibilityMap.length) {
+          return false
+        }
+        
+        const row = visibilityMap[tileY]
+        if (!row || tileX < 0 || tileX >= row.length) {
+          return false
+        }
+        
+        const cell = row[tileX]
+        return Boolean(cell && cell.visible)
+      }
+      
       gameState.explosions.forEach(exp => {
         if (!exp) {
+          return
+        }
+        
+        // Skip explosions under fog of war
+        if (!isExplosionVisible(exp)) {
           return
         }
 

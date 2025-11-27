@@ -8,7 +8,7 @@ import { getActiveRemoteConnection } from './remoteConnection.js'
 import { getActiveHostMonitor } from './webrtcSession.js'
 import { placeBuilding } from '../buildings.js'
 import { units as mainUnits, bullets as mainBullets, factories as mainFactories, regenerateMapForClient } from '../main.js'
-import { setMapDimensions } from '../config.js'
+import { setMapDimensions, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from '../config.js'
 
 // Command types for synchronization
 export const COMMAND_TYPES = {
@@ -879,6 +879,9 @@ function createGameStateSnapshot() {
     mapTilesX: gameState.mapTilesX,
     mapTilesY: gameState.mapTilesY,
     playerCount: gameState.playerCount,
+    // Game settings that clients must inherit from host
+    oreSpreadEnabled: ORE_SPREAD_ENABLED,
+    shadowOfWarEnabled: gameState.shadowOfWarEnabled,
     timestamp: Date.now()
   }
 }
@@ -991,6 +994,24 @@ function applyGameStateSnapshot(snapshot) {
   // This must happen before syncing buildings so placeBuilding can work
   if (snapshot.mapSeed && snapshot.mapTilesX && snapshot.mapTilesY) {
     syncClientMap(snapshot.mapSeed, snapshot.mapTilesX, snapshot.mapTilesY, snapshot.playerCount)
+  }
+  
+  // Sync game settings from host - clients cannot change these
+  if (typeof snapshot.oreSpreadEnabled === 'boolean') {
+    setOreSpreadEnabled(snapshot.oreSpreadEnabled)
+    // Update the checkbox UI to reflect host's setting
+    const oreCheckbox = document.getElementById('oreSpreadCheckbox')
+    if (oreCheckbox) {
+      oreCheckbox.checked = snapshot.oreSpreadEnabled
+    }
+  }
+  if (typeof snapshot.shadowOfWarEnabled === 'boolean') {
+    gameState.shadowOfWarEnabled = snapshot.shadowOfWarEnabled
+    // Update the checkbox UI to reflect host's setting
+    const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
+    if (shadowCheckbox) {
+      shadowCheckbox.checked = snapshot.shadowOfWarEnabled
+    }
   }
   
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)
