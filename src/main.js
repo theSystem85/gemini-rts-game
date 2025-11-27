@@ -1769,17 +1769,22 @@ export const bullets = []
  * @param {string} seed - The map seed from the host
  * @param {number} widthTiles - Map width in tiles
  * @param {number} heightTiles - Map height in tiles
+ * @param {number} playerCount - Number of players (affects road generation)
  */
-export function regenerateMapForClient(seed, widthTiles, heightTiles) {
-  console.log('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles)
+export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCount) {
+  console.log('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles, 'playerCount:', playerCount)
   
   // Update map dimensions in config
   setMapDimensions(widthTiles, heightTiles)
   
-  // Store the seed
+  // Store the seed and player count BEFORE map generation
+  // Player count is used by generateMap for road generation
   gameState.mapSeed = seed
   gameState.mapTilesX = widthTiles
   gameState.mapTilesY = heightTiles
+  if (playerCount) {
+    gameState.playerCount = playerCount
+  }
   
   // Clear and regenerate the map grid
   mapGrid.length = 0

@@ -68,6 +68,8 @@
   - done: Added mapTilesX/mapTilesY to game state snapshot so client knows map dimensions; Added ensureClientMapGridInitialized() to initialize client mapGrid/occupancyMap before building placement; Fixed building placement bounds checking with proper mapGrid readiness validation; Added mainFactories sync to keep factories array from main.js in sync with gameState.factories
 - [x] ✅ T034 Sync map seed and dimensions from host to client
   - done: Added mapSeed to game state snapshot; Replaced ensureClientMapGridInitialized() with syncClientMap() that regenerates map using host's seed; Added regenerateMapForClient() export in main.js; Map settings UI hidden for clients on invite token detection and connection; Settings restored on disconnect
+- [x] ✅ T035 Sync player count from host to client for matching map generation
+  - done: Added playerCount to game state snapshot; Updated syncClientMap() and regenerateMapForClient() to accept and set playerCount before map generation; Fixed issue where roads were generated differently due to different player positions being used in street network generation
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

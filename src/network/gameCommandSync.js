@@ -873,21 +873,23 @@ function createGameStateSnapshot() {
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
     partyStates: gameState.partyStates,
-    // Include map seed and dimensions so client can generate matching map
+    // Include map seed, dimensions, and player count so client can generate matching map
     mapSeed: gameState.mapSeed,
     mapTilesX: gameState.mapTilesX,
     mapTilesY: gameState.mapTilesY,
+    playerCount: gameState.playerCount,
     timestamp: Date.now()
   }
 }
 
 /**
- * Sync the map from host (seed, dimensions) and regenerate if needed
+ * Sync the map from host (seed, dimensions, playerCount) and regenerate if needed
  * @param {string} seed - Map seed from host
  * @param {number} width - Map width in tiles
  * @param {number} height - Map height in tiles
+ * @param {number} playerCount - Number of players from host
  */
-function syncClientMap(seed, width, height) {
+function syncClientMap(seed, width, height, playerCount) {
   if (!seed || !width || !height) {
     return false
   }
@@ -897,20 +899,24 @@ function syncClientMap(seed, width, height) {
     return true
   }
   
-  console.log('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height)
+  console.log('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height, 'playerCount:', playerCount)
   
   // Update map dimensions in config module
   setMapDimensions(width, height)
   
-  // Store the host's map seed
+  // Store the host's map seed and player count BEFORE map generation
+  // Player count affects road generation in gameSetup.js
   gameState.mapSeed = seed
   gameState.mapTilesX = width
   gameState.mapTilesY = height
+  if (playerCount) {
+    gameState.playerCount = playerCount
+  }
   
-  // Call main.js function to regenerate map with host's seed and dimensions
+  // Call main.js function to regenerate map with host's seed, dimensions, and player count
   if (typeof regenerateMapForClient === 'function') {
-    regenerateMapForClient(seed, width, height)
-    console.log('[GameCommandSync] Client map regenerated with host seed:', seed)
+    regenerateMapForClient(seed, width, height, playerCount)
+    console.log('[GameCommandSync] Client map regenerated with host seed:', seed, 'playerCount:', playerCount)
   } else {
     // Fallback: Initialize empty map grid if regenerateMapForClient is not available
     console.warn('[GameCommandSync] regenerateMapForClient not available, creating empty map grid')
@@ -980,10 +986,10 @@ function applyGameStateSnapshot(snapshot) {
     gameState.partyStates = snapshot.partyStates
   }
   
-  // Sync map seed and dimensions from host, regenerate map if needed
+  // Sync map seed, dimensions, and player count from host, regenerate map if needed
   // This must happen before syncing buildings so placeBuilding can work
   if (snapshot.mapSeed && snapshot.mapTilesX && snapshot.mapTilesY) {
-    syncClientMap(snapshot.mapSeed, snapshot.mapTilesX, snapshot.mapTilesY)
+    syncClientMap(snapshot.mapSeed, snapshot.mapTilesX, snapshot.mapTilesY, snapshot.playerCount)
   }
   
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)
@@ -1419,6 +1425,17 @@ export function stopGameStateSync() {
 }
 
 // Note: Interpolation removed - using faster sync interval (100ms) for smooth movement
+
+/**
+ * Notify that a new client has connected to the host
+ * This ensures the first snapshot includes all map configuration data
+ */
+export function notifyClientConnected() {
+  console.log('[GameCommandSync] New client connected, first snapshot will include full map data')
+  // The mapSynced flag is only used on clients, not on the host
+  // The host always includes map data in snapshots anyway
+  // This function serves as a hook for any host-side initialization when a client connects
+}
 
 /**
  * Check if this client is in a multiplayer session as a remote player

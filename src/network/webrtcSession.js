@@ -4,7 +4,7 @@ import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import { fetchPendingSessions, postAnswer, postCandidate } from './signalling.js'
-import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNetworkStats } from './gameCommandSync.js'
+import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNetworkStats, notifyClientConnected } from './gameCommandSync.js'
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_HOST_STATUS_INTERVAL_MS = 1500
@@ -373,6 +373,9 @@ class HostInviteMonitor {
         status: SESSION_STATES.CONNECTED,
         connectedAt: Date.now()
       })
+      
+      // Notify that a new client connected so mapGrid will be sent in snapshots
+      notifyClientConnected()
       
       // Start game state synchronization when a player connects
       startGameStateSync()
