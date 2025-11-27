@@ -207,6 +207,11 @@ export const gameState = {
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),
 
+  // Spectator mode for defeated multiplayer players
+  isSpectator: false,
+  spectatorShadowOfWarDisabled: false,
+  localPlayerDefeated: false, // True when local player is defeated in multiplayer
+
   // Initially no units are available (require vehicle factory), only basic buildings
   availableUnitTypes: new Set([]),
   availableBuildingTypes: new Set(['constructionYard', 'oreRefinery', 'powerPlant', 'vehicleFactory', 'vehicleWorkshop', 'radarStation', 'hospital', 'helipad', 'gasStation', 'turretGunV1', 'concreteWall']),

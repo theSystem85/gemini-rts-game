@@ -166,16 +166,20 @@ export class MouseHandler {
     gameCanvas.addEventListener('mousedown', e => {
       // Don't process input if game is paused
       if (gameState.paused) return
+      
+      // Don't process game commands in spectator mode or when locally defeated
+      // (allow camera panning but not unit selection/commands)
+      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated
 
       const rect = gameCanvas.getBoundingClientRect()
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
       if (e.button === 2) {
-        // Right-click: start scrolling
+        // Right-click: start scrolling (allowed for spectators)
         this.handleRightMouseDown(e, gameCanvas, cursorManager)
-      } else if (e.button === 0) {
-        // Left-click: start selection or force attack
+      } else if (e.button === 0 && !isSpectatorOrDefeated) {
+        // Left-click: start selection or force attack (blocked for spectators)
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
       }
     })
@@ -210,10 +214,13 @@ export class MouseHandler {
     gameCanvas.addEventListener('mouseup', e => {
       // Don't process input if game is paused
       if (gameState.paused) return
+      
+      // Don't process game commands in spectator mode or when locally defeated
+      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated
 
       if (e.button === 2) {
         this.handleRightMouseUp(e, units, factories, selectedUnits, selectionManager, cursorManager)
-      } else if (e.button === 0) {
+      } else if (e.button === 0 && !isSpectatorOrDefeated) {
         // Handle left mouse up regardless of selection state to ensure cleanup
         this.handleLeftMouseUp(e, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager)
       }

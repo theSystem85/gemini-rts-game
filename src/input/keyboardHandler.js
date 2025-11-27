@@ -99,6 +99,10 @@ export class KeyboardHandler {
       // Don't process other inputs if game is paused, cheat dialog is open, or runtime config dialog is open
       if (gameState.paused || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen) return
 
+      // Block game commands in spectator mode or when locally defeated
+      // (allow view-only commands like grid toggle, FPS toggle, camera movement)
+      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated
+
       // ESC key to cancel attack group mode
       if (e.key === 'Escape') {
         e.preventDefault()
@@ -106,6 +110,41 @@ export class KeyboardHandler {
         this.handleEscapeKey()
         return
       }
+
+      // View-only commands that work in spectator mode
+      if (e.key.toLowerCase() === 'g') {
+        e.preventDefault()
+        this.handleGridToggle()
+        return
+      }
+      if (e.key.toLowerCase() === 'o') {
+        e.preventDefault()
+        this.handleOccupancyMapToggle()
+        return
+      }
+      if (e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        this.handleDzmToggle()
+        return
+      }
+      if (e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        this.handleTankImageToggle()
+        return
+      }
+      if (e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        this.handleFpsDisplayToggle()
+        return
+      }
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        this.handlePerformanceToggle()
+        return
+      }
+      
+      // Block all game action commands for spectators
+      if (isSpectatorOrDefeated) return
 
       // A key for alert mode
       if (e.key.toLowerCase() === 'a') {
@@ -164,35 +203,6 @@ export class KeyboardHandler {
       else if (e.key.toLowerCase() === 'f') {
         e.preventDefault()
         this.handleFormationToggle(selectedUnits)
-      }
-      // G key to toggle grid visibility
-      else if (e.key.toLowerCase() === 'g') {
-        e.preventDefault()
-        this.handleGridToggle()
-      }
-      // O key to toggle occupancy map visibility
-      else if (e.key.toLowerCase() === 'o') {
-        e.preventDefault()
-        this.handleOccupancyMapToggle()
-      }
-      else if (e.key.toLowerCase() === 'z') {
-        e.preventDefault()
-        this.handleDzmToggle()
-      }
-      // T key to toggle tank image rendering
-      else if (e.key.toLowerCase() === 't') {
-        e.preventDefault()
-        this.handleTankImageToggle()
-      }
-      // R key to toggle turret image rendering
-      else if (e.key.toLowerCase() === 'r') {
-        e.preventDefault()
-        this.handleTurretImageToggle()
-      }
-      // P key to toggle FPS display
-      else if (e.key.toLowerCase() === 'p') {
-        e.preventDefault()
-        this.handleFpsDisplayToggle()
       }
       // L key to toggle logging for selected units
       else if (e.key.toLowerCase() === 'l') {

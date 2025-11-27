@@ -22,6 +22,13 @@
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
 ## Current Multiplayer Work
+- [x] ✅ T042 Multiplayer defeat handling and spectator mode
+  - [x] ✅ Defeated human players see beautiful, mobile-optimized defeat modal with game statistics
+  - [x] ✅ Two buttons on defeat modal: "New Game" and "Spectator Mode"
+  - [x] ✅ Spectator mode allows viewing entire map (shadow of war disabled) but no interactions
+  - [x] ✅ Host defeat doesn't end game for other players - all players see same defeat modal
+  - [x] ✅ Fixed "money earned" statistics showing 0 on end game screen (totalMoneyEarned now tracked in harvesterLogic.js)
+  - [x] ✅ Spectator input blocking in mouseHandler.js and keyboardHandler.js (view-only commands like FPS, occupancy, grid still work)
 - [x] T011 persist host invite UI state so party rows keep their button visibility state
 - [x] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
   - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE

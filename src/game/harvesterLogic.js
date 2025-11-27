@@ -475,6 +475,10 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMa
     // Unloading complete
     if (unit.owner === gameState.humanPlayer) {
       gameState.money += moneyEarned
+      // Track total money earned for statistics
+      if (typeof gameState.totalMoneyEarned === 'number') {
+        gameState.totalMoneyEarned += moneyEarned
+      }
       if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
         productionQueue.tryResumeProduction()
       }
