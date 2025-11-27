@@ -1593,6 +1593,7 @@ class Game {
     gameState.targetedOreTiles = {}
     gameState.refineryStatus = {}
     gameState.defeatedPlayers = new Set() // Reset defeated players tracking
+    gameState.unitWrecks = [] // Clear all unit wrecks from previous game
 
     // Restore preserved statistics
     gameState.wins = preservedWins
