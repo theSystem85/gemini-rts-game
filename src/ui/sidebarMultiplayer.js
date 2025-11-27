@@ -11,6 +11,7 @@ import { gameState } from '../gameState.js'
 import { observeMultiplayerSession } from '../network/multiplayerSessionEvents.js'
 
 const PARTY_LIST_ID = 'multiplayerPartyList'
+const PLAYER_ALIAS_STORAGE_KEY = 'rts-player-alias'
 const PARTY_DISPLAY_NAMES = {
   player1: 'Green',
   player2: 'Red',
@@ -27,11 +28,72 @@ let partyListContainer = null
 let sessionObserverCleanup = null
 let partyOwnershipCleanup = null
 
+/**
+ * Get the stored player alias from localStorage
+ * @returns {string} The stored alias or empty string
+ */
+export function getStoredPlayerAlias() {
+  try {
+    return localStorage.getItem(PLAYER_ALIAS_STORAGE_KEY) || ''
+  } catch (e) {
+    console.warn('Failed to read player alias from localStorage:', e)
+    return ''
+  }
+}
+
+/**
+ * Save the player alias to localStorage
+ * @param {string} alias - The alias to save
+ */
+export function setStoredPlayerAlias(alias) {
+  try {
+    if (alias && alias.trim()) {
+      localStorage.setItem(PLAYER_ALIAS_STORAGE_KEY, alias.trim())
+    } else {
+      localStorage.removeItem(PLAYER_ALIAS_STORAGE_KEY)
+    }
+  } catch (e) {
+    console.warn('Failed to save player alias to localStorage:', e)
+  }
+}
+
+/**
+ * Setup alias input synchronization
+ */
+function setupAliasInput() {
+  const aliasInput = document.getElementById('playerAliasInput')
+  const remoteAliasInput = document.getElementById('remoteAliasInput')
+  
+  if (aliasInput) {
+    // Load stored alias on init
+    const storedAlias = getStoredPlayerAlias()
+    if (storedAlias) {
+      aliasInput.value = storedAlias
+    }
+    
+    // Save on change and sync to remote input
+    aliasInput.addEventListener('input', (e) => {
+      const value = e.target.value
+      setStoredPlayerAlias(value)
+      // Sync to remote join modal input if exists
+      if (remoteAliasInput) {
+        remoteAliasInput.value = value
+      }
+    })
+    
+    // Also save on blur
+    aliasInput.addEventListener('blur', (e) => {
+      setStoredPlayerAlias(e.target.value)
+    })
+  }
+}
+
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
   setupHostControlWatcher()
   setupPartyOwnershipWatcher()
+  setupAliasInput()
   listPartyStates().forEach((partyState) => {
     if (partyState.inviteToken) {
       watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
@@ -123,11 +185,12 @@ function createPartyRow(partyState) {
   const dot = document.createElement('span')
   dot.className = 'multiplayer-party-dot'
   dot.style.backgroundColor = partyState.color || '#999'
+  dot.title = getPartyDisplayName(partyState.partyId, partyState.color)
   info.appendChild(dot)
 
   const label = document.createElement('span')
   label.className = 'multiplayer-party-label'
-  label.textContent = `${getPartyDisplayName(partyState.partyId, partyState.color)}: ${partyState.owner}`
+  label.textContent = partyState.owner
   info.appendChild(label)
 
   const controls = document.createElement('div')

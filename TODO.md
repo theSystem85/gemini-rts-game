@@ -80,6 +80,8 @@
   - done: kickPlayer() now sends kick message before disconnecting, invalidates old token, generates new invite; client handles kick message by converting to standalone host with all AI parties; invite URL cleared from browser
 - [x] ✅ T040 Sync ore spread and shadow of war settings from host to clients
   - done: Added oreSpreadEnabled and shadowOfWarEnabled to game state snapshot; Clients receive and apply host settings on snapshot; Ore spread and shadow of war checkboxes disabled for clients with "(host setting)" indicator; Settings re-enabled on disconnect; Explosions now hidden under fog of war for shadow of war mode
+- [x] ✅ T041 Improve multiplayer party list UI and add alias persistence
+  - done: Party rows now show only color dot (with tooltip) instead of "Green: AI"; Changed "Human (Host)" to "You (Host)" for clarity; Added "Your alias:" input field in map settings; Alias persisted to localStorage and synced between sidebar input and join modal input
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

@@ -5,6 +5,7 @@ import { gameState } from '../gameState.js'
 import { TILE_SIZE, MAP_TILES_X, MAP_TILES_Y } from '../config.js'
 import { showHostNotification } from '../network/hostNotifications.js'
 import { ensureMultiplayerState, generateRandomId } from '../network/multiplayerStore.js'
+import { getStoredPlayerAlias, setStoredPlayerAlias } from './sidebarMultiplayer.js'
 
 const STATUS_MESSAGES = {
   [RemoteConnectionStatus.IDLE]: 'Awaiting alias submission.',
@@ -348,7 +349,7 @@ function convertToStandaloneHost() {
         party.lastConnectedAt = null
         party.inviteToken = null
       } else {
-        party.owner = 'Human (Host)'
+        party.owner = 'You (Host)'
         party.aiActive = false
       }
     })
@@ -386,7 +387,26 @@ export function initRemoteInviteLanding() {
 
   tokenText.textContent = inviteToken
   showOverlay(overlay, statusElement)
-  aliasInput.value = ''
+  
+  // Pre-fill alias from localStorage if available
+  const storedAlias = getStoredPlayerAlias()
+  if (storedAlias) {
+    aliasInput.value = storedAlias
+  } else {
+    aliasInput.value = ''
+  }
+  
+  // Sync alias changes to localStorage and sidebar input
+  aliasInput.addEventListener('input', (e) => {
+    const value = e.target.value
+    setStoredPlayerAlias(value)
+    // Sync to sidebar alias input if exists
+    const sidebarAliasInput = document.getElementById('playerAliasInput')
+    if (sidebarAliasInput) {
+      sidebarAliasInput.value = value
+    }
+  })
+  
   aliasInput.focus()
   submitButton.disabled = false
 

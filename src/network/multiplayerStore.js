@@ -58,7 +58,7 @@ function ensurePartyStates() {
       return {
         partyId,
         color: PARTY_COLORS[partyId] || PARTY_COLORS.player1,
-        owner: isHost ? 'Human (Host)' : 'AI',
+        owner: isHost ? 'You (Host)' : 'AI',
         inviteToken: null,
         aiActive: !isHost,
         lastConnectedAt: null
