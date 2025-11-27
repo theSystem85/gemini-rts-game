@@ -70,6 +70,8 @@
   - done: Added mapSeed to game state snapshot; Replaced ensureClientMapGridInitialized() with syncClientMap() that regenerates map using host's seed; Added regenerateMapForClient() export in main.js; Map settings UI hidden for clients on invite token detection and connection; Settings restored on disconnect
 - [x] ✅ T035 Sync player count from host to client for matching map generation
   - done: Added playerCount to game state snapshot; Updated syncClientMap() and regenerateMapForClient() to accept and set playerCount before map generation; Fixed issue where roads were generated differently due to different player positions being used in street network generation
+- [x] ✅ T036 Fix wreck unitType not syncing to clients
+  - done: Fixed wreck serialization in createGameStateSnapshot() to use `unitType: wreck.unitType` instead of incorrect `type: wreck.type`; Also added spriteCacheKey to wreck snapshot for proper sprite lookup on client
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

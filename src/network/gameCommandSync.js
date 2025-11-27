@@ -849,7 +849,7 @@ function createGameStateSnapshot() {
   const unitWrecks = (gameState.unitWrecks || []).map(wreck => ({
     id: wreck.id,
     sourceUnitId: wreck.sourceUnitId,
-    type: wreck.type,
+    unitType: wreck.unitType,
     x: wreck.x,
     y: wreck.y,
     tileX: wreck.tileX,
@@ -859,7 +859,8 @@ function createGameStateSnapshot() {
     createdAt: wreck.createdAt,
     owner: wreck.owner,
     health: wreck.health,
-    maxHealth: wreck.maxHealth
+    maxHealth: wreck.maxHealth,
+    spriteCacheKey: wreck.spriteCacheKey
   }))
   
   return {
