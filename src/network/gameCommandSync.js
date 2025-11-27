@@ -882,6 +882,11 @@ function createGameStateSnapshot() {
     // Game settings that clients must inherit from host
     oreSpreadEnabled: ORE_SPREAD_ENABLED,
     shadowOfWarEnabled: gameState.shadowOfWarEnabled,
+    showEnemyResources: gameState.showEnemyResources,
+    // Sync defeated players so clients can detect their own defeat
+    defeatedPlayers: gameState.defeatedPlayers instanceof Set 
+      ? Array.from(gameState.defeatedPlayers) 
+      : (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : []),
     timestamp: Date.now()
   }
 }
@@ -1011,6 +1016,33 @@ function applyGameStateSnapshot(snapshot) {
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     if (shadowCheckbox) {
       shadowCheckbox.checked = snapshot.shadowOfWarEnabled
+    }
+  }
+  
+  // Sync showEnemyResources setting from host
+  if (typeof snapshot.showEnemyResources === 'boolean') {
+    gameState.showEnemyResources = snapshot.showEnemyResources
+  }
+  
+  // Sync defeated players from host - check if local player is in the defeated list
+  if (Array.isArray(snapshot.defeatedPlayers)) {
+    // Convert to Set
+    gameState.defeatedPlayers = new Set(snapshot.defeatedPlayers)
+    
+    // Check if the local player (client's humanPlayer) was just defeated
+    if (gameState.defeatedPlayers.has(gameState.humanPlayer) && !gameState.localPlayerDefeated && !gameState.isSpectator) {
+      gameState.localPlayerDefeated = true
+      gameState.gameResult = 'defeat'
+      gameState.gameOverMessage = 'DEFEAT'
+      gameState.losses++
+      // Play defeat sound only once
+      if (!gameState._defeatSoundPlayed) {
+        gameState._defeatSoundPlayed = true
+        // Import playSound dynamically to avoid circular dependency
+        import('../sound.js').then(({ playSound }) => {
+          playSound('battleLost', 1.0, 0, true)
+        })
+      }
     }
   }
   

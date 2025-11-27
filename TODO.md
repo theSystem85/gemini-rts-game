@@ -29,6 +29,12 @@
   - [x] ✅ Host defeat doesn't end game for other players - all players see same defeat modal
   - [x] ✅ Fixed "money earned" statistics showing 0 on end game screen (totalMoneyEarned now tracked in harvesterLogic.js)
   - [x] ✅ Spectator input blocking in mouseHandler.js and keyboardHandler.js (view-only commands like FPS, occupancy, grid still work)
+- [x] ✅ T043 Multiplayer defeat modal improvements
+  - [x] ✅ Defeat modal now shown for invited clients (defeatedPlayers synced via snapshot)
+  - [x] ✅ Fixed battleLost sound playing only once (guard flag _defeatSoundPlayed)
+  - [x] ✅ Defeat label text wrapped properly inside modal (split into title + subtitle)
+  - [x] ✅ Player alias shown above construction yards in multiplayer (from partyState.owner)
+  - [x] ✅ Host can toggle "Show Enemy Resources" to show/hide money and power on enemy construction yards
 - [x] T011 persist host invite UI state so party rows keep their button visibility state
 - [x] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
   - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE

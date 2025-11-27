@@ -56,6 +56,12 @@ function hideMapSettingsForClient() {
     }
   }
   
+  // Hide showEnemyResources checkbox for clients (host-only setting)
+  const showEnemyResourcesLabel = document.getElementById('showEnemyResourcesLabel')
+  if (showEnemyResourcesLabel) {
+    showEnemyResourcesLabel.style.display = 'none'
+  }
+  
   if (mapSettingsContainer) {
     mapSettingsContainer.style.display = 'none'
   }
@@ -99,6 +105,12 @@ function showMapSettings() {
     if (indicator) {
       indicator.remove()
     }
+  }
+  
+  // Re-show showEnemyResources checkbox (host setting)
+  const showEnemyResourcesLabel = document.getElementById('showEnemyResourcesLabel')
+  if (showEnemyResourcesLabel) {
+    showEnemyResourcesLabel.style.display = ''
   }
   
   if (mapSettingsContainer) {

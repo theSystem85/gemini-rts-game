@@ -444,6 +444,11 @@ export function checkGameEndConditions(factories, gameState) {
   const isMultiplayer = gameState.multiplayerSession?.isRemote || 
     (gameState.partyStates && gameState.partyStates.some(p => !p.aiActive))
 
+  // Track if defeat sound was already played to prevent looping
+  if (!gameState._defeatSoundPlayed) {
+    gameState._defeatSoundPlayed = false
+  }
+
   // Count remaining buildings AND factories for human player (excluding concrete walls)
   const humanPlayerBuildings = gameState.buildings.filter(
     b => b.owner === gameState.humanPlayer && shouldCountBuilding(b)
@@ -461,10 +466,13 @@ export function checkGameEndConditions(factories, gameState) {
       // Mark player as defeated but don't end the game globally
       gameState.localPlayerDefeated = true
       gameState.gameResult = 'defeat'
-      gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
+      gameState.gameOverMessage = 'DEFEAT'
       gameState.losses++
-      // Play battle lost sound and human player defeat sound
-      playSound('battleLost', 1.0, 0, true)
+      // Play battle lost sound only once
+      if (!gameState._defeatSoundPlayed) {
+        gameState._defeatSoundPlayed = true
+        playSound('battleLost', 1.0, 0, true)
+      }
       // Add to defeated players set
       if (!(gameState.defeatedPlayers instanceof Set)) {
         gameState.defeatedPlayers = new Set(gameState.defeatedPlayers || [])
@@ -475,10 +483,13 @@ export function checkGameEndConditions(factories, gameState) {
       // Single player - end the game
       gameState.gameOver = true
       gameState.gameResult = 'defeat'
-      gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
+      gameState.gameOverMessage = 'DEFEAT'
       gameState.losses++
-      // Play battle lost sound and human player defeat sound
-      playSound('battleLost', 1.0, 0, true)
+      // Play battle lost sound only once
+      if (!gameState._defeatSoundPlayed) {
+        gameState._defeatSoundPlayed = true
+        playSound('battleLost', 1.0, 0, true)
+      }
       return true
     }
   }

@@ -211,6 +211,10 @@ export const gameState = {
   isSpectator: false,
   spectatorShadowOfWarDisabled: false,
   localPlayerDefeated: false, // True when local player is defeated in multiplayer
+  _defeatSoundPlayed: false, // Guard to prevent defeat sound from looping
+
+  // Multiplayer settings (host-controlled)
+  showEnemyResources: false, // Whether to show enemy power/money on their construction yards
 
   // Initially no units are available (require vehicle factory), only basic buildings
   availableUnitTypes: new Set([]),

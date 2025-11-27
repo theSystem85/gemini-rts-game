@@ -154,6 +154,7 @@ export class BuildingRenderer {
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
     this.renderWorkshopRestoration(ctx, building, screenX, screenY, width, height)
     this.renderHospitalHealing(ctx, building, screenX, screenY, width, height)
+    this.renderPlayerAlias(ctx, building, screenX, screenY, width, height)
     this.renderFactoryBudget(ctx, building, screenX, screenY, width, height)
     this.renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height)
   }
@@ -962,12 +963,13 @@ export class BuildingRenderer {
   }
 
   renderFactoryBudget(ctx, building, screenX, screenY, width, height) {
-    // Show enemy budget only when their construction yard is selected
+    // Show enemy budget only when their construction yard is selected AND showEnemyResources is enabled
     if (
       building.type === 'constructionYard' &&
       building.owner !== gameState.humanPlayer &&
       building.selected &&
-      gameState.factories
+      gameState.factories &&
+      gameState.showEnemyResources
     ) {
       const factory = gameState.factories.find(f => f.id === building.owner)
       if (factory && typeof factory.budget === 'number') {
@@ -988,11 +990,12 @@ export class BuildingRenderer {
   }
 
   renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height) {
-    // Show power status when an enemy construction yard is selected
+    // Show power status when an enemy construction yard is selected AND showEnemyResources is enabled
     if (
       building.type === 'constructionYard' &&
       building.owner !== gameState.humanPlayer &&
-      building.selected
+      building.selected &&
+      gameState.showEnemyResources
     ) {
       const powerText = `Power: ${gameState.enemyPowerSupply}`
       ctx.save()
@@ -1008,6 +1011,58 @@ export class BuildingRenderer {
       ctx.fillText(powerText, textX, textY)
       ctx.restore()
     }
+  }
+
+  renderPlayerAlias(ctx, building, screenX, screenY, width, height) {
+    // Only show alias above construction yards in multiplayer mode
+    if (building.type !== 'constructionYard') {
+      return
+    }
+    
+    // Check if we're in multiplayer mode
+    const isMultiplayer = gameState.multiplayerSession?.isRemote || 
+      (gameState.partyStates && gameState.partyStates.some(p => !p.aiActive))
+    
+    if (!isMultiplayer) {
+      return
+    }
+    
+    // Find the party state for this building's owner
+    const partyState = gameState.partyStates?.find(p => p.partyId === building.owner)
+    if (!partyState) {
+      return
+    }
+    
+    // Get the alias (owner field contains "AI", "You (Host)", or player's alias)
+    let alias = partyState.owner || 'Unknown'
+    
+    // Don't show "AI" - only show human player aliases
+    if (alias === 'AI') {
+      return
+    }
+    
+    // Shorten "You (Host)" to just "You" for the local player
+    if (building.owner === gameState.humanPlayer) {
+      alias = 'You'
+    }
+    
+    ctx.save()
+    ctx.font = 'bold 11px Arial'
+    ctx.textAlign = 'center'
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    
+    // Use party color for the text
+    const partyColor = partyState.color || '#fff'
+    ctx.fillStyle = partyColor
+    
+    const textX = screenX + width / 2
+    // Position above the health bar (which is at screenY - 10)
+    const textY = screenY - 18
+    
+    ctx.strokeText(alias, textX, textY)
+    ctx.fillText(alias, textX, textY)
+    ctx.restore()
   }
 
   renderBases(ctx, buildings, mapGrid, scrollOffset) {

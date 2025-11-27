@@ -384,18 +384,47 @@ export class UIRenderer {
       ctx.lineWidth = 2
       ctx.strokeRect(modal.x, modal.y, modal.width, modal.height)
 
-      // Render game over message with glow effect
-      const message = gameState.gameOverMessage || 'DEFEAT - All your buildings have been destroyed!'
+      // Render game over message with glow effect and text wrapping
+      const message = gameState.gameResult === 'victory' ? 'VICTORY' : 'DEFEAT'
+      const subMessage = gameState.gameResult === 'victory' 
+        ? 'All enemy buildings destroyed!'
+        : 'All your buildings have been destroyed!'
+      
       ctx.font = `bold ${layout.heading.fontSize}px Arial`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
       
-      // Text glow
+      // Text glow for main title
       ctx.shadowColor = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
       ctx.shadowBlur = 10
       ctx.fillStyle = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
       ctx.fillText(message, layout.heading.x, layout.heading.y)
       ctx.shadowBlur = 0
+      
+      // Render subtitle (wrapped if needed) below the main title
+      const subtitleY = layout.heading.y + layout.heading.fontSize + 8
+      const subtitleFontSize = Math.max(12, layout.heading.fontSize * 0.6)
+      ctx.font = `${subtitleFontSize}px Arial`
+      ctx.fillStyle = '#ccc'
+      
+      // Wrap subtitle text if needed
+      const maxTextWidth = modal.width - layout.padding * 2
+      const words = subMessage.split(' ')
+      let line = ''
+      let lineY = subtitleY
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' '
+        const metrics = ctx.measureText(testLine)
+        if (metrics.width > maxTextWidth && i > 0) {
+          ctx.fillText(line.trim(), layout.heading.x, lineY)
+          line = words[i] + ' '
+          lineY += subtitleFontSize + 4
+        } else {
+          line = testLine
+        }
+      }
+      ctx.fillText(line.trim(), layout.heading.x, lineY)
 
       // Render statistics with icons/styling
       ctx.font = `${layout.stats.fontSize}px Arial`

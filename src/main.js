@@ -1437,6 +1437,15 @@ class Game {
       shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
     }
 
+    // Show enemy resources checkbox (host only)
+    const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
+    if (showEnemyResourcesCheckbox) {
+      showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
+      showEnemyResourcesCheckbox.addEventListener('change', (e) => {
+        gameState.showEnemyResources = e.target.checked
+      })
+    }
+
     settingsBtn.addEventListener('click', () => {
       settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
     })
@@ -1594,6 +1603,9 @@ class Game {
     gameState.refineryStatus = {}
     gameState.defeatedPlayers = new Set() // Reset defeated players tracking
     gameState.unitWrecks = [] // Clear all unit wrecks from previous game
+    gameState._defeatSoundPlayed = false // Reset defeat sound guard
+    gameState.localPlayerDefeated = false // Reset multiplayer defeat state
+    gameState.isSpectator = false // Reset spectator mode
 
     // Restore preserved statistics
     gameState.wins = preservedWins
