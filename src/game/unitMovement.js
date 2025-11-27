@@ -57,7 +57,7 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     const prevX = unit.x, prevY = unit.y
 
     // Handle dodge completion
-    if (unit.isDodging && unit.path.length === 0 && unit.originalPath) {
+    if (unit.isDodging && unit.path && unit.path.length === 0 && unit.originalPath) {
       unit.path = unit.originalPath
       unit.target = unit.originalTarget
       unit.originalPath = null
