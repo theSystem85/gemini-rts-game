@@ -21,6 +21,81 @@
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
+## Current Multiplayer Work
+- [x] ✅ T042 Multiplayer defeat handling and spectator mode
+  - [x] ✅ Defeated human players see beautiful, mobile-optimized defeat modal with game statistics
+  - [x] ✅ Two buttons on defeat modal: "New Game" and "Spectator Mode"
+  - [x] ✅ Spectator mode allows viewing entire map (shadow of war disabled) but no interactions
+  - [x] ✅ Host defeat doesn't end game for other players - all players see same defeat modal
+  - [x] ✅ Fixed "money earned" statistics showing 0 on end game screen (totalMoneyEarned now tracked in harvesterLogic.js)
+  - [x] ✅ Spectator input blocking in mouseHandler.js and keyboardHandler.js (view-only commands like FPS, occupancy, grid still work)
+- [x] ✅ T043 Multiplayer defeat modal improvements
+  - [x] ✅ Defeat modal now shown for invited clients (defeatedPlayers synced via snapshot)
+  - [x] ✅ Fixed battleLost sound playing only once (guard flag _defeatSoundPlayed)
+  - [x] ✅ Defeat label text wrapped properly inside modal (split into title + subtitle)
+  - [x] ✅ Player alias shown above construction yards in multiplayer (from partyState.owner)
+  - [x] ✅ Host can toggle "Show Enemy Resources" to show/hide money and power on enemy construction yards
+- [x] T011 persist host invite UI state so party rows keep their button visibility state
+- [x] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
+  - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE
+- [x] T013 start User Story 2 host WebRTC handling
+  - done: host now polls `/signalling/pending`, answers offers, consumes remote control snapshots, and broadcasts pause/running updates via the data channel
+- [x] ✅ T014 enforce host-only start/pause/cheat controls when a remote client is connected
+  - done: session events disable pause/cheat buttons in `src/ui/sidebarMultiplayer.js` and the cheat hotkey is blocked in `src/inputHandler.js`
+- [x] ✅ T015 emit join notification when a remote WebRTC session flips to connected (host alert)
+- [x] ✅ T016 [US3] detect remote disconnects/host drops, flip `aiActive` back on, and keep invite usable within seconds of failure
+  - done: HostSession state change handler detects DISCONNECTED/FAILED, calls markPartyControlledByAi, emits AI_REACTIVATION_EVENT, and shows notification
+- [x] ✅ T017 [US3] regenerate `/invite-regenerate` when a non-host loads a save so the loader becomes new host and sidebar invites refresh
+  - done: multiplayerStore exports regenerateAllInviteTokens() and isHost(); saveGame.js calls regeneration on load
+- [x] ✅ T018 [US3] sync host metadata (start/pause/cheat authority, party state) during save/load handover so the new host gains exclusive controls
+  - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
+- [x] ✅ T019 Game command synchronization - broadcast unit commands (move, attack) and build commands between multiplayer players via WebRTC DataChannel
+  - done: gameCommandSync.js module created with broadcastUnitMove/broadcastUnitAttack, integrated into unitCommands.js and webrtcSession.js/remoteConnection.js
+- [x] ✅ T020 Client initialization fixes - parse partyId from invite token, set humanPlayer, center camera on party's base
+  - done: invites.js exports parsePartyIdFromToken(); remoteInviteLanding.js sets humanPlayer and centers camera; gameCommandSync.js syncs factories in snapshots
+- [x] ✅ T021 Fix multiplayer sync issues - building IDs, unit visibility, render loop resume, building disappearance
+  - done: buildings.js now assigns unique IDs via getUniqueId(); gameCommandSync.js uses full array replacement for buildings/units with position-based fallback; gameLoop.js always schedules frame when paused
+- [x] ✅ T022 Fix client→host building sync and AI on client issues
+  - done: Added broadcastBuildingPlace() calls to eventHandlers.js, buildingRepairHandler.js, and productionQueue.js; Added isHost() check in enemy.js to disable AI on clients; Added processPendingRemoteCommands() in updateGame.js to process BUILDING_PLACE commands from clients on host
+- [x] ✅ T023 Enhanced multiplayer sync - tech tree, building damage, occupancy, animations
+  - done: Tech tree syncs on client join via setProductionControllerRef() and requestTechTreeSync(); Building damage broadcasts bi-directionally via broadcastBuildingDamage(); New buildings from network placed in occupancy map via placeBuilding(); Building construction animation triggered for network buildings; Milestone video volume reduced by 60%
+- [x] ✅ T024 Comprehensive multiplayer sync - all units, buildings, bullets, explosions
+  - done: Extended unit snapshot with muzzleFlashStartTime, recoilStartTime, path, vx/vy, attackTarget, guardPosition, isMoving, isAttacking, remainingMines, sweeping; Extended building snapshot with constructionStartTime, constructionFinished, turretDirection, muzzleFlashStartTime; Extended bullet snapshot with full trajectory properties; Added explosions to snapshot; Added CLIENT_STATE_UPDATE command type for bidirectional sync; Client now sends owned entity updates to host; Host merges client updates into authoritative state
+- [x] ✅ T025 Unit visibility, building sell, and money sync fixes
+  - done: Fixed unit array sync by using mainUnits from main.js (the actual rendering array) instead of gameState.units; Bullets now sync to mainBullets array; Added broadcastBuildingSell() for building sell action sync with sellStartTime in snapshot; Removed incorrect money sync from snapshot (each player manages own money)
+- [x] ✅ T026 Host-authoritative architecture fix
+  - done: Implemented proper host-authoritative architecture where host runs all game logic and clients only render + send user commands; Fixed updateGame.js to skip game logic on remote clients (early return after visual updates); Removed CLIENT_STATE_UPDATE sending from client in gameCommandSync.js; This fixes: HP oscillation (only host computes damage), turret rotation sync (only host updates), bullets visibility (mainBullets synced via snapshot), bidirectional unit production (all units synced via snapshot)
+- [x] ✅ T027 Client unit spawn and smooth movement fix
+  - done: Client no longer spawns units locally - sends UNIT_SPAWN command to host; Host processes UNIT_SPAWN and creates unit; Added easeOutQuad interpolation for smooth unit movement between 500ms snapshots; Movement interpolation runs each frame on client via updateUnitInterpolation()
+- [x] ✅ T028 Client commands, wrecks sync, and remove interpolation
+  - done: Added debug logging for client UNIT_MOVE commands; Removed interpolation entirely - using faster 100ms sync interval instead; Added unitWrecks to snapshot and applyGameStateSnapshot(); Direct position sync for consistent rendering with host
+- [x] ✅ T029 Fix client unit movement not working on host
+  - done: Fixed updateUnitPathfinding() in unitMovement.js to iterate over ALL units with moveTarget, not just selectedUnits; Previously host would receive UNIT_MOVE and set moveTarget but pathfinding only ran for local player's selected units; Now any unit with moveTarget gets path calculated
+- [x] ✅ T030 Client movement interpolation
+  - done: Added linear interpolation for smooth unit movement on client between 100ms host snapshots; unitInterpolationState Map tracks prev/target positions per unit; updateUnitInterpolation() called every frame interpolates x, y, direction, turretDirection; Handles angle wraparound for rotation
+- [x] ✅ T031 Fix multiplayer client issues: tank barrel, promotion stars, stop command
+  - done: Fixed tank barrel disappearing on client by converting animation timestamps (recoilStartTime, muzzleFlashStartTime) to elapsed times for cross-machine sync; Added level, bountyCounter, baseCost to unit snapshot for promotion stars; Added broadcastUnitStop() and integrated into handleStopAttacking(); Fixed UNIT_STOP handler on host to clear target property
+- [ ] T032 Multiplayer network stats + bullets
+  - TODO: finish host/client byte tracking for WebRTC data channels, display send/receive rates & totals inside FPS overlay/perf widget, and ensure bullet interpolation updates alongside unit interpolation on clients
+- [x] ✅ T033 Fix client building sync when host loads save game
+  - done: Added mapTilesX/mapTilesY to game state snapshot so client knows map dimensions; Added ensureClientMapGridInitialized() to initialize client mapGrid/occupancyMap before building placement; Fixed building placement bounds checking with proper mapGrid readiness validation; Added mainFactories sync to keep factories array from main.js in sync with gameState.factories
+- [x] ✅ T034 Sync map seed and dimensions from host to client
+  - done: Added mapSeed to game state snapshot; Replaced ensureClientMapGridInitialized() with syncClientMap() that regenerates map using host's seed; Added regenerateMapForClient() export in main.js; Map settings UI hidden for clients on invite token detection and connection; Settings restored on disconnect
+- [x] ✅ T035 Sync player count from host to client for matching map generation
+  - done: Added playerCount to game state snapshot; Updated syncClientMap() and regenerateMapForClient() to accept and set playerCount before map generation; Fixed issue where roads were generated differently due to different player positions being used in street network generation
+- [x] ✅ T036 Fix wreck unitType not syncing to clients
+  - done: Fixed wreck serialization in createGameStateSnapshot() to use `unitType: wreck.unitType` instead of incorrect `type: wreck.type`; Also added spriteCacheKey to wreck snapshot for proper sprite lookup on client
+- [x] ✅ T037 Update sidebar party display when player takes over AI or disconnects
+  - done: Added PARTY_OWNERSHIP_CHANGED_EVENT in multiplayerStore.js; markPartyControlledByHuman() and markPartyControlledByAi() now emit ownership change events; sidebarMultiplayer.js subscribes to these events and refreshes the party list display when ownership changes
+- [x] ✅ T038 Add kick button for connected players
+  - done: Added kickPlayer() function in webrtcSession.js; sidebarMultiplayer.js shows "Kick" button instead of "Invite" when a human player is connected; kick disconnects the WebRTC session and returns party to AI control; red-styled button in CSS
+- [x] ✅ T039 Kick invalidates invite, regenerates token, client becomes standalone host
+  - done: kickPlayer() now sends kick message before disconnecting, invalidates old token, generates new invite; client handles kick message by converting to standalone host with all AI parties; invite URL cleared from browser
+- [x] ✅ T040 Sync ore spread and shadow of war settings from host to clients
+  - done: Added oreSpreadEnabled and shadowOfWarEnabled to game state snapshot; Clients receive and apply host settings on snapshot; Ore spread and shadow of war checkboxes disabled for clients with "(host setting)" indicator; Settings re-enabled on disconnect; Explosions now hidden under fog of war for shadow of war mode
+- [x] ✅ T041 Improve multiplayer party list UI and add alias persistence
+  - done: Party rows now show only color dot (with tooltip) instead of "Green: AI"; Changed "Human (Host)" to "You (Host)" for clarity; Added "Your alias:" input field in map settings; Alias persisted to localStorage and synced between sidebar input and join modal input
+
 ## Features
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
@@ -152,7 +227,10 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] the invite link is specific to a game instance and a party
   - [ ] any party can save the game but when a non host will load the game this non host will be the new host and the game instance will be different and also the invite links will be different from the original.
   - [ ] only the host can start/pause the game
-  - [ ] For the initial webRTC connection setup use a public STUN like some from google "stun:stun.l.google.com:19302"
+  - [ ] For the initial webRTC connection setup use a small express server that provides STUN services to connect peers
+  - [ ] only the host can start/pause the game or use cheats, even after other players join
+  - [ ] Phase 2: foundation state, UI rows, invite/notification wiring still pending
+  - [ ] Phase 3: render the party invite rows, copy button, and host notifications
 ## Bugs
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
@@ -172,6 +250,9 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] ✅ Fixed howitzer aiming when target is below - barrel now points in correct launch direction with smooth transitions
 - [x] ✅ Fixed howitzer bullet starting from end of gun barrel instead of center of wagon, aligned muzzle flash accordingly
 - [x] ✅ Fixed howitzer recoil direction to align with barrel rotation
+
+## Bug Fixes (2025-11-27)
+- [x] ✅ Defeat modal subtitle overlapping statistics — now subtitle lines are wrapped and stats start below the subtitle (fix: `src/rendering/uiRenderer.js`)
 
 ## Improvements
 - [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.

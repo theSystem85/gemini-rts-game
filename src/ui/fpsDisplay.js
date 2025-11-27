@@ -1,6 +1,7 @@
 // fpsDisplay.js - FPS overlay system using DOM element
 import { gameState } from '../gameState.js'
 import { notifyBenchmarkFrame } from '../benchmark/benchmarkTracker.js'
+import { getNetworkStats } from '../network/gameCommandSync.js'
 
 export class FPSDisplay {
   constructor() {
@@ -18,6 +19,11 @@ export class FPSDisplay {
     this.minFrameTime = 0
     this.maxFrameTime = 0
     this.lastDomUpdate = performance.now()
+    
+    // Network stats tracking
+    this.lastNetworkUpdate = performance.now()
+    this.lastBytesSent = 0
+    this.lastBytesReceived = 0
 
     // Get the DOM element
     this.fpsElement = document.getElementById('fpsDisplay')
@@ -29,6 +35,13 @@ export class FPSDisplay {
     this.frameTimeEl = document.getElementById('frameTimeValue')
     this.frameTimeMinEl = document.getElementById('frameTimeMin')
     this.frameTimeMaxEl = document.getElementById('frameTimeMax')
+    
+    // Network stats elements
+    this.networkStatsContainer = document.getElementById('networkStatsContainer')
+    this.networkSendRateEl = document.getElementById('networkSendRate')
+    this.networkRecvRateEl = document.getElementById('networkRecvRate')
+    this.networkTotalSentEl = document.getElementById('networkTotalSent')
+    this.networkTotalRecvEl = document.getElementById('networkTotalRecv')
   }
 
   updateFPS(currentTime) {
@@ -116,6 +129,9 @@ export class FPSDisplay {
       if (this.frameTimeMaxEl) {
         this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
       }
+      
+      // Update network stats if multiplayer is active
+      this.updateNetworkStats(currentTime)
 
       this.fpsElement.classList.add('visible')
 
@@ -127,6 +143,47 @@ export class FPSDisplay {
       this.fpsElement.classList.add(colorClass)
     } else {
       this.fpsElement.classList.remove('visible')
+    }
+  }
+  
+  updateNetworkStats(_currentTime) {
+    // Get current network stats
+    const stats = getNetworkStats()
+    
+    // Only show network stats if there's any network activity
+    const hasNetworkActivity = stats.bytesSent > 0 || stats.bytesReceived > 0
+    
+    if (!hasNetworkActivity || !this.networkStatsContainer) {
+      if (this.networkStatsContainer) {
+        this.networkStatsContainer.style.display = 'none'
+      }
+      return
+    }
+    
+    this.networkStatsContainer.style.display = 'block'
+    
+    // Format rates (already calculated by gameCommandSync)
+    if (this.networkSendRateEl) {
+      this.networkSendRateEl.textContent = `↑ ${this.formatBytes(stats.sendRate)}/s`
+    }
+    if (this.networkRecvRateEl) {
+      this.networkRecvRateEl.textContent = `↓ ${this.formatBytes(stats.receiveRate)}/s`
+    }
+    if (this.networkTotalSentEl) {
+      this.networkTotalSentEl.textContent = `Sent: ${this.formatBytes(stats.bytesSent)}`
+    }
+    if (this.networkTotalRecvEl) {
+      this.networkTotalRecvEl.textContent = `Recv: ${this.formatBytes(stats.bytesReceived)}`
+    }
+  }
+  
+  formatBytes(bytes) {
+    if (bytes < 1024) {
+      return `${Math.round(bytes)} B`
+    } else if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`
+    } else {
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
     }
   }
 

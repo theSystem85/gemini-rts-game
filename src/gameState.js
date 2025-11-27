@@ -118,6 +118,9 @@ export const gameState = {
   repairMode: false,
   buildingsUnderRepair: [],
 
+  // Track active invite buttons per party so UI state persists after re-render
+  hostInviteStatus: {},
+
   // Enemy AI learning
   playerBuildHistory: null,  // Will be initialized from localStorage if available
   currentSessionId: null,    // Will be set when first building is placed
@@ -189,9 +192,29 @@ export const gameState = {
   // Multiplayer settings
   playerCount: 2,  // Number of players (2-4)
   humanPlayer: 'player1',  // Which player is controlled by human
+  partyStates: [], // Tracks per-party metadata for invites and AI/human control
+  gameInstanceId: null, // UUID tied to this running match
+  hostId: null, // Identifier for the current host browser/session
+  multiplayerSession: {
+    isRemote: false,
+    alias: null,
+    inviteToken: null,
+    status: 'idle',
+    connectedAt: null,
+    localRole: 'host'
+  },
 
   // Track defeated players for sound effects
   defeatedPlayers: new Set(),
+
+  // Spectator mode for defeated multiplayer players
+  isSpectator: false,
+  spectatorShadowOfWarDisabled: false,
+  localPlayerDefeated: false, // True when local player is defeated in multiplayer
+  _defeatSoundPlayed: false, // Guard to prevent defeat sound from looping
+
+  // Multiplayer settings (host-controlled)
+  showEnemyResources: false, // Whether to show enemy power/money on their construction yards
 
   // Initially no units are available (require vehicle factory), only basic buildings
   availableUnitTypes: new Set([]),

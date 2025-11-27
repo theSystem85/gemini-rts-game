@@ -426,9 +426,10 @@ function getPlayerDefeatSound(playerId) {
 
 /**
  * Checks for game win/loss conditions
+ * In multiplayer, defeated human players can continue as spectators
  * @param {Array} factories - Array of factory objects
  * @param {Object} gameState - Game state object
- * @returns {boolean} - True if game should end
+ * @returns {boolean} - True if game should end (for this player)
  */
 export function checkGameEndConditions(factories, gameState) {
   if (gameState.gameOver) return true
@@ -437,6 +438,15 @@ export function checkGameEndConditions(factories, gameState) {
   const shouldCountBuilding = (building) => {
     if (!building || building.health <= 0) return false
     return building.type !== 'concreteWall'
+  }
+
+  // In multiplayer, check if the local player is already a spectator
+  const isMultiplayer = gameState.multiplayerSession?.isRemote || 
+    (gameState.partyStates && gameState.partyStates.some(p => !p.aiActive))
+
+  // Track if defeat sound was already played to prevent looping
+  if (!gameState._defeatSoundPlayed) {
+    gameState._defeatSoundPlayed = false
   }
 
   // Count remaining buildings AND factories for human player (excluding concrete walls)
@@ -449,56 +459,81 @@ export function checkGameEndConditions(factories, gameState) {
   const totalHumanPlayerBuildings = humanPlayerBuildings.length + humanPlayerFactories.length
 
   // Check if human player has no buildings left
-  if (totalHumanPlayerBuildings === 0) {
-    gameState.gameOver = true
-    gameState.gameResult = 'defeat'
-    gameState.gameOverMessage = 'DEFEAT - All your buildings have been destroyed!'
-    gameState.losses++
-    // Play battle lost sound and human player defeat sound
-    playSound('battleLost', 1.0, 0, true)
-    return true
-  }
-
-  // Count remaining AI players (any player that isn't the human player)
-  const playerCount = gameState.playerCount || 2
-  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
-  const aiPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
-
-  let remainingAiPlayers = 0
-  const defeatedAiPlayers = []
-
-  for (const aiPlayerId of aiPlayerIds) {
-    const aiBuildings = gameState.buildings.filter(
-      b => b.owner === aiPlayerId && shouldCountBuilding(b)
-    )
-    const aiFactories = factories.filter(
-      f => (f.id === aiPlayerId || f.owner === aiPlayerId) && shouldCountBuilding(f)
-    )
-    const totalAiBuildings = aiBuildings.length + aiFactories.length
-
-    if (totalAiBuildings > 0) {
-      remainingAiPlayers++
-    } else {
-      // Check if this AI player was just defeated (not already marked as defeated)
+  if (totalHumanPlayerBuildings === 0 && !gameState.isSpectator) {
+    // In multiplayer, show defeat modal but allow spectator mode
+    // Don't set gameOver = true immediately in multiplayer - let the modal handle it
+    if (isMultiplayer) {
+      // Mark player as defeated but don't end the game globally
+      gameState.localPlayerDefeated = true
+      gameState.gameResult = 'defeat'
+      gameState.gameOverMessage = 'DEFEAT'
+      gameState.losses++
+      // Play battle lost sound only once
+      if (!gameState._defeatSoundPlayed) {
+        gameState._defeatSoundPlayed = true
+        playSound('battleLost', 1.0, 0, true)
+      }
+      // Add to defeated players set
       if (!(gameState.defeatedPlayers instanceof Set)) {
         gameState.defeatedPlayers = new Set(gameState.defeatedPlayers || [])
       }
-      if (!gameState.defeatedPlayers.has(aiPlayerId)) {
-        defeatedAiPlayers.push(aiPlayerId)
-        gameState.defeatedPlayers.add(aiPlayerId)
+      gameState.defeatedPlayers.add(gameState.humanPlayer)
+      return false // Don't end the game globally in multiplayer
+    } else {
+      // Single player - end the game
+      gameState.gameOver = true
+      gameState.gameResult = 'defeat'
+      gameState.gameOverMessage = 'DEFEAT'
+      gameState.losses++
+      // Play battle lost sound only once
+      if (!gameState._defeatSoundPlayed) {
+        gameState._defeatSoundPlayed = true
+        playSound('battleLost', 1.0, 0, true)
+      }
+      return true
+    }
+  }
+
+  // Count remaining players (including human players in multiplayer)
+  const playerCount = gameState.playerCount || 2
+  const allPlayers = ['player1', 'player2', 'player3', 'player4'].slice(0, playerCount)
+  const otherPlayerIds = allPlayers.filter(p => p !== gameState.humanPlayer)
+
+  let remainingOtherPlayers = 0
+  const defeatedPlayers = []
+
+  for (const playerId of otherPlayerIds) {
+    const playerBuildings = gameState.buildings.filter(
+      b => b.owner === playerId && shouldCountBuilding(b)
+    )
+    const playerFactories = factories.filter(
+      f => (f.id === playerId || f.owner === playerId) && shouldCountBuilding(f)
+    )
+    const totalPlayerBuildings = playerBuildings.length + playerFactories.length
+
+    if (totalPlayerBuildings > 0) {
+      remainingOtherPlayers++
+    } else {
+      // Check if this player was just defeated (not already marked as defeated)
+      if (!(gameState.defeatedPlayers instanceof Set)) {
+        gameState.defeatedPlayers = new Set(gameState.defeatedPlayers || [])
+      }
+      if (!gameState.defeatedPlayers.has(playerId)) {
+        defeatedPlayers.push(playerId)
+        gameState.defeatedPlayers.add(playerId)
       }
     }
   }
 
-  // Play defeat sounds for newly defeated AI players
-  defeatedAiPlayers.forEach((playerId, index) => {
+  // Play defeat sounds for newly defeated players
+  defeatedPlayers.forEach((playerId, index) => {
     setTimeout(() => {
       playSound(getPlayerDefeatSound(playerId), 1.0, 0, true)
     }, index * 500) // Stagger the defeat sounds by 500ms each
   })
 
-  // Check if human player has eliminated all AI players
-  if (remainingAiPlayers === 0 && aiPlayerIds.length > 0) {
+  // Check if human player has eliminated all other players (and is not a spectator)
+  if (remainingOtherPlayers === 0 && otherPlayerIds.length > 0 && !gameState.isSpectator) {
     gameState.gameOver = true
     gameState.gameResult = 'victory'
     gameState.gameOverMessage = 'VICTORY - All enemy buildings destroyed!'
@@ -506,6 +541,43 @@ export function checkGameEndConditions(factories, gameState) {
     // Play battle won sound
     playSound('battleWon', 0.8, 0, true)
     return true
+  }
+
+  // In spectator mode, check if the game should end for everyone
+  if (gameState.isSpectator) {
+    // Count all remaining players
+    let totalRemainingPlayers = 0
+    for (const playerId of allPlayers) {
+      const playerBuildings = gameState.buildings.filter(
+        b => b.owner === playerId && shouldCountBuilding(b)
+      )
+      const playerFactories = factories.filter(
+        f => (f.id === playerId || f.owner === playerId) && shouldCountBuilding(f)
+      )
+      if (playerBuildings.length + playerFactories.length > 0) {
+        totalRemainingPlayers++
+      }
+    }
+    
+    // If only one player remains, that player wins
+    if (totalRemainingPlayers <= 1) {
+      gameState.gameOver = true
+      // Find the winner
+      const winner = allPlayers.find(playerId => {
+        const playerBuildings = gameState.buildings.filter(
+          b => b.owner === playerId && shouldCountBuilding(b)
+        )
+        const playerFactories = factories.filter(
+          f => (f.id === playerId || f.owner === playerId) && shouldCountBuilding(f)
+        )
+        return playerBuildings.length + playerFactories.length > 0
+      })
+      gameState.gameResult = 'spectator_end'
+      gameState.gameOverMessage = winner 
+        ? `GAME OVER - ${winner.replace('player', 'Player ')} wins!`
+        : 'GAME OVER - No survivors!'
+      return true
+    }
   }
 
   return false

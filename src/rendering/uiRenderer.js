@@ -240,7 +240,7 @@ export class UIRenderer {
     }
   }
 
-  calculateGameOverLayout(gameCanvas) {
+  calculateGameOverLayout(gameCanvas, isMultiplayerDefeat = false) {
     if (!gameCanvas) {
       return null
     }
@@ -263,90 +263,94 @@ export class UIRenderer {
     const adjustedWidth = logicalWidth - safeLeft - rightObstruction
     const adjustedHeight = logicalHeight - safeTop - safeBottom
 
-    const overlayWidth = adjustedWidth > 0 ? adjustedWidth : logicalWidth
-    const overlayHeight = adjustedHeight > 0 ? adjustedHeight : logicalHeight
-    const offsetX = adjustedWidth > 0 ? safeLeft : 0
-    const offsetY = adjustedHeight > 0 ? safeTop : 0
+    // Modal dimensions - centered with max size
+    const maxModalWidth = Math.min(adjustedWidth * 0.9, 480)
+    const maxModalHeight = Math.min(adjustedHeight * 0.9, 520)
+    
+    const modalWidth = Math.max(280, maxModalWidth)
+    const modalHeight = Math.max(320, maxModalHeight)
+    
+    const modalX = safeLeft + (adjustedWidth - modalWidth) / 2
+    const modalY = safeTop + (adjustedHeight - modalHeight) / 2
 
-    const headingFontSize = Math.round(Math.max(22, Math.min(
-      overlayWidth * 0.08,
-      overlayHeight * 0.1,
-      48
+    // Dynamic font sizing based on modal size
+    const headingFontSize = Math.round(Math.max(20, Math.min(
+      modalWidth * 0.065,
+      modalHeight * 0.06,
+      36
     )))
-    const statsFontSize = Math.round(Math.max(14, Math.min(
-      overlayWidth * 0.05,
-      overlayHeight * 0.07,
-      26
+    const statsFontSize = Math.round(Math.max(12, Math.min(
+      modalWidth * 0.04,
+      modalHeight * 0.035,
+      18
     )))
 
-    const verticalPadding = Math.min(
-      Math.max(statsFontSize, overlayHeight * 0.08, 18),
-      overlayHeight * 0.25
-    )
-    const headingY = offsetY + verticalPadding
+    const padding = Math.max(16, modalWidth * 0.05)
+    const headingY = modalY + padding
 
-    const buttonHeight = Math.max(36, Math.min(overlayHeight * 0.15, 60))
-    const desiredButtonWidth = Math.max(overlayWidth * 0.8, Math.min(overlayWidth, 160))
-    const buttonWidth = Math.min(desiredButtonWidth, Math.min(overlayWidth, 320))
-    const bottomPadding = Math.min(Math.max(overlayHeight * 0.06, 18), overlayHeight * 0.25)
-    const maxButtonTop = offsetY + overlayHeight - buttonHeight - bottomPadding
+    // Button sizing
+    const buttonHeight = Math.max(40, Math.min(modalHeight * 0.1, 52))
+    const buttonWidth = Math.min(modalWidth - padding * 2, 280)
+    const buttonGap = Math.max(10, buttonHeight * 0.25)
+    const buttonFontSize = Math.round(Math.max(14, Math.min(statsFontSize + 2, 18)))
 
-    const statsStartY = headingY + headingFontSize + Math.max(statsFontSize * 0.6, 12)
-    const statsCount = 5
-    const availableStatsHeight = Math.max(maxButtonTop - statsStartY, 0)
-    const baseStatsSpacing = Math.max(statsFontSize * 1.1, 18)
+    // Calculate how many buttons we need
+    const numButtons = isMultiplayerDefeat ? 2 : 1
+    const totalButtonsHeight = numButtons * buttonHeight + (numButtons - 1) * buttonGap
+    
+    // Stats layout
+    const statsStartY = headingY + headingFontSize + padding * 0.5
+    const statsSpacing = Math.max(statsFontSize * 1.3, 20)
+    // statsTotalHeight not needed here; stats startY will be adjusted dynamically during rendering
 
-    let statsSpacing = baseStatsSpacing
-    if (availableStatsHeight > 0) {
-      const maxSpacing = availableStatsHeight / statsCount
-      if (maxSpacing > 0) {
-        const minSpacing = Math.min(Math.max(statsFontSize * 0.9, 14), maxSpacing)
-        statsSpacing = Math.max(Math.min(baseStatsSpacing, maxSpacing), minSpacing)
-      }
-    }
-
-    const statsTotalHeight = statsSpacing * (statsCount - 1) + statsFontSize
-    const minButtonTop = statsStartY + statsTotalHeight + Math.max(statsFontSize * 0.5, 10)
-    let buttonY = Math.max(minButtonTop, offsetY + verticalPadding)
-    buttonY = Math.min(buttonY, maxButtonTop)
-    const buttonX = offsetX + (overlayWidth - buttonWidth) / 2
-
-    const buttonFontSize = Math.round(Math.max(statsFontSize, 16))
+    // Position buttons at bottom of modal
+    const buttonsStartY = modalY + modalHeight - padding - totalButtonsHeight
+    const buttonX = modalX + (modalWidth - buttonWidth) / 2
 
     return {
+      modal: {
+        x: modalX,
+        y: modalY,
+        width: modalWidth,
+        height: modalHeight
+      },
       overlay: {
-        x: offsetX,
-        y: offsetY,
-        width: overlayWidth,
-        height: overlayHeight
+        x: 0,
+        y: 0,
+        width: logicalWidth,
+        height: logicalHeight
       },
       heading: {
-        x: offsetX + overlayWidth / 2,
+        x: modalX + modalWidth / 2,
         y: headingY,
         fontSize: headingFontSize
       },
       stats: {
-        x: offsetX + overlayWidth / 2,
+        x: modalX + modalWidth / 2,
         startY: statsStartY,
         fontSize: statsFontSize,
         spacing: statsSpacing
       },
-      button: {
+      buttons: {
         x: buttonX,
-        y: buttonY,
+        startY: buttonsStartY,
         width: buttonWidth,
         height: buttonHeight,
+        gap: buttonGap,
         fontSize: buttonFontSize,
-        centerX: offsetX + overlayWidth / 2,
-        centerY: buttonY + buttonHeight / 2
-      }
+        centerX: modalX + modalWidth / 2
+      },
+      padding
     }
   }
 
   renderGameOver(ctx, gameCanvas, gameState) {
-    // If game over, render win/lose overlay and stop drawing further
-    if (gameState?.gameOver && gameState?.gameOverMessage) {
-      const layout = this.calculateGameOverLayout(gameCanvas)
+    // Check if we should show the defeat modal for multiplayer
+    const isMultiplayerDefeat = gameState?.localPlayerDefeated && !gameState?.isSpectator && !gameState?.gameOver
+    
+    // If game over or multiplayer defeat, render win/lose overlay
+    if ((gameState?.gameOver && gameState?.gameOverMessage) || isMultiplayerDefeat) {
+      const layout = this.calculateGameOverLayout(gameCanvas, isMultiplayerDefeat)
 
       if (!layout) {
         return false
@@ -354,86 +358,159 @@ export class UIRenderer {
 
       this.lastGameOverLayout = layout
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-      ctx.fillRect(
-        layout.overlay.x,
-        layout.overlay.y,
-        layout.overlay.width,
-        layout.overlay.height
-      )
+      // Draw semi-transparent overlay over entire screen
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
+      ctx.fillRect(0, 0, layout.overlay.width, layout.overlay.height)
 
-      // Render game over message
+      // Draw modal background with rounded corners effect
+      const { modal } = layout
+      
+      // Modal shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+      ctx.fillRect(modal.x + 4, modal.y + 4, modal.width, modal.height)
+      
+      // Modal background - gradient effect
+      const gradient = ctx.createLinearGradient(modal.x, modal.y, modal.x, modal.y + modal.height)
+      gradient.addColorStop(0, '#2a2a3a')
+      gradient.addColorStop(1, '#1a1a2a')
+      ctx.fillStyle = gradient
+      ctx.fillRect(modal.x, modal.y, modal.width, modal.height)
+      
+      // Modal border
+      ctx.strokeStyle = gameState.gameResult === 'victory' ? '#4CAF50' : 
+                       gameState.gameResult === 'defeat' ? '#f44336' : '#666'
+      ctx.lineWidth = 2
+      ctx.strokeRect(modal.x, modal.y, modal.width, modal.height)
+
+      // Render game over message with glow effect and text wrapping
+      const message = gameState.gameResult === 'victory' ? 'VICTORY' : 'DEFEAT'
+      const subMessage = gameState.gameResult === 'victory' 
+        ? 'All enemy buildings destroyed!'
+        : 'All your buildings have been destroyed!'
+      
       ctx.font = `bold ${layout.heading.fontSize}px Arial`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillText(gameState.gameOverMessage, layout.heading.x, layout.heading.y)
+      
+      // Text glow for main title
+      ctx.shadowColor = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
+      ctx.shadowBlur = 10
+      ctx.fillStyle = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
+      ctx.fillText(message, layout.heading.x, layout.heading.y)
+      ctx.shadowBlur = 0
+      
+      // Render subtitle (wrapped if needed) below the main title
+      const subtitleY = layout.heading.y + layout.heading.fontSize + 8
+      const subtitleFontSize = Math.max(12, layout.heading.fontSize * 0.6)
+      ctx.font = `${subtitleFontSize}px Arial`
+      ctx.fillStyle = '#ccc'
+      
+      // Wrap subtitle text into lines (don't rely on layout.stats.startY yet)
+      const maxTextWidth = modal.width - layout.padding * 2
+      const words = subMessage.split(' ')
+      const subtitleLines = []
+      let currentLine = ''
+      let measured
 
-      // Render statistics
-      ctx.font = `${layout.stats.fontSize}px Arial`
-      ctx.textBaseline = 'top'
-      const statsLines = [
-        `Player Units Destroyed: ${gameState.playerUnitsDestroyed}`,
-        `Enemy Units Destroyed: ${gameState.enemyUnitsDestroyed}`,
-        `Player Buildings Destroyed: ${gameState.playerBuildingsDestroyed}`,
-        `Enemy Buildings Destroyed: ${gameState.enemyBuildingsDestroyed}`,
-        `Total Money Earned: $${gameState.totalMoneyEarned}`
-      ]
+      for (let i = 0; i < words.length; i++) {
+        const testLine = (currentLine + words[i] + ' ').trimEnd() + ' '
+        measured = ctx.measureText(testLine)
+        if (measured.width > maxTextWidth && currentLine.length > 0) {
+          subtitleLines.push(currentLine.trim())
+          currentLine = words[i] + ' '
+        } else {
+          currentLine = (currentLine + words[i] + ' ').trimEnd() + ' '
+        }
+      }
+      if (currentLine.trim().length > 0) subtitleLines.push(currentLine.trim())
 
-      statsLines.forEach((line, index) => {
-        const lineY = layout.stats.startY + index * layout.stats.spacing
-        ctx.fillText(line, layout.stats.x, lineY)
+      // Draw subtitle lines and compute final Y for stats layout
+      let lineY = subtitleY
+      const subtitleLineSpacing = subtitleFontSize + 4
+      subtitleLines.forEach((ln) => {
+        ctx.fillText(ln, layout.heading.x, lineY)
+        lineY += subtitleLineSpacing
       })
 
-      // Render reset button
-      ctx.fillStyle = '#FF0000'
-      ctx.fillRect(layout.button.x, layout.button.y, layout.button.width, layout.button.height)
-      ctx.font = `bold ${layout.button.fontSize}px Arial`
-      ctx.fillStyle = '#FFFFFF'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('Reset Game', layout.button.centerX, layout.button.centerY)
+      // Ensure statistics block starts below subtitle (with a comfortable gap)
+      const minStatsStart = lineY + Math.max(8, layout.padding * 0.25)
+      if (layout.stats && typeof layout.stats.startY === 'number') {
+        layout.stats.startY = Math.max(layout.stats.startY, minStatsStart)
+      }
+
+      // Render statistics with icons/styling
+      ctx.font = `${layout.stats.fontSize}px Arial`
+      ctx.textBaseline = 'top'
+      ctx.fillStyle = '#ddd'
+      
+      const statsLines = [
+        { icon: '🎖️', label: 'Your Units Lost', value: gameState.playerUnitsDestroyed || 0 },
+        { icon: '💀', label: 'Enemy Units Destroyed', value: gameState.enemyUnitsDestroyed || 0 },
+        { icon: '🏠', label: 'Your Buildings Lost', value: gameState.playerBuildingsDestroyed || 0 },
+        { icon: '💥', label: 'Enemy Buildings Destroyed', value: gameState.enemyBuildingsDestroyed || 0 },
+        { icon: '💰', label: 'Total Money Earned', value: `$${(gameState.totalMoneyEarned || 0).toLocaleString()}` }
+      ]
+
+      statsLines.forEach((stat, index) => {
+        const lineY = layout.stats.startY + index * layout.stats.spacing
+        // Icon and label
+        ctx.textAlign = 'left'
+        ctx.fillStyle = '#aaa'
+        ctx.fillText(`${stat.icon} ${stat.label}:`, layout.modal.x + layout.padding, lineY)
+        // Value
+        ctx.textAlign = 'right'
+        ctx.fillStyle = '#fff'
+        ctx.fillText(String(stat.value), layout.modal.x + layout.modal.width - layout.padding, lineY)
+      })
+
+      // Render buttons
+      const { buttons } = layout
+      
+      if (isMultiplayerDefeat) {
+        // Two buttons for multiplayer defeat: New Game and Spectator Mode
+        
+        // New Game button
+        const newGameY = buttons.startY
+        this.renderButton(ctx, buttons.x, newGameY, buttons.width, buttons.height, 
+          '🔄 New Game', buttons.fontSize, '#f44336', '#fff')
+        
+        // Spectator Mode button
+        const spectatorY = buttons.startY + buttons.height + buttons.gap
+        this.renderButton(ctx, buttons.x, spectatorY, buttons.width, buttons.height,
+          '👁️ Watch as Spectator', buttons.fontSize, '#2196F3', '#fff')
+          
+        // Store button positions for click handling
+        this.newGameButton = { x: buttons.x, y: newGameY, width: buttons.width, height: buttons.height }
+        this.spectatorButton = { x: buttons.x, y: spectatorY, width: buttons.width, height: buttons.height }
+      } else {
+        // Single button for regular game over
+        this.renderButton(ctx, buttons.x, buttons.startY, buttons.width, buttons.height,
+          '🔄 Reset Game', buttons.fontSize, '#f44336', '#fff')
+        this.newGameButton = { x: buttons.x, y: buttons.startY, width: buttons.width, height: buttons.height }
+        this.spectatorButton = null
+      }
+
       ctx.textBaseline = 'alphabetic'
 
-      // Handle reset button click - only add listener once
+      // Handle button clicks - only add listener once
       if (!this.gameOverEventListenerAdded) {
         this.gameOverClickHandler = (event) => {
           const rect = gameCanvas.getBoundingClientRect()
-          const clickX = event.clientX - rect.left
-          const clickY = event.clientY - rect.top
+          const scaleX = gameCanvas.width / rect.width / (window.devicePixelRatio || 1)
+          const scaleY = gameCanvas.height / rect.height / (window.devicePixelRatio || 1)
+          const clickX = (event.clientX - rect.left) * scaleX
+          const clickY = (event.clientY - rect.top) * scaleY
 
-          const currentLayout = this.calculateGameOverLayout(gameCanvas) || this.lastGameOverLayout
-
-          if (!currentLayout) {
+          // Check New Game button
+          if (this.newGameButton && this.isClickInButton(clickX, clickY, this.newGameButton)) {
+            this.handleNewGame()
             return
           }
 
-          const { button } = currentLayout
-
-          // Check if click is within reset button bounds (using logical coordinates)
-          if (
-            clickX >= button.x &&
-            clickX <= button.x + button.width &&
-            clickY >= button.y &&
-            clickY <= button.y + button.height
-          ) {
-            // Reset the game instead of reloading the page
-            (async() => {
-              try {
-                const gameInstance = getCurrentGame()
-
-                if (gameInstance && typeof gameInstance.resetGame === 'function') {
-                  await gameInstance.resetGame()
-                  // Show notification
-                  showNotification('Game restarted while preserving win/loss statistics')
-                } else {
-                  console.warn('Game instance not found or resetGame method missing, falling back to page reload')
-                  window.location.reload()
-                }
-              } catch (err) {
-                console.error('Could not import game instance, falling back to page reload:', err)
-                window.location.reload()
-              }
-            })()
+          // Check Spectator button (only in multiplayer defeat)
+          if (this.spectatorButton && this.isClickInButton(clickX, clickY, this.spectatorButton)) {
+            this.handleSpectatorMode()
+            return
           }
         }
 
@@ -445,13 +522,94 @@ export class UIRenderer {
     } else {
       // Game is not over, remove event listener if it was added
       if (this.gameOverEventListenerAdded) {
-        gameCanvas.removeEventListener('click', this.gameOverClickHandler)
+        const gameCanvas = document.getElementById('gameCanvas')
+        if (gameCanvas) {
+          gameCanvas.removeEventListener('click', this.gameOverClickHandler)
+        }
         this.gameOverEventListenerAdded = false
         this.gameOverClickHandler = null
       }
       this.lastGameOverLayout = null
+      this.newGameButton = null
+      this.spectatorButton = null
     }
     return false
+  }
+
+  renderButton(ctx, x, y, width, height, text, fontSize, bgColor, textColor) {
+    // Button shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+    ctx.fillRect(x + 2, y + 2, width, height)
+    
+    // Button background with gradient
+    const gradient = ctx.createLinearGradient(x, y, x, y + height)
+    gradient.addColorStop(0, bgColor)
+    gradient.addColorStop(1, this.darkenColor(bgColor, 30))
+    ctx.fillStyle = gradient
+    ctx.fillRect(x, y, width, height)
+    
+    // Button border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x, y, width, height)
+    
+    // Button text
+    ctx.font = `bold ${fontSize}px Arial`
+    ctx.fillStyle = textColor
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(text, x + width / 2, y + height / 2)
+  }
+
+  darkenColor(hex, percent) {
+    // Simple color darkening for gradient effect
+    const num = parseInt(hex.replace('#', ''), 16)
+    const amt = Math.round(2.55 * percent)
+    const R = Math.max((num >> 16) - amt, 0)
+    const G = Math.max((num >> 8 & 0x00FF) - amt, 0)
+    const B = Math.max((num & 0x0000FF) - amt, 0)
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)
+  }
+
+  isClickInButton(clickX, clickY, button) {
+    return clickX >= button.x && clickX <= button.x + button.width &&
+           clickY >= button.y && clickY <= button.y + button.height
+  }
+
+  handleNewGame() {
+    (async() => {
+      try {
+        const gameInstance = getCurrentGame()
+
+        if (gameInstance && typeof gameInstance.resetGame === 'function') {
+          await gameInstance.resetGame()
+          showNotification('Game restarted while preserving win/loss statistics')
+        } else {
+          console.warn('Game instance not found or resetGame method missing, falling back to page reload')
+          window.location.reload()
+        }
+      } catch (err) {
+        console.error('Could not import game instance, falling back to page reload:', err)
+        window.location.reload()
+      }
+    })()
+  }
+
+  handleSpectatorMode() {
+    // Enable spectator mode - player can watch but not interact
+    gameState.isSpectator = true
+    gameState.localPlayerDefeated = false // Clear the defeat flag so modal disappears
+    
+    // Disable shadow of war so spectator can see the whole map
+    gameState.spectatorShadowOfWarDisabled = gameState.shadowOfWarEnabled
+    gameState.shadowOfWarEnabled = false
+    
+    // Deselect all units
+    if (gameState.units) {
+      gameState.units.forEach(unit => { unit.selected = false })
+    }
+    
+    showNotification('👁️ Spectator Mode - You can now watch the remaining players', 4000)
   }
 
   render(ctx, gameCanvas, gameState, selectionActive, selectionStart, selectionEnd, scrollOffset, factories, buildings, mapGrid, units) {

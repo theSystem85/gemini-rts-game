@@ -83,12 +83,13 @@ export class SelectionManager {
         playSound('unitSelection')
       }
     } else if (e.shiftKey && isDoubleClick) {
-      // Shift+double click: Add all visible units of this type to selection
+      // Shift+double click: Add all visible units of this type (same owner) to selection
       const gameCanvas = document.getElementById('gameCanvas')
       const canvasWidth = getPlayableViewportWidth(gameCanvas)
       const canvasHeight = getPlayableViewportHeight(gameCanvas)
 
-      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+      // Only select units of the same type AND same owner as the clicked unit
+      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight, clickedUnit.owner)
 
       visibleUnitsOfType.forEach(unit => {
         if (!unit.selected) {
@@ -102,7 +103,7 @@ export class SelectionManager {
       }
       showNotification(`Added ${visibleUnitsOfType.length} ${clickedUnit.type}(s) to selection`)
     } else if (isDoubleClick) {
-      // Double click: Select all visible units of this type
+      // Double click: Select all visible units of this type (same owner)
       const gameCanvas = document.getElementById('gameCanvas')
       const canvasWidth = getPlayableViewportWidth(gameCanvas)
       const canvasHeight = getPlayableViewportHeight(gameCanvas)
@@ -115,8 +116,8 @@ export class SelectionManager {
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
 
-      // Select all visible units of this type
-      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight)
+      // Select all visible units of this type AND same owner as the clicked unit
+      const visibleUnitsOfType = this.getVisibleUnitsOfType(clickedUnit.type, units, gameState.scrollOffset, canvasWidth, canvasHeight, clickedUnit.owner)
 
       visibleUnitsOfType.forEach(unit => {
         unit.selected = true
@@ -281,12 +282,14 @@ export class SelectionManager {
     }
   }
 
-  // Function to get all visible units of the same type on screen
-  getVisibleUnitsOfType(unitType, units, scrollOffset, canvasWidth, canvasHeight) {
+  // Function to get all visible units of the same type on screen (same owner)
+  getVisibleUnitsOfType(unitType, units, scrollOffset, canvasWidth, canvasHeight, ownerFilter = null) {
     const visibleUnits = []
 
     for (const unit of units) {
-      if (this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0) {
+      // Only select units of the same type AND same owner
+      const matchesOwner = ownerFilter ? unit.owner === ownerFilter : true
+      if (this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0 && matchesOwner) {
         // Check if unit is visible on screen
         const unitScreenX = unit.x - scrollOffset.x
         const unitScreenY = unit.y - scrollOffset.y
@@ -301,14 +304,15 @@ export class SelectionManager {
     return visibleUnits
   }
 
-  selectAllOfType(unitType, units, selectedUnits) {
+  selectAllOfType(unitType, units, selectedUnits, ownerFilter = null) {
     // Clear current selection
     units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
     selectedUnits.length = 0
 
-    // Select all units of this type
+    // Select all units of this type AND same owner
     const unitsOfType = units.filter(unit =>
-      this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0
+      this.isSelectableUnit(unit) && unit.type === unitType && unit.health > 0 &&
+      (ownerFilter ? unit.owner === ownerFilter : true)
     )
 
     unitsOfType.forEach(unit => {

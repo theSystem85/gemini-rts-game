@@ -181,9 +181,8 @@ export class GameLoop {
 
     this.forceRender = false
 
-    if (this.hasActiveScrollActivity()) {
-      this.scheduleNextFrame()
-    }
+    // Always schedule next frame when paused to handle external unpause events
+    this.scheduleNextFrame()
   }
 
   animate = logPerformance((timestamp) => {

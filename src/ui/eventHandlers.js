@@ -10,6 +10,7 @@ import { showNotification } from './notifications.js'
 import { milestoneSystem } from '../game/milestoneSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { getCurrentGame } from '../main.js'
+import { broadcastBuildingPlace } from '../network/gameCommandSync.js'
 import {
   canPlaceBuilding,
   createBuilding,
@@ -310,6 +311,9 @@ export class EventHandlers {
 
           // Update power supply
           updatePowerSupply(gameState.buildings, gameState)
+
+          // Broadcast building placement to other players in multiplayer
+          broadcastBuildingPlace(buildingType, tileX, tileY, gameState.humanPlayer)
 
           // Exit placement mode
           gameState.buildingPlacementMode = false

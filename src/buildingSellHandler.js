@@ -4,6 +4,7 @@ import { buildingCosts } from './main.js'
 import { showNotification } from './ui/notifications.js'
 import { productionQueue } from './productionQueue.js'
 import { updateMoneyBar } from './ui/moneyBar.js'
+import { broadcastBuildingSell } from './network/gameCommandSync.js'
 // No need to modify map grid immediately; building removal occurs after the sell animation
 
 /**
@@ -64,6 +65,9 @@ export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, fa
       // Mark the building as being sold
       building.isBeingSold = true
       building.sellStartTime = performance.now()
+
+      // Broadcast sell action to other players
+      broadcastBuildingSell(building.id, sellValue, building.sellStartTime)
 
       // Play selling sound and show notification
       playSound('deposit')

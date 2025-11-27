@@ -1,10 +1,11 @@
 {
   "name": "vite-starter",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "stun": "node server/stun.js",
     "prebuild": "node scripts/write-commit.js",
     "build": "vite build",
     "preview": "vite preview",
@@ -19,6 +20,8 @@
     "vite": "^6.0.3"
   },
   "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
     "sharp": "^0.34.3"
   }
 }

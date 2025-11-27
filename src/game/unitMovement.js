@@ -57,7 +57,7 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     const prevX = unit.x, prevY = unit.y
 
     // Handle dodge completion
-    if (unit.isDodging && unit.path.length === 0 && unit.originalPath) {
+    if (unit.isDodging && unit.path && unit.path.length === 0 && unit.originalPath) {
       unit.path = unit.originalPath
       unit.target = unit.originalTarget
       unit.originalPath = null
@@ -167,50 +167,50 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
   const now = performance.now()
   const occupancyMap = gameState.occupancyMap
 
-  // Update pathfinding for units with movement targets
-  if (selectedUnits && selectedUnits.length > 0) {
-    selectedUnits.forEach(unit => {
-      if (unit.sweepingOverrideMovement) {
-        return
-      }
-      if (unit.moveTarget && (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)) {
-        const targetPos = unit.moveTarget
-        let adjustedTarget = targetPos
+  // Update pathfinding for ALL units with movement targets (not just selected ones)
+  // This ensures remote player units also get paths calculated
+  const unitsWithMoveTarget = units.filter(unit => 
+    unit.moveTarget && 
+    !unit.sweepingOverrideMovement &&
+    (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)
+  )
+  
+  unitsWithMoveTarget.forEach(unit => {
+    const targetPos = unit.moveTarget
+    let adjustedTarget = targetPos
 
-        // Handle formation offsets
-        if (unit.formationOffset) {
-          const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
-          if (distance > 3) {
-            adjustedTarget = {
-              x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
-              y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
-            }
-          }
-        }
-
-        // Compute distance to decide pathfinding strategy
-        const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY)
-
-        // Always use occupancy map for units with targets (attack mode) or attack queues (AGF mode) to prevent moving over occupied tiles
-        // For regular movement commands, use occupancy map for close range, ignore for long distance
-        const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
-        const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
-        const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
-        const pathOptions = { unitOwner: unit.owner }
-        const newPath = useOccupancyMap
-          ? findPath(startNode, adjustedTarget, mapGrid, occupancyMap, undefined, pathOptions)
-          : findPath(startNode, adjustedTarget, mapGrid, null, undefined, pathOptions)
-
-        if (newPath.length > 1) {
-          unit.path = newPath.slice(1)
-          unit.lastPathCalcTime = now
-        } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
-          // Clear moveTarget if we've reached destination
-          unit.moveTarget = null
+    // Handle formation offsets
+    if (unit.formationOffset) {
+      const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
+      if (distance > 3) {
+        adjustedTarget = {
+          x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
+          y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
         }
       }
-    })
-  }
+    }
+
+    // Compute distance to decide pathfinding strategy
+    const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY)
+
+    // Always use occupancy map for units with targets (attack mode) or attack queues (AGF mode) to prevent moving over occupied tiles
+    // For regular movement commands, use occupancy map for close range, ignore for long distance
+    const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
+    const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
+    const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+    const pathOptions = { unitOwner: unit.owner }
+    const newPath = useOccupancyMap
+      ? findPath(startNode, adjustedTarget, mapGrid, occupancyMap, undefined, pathOptions)
+      : findPath(startNode, adjustedTarget, mapGrid, null, undefined, pathOptions)
+
+    if (newPath.length > 1) {
+      unit.path = newPath.slice(1)
+      unit.lastPathCalcTime = now
+    } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
+      // Clear moveTarget if we've reached destination
+      unit.moveTarget = null
+    }
+  })
 }
 
 /**

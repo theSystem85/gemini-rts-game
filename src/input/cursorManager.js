@@ -473,6 +473,14 @@ export class CursorManager {
 
     // Default cursor behavior for regular movement/attack
     if (selectedUnits.length > 0) {
+      // If only enemy units are selected, use default cursor
+      // (player can select enemy units to view them, but can't command them)
+      const hasOwnUnits = selectedUnits.some(u => u.owner === gameState.humanPlayer)
+      if (!hasOwnUnits) {
+        setCursor('default')
+        return
+      }
+
       const hasNonBuildingSelected = selectedUnits.some(u => !u.isBuilding)
       const selectedBuildings = selectedUnits.filter(u => u.isBuilding)
       const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')

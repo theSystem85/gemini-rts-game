@@ -19,6 +19,7 @@ import { handleAttackNotification } from './attackNotifications.js'
 import { emitSmokeParticles } from '../utils/smokeUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
+import { broadcastBuildingDamage } from '../network/gameCommandSync.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 
@@ -659,6 +660,11 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
               // Ensure health doesn't go below 0
               building.health = Math.max(0, building.health)
+
+              // Broadcast building damage to host in multiplayer
+              if (building.id) {
+                broadcastBuildingDamage(building.id, actualDamage, building.health)
+              }
 
               // Mark building for repair pause (deferred processing)
               markBuildingForRepairPause(building)

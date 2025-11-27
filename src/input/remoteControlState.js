@@ -1,4 +1,5 @@
 import { gameState } from '../gameState.js'
+import { getActiveRemoteConnection } from '../network/remoteConnection.js'
 
 const REMOTE_CONTROL_ACTIONS = [
   'forward',
@@ -20,6 +21,8 @@ const DEFAULT_ABSOLUTE_STATE = {
   turretDirection: null,
   turretTurnFactor: 0
 }
+
+const REMOTE_CONTROL_MESSAGE_TYPE = 'remote-control'
 
 function clampIntensity(value) {
   if (!Number.isFinite(value)) {
@@ -144,19 +147,25 @@ export function setRemoteControlAction(action, source, active, intensity = 1) {
     delete sources[source]
   }
   recomputeAction(action)
+  broadcastRemoteControlState()
 }
 
 export function clearRemoteControlSource(source) {
   if (!source) return
   ensureRemoteControlSources()
+  let didChange = false
   for (const action of REMOTE_CONTROL_ACTIONS) {
     const sources = gameState.remoteControlSources[action]
     if (sources && sources[source]) {
       delete sources[source]
       recomputeAction(action)
+      didChange = true
     }
   }
   clearRemoteControlAbsoluteSource(source)
+  if (didChange) {
+    broadcastRemoteControlState()
+  }
 }
 
 export function getRemoteControlActionState(action) {
@@ -192,6 +201,7 @@ export function setRemoteControlAbsolute(source, values = {}) {
   }
 
   recomputeAbsolute()
+  broadcastRemoteControlState()
 }
 
 export function clearRemoteControlAbsoluteSource(source) {
@@ -202,10 +212,64 @@ export function clearRemoteControlAbsoluteSource(source) {
   if (gameState.remoteControlAbsoluteSources[source]) {
     delete gameState.remoteControlAbsoluteSources[source]
     recomputeAbsolute()
+    broadcastRemoteControlState()
   }
 }
 
 export function getRemoteControlAbsolute() {
   ensureRemoteControlAbsolute()
   return gameState.remoteControlAbsolute
+}
+
+function isRemoteSessionActive() {
+  return Boolean(gameState.multiplayerSession && gameState.multiplayerSession.isRemote)
+}
+
+function broadcastRemoteControlState() {
+  if (!isRemoteSessionActive()) {
+    return
+  }
+
+  const connection = getActiveRemoteConnection()
+  if (!connection) {
+    return
+  }
+
+  try {
+    connection.send({
+      type: REMOTE_CONTROL_MESSAGE_TYPE,
+      actions: { ...gameState.remoteControl },
+      absolute: { ...gameState.remoteControlAbsolute },
+      timestamp: Date.now()
+    })
+  } catch (err) {
+    console.warn('Failed to broadcast remote control state:', err)
+  }
+}
+
+export function applyRemoteControlSnapshot(source, payload = {}) {
+  if (!source || typeof payload !== 'object' || payload === null) {
+    return
+  }
+
+  const actions = payload.actions || {}
+  Object.entries(actions).forEach(([action, intensity]) => {
+    if (!REMOTE_CONTROL_ACTIONS.includes(action)) {
+      return
+    }
+    const clamped = clampIntensity(Number(intensity) || 0)
+    setRemoteControlAction(action, source, clamped > 0, clamped)
+  })
+
+  if (payload.absolute && typeof payload.absolute === 'object') {
+    setRemoteControlAbsolute(source, payload.absolute)
+  }
+}
+
+export function releaseRemoteControlSource(source) {
+  if (!source) {
+    return
+  }
+  clearRemoteControlSource(source)
+  clearRemoteControlAbsoluteSource(source)
 }

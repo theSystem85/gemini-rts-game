@@ -10,6 +10,7 @@ import { canPlayCriticalDamageSound, recordCriticalDamageSoundPlayed } from './g
 import { updateUnitSpeedModifier, awardExperience } from './utils.js'
 import { markBuildingForRepairPause } from './buildings.js'
 import { applyDamageToWreck } from './game/unitWreckManager.js'
+import { broadcastBuildingDamage } from './network/gameCommandSync.js'
 
 export const explosions = [] // Global explosion effects for rocket impacts
 
@@ -245,6 +246,11 @@ export function triggerExplosion(
 
           // Ensure health doesn't go below 0
           building.health = Math.max(0, building.health)
+
+          // Broadcast building damage to host in multiplayer
+          if (building.id) {
+            broadcastBuildingDamage(building.id, damage, building.health)
+          }
 
           // Mark building for repair pause (deferred processing)
           markBuildingForRepairPause(building)

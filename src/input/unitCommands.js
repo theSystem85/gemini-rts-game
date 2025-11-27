@@ -20,6 +20,10 @@ import {
   clearTankerKamikazeState,
   updateKamikazeTargetPoint
 } from '../game/tankerTruckUtils.js'
+import {
+  broadcastUnitMove,
+  broadcastUnitAttack
+} from '../network/gameCommandSync.js'
 
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
@@ -1122,6 +1126,15 @@ export class UnitCommandsHandler {
       const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
       playPositionalSound('movement', avgX, avgY, 0.5)
     }
+    
+    // Always broadcast movement command to host if we have units to move
+    // The host will handle the actual pathfinding for remote clients
+    if (unitsToCommand.length > 0) {
+      console.log('[UnitCommands] Broadcasting move command for', unitsToCommand.length, 'units to', targetX, targetY)
+      console.log('[UnitCommands] Unit owners:', unitsToCommand.map(u => ({ id: u.id, owner: u.owner })))
+      console.log('[UnitCommands] gameState.humanPlayer:', gameState.humanPlayer)
+      broadcastUnitMove(unitsToCommand, targetX, targetY)
+    }
   }
 
   assignApacheFlight(unit, destTile, destCenter, options = {}) {
@@ -1275,6 +1288,9 @@ export class UnitCommandsHandler {
 
     // Play attacking sound for user-initiated attack commands
     playSound('attacking', 1.0)
+    
+    // Broadcast attack command to other players
+    broadcastUnitAttack(selectedUnits, target)
   }
 
   handleRefineryUnloadCommand(selectedUnits, refinery, mapGrid) {

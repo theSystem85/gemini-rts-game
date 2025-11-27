@@ -432,3 +432,10 @@ The 3-Star Level System is a comprehensive unit progression system that allows c
 - **Universal Fairness**: AI and player units have identical progression systems
 
 This system transforms combat from simple unit expenditure to strategic unit development, encouraging players to keep experienced units alive while providing clear visual feedback on unit capabilities and progression.
+---
+
+## Online Multiplayer STUN Helper
+
+- Start the Express-based signalling helper with `npm run stun` before sending or opening invite links.
+- Run `npm run dev` for the Vite client simultaneously so the helper listening on http://localhost:3333 can fulfill `/signalling/offer`, `/signalling/answer`, `/signalling/candidate`, and `/game-instance/:id/invite-regenerate` per `specs/001-add-online-multiplayer/contracts/multiplayer-api.yaml`.
+- Keep both processes alive while testing invites so browsers can exchange WebRTC metadata without a dedicated gaming server.

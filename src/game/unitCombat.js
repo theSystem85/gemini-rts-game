@@ -15,6 +15,27 @@ import { showNotification } from '../ui/notifications.js'
 import { isHowitzerGunReadyToFire, getHowitzerLaunchAngle } from './howitzerGunController.js'
 
 /**
+ * Check if a party is controlled by a human player (not AI)
+ * In multiplayer, any party with aiActive === false is human-controlled
+ * @param {string} owner - The owner/partyId to check
+ * @returns {boolean} True if the party is human-controlled
+ */
+function isHumanControlledParty(owner) {
+  // Always allow the local human player
+  if (owner === gameState.humanPlayer) {
+    return true
+  }
+  // Check partyStates for multiplayer - any party with aiActive === false is human
+  if (Array.isArray(gameState.partyStates)) {
+    const partyState = gameState.partyStates.find(p => p.partyId === owner)
+    if (partyState && partyState.aiActive === false) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Check if the turret is properly aimed at the target
  * @param {Object} unit - Tank unit
  * @param {Object} target - Target to aim at
@@ -909,8 +930,8 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     )
 
     // Fire if in range and allowed to attack
-    // Human player units can always attack, AI units need AI permission
-    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+    // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
+    const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
     if (distance <= effectiveRange && canAttack) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
@@ -925,7 +946,7 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
 function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
   // Alert mode: automatically scan for targets when no target is assigned
   // Skip alert mode if unit is retreating
-  if (unit.alertMode && unit.owner === gameState.humanPlayer && (!unit.target || unit.target.health <= 0) && !unit.isRetreating) {
+  if (unit.alertMode && isHumanControlledParty(unit.owner) && (!unit.target || unit.target.health <= 0) && !unit.isRetreating) {
     const ALERT_SCAN_RANGE = getEffectiveFireRange(unit)
     const unitCenterX = unit.x + TILE_SIZE / 2
     const unitCenterY = unit.y + TILE_SIZE / 2
@@ -984,7 +1005,7 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Handle movement using common logic, but prevent chasing if in alert mode
     let distance, targetCenterX, targetCenterY
 
-    if (unit.alertMode && unit.owner === gameState.humanPlayer) {
+    if (unit.alertMode && isHumanControlledParty(unit.owner)) {
       // Alert mode: don't move, just calculate distance for firing
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
@@ -1017,8 +1038,8 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     }
 
     // Fire if in range and allowed to attack
-    // Human player units can always attack, AI units need AI permission
-    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+    // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
+    const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
     if (distance <= effectiveRange && canAttack) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
@@ -1040,8 +1061,8 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     )
 
     // Fire if in range and allowed to attack
-    // Human player units can always attack, AI units need AI permission
-    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+    // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
+    const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
     if (distance <= effectiveRange && canAttack) {
       // Check if we need to start a new burst or continue existing one
@@ -1077,8 +1098,8 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     )
 
     // Fire rockets if in range and allowed to attack
-    // Human player units can always attack, AI units need AI permission
-    const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+    // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
+    const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
     if (distance <= effectiveRange && canAttack) {
       // Check if we need to start a new burst or continue existing one
@@ -1263,7 +1284,7 @@ function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
   const dy = targetCenter.y - unitCenterY
   const distance = Math.hypot(dx, dy)
 
-  const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+  const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
   const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
   const inRange = distance <= effectiveRange
   const directOverlapThreshold = TILE_SIZE * 0.45
@@ -1420,7 +1441,7 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
     mapGrid
   )
 
-  const canAttack = unit.owner === gameState.humanPlayer || (unit.owner !== gameState.humanPlayer && unit.allowedToAttack === true)
+  const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
   const minRangePx = getHowitzerMinRange()
   const effectiveRange = getHowitzerRange(unit)
   const targetVisible = isHowitzerTargetVisible(unit, unit.target, mapGrid)
@@ -1428,7 +1449,7 @@ function updateHowitzerCombat(unit, units, bullets, mapGrid, now, occupancyMap) 
   const unitCenterY = unit.y + TILE_SIZE / 2
 
   if (distance < minRangePx) {
-    if (unit.owner !== gameState.humanPlayer && mapGrid && mapGrid.length > 0) {
+    if (!isHumanControlledParty(unit.owner) && mapGrid && mapGrid.length > 0) {
       const shouldReposition = !unit.lastMinRangeReposition || (now - unit.lastMinRangeReposition > 750)
       if (shouldReposition) {
         const mapHeight = mapGrid.length

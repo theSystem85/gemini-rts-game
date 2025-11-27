@@ -42,6 +42,19 @@
     </style>
   </head>
   <body>
+    <div id="remoteInviteLanding" class="remote-invite-overlay remote-invite-overlay--hidden" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="remote-invite-card">
+        <h2>Join Remote Match</h2>
+        <p class="remote-invite-description">You were invited to control a party. Enter your alias to start the connection with the host.</p>
+        <p class="remote-invite-token">Invite token: <span id="remoteInviteTokenText">loading...</span></p>
+        <form id="remoteInviteForm">
+          <label for="remoteAliasInput">Alias</label>
+          <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Your alias" required>
+          <button id="remoteInviteSubmit" type="submit">Join game</button>
+        </form>
+        <p id="remoteInviteStatus" class="remote-invite-status" aria-live="polite"></p>
+      </div>
+    </div>
     <div id="mobileSidebarControls" aria-hidden="true">
       <button
         id="sidebarToggle"
@@ -478,6 +491,11 @@
               Players:
               <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
             </label>
+            <label style="display: flex; align-items: center; margin: 10px 0;">
+              Your alias:
+              <input type="text" class="sidebar-input" id="playerAliasInput" placeholder="Enter alias" autocomplete="off" style="width: 120px; margin-left: 10px;">
+            </label>
+            <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
             <div style="display: flex; flex-direction: column; gap: 10px; margin: 10px 0;">
               <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
                 Width:
@@ -509,6 +527,10 @@
             <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
               <input type="checkbox" id="shadowOfWarCheckbox">
               <span>Shadow of War</span>
+            </label>
+            <label id="showEnemyResourcesLabel" style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
+              <input type="checkbox" id="showEnemyResourcesCheckbox">
+              <span>Show Enemy Resources</span>
             </label>
           </div>
         </div>
@@ -542,6 +564,13 @@
       <div id="frameTimeValue">Frame: -- ms</div>
       <div id="frameTimeMin">Min: -- ms</div>
       <div id="frameTimeMax">Max: -- ms</div>
+      <div id="networkStatsContainer" style="display: none;">
+        <div style="border-top: 1px solid rgba(255,255,255,0.3); margin: 4px 0;"></div>
+        <div id="networkSendRate">↑ 0 B/s</div>
+        <div id="networkRecvRate">↓ 0 B/s</div>
+        <div id="networkTotalSent">Sent: 0 KB</div>
+        <div id="networkTotalRecv">Recv: 0 KB</div>
+      </div>
     </div>
     <div id="benchmarkCountdown" class="benchmark-countdown" hidden aria-live="polite">
       <span id="benchmarkCountdownText"></span>
@@ -575,6 +604,27 @@
             in the project root to preload them on startup.
           </p>
           <div id="configValueMessage" class="config-modal__message"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kicked from session modal -->
+    <div id="kickedModal" class="kicked-modal" aria-hidden="true">
+      <div class="kicked-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="kickedModalTitle">
+        <div class="kicked-modal__header">
+          <h2 id="kickedModalTitle">Disconnected from Game</h2>
+        </div>
+        <div class="kicked-modal__body">
+          <p id="kickedModalMessage" class="kicked-modal__message">You were kicked from the session by the host.</p>
+          <p class="kicked-modal__info">You can continue playing locally with AI opponents, or start a fresh game.</p>
+          <div class="kicked-modal__actions">
+            <button id="kickedContinueBtn" class="kicked-modal__button kicked-modal__button--primary" type="button">
+              Continue with AI
+            </button>
+            <button id="kickedNewGameBtn" class="kicked-modal__button kicked-modal__button--secondary" type="button">
+              Start New Game
+            </button>
+          </div>
         </div>
       </div>
     </div>

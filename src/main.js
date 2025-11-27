@@ -18,6 +18,10 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
+import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
+import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
+import { initAiPartySync } from './network/aiPartySync.js'
+import { setProductionControllerRef } from './network/gameCommandSync.js'
 import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
@@ -1056,6 +1060,9 @@ class Game {
   constructor() {
     this.canvasManager = new CanvasManager()
     this.productionController = new ProductionController()
+    
+    // Set production controller reference for multiplayer tech tree sync
+    setProductionControllerRef(this.productionController)
 
     gameInstance = this
     this.initializeGame()
@@ -1218,6 +1225,11 @@ class Game {
 
     // Setup map settings
     this.setupMapSettings()
+
+    initSidebarMultiplayer()
+    
+    // T018: Initialize AI party sync observer for disconnect handling
+    initAiPartySync()
 
     // Setup production tabs and buttons
     this.productionController.initProductionTabs()
@@ -1425,6 +1437,15 @@ class Game {
       shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
     }
 
+    // Show enemy resources checkbox (host only)
+    const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
+    if (showEnemyResourcesCheckbox) {
+      showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
+      showEnemyResourcesCheckbox.addEventListener('change', (e) => {
+        gameState.showEnemyResources = e.target.checked
+      })
+    }
+
     settingsBtn.addEventListener('click', () => {
       settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
     })
@@ -1581,6 +1602,10 @@ class Game {
     gameState.targetedOreTiles = {}
     gameState.refineryStatus = {}
     gameState.defeatedPlayers = new Set() // Reset defeated players tracking
+    gameState.unitWrecks = [] // Clear all unit wrecks from previous game
+    gameState._defeatSoundPlayed = false // Reset defeat sound guard
+    gameState.localPlayerDefeated = false // Reset multiplayer defeat state
+    gameState.isSpectator = false // Reset spectator mode
 
     // Restore preserved statistics
     gameState.wins = preservedWins
@@ -1751,6 +1776,52 @@ export const factories = []
 export const units = []
 export const bullets = []
 
+/**
+ * Regenerate the map for a client using the host's seed and dimensions
+ * Called by gameCommandSync when the client receives the first game state snapshot
+ * @param {string} seed - The map seed from the host
+ * @param {number} widthTiles - Map width in tiles
+ * @param {number} heightTiles - Map height in tiles
+ * @param {number} playerCount - Number of players (affects road generation)
+ */
+export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCount) {
+  console.log('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles, 'playerCount:', playerCount)
+  
+  // Update map dimensions in config
+  setMapDimensions(widthTiles, heightTiles)
+  
+  // Store the seed and player count BEFORE map generation
+  // Player count is used by generateMap for road generation
+  gameState.mapSeed = seed
+  gameState.mapTilesX = widthTiles
+  gameState.mapTilesY = heightTiles
+  if (playerCount) {
+    gameState.playerCount = playerCount
+  }
+  
+  // Clear and regenerate the map grid
+  mapGrid.length = 0
+  generateMapFromSetup(seed, mapGrid, widthTiles, heightTiles)
+  
+  // Sync mapGrid with gameState
+  gameState.mapGrid.length = 0
+  gameState.mapGrid.push(...mapGrid)
+  
+  // Rebuild occupancy map for the new map
+  gameState.occupancyMap = []
+  for (let y = 0; y < heightTiles; y++) {
+    gameState.occupancyMap[y] = []
+    for (let x = 0; x < widthTiles; x++) {
+      gameState.occupancyMap[y][x] = 0
+    }
+  }
+  
+  // Initialize shadow of war for the new map
+  initializeShadowOfWar(gameState, mapGrid)
+  
+  console.log('[Main] Client map regeneration complete')
+}
+
 // Add buildingCosts based on our building data
 export const buildingCosts = {}
 for (const [type, data] of Object.entries(buildingData)) {
@@ -1775,6 +1846,7 @@ document.addEventListener('DOMContentLoaded', async() => {
   updateMobileLayoutClasses()
   setupDoubleTapPrevention()
   loadPersistedSettings()
+  initRemoteInviteLanding()
   gameInstance = new Game()
 
   // Also make it available globally for debugging

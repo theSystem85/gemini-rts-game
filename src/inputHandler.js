@@ -7,11 +7,36 @@ import { SelectionManager } from './input/selectionManager.js'
 import { UnitCommandsHandler } from './input/unitCommands.js'
 import { isForceAttackModifierActive, isGuardModifierActive } from './utils/inputUtils.js'
 import { GAME_DEFAULT_CURSOR, preloadCursorAssets } from './input/cursorStyles.js'
+import { observeMultiplayerSession } from './network/multiplayerSessionEvents.js'
+import { showNotification } from './ui/notifications.js'
 
 export const selectedUnits = []
 export const selectionActive = false
 export const selectionStartExport = { x: 0, y: 0 }
 export const selectionEndExport = { x: 0, y: 0 }
+
+const REMOTE_CHEAT_MESSAGE = 'Cheats are host-only for remote clients'
+const isLocalClientSession = (session) => Boolean(session?.isRemote && session?.localRole === 'client')
+let remoteControlsLocked = isLocalClientSession(gameState.multiplayerSession)
+
+observeMultiplayerSession((event) => {
+  remoteControlsLocked = isLocalClientSession(event?.detail)
+})
+
+function remoteCheatGuard(event) {
+  if (!remoteControlsLocked) {
+    return
+  }
+  const key = event.key?.toLowerCase()
+  if (key !== 'c' || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen) {
+    return
+  }
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  showNotification(REMOTE_CHEAT_MESSAGE, 2300)
+}
+
+document.addEventListener('keydown', remoteCheatGuard, { capture: true, passive: false })
 
 // Initialize input system components
 const cursorManager = new CursorManager()

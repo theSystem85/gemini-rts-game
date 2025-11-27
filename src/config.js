@@ -936,6 +936,10 @@ export const PARTY_COLORS = {
   enemy: '#FF0000'        // Red
 }
 
+export const MULTIPLAYER_PARTY_IDS = ['player1', 'player2', 'player3', 'player4']
+export const MAX_MULTIPLAYER_PARTIES = MULTIPLAYER_PARTY_IDS.length
+export const INVITE_TOKEN_TTL_MS = 10 * 60 * 1000 // 10 minute invite validity
+
 // Player position constants for 4-corner setup
 export const PLAYER_POSITIONS = {
   player1: { x: 0.1, y: 0.9 },   // Bottom-left (current player position)

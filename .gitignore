@@ -13,16 +13,22 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+build
+coverage
 *.local
 TODO-Temporary.md
 
 # Editor directories and files
-!.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+.sw?
 .env
+.env*
+*.tmp
+.vscode/
+!.vscode/extensions.json

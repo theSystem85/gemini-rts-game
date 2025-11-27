@@ -303,7 +303,7 @@ export class VideoOverlay {
         for (const path of audioPaths) {
           try {
             this.currentAudio = new Audio(path)
-            this.currentAudio.volume = 0.7 * getMasterVolume() // Apply master volume to video audio
+            this.currentAudio.volume = 0.28 * getMasterVolume() // Apply master volume to video audio (60% quieter)
 
             // Test if audio can load
             await new Promise((resolve, reject) => {
@@ -483,7 +483,7 @@ export class VideoOverlay {
    */
   updateAudioVolume() {
     if (this.currentAudio) {
-      this.currentAudio.volume = 0.7 * getMasterVolume()
+      this.currentAudio.volume = 0.28 * getMasterVolume()
     }
   }
 }
