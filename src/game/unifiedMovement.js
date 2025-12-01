@@ -22,6 +22,10 @@ import {
   COLLISION_SEPARATION_MIN,
   COLLISION_NORMAL_DAMPING_MULT,
   COLLISION_NORMAL_DAMPING_MAX,
+  AIR_COLLISION_AVOID_RADIUS,
+  AIR_COLLISION_AVOID_FORCE,
+  AIR_COLLISION_AVOID_MAX_NEIGHBORS,
+  AIR_COLLISION_TIME_HORIZON,
   WRECK_COLLISION_REMOTE_BOOST,
   WRECK_COLLISION_SPEED_FACTOR,
   WRECK_COLLISION_OVERLAP_FACTOR,
@@ -462,6 +466,8 @@ export function initializeUnitMovement(unit) {
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit)
 
+  const isAirborne = isAirborneUnit(unit)
+
   const hasRestorationOverride = Boolean(unit.restorationMoveOverride)
 
   if (!hasRestorationOverride && typeof unit.gas === 'number' && unit.gas <= 0) {
@@ -769,9 +775,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 }
   if (movement.isMoving && canAccelerate) {
-    const skipAvoidance = unit.type === 'apache' && unit.flightState !== 'grounded'
-    avoidanceForce = skipAvoidance
-      ? { x: 0, y: 0 }
+    avoidanceForce = isAirborne
+      ? calculateAirCollisionAvoidance(unit, units)
       : calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap)
   }
 
@@ -870,10 +875,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
-  const skipCollisionChecks = unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')
-  const collisionResult = skipCollisionChecks
-    ? { collided: false }
-    : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
+  const collisionResult = checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
 
   if (collisionResult.collided) {
     // Revert position if collision detected
@@ -1098,39 +1100,34 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
   const tile = tileRow ? tileRow[tileX] : undefined
 
-  if (unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')) {
-    if (!tileRow || tile === undefined) {
-      return { collided: true, type: 'bounds' }
-    }
-    return { collided: false }
-  }
-
-  const unitAirborneApache = unit.type === 'apache' && unit.flightState !== 'grounded'
+  const unitAirborne = isAirborneUnit(unit)
 
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds', tileX, tileY }
   }
 
-  if (typeof tile === 'number') {
-    if (tile === 1) {
-      return { collided: true, type: 'terrain', tileX, tileY }
-    }
-  } else {
-    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
-      return { collided: true, type: 'terrain', tileX, tileY }
-    }
-
-    if (tile.building) {
-      if (unit.type === 'apache' && tile.building.type === 'helipad') {
-        return { collided: false }
+  if (!unitAirborne) {
+    if (typeof tile === 'number') {
+      if (tile === 1) {
+        return { collided: true, type: 'terrain', tileX, tileY }
       }
-      return {
-        collided: true,
-        type: 'building',
-        building: tile.building,
-        tileX,
-        tileY
+    } else {
+      if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+        return { collided: true, type: 'terrain', tileX, tileY }
+      }
+
+      if (tile.building) {
+        if (unit.type === 'apache' && tile.building.type === 'helipad') {
+          return { collided: false }
+        }
+        return {
+          collided: true,
+          type: 'building',
+          building: tile.building,
+          tileX,
+          tileY
+        }
       }
     }
   }
@@ -1143,8 +1140,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     for (const otherUnit of units) {
       if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
 
-      const otherAirborneApache = otherUnit.type === 'apache' && otherUnit.flightState !== 'grounded'
-      if ((unitAirborneApache && !otherAirborneApache) || (!unitAirborneApache && otherAirborneApache)) {
+      const otherAirborne = isAirborneUnit(otherUnit)
+      if (unitAirborne !== otherAirborne) {
         continue
       }
 
@@ -1176,6 +1173,24 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
         const unitSpeed = Math.hypot(unitVelX, unitVelY)
         const otherSpeed = Math.hypot(otherVelX, otherVelY)
 
+        const relativeVelX = unitVelX - otherVelX
+        const relativeVelY = unitVelY - otherVelY
+        if (unitAirborne && otherAirborne) {
+          return {
+            collided: true,
+            type: 'unit',
+            other: otherUnit,
+            data: {
+              normalX,
+              normalY,
+              overlap,
+              unitSpeed,
+              otherSpeed,
+              airCollision: true
+            }
+          }
+        }
+
         // Decide who gets the "bounce" impulse: the slower one
         const remoteBoost = unit.remoteControlActive ? COLLISION_BOUNCE_REMOTE_BOOST : 1
         const baseImpulse = unitSpeed * COLLISION_BOUNCE_SPEED_FACTOR + overlap * COLLISION_BOUNCE_OVERLAP_FACTOR
@@ -1199,8 +1214,6 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
           otherUnit.movement.velocity.y += normalY * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
         }
 
-        const relativeSpeed = Math.max(0, -((unitVelX * normalX) + (unitVelY * normalY)))
-
         return {
           collided: true,
           type: 'unit',
@@ -1210,16 +1223,14 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
             normalY,
             overlap,
             unitSpeed,
-            otherSpeed,
-            impulse,
-            relativeSpeed
+            otherSpeed
           }
         }
       }
     }
   }
 
-  if (wrecks && wrecks.length > 0) {
+  if (!unitAirborne && wrecks && wrecks.length > 0) {
     const unitCenterX = unit.x + TILE_SIZE / 2
     const unitCenterY = unit.y + TILE_SIZE / 2
     const unitVelX = unit.movement?.velocity?.x || 0
@@ -1459,9 +1470,17 @@ function applyStaticObstacleCollisionResponse(
   movement.lastStaticCollisionNormal = { x: normalX, y: normalY }
 }
 
+function isAirborneUnit(unit) {
+  if (!unit) return false
+  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+    return true
+  }
+  return unit.type === 'apache' && unit.flightState !== 'grounded'
+}
+
 function isGroundUnit(unit) {
   if (!unit) return false
-  return !(unit.type === 'apache' && unit.flightState !== 'grounded')
+  return !isAirborneUnit(unit)
 }
 
 function isTileBlockedForCollision(mapGrid, tileX, tileY) {
@@ -1673,12 +1692,23 @@ function ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occ
   }
 }
 
+function applyAirSeparation(unit, otherUnit, normalX, normalY, separation) {
+  const halfSeparation = separation * 0.5
+  unit.x -= normalX * halfSeparation
+  unit.y -= normalY * halfSeparation
+
+  if (otherUnit) {
+    otherUnit.x += normalX * halfSeparation
+    otherUnit.y += normalY * halfSeparation
+  }
+}
+
 function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null, mapGrid = null, occupancyMap = null, wrecks = []) {
   if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
     return false
   }
 
-  const { normalX, normalY, overlap, unitSpeed, otherSpeed } = collisionResult.data
+  const { normalX, normalY, overlap, unitSpeed, otherSpeed, airCollision = false } = collisionResult.data
   const factoryList = Array.isArray(factories) ? factories : []
 
   if (unit.type === 'tankerTruck') {
@@ -1699,8 +1729,32 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
   }
 
   const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
-  if (separation > 0.001) {
-    const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+  const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+
+  if (airCollision) {
+    if (separation > 0.001) {
+      applyAirSeparation(unit, otherUnit, normalX, normalY, separation)
+    }
+
+    const otherVelocity = otherUnit?.movement?.velocity
+    const relativeNormalSpeed =
+      (movement.velocity.x - (otherVelocity?.x || 0)) * normalX +
+      (movement.velocity.y - (otherVelocity?.y || 0)) * normalY
+
+    if (relativeNormalSpeed > 0) {
+      const bleedOff = Math.min(relativeNormalSpeed, COLLISION_NORMAL_DAMPING_MAX)
+      movement.velocity.x -= normalX * bleedOff
+      movement.velocity.y -= normalY * bleedOff
+
+      if (otherVelocity) {
+        otherVelocity.x += normalX * Math.min(bleedOff * 0.5, COLLISION_NORMAL_DAMPING_MAX)
+        otherVelocity.y += normalY * Math.min(bleedOff * 0.5, COLLISION_NORMAL_DAMPING_MAX)
+      }
+    }
+
+    movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+    return false
+  } else if (separation > 0.001) {
     const pushOther = Boolean(otherUnit) && otherSpeed <= unitSpeed
 
     if (pushOther && otherUnit) {
@@ -2355,6 +2409,75 @@ function findFreeDirection(unit, mapGrid, occupancyMap, units) {
   }
 
   return null // No free direction found
+}
+
+/**
+ * Calculate collision avoidance force to prevent airborne units from getting too close
+ */
+function calculateAirCollisionAvoidance(unit, units) {
+  if (!unit || !units || units.length === 0) {
+    return { x: 0, y: 0 }
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const unitVelX = unit.movement?.velocity?.x || 0
+  const unitVelY = unit.movement?.velocity?.y || 0
+  const radiusSq = AIR_COLLISION_AVOID_RADIUS * AIR_COLLISION_AVOID_RADIUS
+  const minDistanceSq = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
+  const timeHorizonFrames = AIR_COLLISION_TIME_HORIZON / BASE_FRAME_SECONDS
+  let avoidanceX = 0
+  let avoidanceY = 0
+  let neighborCount = 0
+
+  for (const otherUnit of units) {
+    if (!otherUnit || otherUnit.id === unit.id || otherUnit.health <= 0) continue
+    if (!isAirborneUnit(otherUnit)) continue
+
+    const otherCenterX = otherUnit.x + TILE_SIZE / 2
+    const otherCenterY = otherUnit.y + TILE_SIZE / 2
+    const dx = unitCenterX - otherCenterX
+    const dy = unitCenterY - otherCenterY
+    const distanceSq = dx * dx + dy * dy
+
+    if (distanceSq < 1 || distanceSq > radiusSq) continue
+
+    const relativeVelX = unitVelX - (otherUnit.movement?.velocity?.x || 0)
+    const relativeVelY = unitVelY - (otherUnit.movement?.velocity?.y || 0)
+    const relativeSpeedSq = relativeVelX * relativeVelX + relativeVelY * relativeVelY
+    const closingDot = dx * relativeVelX + dy * relativeVelY
+
+    // Skip if moving apart and already outside the minimum separation
+    if (closingDot <= 0 && distanceSq > minDistanceSq) {
+      continue
+    }
+
+    let timeToClosest = relativeSpeedSq > 0 ? -closingDot / relativeSpeedSq : Infinity
+    if (timeToClosest < 0) timeToClosest = 0
+
+    const projectedDx = dx + relativeVelX * Math.min(timeToClosest, timeHorizonFrames)
+    const projectedDy = dy + relativeVelY * Math.min(timeToClosest, timeHorizonFrames)
+    const projectedDistSq = projectedDx * projectedDx + projectedDy * projectedDy
+
+    const withinHorizon = timeToClosest <= timeHorizonFrames
+    const distanceFactor = Math.max(0, 1 - Math.min(projectedDistSq, radiusSq) / radiusSq)
+    const safetyFactor = projectedDistSq < minDistanceSq ? 1 : Math.max(0, (minDistanceSq - projectedDistSq) / minDistanceSq)
+    const timeFactor = withinHorizon && timeHorizonFrames > 0
+      ? 1 - Math.min(1, (timeToClosest * BASE_FRAME_SECONDS) / AIR_COLLISION_TIME_HORIZON)
+      : 0
+
+    const strength = (distanceFactor + safetyFactor + timeFactor) * AIR_COLLISION_AVOID_FORCE
+    const projectionDistance = Math.sqrt(projectedDistSq) || 1
+    avoidanceX += (projectedDx / projectionDistance) * strength
+    avoidanceY += (projectedDy / projectionDistance) * strength
+
+    neighborCount++
+    if (neighborCount >= AIR_COLLISION_AVOID_MAX_NEIGHBORS) {
+      break
+    }
+  }
+
+  return { x: avoidanceX, y: avoidanceY }
 }
 
 /**

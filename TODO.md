@@ -3,6 +3,7 @@
 - [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
+- [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
 - [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
 - [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
 - [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.
@@ -369,6 +370,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [ ] Airborne units must never collide with each other or take impact damage; they should only use predictive, position-based avoidance.
 - [ ] Slow Apache rocket volley cadence by 50% and shorten the reload cooldown between volleys by 30% so bursts fire slower but rearm faster.
 - [x] Prevent Apache rockets from damaging ground units or buildings when engaging airborne targets.
 - [x] Clear restoration move overrides when new movement commands are issued so restored crewless units can't roam indefinitely.
