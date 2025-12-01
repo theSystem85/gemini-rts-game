@@ -34,6 +34,7 @@ import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
+import { initSpatialQuadtree } from './game/spatialQuadtree.js'
 import { attachBenchmarkButton } from './benchmark/benchmarkRunner.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 import { getPlayableViewportWidth, getPlayableViewportHeight } from './utils/layoutMetrics.js'
@@ -1164,6 +1165,10 @@ class Game {
     })
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
+    
+    // Initialize spatial quadtree for efficient collision detection
+    initSpatialQuadtree(MAP_TILES_X * TILE_SIZE, MAP_TILES_Y * TILE_SIZE)
+    
     updateDangerZoneMaps(gameState)
     updateDangerZoneMaps(gameState)
     updateShadowOfWar(gameState, units, mapGrid, factories)

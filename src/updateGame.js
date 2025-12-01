@@ -19,6 +19,9 @@ import { handleSelfRepair } from './utils.js'
 import { updateGuardBehavior } from './behaviours/guard.js'
 import { units as mainUnits } from './main.js'
 
+// Import spatial partitioning for optimized collision detection
+import { rebuildSpatialQuadtree } from './game/spatialQuadtree.js'
+
 // Import modular game systems
 import { updateUnitMovement, updateSpawnExit } from './game/unitMovement.js'
 import { updateUnitCombat, cleanupAttackGroupTargets } from './game/unitCombat.js'
@@ -248,6 +251,9 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // === HOST-ONLY GAME LOGIC ===
     // Remote clients skip all game simulation - they receive state from host
     if (!isRemoteClient) {
+      // Rebuild spatial quadtree for efficient neighbor queries this frame
+      rebuildSpatialQuadtree(units)
+
       // Process queued unit commands before running unit systems
       const unitCommands = getUnitCommandsHandler()
       processCommandQueues(units, mapGrid, unitCommands, gameState.buildings)

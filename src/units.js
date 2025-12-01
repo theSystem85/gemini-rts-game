@@ -19,6 +19,7 @@ import { initializeHowitzerGun } from './game/howitzerGunController.js'
 import { gameState } from './gameState.js'
 import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
 import { isFriendlyMineBlocking } from './game/mineSystem.js'
+import { getSpatialQuadtree } from './game/spatialQuadtree.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -1160,37 +1161,64 @@ export function moveBlockingUnits(targetX, targetY, units, mapGrid) {
 
 // --- Collision Resolution for Idle Units ---
 // When multiple units share the same tile, naturally guide them to separate positions
+// Uses spatial quadtree for efficient O(n × k) neighbor queries instead of O(n²)
 export function resolveUnitCollisions(units, mapGrid) {
-  const assignedTiles = new Set()
   const COLLISION_RADIUS = TILE_SIZE * 0.4 // Collision detection radius
   const SEPARATION_FORCE = 0.5 // Force to separate overlapping units
 
-  // Update each unit's tile coordinates based on their current positions.
-  units.forEach(u => {
-    if (!u.path || u.path.length === 0) {
-      u.tileX = Math.floor(u.x / TILE_SIZE)
-      u.tileY = Math.floor(u.y / TILE_SIZE)
-    }
-  })
+  // Use quadtree for efficient neighbor queries
+  const spatialTree = getSpatialQuadtree()
+  if (!spatialTree) return // No quadtree available yet
+
+  const mapWidth = mapGrid[0]?.length || 100
+  const mapHeight = mapGrid.length || 100
+  const maxX = (mapWidth - 1) * TILE_SIZE
+  const maxY = (mapHeight - 1) * TILE_SIZE
 
   // Find overlapping units and apply gentle separation forces
-  for (let i = 0; i < units.length; i++) {
+  // Using a Set to track processed pairs by combining IDs
+  const processed = new Set()
+
+  for (let i = 0, len = units.length; i < len; i++) {
     const unit1 = units[i]
+    if (!unit1 || unit1.health <= 0) continue
     if (unit1.path && unit1.path.length > 0) continue // Skip moving units
 
-    for (let j = i + 1; j < units.length; j++) {
-      const unit2 = units[j]
+    // Update tile coordinates
+    unit1.tileX = (unit1.x / TILE_SIZE) | 0
+    unit1.tileY = (unit1.y / TILE_SIZE) | 0
+
+    // Use pre-computed centers from quadtree rebuild
+    const unit1CenterX = unit1._cx ?? (unit1.x + TILE_SIZE * 0.5)
+    const unit1CenterY = unit1._cy ?? (unit1.y + TILE_SIZE * 0.5)
+
+    // Query nearby units using quadtree - much faster than nested loop
+    const nearbyUnits = spatialTree.queryNearbyGround(unit1CenterX, unit1CenterY, COLLISION_RADIUS * 2, unit1.id)
+
+    for (let j = 0, jlen = nearbyUnits.length; j < jlen; j++) {
+      const unit2 = nearbyUnits[j]
       if (unit2.path && unit2.path.length > 0) continue // Skip moving units
+
+      // Create a consistent pair key to avoid processing the same pair twice
+      // Use numeric comparison for speed
+      const id1 = unit1.id
+      const id2 = unit2.id
+      const pairKey = id1 < id2 ? `${id1}|${id2}` : `${id2}|${id1}`
+      if (processed.has(pairKey)) continue
+      processed.add(pairKey)
 
       const dx = unit2.x - unit1.x
       const dy = unit2.y - unit1.y
-      const distance = Math.hypot(dx, dy)
+      const distSq = dx * dx + dy * dy
+      const collisionRadiusSq = COLLISION_RADIUS * COLLISION_RADIUS
 
       // If units are overlapping, apply gentle separation
-      if (distance < COLLISION_RADIUS && distance > 0) {
+      if (distSq < collisionRadiusSq && distSq > 0.01) {
+        const distance = Math.sqrt(distSq)
         const overlap = COLLISION_RADIUS - distance
-        const separationX = (dx / distance) * overlap * SEPARATION_FORCE
-        const separationY = (dy / distance) * overlap * SEPARATION_FORCE
+        const invDist = 1 / distance
+        const separationX = dx * invDist * overlap * SEPARATION_FORCE
+        const separationY = dy * invDist * overlap * SEPARATION_FORCE
 
         // Apply separation force (split the movement between both units)
         unit1.x -= separationX * 0.5
@@ -1198,17 +1226,22 @@ export function resolveUnitCollisions(units, mapGrid) {
         unit2.x += separationX * 0.5
         unit2.y += separationY * 0.5
 
-        // Ensure units stay within map bounds
-        unit1.x = Math.max(0, Math.min(unit1.x, (mapGrid[0].length - 1) * TILE_SIZE))
-        unit1.y = Math.max(0, Math.min(unit1.y, (mapGrid.length - 1) * TILE_SIZE))
-        unit2.x = Math.max(0, Math.min(unit2.x, (mapGrid[0].length - 1) * TILE_SIZE))
-        unit2.y = Math.max(0, Math.min(unit2.y, (mapGrid.length - 1) * TILE_SIZE))
+        // Clamp to map bounds
+        if (unit1.x < 0) unit1.x = 0
+        else if (unit1.x > maxX) unit1.x = maxX
+        if (unit1.y < 0) unit1.y = 0
+        else if (unit1.y > maxY) unit1.y = maxY
+        
+        if (unit2.x < 0) unit2.x = 0
+        else if (unit2.x > maxX) unit2.x = maxX
+        if (unit2.y < 0) unit2.y = 0
+        else if (unit2.y > maxY) unit2.y = maxY
 
         // Update tile positions
-        unit1.tileX = Math.floor(unit1.x / TILE_SIZE)
-        unit1.tileY = Math.floor(unit1.y / TILE_SIZE)
-        unit2.tileX = Math.floor(unit2.x / TILE_SIZE)
-        unit2.tileY = Math.floor(unit2.y / TILE_SIZE)
+        unit1.tileX = (unit1.x / TILE_SIZE) | 0
+        unit1.tileY = (unit1.y / TILE_SIZE) | 0
+        unit2.tileX = (unit2.x / TILE_SIZE) | 0
+        unit2.tileY = (unit2.y / TILE_SIZE) | 0
       }
     }
   }

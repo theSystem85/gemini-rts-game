@@ -4,6 +4,16 @@
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
+- [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration
+  - [x] Created `src/game/spatialQuadtree.js` with separate trees for ground/air units
+  - [x] Created `src/game/flowField.js` for on-demand flow fields at chokepoints
+  - [x] Created `src/game/steeringBehaviors.js` with Boids-style separation, alignment, cohesion
+  - [x] Integrated quadtree into `unifiedMovement.js` collision detection functions
+  - [x] Integrated quadtree into `units.js` resolveUnitCollisions function
+  - [x] Quadtree rebuilt once per frame in game loop for consistent spatial queries
+  - [x] **Optimized quadtree:** eliminated array spreading, reuse result arrays, pre-compute unit centers
+  - [x] **Force-field collision:** units experience exponential repulsion preventing overlap proactively
+  - [x] **No velocity inversion:** collisions slow units down gradually instead of bouncing them
 - [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
 - [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
 - [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.

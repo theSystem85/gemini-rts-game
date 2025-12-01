@@ -45,6 +45,7 @@ import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { getMineAtTile, detonateMine } from './mineSystem.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
+import { getSpatialQuadtree } from './spatialQuadtree.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
 const ROTOR_AIRBORNE_SPEED = 0.35
@@ -435,12 +436,16 @@ const MOVEMENT_CONFIG = {
   MIN_SPEED: 0.05,         // Minimum speed before stopping
   COLLISION_BUFFER: 8,     // Buffer distance for collision avoidance
   MIN_UNIT_DISTANCE: 24,   // Minimum distance between unit centers (increased from implicit 16)
-  AVOIDANCE_FORCE: 0.3,    // Strength of collision avoidance force
-  BACKWARD_MOVE_THRESHOLD: 0.5  // When to allow backward movement when stuck
+  AVOIDANCE_FORCE: 0.5,    // Strength of collision avoidance force (increased for better prevention)
+  BACKWARD_MOVE_THRESHOLD: 0.5,  // When to allow backward movement when stuck
+  // Force-field collision constants
+  FORCE_FIELD_RADIUS: 36,  // Radius where force field starts applying
+  FORCE_FIELD_STRENGTH: 2.5, // Max strength of repulsion force
+  FORCE_FIELD_FALLOFF: 2.0   // Exponential falloff (higher = sharper falloff)
 }
 
-const LOCAL_LOOKAHEAD_STEPS = [0.35, 0.7] // In tiles, short-range probes to deflect before collisions
-const LOCAL_LOOKAHEAD_STRENGTH = 0.55     // Multiplier for obstacle lookahead avoidance
+const LOCAL_LOOKAHEAD_STEPS = [0.5, 1.0, 1.5] // In tiles, short-range probes to deflect before collisions
+const LOCAL_LOOKAHEAD_STRENGTH = 0.8     // Multiplier for obstacle lookahead avoidance (increased)
 
 export const UNIT_COLLISION_MIN_DISTANCE = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
 
@@ -1132,88 +1137,83 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     }
   }
 
-  // Check for other units using improved distance-based collision detection
-  if (units) {
-    const unitCenterX = unit.x + TILE_SIZE / 2
-    const unitCenterY = unit.y + TILE_SIZE / 2
+  // Check for other units using force-field collision detection
+  // Use quadtree for efficient neighbor query - O(k) instead of O(n)
+  const spatialTree = getSpatialQuadtree()
+  const unitCenterX = unit._cx ?? (unit.x + TILE_SIZE / 2)
+  const unitCenterY = unit._cy ?? (unit.y + TILE_SIZE / 2)
+  
+  // Get nearby units from quadtree
+  const nearbyUnits = spatialTree
+    ? spatialTree.queryNearbyForUnit(unitCenterX, unitCenterY, MOVEMENT_CONFIG.FORCE_FIELD_RADIUS, unitAirborne, unit.id)
+    : []
 
-    for (const otherUnit of units) {
-      if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
+  for (let i = 0, len = nearbyUnits.length; i < len; i++) {
+    const otherUnit = nearbyUnits[i]
+    if (otherUnit.health <= 0) continue
 
-      const otherAirborne = isAirborneUnit(otherUnit)
-      if (unitAirborne !== otherAirborne) {
+    const otherAirborne = isAirborneUnit(otherUnit)
+    if (unitAirborne !== otherAirborne) continue
+
+    const otherCenterX = otherUnit._cx ?? (otherUnit.x + TILE_SIZE / 2)
+    const otherCenterY = otherUnit._cy ?? (otherUnit.y + TILE_SIZE / 2)
+    const dx = unitCenterX - otherCenterX
+    const dy = unitCenterY - otherCenterY
+    const distSq = dx * dx + dy * dy
+    
+    if (distSq < 1) continue
+    
+    const distance = Math.sqrt(distSq)
+
+    // Only report collision if actually overlapping (not just in force-field range)
+    if (distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE) {
+      const unitVelX = unit.movement?.velocity?.x || 0
+      const unitVelY = unit.movement?.velocity?.y || 0
+
+      // Check if this unit's movement increases distance (moving away)
+      const dotProduct = dx * unitVelX + dy * unitVelY
+      if (dotProduct > 0) {
+        // Moving away - don't report collision but apply gentle separation force
         continue
       }
+      
+      // Compute collision normal (from unit to other)
+      const invDist = 1 / distance
+      const normalX = -dx * invDist  // Points toward other unit
+      const normalY = -dy * invDist
+      const overlap = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE - distance
 
-      const otherCenterX = otherUnit.x + TILE_SIZE / 2
-      const otherCenterY = otherUnit.y + TILE_SIZE / 2
-      const distance = Math.hypot(unitCenterX - otherCenterX, unitCenterY - otherCenterY)
+      // Apply force-field separation (no velocity inversion!)
+      // Force proportional to overlap - units slow down as they penetrate
+      const separationForce = overlap * MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH * 0.1
+      
+      // Reduce velocity in direction of other unit (slowing effect)
+      const velocityTowardOther = -(dx * unitVelX + dy * unitVelY) * invDist
+      if (velocityTowardOther > 0) {
+        // Reduce speed gradually - don't invert
+        const dampingFactor = Math.max(0.3, 1 - overlap / MOVEMENT_CONFIG.MIN_UNIT_DISTANCE)
+        unit.movement.velocity.x *= dampingFactor
+        unit.movement.velocity.y *= dampingFactor
+      }
+      
+      // Apply gentle separation push (both units)
+      const separationX = dx * invDist * separationForce
+      const separationY = dy * invDist * separationForce
+      
+      unit.movement.velocity.x += separationX
+      unit.movement.velocity.y += separationY
+      
+      if (otherUnit.movement) {
+        otherUnit.movement.velocity.x -= separationX * 0.5
+        otherUnit.movement.velocity.y -= separationY * 0.5
+      }
 
-      // Use improved minimum distance to prevent getting stuck
-      if (distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE) {
-        // Allow movement if units are moving away from each other
-        const dx = unitCenterX - otherCenterX
-        const dy = unitCenterY - otherCenterY
-        const unitVelX = unit.movement?.velocity?.x || 0
-        const unitVelY = unit.movement?.velocity?.y || 0
+      const otherVelX = otherUnit.movement?.velocity?.x || 0
+      const otherVelY = otherUnit.movement?.velocity?.y || 0
+      const unitSpeed = Math.sqrt(unitVelX * unitVelX + unitVelY * unitVelY)
+      const otherSpeed = Math.sqrt(otherVelX * otherVelX + otherVelY * otherVelY)
 
-        // Check if this unit's movement increases distance (moving away)
-        const dotProduct = dx * unitVelX + dy * unitVelY
-        if (dotProduct > 0) {
-          return { collided: false }
-        }
-        // Compute collision normal (from unit to other)
-        const normalX = (otherCenterX - unitCenterX) / (distance || 1)
-        const normalY = (otherCenterY - unitCenterY) / (distance || 1)
-        const overlap = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE - distance
-
-        // Speeds
-        const otherVelX = otherUnit.movement?.velocity?.x || 0
-        const otherVelY = otherUnit.movement?.velocity?.y || 0
-        const unitSpeed = Math.hypot(unitVelX, unitVelY)
-        const otherSpeed = Math.hypot(otherVelX, otherVelY)
-
-        const relativeVelX = unitVelX - otherVelX
-        const relativeVelY = unitVelY - otherVelY
-        if (unitAirborne && otherAirborne) {
-          return {
-            collided: true,
-            type: 'unit',
-            other: otherUnit,
-            data: {
-              normalX,
-              normalY,
-              overlap,
-              unitSpeed,
-              otherSpeed,
-              airCollision: true
-            }
-          }
-        }
-
-        // Decide who gets the "bounce" impulse: the slower one
-        const remoteBoost = unit.remoteControlActive ? COLLISION_BOUNCE_REMOTE_BOOST : 1
-        const baseImpulse = unitSpeed * COLLISION_BOUNCE_SPEED_FACTOR + overlap * COLLISION_BOUNCE_OVERLAP_FACTOR
-        const impulse = Math.max(COLLISION_BOUNCE_MIN, Math.min(COLLISION_BOUNCE_MAX, baseImpulse * remoteBoost))
-
-        if (otherSpeed <= unitSpeed) {
-          // Push the other (slower) unit away from this unit
-          if (!otherUnit.movement) initializeUnitMovement(otherUnit)
-          otherUnit.movement.velocity.x = (otherUnit.movement.velocity.x || 0) + normalX * impulse
-          otherUnit.movement.velocity.y = (otherUnit.movement.velocity.y || 0) + normalY * impulse
-          // Slight recoil to the faster unit to visibly separate
-          unit.movement.velocity.x -= normalX * Math.min(impulse * COLLISION_RECOIL_FACTOR_FAST, COLLISION_RECOIL_MAX_FAST)
-          unit.movement.velocity.y -= normalY * Math.min(impulse * COLLISION_RECOIL_FACTOR_FAST, COLLISION_RECOIL_MAX_FAST)
-        } else {
-          // Our unit is slower: bounce our unit back away from the other
-          unit.movement.velocity.x -= normalX * impulse
-          unit.movement.velocity.y -= normalY * impulse
-          // Nudge the other slightly for separation
-          if (!otherUnit.movement) initializeUnitMovement(otherUnit)
-          otherUnit.movement.velocity.x += normalX * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
-          otherUnit.movement.velocity.y += normalY * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
-        }
-
+      if (unitAirborne && otherAirborne) {
         return {
           collided: true,
           type: 'unit',
@@ -1223,16 +1223,28 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
             normalY,
             overlap,
             unitSpeed,
-            otherSpeed
+            otherSpeed,
+            airCollision: true
           }
+        }
+      }
+
+      return {
+        collided: true,
+        type: 'unit',
+        other: otherUnit,
+        data: {
+          normalX,
+          normalY,
+          overlap,
+          unitSpeed,
+          otherSpeed
         }
       }
     }
   }
 
   if (!unitAirborne && wrecks && wrecks.length > 0) {
-    const unitCenterX = unit.x + TILE_SIZE / 2
-    const unitCenterY = unit.y + TILE_SIZE / 2
     const unitVelX = unit.movement?.velocity?.x || 0
     const unitVelY = unit.movement?.velocity?.y || 0
 
@@ -1242,15 +1254,16 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
 
       const wreckCenterX = wreck.x + TILE_SIZE / 2
       const wreckCenterY = wreck.y + TILE_SIZE / 2
-      const distance = Math.hypot(unitCenterX - wreckCenterX, unitCenterY - wreckCenterY)
+      const wdx = unitCenterX - wreckCenterX
+      const wdy = unitCenterY - wreckCenterY
+      const wDistSq = wdx * wdx + wdy * wdy
+      const distance = Math.sqrt(wDistSq)
 
       if (distance >= UNIT_COLLISION_MIN_DISTANCE) {
         continue
       }
 
-      const dx = unitCenterX - wreckCenterX
-      const dy = unitCenterY - wreckCenterY
-      const dotProduct = dx * unitVelX + dy * unitVelY
+      const dotProduct = wdx * unitVelX + wdy * unitVelY
 
       if (dotProduct > 0) {
         // Moving away from wreck - allow
@@ -1260,10 +1273,10 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
       const normalX = (wreckCenterX - unitCenterX) / (distance || 1)
       const normalY = (wreckCenterY - unitCenterY) / (distance || 1)
       const overlap = UNIT_COLLISION_MIN_DISTANCE - distance
-      const unitSpeed = Math.hypot(unitVelX, unitVelY)
+      const unitSpeed = Math.sqrt(unitVelX * unitVelX + unitVelY * unitVelY)
 
       // Compare speeds to decide who bounces more
-      const wreckSpeed = Math.hypot(wreck.velocityX || 0, wreck.velocityY || 0)
+      const wreckSpeed = Math.sqrt((wreck.velocityX || 0) ** 2 + (wreck.velocityY || 0) ** 2)
 
       // Boost impulse for remote-controlled units actively driving
       const remoteControlBoost = unit.remoteControlActive ? WRECK_COLLISION_REMOTE_BOOST : 1.0
@@ -2481,88 +2494,107 @@ function calculateAirCollisionAvoidance(unit, units) {
 }
 
 /**
- * Calculate collision avoidance force to prevent units from getting too close
+ * Calculate collision avoidance force using force-field physics
+ * Units experience repulsive force that increases exponentially as they get closer
+ * This prevents collisions proactively rather than reacting after contact
+ * Uses spatial quadtree for O(k) neighbor queries instead of O(n) iteration
  */
 function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
   if (!unit) return { x: 0, y: 0 }
 
-  const unitCenterX = unit.x + TILE_SIZE / 2
-  const unitCenterY = unit.y + TILE_SIZE / 2
+  // Use pre-computed center from quadtree rebuild, or compute if not available
+  const unitCenterX = unit._cx ?? (unit.x + TILE_SIZE / 2)
+  const unitCenterY = unit._cy ?? (unit.y + TILE_SIZE / 2)
   let avoidanceX = 0
   let avoidanceY = 0
 
-  for (const otherUnit of units || []) {
-    if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
+  // Use quadtree for efficient neighbor query
+  const spatialTree = getSpatialQuadtree()
+  const forceRadius = MOVEMENT_CONFIG.FORCE_FIELD_RADIUS
+  const nearbyUnits = spatialTree
+    ? spatialTree.queryNearbyGround(unitCenterX, unitCenterY, forceRadius, unit.id)
+    : []
 
-    const otherCenterX = otherUnit.x + TILE_SIZE / 2
-    const otherCenterY = otherUnit.y + TILE_SIZE / 2
+  // Apply force-field repulsion from nearby units
+  for (let i = 0, len = nearbyUnits.length; i < len; i++) {
+    const otherUnit = nearbyUnits[i]
+    if (otherUnit.health <= 0) continue
+
+    // Use pre-computed centers
+    const otherCenterX = otherUnit._cx ?? (otherUnit.x + TILE_SIZE / 2)
+    const otherCenterY = otherUnit._cy ?? (otherUnit.y + TILE_SIZE / 2)
     const dx = unitCenterX - otherCenterX
     const dy = unitCenterY - otherCenterY
-    const distance = Math.hypot(dx, dy)
-
-    // Apply avoidance force if too close
-    if (distance < MOVEMENT_CONFIG.MIN_UNIT_DISTANCE && distance > 0) {
-      const avoidanceStrength = (MOVEMENT_CONFIG.MIN_UNIT_DISTANCE - distance) / MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
-      const normalizedDx = dx / distance
-      const normalizedDy = dy / distance
-
-      avoidanceX += normalizedDx * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE
-      avoidanceY += normalizedDy * avoidanceStrength * MOVEMENT_CONFIG.AVOIDANCE_FORCE
+    const distSq = dx * dx + dy * dy
+    
+    if (distSq < 1) continue // Avoid division by zero
+    
+    const distance = Math.sqrt(distSq)
+    
+    // Force-field equation: F = strength * (1 - distance/radius)^falloff
+    // This creates smooth, exponentially increasing repulsion as units get closer
+    if (distance < forceRadius) {
+      const normalizedDist = distance / forceRadius
+      const forceMagnitude = MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH * 
+        Math.pow(1 - normalizedDist, MOVEMENT_CONFIG.FORCE_FIELD_FALLOFF)
+      
+      // Direction away from other unit
+      const invDist = 1 / distance
+      avoidanceX += dx * invDist * forceMagnitude
+      avoidanceY += dy * invDist * forceMagnitude
     }
   }
 
-  const movement = unit.movement || {}
-  const lookAheadVelX = movement.targetVelocity?.x ?? movement.velocity?.x ?? 0
-  const lookAheadVelY = movement.targetVelocity?.y ?? movement.velocity?.y ?? 0
-  const lookAheadSpeed = Math.hypot(lookAheadVelX, lookAheadVelY)
+  // Look-ahead obstacle avoidance (terrain and buildings)
+  const movement = unit.movement
+  if (!movement) return { x: avoidanceX, y: avoidanceY }
+  
+  const velX = movement.targetVelocity?.x ?? movement.velocity?.x ?? 0
+  const velY = movement.targetVelocity?.y ?? movement.velocity?.y ?? 0
+  const speed = Math.sqrt(velX * velX + velY * velY)
 
-  if (lookAheadSpeed > 0.0001 && mapGrid) {
-    const dirX = lookAheadVelX / lookAheadSpeed
-    const dirY = lookAheadVelY / lookAheadSpeed
-    const maxLookAhead = Math.max(...LOCAL_LOOKAHEAD_STEPS) * TILE_SIZE
+  if (speed > 0.0001 && mapGrid) {
+    const invSpeed = 1 / speed
+    const dirX = velX * invSpeed
+    const dirY = velY * invSpeed
 
-    for (const step of LOCAL_LOOKAHEAD_STEPS) {
-      const distance = step * TILE_SIZE
-      const sampleX = unitCenterX + dirX * distance
-      const sampleY = unitCenterY + dirY * distance
-      const tileX = Math.floor(sampleX / TILE_SIZE)
-      const tileY = Math.floor(sampleY / TILE_SIZE)
+    // Check ahead for obstacles
+    for (let s = 0; s < 3; s++) {
+      const step = LOCAL_LOOKAHEAD_STEPS[s]
+      const lookDist = step * TILE_SIZE
+      const sampleX = unitCenterX + dirX * lookDist
+      const sampleY = unitCenterY + dirY * lookDist
+      const tileX = (sampleX / TILE_SIZE) | 0
+      const tileY = (sampleY / TILE_SIZE) | 0
 
+      // Check if tile is blocked
       let blocked = isTileBlockedForCollision(mapGrid, tileX, tileY)
 
-      if (!blocked && occupancyMap && occupancyMap[tileY]) {
-        let occupancy = occupancyMap[tileY][tileX] || 0
-        const currentTileX = Math.floor(unitCenterX / TILE_SIZE)
-        const currentTileY = Math.floor(unitCenterY / TILE_SIZE)
-        if (tileX === currentTileX && tileY === currentTileY) {
-          occupancy = Math.max(0, occupancy - 1)
+      if (!blocked && occupancyMap) {
+        const row = occupancyMap[tileY]
+        if (row) {
+          const occ = row[tileX] || 0
+          const myTileX = (unitCenterX / TILE_SIZE) | 0
+          const myTileY = (unitCenterY / TILE_SIZE) | 0
+          blocked = (tileX === myTileX && tileY === myTileY) ? occ > 1 : occ > 0
         }
-        blocked = occupancy > 0
       }
 
-      if (!blocked && units) {
-        blocked = units.some(other => {
-          if (!other || other.id === unit.id || other.health <= 0) return false
-          if (!isGroundUnit(other)) return false
-          const otherTileX = Math.floor((other.x + TILE_SIZE / 2) / TILE_SIZE)
-          const otherTileY = Math.floor((other.y + TILE_SIZE / 2) / TILE_SIZE)
-          return otherTileX === tileX && otherTileY === tileY
-        })
+      if (blocked) {
+        // Apply repulsion from blocked tile center
+        const tileCenterX = (tileX + 0.5) * TILE_SIZE
+        const tileCenterY = (tileY + 0.5) * TILE_SIZE
+        const awayX = unitCenterX - tileCenterX
+        const awayY = unitCenterY - tileCenterY
+        const awayDist = Math.sqrt(awayX * awayX + awayY * awayY) || 1
+        
+        // Weight by proximity (closer lookahead = stronger deflection)
+        const weight = 1 - step / 2
+        const strength = weight * LOCAL_LOOKAHEAD_STRENGTH * MOVEMENT_CONFIG.AVOIDANCE_FORCE
+        
+        avoidanceX += (awayX / awayDist) * strength
+        avoidanceY += (awayY / awayDist) * strength
       }
-
-      if (!blocked) continue
-
-      const obstacleCenterX = (tileX + 0.5) * TILE_SIZE
-      const obstacleCenterY = (tileY + 0.5) * TILE_SIZE
-      const awayX = unitCenterX - obstacleCenterX
-      const awayY = unitCenterY - obstacleCenterY
-      const awayDist = Math.hypot(awayX, awayY) || 1
-      // Ensure non-zero weight even for furthest probe by adding small epsilon
-      const weight = Math.max(0.1, (maxLookAhead - distance) / maxLookAhead)
-      const avoidanceStrength = weight * LOCAL_LOOKAHEAD_STRENGTH * MOVEMENT_CONFIG.AVOIDANCE_FORCE
-
-      avoidanceX += (awayX / awayDist) * avoidanceStrength
-      avoidanceY += (awayY / awayDist) * avoidanceStrength
     }
   }
 
