@@ -22,12 +22,10 @@ import {
   COLLISION_SEPARATION_MIN,
   COLLISION_NORMAL_DAMPING_MULT,
   COLLISION_NORMAL_DAMPING_MAX,
-  AIR_COLLISION_DAMAGE_FACTOR,
-  AIR_COLLISION_DAMAGE_MIN,
-  AIR_COLLISION_DAMAGE_MAX,
   AIR_COLLISION_AVOID_RADIUS,
   AIR_COLLISION_AVOID_FORCE,
   AIR_COLLISION_AVOID_MAX_NEIGHBORS,
+  AIR_COLLISION_TIME_HORIZON,
   WRECK_COLLISION_REMOTE_BOOST,
   WRECK_COLLISION_SPEED_FACTOR,
   WRECK_COLLISION_OVERLAP_FACTOR,
@@ -42,7 +40,6 @@ import {
 } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
-import { updateUnitSpeedModifier } from '../utils.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
@@ -1176,6 +1173,24 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
         const unitSpeed = Math.hypot(unitVelX, unitVelY)
         const otherSpeed = Math.hypot(otherVelX, otherVelY)
 
+        const relativeVelX = unitVelX - otherVelX
+        const relativeVelY = unitVelY - otherVelY
+        if (unitAirborne && otherAirborne) {
+          return {
+            collided: true,
+            type: 'unit',
+            other: otherUnit,
+            data: {
+              normalX,
+              normalY,
+              overlap,
+              unitSpeed,
+              otherSpeed,
+              airCollision: true
+            }
+          }
+        }
+
         // Decide who gets the "bounce" impulse: the slower one
         const remoteBoost = unit.remoteControlActive ? COLLISION_BOUNCE_REMOTE_BOOST : 1
         const baseImpulse = unitSpeed * COLLISION_BOUNCE_SPEED_FACTOR + overlap * COLLISION_BOUNCE_OVERLAP_FACTOR
@@ -1199,11 +1214,6 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
           otherUnit.movement.velocity.y += normalY * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
         }
 
-        const relativeVelX = unitVelX - otherVelX
-        const relativeVelY = unitVelY - otherVelY
-        const closingSpeed = relativeVelX * normalX + relativeVelY * normalY
-        const relativeSpeed = Math.max(0, closingSpeed)
-
         return {
           collided: true,
           type: 'unit',
@@ -1213,10 +1223,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
             normalY,
             overlap,
             unitSpeed,
-            otherSpeed,
-            impulse,
-            relativeSpeed,
-            airCollision: unitAirborne && otherAirborne
+            otherSpeed
           }
         }
       }
@@ -1685,41 +1692,6 @@ function ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occ
   }
 }
 
-function applyAirCollisionDamage(unit, otherUnit, relativeSpeed) {
-  const closingSpeed = Math.max(0, relativeSpeed || 0)
-  const rawDamage = Math.min(
-    AIR_COLLISION_DAMAGE_MAX,
-    Math.max(AIR_COLLISION_DAMAGE_MIN, Math.round(closingSpeed * AIR_COLLISION_DAMAGE_FACTOR))
-  )
-
-  const timestamp = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
-
-  applyDamageToAirUnit(unit, rawDamage, timestamp)
-  if (otherUnit) {
-    applyDamageToAirUnit(otherUnit, rawDamage, timestamp)
-  }
-}
-
-function applyDamageToAirUnit(target, damage, timestamp) {
-  if (!target || damage <= 0) {
-    return
-  }
-
-  let finalDamage = damage
-  if (typeof window !== 'undefined' && window.cheatSystem) {
-    finalDamage = window.cheatSystem.preventDamage(target, finalDamage)
-  }
-
-  if (finalDamage <= 0) {
-    return
-  }
-
-  const adjustedDamage = target.armor ? Math.max(1, Math.round(finalDamage / target.armor)) : finalDamage
-  target.health -= adjustedDamage
-  updateUnitSpeedModifier(target)
-  target.lastDamageTime = timestamp
-}
-
 function applyAirSeparation(unit, otherUnit, normalX, normalY, separation) {
   const halfSeparation = separation * 0.5
   unit.x -= normalX * halfSeparation
@@ -1736,7 +1708,7 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
     return false
   }
 
-  const { normalX, normalY, overlap, unitSpeed, otherSpeed, relativeSpeed = 0, airCollision = false } = collisionResult.data
+  const { normalX, normalY, overlap, unitSpeed, otherSpeed, airCollision = false } = collisionResult.data
   const factoryList = Array.isArray(factories) ? factories : []
 
   if (unit.type === 'tankerTruck') {
@@ -1760,11 +1732,28 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
   const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
 
   if (airCollision) {
-    applyAirCollisionDamage(unit, otherUnit, relativeSpeed)
-
     if (separation > 0.001) {
       applyAirSeparation(unit, otherUnit, normalX, normalY, separation)
     }
+
+    const otherVelocity = otherUnit?.movement?.velocity
+    const relativeNormalSpeed =
+      (movement.velocity.x - (otherVelocity?.x || 0)) * normalX +
+      (movement.velocity.y - (otherVelocity?.y || 0)) * normalY
+
+    if (relativeNormalSpeed > 0) {
+      const bleedOff = Math.min(relativeNormalSpeed, COLLISION_NORMAL_DAMPING_MAX)
+      movement.velocity.x -= normalX * bleedOff
+      movement.velocity.y -= normalY * bleedOff
+
+      if (otherVelocity) {
+        otherVelocity.x += normalX * Math.min(bleedOff * 0.5, COLLISION_NORMAL_DAMPING_MAX)
+        otherVelocity.y += normalY * Math.min(bleedOff * 0.5, COLLISION_NORMAL_DAMPING_MAX)
+      }
+    }
+
+    movement.currentSpeed = Math.hypot(movement.velocity.x, movement.velocity.y)
+    return false
   } else if (separation > 0.001) {
     const pushOther = Boolean(otherUnit) && otherSpeed <= unitSpeed
 
@@ -2432,7 +2421,11 @@ function calculateAirCollisionAvoidance(unit, units) {
 
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
+  const unitVelX = unit.movement?.velocity?.x || 0
+  const unitVelY = unit.movement?.velocity?.y || 0
   const radiusSq = AIR_COLLISION_AVOID_RADIUS * AIR_COLLISION_AVOID_RADIUS
+  const minDistanceSq = MOVEMENT_CONFIG.MIN_UNIT_DISTANCE * MOVEMENT_CONFIG.MIN_UNIT_DISTANCE
+  const timeHorizonFrames = AIR_COLLISION_TIME_HORIZON / BASE_FRAME_SECONDS
   let avoidanceX = 0
   let avoidanceY = 0
   let neighborCount = 0
@@ -2449,19 +2442,34 @@ function calculateAirCollisionAvoidance(unit, units) {
 
     if (distanceSq < 1 || distanceSq > radiusSq) continue
 
-    const distance = Math.sqrt(distanceSq)
-    const normalizedDx = dx / distance
-    const normalizedDy = dy / distance
-    const weight = Math.max(0, 1 - distance / AIR_COLLISION_AVOID_RADIUS)
+    const relativeVelX = unitVelX - (otherUnit.movement?.velocity?.x || 0)
+    const relativeVelY = unitVelY - (otherUnit.movement?.velocity?.y || 0)
+    const relativeSpeedSq = relativeVelX * relativeVelX + relativeVelY * relativeVelY
+    const closingDot = dx * relativeVelX + dy * relativeVelY
 
-    const relativeVelX = (unit.movement?.velocity?.x || 0) - (otherUnit.movement?.velocity?.x || 0)
-    const relativeVelY = (unit.movement?.velocity?.y || 0) - (otherUnit.movement?.velocity?.y || 0)
-    const closingSpeed = relativeVelX * normalizedDx + relativeVelY * normalizedDy
-    const closingFactor = Math.max(0, closingSpeed)
+    // Skip if moving apart and already outside the minimum separation
+    if (closingDot <= 0 && distanceSq > minDistanceSq) {
+      continue
+    }
 
-    const strength = weight * (1 + closingFactor) * AIR_COLLISION_AVOID_FORCE
-    avoidanceX += normalizedDx * strength
-    avoidanceY += normalizedDy * strength
+    let timeToClosest = relativeSpeedSq > 0 ? -closingDot / relativeSpeedSq : Infinity
+    if (timeToClosest < 0) timeToClosest = 0
+
+    const projectedDx = dx + relativeVelX * Math.min(timeToClosest, timeHorizonFrames)
+    const projectedDy = dy + relativeVelY * Math.min(timeToClosest, timeHorizonFrames)
+    const projectedDistSq = projectedDx * projectedDx + projectedDy * projectedDy
+
+    const withinHorizon = timeToClosest <= timeHorizonFrames
+    const distanceFactor = Math.max(0, 1 - Math.min(projectedDistSq, radiusSq) / radiusSq)
+    const safetyFactor = projectedDistSq < minDistanceSq ? 1 : Math.max(0, (minDistanceSq - projectedDistSq) / minDistanceSq)
+    const timeFactor = withinHorizon && timeHorizonFrames > 0
+      ? 1 - Math.min(1, (timeToClosest * BASE_FRAME_SECONDS) / AIR_COLLISION_TIME_HORIZON)
+      : 0
+
+    const strength = (distanceFactor + safetyFactor + timeFactor) * AIR_COLLISION_AVOID_FORCE
+    const projectionDistance = Math.sqrt(projectedDistSq) || 1
+    avoidanceX += (projectedDx / projectionDistance) * strength
+    avoidanceY += (projectedDy / projectionDistance) * strength
 
     neighborCount++
     if (neighborCount >= AIR_COLLISION_AVOID_MAX_NEIGHBORS) {

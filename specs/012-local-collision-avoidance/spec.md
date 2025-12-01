@@ -25,3 +25,4 @@ Units should anticipate nearby blockers using the existing occupancy map and gen
    - Keep the lookahead checks local (a few tiles at most) to preserve frame performance and avoid altering global path planning.
 5. **Airborne Traffic Safety**
    - Apply an efficient, proximity-based avoidance pass for airborne units so helicopters steer away from each other before contact, without interacting with ground occupancy.
+   - Air units must rely solely on predictive separation—no mid-air collisions, bounces, or collision damage are permitted.
