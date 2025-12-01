@@ -22,6 +22,12 @@ import {
   COLLISION_SEPARATION_MIN,
   COLLISION_NORMAL_DAMPING_MULT,
   COLLISION_NORMAL_DAMPING_MAX,
+  AIR_COLLISION_DAMAGE_FACTOR,
+  AIR_COLLISION_DAMAGE_MIN,
+  AIR_COLLISION_DAMAGE_MAX,
+  AIR_COLLISION_AVOID_RADIUS,
+  AIR_COLLISION_AVOID_FORCE,
+  AIR_COLLISION_AVOID_MAX_NEIGHBORS,
   WRECK_COLLISION_REMOTE_BOOST,
   WRECK_COLLISION_SPEED_FACTOR,
   WRECK_COLLISION_OVERLAP_FACTOR,
@@ -36,6 +42,7 @@ import {
 } from '../config.js'
 import { clearStuckHarvesterOreField, handleStuckHarvester } from './harvesterLogic.js'
 import { updateUnitOccupancy, findPath, removeUnitOccupancy } from '../units.js'
+import { updateUnitSpeedModifier } from '../utils.js'
 import { playPositionalSound, playSound, audioContext, getMasterVolume } from '../sound.js'
 import { gameState } from '../gameState.js'
 import { detonateTankerTruck } from './tankerTruckUtils.js'
@@ -462,6 +469,8 @@ export function initializeUnitMovement(unit) {
 export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [], gameState = null, factories = null) {
   initializeUnitMovement(unit)
 
+  const isAirborne = isAirborneUnit(unit)
+
   const hasRestorationOverride = Boolean(unit.restorationMoveOverride)
 
   if (!hasRestorationOverride && typeof unit.gas === 'number' && unit.gas <= 0) {
@@ -769,9 +778,8 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   // Apply acceleration/deceleration with collision avoidance
   let avoidanceForce = { x: 0, y: 0 }
   if (movement.isMoving && canAccelerate) {
-    const skipAvoidance = unit.type === 'apache' && unit.flightState !== 'grounded'
-    avoidanceForce = skipAvoidance
-      ? { x: 0, y: 0 }
+    avoidanceForce = isAirborne
+      ? calculateAirCollisionAvoidance(unit, units)
       : calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap)
   }
 
@@ -870,10 +878,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const wrecks = Array.isArray(gameState?.unitWrecks) ? gameState.unitWrecks : []
 
   // Handle collisions
-  const skipCollisionChecks = unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')
-  const collisionResult = skipCollisionChecks
-    ? { collided: false }
-    : checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
+  const collisionResult = checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks)
 
   if (collisionResult.collided) {
     // Revert position if collision detected
@@ -1098,39 +1103,34 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const tileRow = Array.isArray(mapGrid) ? mapGrid[tileY] : undefined
   const tile = tileRow ? tileRow[tileX] : undefined
 
-  if (unit.type === 'apache' && (unit.flightState !== 'grounded' || unit.flightPlan || unit.manualFlightState === 'takeoff')) {
-    if (!tileRow || tile === undefined) {
-      return { collided: true, type: 'bounds' }
-    }
-    return { collided: false }
-  }
-
-  const unitAirborneApache = unit.type === 'apache' && unit.flightState !== 'grounded'
+  const unitAirborne = isAirborneUnit(unit)
 
   // Check map bounds
   if (!tileRow || tile === undefined) {
     return { collided: true, type: 'bounds', tileX, tileY }
   }
 
-  if (typeof tile === 'number') {
-    if (tile === 1) {
-      return { collided: true, type: 'terrain', tileX, tileY }
-    }
-  } else {
-    if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
-      return { collided: true, type: 'terrain', tileX, tileY }
-    }
-
-    if (tile.building) {
-      if (unit.type === 'apache' && tile.building.type === 'helipad') {
-        return { collided: false }
+  if (!unitAirborne) {
+    if (typeof tile === 'number') {
+      if (tile === 1) {
+        return { collided: true, type: 'terrain', tileX, tileY }
       }
-      return {
-        collided: true,
-        type: 'building',
-        building: tile.building,
-        tileX,
-        tileY
+    } else {
+      if (tile.type === 'water' || tile.type === 'rock' || tile.seedCrystal) {
+        return { collided: true, type: 'terrain', tileX, tileY }
+      }
+
+      if (tile.building) {
+        if (unit.type === 'apache' && tile.building.type === 'helipad') {
+          return { collided: false }
+        }
+        return {
+          collided: true,
+          type: 'building',
+          building: tile.building,
+          tileX,
+          tileY
+        }
       }
     }
   }
@@ -1143,8 +1143,8 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     for (const otherUnit of units) {
       if (otherUnit.id === unit.id || otherUnit.health <= 0) continue
 
-      const otherAirborneApache = otherUnit.type === 'apache' && otherUnit.flightState !== 'grounded'
-      if ((unitAirborneApache && !otherAirborneApache) || (!unitAirborneApache && otherAirborneApache)) {
+      const otherAirborne = isAirborneUnit(otherUnit)
+      if (unitAirborne !== otherAirborne) {
         continue
       }
 
@@ -1199,7 +1199,10 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
           otherUnit.movement.velocity.y += normalY * Math.min(impulse * COLLISION_RECOIL_PUSH_OTHER_FACTOR, COLLISION_RECOIL_PUSH_OTHER_MAX)
         }
 
-        const relativeSpeed = Math.max(0, -((unitVelX * normalX) + (unitVelY * normalY)))
+        const relativeVelX = unitVelX - otherVelX
+        const relativeVelY = unitVelY - otherVelY
+        const closingSpeed = relativeVelX * normalX + relativeVelY * normalY
+        const relativeSpeed = Math.max(0, closingSpeed)
 
         return {
           collided: true,
@@ -1212,14 +1215,15 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
             unitSpeed,
             otherSpeed,
             impulse,
-            relativeSpeed
+            relativeSpeed,
+            airCollision: unitAirborne && otherAirborne
           }
         }
       }
     }
   }
 
-  if (wrecks && wrecks.length > 0) {
+  if (!unitAirborne && wrecks && wrecks.length > 0) {
     const unitCenterX = unit.x + TILE_SIZE / 2
     const unitCenterY = unit.y + TILE_SIZE / 2
     const unitVelX = unit.movement?.velocity?.x || 0
@@ -1459,9 +1463,17 @@ function applyStaticObstacleCollisionResponse(
   movement.lastStaticCollisionNormal = { x: normalX, y: normalY }
 }
 
+function isAirborneUnit(unit) {
+  if (!unit) return false
+  if (unit.isAirUnit && unit.flightState !== 'grounded') {
+    return true
+  }
+  return unit.type === 'apache' && unit.flightState !== 'grounded'
+}
+
 function isGroundUnit(unit) {
   if (!unit) return false
-  return !(unit.type === 'apache' && unit.flightState !== 'grounded')
+  return !isAirborneUnit(unit)
 }
 
 function isTileBlockedForCollision(mapGrid, tileX, tileY) {
@@ -1673,12 +1685,58 @@ function ensureMinimumSeparation(unit, otherUnit, normalX, normalY, mapGrid, occ
   }
 }
 
+function applyAirCollisionDamage(unit, otherUnit, relativeSpeed) {
+  const closingSpeed = Math.max(0, relativeSpeed || 0)
+  const rawDamage = Math.min(
+    AIR_COLLISION_DAMAGE_MAX,
+    Math.max(AIR_COLLISION_DAMAGE_MIN, Math.round(closingSpeed * AIR_COLLISION_DAMAGE_FACTOR))
+  )
+
+  const timestamp = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+
+  applyDamageToAirUnit(unit, rawDamage, timestamp)
+  if (otherUnit) {
+    applyDamageToAirUnit(otherUnit, rawDamage, timestamp)
+  }
+}
+
+function applyDamageToAirUnit(target, damage, timestamp) {
+  if (!target || damage <= 0) {
+    return
+  }
+
+  let finalDamage = damage
+  if (typeof window !== 'undefined' && window.cheatSystem) {
+    finalDamage = window.cheatSystem.preventDamage(target, finalDamage)
+  }
+
+  if (finalDamage <= 0) {
+    return
+  }
+
+  const adjustedDamage = target.armor ? Math.max(1, Math.round(finalDamage / target.armor)) : finalDamage
+  target.health -= adjustedDamage
+  updateUnitSpeedModifier(target)
+  target.lastDamageTime = timestamp
+}
+
+function applyAirSeparation(unit, otherUnit, normalX, normalY, separation) {
+  const halfSeparation = separation * 0.5
+  unit.x -= normalX * halfSeparation
+  unit.y -= normalY * halfSeparation
+
+  if (otherUnit) {
+    otherUnit.x += normalX * halfSeparation
+    otherUnit.y += normalY * halfSeparation
+  }
+}
+
 function applyUnitCollisionResponse(unit, movement, collisionResult, units = [], factories = [], gameState = null, mapGrid = null, occupancyMap = null, wrecks = []) {
   if (!unit || !movement || !collisionResult || collisionResult.type !== 'unit' || !collisionResult.data) {
     return false
   }
 
-  const { normalX, normalY, overlap, unitSpeed, otherSpeed } = collisionResult.data
+  const { normalX, normalY, overlap, unitSpeed, otherSpeed, relativeSpeed = 0, airCollision = false } = collisionResult.data
   const factoryList = Array.isArray(factories) ? factories : []
 
   if (unit.type === 'tankerTruck') {
@@ -1699,8 +1757,15 @@ function applyUnitCollisionResponse(unit, movement, collisionResult, units = [],
   }
 
   const separation = Math.min(COLLISION_SEPARATION_MAX, Math.max(COLLISION_SEPARATION_MIN, (overlap * COLLISION_SEPARATION_SCALE)))
-  if (separation > 0.001) {
-    const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+  const otherUnit = collisionResult.other && collisionResult.other.movement ? collisionResult.other : null
+
+  if (airCollision) {
+    applyAirCollisionDamage(unit, otherUnit, relativeSpeed)
+
+    if (separation > 0.001) {
+      applyAirSeparation(unit, otherUnit, normalX, normalY, separation)
+    }
+  } else if (separation > 0.001) {
     const pushOther = Boolean(otherUnit) && otherSpeed <= unitSpeed
 
     if (pushOther && otherUnit) {
@@ -2355,6 +2420,56 @@ function findFreeDirection(unit, mapGrid, occupancyMap, units) {
   }
 
   return null // No free direction found
+}
+
+/**
+ * Calculate collision avoidance force to prevent airborne units from getting too close
+ */
+function calculateAirCollisionAvoidance(unit, units) {
+  if (!unit || !units || units.length === 0) {
+    return { x: 0, y: 0 }
+  }
+
+  const unitCenterX = unit.x + TILE_SIZE / 2
+  const unitCenterY = unit.y + TILE_SIZE / 2
+  const radiusSq = AIR_COLLISION_AVOID_RADIUS * AIR_COLLISION_AVOID_RADIUS
+  let avoidanceX = 0
+  let avoidanceY = 0
+  let neighborCount = 0
+
+  for (const otherUnit of units) {
+    if (!otherUnit || otherUnit.id === unit.id || otherUnit.health <= 0) continue
+    if (!isAirborneUnit(otherUnit)) continue
+
+    const otherCenterX = otherUnit.x + TILE_SIZE / 2
+    const otherCenterY = otherUnit.y + TILE_SIZE / 2
+    const dx = unitCenterX - otherCenterX
+    const dy = unitCenterY - otherCenterY
+    const distanceSq = dx * dx + dy * dy
+
+    if (distanceSq < 1 || distanceSq > radiusSq) continue
+
+    const distance = Math.sqrt(distanceSq)
+    const normalizedDx = dx / distance
+    const normalizedDy = dy / distance
+    const weight = Math.max(0, 1 - distance / AIR_COLLISION_AVOID_RADIUS)
+
+    const relativeVelX = (unit.movement?.velocity?.x || 0) - (otherUnit.movement?.velocity?.x || 0)
+    const relativeVelY = (unit.movement?.velocity?.y || 0) - (otherUnit.movement?.velocity?.y || 0)
+    const closingSpeed = relativeVelX * normalizedDx + relativeVelY * normalizedDy
+    const closingFactor = Math.max(0, closingSpeed)
+
+    const strength = weight * (1 + closingFactor) * AIR_COLLISION_AVOID_FORCE
+    avoidanceX += normalizedDx * strength
+    avoidanceY += normalizedDy * strength
+
+    neighborCount++
+    if (neighborCount >= AIR_COLLISION_AVOID_MAX_NEIGHBORS) {
+      break
+    }
+  }
+
+  return { x: avoidanceX, y: avoidanceY }
 }
 
 /**

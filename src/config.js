@@ -394,6 +394,14 @@ export const COLLISION_SEPARATION_MIN = 0.5 // Min separation distance
 export const COLLISION_NORMAL_DAMPING_MULT = 1.1 // How strongly to damp velocity along collision normal
 export const COLLISION_NORMAL_DAMPING_MAX = 1.2 // Max damping amount
 
+// Collision damage and avoidance for airborne units
+export const AIR_COLLISION_DAMAGE_FACTOR = 14 // Damage scaling per unit of closing speed when air units collide
+export const AIR_COLLISION_DAMAGE_MIN = 2 // Minimum damage when air units collide
+export const AIR_COLLISION_DAMAGE_MAX = 55 // Maximum damage from an air-to-air collision
+export const AIR_COLLISION_AVOID_RADIUS = 60 // Radius (in pixels) for airborne traffic avoidance sampling
+export const AIR_COLLISION_AVOID_FORCE = 0.35 // Strength of avoidance steering for airborne units
+export const AIR_COLLISION_AVOID_MAX_NEIGHBORS = 6 // Maximum nearby airborne neighbors considered for avoidance
+
 // Collision bounce tuning (unit vs static obstacles)
 export let STATIC_COLLISION_BOUNCE_MULT = 0.75 // Velocity contribution when bouncing off static obstacles
 
