@@ -132,6 +132,10 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     const speedMod = (typeof unit.speedModifier === 'number') ? unit.speedModifier : 1
     unit.speedModifier = speedMod
 
+    // Update rotation BEFORE position update so canAccelerate is current
+    // This ensures tanks rotate to face target before starting to move
+    updateUnitRotation(unit, now)
+
     // Use unified movement system for natural movement
     updateUnitPosition(unit, mapGrid, occupancyMap, now, units, gameState, factories)
 
@@ -143,9 +147,6 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     // Clamp tile indices again after repositioning
     unit.tileX = Math.max(0, Math.min(unit.tileX || 0, mapGrid[0].length - 1))
     unit.tileY = Math.max(0, Math.min(unit.tileY || 0, mapGrid.length - 1))
-
-    // Update rotation for units with turrets
-    updateUnitRotation(unit, now)
 
     // Clear moveTarget when close enough and no further path exists
     if (unit.moveTarget && (!unit.path || unit.path.length === 0)) {

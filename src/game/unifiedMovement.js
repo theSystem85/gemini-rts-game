@@ -8,15 +8,6 @@ import {
   DODGE_ATTEMPT_COOLDOWN,
   STREET_SPEED_MULTIPLIER,
   TILE_LENGTH_METERS,
-  COLLISION_BOUNCE_REMOTE_BOOST,
-  COLLISION_BOUNCE_SPEED_FACTOR,
-  COLLISION_BOUNCE_OVERLAP_FACTOR,
-  COLLISION_BOUNCE_MIN,
-  COLLISION_BOUNCE_MAX,
-  COLLISION_RECOIL_FACTOR_FAST,
-  COLLISION_RECOIL_MAX_FAST,
-  COLLISION_RECOIL_PUSH_OTHER_FACTOR,
-  COLLISION_RECOIL_PUSH_OTHER_MAX,
   COLLISION_SEPARATION_SCALE,
   COLLISION_SEPARATION_MAX,
   COLLISION_SEPARATION_MIN,
@@ -771,8 +762,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     }
   } else if (unit.type !== 'apache') {
     // Non-tank, non-Apache units need to be mostly facing the right direction
+    // Use a stricter threshold (15 degrees) to ensure units face target before moving
     const rotationDiff = Math.abs(normalizeAngle(movement.targetRotation - movement.rotation))
-    canAccelerate = rotationDiff < Math.PI / 4 // Allow movement if within 45 degrees
+    canAccelerate = rotationDiff < Math.PI / 12 // Allow movement if within 15 degrees
     shouldDecelerate = !canAccelerate && movement.isMoving
   }
   // Apache can always accelerate while moving (helicopters can fly in any direction while rotating)
@@ -1946,6 +1938,20 @@ export function cancelUnitMovement(unit) {
   unit.movement.targetVelocity.y = 0
   unit.movement.isMoving = false
   unit.moveTarget = null
+}
+
+/**
+ * Reset unit velocity when receiving a new movement command
+ * This ensures units don't coast in the wrong direction when given a new path
+ */
+export function resetUnitVelocityForNewPath(unit) {
+  initializeUnitMovement(unit)
+  
+  // Reset velocity to zero so unit starts fresh with new path
+  unit.movement.velocity.x = 0
+  unit.movement.velocity.y = 0
+  unit.movement.currentSpeed = 0
+  // Don't reset targetVelocity or isMoving - let the path system set these
 }
 
 /**

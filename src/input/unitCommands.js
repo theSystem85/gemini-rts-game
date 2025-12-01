@@ -24,6 +24,7 @@ import {
   broadcastUnitMove,
   broadcastUnitAttack
 } from '../network/gameCommandSync.js'
+import { resetUnitVelocityForNewPath } from '../game/unifiedMovement.js'
 
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
@@ -1097,6 +1098,9 @@ export class UnitCommandsHandler {
           )
 
       if (path && path.length > 0) {
+        // Reset velocity to prevent coasting in wrong direction with new path
+        resetUnitVelocityForNewPath(unit)
+        
         unit.path = path.length > 1 ? path.slice(1) : path
         // Clear any existing target when issuing a move command - but preserve turret direction
         unit.target = null

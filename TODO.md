@@ -14,6 +14,10 @@
   - [x] **Optimized quadtree:** eliminated array spreading, reuse result arrays, pre-compute unit centers
   - [x] **Force-field collision:** units experience exponential repulsion preventing overlap proactively
   - [x] **No velocity inversion:** collisions slow units down gradually instead of bouncing them
+  - [x] **Direct movement fix:** units now rotate to face target before moving instead of going opposite direction first
+    - Fixed 1-frame delay in `canAccelerate` flag by calling rotation update before position update
+    - Reduced rotation threshold from 45° to 15° for non-tank units
+    - Reset velocity when receiving new movement command to prevent coasting in wrong direction
 - [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
 - [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
 - [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.
