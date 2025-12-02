@@ -21,6 +21,13 @@
 - [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
 - [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
 - [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.
+- [x] **Performance:** Precompute SOT (Smoothening Overlay Texture) masks when map is loaded/mutated instead of examining 4 neighbors per land tile each frame.
+  - [x] Created `sotMask` 2D array in MapRenderer storing precomputed orientation and type for each tile needing smoothening overlays
+  - [x] `computeSOTMask()` generates the full mask once on initial render (lazy initialization)
+  - [x] `updateSOTMaskForTile()` efficiently updates only affected tiles and neighbors when tile mutations occur
+  - [x] `drawBaseLayer()` now uses O(1) mask lookup instead of O(4) neighbor checks per land tile
+  - [x] Integrated SOT mask updates into `clearBuildingFromMapGrid()` for runtime tile type changes
+  - [x] Exposed `getMapRenderer()` and `notifyTileMutation()` in rendering.js for external mutation notifications
 - [x] Add short-range occupancy-based lookahead so moving units steer away from nearby blockers before colliding while keeping their planned paths unchanged.
 - [ ] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.

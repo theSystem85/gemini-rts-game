@@ -15,6 +15,7 @@ import {
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { ensureServiceRadius } from './utils/serviceRadius.js'
 import { getUniqueId } from './utils.js'
+import { getMapRenderer } from './rendering.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -648,6 +649,8 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
 
 // Remove building from the map grid: restore original tiles and clear building flag
 export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameState.occupancyMap) {
+  const changedTiles = [] // Track tiles that had type changes for SOT mask update
+  
   for (let y = building.y; y < building.y + building.height; y++) {
     for (let x = building.x; x < building.x + building.width; x++) {
       if (mapGrid[y] && mapGrid[y][x]) {
@@ -663,6 +666,7 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
             mapGrid[y][x].ore = false
           }
         }
+        changedTiles.push({ x, y })
         // Clear any building reference to unblock this tile for pathfinding
         delete mapGrid[y][x].building
         if (occupancyMap && occupancyMap[y] && occupancyMap[y][x] !== undefined) {
@@ -710,6 +714,16 @@ export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameS
           }
         }
       }
+    }
+  }
+
+  // Update SOT mask for all changed tiles (batched for efficiency)
+  if (changedTiles.length > 0) {
+    const mapRenderer = getMapRenderer()
+    if (mapRenderer && mapRenderer.sotMask) {
+      changedTiles.forEach(({ x, y }) => {
+        mapRenderer.updateSOTMaskForTile(mapGrid, x, y)
+      })
     }
   }
 }

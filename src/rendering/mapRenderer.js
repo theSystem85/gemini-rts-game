@@ -15,12 +15,135 @@ export class MapRenderer {
     this.cachedMapWidth = 0
     this.cachedMapHeight = 0
     this.canUseOffscreen = typeof document !== 'undefined' && typeof document.createElement === 'function'
+    // Precomputed SOT (Smoothening Overlay Texture) mask for performance optimization
+    // sotMask[y][x] = { orientation: 'top-left'|'top-right'|'bottom-left'|'bottom-right', type: 'street'|'water' } or null
+    this.sotMask = null
+    this.sotMaskVersion = 0
+  }
+
+  /**
+   * Compute the SOT (Smoothening Overlay Texture) mask for the entire map.
+   * This should be called once when the map is loaded and when tile types change.
+   * @param {Array} mapGrid - The map grid
+   */
+  computeSOTMask(mapGrid) {
+    if (!mapGrid || !mapGrid.length || !mapGrid[0]?.length) {
+      this.sotMask = null
+      return
+    }
+
+    const mapHeight = mapGrid.length
+    const mapWidth = mapGrid[0].length
+
+    // Initialize mask array
+    this.sotMask = Array.from({ length: mapHeight })
+    for (let y = 0; y < mapHeight; y++) {
+      this.sotMask[y] = Array.from({ length: mapWidth }, () => null)
+    }
+
+    // Compute SOT for each land tile
+    for (let y = 0; y < mapHeight; y++) {
+      for (let x = 0; x < mapWidth; x++) {
+        const tile = mapGrid[y][x]
+        if (tile.type !== 'land') continue
+
+        const sotInfo = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight)
+        if (sotInfo) {
+          this.sotMask[y][x] = sotInfo
+        }
+      }
+    }
+
+    this.sotMaskVersion++
+  }
+
+  /**
+   * Compute SOT info for a single tile
+   * @param {Array} mapGrid - The map grid
+   * @param {number} x - Tile X coordinate
+   * @param {number} y - Tile Y coordinate
+   * @param {number} mapWidth - Map width in tiles
+   * @param {number} mapHeight - Map height in tiles
+   * @returns {Object|null} SOT info { orientation, type } or null
+   */
+  computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight) {
+    const top = y > 0 ? mapGrid[y - 1][x] : null
+    const left = x > 0 ? mapGrid[y][x - 1] : null
+    const bottom = y < mapHeight - 1 ? mapGrid[y + 1][x] : null
+    const right = x < mapWidth - 1 ? mapGrid[y][x + 1] : null
+
+    // Check street corners first (streets take priority over water)
+    if (top && left && top.type === 'street' && left.type === 'street') {
+      return { orientation: 'top-left', type: 'street' }
+    }
+    if (top && right && top.type === 'street' && right.type === 'street') {
+      return { orientation: 'top-right', type: 'street' }
+    }
+    if (bottom && left && bottom.type === 'street' && left.type === 'street') {
+      return { orientation: 'bottom-left', type: 'street' }
+    }
+    if (bottom && right && bottom.type === 'street' && right.type === 'street') {
+      return { orientation: 'bottom-right', type: 'street' }
+    }
+
+    // Check water corners
+    if (top && left && top.type === 'water' && left.type === 'water') {
+      return { orientation: 'top-left', type: 'water' }
+    }
+    if (top && right && top.type === 'water' && right.type === 'water') {
+      return { orientation: 'top-right', type: 'water' }
+    }
+    if (bottom && left && bottom.type === 'water' && left.type === 'water') {
+      return { orientation: 'bottom-left', type: 'water' }
+    }
+    if (bottom && right && bottom.type === 'water' && right.type === 'water') {
+      return { orientation: 'bottom-right', type: 'water' }
+    }
+
+    return null
+  }
+
+  /**
+   * Update SOT mask for a single tile and its neighbors when a tile mutation occurs.
+   * This is more efficient than recomputing the entire mask.
+   * @param {Array} mapGrid - The map grid
+   * @param {number} tileX - The X coordinate of the changed tile
+   * @param {number} tileY - The Y coordinate of the changed tile
+   */
+  updateSOTMaskForTile(mapGrid, tileX, tileY) {
+    if (!this.sotMask || !mapGrid || !mapGrid.length) return
+
+    const mapHeight = mapGrid.length
+    const mapWidth = mapGrid[0]?.length || 0
+
+    // Update the tile and its immediate neighbors (SOT depends on adjacent tiles)
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = tileX + dx
+        const y = tileY + dy
+
+        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) continue
+
+        const tile = mapGrid[y][x]
+        if (tile.type === 'land') {
+          this.sotMask[y][x] = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight)
+        } else {
+          this.sotMask[y][x] = null
+        }
+      }
+    }
+
+    this.sotMaskVersion++
+    // Mark affected chunks as dirty
+    this.markTileDirty(tileX, tileY)
   }
 
   invalidateAllChunks() {
     if (this.chunkCache.size) {
       this.chunkCache.clear()
     }
+    // Also invalidate SOT mask since map dimensions may have changed
+    this.sotMask = null
   }
 
   markTileDirty(tileX, tileY) {
@@ -76,6 +199,7 @@ export class MapRenderer {
         signature: null,
         lastUseTexture: null,
         lastWaterFrameIndex: null,
+        lastSotMaskVersion: null,
         containsWaterAnimation: false,
         padding: this.chunkPadding,
         offsetX: startX * TILE_SIZE - this.chunkPadding,
@@ -134,6 +258,7 @@ export class MapRenderer {
     const needsRedraw =
       chunk.signature !== signature ||
       chunk.lastUseTexture !== useTexture ||
+      chunk.lastSotMaskVersion !== this.sotMaskVersion ||
       chunk.containsWaterAnimation !== hasWaterAnimation ||
       (hasWaterAnimation && chunk.lastWaterFrameIndex !== waterFrameIndex)
 
@@ -168,11 +293,12 @@ export class MapRenderer {
 
     chunk.signature = signature
     chunk.lastUseTexture = useTexture
+    chunk.lastSotMaskVersion = this.sotMaskVersion
     chunk.containsWaterAnimation = hasWaterAnimation
     chunk.lastWaterFrameIndex = hasWaterAnimation ? waterFrameIndex : null
   }
 
-  renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState) {
+  renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, _gameState) {
     // Disable image smoothing to prevent antialiasing gaps between tiles
     ctx.imageSmoothingEnabled = false
 
@@ -180,6 +306,11 @@ export class MapRenderer {
     const currentWaterFrame = this.textureManager.waterFrames.length
       ? this.textureManager.getCurrentWaterFrame()
       : null
+
+    // Ensure SOT mask is computed before any rendering (needed for chunk caching)
+    if (!this.sotMask) {
+      this.computeSOTMask(mapGrid)
+    }
 
     if (!this.canUseOffscreen) {
       this.drawBaseLayer(
@@ -251,6 +382,11 @@ export class MapRenderer {
   drawBaseLayer(ctx, mapGrid, startTileX, startTileY, endTileX, endTileY, offsetX, offsetY, useTexture, currentWaterFrame) {
     if (!mapGrid.length || !mapGrid[0]?.length) return
 
+    // Ensure SOT mask is computed
+    if (!this.sotMask) {
+      this.computeSOTMask(mapGrid)
+    }
+
     const sotApplied = new Set()
     const scrollOffset = { x: offsetX, y: offsetY }
 
@@ -262,44 +398,10 @@ export class MapRenderer {
 
         this.drawTileBase(ctx, x, y, tile.type, screenX, screenY, useTexture, currentWaterFrame)
 
-        if (tile.type === 'land') {
-          const top = y > 0 ? mapGrid[y - 1][x] : null
-          const left = x > 0 ? mapGrid[y][x - 1] : null
-          const bottom = y < mapGrid.length - 1 ? mapGrid[y + 1][x] : null
-          const right = x < mapGrid[0].length - 1 ? mapGrid[y][x + 1] : null
-
-          let orientation = null
-          let overlayType = null
-
-          if (top && left && top.type === 'street' && left.type === 'street') {
-            orientation = 'top-left'
-            overlayType = 'street'
-          } else if (top && right && top.type === 'street' && right.type === 'street') {
-            orientation = 'top-right'
-            overlayType = 'street'
-          } else if (bottom && left && bottom.type === 'street' && left.type === 'street') {
-            orientation = 'bottom-left'
-            overlayType = 'street'
-          } else if (bottom && right && bottom.type === 'street' && right.type === 'street') {
-            orientation = 'bottom-right'
-            overlayType = 'street'
-          } else if (top && left && top.type === 'water' && left.type === 'water') {
-            orientation = 'top-left'
-            overlayType = 'water'
-          } else if (top && right && top.type === 'water' && right.type === 'water') {
-            orientation = 'top-right'
-            overlayType = 'water'
-          } else if (bottom && left && bottom.type === 'water' && left.type === 'water') {
-            orientation = 'bottom-left'
-            overlayType = 'water'
-          } else if (bottom && right && bottom.type === 'water' && right.type === 'water') {
-            orientation = 'bottom-right'
-            overlayType = 'water'
-          }
-
-          if (orientation) {
-            this.drawSOT(ctx, x, y, orientation, scrollOffset, useTexture, sotApplied, overlayType, currentWaterFrame)
-          }
+        // Use precomputed SOT mask instead of computing neighbors each frame
+        if (tile.type === 'land' && this.sotMask[y]?.[x]) {
+          const sotInfo = this.sotMask[y][x]
+          this.drawSOT(ctx, x, y, sotInfo.orientation, scrollOffset, useTexture, sotApplied, sotInfo.type, currentWaterFrame)
         }
 
         if (tile.seedCrystal) {
@@ -621,6 +723,34 @@ export class MapRenderer {
     return overlay
   }
 
+  /**
+   * Render only the SOT (Smoothening Overlay Texture) overlays without base tiles.
+   * Used when GPU rendering handles base tiles but SOT still needs 2D canvas rendering.
+   */
+  renderSOTOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
+    // Ensure SOT mask is computed
+    if (!this.sotMask) {
+      this.computeSOTMask(mapGrid)
+    }
+
+    const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
+    const currentWaterFrame = this.textureManager.waterFrames.length
+      ? this.textureManager.getCurrentWaterFrame()
+      : null
+
+    const sotApplied = new Set()
+
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        const tile = mapGrid[y][x]
+        if (tile.type === 'land' && this.sotMask[y]?.[x]) {
+          const sotInfo = this.sotMask[y][x]
+          this.drawSOT(ctx, x, y, sotInfo.orientation, scrollOffset, useTexture, sotApplied, sotInfo.type, currentWaterFrame)
+        }
+      }
+    }
+  }
+
   render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null, options = {}) {
     const { skipBaseLayer = false } = options || {}
     // Calculate visible tile range - improved for better performance
@@ -633,6 +763,9 @@ export class MapRenderer {
 
     if (!skipBaseLayer) {
       this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
+    } else {
+      // When GPU renders base tiles, we still need to render SOT overlays with 2D canvas
+      this.renderSOTOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
     }
     this.applyVisibilityOverlay(ctx, mapGrid, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
     this.renderGrid(ctx, startTileX, startTileY, endTileX, endTileY, scrollOffset, gameState)
