@@ -1,11 +1,10 @@
 // Path Finding Module - Handles unit pathfinding and formation management
-import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD } from '../config.js'
+import { PATH_CALC_INTERVAL, PATHFINDING_THRESHOLD, TILE_SIZE, ATTACK_PATH_CALC_INTERVAL, MOVE_TARGET_REACHED_THRESHOLD, PATH_CACHE_TTL, MAX_PATHS_PER_CYCLE } from '../config.js'
 import { findPath } from '../units.js'
 import { logPerformance } from '../performanceUtils.js'
 
 // Simple in-memory cache for sharing A* paths between units
 const pathCache = new Map()
-const PATH_CACHE_TTL = PATH_CALC_INTERVAL
 
 /**
  * Retrieve a cached path or reuse a path to the same end coordinate
@@ -119,7 +118,9 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
       }
     })
 
-    // Second pass: recalculate paths for all units
+    // Collect units needing path recalculation and sort by priority
+    const unitsNeedingPaths = []
+
     units.forEach(unit => {
       // Only recalculate if unit has no path or is near the end of its current path
       if (!unit.path || unit.path.length === 0 || unit.path.length < 3) {
@@ -153,58 +154,63 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
         }
 
         if (targetPos) {
-          // Store move target for future recalculations
-          unit.moveTarget = targetPos
+          // Calculate distance for priority sorting (closer units get priority)
+          const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
+          unitsNeedingPaths.push({ unit, targetPos, distance, isAttackMode, formationGroups })
+        }
+      }
+    })
 
-          // Apply formation offset if unit is in formation mode
-          let adjustedTarget = { ...targetPos }
+    // Sort by distance (closer units have higher priority) and limit to MAX_PATHS_PER_CYCLE
+    unitsNeedingPaths.sort((a, b) => a.distance - b.distance)
+    const unitsToProcess = unitsNeedingPaths.slice(0, MAX_PATHS_PER_CYCLE)
 
-          // If unit is in formation mode and has formation offset, adjust the target
-          if (unit.formationActive && unit.formationOffset && unit.groupNumber) {
-            const formationGroup = formationGroups[unit.groupNumber]
+    // Process batched path calculations
+    unitsToProcess.forEach(({ unit, targetPos, distance, isAttackMode, formationGroups }) => {
+      // Store move target for future recalculations
+      unit.moveTarget = targetPos
 
-            // If this unit is part of a known formation group
-            if (formationGroup && formationGroup.units.some(u => u.moveTarget)) {
-              // Use the first unit with a moveTarget as the formation reference point
-              const referenceUnit = formationGroup.units.find(u => u.moveTarget)
-              if (referenceUnit && referenceUnit !== unit) {
-                // Apply formation offset to target position
-                adjustedTarget = {
-                  x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
-                  y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
-                }
-              }
+      // Apply formation offset if unit is in formation mode
+      let adjustedTarget = { ...targetPos }
+
+      // If unit is in formation mode and has formation offset, adjust the target
+      if (unit.formationActive && unit.formationOffset && unit.groupNumber) {
+        const formationGroup = formationGroups[unit.groupNumber]
+
+        // If this unit is part of a known formation group
+        if (formationGroup && formationGroup.units.some(u => u.moveTarget)) {
+          // Use the first unit with a moveTarget as the formation reference point
+          const referenceUnit = formationGroup.units.find(u => u.moveTarget)
+          if (referenceUnit && referenceUnit !== unit) {
+            // Apply formation offset to target position
+            adjustedTarget = {
+              x: Math.floor((targetPos.x * TILE_SIZE + unit.formationOffset.x) / TILE_SIZE),
+              y: Math.floor((targetPos.y * TILE_SIZE + unit.formationOffset.y) / TILE_SIZE)
             }
-          }
-
-          // Compute distance to decide pathfinding strategy
-          const distance = Math.hypot(adjustedTarget.x - unit.tileX, adjustedTarget.y - unit.tileY)
-
-          // Always use occupancy map for units with targets (attack mode) or attack queues (AGF mode) to prevent moving over occupied tiles
-          // For regular movement commands, use occupancy map for close range, ignore for long distance
-          const isAttackMode = (unit.target && unit.target.health !== undefined) || (unit.attackQueue && unit.attackQueue.length > 0)
-          const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
-          const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
-          const cacheOptions = { unitOwner: unit.owner }
-          const newPath = useOccupancyMap
-            ? getCachedPath(startNode, adjustedTarget, mapGrid, occupancyMap, cacheOptions)
-            : getCachedPath(startNode, adjustedTarget, mapGrid, null, cacheOptions)
-
-          if (newPath.length > 1) {
-            unit.path = newPath.slice(1)
-            // Update path calculation time - use attack-specific timer for attacking units
-            if (isAttackMode) {
-              unit.lastAttackPathCalcTime = now
-            } else {
-              unit.lastPathCalcTime = now
-            }
-          } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
-            // Clear moveTarget if we've reached destination
-            unit.moveTarget = null
-          } else {
-            // console.log('[Pathfinding] No valid path for unit', unit.id, 'from', startNode, 'to', adjustedTarget, 'newPath:', newPath)
           }
         }
+      }
+
+      // Always use occupancy map for units with targets (attack mode) or attack queues (AGF mode) to prevent moving over occupied tiles
+      // For regular movement commands, use occupancy map for close range, ignore for long distance
+      const useOccupancyMap = isAttackMode || distance <= PATHFINDING_THRESHOLD
+      const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
+      const cacheOptions = { unitOwner: unit.owner }
+      const newPath = useOccupancyMap
+        ? getCachedPath(startNode, adjustedTarget, mapGrid, occupancyMap, cacheOptions)
+        : getCachedPath(startNode, adjustedTarget, mapGrid, null, cacheOptions)
+
+      if (newPath.length > 1) {
+        unit.path = newPath.slice(1)
+        // Update path calculation time - use attack-specific timer for attacking units
+        if (isAttackMode) {
+          unit.lastAttackPathCalcTime = now
+        } else {
+          unit.lastPathCalcTime = now
+        }
+      } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
+        // Clear moveTarget if we've reached destination
+        unit.moveTarget = null
       }
     })
   }

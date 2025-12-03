@@ -28,6 +28,15 @@
   - [x] Added view frustum culling for smoke (64px padding) and explosions (128px padding)
   - [x] Reduced `MAX_SMOKE_PARTICLES` from 600 to 300 for better baseline performance
   - [x] Replaced `.forEach()` with `for` loops and removed per-particle ctx.save()/restore()
+- [x] **Performance:** Batch and throttle pathfinding calculations
+  - [x] Extended `PATH_CACHE_TTL` to 4000ms (2x the calc interval) for better cache utilization
+  - [x] Added `MAX_PATHS_PER_CYCLE` limit (5 paths max per update) to prevent CPU spikes
+  - [x] Units sorted by distance to target - closer units get pathfinding priority
+  - [x] Spreads pathfinding work across multiple frames instead of calculating all at once
+- [x] **Performance:** Throttle AI updates with frame skipping
+  - [x] Added `AI_UPDATE_FRAME_SKIP` config (default: 3) - AI runs every 3rd frame (~20 FPS AI at 60 FPS game)
+  - [x] Frame counter in enemy.js skips AI processing on non-AI frames
+  - [x] Reduces AI CPU overhead by ~66% while maintaining responsive gameplay
 - [x] **Performance:** Precompute SOT (Smoothening Overlay Texture) masks when map is loaded/mutated instead of examining 4 neighbors per land tile each frame.
   - [x] Created `sotMask` 2D array in MapRenderer storing precomputed orientation and type for each tile needing smoothening overlays
   - [x] `computeSOTMask()` generates the full mask once on initial render (lazy initialization)

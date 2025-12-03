@@ -3,7 +3,11 @@ import { updateAIPlayer } from './ai/enemyAIPlayer.js'
 import { computeLeastDangerAttackPoint } from './ai/enemyStrategies.js'
 import { logPerformance } from './performanceUtils.js'
 import { isHost } from './network/gameCommandSync.js'
+import { AI_UPDATE_FRAME_SKIP } from './config.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
+
+// Frame counter for AI update throttling
+let aiFrameCounter = 0
 
 /**
  * Check if a party is currently AI-controlled (not taken over by a human via multiplayer)
@@ -31,6 +35,13 @@ export const updateEnemyAI = logPerformance(function updateEnemyAI(units, factor
   // AI only runs on the host - clients receive state via sync
   if (!isHost()) {
     return
+  }
+
+  // Frame skip throttling - only run AI logic every N frames
+  // This reduces AI CPU load while maintaining smooth gameplay
+  aiFrameCounter = (aiFrameCounter + 1) % AI_UPDATE_FRAME_SKIP
+  if (aiFrameCounter !== 0) {
+    return // Skip this frame
   }
   
   const occupancyMap = gameState.occupancyMap

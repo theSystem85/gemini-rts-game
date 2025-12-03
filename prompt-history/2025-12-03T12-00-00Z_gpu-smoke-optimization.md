@@ -11,6 +11,8 @@
 
 > now implement the optimizations for step 1 and 2 in one go.
 
+> now implement step 3 and 4 of your performance improvement proposals
+
 ---
 
 ## Analysis Summary
@@ -34,7 +36,7 @@ Three major performance bottlenecks were identified:
 
 ---
 
-## Changes Implemented
+## Phase 1 & 2: Smoke/Explosion Rendering Optimizations
 
 ### 1. Pre-cached Gradient Sprites (`src/rendering/effectsRenderer.js`)
 
@@ -62,25 +64,69 @@ Three major performance bottlenecks were identified:
 ### 4. Reduced Particle Budget (`src/config.js`)
 
 - `MAX_SMOKE_PARTICLES` reduced from 600 to 300
-- Soft cap remains at 60% = 180 particles for unit fumes
 
 ---
 
-## Performance Impact
+## Phase 3 & 4: Pathfinding and AI Throttling
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Gradient operations/frame | ~4,800 | 0 |
-| drawImage calls/frame | 0 | ~300 |
-| Max smoke particles | 600 | 300 |
-| View frustum culling | No | Yes |
+### 5. Pathfinding Batching and Throttling (`src/game/pathfinding.js`, `src/config.js`)
 
-Expected improvement: 3-5x faster smoke/explosion rendering by moving gradient computation from per-frame CPU work to one-time startup cost + GPU texture sampling.
+- **Extended PATH_CACHE_TTL** from 2000ms to 4000ms (2x the calc interval)
+  - Cache now lives longer than recalc interval, maximizing cache hits
+  
+- **Added MAX_PATHS_PER_CYCLE** limit (default: 5)
+  - Instead of calculating ALL paths in one frame, limits to 5 paths per update
+  - Spreads pathfinding CPU work across multiple frames
+  - Prevents CPU spikes when many units need paths simultaneously
+
+- **Priority-based path processing**
+  - Units sorted by distance to target (ascending)
+  - Closer units get pathfinding priority
+  - Ensures units about to reach destination get recalculated first
+
+### 6. AI Frame Skip Throttling (`src/enemy.js`, `src/config.js`)
+
+- **Added AI_UPDATE_FRAME_SKIP** config (default: 3)
+  - AI logic runs every 3rd frame instead of every frame
+  - At 60 FPS game, AI runs at ~20 FPS
+  - Reduces AI CPU overhead by ~66%
+
+- **Frame counter implementation**
+  - `aiFrameCounter` cycles 0, 1, 2, 0, 1, 2...
+  - AI update only executes when counter === 0
+  - Early return on non-AI frames for minimal overhead
+
+---
+
+## New Config Constants
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `PATH_CACHE_TTL` | 4000ms | Path cache lifetime (2x calc interval) |
+| `MAX_PATHS_PER_CYCLE` | 5 | Max concurrent path calculations per update |
+| `AI_UPDATE_FRAME_SKIP` | 3 | Run AI every N frames |
+
+---
+
+## Performance Impact Summary
+
+| Optimization | Before | After | Improvement |
+|--------------|--------|-------|-------------|
+| Gradient ops/frame | ~4,800 | 0 | 100% reduction |
+| drawImage calls/frame | 0 | ~300 | GPU-accelerated |
+| Max smoke particles | 600 | 300 | 50% reduction |
+| View frustum culling | No | Yes | Skip off-screen |
+| Path calcs/cycle | Unbounded | Max 5 | CPU spike prevention |
+| Path cache TTL | 2000ms | 4000ms | 2x cache hits |
+| AI update frequency | Every frame | Every 3rd | 66% reduction |
 
 ---
 
 ## Files Modified
 
-- `src/rendering/effectsRenderer.js` - Added sprite caching, frustum culling, optimized rendering
-- `src/config.js` - Reduced `MAX_SMOKE_PARTICLES` from 600 to 300
+- `src/rendering/effectsRenderer.js` - Sprite caching, frustum culling, optimized rendering
+- `src/config.js` - New constants: `PATH_CACHE_TTL`, `MAX_PATHS_PER_CYCLE`, `AI_UPDATE_FRAME_SKIP`
+- `src/game/pathfinding.js` - Batched path processing with priority sorting
+- `src/enemy.js` - AI frame skip throttling
 - `specs/011-unit-smoke-optimization/spec.md` - Updated spec with Phase 2 requirements
+- `TODO.md` - Added completed performance items

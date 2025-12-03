@@ -586,6 +586,29 @@ export function setPathCalcInterval(value) {
   PATH_CALC_INTERVAL = value
 }
 
+// Path cache TTL - set longer than calc interval to maximize cache hits
+export let PATH_CACHE_TTL = 4000
+
+export function setPathCacheTtl(value) {
+  PATH_CACHE_TTL = value
+}
+
+// Maximum concurrent path calculations per pathfinding update cycle
+// Limits CPU spike by spreading pathfinding work across multiple frames
+export let MAX_PATHS_PER_CYCLE = 5
+
+export function setMaxPathsPerCycle(value) {
+  MAX_PATHS_PER_CYCLE = value
+}
+
+// AI update frame skip - run AI every N frames instead of every frame
+// Value of 3 means AI runs on frames 0, 3, 6, 9... (~20 FPS AI at 60 FPS game)
+export let AI_UPDATE_FRAME_SKIP = 3
+
+export function setAiUpdateFrameSkip(value) {
+  AI_UPDATE_FRAME_SKIP = value
+}
+
 // Attack/chase pathfinding interval - throttled to prevent excessive recalculation (in milliseconds)
 export let ATTACK_PATH_CALC_INTERVAL = 3000
 
