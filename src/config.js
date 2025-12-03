@@ -608,7 +608,7 @@ export function setRecoveryTankRatio(value) {
 }
 
 // Smoke emission for buildings
-export const BUILDING_SMOKE_EMIT_INTERVAL = 1000 // ms between puffs
+export const BUILDING_SMOKE_EMIT_INTERVAL = 800 // ms between puffs (reduced for more visible smoke)
 
 // Distance threshold for using occupancy map in pathfinding (in tiles)
 export let PATHFINDING_THRESHOLD = 10

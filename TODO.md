@@ -28,6 +28,16 @@
   - [x] `drawBaseLayer()` now uses O(1) mask lookup instead of O(4) neighbor checks per land tile
   - [x] Integrated SOT mask updates into `clearBuildingFromMapGrid()` for runtime tile type changes
   - [x] Exposed `getMapRenderer()` and `notifyTileMutation()` in rendering.js for external mutation notifications
+- [x] **Performance:** Cache building smoke emission scale factors on construction completion
+  - [x] Added `cacheBuildingSmokeScales()` function in buildings.js to precompute scale factors
+  - [x] Scale factors cached when building is created or when image first loads (async callback)
+  - [x] `updateGame.js` now uses cached `cachedSmokeSpots` instead of per-frame image lookups and scale calculations
+  - [x] Removes per-frame `getBuildingImage()` calls for smoke emission, deferring to cached values
+- [x] **Bug Fix:** Unit smoke emission not working for loaded games
+  - [x] Fixed maxHealth validation - loaded units from older saves may have undefined maxHealth
+  - [x] Added fallback in saveGame.js to preserve defaultMaxHealth before Object.assign overwrites it
+  - [x] Added fallback in updateGame.js to use `unit.health || 100` if maxHealth is missing
+  - [x] Smoke now emits from back of unit (based on direction) instead of center
 - [x] Add short-range occupancy-based lookahead so moving units steer away from nearby blockers before colliding while keeping their planned paths unchanged.
 - [ ] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.

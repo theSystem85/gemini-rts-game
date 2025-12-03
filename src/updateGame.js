@@ -8,13 +8,12 @@ import {
 } from './config.js'
 
 import { emitSmokeParticles } from './utils/smokeUtils.js'
-import { getBuildingImage } from './buildingImageMap.js'
 
 import { logPerformance } from './performanceUtils.js'
 
 import { updateEnemyAI } from './enemy.js'
 import { cleanupDestroyedSelectedUnits, getUnitCommandsHandler } from './inputHandler.js'
-import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData } from './buildings.js'
+import { updateBuildingsUnderRepair, updateBuildingsAwaitingRepair, buildingData, cacheBuildingSmokeScales } from './buildings.js'
 import { handleSelfRepair } from './utils.js'
 import { updateGuardBehavior } from './behaviours/guard.js'
 import { units as mainUnits } from './main.js'
@@ -341,22 +340,40 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // === END HOST-ONLY GAME LOGIC ===
 
     // === VISUAL UPDATES (both host and client) ===
-    // Emit smoke for heavily damaged tanks
+    // Ensure smoke particle array exists before checking length
+    if (!Array.isArray(gameState.smokeParticles)) {
+      gameState.smokeParticles = []
+    }
+
+    // Emit smoke for heavily damaged ground vehicles
     const unitSmokeLimit = MAX_SMOKE_PARTICLES * UNIT_SMOKE_SOFT_CAP_RATIO
 
     units.forEach(unit => {
-      if (
-        unit.maxHealth &&
-        unit.health / unit.maxHealth < 0.25 &&
-        (unit.type.includes('tank') || unit.type === 'harvester')
-      ) {
+      // Ensure maxHealth is valid (fix for loaded games with missing maxHealth)
+      const maxHealth = unit.maxHealth || unit.health || 100
+      const healthRatio = unit.health / maxHealth
+      
+      // Check if unit type should emit smoke when heavily damaged
+      // Uses string.includes('tank') to match tank_v1, tank-v2, tank-v3, rocketTank
+      const isSmokeEmittingType = 
+        unit.type.includes('tank') || 
+        unit.type === 'harvester' || 
+        unit.type === 'howitzer' || 
+        unit.type === 'recoveryTank'
+      
+      const shouldEmitSmoke = healthRatio < 0.25 && isSmokeEmittingType
+      
+      if (shouldEmitSmoke) {
         if (gameState.smokeParticles.length >= unitSmokeLimit) {
           return
         }
 
         if (!unit.lastSmokeTime || now - unit.lastSmokeTime > SMOKE_EMIT_INTERVAL) {
-          const offsetX = -Math.cos(unit.direction) * TILE_SIZE * 0.4
-          const offsetY = -Math.sin(unit.direction) * TILE_SIZE * 0.4
+          // Emit smoke from the BACK of the unit (opposite to direction of travel)
+          // direction = 0 means facing right (east), so back is to the left (west)
+          const direction = unit.direction || 0
+          const offsetX = -Math.cos(direction) * TILE_SIZE * 0.35
+          const offsetY = -Math.sin(direction) * TILE_SIZE * 0.35
 
           const particleCount = 1
           emitSmokeParticles(
@@ -372,58 +389,55 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     })
 
     // Emit smoke for buildings with smoke spots
+    // Performance optimization: Use cached scale factors instead of computing per-frame
     if (gameState.buildings && gameState.buildings.length > 0) {
       gameState.buildings.forEach(building => {
         const buildingConfig = buildingData[building.type]
         if (
-          buildingConfig &&
-          buildingConfig.smokeSpots &&
-          buildingConfig.smokeSpots.length > 0
+          !buildingConfig?.smokeSpots?.length
         ) {
-          // Initialize smoke emission tracking for each spot if not exists
-          if (!building.smokeEmissionTrackers) {
-            building.smokeEmissionTrackers = buildingConfig.smokeSpots.map(() => ({
-              lastEmissionTime: 0,
-              emissionStage: 0 // Track which emission in the sequence we're on
-            }))
-          }
-
-          // Get the actual building image to determine real dimensions
-          const buildingImage = getBuildingImage(building.type)
-          if (!buildingImage) {
-            return // Skip if image not loaded yet
-          }
-
-          // Calculate dynamic scaling factors based on actual image vs rendered size
-          const renderedWidth = building.width * TILE_SIZE
-          const renderedHeight = building.height * TILE_SIZE
-          const actualImageWidth = buildingImage.naturalWidth || buildingImage.width
-          const actualImageHeight = buildingImage.naturalHeight || buildingImage.height
-
-          // Calculate individual scaling factors for X and Y (important for non-square images)
-          const scaleX = renderedWidth / actualImageWidth
-          const scaleY = renderedHeight / actualImageHeight
-
-          // Emit smoke from each smoke spot with proper coordinate scaling and timing
-          buildingConfig.smokeSpots.forEach((smokeSpot, spotIndex) => {
-            const tracker = building.smokeEmissionTrackers[spotIndex]
-            const timeSinceLastEmission = now - tracker.lastEmissionTime
-
-            if (timeSinceLastEmission > BUILDING_SMOKE_EMIT_INTERVAL) {
-              const scaledX = smokeSpot.x * scaleX
-              const scaledY = smokeSpot.y * scaleY
-              // Use precise coordinates without additional offset now that scaling is accurate
-              const smokeX = building.x * TILE_SIZE + scaledX
-              const smokeY = building.y * TILE_SIZE + scaledY
-
-              // Emit a limited number of particles per puff to avoid runaway counts
-              emitSmokeParticles(gameState, smokeX, smokeY, now, 2)
-
-              tracker.lastEmissionTime = now
-              tracker.emissionStage = (tracker.emissionStage + 1) % 4 // Cycle through stages
-            }
-          })
+          return // Skip buildings without smoke spots
         }
+
+        // Initialize smoke emission tracking for each spot if not exists (legacy building support)
+        if (!building.smokeEmissionTrackers) {
+          building.smokeEmissionTrackers = buildingConfig.smokeSpots.map(() => ({
+            lastEmissionTime: 0,
+            emissionStage: 0
+          }))
+        }
+
+        // Check if smoke scales are cached; if not, attempt to cache them
+        if (!building.smokeScalesCached) {
+          cacheBuildingSmokeScales(building, buildingConfig)
+          // If still not cached after attempt, skip this frame
+          if (!building.smokeScalesCached) {
+            return
+          }
+        }
+
+        // Use pre-calculated cached smoke spot positions for performance
+        const cachedSpots = building.cachedSmokeSpots
+        const buildingOriginX = building.x * TILE_SIZE
+        const buildingOriginY = building.y * TILE_SIZE
+
+        // Emit smoke from each smoke spot using cached coordinates
+        cachedSpots.forEach((cachedSpot, spotIndex) => {
+          const tracker = building.smokeEmissionTrackers[spotIndex]
+          const timeSinceLastEmission = now - tracker.lastEmissionTime
+
+          if (timeSinceLastEmission > BUILDING_SMOKE_EMIT_INTERVAL) {
+            // Use pre-calculated scaled coordinates
+            const smokeX = buildingOriginX + cachedSpot.scaledX
+            const smokeY = buildingOriginY + cachedSpot.scaledY
+
+            // Emit more particles per puff for visible building smoke
+            emitSmokeParticles(gameState, smokeX, smokeY, now, 3)
+
+            tracker.lastEmissionTime = now
+            tracker.emissionStage = (tracker.emissionStage + 1) % 4
+          }
+        })
       })
     }
 

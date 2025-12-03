@@ -701,8 +701,14 @@ export function loadGame(key) {
       const tileX = u.tileX !== undefined ? u.tileX : Math.floor(u.x / TILE_SIZE)
       const tileY = u.tileY !== undefined ? u.tileY : Math.floor(u.y / TILE_SIZE)
       const hydrated = createUnit(factory, u.type, tileX, tileY)
+      // Store the default maxHealth from createUnit before Object.assign overwrites it
+      const defaultMaxHealth = hydrated.maxHealth
       // Copy over all saved properties (health, id, etc.)
       Object.assign(hydrated, u)
+      // Ensure maxHealth is valid (fix for older save games that may not have saved maxHealth)
+      if (!Number.isFinite(hydrated.maxHealth) || hydrated.maxHealth <= 0) {
+        hydrated.maxHealth = defaultMaxHealth || hydrated.health || 100
+      }
       // Ensure tileX/tileY/x/y are consistent
       hydrated.tileX = tileX
       hydrated.tileY = tileY

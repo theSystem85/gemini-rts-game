@@ -10,12 +10,14 @@ import {
   MAX_BUILDING_GAP_TILES,
   HELIPAD_FUEL_CAPACITY,
   HELIPAD_RELOAD_TIME,
-  HELIPAD_AMMO_RESERVE
+  HELIPAD_AMMO_RESERVE,
+  TILE_SIZE
 } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { ensureServiceRadius } from './utils/serviceRadius.js'
 import { getUniqueId } from './utils.js'
 import { getMapRenderer } from './rendering.js'
+import { getBuildingImage } from './buildingImageMap.js'
 
 // Building dimensions and costs
 export const buildingData = {
@@ -258,6 +260,62 @@ export const buildingData = {
   }
 }
 
+/**
+ * Precompute and cache smoke emission scale factors for a building.
+ * This avoids expensive per-frame image lookups and scale calculations.
+ * @param {Object} building - The building to cache smoke scales for
+ * @param {Object} buildingConfig - The building's configuration from buildingData
+ */
+export function cacheBuildingSmokeScales(building, buildingConfig) {
+  if (!buildingConfig?.smokeSpots?.length) {
+    return
+  }
+
+  // Attempt to get the cached building image
+  const buildingImage = getBuildingImage(building.type)
+  if (!buildingImage) {
+    // Image not loaded yet - register a callback to cache when it's ready
+    getBuildingImage(building.type, (img) => {
+      if (img && building) {
+        computeAndStoreSmokeScales(building, buildingConfig, img)
+      }
+    })
+    return
+  }
+
+  computeAndStoreSmokeScales(building, buildingConfig, buildingImage)
+}
+
+/**
+ * Internal helper to compute and store smoke scale factors.
+ * @param {Object} building - The building to cache smoke scales for
+ * @param {Object} buildingConfig - The building's configuration
+ * @param {HTMLImageElement} buildingImage - The loaded building image
+ */
+function computeAndStoreSmokeScales(building, buildingConfig, buildingImage) {
+  const renderedWidth = building.width * TILE_SIZE
+  const renderedHeight = building.height * TILE_SIZE
+  const actualImageWidth = buildingImage.naturalWidth || buildingImage.width
+  const actualImageHeight = buildingImage.naturalHeight || buildingImage.height
+
+  // Calculate individual scaling factors for X and Y (important for non-square images)
+  const scaleX = renderedWidth / actualImageWidth
+  const scaleY = renderedHeight / actualImageHeight
+
+  // Store cached scale factors on the building
+  building.smokeScaleX = scaleX
+  building.smokeScaleY = scaleY
+
+  // Pre-calculate scaled smoke spot positions (in world pixel coordinates relative to building origin)
+  building.cachedSmokeSpots = buildingConfig.smokeSpots.map((spot) => ({
+    scaledX: spot.x * scaleX,
+    scaledY: spot.y * scaleY
+  }))
+
+  // Mark smoke scales as cached
+  building.smokeScalesCached = true
+}
+
 export function createBuilding(type, x, y) {
   if (!buildingData[type]) return null
 
@@ -307,6 +365,17 @@ export function createBuilding(type, x, y) {
 
   // Initialize service radius for support buildings
   ensureServiceRadius(building)
+
+  // Initialize smoke emission trackers and cache scale factors for buildings with smoke spots
+  if (data.smokeSpots?.length > 0) {
+    // Initialize smoke emission trackers for each spot
+    building.smokeEmissionTrackers = data.smokeSpots.map(() => ({
+      lastEmissionTime: 0,
+      emissionStage: 0
+    }))
+    // Cache smoke scale factors (this will be computed once when image is available)
+    cacheBuildingSmokeScales(building, data)
+  }
 
   // Add combat properties for defensive buildings (including teslaCoil)
   if (type === 'rocketTurret' || type.startsWith('turretGun') || type === 'teslaCoil' || type === 'artilleryTurret') {

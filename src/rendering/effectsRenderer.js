@@ -363,5 +363,10 @@ export class EffectsRenderer {
     this.renderDustParticles(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
+    
+    // Debug: log smoke particle count periodically
+    if (gameState?.smokeParticles?.length > 0 && gameState.frameCount % 100 === 0) {
+      console.log('[Render Debug] Smoke particles to render:', gameState.smokeParticles.length)
+    }
   }
 }

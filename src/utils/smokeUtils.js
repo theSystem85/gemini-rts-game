@@ -66,6 +66,11 @@ export function emitSmokeParticles(gameState, x, y, now, count = 1) {
     return
   }
 
+  // Validate coordinates - NaN or Infinity would break rendering
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return
+  }
+
   // Make sure we never exceed the configured cap by recycling the oldest particles
   for (let i = 0; i < count; i++) {
     if (gameState.smokeParticles.length >= MAX_SMOKE_PARTICLES) {
