@@ -4,6 +4,14 @@
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
+
+## Netlify Deployment for Multiplayer
+- [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http
+- [x] ✅ Replace in-memory session storage with Netlify Blobs for persistence
+- [x] ✅ Update netlify.toml with functions config and API redirects
+- [x] ✅ Update frontend signalling.js to use relative /api/ URLs in production
+- [ ] Test multiplayer with `netlify dev` locally before deploying
+- [ ] Deploy to Netlify and verify WebRTC signalling works end-to-end
 - [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration
   - [x] Created `src/game/spatialQuadtree.js` with separate trees for ground/air units
   - [x] Created `src/game/flowField.js` for on-demand flow fields at chokepoints

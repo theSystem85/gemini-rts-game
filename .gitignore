@@ -32,3 +32,6 @@ Thumbs.db
 *.tmp
 .vscode/
 !.vscode/extensions.json
+
+# Local Netlify folder
+.netlify

@@ -20,8 +20,10 @@
     "vite": "^6.0.3"
   },
   "dependencies": {
-    "express": "^5.1.0",
+    "@netlify/blobs": "^10.4.2",
     "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "serverless-http": "^4.0.0",
     "sharp": "^0.34.3"
   }
 }

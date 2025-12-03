@@ -5,6 +5,18 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  external_node_modules = ["express"]
+  node_bundler = "esbuild"
+
+# API routes go to Netlify Functions (must come before the catch-all)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback for all other routes
 [[redirects]]
   from = "/*"
   to = "/index.html"

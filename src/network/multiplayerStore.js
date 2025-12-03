@@ -125,7 +125,7 @@ export function listPartyStates() {
 
 async function requestServerInviteToken(partyId) {
   const instanceId = ensureGameInstanceId()
-  if (!STUN_HOST || !instanceId) {
+  if (!instanceId) {
     return null
   }
 
@@ -134,8 +134,10 @@ async function requestServerInviteToken(partyId) {
   }
 
   try {
+    // Use relative URL with /api prefix for Netlify Functions, or full STUN_HOST for local dev
+    const baseUrl = STUN_HOST === '' ? '/api' : STUN_HOST
     const response = await fetch(
-      `${STUN_HOST}/game-instance/${encodeURIComponent(instanceId)}/invite-regenerate`,
+      `${baseUrl}/game-instance/${encodeURIComponent(instanceId)}/invite-regenerate`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
