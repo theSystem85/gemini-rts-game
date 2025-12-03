@@ -256,7 +256,7 @@ function drawBenchmarkChart(canvas, data, summary) {
     return
   }
 
-  const margin = { top: 20, right: 20, bottom: 30, left: 40 }
+  const margin = { top: 20, right: 20, bottom: 30, left: 55 }
   const chartWidth = displayWidth - margin.left - margin.right
   const chartHeight = displayHeight - margin.top - margin.bottom
 
