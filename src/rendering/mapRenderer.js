@@ -41,13 +41,14 @@ export class MapRenderer {
       this.sotMask[y] = Array.from({ length: mapWidth }, () => null)
     }
 
-    // Compute SOT for each land tile
+    // Compute SOT for each land or street tile
+    // Land tiles get SOT for street/water corners, street tiles get SOT for water corners
     for (let y = 0; y < mapHeight; y++) {
       for (let x = 0; x < mapWidth; x++) {
         const tile = mapGrid[y][x]
-        if (tile.type !== 'land') continue
+        if (tile.type !== 'land' && tile.type !== 'street') continue
 
-        const sotInfo = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight)
+        const sotInfo = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight, tile.type)
         if (sotInfo) {
           this.sotMask[y][x] = sotInfo
         }
@@ -64,29 +65,32 @@ export class MapRenderer {
    * @param {number} y - Tile Y coordinate
    * @param {number} mapWidth - Map width in tiles
    * @param {number} mapHeight - Map height in tiles
+   * @param {string} tileType - The type of the current tile ('land' or 'street')
    * @returns {Object|null} SOT info { orientation, type } or null
    */
-  computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight) {
+  computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight, tileType = 'land') {
     const top = y > 0 ? mapGrid[y - 1][x] : null
     const left = x > 0 ? mapGrid[y][x - 1] : null
     const bottom = y < mapHeight - 1 ? mapGrid[y + 1][x] : null
     const right = x < mapWidth - 1 ? mapGrid[y][x + 1] : null
 
-    // Check street corners first (streets take priority over water)
-    if (top && left && top.type === 'street' && left.type === 'street') {
-      return { orientation: 'top-left', type: 'street' }
-    }
-    if (top && right && top.type === 'street' && right.type === 'street') {
-      return { orientation: 'top-right', type: 'street' }
-    }
-    if (bottom && left && bottom.type === 'street' && left.type === 'street') {
-      return { orientation: 'bottom-left', type: 'street' }
-    }
-    if (bottom && right && bottom.type === 'street' && right.type === 'street') {
-      return { orientation: 'bottom-right', type: 'street' }
+    // For land tiles: check street corners first (streets take priority over water)
+    if (tileType === 'land') {
+      if (top && left && top.type === 'street' && left.type === 'street') {
+        return { orientation: 'top-left', type: 'street' }
+      }
+      if (top && right && top.type === 'street' && right.type === 'street') {
+        return { orientation: 'top-right', type: 'street' }
+      }
+      if (bottom && left && bottom.type === 'street' && left.type === 'street') {
+        return { orientation: 'bottom-left', type: 'street' }
+      }
+      if (bottom && right && bottom.type === 'street' && right.type === 'street') {
+        return { orientation: 'bottom-right', type: 'street' }
+      }
     }
 
-    // Check water corners
+    // Check water corners (for both land and street tiles)
     if (top && left && top.type === 'water' && left.type === 'water') {
       return { orientation: 'top-left', type: 'water' }
     }
@@ -125,8 +129,8 @@ export class MapRenderer {
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) continue
 
         const tile = mapGrid[y][x]
-        if (tile.type === 'land') {
-          this.sotMask[y][x] = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight)
+        if (tile.type === 'land' || tile.type === 'street') {
+          this.sotMask[y][x] = this.computeSOTForTile(mapGrid, x, y, mapWidth, mapHeight, tile.type)
         } else {
           this.sotMask[y][x] = null
         }
@@ -399,7 +403,8 @@ export class MapRenderer {
         this.drawTileBase(ctx, x, y, tile.type, screenX, screenY, useTexture, currentWaterFrame)
 
         // Use precomputed SOT mask instead of computing neighbors each frame
-        if (tile.type === 'land' && this.sotMask[y]?.[x]) {
+        // SOT applies to land tiles (street/water corners) and street tiles (water corners)
+        if ((tile.type === 'land' || tile.type === 'street') && this.sotMask[y]?.[x]) {
           const sotInfo = this.sotMask[y][x]
           this.drawSOT(ctx, x, y, sotInfo.orientation, scrollOffset, useTexture, sotApplied, sotInfo.type, currentWaterFrame)
         }
@@ -742,10 +747,11 @@ export class MapRenderer {
     const sotApplied = new Set()
 
     // First pass: render all SOT overlays
+    // SOT applies to land tiles (street/water corners) and street tiles (water corners)
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
-        if (tile.type === 'land' && this.sotMask[y]?.[x]) {
+        if ((tile.type === 'land' || tile.type === 'street') && this.sotMask[y]?.[x]) {
           const sotInfo = this.sotMask[y][x]
           this.drawSOT(ctx, x, y, sotInfo.orientation, scrollOffset, useTexture, sotApplied, sotInfo.type, currentWaterFrame)
         }
