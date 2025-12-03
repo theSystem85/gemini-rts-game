@@ -366,7 +366,7 @@ export class EffectsRenderer {
     
     // Debug: log smoke particle count periodically
     if (gameState?.smokeParticles?.length > 0 && gameState.frameCount % 100 === 0) {
-      console.log('[Render Debug] Smoke particles to render:', gameState.smokeParticles.length)
+      // Removed debug logging
     }
   }
 }

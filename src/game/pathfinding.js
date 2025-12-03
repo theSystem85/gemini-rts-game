@@ -195,7 +195,6 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
 
           if (newPath.length > 1) {
             unit.path = newPath.slice(1)
-            console.log('[Pathfinding] Path assigned to unit', unit.id, 'owner:', unit.owner, 'path length:', unit.path.length)
             // Update path calculation time - use attack-specific timer for attacking units
             if (isAttackMode) {
               unit.lastAttackPathCalcTime = now
