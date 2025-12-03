@@ -21,6 +21,13 @@
 - [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
 - [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
 - [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.
+- [x] **Performance:** Pre-cached gradient sprites for smoke and explosions - moves gradient creation from per-frame CPU to one-time startup + GPU texture sampling
+  - [x] Created sprite cache with pre-rendered gradients for sizes [4-32px] at initialization
+  - [x] Smoke particles now use `drawImage()` instead of `createRadialGradient()` per frame
+  - [x] Explosions use on-demand cached sprites with LRU eviction (max 50 entries)
+  - [x] Added view frustum culling for smoke (64px padding) and explosions (128px padding)
+  - [x] Reduced `MAX_SMOKE_PARTICLES` from 600 to 300 for better baseline performance
+  - [x] Replaced `.forEach()` with `for` loops and removed per-particle ctx.save()/restore()
 - [x] **Performance:** Precompute SOT (Smoothening Overlay Texture) masks when map is loaded/mutated instead of examining 4 neighbors per land tile each frame.
   - [x] Created `sotMask` 2D array in MapRenderer storing precomputed orientation and type for each tile needing smoothening overlays
   - [x] `computeSOTMask()` generates the full mask once on initial render (lazy initialization)

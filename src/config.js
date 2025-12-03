@@ -547,7 +547,7 @@ export const SMOKE_PARTICLE_LIFETIME = 4500 // milliseconds (increased for longe
 export const SMOKE_EMIT_INTERVAL = 320 // milliseconds between puffs for unit fumes (throttled for performance)
 export const SMOKE_PARTICLE_SIZE = 8 // radius of smoke particles (reduced from 12)
 export const UNIT_SMOKE_SOFT_CAP_RATIO = 0.6 // stop emitting unit fumes once 60% of the smoke budget is reached
-export let MAX_SMOKE_PARTICLES = 600 // Upper limit to keep smoke rendering performant
+export let MAX_SMOKE_PARTICLES = 300 // Upper limit to keep smoke rendering performant (reduced from 600 for GPU optimization)
 
 export function setMaxSmokeParticles(value) {
   MAX_SMOKE_PARTICLES = value

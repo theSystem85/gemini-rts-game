@@ -88,9 +88,6 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
     if (newPath.length > 1) {
       unit.path = newPath.slice(1)
       unit.lastPathCalcTime = now
-      console.log('[Pathfinding] IMMEDIATE path assigned to unit', unit.id, 'owner:', unit.owner, 'path length:', unit.path.length)
-    } else {
-      console.log('[Pathfinding] IMMEDIATE - no valid path for unit', unit.id, 'from', startNode, 'to', targetPos)
     }
   })
 
@@ -205,7 +202,7 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
             // Clear moveTarget if we've reached destination
             unit.moveTarget = null
           } else {
-            console.log('[Pathfinding] No valid path for unit', unit.id, 'from', startNode, 'to', adjustedTarget, 'newPath:', newPath)
+            // console.log('[Pathfinding] No valid path for unit', unit.id, 'from', startNode, 'to', adjustedTarget, 'newPath:', newPath)
           }
         }
       }
