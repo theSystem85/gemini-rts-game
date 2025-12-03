@@ -28,6 +28,8 @@
   - [x] `drawBaseLayer()` now uses O(1) mask lookup instead of O(4) neighbor checks per land tile
   - [x] Integrated SOT mask updates into `clearBuildingFromMapGrid()` for runtime tile type changes
   - [x] Exposed `getMapRenderer()` and `notifyTileMutation()` in rendering.js for external mutation notifications
+  - [x] **Bug Fix:** SOT tiles now correctly update when loading save games or missions by invalidating the SOT mask cache
+  - [x] **Bug Fix:** SOT now renders below ore overlays in GPU rendering mode by adding second pass for ore/seed overlays in `renderSOTOverlays()`
 - [x] **Performance:** Cache building smoke emission scale factors on construction completion
   - [x] Added `cacheBuildingSmokeScales()` function in buildings.js to precompute scale factors
   - [x] Scale factors cached when building is created or when image first loads (async callback)

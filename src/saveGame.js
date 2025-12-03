@@ -23,7 +23,7 @@ import { buildingData } from './buildings.js'
 import { showNotification } from './ui/notifications.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { initializeOccupancyMap } from './units.js'
-import { getTextureManager } from './rendering.js'
+import { getTextureManager, getMapRenderer } from './rendering.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { productionQueue } from './productionQueue.js'
 import {
@@ -1088,6 +1088,13 @@ export function loadGame(key) {
 
     // Ensure no ore overlaps with buildings or factories after loading
     cleanupOreFromBuildings(mapGrid, gameState.buildings, factories)
+
+    // Invalidate SOT (Smoothening Overlay Texture) mask to force recomputation
+    // This ensures the map renders correctly after loading a new map
+    const mapRenderer = getMapRenderer()
+    if (mapRenderer) {
+      mapRenderer.invalidateAllChunks()
+    }
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
     updateDangerZoneMaps(gameState)

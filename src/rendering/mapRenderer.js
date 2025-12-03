@@ -726,6 +726,7 @@ export class MapRenderer {
   /**
    * Render only the SOT (Smoothening Overlay Texture) overlays without base tiles.
    * Used when GPU rendering handles base tiles but SOT still needs 2D canvas rendering.
+   * Also renders ore/seed overlays after SOT to ensure correct z-order (SOT below ore).
    */
   renderSOTOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
     // Ensure SOT mask is computed
@@ -740,12 +741,28 @@ export class MapRenderer {
 
     const sotApplied = new Set()
 
+    // First pass: render all SOT overlays
     for (let y = startTileY; y < endTileY; y++) {
       for (let x = startTileX; x < endTileX; x++) {
         const tile = mapGrid[y][x]
         if (tile.type === 'land' && this.sotMask[y]?.[x]) {
           const sotInfo = this.sotMask[y][x]
           this.drawSOT(ctx, x, y, sotInfo.orientation, scrollOffset, useTexture, sotApplied, sotInfo.type, currentWaterFrame)
+        }
+      }
+    }
+
+    // Second pass: render ore/seed overlays on top of SOT to maintain correct z-order
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        const tile = mapGrid[y][x]
+        const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+        const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+
+        if (tile.seedCrystal) {
+          this.drawSeedOverlay(ctx, x, y, screenX, screenY, useTexture)
+        } else if (tile.ore) {
+          this.drawOreOverlay(ctx, x, y, screenX, screenY, useTexture)
         }
       }
     }
