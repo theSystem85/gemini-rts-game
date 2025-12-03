@@ -1,5 +1,5 @@
 // rendering/buildingRenderer.js
-import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS, WIND_DIRECTION, BUILDING_SELL_DURATION } from '../config.js'
+import { TILE_SIZE, TURRET_RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, PARTY_COLORS, WIND_DIRECTION, BUILDING_SELL_DURATION, VIEW_FRUSTUM_MARGIN } from '../config.js'
 import { getBuildingImage } from '../buildingImageMap.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
@@ -1067,8 +1067,10 @@ export class BuildingRenderer {
 
   renderBases(ctx, buildings, mapGrid, scrollOffset) {
     if (buildings && buildings.length > 0) {
+      const viewportWidth = ctx.canvas.width
+      const viewportHeight = ctx.canvas.height
       buildings.forEach(building => {
-        if (!this.shouldRenderBuilding(building)) return
+        if (!this.shouldRenderBuilding(building, scrollOffset, viewportWidth, viewportHeight)) return
         this.renderBuildingBase(ctx, building, mapGrid, scrollOffset)
       })
     }
@@ -1076,16 +1078,37 @@ export class BuildingRenderer {
 
   renderOverlays(ctx, buildings, scrollOffset) {
     if (buildings && buildings.length > 0) {
+      const viewportWidth = ctx.canvas.width
+      const viewportHeight = ctx.canvas.height
       buildings.forEach(building => {
-        if (!this.shouldRenderBuilding(building)) return
+        if (!this.shouldRenderBuilding(building, scrollOffset, viewportWidth, viewportHeight)) return
         this.renderBuildingOverlays(ctx, building, scrollOffset)
       })
     }
   }
 
-  shouldRenderBuilding(building) {
+  shouldRenderBuilding(building, scrollOffset, viewportWidth, viewportHeight) {
     if (!building || building.health <= 0) {
       return false
+    }
+
+    // View frustum culling - skip buildings outside the visible viewport
+    // This is the first check as it's the cheapest and most frequently eliminates entities
+    if (scrollOffset && viewportWidth && viewportHeight) {
+      const buildingWidthPx = (building.width || 1) * TILE_SIZE
+      const buildingHeightPx = (building.height || 1) * TILE_SIZE
+      const screenX = building.x * TILE_SIZE - scrollOffset.x
+      const screenY = building.y * TILE_SIZE - scrollOffset.y
+      const margin = VIEW_FRUSTUM_MARGIN
+      
+      if (
+        screenX + buildingWidthPx < -margin ||
+        screenY + buildingHeightPx < -margin ||
+        screenX > viewportWidth + margin ||
+        screenY > viewportHeight + margin
+      ) {
+        return false
+      }
     }
 
     if (!gameState.shadowOfWarEnabled) {

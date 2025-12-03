@@ -37,6 +37,12 @@
   - [x] Added `AI_UPDATE_FRAME_SKIP` config (default: 3) - AI runs every 3rd frame (~20 FPS AI at 60 FPS game)
   - [x] Frame counter in enemy.js skips AI processing on non-AI frames
   - [x] Reduces AI CPU overhead by ~66% while maintaining responsive gameplay
+- [x] **Performance:** View frustum culling for units and buildings
+  - [x] Added `VIEW_FRUSTUM_MARGIN` config (64px buffer = 2 tiles) to prevent pop-in artifacts
+  - [x] Units outside visible viewport + margin are skipped in `shouldRenderUnit()`
+  - [x] Buildings outside visible viewport + margin are skipped in `shouldRenderBuilding()`
+  - [x] Frustum check runs before fog-of-war visibility check (cheaper early exit)
+  - [x] Affects both base rendering and overlay rendering passes
 - [x] **Performance:** Precompute SOT (Smoothening Overlay Texture) masks when map is loaded/mutated instead of examining 4 neighbors per land tile each frame.
   - [x] Created `sotMask` 2D array in MapRenderer storing precomputed orientation and type for each tile needing smoothening overlays
   - [x] `computeSOTMask()` generates the full mask once on initial render (lazy initialization)

@@ -1,5 +1,5 @@
 // rendering/unitRenderer.js
-import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, MINE_DEPLOY_STOP_TIME } from '../config.js'
+import { TILE_SIZE, HARVESTER_CAPPACITY, HARVESTER_UNLOAD_TIME, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE, TANK_FIRE_RANGE, ATTACK_TARGET_INDICATOR_SIZE, ATTACK_TARGET_BOUNCE_SPEED, UNIT_TYPE_COLORS, PARTY_COLORS, TANKER_SUPPLY_CAPACITY, UTILITY_SERVICE_INDICATOR_SIZE, UTILITY_SERVICE_INDICATOR_BOUNCE_SPEED, SERVICE_DISCOVERY_RANGE, SERVICE_SERVING_RANGE, MINE_DEPLOY_STOP_TIME, VIEW_FRUSTUM_MARGIN } from '../config.js'
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTankWithImages, areTankImagesLoaded } from './tankImageRenderer.js'
@@ -751,8 +751,8 @@ export class UnitRenderer {
     ctx.restore()
   }
 
-  renderUnitBase(ctx, unit, scrollOffset) {
-    if (!this.shouldRenderUnit(unit)) return
+  renderUnitBase(ctx, unit, scrollOffset, viewportWidth, viewportHeight) {
+    if (!this.shouldRenderUnit(unit, scrollOffset, viewportWidth, viewportHeight)) return
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
@@ -885,8 +885,8 @@ export class UnitRenderer {
     this.renderTurret(ctx, unit, centerX, centerY)
   }
 
-  renderUnitOverlay(ctx, unit, scrollOffset) {
-    if (!this.shouldRenderUnit(unit)) return
+  renderUnitOverlay(ctx, unit, scrollOffset, viewportWidth, viewportHeight) {
+    if (!this.shouldRenderUnit(unit, scrollOffset, viewportWidth, viewportHeight)) return
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
@@ -906,17 +906,21 @@ export class UnitRenderer {
   }
 
   renderBases(ctx, units, scrollOffset) {
+    const viewportWidth = ctx.canvas.width
+    const viewportHeight = ctx.canvas.height
     units.forEach(unit => {
-      this.renderUnitBase(ctx, unit, scrollOffset)
+      this.renderUnitBase(ctx, unit, scrollOffset, viewportWidth, viewportHeight)
     })
   }
 
   renderOverlays(ctx, units, scrollOffset) {
+    const viewportWidth = ctx.canvas.width
+    const viewportHeight = ctx.canvas.height
     units.forEach(unit => {
       this.renderTowCable(ctx, unit, scrollOffset)
       this.renderFuelHose(ctx, unit, units, scrollOffset)
       this.renderAmmoHose(ctx, unit, units, scrollOffset)
-      this.renderUnitOverlay(ctx, unit, scrollOffset)
+      this.renderUnitOverlay(ctx, unit, scrollOffset, viewportWidth, viewportHeight)
       this.renderApacheRemoteReticle(ctx, unit, scrollOffset)
     })
   }
@@ -1087,8 +1091,25 @@ export class UnitRenderer {
     ctx.restore()
   }
 
-  shouldRenderUnit(unit) {
+  shouldRenderUnit(unit, scrollOffset, viewportWidth, viewportHeight) {
     if (!unit || unit.health <= 0) return false
+
+    // View frustum culling - skip units outside the visible viewport
+    // This is the first check as it's the cheapest and most frequently eliminates entities
+    if (scrollOffset && viewportWidth && viewportHeight) {
+      const screenX = unit.x - scrollOffset.x
+      const screenY = unit.y - scrollOffset.y
+      const margin = VIEW_FRUSTUM_MARGIN
+      
+      if (
+        screenX + TILE_SIZE < -margin ||
+        screenY + TILE_SIZE < -margin ||
+        screenX > viewportWidth + margin ||
+        screenY > viewportHeight + margin
+      ) {
+        return false
+      }
+    }
 
     if (!gameState.shadowOfWarEnabled) {
       return true

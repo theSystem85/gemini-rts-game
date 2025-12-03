@@ -623,6 +623,10 @@ export function setAiDecisionInterval(value) {
   AI_DECISION_INTERVAL = value
 }
 
+// View frustum culling margin - extra buffer around viewport to prevent pop-in (in pixels)
+// Set to TILE_SIZE * 2 to account for large units and buildings
+export const VIEW_FRUSTUM_MARGIN = TILE_SIZE * 2
+
 // Recovery tank ratio: 1 recovery tank per X combat units
 export let RECOVERY_TANK_RATIO = 5
 
