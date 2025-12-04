@@ -12,8 +12,10 @@
 - [x] ✅ Update frontend signalling.js to use relative /api/ URLs in production
 - [x] ✅ Fix Netlify Blobs error - convert to Netlify Functions v2 format with native context
 - [x] ✅ Fix Netlify function 404 errors - added redirect from /api/* to /.netlify/functions/api and removed conflicting config.path
-- [ ] Test multiplayer with `netlify dev` locally before deploying
-- [ ] Deploy to Netlify and verify WebRTC signalling works end-to-end
+- [x] ✅ Fix host polling stopping after first 404 - added try-catch wrapper in _schedulePoll
+- [x] ✅ Fix CDN caching 404 responses - added cache-busting timestamps and no-store to fetch requests
+- [x] ✅ Replaced unreliable Netlify Blobs prefix listing with explicit index-based peer tracking
+- [x] ✅ Test multiplayer on Netlify production - WebRTC signalling works end-to-end
 - [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration
   - [x] Created `src/game/spatialQuadtree.js` with separate trees for ground/air units
   - [x] Created `src/game/flowField.js` for on-demand flow fields at chokepoints

@@ -39,9 +39,6 @@ export default async (request, _context) => {
   const url = new URL(request.url)
   let path = url.pathname
   
-  // Log incoming request for debugging
-  console.log('[API Function] Incoming request:', { pathname: url.pathname, method: request.method })
-  
   // Normalize path - remove function path prefixes
   if (path.startsWith('/.netlify/functions/api')) {
     path = path.replace('/.netlify/functions/api', '')
@@ -52,8 +49,6 @@ export default async (request, _context) => {
   if (!path.startsWith('/')) {
     path = '/' + path
   }
-  
-  console.log('[API Function] Normalized path:', path)
   
   const method = request.method
 
@@ -77,12 +72,10 @@ export default async (request, _context) => {
 
       // Store offer in its own key (won't conflict with answer or candidates)
       const offerKeyName = `offer:${inviteToken}:${peerId}`
-      console.log('[API Function] Storing offer with key:', offerKeyName)
       await setBlob(store, offerKeyName, { offer, alias, createdAt: Date.now() })
       
       // Also store metadata to help with listing
       const metaKeyName = `meta:${inviteToken}:${peerId}`
-      console.log('[API Function] Storing meta with key:', metaKeyName)
       await setBlob(store, metaKeyName, { inviteToken, peerId, alias, createdAt: Date.now() })
       
       // Maintain an index of peerIds for this inviteToken (avoids relying on list prefix search)
@@ -94,7 +87,6 @@ export default async (request, _context) => {
       if (!indexData.peerIds.includes(peerId)) {
         indexData.peerIds.push(peerId)
         await setBlob(store, indexKeyName, indexData)
-        console.log('[API Function] Updated index for inviteToken, peerIds:', indexData.peerIds)
       }
 
       return new Response(
@@ -161,18 +153,15 @@ export default async (request, _context) => {
     if (pendingMatch && method === 'GET') {
       const inviteToken = decodeURIComponent(pendingMatch[1])
       
-      console.log('[API Function] Looking for pending sessions for inviteToken:', inviteToken)
-      
       // Use the index to find peerIds (more reliable than prefix listing)
       const indexKeyName = `index:${inviteToken}`
       const indexData = await getBlob(store, indexKeyName)
       
-      console.log('[API Function] Index data:', indexData)
-      
+      // Return empty array with 200 if no sessions (avoids browser console 404 errors)
       if (!indexData || !indexData.peerIds || !indexData.peerIds.length) {
         return new Response(
-          JSON.stringify({ error: 'no pending sessions' }),
-          { status: 404, headers: corsHeaders }
+          JSON.stringify([]),
+          { status: 200, headers: corsHeaders }
         )
       }
       
@@ -193,8 +182,6 @@ export default async (request, _context) => {
           connectionState: answerData?.answer ? 'connected' : 'pending'
         })
       }
-
-      console.log('[API Function] Found sessions:', sessions.length)
 
       return new Response(
         JSON.stringify(sessions),

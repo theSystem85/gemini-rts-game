@@ -45,7 +45,7 @@ export function fetchPendingSessions(inviteToken) {
     throw new Error('Invite token is required to fetch pending sessions')
   }
 
-  // Add cache-busting timestamp to prevent CDN/edge caching of 404 responses
+  // Add cache-busting timestamp to prevent CDN/edge caching
   const cacheBuster = `_t=${Date.now()}`
   const url = STUN_HOST === '' 
     ? `/api/signalling/pending/${encodeURIComponent(inviteToken)}?${cacheBuster}`
