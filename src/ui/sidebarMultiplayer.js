@@ -89,12 +89,130 @@ function setupAliasInput() {
   }
 }
 
+/**
+ * Extract invite token from a URL or raw token string
+ * @param {string} input - URL or token string
+ * @returns {string|null} The extracted token or null if invalid
+ */
+function extractInviteToken(input) {
+  if (!input || typeof input !== 'string') {
+    return null
+  }
+  
+  const trimmed = input.trim()
+  if (!trimmed) {
+    return null
+  }
+  
+  // Try to parse as URL first
+  try {
+    const url = new URL(trimmed)
+    const token = url.searchParams.get('invite')
+    if (token && token.trim()) {
+      return token.trim()
+    }
+  } catch {
+    // Not a valid URL, check if it's a raw token
+  }
+  
+  // Check if it looks like a URL with invite param but missing protocol
+  if (trimmed.includes('?invite=') || trimmed.includes('&invite=')) {
+    try {
+      // Add protocol and try again
+      const url = new URL('https://' + trimmed)
+      const token = url.searchParams.get('invite')
+      if (token && token.trim()) {
+        return token.trim()
+      }
+    } catch {
+      // Still not valid
+    }
+  }
+  
+  // Check if it's just the raw token (alphanumeric with dashes/underscores)
+  // Invite tokens are typically in format: partyId-timestamp-random
+  if (/^[a-zA-Z0-9_-]+$/.test(trimmed) && trimmed.length > 10) {
+    return trimmed
+  }
+  
+  return null
+}
+
+/**
+ * Setup the join via invite link input
+ */
+function setupJoinInviteLinkInput() {
+  const input = document.getElementById('inviteLinkInput')
+  const button = document.getElementById('joinInviteLinkBtn')
+  const status = document.getElementById('joinInviteLinkStatus')
+  
+  if (!input || !button) {
+    return
+  }
+  
+  const showStatus = (message, isError = false, isSuccess = false) => {
+    if (status) {
+      status.textContent = message
+      status.classList.toggle('error', isError)
+      status.classList.toggle('success', isSuccess)
+    }
+  }
+  
+  const clearStatus = () => {
+    if (status) {
+      status.textContent = ''
+      status.classList.remove('error', 'success')
+    }
+  }
+  
+  const handleJoin = () => {
+    const inputValue = input.value
+    const token = extractInviteToken(inputValue)
+    
+    if (!token) {
+      showStatus('Invalid invite link or token', true)
+      return
+    }
+    
+    // Clear the input
+    input.value = ''
+    clearStatus()
+    
+    // Navigate to the URL with the invite token
+    // This will trigger the remoteInviteLanding flow
+    const baseUrl = window.location.origin + window.location.pathname
+    const inviteUrl = `${baseUrl}?invite=${encodeURIComponent(token)}`
+    
+    showStatus('Connecting...', false, false)
+    
+    // Use location.href to navigate (this will reload the page with the invite token)
+    window.location.href = inviteUrl
+  }
+  
+  // Handle button click
+  button.addEventListener('click', handleJoin)
+  
+  // Handle Enter key in input
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleJoin()
+    }
+  })
+  
+  // Clear status when user starts typing
+  input.addEventListener('input', () => {
+    clearStatus()
+  })
+}
+
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
   setupHostControlWatcher()
   setupPartyOwnershipWatcher()
   setupAliasInput()
+  setupJoinInviteLinkInput()
   // Note: Host polling is started only when user clicks "Invite" button (handleInviteClick)
   // This prevents unnecessary polling before a user actively shares an invite link
 }

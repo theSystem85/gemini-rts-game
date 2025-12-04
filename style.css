@@ -150,6 +150,55 @@ body.is-touch {
   border-color: rgba(255, 100, 100, 0.8);
 }
 
+/* Join via invite link section */
+.multiplayer-join-section {
+  margin: 12px 0;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.multiplayer-join-label {
+  display: block;
+  font-size: 11px;
+  color: #a8a8a8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.multiplayer-join-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.multiplayer-join-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.multiplayer-join-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+}
+
+.multiplayer-join-status {
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+  min-height: 16px;
+}
+
+.multiplayer-join-status.error {
+  color: #ff8888;
+}
+
+.multiplayer-join-status.success {
+  color: #6efc4b;
+}
+
 /* QR Code Modal styles */
 .multiplayer-qr-modal {
   position: fixed;
