@@ -1,6 +1,9 @@
 // main.js
 // Refactored main game orchestrator
 
+// Initialize debug logger first so it's available globally
+import './utils/debugLogger.js'
+
 import { setupInputHandlers, selectedUnits, setRenderScheduler } from './inputHandler.js'
 import { unitCosts, initializeOccupancyMap, rebuildOccupancyMapWithTextures } from './units.js'
 import { gameState } from './gameState.js'
