@@ -45,11 +45,15 @@ export function fetchPendingSessions(inviteToken) {
     throw new Error('Invite token is required to fetch pending sessions')
   }
 
+  // Add cache-busting timestamp to prevent CDN/edge caching of 404 responses
+  const cacheBuster = `_t=${Date.now()}`
   const url = STUN_HOST === '' 
-    ? `/api/signalling/pending/${encodeURIComponent(inviteToken)}`
-    : `${STUN_HOST}/signalling/pending/${encodeURIComponent(inviteToken)}`
+    ? `/api/signalling/pending/${encodeURIComponent(inviteToken)}?${cacheBuster}`
+    : `${STUN_HOST}/signalling/pending/${encodeURIComponent(inviteToken)}?${cacheBuster}`
   
-  return fetch(url).then((response) => {
+  return fetch(url, {
+    cache: 'no-store'
+  }).then((response) => {
     if (!response.ok) {
       throw new Error(`Failed to fetch pending sessions (${response.status})`)
     }
@@ -62,11 +66,15 @@ export async function fetchSessionStatus(inviteToken, peerId) {
     throw new Error('Invite token and peerId are required to fetch signalling session data')
   }
 
+  // Add cache-busting timestamp to prevent CDN/edge caching
+  const cacheBuster = `_t=${Date.now()}`
   const url = STUN_HOST === ''
-    ? `/api/signalling/session/${encodeURIComponent(inviteToken)}/${encodeURIComponent(peerId)}`
-    : `${STUN_HOST}/signalling/session/${encodeURIComponent(inviteToken)}/${encodeURIComponent(peerId)}`
+    ? `/api/signalling/session/${encodeURIComponent(inviteToken)}/${encodeURIComponent(peerId)}?${cacheBuster}`
+    : `${STUN_HOST}/signalling/session/${encodeURIComponent(inviteToken)}/${encodeURIComponent(peerId)}?${cacheBuster}`
 
-  const response = await fetch(url)
+  const response = await fetch(url, {
+    cache: 'no-store'
+  })
 
   if (!response.ok) {
     throw new Error(`Failed to retrieve signalling session (${response.status})`)
