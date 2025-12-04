@@ -42,15 +42,32 @@
     </style>
   </head>
   <body>
+    <!-- Host Paused Banner - shown to clients when host pauses the game -->
+    <div id="hostPausedBanner" class="host-paused-banner host-paused-banner--hidden" aria-hidden="true" role="alert">
+      <div class="host-paused-banner__content">
+        <span class="host-paused-banner__icon">⏸️</span>
+        <span class="host-paused-banner__text">Host has paused the game</span>
+      </div>
+    </div>
+
     <div id="remoteInviteLanding" class="remote-invite-overlay remote-invite-overlay--hidden" aria-hidden="true" role="dialog" aria-modal="true">
       <div class="remote-invite-card">
-        <h2>Join Remote Match</h2>
+        <div class="remote-invite-header">
+          <div class="remote-invite-header__icon">🎮</div>
+          <h2>Join Remote Match</h2>
+        </div>
         <p class="remote-invite-description">You were invited to control a party. Enter your alias to start the connection with the host.</p>
-        <p class="remote-invite-token">Invite token: <span id="remoteInviteTokenText">loading...</span></p>
+        <div class="remote-invite-token">
+          <span class="remote-invite-token__label">Invite token:</span>
+          <code id="remoteInviteTokenText" class="remote-invite-token__value">loading...</code>
+        </div>
         <form id="remoteInviteForm">
           <label for="remoteAliasInput">Alias</label>
-          <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Your alias" required>
-          <button id="remoteInviteSubmit" type="submit">Join game</button>
+          <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Enter your display name" required>
+          <div class="remote-invite-buttons">
+            <button id="remoteInviteSubmit" type="submit" class="remote-invite-btn remote-invite-btn--primary">Join game</button>
+            <button id="remoteInviteCancel" type="button" class="remote-invite-btn remote-invite-btn--secondary">Cancel</button>
+          </div>
         </form>
         <p id="remoteInviteStatus" class="remote-invite-status" aria-live="polite"></p>
       </div>

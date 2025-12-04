@@ -109,6 +109,18 @@ description: "Task list for implementing online multiplayer takeover"
 
 ---
 
+## Phase 8: Client UX Improvements
+
+**Purpose**: Improve client-side user experience during multiplayer sessions.
+
+- [x] T045 [US2] Host paused banner for clients
+  - done: Added hostPausedBanner element that shows "Host has paused the game" when client receives host-status with running: false; Banner slides in from top with animation; Commands blocked via gameState.hostPausedByRemote flag but map scrolling still allowed; Banner hidden when game resumes or client disconnects
+
+- [x] T046 [US2] Beautify remote invite modal and add cancel button
+  - done: Completely redesigned the "Join Remote Match" modal with modern styling (gradient backgrounds, improved typography, game controller icon, better token display, proper button styling with hover states); Added Cancel button that allows users to cancel the connection attempt and return to normal game; URL query parameter cleared on cancel
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

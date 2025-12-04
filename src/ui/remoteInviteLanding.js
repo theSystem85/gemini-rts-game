@@ -18,6 +18,62 @@ const STATUS_MESSAGES = {
 const DEFAULT_STATUS = 'Enter your alias to claim the invited party.'
 
 /**
+ * Show the host paused banner
+ */
+function showHostPausedBanner() {
+  const banner = document.getElementById('hostPausedBanner')
+  if (banner) {
+    banner.classList.remove('host-paused-banner--hidden')
+    banner.setAttribute('aria-hidden', 'false')
+  }
+  // Set flag to block commands (but allow scrolling)
+  gameState.hostPausedByRemote = true
+}
+
+/**
+ * Hide the host paused banner
+ */
+function hideHostPausedBanner() {
+  const banner = document.getElementById('hostPausedBanner')
+  if (banner) {
+    banner.classList.add('host-paused-banner--hidden')
+    banner.setAttribute('aria-hidden', 'true')
+  }
+  // Clear the flag to allow commands again
+  gameState.hostPausedByRemote = false
+}
+
+/**
+ * Cancel the remote invite connection and return to normal game
+ * @param {HTMLElement} overlay - The invite overlay element
+ */
+function cancelRemoteInvite(overlay) {
+  // Stop any active connection
+  const connection = getActiveRemoteConnection()
+  if (connection) {
+    connection.stop()
+  }
+  
+  // Hide the overlay
+  hideOverlay(overlay)
+  
+  // Hide the host paused banner if showing
+  hideHostPausedBanner()
+  
+  // Show map settings again
+  showMapSettings()
+  
+  // Remove invite token from URL
+  if (typeof window !== 'undefined' && window.history) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('invite')
+    window.history.replaceState({}, '', url.toString())
+  }
+  
+  window.logger('[RemoteInviteLanding] Connection cancelled by user')
+}
+
+/**
  * Hide map settings UI for remote clients since map is determined by host
  * Also disables ore spread and shadow of war checkboxes since these are host-controlled
  */
@@ -236,6 +292,9 @@ function handleKickedFromSession(payload, overlay) {
   // Hide the invite overlay
   hideOverlay(overlay)
   
+  // Hide the host paused banner if showing
+  hideHostPausedBanner()
+  
   // Show map settings again since we're now the host
   showMapSettings()
   
@@ -381,6 +440,7 @@ export function initRemoteInviteLanding() {
   const statusElement = document.getElementById('remoteInviteStatus')
   const tokenText = document.getElementById('remoteInviteTokenText')
   const submitButton = document.getElementById('remoteInviteSubmit')
+  const cancelButton = document.getElementById('remoteInviteCancel')
   const inviteToken = getInviteTokenFromUrl()
 
   // Flag to track if client was kicked (to prevent showing reconnect screen)
@@ -425,6 +485,17 @@ export function initRemoteInviteLanding() {
   const setFormDisabled = (disabled) => {
     aliasInput.disabled = disabled
     submitButton.disabled = disabled
+    // Enable/disable cancel button too
+    if (cancelButton) {
+      cancelButton.disabled = disabled
+    }
+  }
+
+  // Handle cancel button click
+  if (cancelButton) {
+    cancelButton.addEventListener('click', () => {
+      cancelRemoteInvite(overlay)
+    })
   }
 
   const handleStatusChange = (status) => {
@@ -438,6 +509,8 @@ export function initRemoteInviteLanding() {
       aliasInput.focus()
       // Reset client state on disconnect
       resetClientState()
+      // Hide the host paused banner on disconnect
+      hideHostPausedBanner()
     }
   }
 
@@ -482,6 +555,8 @@ export function initRemoteInviteLanding() {
     resetClientState()
     // Restore map settings UI
     showMapSettings()
+    // Hide the host paused banner on disconnect
+    hideHostPausedBanner()
   }
 
   const handleDataChannelMessage = (rawPayload) => {
@@ -518,6 +593,13 @@ export function initRemoteInviteLanding() {
     const running = Boolean(payload.running)
     const message = running ? 'Host resumed the game.' : 'Host paused the game.'
     updateStatus(statusElement, message, !running)
+    
+    // Show/hide the host paused banner based on running status
+    if (running) {
+      hideHostPausedBanner()
+    } else {
+      showHostPausedBanner()
+    }
   }
 
   form.addEventListener('submit', async (event) => {

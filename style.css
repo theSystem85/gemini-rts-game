@@ -2725,7 +2725,8 @@ body.mobile-sidebar-modal-open #sidebarScroll {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   z-index: 10000;
   padding: 20px;
 }
@@ -2735,83 +2736,251 @@ body.mobile-sidebar-modal-open #sidebarScroll {
 }
 
 .remote-invite-card {
-  width: min(360px, 100%);
-  background: #0f0f15;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  width: min(420px, 100%);
+  background: linear-gradient(180deg, #1a1a24 0%, #12121a 100%);
+  border: 1px solid rgba(110, 251, 160, 0.3);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(110, 251, 160, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   font-family: 'Segoe UI', sans-serif;
   text-align: center;
+  animation: remoteInvitePopIn 0.3s ease-out;
+}
+
+@keyframes remoteInvitePopIn {
+  from {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.remote-invite-header {
+  margin-bottom: 20px;
+}
+
+.remote-invite-header__icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  line-height: 1;
 }
 
 .remote-invite-card h2 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.4rem;
-  letter-spacing: 0.4px;
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: linear-gradient(180deg, #fff 0%, #b0b9cf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .remote-invite-description {
-  margin: 0 0 12px;
-  color: #dfe3f1;
-  line-height: 1.4;
+  margin: 0 0 20px;
+  color: #b0b9cf;
+  line-height: 1.5;
+  font-size: 0.95rem;
 }
 
 .remote-invite-token {
-  margin: 0 0 14px;
-  font-size: 0.9rem;
-  color: #99a3b6;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.remote-invite-token__label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.remote-invite-token__value {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: rgba(110, 251, 160, 0.9);
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 .remote-invite-card form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   text-align: left;
 }
 
 .remote-invite-card label {
   font-size: 0.85rem;
+  font-weight: 500;
   color: #b0b9cf;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .remote-invite-card input {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: none;
-  background: rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
   font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.remote-invite-card input::placeholder {
+  color: rgba(176, 185, 207, 0.5);
+}
+
+.remote-invite-card input:hover {
+  border-color: rgba(110, 251, 160, 0.3);
 }
 
 .remote-invite-card input:focus {
-  outline: 2px solid rgba(110, 251, 160, 0.8);
+  outline: none;
+  border-color: rgba(110, 251, 160, 0.8);
+  box-shadow: 0 0 0 4px rgba(110, 251, 160, 0.15);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.remote-invite-card button {
-  padding: 12px;
-  border-radius: 8px;
+.remote-invite-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.remote-invite-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
   border: none;
-  background: linear-gradient(180deg, #2ee38a, #07b16e);
-  color: #030803;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.remote-invite-card button:hover {
-  opacity: 0.9;
+.remote-invite-btn--primary {
+  background: linear-gradient(180deg, #2ee38a, #07b16e);
+  color: #030803;
+  box-shadow: 0 4px 12px rgba(46, 227, 138, 0.3);
+}
+
+.remote-invite-btn--primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 227, 138, 0.4);
+}
+
+.remote-invite-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.remote-invite-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.remote-invite-btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #b0b9cf;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.remote-invite-btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.remote-invite-btn--secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .remote-invite-status {
-  min-height: 20px;
-  margin-top: 14px;
+  min-height: 24px;
+  margin-top: 18px;
+  padding: 10px 14px;
   font-size: 0.9rem;
-  color: #dfe3f1;
+  color: #b0b9cf;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.remote-invite-status:empty {
+  display: none;
 }
 
 .remote-invite-status--error {
   color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.2);
+}
+
+/* Host Paused Banner */
+.host-paused-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(255, 152, 0, 0.95) 0%, rgba(230, 126, 34, 0.95) 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: hostPausedSlideIn 0.3s ease-out;
+}
+
+.host-paused-banner--hidden {
+  display: none;
+}
+
+.host-paused-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.host-paused-banner__icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.host-paused-banner__text {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+}
+
+@keyframes hostPausedSlideIn {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

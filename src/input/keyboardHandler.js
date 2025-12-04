@@ -99,9 +99,9 @@ export class KeyboardHandler {
       // Don't process other inputs if game is paused, cheat dialog is open, or runtime config dialog is open
       if (gameState.paused || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen) return
 
-      // Block game commands in spectator mode or when locally defeated
+      // Block game commands in spectator mode, when locally defeated, or when host has paused
       // (allow view-only commands like grid toggle, FPS toggle, camera movement)
-      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated
+      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
 
       // ESC key to cancel attack group mode
       if (e.key === 'Escape') {
