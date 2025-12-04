@@ -27,13 +27,13 @@ function bumpVersion(version, commitMessage) {
   // Check commit message prefix
   if (upperMessage.startsWith('FIX') || upperMessage.startsWith('REFACTOR')) {
     patch++
-    window.logger(`🔧 ${commitMessage.split('\n')[0].substring(0, 50)} → Bumping patch version`)
+    console.log(`🔧 ${commitMessage.split('\n')[0].substring(0, 50)} → Bumping patch version`)
   } else if (upperMessage.startsWith('FEAT') || upperMessage.startsWith('IMPROVE')) {
     minor++
     patch = 0
-    window.logger(`✨ ${commitMessage.split('\n')[0].substring(0, 50)} → Bumping minor version`)
+    console.log(`✨ ${commitMessage.split('\n')[0].substring(0, 50)} → Bumping minor version`)
   } else {
-    window.logger(`ℹ️  No version bump (commit doesn't match patterns: FIX, REFACTOR, FEAT, IMPROVE)`)
+    console.log(`ℹ️  No version bump (commit doesn't match patterns: FIX, REFACTOR, FEAT, IMPROVE)`)
     return version
   }
 
@@ -48,7 +48,7 @@ function main() {
   const commitMessage = process.argv[2]
   
   if (!commitMessage || commitMessage.trim() === '') {
-    window.logger('No commit message provided, skipping version bump')
+    console.log('No commit message provided, skipping version bump')
     return
   }
 
@@ -60,7 +60,7 @@ function main() {
   const newVersion = bumpVersion(currentVersion, commitMessage)
   
   if (newVersion === currentVersion) {
-    window.logger(`Version remains: ${currentVersion}`)
+    console.log(`Version remains: ${currentVersion}`)
     return
   }
 
@@ -68,7 +68,7 @@ function main() {
   packageJson.version = newVersion
   writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n')
   
-  window.logger(`✅ Version bumped: ${currentVersion} → ${newVersion}`)
+  console.log(`✅ Version bumped: ${currentVersion} → ${newVersion}`)
 }
 
 main()

@@ -16,36 +16,36 @@ if (!stateMatch) {
 const stateStr = stateMatch[1].replace(/\\n/g, '').replace(/\\"/g, '"');
 const parsed = JSON.parse(stateStr);
 
-window.logger('=== FIXING MISSION 01 ===\n');
+console.log('=== FIXING MISSION 01 ===\n');
 
 // Fix 1: Resolve building overlaps
-window.logger('Fix 1: Resolving building overlaps...');
+console.log('Fix 1: Resolving building overlaps...');
 const buildings = parsed.gameState.buildings;
 
 // Move gasStation from (68,34) to (68,37)
 const gasStation = buildings.find(b => b.id === 'mission01-p2-gas');
 if (gasStation) {
-  window.logger(`  Moving Gas Station from (${gasStation.x},${gasStation.y}) to (68,37)`);
+  console.log(`  Moving Gas Station from (${gasStation.x},${gasStation.y}) to (68,37)`);
   gasStation.y = 37;
 }
 
 // Move artilleryTurret from (82,26) to (85,26)
 const artillery = buildings.find(b => b.id === 'mission01-p2-artillery');
 if (artillery) {
-  window.logger(`  Moving Artillery Turret from (${artillery.x},${artillery.y}) to (85,26)`);
+  console.log(`  Moving Artillery Turret from (${artillery.x},${artillery.y}) to (85,26)`);
   artillery.x = 85;
 }
 
 // Move radarStation from (80,30) to (82,33)
 const radar = buildings.find(b => b.id === 'mission01-p2-radar');
 if (radar) {
-  window.logger(`  Moving Radar Station from (${radar.x},${radar.y}) to (82,33)`);
+  console.log(`  Moving Radar Station from (${radar.x},${radar.y}) to (82,33)`);
   radar.x = 82;
   radar.y = 33;
 }
 
 // Fix 2: Move turrets outside walls
-window.logger('\nFix 2: Moving turrets outside walls...');
+console.log('\nFix 2: Moving turrets outside walls...');
 
 // Turrets at y=16 (north wall) - move to y=15
 const turretsNorth = [
@@ -57,7 +57,7 @@ const turretsNorth = [
 turretsNorth.forEach(({ id, x }) => {
   const turret = buildings.find(b => b.id === id);
   if (turret && turret.y === 16) {
-    window.logger(`  Moving ${turret.type} from (${turret.x},${turret.y}) to (${x},15)`);
+    console.log(`  Moving ${turret.type} from (${turret.x},${turret.y}) to (${x},15)`);
     turret.x = x;
     turret.y = 15;
   }
@@ -73,29 +73,29 @@ const turretsSouth = [
 turretsSouth.forEach(({ id, x }) => {
   const turret = buildings.find(b => b.id === id);
   if (turret && turret.y === 44) {
-    window.logger(`  Moving ${turret.type} from (${turret.x},${turret.y}) to (${x},45)`);
+    console.log(`  Moving ${turret.type} from (${turret.x},${turret.y}) to (${x},45)`);
     turret.x = x;
     turret.y = 45;
   }
 });
 
 // Remove walls where turrets were (now they're outside)
-window.logger('\nRemoving walls at turret positions outside the base...');
+console.log('\nRemoving walls at turret positions outside the base...');
 const wallsToRemove = ['mission01-wall-70-44', 'mission01-wall-72-44', 'mission01-wall-78-44'];
 wallsToRemove.forEach(wallId => {
   const wallIndex = buildings.findIndex(b => b.id === wallId);
   if (wallIndex !== -1) {
-    window.logger(`  Removing wall ${wallId}`);
+    console.log(`  Removing wall ${wallId}`);
     buildings.splice(wallIndex, 1);
   }
 });
 
 // Add new walls at y=44 where turrets moved from (gaps in defense)
-window.logger('\nFilling gaps in wall defense...');
+console.log('\nFilling gaps in wall defense...');
 // Note: Walls at 70,44 72,44 and 78,44 should stay, only turrets moved out
 
 // Verify no overlaps remain
-window.logger('\nVerifying no overlaps remain...');
+console.log('\nVerifying no overlaps remain...');
 const occupancy = {};
 buildings.forEach(b => {
   for (let y = b.y; y < b.y + b.height; y++) {
@@ -110,13 +110,13 @@ buildings.forEach(b => {
 let hasOverlaps = false;
 Object.entries(occupancy).forEach(([key, list]) => {
   if (list.length > 1) {
-    window.logger(`  ⚠️  Overlap still at ${key}:`, list.map(b => b.type).join(' + '));
+    console.log(`  ⚠️  Overlap still at ${key}:`, list.map(b => b.type).join(' + '));
     hasOverlaps = true;
   }
 });
 
 if (!hasOverlaps) {
-  window.logger('  ✓ No overlaps detected!');
+  console.log('  ✓ No overlaps detected!');
 }
 
 // Reconstruct the state string
@@ -128,5 +128,5 @@ const newContent = content.replace(
 
 // Write back to file
 fs.writeFileSync(missionFile, newContent, 'utf8');
-window.logger('\n✓ Mission file updated successfully!');
-window.logger('File:', missionFile);
+console.log('\n✓ Mission file updated successfully!');
+console.log('File:', missionFile);

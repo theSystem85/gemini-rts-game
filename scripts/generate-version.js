@@ -28,7 +28,7 @@ export const APP_VERSION = '${version}'
     
     // Write version.js
     writeFileSync(outputPath, content)
-    window.logger(`✅ Generated version.js with version: ${version}`)
+    console.log(`✅ Generated version.js with version: ${version}`)
   } catch (error) {
     console.error('Error generating version file:', error.message)
     process.exit(1)

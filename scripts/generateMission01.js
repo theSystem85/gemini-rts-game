@@ -744,4 +744,4 @@ const indexContents = `import { mission01 } from './mission_01.js'\n\nexport con
 
 fs.writeFileSync(path.join(outputDir, 'index.js'), indexContents)
 
-window.logger('Mission 01 generated successfully')
+console.log('Mission 01 generated successfully')

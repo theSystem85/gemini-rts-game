@@ -1,4 +1,5 @@
 ## Improvements
+- [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
 - [x] ✅ Make scrolling on the minimap on mobile super smooth.
 - [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
