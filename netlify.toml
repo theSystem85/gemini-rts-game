@@ -6,17 +6,17 @@
   NODE_VERSION = "22"
 
 [functions]
-  external_node_modules = ["express"]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# API routes go to Netlify Functions (must come before the catch-all)
+# API routes - redirect to Netlify Function (needed for netlify dev compatibility)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
 
-# SPA fallback for all other routes
+# SPA fallback for client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"

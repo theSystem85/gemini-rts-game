@@ -238,6 +238,7 @@ class RemoteConnection {
     }
 
     const payload = await fetchSessionStatus(this.inviteToken, this.peerId)
+    
     if (payload.answer && !this.answerApplied) {
       try {
         const answer = typeof payload.answer === 'string' ? JSON.parse(payload.answer) : payload.answer
@@ -254,7 +255,25 @@ class RemoteConnection {
     const candidates = Array.isArray(payload.candidates) ? payload.candidates : []
     for (let i = this.remoteCandidateIndex; i < candidates.length; i += 1) {
       const candidateValue = candidates[i]
-      const parsed = typeof candidateValue === 'string' ? JSON.parse(candidateValue) : candidateValue
+      
+      // Skip our own candidates - only process candidates from the host
+      if (candidateValue.origin === 'peer') {
+        this.remoteCandidateIndex += 1
+        continue
+      }
+      
+      // candidateValue is an object like {candidate: "...", origin: "host", timestamp: ...}
+      // The actual ICE candidate is in the .candidate field as a JSON string
+      let parsed
+      if (typeof candidateValue === 'object' && candidateValue !== null && candidateValue.candidate) {
+        parsed = typeof candidateValue.candidate === 'string' 
+          ? JSON.parse(candidateValue.candidate) 
+          : candidateValue.candidate
+      } else if (typeof candidateValue === 'string') {
+        parsed = JSON.parse(candidateValue)
+      } else {
+        parsed = candidateValue
+      }
       this.remoteCandidateIndex += 1
       await this._safeAddRemoteCandidate(parsed)
     }

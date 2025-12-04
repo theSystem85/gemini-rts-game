@@ -78,17 +78,21 @@ class HostSession {
       return
     }
 
-    const offer = typeof offerPayload === 'string' ? JSON.parse(offerPayload) : offerPayload
-    await this.pc.setRemoteDescription(offer)
-    const answer = await this.pc.createAnswer()
-    await this.pc.setLocalDescription(answer)
-    await postAnswer({
-      inviteToken: this.inviteToken,
-      peerId: this.peerId,
-      answer: JSON.stringify(answer)
-    })
-    this.answerSent = true
-    this._flushPendingCandidates()
+    try {
+      const offer = typeof offerPayload === 'string' ? JSON.parse(offerPayload) : offerPayload
+      await this.pc.setRemoteDescription(offer)
+      const answer = await this.pc.createAnswer()
+      await this.pc.setLocalDescription(answer)
+      await postAnswer({
+        inviteToken: this.inviteToken,
+        peerId: this.peerId,
+        answer: JSON.stringify(answer)
+      })
+      this.answerSent = true
+      this._flushPendingCandidates()
+    } catch (err) {
+      console.error('Failed to answer WebRTC offer:', err)
+    }
   }
 
   processCandidateEntries(entries) {

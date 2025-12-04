@@ -1,17 +1,14 @@
-const DEFAULT_STUN_HOST = 'http://localhost:3333'
 const detectStunHost = () => {
-  // In production (Netlify), use relative URLs to hit the same origin
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return '' // Relative URLs: /api/signalling/...
-  }
-  // Dev mode: check for environment variable first
+  // Check for explicit environment variable override first (for custom setups)
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STUN_HOST) {
     return import.meta.env.VITE_STUN_HOST
   }
   if (typeof window !== 'undefined' && window.STUN_HOST) {
     return window.STUN_HOST
   }
-  return DEFAULT_STUN_HOST
+  // Default: use relative URLs for both netlify dev and production
+  // This works because netlify dev proxies /api/* to the functions
+  return ''
 }
 
 export const STUN_HOST = detectStunHost()

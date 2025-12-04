@@ -10,6 +10,7 @@
 - [x] ✅ Replace in-memory session storage with Netlify Blobs for persistence
 - [x] ✅ Update netlify.toml with functions config and API redirects
 - [x] ✅ Update frontend signalling.js to use relative /api/ URLs in production
+- [x] ✅ Fix Netlify Blobs error - convert to Netlify Functions v2 format with native context
 - [ ] Test multiplayer with `netlify dev` locally before deploying
 - [ ] Deploy to Netlify and verify WebRTC signalling works end-to-end
 - [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration
