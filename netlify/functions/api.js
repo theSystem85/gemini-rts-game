@@ -24,15 +24,6 @@ async function setBlob(store, key, value) {
   await store.setJSON(key, value)
 }
 
-async function listKeys(store, prefix) {
-  try {
-    const { blobs } = await store.list({ prefix })
-    return blobs.map(b => b.key)
-  } catch {
-    return []
-  }
-}
-
 // CORS headers for all responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,11 +75,25 @@ export default async (request, _context) => {
 
       // Store offer in its own key (won't conflict with answer or candidates)
       const offerKeyName = `offer:${inviteToken}:${peerId}`
+      console.log('[API Function] Storing offer with key:', offerKeyName)
       await setBlob(store, offerKeyName, { offer, alias, createdAt: Date.now() })
       
       // Also store metadata to help with listing
       const metaKeyName = `meta:${inviteToken}:${peerId}`
+      console.log('[API Function] Storing meta with key:', metaKeyName)
       await setBlob(store, metaKeyName, { inviteToken, peerId, alias, createdAt: Date.now() })
+      
+      // Maintain an index of peerIds for this inviteToken (avoids relying on list prefix search)
+      const indexKeyName = `index:${inviteToken}`
+      let indexData = await getBlob(store, indexKeyName)
+      if (!indexData) {
+        indexData = { peerIds: [] }
+      }
+      if (!indexData.peerIds.includes(peerId)) {
+        indexData.peerIds.push(peerId)
+        await setBlob(store, indexKeyName, indexData)
+        console.log('[API Function] Updated index for inviteToken, peerIds:', indexData.peerIds)
+      }
 
       return new Response(
         JSON.stringify({ message: 'offer stored' }),
@@ -154,24 +159,32 @@ export default async (request, _context) => {
     if (pendingMatch && method === 'GET') {
       const inviteToken = decodeURIComponent(pendingMatch[1])
       
-      // Find all meta keys for this invite token
-      const metaKeys = await listKeys(store, `meta:${inviteToken}:`)
+      console.log('[API Function] Looking for pending sessions for inviteToken:', inviteToken)
+      
+      // Use the index to find peerIds (more reliable than prefix listing)
+      const indexKeyName = `index:${inviteToken}`
+      const indexData = await getBlob(store, indexKeyName)
+      
+      console.log('[API Function] Index data:', indexData)
+      
+      if (!indexData || !indexData.peerIds || !indexData.peerIds.length) {
+        return new Response(
+          JSON.stringify({ error: 'no pending sessions' }),
+          { status: 404, headers: corsHeaders }
+        )
+      }
       
       const sessions = []
-      for (const metaKey of metaKeys) {
-        const meta = await getBlob(store, metaKey)
-        if (!meta) continue
-        
-        const { peerId, alias } = meta
-        
+      for (const peerId of indexData.peerIds) {
         // Fetch offer, answer, and candidates from their separate keys
         const offerData = await getBlob(store, `offer:${inviteToken}:${peerId}`)
         const answerData = await getBlob(store, `answer:${inviteToken}:${peerId}`)
         const candidatesData = await getBlob(store, `candidates:${inviteToken}:${peerId}`)
+        const metaData = await getBlob(store, `meta:${inviteToken}:${peerId}`)
         
         sessions.push({
           peerId,
-          alias: alias || offerData?.alias,
+          alias: metaData?.alias || offerData?.alias || 'Unknown',
           offer: offerData?.offer || null,
           answer: answerData?.answer || null,
           candidates: candidatesData?.candidates || [],
@@ -179,12 +192,7 @@ export default async (request, _context) => {
         })
       }
 
-      if (!sessions.length) {
-        return new Response(
-          JSON.stringify({ error: 'no pending sessions' }),
-          { status: 404, headers: corsHeaders }
-        )
-      }
+      console.log('[API Function] Found sessions:', sessions.length)
 
       return new Response(
         JSON.stringify(sessions),
