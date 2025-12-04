@@ -206,6 +206,236 @@ function setupJoinInviteLinkInput() {
   })
 }
 
+// QR Scanner state
+let qrScannerModal = null
+let qrScannerStream = null
+let qrScannerAnimationId = null
+
+/**
+ * Check if the BarcodeDetector API supports QR codes
+ * @returns {Promise<boolean>}
+ */
+async function isQrScannerSupported() {
+  if (!('BarcodeDetector' in window)) {
+    return false
+  }
+  
+  try {
+    const formats = await BarcodeDetector.getSupportedFormats()
+    return formats.includes('qr_code')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Get or create the QR scanner modal element
+ * @returns {HTMLElement}
+ */
+function getOrCreateQrScannerModal() {
+  if (qrScannerModal && document.body.contains(qrScannerModal)) {
+    return qrScannerModal
+  }
+  
+  qrScannerModal = document.createElement('div')
+  qrScannerModal.className = 'qr-scanner-modal'
+  qrScannerModal.setAttribute('aria-hidden', 'true')
+  qrScannerModal.setAttribute('role', 'dialog')
+  qrScannerModal.setAttribute('aria-modal', 'true')
+  qrScannerModal.setAttribute('aria-labelledby', 'qr-scanner-title')
+  
+  qrScannerModal.innerHTML = `
+    <div class="qr-scanner-modal__backdrop"></div>
+    <div class="qr-scanner-modal__dialog">
+      <div class="qr-scanner-modal__header">
+        <h3 id="qr-scanner-title" class="qr-scanner-modal__title">Scan QR Code</h3>
+        <button type="button" class="qr-scanner-modal__close" aria-label="Close">&times;</button>
+      </div>
+      <div class="qr-scanner-modal__body">
+        <div class="qr-scanner-modal__video-container">
+          <video class="qr-scanner-modal__video" autoplay playsinline muted></video>
+          <div class="qr-scanner-modal__overlay">
+            <div class="qr-scanner-modal__frame"></div>
+          </div>
+        </div>
+        <p class="qr-scanner-modal__status">Point your camera at a QR code</p>
+      </div>
+    </div>
+  `
+  
+  // Add event listeners
+  const backdrop = qrScannerModal.querySelector('.qr-scanner-modal__backdrop')
+  const closeBtn = qrScannerModal.querySelector('.qr-scanner-modal__close')
+  
+  backdrop.addEventListener('click', stopQrScanner)
+  closeBtn.addEventListener('click', stopQrScanner)
+  
+  // Close on Escape key
+  qrScannerModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      stopQrScanner()
+    }
+  })
+  
+  document.body.appendChild(qrScannerModal)
+  return qrScannerModal
+}
+
+/**
+ * Update the QR scanner status message
+ * @param {string} message
+ * @param {boolean} isError
+ * @param {boolean} isSuccess
+ */
+function updateQrScannerStatus(message, isError = false, isSuccess = false) {
+  const modal = getOrCreateQrScannerModal()
+  const status = modal.querySelector('.qr-scanner-modal__status')
+  if (status) {
+    status.textContent = message
+    status.classList.toggle('error', isError)
+    status.classList.toggle('success', isSuccess)
+  }
+}
+
+/**
+ * Start the QR scanner
+ */
+async function startQrScanner() {
+  const modal = getOrCreateQrScannerModal()
+  const video = modal.querySelector('.qr-scanner-modal__video')
+  
+  // Show modal
+  modal.classList.add('visible')
+  modal.setAttribute('aria-hidden', 'false')
+  
+  // Focus close button for accessibility
+  const closeBtn = modal.querySelector('.qr-scanner-modal__close')
+  closeBtn.focus()
+  
+  updateQrScannerStatus('Requesting camera access...')
+  
+  try {
+    // Request camera access
+    qrScannerStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment', // Prefer back camera on mobile
+        width: { ideal: 640 },
+        height: { ideal: 640 }
+      }
+    })
+    
+    video.srcObject = qrScannerStream
+    await video.play()
+    
+    updateQrScannerStatus('Point your camera at a QR code')
+    
+    // Create barcode detector
+    const barcodeDetector = new BarcodeDetector({
+      formats: ['qr_code']
+    })
+    
+    // Start scanning loop
+    const scanFrame = async () => {
+      if (!qrScannerStream || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        qrScannerAnimationId = requestAnimationFrame(scanFrame)
+        return
+      }
+      
+      try {
+        const barcodes = await barcodeDetector.detect(video)
+        
+        if (barcodes.length > 0) {
+          const qrValue = barcodes[0].rawValue
+          const token = extractInviteToken(qrValue)
+          
+          if (token) {
+            updateQrScannerStatus('QR code detected! Connecting...', false, true)
+            
+            // Stop scanner and navigate
+            stopQrScanner()
+            
+            // Navigate to the invite URL
+            const baseUrl = window.location.origin + window.location.pathname
+            const inviteUrl = `${baseUrl}?invite=${encodeURIComponent(token)}`
+            window.location.href = inviteUrl
+            return
+          }
+        }
+      } catch (err) {
+        // Detection failed, continue scanning
+        window.logger.warn('QR detection error:', err)
+      }
+      
+      qrScannerAnimationId = requestAnimationFrame(scanFrame)
+    }
+    
+    qrScannerAnimationId = requestAnimationFrame(scanFrame)
+    
+  } catch (err) {
+    window.logger.warn('Camera access failed:', err)
+    
+    if (err.name === 'NotAllowedError') {
+      updateQrScannerStatus('Camera access denied. Please allow camera access.', true)
+    } else if (err.name === 'NotFoundError') {
+      updateQrScannerStatus('No camera found on this device.', true)
+    } else {
+      updateQrScannerStatus('Failed to access camera. Try again.', true)
+    }
+  }
+}
+
+/**
+ * Stop the QR scanner and clean up
+ */
+function stopQrScanner() {
+  // Stop animation loop
+  if (qrScannerAnimationId) {
+    cancelAnimationFrame(qrScannerAnimationId)
+    qrScannerAnimationId = null
+  }
+  
+  // Stop camera stream
+  if (qrScannerStream) {
+    qrScannerStream.getTracks().forEach(track => track.stop())
+    qrScannerStream = null
+  }
+  
+  // Hide modal
+  if (qrScannerModal) {
+    const video = qrScannerModal.querySelector('.qr-scanner-modal__video')
+    if (video) {
+      video.srcObject = null
+    }
+    qrScannerModal.classList.remove('visible')
+    qrScannerModal.setAttribute('aria-hidden', 'true')
+  }
+}
+
+/**
+ * Setup the QR scanner button
+ */
+async function setupQrScanner() {
+  const scanBtn = document.getElementById('scanQrBtn')
+  
+  if (!scanBtn) {
+    return
+  }
+  
+  // Check if QR scanning is supported
+  const supported = await isQrScannerSupported()
+  
+  if (!supported) {
+    // Hide button if not supported
+    scanBtn.style.display = 'none'
+    return
+  }
+  
+  // Handle button click
+  scanBtn.addEventListener('click', async () => {
+    await startQrScanner()
+  })
+}
+
 export function initSidebarMultiplayer() {
   partyListContainer = document.getElementById(PARTY_LIST_ID)
   refreshSidebarMultiplayer()
@@ -213,6 +443,7 @@ export function initSidebarMultiplayer() {
   setupPartyOwnershipWatcher()
   setupAliasInput()
   setupJoinInviteLinkInput()
+  setupQrScanner()
   // Note: Host polling is started only when user clicks "Invite" button (handleInviteClick)
   // This prevents unnecessary polling before a user actively shares an invite link
 }
