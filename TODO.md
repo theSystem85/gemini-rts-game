@@ -4,6 +4,8 @@
 - [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
 - [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
+- [ ] ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
+- [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
 
 ## Netlify Deployment for Multiplayer
 - [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http
@@ -166,6 +168,8 @@
   - done: Added oreSpreadEnabled and shadowOfWarEnabled to game state snapshot; Clients receive and apply host settings on snapshot; Ore spread and shadow of war checkboxes disabled for clients with "(host setting)" indicator; Settings re-enabled on disconnect; Explosions now hidden under fog of war for shadow of war mode
 - [x] ✅ T041 Improve multiplayer party list UI and add alias persistence
   - done: Party rows now show only color dot (with tooltip) instead of "Green: AI"; Changed "Human (Host)" to "You (Host)" for clarity; Added "Your alias:" input field in map settings; Alias persisted to localStorage and synced between sidebar input and join modal input
+- [x] ✅ T045 Add QR code hover display for invite buttons
+  - done: When hovering over an invite button after generating an invite, a QR code popup appears showing the invite URL; Mobile users can scan the QR code to join the game; Created src/ui/qrCode.js with lightweight pure JS QR code generator; Added CSS styles for QR popup positioning and animations
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

@@ -150,6 +150,147 @@ body.is-touch {
   border-color: rgba(255, 100, 100, 0.8);
 }
 
+/* QR Code Modal styles */
+.multiplayer-qr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.multiplayer-qr-modal.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.multiplayer-qr-modal__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.multiplayer-qr-modal__dialog {
+  position: relative;
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.multiplayer-qr-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.multiplayer-qr-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.multiplayer-qr-modal__close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.multiplayer-qr-modal__close:hover {
+  color: #fff;
+}
+
+.multiplayer-qr-modal__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.multiplayer-qr-modal__qr-container {
+  background: #fff;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.multiplayer-qr-modal__qr-canvas {
+  display: block;
+}
+
+.multiplayer-qr-modal__instruction {
+  margin: 0;
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+}
+
+.multiplayer-qr-modal__link-container {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.multiplayer-qr-modal__link-input {
+  flex: 1;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.multiplayer-qr-modal__link-input:focus {
+  outline: none;
+  border-color: rgba(110, 252, 75, 0.5);
+}
+
+.multiplayer-qr-modal__copy-btn {
+  padding: 10px 16px;
+  background: #6efc4b;
+  border: none;
+  border-radius: 6px;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.multiplayer-qr-modal__copy-btn:hover {
+  background: #5ee03a;
+}
+
+.multiplayer-qr-modal__error {
+  color: #ff6b6b;
+  font-size: 13px;
+  text-align: center;
+}
+
 #sidebarScroll {
   flex: 1;
   overflow-y: auto;

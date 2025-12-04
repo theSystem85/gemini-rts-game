@@ -9,6 +9,7 @@ import { watchHostInvite, kickPlayer } from '../network/webrtcSession.js'
 import { showHostNotification } from '../network/hostNotifications.js'
 import { gameState } from '../gameState.js'
 import { observeMultiplayerSession } from '../network/multiplayerSessionEvents.js'
+import { createQRCodeCanvas } from './qrCode.js'
 
 const PARTY_LIST_ID = 'multiplayerPartyList'
 const PLAYER_ALIAS_STORAGE_KEY = 'rts-player-alias'
@@ -221,6 +222,7 @@ function createPartyRow(partyState) {
     inviteButton.className = 'multiplayer-invite-button'
     inviteButton.textContent = 'Invite'
     inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
+    
     controls.appendChild(inviteButton)
   }
 
@@ -256,6 +258,16 @@ function updateStatusText(element, partyState) {
 }
 
 async function handleInviteClick(partyState, button, status) {
+  // If invite already exists, show the QR modal immediately
+  if (partyState.inviteToken) {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
+    const inviteUrl = `${baseUrl}?invite=${partyState.inviteToken}`
+    await tryCopyToClipboard(inviteUrl)
+    showHostNotification('Invite link copied to clipboard')
+    showQRCodeModal(partyState, inviteUrl)
+    return
+  }
+
   const originalText = button.textContent
   button.disabled = true
   button.textContent = 'Generating…'
@@ -272,6 +284,8 @@ async function handleInviteClick(partyState, button, status) {
     button.title = url
     setHostInviteStatus(partyState.partyId, 'copied')
     updateStatusText(status, partyState)
+    // Show QR code modal after generating invite
+    showQRCodeModal(partyState, url)
   } catch (error) {
     setHostInviteStatus(partyState.partyId, 'error')
     status.classList.remove('success')
@@ -318,4 +332,123 @@ async function tryCopyToClipboard(text) {
     }
   }
   return false
+}
+
+// Store reference to QR modal element
+let qrModal = null
+
+/**
+ * Get or create the QR code modal element
+ * @returns {HTMLElement} The modal element
+ */
+function getOrCreateQRModal() {
+  if (qrModal && document.body.contains(qrModal)) {
+    return qrModal
+  }
+  
+  // Create modal structure
+  qrModal = document.createElement('div')
+  qrModal.className = 'multiplayer-qr-modal'
+  qrModal.setAttribute('aria-hidden', 'true')
+  qrModal.setAttribute('role', 'dialog')
+  qrModal.setAttribute('aria-modal', 'true')
+  qrModal.setAttribute('aria-labelledby', 'qr-modal-title')
+  
+  qrModal.innerHTML = `
+    <div class="multiplayer-qr-modal__backdrop"></div>
+    <div class="multiplayer-qr-modal__dialog">
+      <div class="multiplayer-qr-modal__header">
+        <h3 id="qr-modal-title" class="multiplayer-qr-modal__title">Invite Player</h3>
+        <button type="button" class="multiplayer-qr-modal__close" aria-label="Close">&times;</button>
+      </div>
+      <div class="multiplayer-qr-modal__body">
+        <div class="multiplayer-qr-modal__qr-container"></div>
+        <p class="multiplayer-qr-modal__instruction">Scan QR code or share the link below</p>
+        <div class="multiplayer-qr-modal__link-container">
+          <input type="text" class="multiplayer-qr-modal__link-input" readonly>
+          <button type="button" class="multiplayer-qr-modal__copy-btn">Copy</button>
+        </div>
+      </div>
+    </div>
+  `
+  
+  // Add event listeners
+  const backdrop = qrModal.querySelector('.multiplayer-qr-modal__backdrop')
+  const closeBtn = qrModal.querySelector('.multiplayer-qr-modal__close')
+  const copyBtn = qrModal.querySelector('.multiplayer-qr-modal__copy-btn')
+  const linkInput = qrModal.querySelector('.multiplayer-qr-modal__link-input')
+  
+  backdrop.addEventListener('click', hideQRCodeModal)
+  closeBtn.addEventListener('click', hideQRCodeModal)
+  copyBtn.addEventListener('click', async () => {
+    const success = await tryCopyToClipboard(linkInput.value)
+    if (success) {
+      copyBtn.textContent = 'Copied!'
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy'
+      }, 2000)
+    }
+  })
+  
+  // Close on Escape key
+  qrModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideQRCodeModal()
+    }
+  })
+  
+  document.body.appendChild(qrModal)
+  return qrModal
+}
+
+/**
+ * Show QR code modal for a party's invite link
+ * @param {Object} partyState - The party state object
+ * @param {string} inviteUrl - The invite URL to display
+ */
+function showQRCodeModal(partyState, inviteUrl) {
+  const modal = getOrCreateQRModal()
+  
+  // Update modal content
+  const title = modal.querySelector('.multiplayer-qr-modal__title')
+  const qrContainer = modal.querySelector('.multiplayer-qr-modal__qr-container')
+  const linkInput = modal.querySelector('.multiplayer-qr-modal__link-input')
+  const copyBtn = modal.querySelector('.multiplayer-qr-modal__copy-btn')
+  
+  // Set title with party color
+  const partyName = getPartyDisplayName(partyState.partyId, partyState.color)
+  title.textContent = `Invite to ${partyName}`
+  
+  // Clear and regenerate QR code
+  qrContainer.innerHTML = ''
+  try {
+    const qrCanvas = createQRCodeCanvas(inviteUrl, 180)
+    qrCanvas.className = 'multiplayer-qr-modal__qr-canvas'
+    qrContainer.appendChild(qrCanvas)
+  } catch (err) {
+    console.warn('Failed to generate QR code:', err)
+    qrContainer.innerHTML = '<p class="multiplayer-qr-modal__error">Failed to generate QR code</p>'
+  }
+  
+  // Set link input value
+  linkInput.value = inviteUrl
+  copyBtn.textContent = 'Copy'
+  
+  // Show modal
+  modal.classList.add('visible')
+  modal.setAttribute('aria-hidden', 'false')
+  
+  // Focus close button for accessibility
+  const closeBtn = modal.querySelector('.multiplayer-qr-modal__close')
+  closeBtn.focus()
+}
+
+/**
+ * Hide QR code modal
+ */
+function hideQRCodeModal() {
+  if (qrModal) {
+    qrModal.classList.remove('visible')
+    qrModal.setAttribute('aria-hidden', 'true')
+  }
 }
