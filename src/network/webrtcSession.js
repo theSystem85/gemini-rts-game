@@ -308,7 +308,12 @@ class HostInviteMonitor {
       if (!this.running) {
         return
       }
-      await this._pollSessions()
+      try {
+        await this._pollSessions()
+      } catch (err) {
+        // Ensure polling continues even if there's an unexpected error
+        console.warn('Poll tick error:', err)
+      }
       if (this.running) {
         this.pollHandle = setTimeout(tick, this.pollInterval)
       }
