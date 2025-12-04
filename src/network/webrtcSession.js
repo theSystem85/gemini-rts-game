@@ -304,15 +304,18 @@ class HostInviteMonitor {
   }
 
   _schedulePoll() {
+    console.log('[HostSessionManager] Starting poll schedule, interval:', this.pollInterval)
     const tick = async () => {
       if (!this.running) {
+        console.log('[HostSessionManager] Poll stopped - not running')
         return
       }
+      console.log('[HostSessionManager] Poll tick - fetching pending sessions')
       try {
         await this._pollSessions()
       } catch (err) {
         // Ensure polling continues even if there's an unexpected error
-        console.warn('Poll tick error:', err)
+        console.warn('[HostSessionManager] Poll tick error:', err)
       }
       if (this.running) {
         this.pollHandle = setTimeout(tick, this.pollInterval)
