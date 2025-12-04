@@ -88,6 +88,8 @@
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
 ## Current Multiplayer Work
+- [x] ✅ T044 Host only starts polling signaling server after user clicks invite button
+  - done: Removed automatic polling start from initSidebarMultiplayer(); polling now only starts when user clicks "Invite" button in handleInviteClick()
 - [x] ✅ T042 Multiplayer defeat handling and spectator mode
   - [x] ✅ Defeated human players see beautiful, mobile-optimized defeat modal with game statistics
   - [x] ✅ Two buttons on defeat modal: "New Game" and "Spectator Mode"

@@ -94,11 +94,8 @@ export function initSidebarMultiplayer() {
   setupHostControlWatcher()
   setupPartyOwnershipWatcher()
   setupAliasInput()
-  listPartyStates().forEach((partyState) => {
-    if (partyState.inviteToken) {
-      watchHostInvite({ partyId: partyState.partyId, inviteToken: partyState.inviteToken })
-    }
-  })
+  // Note: Host polling is started only when user clicks "Invite" button (handleInviteClick)
+  // This prevents unnecessary polling before a user actively shares an invite link
 }
 
 export function refreshSidebarMultiplayer() {
