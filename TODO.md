@@ -11,6 +11,7 @@
 - [x] ✅ Update netlify.toml with functions config and API redirects
 - [x] ✅ Update frontend signalling.js to use relative /api/ URLs in production
 - [x] ✅ Fix Netlify Blobs error - convert to Netlify Functions v2 format with native context
+- [x] ✅ Fix Netlify function 404 errors - added redirect from /api/* to /.netlify/functions/api and removed conflicting config.path
 - [ ] Test multiplayer with `netlify dev` locally before deploying
 - [ ] Deploy to Netlify and verify WebRTC signalling works end-to-end
 - [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration

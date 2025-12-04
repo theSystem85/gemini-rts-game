@@ -45,14 +45,23 @@ const corsHeaders = {
 export default async (request, _context) => {
   const url = new URL(request.url)
   let path = url.pathname
+  
+  // Log incoming request for debugging
+  console.log('[API Function] Incoming request:', { pathname: url.pathname, method: request.method })
+  
+  // Normalize path - remove function path prefixes
   if (path.startsWith('/.netlify/functions/api')) {
     path = path.replace('/.netlify/functions/api', '')
-  } else if (path.startsWith('/api')) {
+  }
+  if (path.startsWith('/api')) {
     path = path.replace(/^\/api/, '')
   }
   if (!path.startsWith('/')) {
     path = '/' + path
   }
+  
+  console.log('[API Function] Normalized path:', path)
+  
   const method = request.method
 
   if (method === 'OPTIONS') {
@@ -247,6 +256,5 @@ export default async (request, _context) => {
   }
 }
 
-export const config = {
-  path: '/api/*'
-}
+// Note: Routing is handled via netlify.toml redirects
+// The redirect forwards /api/* to /.netlify/functions/api

@@ -9,15 +9,16 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# API routes - redirect to Netlify Function (needed for netlify dev compatibility)
+# API routes handled by Netlify Function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/api"
   status = 200
-  force = true
 
 # SPA fallback for client-side routing
+# force = false ensures functions and assets are served first
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
