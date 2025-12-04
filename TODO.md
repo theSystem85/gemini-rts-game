@@ -171,6 +171,8 @@
   - done: Party rows now show only color dot (with tooltip) instead of "Green: AI"; Changed "Human (Host)" to "You (Host)" for clarity; Added "Your alias:" input field in map settings; Alias persisted to localStorage and synced between sidebar input and join modal input
 - [x] ✅ T045 Add QR code hover display for invite buttons
   - done: When hovering over an invite button after generating an invite, a QR code popup appears showing the invite URL; Mobile users can scan the QR code to join the game; Created src/ui/qrCode.js with lightweight pure JS QR code generator; Added CSS styles for QR popup positioning and animations
+- [x] ✅ T046 Clear wrecks and SOT on client join and shuffle map
+  - done: Added gameState.unitWrecks cleanup and mapRenderer.invalidateAllChunks() in both resetGameWithNewMap() (shuffle map button) and regenerateMapForClient() (client joining multiplayer); Ensures stale wrecks from previous games don't persist and SOT (Smoothening Overlay Texture) mask is recomputed for the new map
 
 ## Features
 - [ ] **Spec 011** Land mine system planning:

@@ -31,7 +31,7 @@ import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFr
 import { initSaveGameSystem } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
-import { getTextureManager, preloadTileTextures } from './rendering.js'
+import { getTextureManager, preloadTileTextures, getMapRenderer } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
@@ -1511,6 +1511,15 @@ class Game {
     gameState.currentBuildingType = null
     gameState.repairMode = false
 
+    // Clear all unit wrecks from previous game
+    gameState.unitWrecks = []
+
+    // Invalidate SOT (Smoothening Overlay Texture) mask to force recomputation
+    const mapRenderer = getMapRenderer()
+    if (mapRenderer) {
+      mapRenderer.invalidateAllChunks()
+    }
+
     // Remember the seed so further restarts use the same map
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
@@ -1806,6 +1815,9 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   if (playerCount) {
     gameState.playerCount = playerCount
   }
+
+  // Clear all unit wrecks from previous game when joining multiplayer
+  gameState.unitWrecks = []
   
   // Clear and regenerate the map grid
   mapGrid.length = 0
@@ -1826,6 +1838,12 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   
   // Initialize shadow of war for the new map
   initializeShadowOfWar(gameState, mapGrid)
+  
+  // Invalidate SOT (Smoothening Overlay Texture) mask to force recomputation for new map
+  const mapRenderer = getMapRenderer()
+  if (mapRenderer) {
+    mapRenderer.invalidateAllChunks()
+  }
   
   window.logger('[Main] Client map regeneration complete')
 }
