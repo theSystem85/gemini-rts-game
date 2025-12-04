@@ -146,19 +146,19 @@ function applyOverridesFromObject(overrides, { persistLocal = false } = {}) {
 
   Object.entries(overrides).forEach(([name, value]) => {
     if (!configRegistry.has(name)) {
-      console.warn(`Ignoring unknown config override: ${name}`)
+      window.logger.warn(`Ignoring unknown config override: ${name}`)
       return
     }
 
     const entry = configRegistry.get(name)
     if (entry.type !== 'number') {
-      console.warn(`Ignoring override for non-numeric config value: ${name}`)
+      window.logger.warn(`Ignoring override for non-numeric config value: ${name}`)
       return
     }
 
     const numericValue = typeof value === 'number' ? value : Number(value)
     if (!Number.isFinite(numericValue)) {
-      console.warn(`Ignoring non-finite override for ${name}`)
+      window.logger.warn(`Ignoring non-finite override for ${name}`)
       return
     }
 
@@ -182,7 +182,7 @@ function saveOverridesToLocalStorage() {
       JSON.stringify(getConfigOverrides())
     )
   } catch (err) {
-    console.warn('Failed to persist config overrides to localStorage:', err)
+    window.logger.warn('Failed to persist config overrides to localStorage:', err)
   }
 }
 
@@ -195,7 +195,7 @@ function loadOverridesFromLocalStorage() {
   try {
     raw = window.localStorage.getItem(CONFIG_OVERRIDE_STORAGE_KEY)
   } catch (err) {
-    console.warn('Failed to read config overrides from localStorage:', err)
+    window.logger.warn('Failed to read config overrides from localStorage:', err)
     return
   }
 
@@ -207,7 +207,7 @@ function loadOverridesFromLocalStorage() {
     const parsed = JSON.parse(raw)
     applyOverridesFromObject(parsed)
   } catch (err) {
-    console.warn('Failed to parse config overrides from localStorage:', err)
+    window.logger.warn('Failed to parse config overrides from localStorage:', err)
   }
 }
 
@@ -225,7 +225,7 @@ async function loadOverridesFromFile() {
     const data = await response.json()
     applyOverridesFromObject(data)
   } catch (err) {
-    console.warn('Failed to load config overrides file:', err)
+    window.logger.warn('Failed to load config overrides file:', err)
   }
 }
 

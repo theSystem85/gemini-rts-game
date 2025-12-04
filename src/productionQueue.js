@@ -343,7 +343,7 @@ export const productionQueue = {
     if (this.currentBuilding && !this.pausedBuilding) {
       // Safety check: ensure there's a building item in the queue
       if (this.buildingItems.length === 0) {
-        console.warn('Current building exists but buildingItems queue is empty, clearing current building')
+        window.logger.warn('Current building exists but buildingItems queue is empty, clearing current building')
         this.currentBuilding = null
         return
       }
@@ -521,7 +521,7 @@ export const productionQueue = {
           }
         } else {
           // Handle spawn failure (e.g., no valid position)
-          console.warn(`Failed to spawn ${unitType} from factory ${spawnFactory.id || spawnFactory.type}`)
+          window.logger.warn(`Failed to spawn ${unitType} from factory ${spawnFactory.id || spawnFactory.type}`)
           // Optional: Refund cost?
           // gameState.money += unitCosts[unitType] || 0;
           // moneyEl.textContent = gameState.money; // Assuming moneyEl is accessible

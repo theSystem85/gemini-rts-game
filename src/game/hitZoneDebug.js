@@ -8,7 +8,7 @@ import { calculateHitZoneDamageMultiplier } from './hitZoneCalculator.js'
  * Run this in browser console: window.testHitZones()
  */
 export function testHitZoneCalculations() {
-  console.log('Testing Hit Zone Damage Calculations...')
+  window.logger('Testing Hit Zone Damage Calculations...')
 
   // Create a mock tank unit at position (100, 100) facing right (0 radians)
   const mockTank = {
@@ -29,17 +29,17 @@ export function testHitZoneCalculations() {
     { name: 'Rear-left diagonal', bullet: { x: 60, y: 60 } }
   ]
 
-  console.log('Tank position: (116, 116) - center of 32x32 tile at (100, 100)')
-  console.log('Tank facing: Right (0 radians)')
-  console.log('')
+  window.logger('Tank position: (116, 116) - center of 32x32 tile at (100, 100)')
+  window.logger('Tank facing: Right (0 radians)')
+  window.logger('')
 
   testCases.forEach(testCase => {
     const result = calculateHitZoneDamageMultiplier(testCase.bullet, mockTank)
-    console.log(`${testCase.name}:`)
-    console.log(`  Bullet at: (${testCase.bullet.x}, ${testCase.bullet.y})`)
-    console.log(`  Damage multiplier: ${result.multiplier}x`)
-    console.log(`  Critical hit: ${result.isRearHit ? 'YES' : 'NO'}`)
-    console.log('')
+    window.logger(`${testCase.name}:`)
+    window.logger(`  Bullet at: (${testCase.bullet.x}, ${testCase.bullet.y})`)
+    window.logger(`  Damage multiplier: ${result.multiplier}x`)
+    window.logger(`  Critical hit: ${result.isRearHit ? 'YES' : 'NO'}`)
+    window.logger('')
   })
 }
 

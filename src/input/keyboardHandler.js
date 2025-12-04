@@ -219,7 +219,7 @@ export class KeyboardHandler {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (!getRemoteControlActionState('forward')) {
-            console.log('Remote control: up key down')
+            window.logger('Remote control: up key down')
           }
           setRemoteControlAction('forward', 'keyboard', true)
         } else {
@@ -238,7 +238,7 @@ export class KeyboardHandler {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (!getRemoteControlActionState('backward')) {
-            console.log('Remote control: down key down')
+            window.logger('Remote control: down key down')
           }
           setRemoteControlAction('backward', 'keyboard', true)
         } else {
@@ -258,12 +258,12 @@ export class KeyboardHandler {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (gameState.shiftKeyDown) {
             if (!getRemoteControlActionState('turretLeft')) {
-              console.log('Remote control: turret left key down')
+              window.logger('Remote control: turret left key down')
             }
             setRemoteControlAction('turretLeft', 'keyboard', true)
           } else {
             if (!getRemoteControlActionState('turnLeft')) {
-              console.log('Remote control: left key down')
+              window.logger('Remote control: left key down')
             }
             setRemoteControlAction('turnLeft', 'keyboard', true)
           }
@@ -284,12 +284,12 @@ export class KeyboardHandler {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (gameState.shiftKeyDown) {
             if (!getRemoteControlActionState('turretRight')) {
-              console.log('Remote control: turret right key down')
+              window.logger('Remote control: turret right key down')
             }
             setRemoteControlAction('turretRight', 'keyboard', true)
           } else {
             if (!getRemoteControlActionState('turnRight')) {
-              console.log('Remote control: right key down')
+              window.logger('Remote control: right key down')
             }
             setRemoteControlAction('turnRight', 'keyboard', true)
           }
@@ -315,7 +315,7 @@ export class KeyboardHandler {
           }
         }
         if (!getRemoteControlActionState('fire')) {
-          console.log('Remote control: space pressed')
+          window.logger('Remote control: space pressed')
         }
         setRemoteControlAction('fire', 'keyboard', true)
       }
@@ -337,7 +337,7 @@ export class KeyboardHandler {
       if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('forward')) {
-            console.log('Remote control: up key up')
+            window.logger('Remote control: up key up')
           }
           setRemoteControlAction('forward', 'keyboard', false)
         } else {
@@ -349,7 +349,7 @@ export class KeyboardHandler {
       } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('backward')) {
-            console.log('Remote control: down key up')
+            window.logger('Remote control: down key up')
           }
           setRemoteControlAction('backward', 'keyboard', false)
         } else {
@@ -361,7 +361,7 @@ export class KeyboardHandler {
       } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('turnLeft') || getRemoteControlActionState('turretLeft')) {
-            console.log('Remote control: left key up')
+            window.logger('Remote control: left key up')
           }
           setRemoteControlAction('turnLeft', 'keyboard', false)
           setRemoteControlAction('turretLeft', 'keyboard', false)
@@ -374,7 +374,7 @@ export class KeyboardHandler {
       } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('turnRight') || getRemoteControlActionState('turretRight')) {
-            console.log('Remote control: right key up')
+            window.logger('Remote control: right key up')
           }
           setRemoteControlAction('turnRight', 'keyboard', false)
           setRemoteControlAction('turretRight', 'keyboard', false)
@@ -386,7 +386,7 @@ export class KeyboardHandler {
         }
       } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
         if (getRemoteControlActionState('fire')) {
-          console.log('Remote control: space released')
+          window.logger('Remote control: space released')
         }
         setRemoteControlAction('fire', 'keyboard', false)
       }

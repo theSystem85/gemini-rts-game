@@ -103,7 +103,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           // Convert pixel coordinates to tile coordinates
           const tileX = Math.floor(targetX / TILE_SIZE)
           const tileY = Math.floor(targetY / TILE_SIZE)
-          console.log('[Host] Processing UNIT_MOVE from party:', partyId, 'unitIds:', unitIds, 'target pixels:', targetX, targetY, 'tiles:', tileX, tileY)
+          window.logger('[Host] Processing UNIT_MOVE from party:', partyId, 'unitIds:', unitIds, 'target pixels:', targetX, targetY, 'tiles:', tileX, tileY)
           unitIds.forEach(unitId => {
             // Find unit by ID - owner check is implicit since client can only select their own units
             const unit = mainUnits.find(u => u.id === unitId)
@@ -114,19 +114,19 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
                 unit.moveTarget = { x: tileX, y: tileY }
                 unit.attackTarget = null
                 unit.guardPosition = null
-                console.log('[Host] Unit', unitId, 'moveTarget set to tile', tileX, tileY)
+                window.logger('[Host] Unit', unitId, 'moveTarget set to tile', tileX, tileY)
               } else {
-                console.warn('[Host] Unit', unitId, 'owner mismatch:', unit.owner, '!==', partyId)
+                window.logger.warn('[Host] Unit', unitId, 'owner mismatch:', unit.owner, '!==', partyId)
               }
             } else {
-              console.warn('[Host] Unit not found:', unitId)
+              window.logger.warn('[Host] Unit not found:', unitId)
             }
           })
         } else if (cmd.commandType === COMMAND_TYPES.UNIT_ATTACK && cmd.payload) {
           // Apply unit attack command from client
           const { unitIds, targetId, targetX, targetY } = cmd.payload
           const partyId = cmd.sourcePartyId
-          console.log('[Host] Processing UNIT_ATTACK from party:', partyId, 'unitIds:', unitIds, 'targetId:', targetId)
+          window.logger('[Host] Processing UNIT_ATTACK from party:', partyId, 'unitIds:', unitIds, 'targetId:', targetId)
           unitIds.forEach(unitId => {
             const unit = mainUnits.find(u => u.id === unitId && u.owner === partyId)
             if (unit) {
@@ -140,7 +140,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
                 unit.moveTarget = null
                 unit.guardPosition = null
                 unit.path = null // Clear path so unit stops and attacks
-                console.log('[Host] Unit', unitId, 'target set to', target.id || target.type)
+                window.logger('[Host] Unit', unitId, 'target set to', target.id || target.type)
               } else if (targetX !== undefined && targetY !== undefined) {
                 // Attack move to position - convert pixels to tiles
                 const tileX = Math.floor(targetX / TILE_SIZE)
@@ -148,10 +148,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
                 unit.moveTarget = { x: tileX, y: tileY }
                 unit.target = null
               } else {
-                console.warn('[Host] Target not found:', targetId)
+                window.logger.warn('[Host] Target not found:', targetId)
               }
             } else {
-              console.warn('[Host] Unit not found or owner mismatch:', unitId, partyId)
+              window.logger.warn('[Host] Unit not found or owner mismatch:', unitId, partyId)
             }
           })
         } else if (cmd.commandType === COMMAND_TYPES.UNIT_STOP && cmd.payload) {

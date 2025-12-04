@@ -48,7 +48,7 @@ async function scanDirectory(dirPath) {
 
     return imageFiles.sort() // Sort for consistent output
   } catch (error) {
-    console.warn(`Warning: Could not read directory ${dirPath}:`, error.message)
+    window.logger.warn(`Warning: Could not read directory ${dirPath}:`, error.message)
     return []
   }
 }
@@ -64,7 +64,7 @@ function generatePaths(files, relativePath) {
  * Main function to analyze grass tiles structure
  */
 async function analyzeGrassTiles() {
-  console.log('🔍 Analyzing grass tiles structure...')
+  window.logger('🔍 Analyzing grass tiles structure...')
 
   // Check if the grass tiles directory exists
   if (!existsSync(GRASS_TILES_DIR)) {
@@ -74,13 +74,13 @@ async function analyzeGrassTiles() {
 
   try {
     // Scan each category of tiles
-    console.log('📁 Scanning passable tiles...')
+    window.logger('📁 Scanning passable tiles...')
     const passableFiles = await scanDirectory(join(GRASS_TILES_DIR, 'passable'))
 
-    console.log('🎨 Scanning decorative tiles...')
+    window.logger('🎨 Scanning decorative tiles...')
     const decorativeFiles = await scanDirectory(join(GRASS_TILES_DIR, 'passable', 'decorative'))
 
-    console.log('🚫 Scanning impassable tiles...')
+    window.logger('🚫 Scanning impassable tiles...')
     const impassableFiles = await scanDirectory(join(GRASS_TILES_DIR, 'impassable'))
 
     // Generate the paths (without file extensions for texture loading)
@@ -109,16 +109,16 @@ async function analyzeGrassTiles() {
     await writeFile(OUTPUT_FILE, jsonContent, 'utf8')
 
     // Output summary
-    console.log('\n✅ Grass tiles analysis complete!')
-    console.log(`📄 Generated: ${OUTPUT_FILE}`)
-    console.log('\n📊 Summary:')
-    console.log(`   Passable tiles: ${passableFiles.length}`)
-    console.log(`   Decorative tiles: ${decorativeFiles.length}`)
-    console.log(`   Impassable tiles: ${impassableFiles.length}`)
-    console.log(`   Total tiles: ${grassTilesConfig.metadata.totalFiles}`)
+    window.logger('\n✅ Grass tiles analysis complete!')
+    window.logger(`📄 Generated: ${OUTPUT_FILE}`)
+    window.logger('\n📊 Summary:')
+    window.logger(`   Passable tiles: ${passableFiles.length}`)
+    window.logger(`   Decorative tiles: ${decorativeFiles.length}`)
+    window.logger(`   Impassable tiles: ${impassableFiles.length}`)
+    window.logger(`   Total tiles: ${grassTilesConfig.metadata.totalFiles}`)
 
     if (passableFiles.length === 0 && decorativeFiles.length === 0 && impassableFiles.length === 0) {
-      console.warn('\n⚠️  Warning: No image files found in any category!')
+      window.logger.warn('\n⚠️  Warning: No image files found in any category!')
     }
 
   } catch (error) {

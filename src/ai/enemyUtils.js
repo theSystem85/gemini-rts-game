@@ -17,7 +17,7 @@ export function isEnemyTo(unit, currentPlayer) {
 
 export function getClosestEnemyFactory(unit, factories, aiPlayerId) {
   if (!factories || !Array.isArray(factories)) {
-    console.warn('getClosestEnemyFactory: factories is undefined or not an array')
+    window.logger.warn('getClosestEnemyFactory: factories is undefined or not an array')
     return null
   }
 

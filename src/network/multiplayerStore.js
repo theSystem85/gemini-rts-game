@@ -152,7 +152,7 @@ async function requestServerInviteToken(partyId) {
     const payload = await response.json()
     return payload?.inviteToken || null
   } catch (err) {
-    console.warn('Could not sync invite token with STUN helper:', err)
+    window.logger.warn('Could not sync invite token with STUN helper:', err)
     return null
   }
 }
@@ -244,7 +244,7 @@ export async function regenerateAllInviteTokens() {
       try {
         await generateInviteForParty(party.partyId)
       } catch (err) {
-        console.warn(`Failed to regenerate invite token for party ${party.partyId}:`, err)
+        window.logger.warn(`Failed to regenerate invite token for party ${party.partyId}:`, err)
       }
     })
   

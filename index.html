@@ -691,7 +691,7 @@
         if (typeof sounds !== 'undefined' && sounds[soundName]) {
           const sound = sounds[soundName]
           sound.currentTime = 0
-          sound.play().catch(e => console.log('Error playing sound:', e))
+          sound.play().catch(e => window.logger('Error playing sound:', e))
         }
       }
     </script>

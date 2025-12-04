@@ -55,7 +55,7 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
   }
 
   if (impassableGrassCount > 0) {
-    console.log(`Occupancy map built: ${impassableGrassCount} impassable grass tiles found`)
+    window.logger(`Occupancy map built: ${impassableGrassCount} impassable grass tiles found`)
   }
 
   units.forEach(unit => {
@@ -99,7 +99,7 @@ export function initializeOccupancyMap(units, mapGrid, textureManager = null) {
 // Function to rebuild occupancy map after textures are loaded
 export function rebuildOccupancyMapWithTextures(units, mapGrid, textureManager) {
   if (textureManager && textureManager.allTexturesLoaded) {
-    console.log('Rebuilding occupancy map with loaded textures...')
+    window.logger('Rebuilding occupancy map with loaded textures...')
     return buildOccupancyMap(units, mapGrid, textureManager)
   }
   return null
@@ -264,13 +264,13 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
       typeof end.x !== 'number' || typeof end.y !== 'number' ||
       !isFinite(start.x) || !isFinite(start.y) ||
       !isFinite(end.x) || !isFinite(end.y)) {
-    console.warn('findPath: invalid coordinates provided', { start, end })
+    window.logger.warn('findPath: invalid coordinates provided', { start, end })
     return []
   }
 
   // Validate mapGrid
   if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0] || !Array.isArray(mapGrid[0])) {
-    console.warn('findPath: invalid mapGrid provided', { mapGrid })
+    window.logger.warn('findPath: invalid mapGrid provided', { mapGrid })
     return []
   }
 
@@ -281,7 +281,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     end.x >= mapGrid[0].length || end.y >= mapGrid.length
   ) {
     if (!pathfindingWarningShown) {
-      console.warn('findPath: start or destination tile out of bounds', { start, end })
+      window.logger.warn('findPath: start or destination tile out of bounds', { start, end })
       pathfindingWarningShown = true
     }
     return []
@@ -312,7 +312,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     } else {
       // Only show the warning once and include detailed information to help diagnose
       if (!pathfindingWarningShown) {
-        console.warn('findPath: destination tile not passable and no adjacent free tile found', {
+        window.logger.warn('findPath: destination tile not passable and no adjacent free tile found', {
           start,
           end,
           destinationType: destType,
@@ -555,7 +555,7 @@ function getLineTiles(start, end) {
       typeof end.x !== 'number' || typeof end.y !== 'number' ||
       !isFinite(start.x) || !isFinite(start.y) ||
       !isFinite(end.x) || !isFinite(end.y)) {
-    console.warn('Invalid coordinates passed to getLineTiles:', { start, end })
+    window.logger.warn('Invalid coordinates passed to getLineTiles:', { start, end })
     return []
   }
 
@@ -588,7 +588,7 @@ function getLineTiles(start, end) {
     if (isFinite(x) && isFinite(y)) {
       tiles.push({ x, y })
     } else {
-      console.warn('Invalid coordinates generated in getLineTiles:', { x, y, start, end })
+      window.logger.warn('Invalid coordinates generated in getLineTiles:', { x, y, start, end })
       break
     }
   }
@@ -711,7 +711,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   }
 
   if (!spawnPosition) {
-    console.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`)
+    window.logger.warn(`No available spawn position near factory/building at (${factory.x}, ${factory.y}) for unit type ${type}`)
     return null // Return null if no position is available
   }
 
@@ -803,7 +803,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
       newUnit.path = []
       newUnit.moveTarget = { x: rallyPointTarget.x, y: rallyPointTarget.y }
     } else {
-      console.warn(`Could not find path from spawn (${spawnPosition.x}, ${spawnPosition.y}) to rally point (${rallyPointTarget.x}, ${rallyPointTarget.y}) for ${type}`)
+      window.logger.warn(`Could not find path from spawn (${spawnPosition.x}, ${spawnPosition.y}) to rally point (${rallyPointTarget.x}, ${rallyPointTarget.y}) for ${type}`)
     }
   }
 

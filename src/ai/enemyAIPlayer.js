@@ -137,12 +137,12 @@ function ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvester
 function findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId) {
   // Validate inputs
   if (!buildingType) {
-    console.warn('findSimpleBuildingPosition called with undefined buildingType')
+    window.logger.warn('findSimpleBuildingPosition called with undefined buildingType')
     return null
   }
 
   if (!buildingData[buildingType]) {
-    console.warn(`findSimpleBuildingPosition called with unknown buildingType: ${buildingType}`)
+    window.logger.warn(`findSimpleBuildingPosition called with unknown buildingType: ${buildingType}`)
     return null
   }
 
@@ -567,7 +567,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
       let position = findBuildingPosition(buildingType, mapGrid, units, gameState.buildings, factories, aiPlayerId)
 
       if (!position) {
-        console.log(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
+        window.logger(`AI ${aiPlayerId} could not find position for ${buildingType}, trying simpler placement`)
         position = findSimpleBuildingPosition(buildingType, mapGrid, factories, aiPlayerId)
       }
 
@@ -587,7 +587,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
         aiFactory.buildingPosition = position // Store position for completion
         gameState[lastBuildingTimeKey] = now
       } else {
-        console.log(`AI ${aiPlayerId} failed to find any position for ${buildingType}`)
+        window.logger(`AI ${aiPlayerId} failed to find any position for ${buildingType}`)
         gameState[lastBuildingTimeKey] = now
       }
     }
@@ -697,7 +697,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
           setTimeout(attemptAssignment, 500)
         }
       } else {
-        console.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
+        window.logger.warn(`Failed to spawn ${aiPlayerId} ${unitType}`)
       }
     }
 

@@ -23,6 +23,12 @@ function isDebugEnabled() {
 // Cache the debug state at module load time
 const DEBUG_ENABLED = isDebugEnabled()
 
+// Store references to native console methods to avoid recursion after find/replace
+const nativeLog = console.log.bind(console)
+const nativeWarn = console.warn.bind(console)
+const nativeInfo = console.info.bind(console)
+const nativeDebug = console.debug.bind(console)
+
 /**
  * Logger function - works like console.log
  * Only outputs when ?debug is in the URL
@@ -30,7 +36,7 @@ const DEBUG_ENABLED = isDebugEnabled()
  */
 function logger(...args) {
   if (DEBUG_ENABLED) {
-    console.log(...args)
+    nativeLog(...args)
   }
 }
 
@@ -41,7 +47,7 @@ function logger(...args) {
  */
 logger.warn = function(...args) {
   if (DEBUG_ENABLED) {
-    console.warn(...args)
+    nativeWarn(...args)
   }
 }
 
@@ -52,7 +58,7 @@ logger.warn = function(...args) {
  */
 logger.info = function(...args) {
   if (DEBUG_ENABLED) {
-    console.info(...args)
+    nativeInfo(...args)
   }
 }
 
@@ -63,7 +69,7 @@ logger.info = function(...args) {
  */
 logger.debug = function(...args) {
   if (DEBUG_ENABLED) {
-    console.debug(...args)
+    nativeDebug(...args)
   }
 }
 

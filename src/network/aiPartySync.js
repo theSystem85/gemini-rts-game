@@ -108,7 +108,7 @@ export function reinitializeAiForParty(partyId) {
     })
   }
   
-  console.log(`AI reinitialized for party ${partyId}`)
+  window.logger(`AI reinitialized for party ${partyId}`)
 }
 
 // Set up the observer to reinitialize AI when a disconnect event occurs

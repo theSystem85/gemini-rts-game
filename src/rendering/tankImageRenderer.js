@@ -375,8 +375,8 @@ export function clearTankImageCache() {
 export function setRecoilOffset(variant, degrees) {
   if (tankImageConfig[variant]) {
     tankImageConfig[variant].recoilRotationOffset.degrees = degrees
-    console.log(`Recoil offset for ${variant} set to ${degrees} degrees`)
-    console.log('Fire your tank to see the recoil direction')
+    window.logger(`Recoil offset for ${variant} set to ${degrees} degrees`)
+    window.logger('Fire your tank to see the recoil direction')
   } else {
     console.error(`Invalid tank variant: ${variant}. Use tankV1, tankV2, or tankV3`)
   }
@@ -390,7 +390,7 @@ export function setRecoilOffset(variant, degrees) {
 export function getRecoilOffset(variant = 'tankV1') {
   if (tankImageConfig[variant]) {
     const offset = tankImageConfig[variant].recoilRotationOffset.degrees
-    console.log(`Current recoil offset for ${variant}: ${offset} degrees`)
+    window.logger(`Current recoil offset for ${variant}: ${offset} degrees`)
     return offset
   } else {
     console.error(`Invalid tank variant: ${variant}. Use tankV1, tankV2, or tankV3`)
@@ -405,12 +405,12 @@ export function getRecoilOffset(variant = 'tankV1') {
  * @param {number} step - Step size in degrees
  */
 export function testRecoilOffsets(variant = 'tankV1', startDegrees = 0, step = 45) {
-  console.log(`Testing recoil offsets for ${variant}:`)
+  window.logger(`Testing recoil offsets for ${variant}:`)
   for (let i = 0; i < 8; i++) {
     const degrees = (startDegrees + i * step) % 360
-    console.log(`  ${i + 1}. setRecoilOffset('${variant}', ${degrees}) - ${degrees}°`)
+    window.logger(`  ${i + 1}. setRecoilOffset('${variant}', ${degrees}) - ${degrees}°`)
   }
-  console.log('Copy and paste any command above to test that offset')
+  window.logger('Copy and paste any command above to test that offset')
 }
 
 // Expose functions to window for easy console access
@@ -421,9 +421,9 @@ if (typeof window !== 'undefined') {
     test: testRecoilOffsets
   }
 
-  console.log('🔫 Tank Recoil Debug Functions Available:')
-  console.log('  tankRecoilDebug.setOffset(variant, degrees) - Set recoil offset for variant')
-  console.log('  tankRecoilDebug.getOffset(variant) - Get current offset for variant')
-  console.log('  tankRecoilDebug.test(variant) - Show test values for variant')
-  console.log("Example: tankRecoilDebug.setOffset('tankV1', 180)")
+  window.logger('🔫 Tank Recoil Debug Functions Available:')
+  window.logger('  tankRecoilDebug.setOffset(variant, degrees) - Set recoil offset for variant')
+  window.logger('  tankRecoilDebug.getOffset(variant) - Get current offset for variant')
+  window.logger('  tankRecoilDebug.test(variant) - Show test values for variant')
+  window.logger("Example: tankRecoilDebug.setOffset('tankV1', 180)")
 }

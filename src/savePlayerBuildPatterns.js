@@ -9,7 +9,7 @@ function readHistoryFromStorage() {
     const savedHistory = localStorage.getItem('playerBuildHistory')
     return savedHistory ? JSON.parse(savedHistory) : []
   } catch (error) {
-    console.warn('Failed to parse playerBuildHistory from storage:', error)
+    window.logger.warn('Failed to parse playerBuildHistory from storage:', error)
     return []
   }
 }

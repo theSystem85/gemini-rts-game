@@ -75,7 +75,7 @@ export class Renderer {
     // Load tank images
     preloadTankImages((success) => {
       if (!success) {
-        console.warn('Tank images failed to load, falling back to original rendering')
+        window.logger.warn('Tank images failed to load, falling back to original rendering')
       }
       tankImagesLoaded = true
       checkAllLoaded()
@@ -83,7 +83,7 @@ export class Renderer {
 
     preloadHarvesterImage((success) => {
       if (!success) {
-        console.warn('Harvester image failed to load')
+        window.logger.warn('Harvester image failed to load')
       }
       harvesterLoaded = true
       checkAllLoaded()
@@ -91,7 +91,7 @@ export class Renderer {
 
     preloadRocketTankImage((success) => {
       if (!success) {
-        console.warn('Rocket tank image failed to load')
+        window.logger.warn('Rocket tank image failed to load')
       }
       rocketTankLoaded = true
       checkAllLoaded()
@@ -99,7 +99,7 @@ export class Renderer {
 
     preloadAmbulanceImage((success) => {
       if (!success) {
-        console.warn('Ambulance image failed to load')
+        window.logger.warn('Ambulance image failed to load')
       }
       ambulanceLoaded = true
       checkAllLoaded()
@@ -107,7 +107,7 @@ export class Renderer {
 
     preloadTankerTruckImage((success) => {
       if (!success) {
-        console.warn('Tanker truck image failed to load')
+        window.logger.warn('Tanker truck image failed to load')
       }
       tankerLoaded = true
       checkAllLoaded()
@@ -115,7 +115,7 @@ export class Renderer {
 
     preloadRecoveryTankImage((success) => {
       if (!success) {
-        console.warn('Recovery tank image failed to load')
+        window.logger.warn('Recovery tank image failed to load')
       }
       recoveryTankLoaded = true
       checkAllLoaded()
@@ -123,7 +123,7 @@ export class Renderer {
 
     preloadAmmunitionTruckImage((success) => {
       if (!success) {
-        console.warn('Ammunition truck image failed to load')
+        window.logger.warn('Ammunition truck image failed to load')
       }
       ammunitionLoaded = true
       checkAllLoaded()
@@ -131,7 +131,7 @@ export class Renderer {
 
     preloadHowitzerImage((success) => {
       if (!success) {
-        console.warn('Howitzer image failed to load')
+        window.logger.warn('Howitzer image failed to load')
       }
       howitzerLoaded = true
       checkAllLoaded()
@@ -139,7 +139,7 @@ export class Renderer {
 
     preloadMineLayerImage((success) => {
       if (!success) {
-        console.warn('Mine layer image failed to load')
+        window.logger.warn('Mine layer image failed to load')
       }
       mineLayerLoaded = true
       checkAllLoaded()
@@ -147,7 +147,7 @@ export class Renderer {
 
     preloadMineSweeperImage((success) => {
       if (!success) {
-        console.warn('Mine sweeper image failed to load')
+        window.logger.warn('Mine sweeper image failed to load')
       }
       mineSweeperLoaded = true
       checkAllLoaded()

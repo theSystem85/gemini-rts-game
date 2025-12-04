@@ -837,7 +837,7 @@ export function getConfigsByCategory(category) {
 export function getConfigValue(configId) {
   const entry = configRegistry[configId]
   if (!entry) {
-    console.warn(`Config not found: ${configId}`)
+    window.logger.warn(`Config not found: ${configId}`)
     return null
   }
   return entry.get()
@@ -852,12 +852,12 @@ export function getConfigValue(configId) {
 export function setConfigValue(configId, value) {
   const entry = configRegistry[configId]
   if (!entry) {
-    console.warn(`Config not found: ${configId}`)
+    window.logger.warn(`Config not found: ${configId}`)
     return false
   }
 
   if (!entry.set) {
-    console.warn(`Config is read-only: ${configId}`)
+    window.logger.warn(`Config is read-only: ${configId}`)
     return false
   }
 

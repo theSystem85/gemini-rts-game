@@ -304,7 +304,7 @@ export class MinimapRenderer {
         renderHeight
       )
     } catch (error) {
-      console.warn('Failed to draw video frame:', error)
+      window.logger.warn('Failed to draw video frame:', error)
       // Fallback to loading text
       minimapCtx.fillStyle = '#ff0000'
       minimapCtx.font = '12px Arial'

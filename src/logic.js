@@ -99,7 +99,7 @@ export function triggerExplosion(
 
       // Award experience if unit dies from explosion
       if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
-        // console.log(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
+        // window.logger(`💥 Unit killed by explosion: ${unit.type} (killed by ${shooter.type})`)
         awardExperience(shooter, unit)
       }
 
@@ -380,7 +380,7 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
 
 export function findAdjacentTile(factory, mapGrid) {
   if (!factory || !mapGrid) {
-    console.warn('findAdjacentTile called with invalid parameters:', { factory, mapGrid: !!mapGrid })
+    window.logger.warn('findAdjacentTile called with invalid parameters:', { factory, mapGrid: !!mapGrid })
     return null
   }
 

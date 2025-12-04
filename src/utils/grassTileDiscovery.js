@@ -21,22 +21,22 @@ export async function discoverGrassTiles() {
       throw new Error('Invalid grass tiles configuration: missing required path arrays')
     }
 
-    console.log('🌱 Loaded grass tiles configuration:')
-    console.log(`   Passable: ${config.passablePaths.length} tiles`)
-    console.log(`   Decorative: ${config.decorativePaths.length} tiles`)
-    console.log(`   Impassable: ${config.impassablePaths.length} tiles`)
-    console.log(`   Total: ${config.passablePaths.length + config.decorativePaths.length + config.impassablePaths.length} tiles`)
-    console.log(`   Generated: ${config.metadata?.generatedAt || 'Unknown'}`)
+    window.logger('🌱 Loaded grass tiles configuration:')
+    window.logger(`   Passable: ${config.passablePaths.length} tiles`)
+    window.logger(`   Decorative: ${config.decorativePaths.length} tiles`)
+    window.logger(`   Impassable: ${config.impassablePaths.length} tiles`)
+    window.logger(`   Total: ${config.passablePaths.length + config.decorativePaths.length + config.impassablePaths.length} tiles`)
+    window.logger(`   Generated: ${config.metadata?.generatedAt || 'Unknown'}`)
 
     // Validate that we have tiles in each category
     if (config.passablePaths.length === 0) {
-      console.warn('⚠️  No passable grass tiles found - this may cause rendering issues')
+      window.logger.warn('⚠️  No passable grass tiles found - this may cause rendering issues')
     }
     if (config.decorativePaths.length === 0) {
-      console.warn('⚠️  No decorative grass tiles found - reduced variety')
+      window.logger.warn('⚠️  No decorative grass tiles found - reduced variety')
     }
     if (config.impassablePaths.length === 0) {
-      console.warn('⚠️  No impassable grass tiles found - reduced variety')
+      window.logger.warn('⚠️  No impassable grass tiles found - reduced variety')
     }
 
     return {

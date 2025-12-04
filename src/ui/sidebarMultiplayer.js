@@ -37,7 +37,7 @@ export function getStoredPlayerAlias() {
   try {
     return localStorage.getItem(PLAYER_ALIAS_STORAGE_KEY) || ''
   } catch (e) {
-    console.warn('Failed to read player alias from localStorage:', e)
+    window.logger.warn('Failed to read player alias from localStorage:', e)
     return ''
   }
 }
@@ -54,7 +54,7 @@ export function setStoredPlayerAlias(alias) {
       localStorage.removeItem(PLAYER_ALIAS_STORAGE_KEY)
     }
   } catch (e) {
-    console.warn('Failed to save player alias to localStorage:', e)
+    window.logger.warn('Failed to save player alias to localStorage:', e)
   }
 }
 
@@ -315,7 +315,7 @@ function handleKickClick(partyState, button) {
     }
     // If successful, the ownership change event will refresh the sidebar
   }).catch(err => {
-    console.warn('Kick failed:', err)
+    window.logger.warn('Kick failed:', err)
     showHostNotification(`Failed to kick player from ${partyState.partyId}`)
     button.disabled = false
     button.textContent = 'Kick'
@@ -328,7 +328,7 @@ async function tryCopyToClipboard(text) {
       await navigator.clipboard.writeText(text)
       return true
     } catch (err) {
-      console.warn('Clipboard write failed:', err)
+      window.logger.warn('Clipboard write failed:', err)
     }
   }
   return false
@@ -426,7 +426,7 @@ function showQRCodeModal(partyState, inviteUrl) {
     qrCanvas.className = 'multiplayer-qr-modal__qr-canvas'
     qrContainer.appendChild(qrCanvas)
   } catch (err) {
-    console.warn('Failed to generate QR code:', err)
+    window.logger.warn('Failed to generate QR code:', err)
     qrContainer.innerHTML = '<p class="multiplayer-qr-modal__error">Failed to generate QR code</p>'
   }
   

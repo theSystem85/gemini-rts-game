@@ -632,7 +632,7 @@ export class CheatSystem {
           setTimeout(() => manageAIRecoveryTanks(units, gameState, gameState.mapGrid, now), 200)
           setTimeout(() => manageAIRecoveryTanks(units, gameState, gameState.mapGrid, now), 500)
 
-          console.log(`✓ Triggered immediate recovery tank assignment for ${spawnedRecoveryTanks.length} cheat-spawned tanks`)
+          window.logger(`✓ Triggered immediate recovery tank assignment for ${spawnedRecoveryTanks.length} cheat-spawned tanks`)
         }).catch(err => {
           console.error('Failed to load recovery tank management:', err)
         })

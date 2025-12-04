@@ -60,7 +60,7 @@ export class TextureManager {
           cb(null)
         }
         delete this.loadingImages[baseName]
-        console.warn(`Failed to load image: ${baseName}. Tried extensions: ${extensions.join(', ')}`)
+        window.logger.warn(`Failed to load image: ${baseName}. Tried extensions: ${extensions.join(', ')}`)
         // Show which image maps contain this asset for debugging
         if (buildingImageMap && Object.values(buildingImageMap).includes(baseName)) {
           console.info('Note: This image is referenced in buildingImageMap')
@@ -293,7 +293,7 @@ export class TextureManager {
 
         // Bounds check
         if (selectedIndex >= this.tileTextureCache[tileType].length) {
-          console.warn(`Impassable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
+          window.logger.warn(`Impassable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
           return 0 // Default to first tile
         }
 
@@ -309,7 +309,7 @@ export class TextureManager {
 
         // Bounds check
         if (selectedIndex >= this.tileTextureCache[tileType].length) {
-          console.warn(`Decorative index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
+          window.logger.warn(`Decorative index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
           return 0 // Default to first tile
         }
 
@@ -322,7 +322,7 @@ export class TextureManager {
 
       // Bounds check
       if (selectedIndex >= this.tileTextureCache[tileType].length) {
-        console.warn(`Passable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
+        window.logger.warn(`Passable index out of bounds: ${selectedIndex} >= ${this.tileTextureCache[tileType].length}`)
         return 0 // Default to first tile
       }
 

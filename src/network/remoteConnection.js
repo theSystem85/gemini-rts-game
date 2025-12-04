@@ -99,19 +99,19 @@ class RemoteConnection {
   }
 
   send(data) {
-    console.log('[RemoteConnection] send() called, dataChannel state:', this.dataChannel?.readyState)
+    window.logger('[RemoteConnection] send() called, dataChannel state:', this.dataChannel?.readyState)
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       try {
         const payload = typeof data === 'string' ? data : JSON.stringify(data)
         this.dataChannel.send(payload)
         // Track bytes sent for network stats
         updateNetworkStats(payload.length, 0)
-        console.log('[RemoteConnection] Data sent successfully')
+        window.logger('[RemoteConnection] Data sent successfully')
       } catch (err) {
-        console.warn('Failed to send remote data:', err)
+        window.logger.warn('Failed to send remote data:', err)
       }
     } else {
-      console.warn('[RemoteConnection] Cannot send - dataChannel not open:', this.dataChannel?.readyState)
+      window.logger.warn('[RemoteConnection] Cannot send - dataChannel not open:', this.dataChannel?.readyState)
     }
   }
 
@@ -129,7 +129,7 @@ class RemoteConnection {
         peerId: this.peerId,
         candidate: JSON.stringify(event.candidate)
       }).catch((err) => {
-        console.warn('Failed to send ICE candidate to STUN helper:', err)
+        window.logger.warn('Failed to send ICE candidate to STUN helper:', err)
       })
     })
 
@@ -208,7 +208,7 @@ class RemoteConnection {
         this.pollErrorCount = 0
       } catch (err) {
         this.pollErrorCount += 1
-        console.warn('Remote session polling failed:', err)
+        window.logger.warn('Remote session polling failed:', err)
         if (this.pollErrorCount >= 3) {
           this._updateStatus(RemoteConnectionStatus.FAILED)
           this._stopPolling()
@@ -248,7 +248,7 @@ class RemoteConnection {
           this._processPendingCandidates()
         }
       } catch (err) {
-        console.warn('Failed to apply remote answer:', err)
+        window.logger.warn('Failed to apply remote answer:', err)
       }
     }
 
@@ -285,7 +285,7 @@ class RemoteConnection {
     }
 
     if (!candidate.sdpMid && candidate.sdpMLineIndex == null) {
-      console.warn('Skipping ICE candidate without sdpMid/mLineIndex', candidate)
+      window.logger.warn('Skipping ICE candidate without sdpMid/mLineIndex', candidate)
       return
     }
 
@@ -305,7 +305,7 @@ class RemoteConnection {
     try {
       await this.pc.addIceCandidate(candidate)
     } catch (err) {
-      console.warn('Failed to add ICE candidate to peer connection:', err)
+      window.logger.warn('Failed to add ICE candidate to peer connection:', err)
     }
   }
 
@@ -316,11 +316,11 @@ class RemoteConnection {
 
     this.pendingRemoteCandidates.forEach((candidate) => {
       if (!candidate.sdpMid && candidate.sdpMLineIndex == null) {
-        console.warn('Skipping queued ICE candidate without sdpMid/mLineIndex', candidate)
+        window.logger.warn('Skipping queued ICE candidate without sdpMid/mLineIndex', candidate)
         return
       }
       this.pc.addIceCandidate(candidate).catch((err) => {
-        console.warn('Failed to add queued ICE candidate:', err)
+        window.logger.warn('Failed to add queued ICE candidate:', err)
       })
     })
     this.pendingRemoteCandidates = []

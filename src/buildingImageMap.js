@@ -47,7 +47,7 @@ export function getBuildingImage(buildingType, callback) {
   const imagePath = buildingImageMap[buildingType]
 
   if (!imagePath) {
-    console.warn(`No image mapping found for building type: ${buildingType}`)
+    window.logger.warn(`No image mapping found for building type: ${buildingType}`)
     if (callback) callback(null)
     return null
   }

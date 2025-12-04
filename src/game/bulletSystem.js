@@ -498,7 +498,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
                 unit.health -= actualDamage
               }
 
-              // console.log(`💥 Unit hit: ${unit.type} took ${actualDamage} damage, health: ${unit.health}/${unit.maxHealth}`)
+              // window.logger(`💥 Unit hit: ${unit.type} took ${actualDamage} damage, health: ${unit.health}/${unit.maxHealth}`)
 
               // Update speed modifier based on new health level
               updateUnitSpeedModifier(unit)

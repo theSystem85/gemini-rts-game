@@ -26,7 +26,7 @@ export function logPerformance(functionToWrap, printEachCall = false, fnName = f
     }
 
     if (printEachCall) {
-      console.log(`${fnName} took ${JSON.stringify(window.performanceStatistics[fnName])}, args: ${JSON.stringify(args)}, `)
+      window.logger(`${fnName} took ${JSON.stringify(window.performanceStatistics[fnName])}, args: ${JSON.stringify(args)}, `)
     }
 
     return result

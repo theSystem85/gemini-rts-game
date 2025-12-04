@@ -791,10 +791,10 @@ export class MouseHandler {
     // Handle mine deployment for Mine Layer units (Ctrl+Click)
     let mineDeploymentHandled = false
     if (selectedUnits.length > 0 && !this.wasDragging && e.ctrlKey && mineInput.hasMineLayerSelected(selectedUnits)) {
-      console.log('Mine deployment triggered: ctrlKey=', e.ctrlKey, 'hasMineLayerSelected=', mineInput.hasMineLayerSelected(selectedUnits))
+      window.logger('Mine deployment triggered: ctrlKey=', e.ctrlKey, 'hasMineLayerSelected=', mineInput.hasMineLayerSelected(selectedUnits))
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
-      console.log('Deploying mine at tile:', tileX, tileY)
+      window.logger('Deploying mine at tile:', tileX, tileY)
       mineInput.handleMineLayerClick(selectedUnits, tileX, tileY, e.shiftKey)
       mineDeploymentHandled = true
       playSound('movement', 0.5)

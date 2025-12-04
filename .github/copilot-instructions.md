@@ -155,7 +155,7 @@ gameCanvas.addEventListener('click', (event) => {
 // Consistent error handling pattern
 function processGameCommand(command) {
   if (!command || typeof command !== 'object') {
-    console.warn('Invalid command:', command)
+    window.logger.warn('Invalid command:', command)
     return false
   }
   

@@ -23,7 +23,7 @@ try {
   const versionPath = resolve(__dirname, '..', 'src', 'version.json')
   writeFileSync(versionPath, `${JSON.stringify(versionInfo, null, 2)}\n`, 'utf8')
 
-  console.log(`✅ Wrote commit hash: ${commitHash}`)
+  window.logger(`✅ Wrote commit hash: ${commitHash}`)
 } catch (error) {
   console.error('Failed to write commit hash to version.json:', error.message)
   process.exitCode = 1

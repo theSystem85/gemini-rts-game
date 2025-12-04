@@ -8,7 +8,7 @@ export function addMoneyIndicator() {
   // Get the money bar container that's already in the HTML
   const moneyBarContainer = document.getElementById('moneyBarContainer')
   if (!moneyBarContainer) {
-    console.warn('Money bar container not found!')
+    window.logger.warn('Money bar container not found!')
     return
   }
 

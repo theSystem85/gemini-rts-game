@@ -119,7 +119,7 @@ class HostSession {
       updateNetworkStats(byteLength, 0)
       this.dataChannel.send(message)
     } catch (err) {
-      console.warn('Failed to send host status message:', err)
+      window.logger.warn('Failed to send host status message:', err)
     }
   }
 
@@ -149,7 +149,7 @@ class HostSession {
         candidate: JSON.stringify(event.candidate),
         origin: 'host'
       }).catch((err) => {
-        console.warn('Failed to post host ICE candidate:', err)
+        window.logger.warn('Failed to post host ICE candidate:', err)
       })
     })
 
@@ -183,7 +183,7 @@ class HostSession {
     }
     this.dataChannel = channel
     this.dataChannel.addEventListener('message', (event) => {
-      console.log('[HostSession] Raw message received from client:', event.data?.substring?.(0, 200) || event.data)
+      window.logger('[HostSession] Raw message received from client:', event.data?.substring?.(0, 200) || event.data)
       // Track bytes received
       const byteLength = typeof event.data === 'string' ? event.data.length : event.data.byteLength || 0
       updateNetworkStats(0, byteLength)
@@ -193,12 +193,12 @@ class HostSession {
         try {
           payload = JSON.parse(payload)
         } catch (err) {
-          console.warn('[HostSession] Failed to parse message as JSON:', err)
+          window.logger.warn('[HostSession] Failed to parse message as JSON:', err)
           payload = null
         }
       }
       if (payload) {
-        console.log('[HostSession] Parsed payload type:', payload.type)
+        window.logger('[HostSession] Parsed payload type:', payload.type)
         this.onControlMessage?.(this, payload)
       }
     })
@@ -217,7 +217,7 @@ class HostSession {
       return
     }
     this.pc.addIceCandidate(candidate).catch((err) => {
-      console.warn('Failed to add ICE candidate to host session:', err)
+      window.logger.warn('Failed to add ICE candidate to host session:', err)
     })
   }
 
@@ -227,7 +227,7 @@ class HostSession {
     }
     this.pendingCandidates.forEach((candidate) => {
       this.pc.addIceCandidate(candidate).catch((err) => {
-        console.warn('Failed to add queued host ICE candidate:', err)
+        window.logger.warn('Failed to add queued host ICE candidate:', err)
       })
     })
     this.pendingCandidates = []
@@ -312,7 +312,7 @@ class HostInviteMonitor {
         await this._pollSessions()
       } catch (err) {
         // Ensure polling continues even if there's an unexpected error
-        console.warn('Poll tick error:', err)
+        window.logger.warn('Poll tick error:', err)
       }
       if (this.running) {
         this.pollHandle = setTimeout(tick, this.pollInterval)
@@ -336,7 +336,7 @@ class HostInviteMonitor {
       const entries = await fetchPendingSessions(this.inviteToken)
       entries.forEach((entry) => this._processEntry(entry))
     } catch (err) {
-      console.warn('Host polling failed:', err)
+      window.logger.warn('Host polling failed:', err)
     }
   }
 
@@ -357,7 +357,7 @@ class HostInviteMonitor {
       })
       this.sessions.set(entry.peerId, session)
       session.answerOffer(entry.offer).catch((err) => {
-        console.warn('Failed to answer remote offer:', err)
+        window.logger.warn('Failed to answer remote offer:', err)
       })
     } else if (entry.alias && entry.alias !== session.alias) {
       session.alias = entry.alias
@@ -422,11 +422,11 @@ class HostInviteMonitor {
       return
     }
     
-    console.log('[Host WebRTC] Received control message:', payload.type, payload)
+    window.logger('[Host WebRTC] Received control message:', payload.type, payload)
     
     // Handle game command synchronization messages
     if (payload.type === 'game-command') {
-      console.log('[Host WebRTC] Forwarding game-command to handleReceivedCommand')
+      window.logger('[Host WebRTC] Forwarding game-command to handleReceivedCommand')
       handleReceivedCommand(payload, session.sourceId)
       return
     }
@@ -522,7 +522,7 @@ export async function kickPlayer(partyId) {
       // Small delay to ensure message is sent before disconnect
       await new Promise(resolve => setTimeout(resolve, 100))
     } catch (err) {
-      console.warn('Failed to send kick message:', err)
+      window.logger.warn('Failed to send kick message:', err)
     }
   }
   
@@ -556,7 +556,7 @@ export async function kickPlayer(partyId) {
     watchHostInvite({ partyId, inviteToken: getPartyState(partyId)?.inviteToken })
     showHostNotification(`New invite ready for party ${partyId}`)
   } catch (err) {
-    console.warn('Failed to generate new invite after kick:', err)
+    window.logger.warn('Failed to generate new invite after kick:', err)
   }
   
   return true

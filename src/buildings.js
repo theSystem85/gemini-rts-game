@@ -519,7 +519,7 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
 
   // Validate mapGrid parameter
   if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0]) {
-    console.warn('canPlaceBuilding: Invalid mapGrid provided', { mapGrid, type, tileX, tileY })
+    window.logger.warn('canPlaceBuilding: Invalid mapGrid provided', { mapGrid, type, tileX, tileY })
     return false
   }
 

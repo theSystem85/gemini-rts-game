@@ -53,7 +53,7 @@ function getDesaturatedCanvas(image) {
     }
     ctx.putImageData(imageData, 0, 0)
   } catch (e) {
-    console.warn('Failed to process wreck image for grayscale', e)
+    window.logger.warn('Failed to process wreck image for grayscale', e)
   }
 
   grayscaleCache.set(image, canvas)

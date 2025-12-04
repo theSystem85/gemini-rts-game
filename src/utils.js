@@ -227,12 +227,12 @@ export function debugAddExperience(amount = 1000) {
       selectedUnits = window.debugGetSelectedUnits()
     }
   } catch (e) {
-    console.log('Using fallback method to access selected units')
+    window.logger('Using fallback method to access selected units')
   }
 
   if (selectedUnits.length === 0) {
-    console.log('No units selected. Please select some units first.')
-    console.log('Try clicking on some tanks, then run debugAddExperience(500) again')
+    window.logger('No units selected. Please select some units first.')
+    window.logger('Try clicking on some tanks, then run debugAddExperience(500) again')
     return
   }
 
@@ -242,13 +242,13 @@ export function debugAddExperience(amount = 1000) {
       const oldExp = unit.experience
       unit.experience += amount
       checkLevelUp(unit)
-      console.log(`✅ Added ${amount} experience to ${unit.type} (Level ${unit.level}, Experience: ${oldExp} → ${unit.experience})`)
+      window.logger(`✅ Added ${amount} experience to ${unit.type} (Level ${unit.level}, Experience: ${oldExp} → ${unit.experience})`)
 
       // Force a progress calculation
       const progress = getExperienceProgress(unit)
-      console.log(`📊 Experience progress: ${Math.round(progress * 100)}%`)
+      window.logger(`📊 Experience progress: ${Math.round(progress * 100)}%`)
     } else {
-      console.log('❌ Harvesters cannot gain experience')
+      window.logger('❌ Harvesters cannot gain experience')
     }
   })
 }
@@ -263,16 +263,16 @@ export function debugShowUnitStats() {
         initializeUnitLeveling(unit)
         const progress = getExperienceProgress(unit)
         const nextLevelExp = getExperienceRequiredForLevel(unit.level, unit.baseCost)
-        console.log(`=== ${unit.type} (ID: ${unit.id}) ===`)
-        console.log(`Level: ${unit.level}/3`)
-        console.log(`Experience: ${unit.experience}/${nextLevelExp || 'MAX'}`)
-        console.log(`Progress: ${Math.round(progress * 100)}%`)
-        console.log(`Range Multiplier: ${unit.rangeMultiplier || 1}x`)
-        console.log(`Armor: ${unit.armor || 1}`)
-        console.log(`Fire Rate Multiplier: ${unit.fireRateMultiplier || 1}x`)
-        console.log(`Self Repair: ${unit.selfRepair ? 'YES' : 'NO'}`)
+        window.logger(`=== ${unit.type} (ID: ${unit.id}) ===`)
+        window.logger(`Level: ${unit.level}/3`)
+        window.logger(`Experience: ${unit.experience}/${nextLevelExp || 'MAX'}`)
+        window.logger(`Progress: ${Math.round(progress * 100)}%`)
+        window.logger(`Range Multiplier: ${unit.rangeMultiplier || 1}x`)
+        window.logger(`Armor: ${unit.armor || 1}`)
+        window.logger(`Fire Rate Multiplier: ${unit.fireRateMultiplier || 1}x`)
+        window.logger(`Self Repair: ${unit.selfRepair ? 'YES' : 'NO'}`)
       } else {
-        console.log(`${unit.type} (ID: ${unit.id}) - Harvesters don't level up`)
+        window.logger(`${unit.type} (ID: ${unit.id}) - Harvesters don't level up`)
       }
     })
   }
@@ -290,10 +290,10 @@ export function debugForceShowExperienceBars() {
         if (unit.experience === 0) {
           unit.experience = 100 // Give a small amount of experience to make bar visible
         }
-        console.log(`${unit.type}: Level ${unit.level}, Experience ${unit.experience}`)
+        window.logger(`${unit.type}: Level ${unit.level}, Experience ${unit.experience}`)
       }
     })
-    console.log('🔧 Forced experience bars to show on all combat units')
+    window.logger('🔧 Forced experience bars to show on all combat units')
   }
 }
 
@@ -342,8 +342,8 @@ export function debugSpawnEnemyUnit(unitType = 'tank') {
       }
     }
 
-    console.log(`🎯 Spawned enemy ${unitType} at (500, 500) for testing`)
-    console.log('💡 Use your tanks to destroy it and gain experience!')
+    window.logger(`🎯 Spawned enemy ${unitType} at (500, 500) for testing`)
+    window.logger('💡 Use your tanks to destroy it and gain experience!')
 
     return enemyUnit
   }
@@ -357,7 +357,7 @@ export function debugTestExperienceAwarding() {
     const selectedUnits = window.debugGetSelectedUnits()
 
     if (selectedUnits.length === 0) {
-      console.log('❌ No units selected. Please select a unit first.')
+      window.logger('❌ No units selected. Please select a unit first.')
       return
     }
 
@@ -371,19 +371,19 @@ export function debugTestExperienceAwarding() {
 
     selectedUnits.forEach(unit => {
       if (unit.type !== 'harvester') {
-        console.log(`🧪 Testing experience awarding for ${unit.type}...`)
+        window.logger(`🧪 Testing experience awarding for ${unit.type}...`)
 
         // Force initialize leveling system first
         initializeUnitLeveling(unit)
-        console.log(`📊 Before: Level ${unit.level}, Experience ${unit.experience}, BaseCost ${unit.baseCost}`)
+        window.logger(`📊 Before: Level ${unit.level}, Experience ${unit.experience}, BaseCost ${unit.baseCost}`)
 
         const oldExp = unit.experience
         const oldLevel = unit.level
 
         awardExperience(unit, fakeKilledUnit)
 
-        console.log(`📊 After: Level ${unit.level}, Experience ${unit.experience}`)
-        console.log(`✅ Change: Experience +${unit.experience - oldExp}, Level ${oldLevel} → ${unit.level}`)
+        window.logger(`📊 After: Level ${unit.level}, Experience ${unit.experience}`)
+        window.logger(`✅ Change: Experience +${unit.experience - oldExp}, Level ${oldLevel} → ${unit.level}`)
       }
     })
   }
@@ -395,7 +395,7 @@ export function debugTestExperienceAwarding() {
 export function debugListAllUnits() {
   if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
     const units = window.gameInstance.units
-    console.log(`📋 Total units in game: ${units.length}`)
+    window.logger(`📋 Total units in game: ${units.length}`)
 
     const unitsByOwner = {}
     units.forEach(unit => {
@@ -407,7 +407,7 @@ export function debugListAllUnits() {
     })
 
     Object.keys(unitsByOwner).forEach(owner => {
-      console.log(`👥 ${owner}: ${unitsByOwner[owner].join(', ')}`)
+      window.logger(`👥 ${owner}: ${unitsByOwner[owner].join(', ')}`)
     })
 
     return units
@@ -429,13 +429,13 @@ export function debugInitializeAllUnits() {
 
         if (!hadLeveling) {
           count++
-          console.log(`🔧 Initialized leveling for ${unit.type} (Owner: ${unit.owner})`)
+          window.logger(`🔧 Initialized leveling for ${unit.type} (Owner: ${unit.owner})`)
         }
       }
     })
 
-    console.log(`✅ Initialized experience system for ${count} units`)
-    console.log(`📊 Total combat units: ${units.filter(u => u.type !== 'harvester').length}`)
+    window.logger(`✅ Initialized experience system for ${count} units`)
+    window.logger(`📊 Total combat units: ${units.filter(u => u.type !== 'harvester').length}`)
   }
 }
 

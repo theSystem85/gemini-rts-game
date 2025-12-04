@@ -36,7 +36,7 @@ export function preloadTurretImages(callback) {
     loadedCount++
     if (loadedCount + errorCount >= totalImages) {
       turretImagesPreloaded = true
-      console.log(`Turret images loaded: ${loadedCount}/${totalImages}`)
+      window.logger(`Turret images loaded: ${loadedCount}/${totalImages}`)
       if (callback) callback(errorCount === 0)
     }
   }

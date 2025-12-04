@@ -585,7 +585,7 @@ export class UIRenderer {
           await gameInstance.resetGame()
           showNotification('Game restarted while preserving win/loss statistics')
         } else {
-          console.warn('Game instance not found or resetGame method missing, falling back to page reload')
+          window.logger.warn('Game instance not found or resetGame method missing, falling back to page reload')
           window.location.reload()
         }
       } catch (err) {

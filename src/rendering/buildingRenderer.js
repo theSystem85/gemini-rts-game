@@ -38,7 +38,7 @@ export class BuildingRenderer {
     this.wrenchIcon = new Image()
     this.wrenchIcon.src = '/cursors/repair.svg'
     this.wrenchIcon.onerror = () => {
-      console.warn('Failed to load repair cursor icon for repair animation')
+      window.logger.warn('Failed to load repair cursor icon for repair animation')
       this.wrenchIcon = null
     }
   }

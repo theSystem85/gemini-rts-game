@@ -12,11 +12,11 @@ export function printTankImageConfig(variant = 'all') {
   const config = getTankImageConfig()
 
   if (variant === 'all') {
-    console.log('Current Tank Image Configuration:')
-    console.log(JSON.stringify(config, null, 2))
+    window.logger('Current Tank Image Configuration:')
+    window.logger(JSON.stringify(config, null, 2))
   } else if (config[variant]) {
-    console.log(`Current Tank Image Configuration for ${variant}:`)
-    console.log(JSON.stringify(config[variant], null, 2))
+    window.logger(`Current Tank Image Configuration for ${variant}:`)
+    window.logger(JSON.stringify(config[variant], null, 2))
   } else {
     console.error(`Invalid variant: ${variant}. Use 'tankV1', 'tankV2', 'tankV3', or 'all'`)
   }

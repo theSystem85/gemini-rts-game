@@ -46,7 +46,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     if (import.meta.env.PROD) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.warn('Service worker registration failed', err)
+        window.logger.warn('Service worker registration failed', err)
       })
       return
     }
@@ -54,11 +54,11 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(registrations => {
       registrations.forEach(registration => {
         registration.unregister().catch(err => {
-          console.warn('Service worker unregistration failed', err)
+          window.logger.warn('Service worker unregistration failed', err)
         })
       })
     }).catch(err => {
-      console.warn('Service worker lookup failed', err)
+      window.logger.warn('Service worker lookup failed', err)
     })
 
     if (typeof caches !== 'undefined' && caches?.keys) {
@@ -67,11 +67,11 @@ if ('serviceWorker' in navigator) {
           .filter(name => name.startsWith('codeandconquer-cache-'))
           .forEach(name => {
             caches.delete(name).catch(err => {
-              console.warn('Failed to delete service worker cache', name, err)
+              window.logger.warn('Failed to delete service worker cache', name, err)
             })
           })
       }).catch(err => {
-        console.warn('Failed to enumerate service worker caches', err)
+        window.logger.warn('Failed to enumerate service worker caches', err)
       })
     }
   })
@@ -976,7 +976,7 @@ function loadPersistedSettings() {
       seedInput.value = storedSeed
     }
   } catch (e) {
-    console.warn('Failed to load map seed from localStorage:', e)
+    window.logger.warn('Failed to load map seed from localStorage:', e)
   }
 
   const widthInput = document.getElementById('mapWidthTiles')
@@ -990,7 +990,7 @@ function loadPersistedSettings() {
       widthTiles = sanitizeMapDimension(storedWidth, DEFAULT_MAP_TILES_X)
     }
   } catch (e) {
-    console.warn('Failed to load map width from localStorage:', e)
+    window.logger.warn('Failed to load map width from localStorage:', e)
   }
 
   try {
@@ -999,7 +999,7 @@ function loadPersistedSettings() {
       heightTiles = sanitizeMapDimension(storedHeight, DEFAULT_MAP_TILES_Y)
     }
   } catch (e) {
-    console.warn('Failed to load map height from localStorage:', e)
+    window.logger.warn('Failed to load map height from localStorage:', e)
   }
 
   if (widthInput) {
@@ -1016,13 +1016,13 @@ function loadPersistedSettings() {
   try {
     localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
   } catch (e) {
-    console.warn('Failed to save map width to localStorage:', e)
+    window.logger.warn('Failed to save map width to localStorage:', e)
   }
 
   try {
     localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
   } catch (e) {
-    console.warn('Failed to save map height to localStorage:', e)
+    window.logger.warn('Failed to save map height to localStorage:', e)
   }
 
   try {
@@ -1036,7 +1036,7 @@ function loadPersistedSettings() {
       }
     }
   } catch (e) {
-    console.warn('Failed to load player count from localStorage:', e)
+    window.logger.warn('Failed to load player count from localStorage:', e)
   }
 
   try {
@@ -1047,7 +1047,7 @@ function loadPersistedSettings() {
       gameState.shadowOfWarEnabled = false
     }
   } catch (e) {
-    console.warn('Failed to load shadow of war setting from localStorage:', e)
+    window.logger.warn('Failed to load shadow of war setting from localStorage:', e)
   }
 }
 
@@ -1093,11 +1093,11 @@ class Game {
 
         // Load textures and rebuild occupancy map once they're loaded
         preloadTileTextures(() => {
-          console.log('Textures loaded, rebuilding occupancy map...')
+          window.logger('Textures loaded, rebuilding occupancy map...')
           const newOccupancyMap = rebuildOccupancyMapWithTextures(units, mapGrid, getTextureManager())
           if (newOccupancyMap) {
             gameState.occupancyMap = newOccupancyMap
-            console.log('Occupancy map updated with impassable grass tiles')
+            window.logger('Occupancy map updated with impassable grass tiles')
           }
         })
 
@@ -1300,7 +1300,7 @@ class Game {
           try {
             localStorage.setItem(PLAYER_COUNT_STORAGE_KEY, value.toString())
           } catch (err) {
-            console.warn('Failed to save player count to localStorage:', err)
+            window.logger.warn('Failed to save player count to localStorage:', err)
           }
           // Note: Map will be regenerated on next shuffle
         } else {
@@ -1319,7 +1319,7 @@ class Game {
         try {
           localStorage.setItem(MAP_SEED_STORAGE_KEY, e.target.value)
         } catch (err) {
-          console.warn('Failed to save map seed to localStorage:', err)
+          window.logger.warn('Failed to save map seed to localStorage:', err)
         }
       })
     }
@@ -1333,7 +1333,7 @@ class Game {
         try {
           localStorage.setItem(storageKey, sanitized.toString())
         } catch (err) {
-          console.warn('Failed to save map dimension to localStorage:', err)
+          window.logger.warn('Failed to save map dimension to localStorage:', err)
         }
       })
     }
@@ -1346,7 +1346,7 @@ class Game {
       try {
         localStorage.setItem(MAP_SEED_STORAGE_KEY, seed)
       } catch (err) {
-        console.warn('Failed to save map seed to localStorage:', err)
+        window.logger.warn('Failed to save map seed to localStorage:', err)
       }
 
       const widthTiles = mapWidthInput ? sanitizeMapDimension(mapWidthInput.value, MAP_TILES_X) : MAP_TILES_X
@@ -1362,13 +1362,13 @@ class Game {
       try {
         localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, widthTiles.toString())
       } catch (err) {
-        console.warn('Failed to save map width to localStorage:', err)
+        window.logger.warn('Failed to save map width to localStorage:', err)
       }
 
       try {
         localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, heightTiles.toString())
       } catch (err) {
-        console.warn('Failed to save map height to localStorage:', err)
+        window.logger.warn('Failed to save map height to localStorage:', err)
       }
 
       const { width, height } = setMapDimensions(widthTiles, heightTiles)
@@ -1471,7 +1471,7 @@ class Game {
         try {
           localStorage.setItem(SHADOW_OF_WAR_STORAGE_KEY, enabled.toString())
         } catch (err) {
-          console.warn('Failed to save shadow of war setting to localStorage:', err)
+          window.logger.warn('Failed to save shadow of war setting to localStorage:', err)
         }
         updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
       })
@@ -1565,7 +1565,7 @@ class Game {
   }
 
   async resetGame() {
-    console.log('Resetting game...')
+    window.logger('Resetting game...')
 
     // Stop existing game loop to prevent conflicts
     if (this.gameLoop) {
@@ -1671,7 +1671,7 @@ class Game {
         milestoneSystem.reset()
       }
     } catch (err) {
-      console.warn('Could not reset milestone system:', err)
+      window.logger.warn('Could not reset milestone system:', err)
     }
 
     // Reset UI elements
@@ -1686,7 +1686,7 @@ class Game {
     // Start new game loop with a small delay to ensure cleanup is complete
     setTimeout(() => {
       this.startGameLoop()
-      console.log('Game reset complete!')
+      window.logger('Game reset complete!')
     }, 100)
   }
 
@@ -1793,7 +1793,7 @@ export const bullets = []
  * @param {number} playerCount - Number of players (affects road generation)
  */
 export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCount) {
-  console.log('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles, 'playerCount:', playerCount)
+  window.logger('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles, 'playerCount:', playerCount)
   
   // Update map dimensions in config
   setMapDimensions(widthTiles, heightTiles)
@@ -1827,7 +1827,7 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   // Initialize shadow of war for the new map
   initializeShadowOfWar(gameState, mapGrid)
   
-  console.log('[Main] Client map regeneration complete')
+  window.logger('[Main] Client map regeneration complete')
 }
 
 // Add buildingCosts based on our building data
@@ -1874,7 +1874,7 @@ window.clearSoundCache = clearSoundCache
 
 // Preload all sound files for optimal performance (async)
 preloadSounds().then(() => {
-  console.log('Sound preloading completed')
+  window.logger('Sound preloading completed')
 }).catch(e => {
   console.error('Sound preloading failed:', e)
 })
@@ -1882,10 +1882,10 @@ preloadSounds().then(() => {
 // Export functions for backward compatibility - these are now handled by ProductionController
 export function updateVehicleButtonStates() {
   // This function is now handled by ProductionController
-  console.warn('updateVehicleButtonStates called from main.js - should use ProductionController instead')
+  window.logger.warn('updateVehicleButtonStates called from main.js - should use ProductionController instead')
 }
 
 export function updateBuildingButtonStates() {
   // This function is now handled by ProductionController
-  console.warn('updateBuildingButtonStates called from main.js - should use ProductionController instead')
+  window.logger.warn('updateBuildingButtonStates called from main.js - should use ProductionController instead')
 }

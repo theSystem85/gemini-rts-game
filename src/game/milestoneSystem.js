@@ -87,7 +87,7 @@ export class MilestoneSystem {
    */
   unlockAdvancedTechnology() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock advanced technology')
+      window.logger.warn('ProductionController not set, cannot unlock advanced technology')
       return
     }
 
@@ -104,7 +104,7 @@ export class MilestoneSystem {
    */
   unlockBasicUnits(gameState) {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock basic units')
+      window.logger.warn('ProductionController not set, cannot unlock basic units')
       return
     }
 
@@ -117,7 +117,7 @@ export class MilestoneSystem {
    */
   unlockHarvester() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock harvester')
+      window.logger.warn('ProductionController not set, cannot unlock harvester')
       return
     }
 
@@ -129,7 +129,7 @@ export class MilestoneSystem {
    */
   unlockRocketTank() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock rocket tank')
+      window.logger.warn('ProductionController not set, cannot unlock rocket tank')
       return
     }
 
@@ -141,7 +141,7 @@ export class MilestoneSystem {
    */
   unlockTankV3() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock tank-v3')
+      window.logger.warn('ProductionController not set, cannot unlock tank-v3')
       return
     }
 
@@ -150,7 +150,7 @@ export class MilestoneSystem {
 
   unlockAmbulance() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock ambulance')
+      window.logger.warn('ProductionController not set, cannot unlock ambulance')
       return
     }
     this.productionController.unlockUnitType('ambulance')
@@ -158,7 +158,7 @@ export class MilestoneSystem {
 
   unlockTankerTruck() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock tanker truck')
+      window.logger.warn('ProductionController not set, cannot unlock tanker truck')
       return
     }
     this.productionController.unlockUnitType('tankerTruck')
@@ -166,7 +166,7 @@ export class MilestoneSystem {
 
   unlockRecoveryTank() {
     if (!this.productionController) {
-      console.warn('ProductionController not set, cannot unlock recovery tank')
+      window.logger.warn('ProductionController not set, cannot unlock recovery tank')
       return
     }
     this.productionController.unlockUnitType('recoveryTank')
@@ -323,7 +323,7 @@ export class MilestoneSystem {
 
     const milestone = this.milestoneConfig[milestoneId]
     if (!milestone) {
-      console.warn(`Unknown milestone: ${milestoneId}`)
+      window.logger.warn(`Unknown milestone: ${milestoneId}`)
       return
     }
 

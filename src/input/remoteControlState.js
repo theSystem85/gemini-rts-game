@@ -243,7 +243,7 @@ function broadcastRemoteControlState() {
       timestamp: Date.now()
     })
   } catch (err) {
-    console.warn('Failed to broadcast remote control state:', err)
+    window.logger.warn('Failed to broadcast remote control state:', err)
   }
 }
 

@@ -66,20 +66,20 @@ function syncLoadedMapSettings(widthTiles, heightTiles, mapSeed) {
   try {
     localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, widthTiles.toString())
   } catch (err) {
-    console.warn('Failed to persist loaded map width to localStorage:', err)
+    window.logger.warn('Failed to persist loaded map width to localStorage:', err)
   }
 
   try {
     localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, heightTiles.toString())
   } catch (err) {
-    console.warn('Failed to persist loaded map height to localStorage:', err)
+    window.logger.warn('Failed to persist loaded map height to localStorage:', err)
   }
 
   if (typeof mapSeed === 'string') {
     try {
       localStorage.setItem(MAP_SEED_STORAGE_KEY, mapSeed)
     } catch (err) {
-      console.warn('Failed to persist loaded map seed to localStorage:', err)
+      window.logger.warn('Failed to persist loaded map seed to localStorage:', err)
     }
   }
 }
@@ -150,7 +150,7 @@ export function getSaveGames() {
             description: null
           })
         } catch (err) {
-          console.warn('Error processing saved game:', err)
+          window.logger.warn('Error processing saved game:', err)
         }
       }
     }
@@ -436,7 +436,7 @@ export function loadGame(key) {
     const missionId = key.slice(BUILTIN_SAVE_PREFIX.length)
     const mission = getBuiltinMissionById(missionId)
     if (!mission) {
-      console.warn('Built-in mission not found:', missionId)
+      window.logger.warn('Built-in mission not found:', missionId)
       return
     }
     saveObj = {
@@ -445,18 +445,18 @@ export function loadGame(key) {
     }
   } else {
     if (typeof localStorage === 'undefined') {
-      console.warn('localStorage is not available, unable to load save:', key)
+      window.logger.warn('localStorage is not available, unable to load save:', key)
       return
     }
     const raw = localStorage.getItem(key)
     if (!raw) {
-      console.warn('Save game not found:', key)
+      window.logger.warn('Save game not found:', key)
       return
     }
     try {
       saveObj = JSON.parse(raw)
     } catch (err) {
-      console.warn('Failed to parse saved game metadata:', err)
+      window.logger.warn('Failed to parse saved game metadata:', err)
       return
     }
   }
@@ -468,7 +468,7 @@ export function loadGame(key) {
     } else if (saveObj.state && typeof saveObj.state === 'object') {
       stateString = JSON.stringify(saveObj.state)
     } else {
-      console.warn('Invalid save game format for key:', key)
+      window.logger.warn('Invalid save game format for key:', key)
       return
     }
 
@@ -476,7 +476,7 @@ export function loadGame(key) {
     try {
       loaded = JSON.parse(stateString)
     } catch (err) {
-      console.warn('Failed to parse saved game state:', err)
+      window.logger.warn('Failed to parse saved game state:', err)
       return
     }
 
@@ -791,7 +791,7 @@ export function loadGame(key) {
         if (u.armor && u.armor > 1) hydrated.armor = u.armor
         if (u.selfRepair) hydrated.selfRepair = u.selfRepair
 
-        console.log(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
+        window.logger(`🔄 Loaded ${hydrated.type}: Level ${hydrated.level}, Experience ${hydrated.experience}`)
       }
 
         if (hydrated.type === 'mineLayer') {
@@ -1180,7 +1180,7 @@ export function loadGame(key) {
       // Refresh the sidebar UI after tokens are regenerated
       refreshSidebarMultiplayer()
     }).catch(err => {
-      console.warn('Failed to regenerate multiplayer tokens on load:', err)
+      window.logger.warn('Failed to regenerate multiplayer tokens on load:', err)
     })
 
     showNotification('Game loaded: ' + (saveObj.label || key))
@@ -1189,7 +1189,7 @@ export function loadGame(key) {
 
 export function deleteGame(key) {
   if (key.startsWith(BUILTIN_SAVE_PREFIX)) {
-    console.warn('Built-in missions cannot be deleted:', key)
+    window.logger.warn('Built-in missions cannot be deleted:', key)
     return
   }
   if (typeof localStorage !== 'undefined') {

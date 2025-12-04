@@ -72,7 +72,7 @@ function hideMapSettingsForClient() {
     mapSettingsContent.style.display = 'none'
   }
   
-  console.log('[RemoteInviteLanding] Map settings hidden for client, ore/shadow controls disabled')
+  window.logger('[RemoteInviteLanding] Map settings hidden for client, ore/shadow controls disabled')
 }
 
 /**
@@ -120,7 +120,7 @@ function showMapSettings() {
     mapSettingsToggle.style.display = ''
   }
   
-  console.log('[RemoteInviteLanding] Map settings restored, ore/shadow controls re-enabled')
+  window.logger('[RemoteInviteLanding] Map settings restored, ore/shadow controls re-enabled')
 }
 
 function getInviteTokenFromUrl() {
@@ -133,7 +133,7 @@ function getInviteTokenFromUrl() {
     const token = params.get('invite')
     return token ? token.trim() : null
   } catch (err) {
-    console.warn('Failed to parse invite token:', err)
+    window.logger.warn('Failed to parse invite token:', err)
     return null
   }
 }
@@ -181,7 +181,7 @@ function centerCameraOnPartyBase(partyId) {
   )
   
   if (!factory) {
-    console.warn('[RemoteInviteLanding] Could not find factory for party:', partyId)
+    window.logger.warn('[RemoteInviteLanding] Could not find factory for party:', partyId)
     return
   }
   
@@ -209,7 +209,7 @@ function centerCameraOnPartyBase(partyId) {
     MAP_TILES_Y * TILE_SIZE - viewportHeight
   ))
   
-  console.log('[RemoteInviteLanding] Camera centered on party base:', partyId, 
+  window.logger('[RemoteInviteLanding] Camera centered on party base:', partyId, 
     'at', factory.x, factory.y, 
     'scroll:', gameState.scrollOffset.x, gameState.scrollOffset.y)
 }
@@ -221,7 +221,7 @@ function centerCameraOnPartyBase(partyId) {
  * @param {HTMLElement} overlay - The invite overlay element
  */
 function handleKickedFromSession(payload, overlay) {
-  console.log('[RemoteInviteLanding] Kicked from session:', payload)
+  window.logger('[RemoteInviteLanding] Kicked from session:', payload)
   
   // Stop the remote connection
   const connection = getActiveRemoteConnection()
@@ -252,7 +252,7 @@ function handleKickedFromSession(payload, overlay) {
   // Show the kicked modal
   showKickedModal(payload)
   
-  console.log('[RemoteInviteLanding] Showing kicked modal')
+  window.logger('[RemoteInviteLanding] Showing kicked modal')
 }
 
 /**
@@ -367,7 +367,7 @@ function convertToStandaloneHost() {
     })
   }
   
-  console.log('[RemoteInviteLanding] Converted to standalone host mode')
+  window.logger('[RemoteInviteLanding] Converted to standalone host mode')
 }
 
 export function initRemoteInviteLanding() {
@@ -455,7 +455,7 @@ export function initRemoteInviteLanding() {
     if (partyId) {
       setClientPartyId(partyId)
       gameState.humanPlayer = partyId
-      console.log('[RemoteInviteLanding] Client party set to:', partyId)
+      window.logger('[RemoteInviteLanding] Client party set to:', partyId)
       
       // Start client state sync to send updates to host
       startGameStateSync()

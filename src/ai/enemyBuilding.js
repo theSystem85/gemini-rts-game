@@ -464,12 +464,12 @@ function directionToClosestOre(x, y, mapGrid) {
 function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, factories, aiPlayerId, minSpaceBetweenBuildings = 2) {
   // Validate inputs
   if (!buildingType) {
-    console.warn('fallbackBuildingPosition called with undefined buildingType')
+    window.logger.warn('fallbackBuildingPosition called with undefined buildingType')
     return null
   }
 
   if (!buildingData[buildingType]) {
-    console.warn(`fallbackBuildingPosition called with unknown buildingType: ${buildingType}`)
+    window.logger.warn(`fallbackBuildingPosition called with unknown buildingType: ${buildingType}`)
     return null
   }
 

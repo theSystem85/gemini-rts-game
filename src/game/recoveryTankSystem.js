@@ -440,7 +440,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
           repairFinishedSoundPlayed: false,
           repairStartSoundPlayed: false
         }
-        // console.log(`Recovery tank starting repair of ${target.type}: health=${target.health}/${target.maxHealth}, cost=${cost}, duration=${buildDuration}ms`)
+        // window.logger(`Recovery tank starting repair of ${target.type}: health=${target.health}/${target.maxHealth}, cost=${cost}, duration=${buildDuration}ms`)
       }
     }
 
@@ -453,7 +453,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
       if (target.health <= 0 ||
           targetDistance > SERVICE_SERVING_RANGE ||
           (target.movement && target.movement.isMoving)) {
-        // console.log(`Recovery tank repair cancelled: target invalid`)
+        // window.logger(`Recovery tank repair cancelled: target invalid`)
         tank.repairTarget = null
         tank.repairData = null
         tank.repairStarted = false
@@ -492,7 +492,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
           gameState.money -= spend
           target.health = Math.min(target.health + heal, target.maxHealth)
 
-          // console.log(`Repairing ${target.type}: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)} (+${heal.toFixed(1)} HP) cost: ${spend.toFixed(2)}`)
+          // window.logger(`Repairing ${target.type}: ${oldHealth.toFixed(1)} -> ${target.health.toFixed(1)} (+${heal.toFixed(1)} HP) cost: ${spend.toFixed(2)}`)
 
           // Handle repair sounds with cooldown to prevent looping
           if (!repairData.repairStartSoundPlayed) {
@@ -506,7 +506,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
               if (!repairData.repairFinishedSoundPlayed) {
                 playSound('repairFinished', 0.7, 1, true)
                 repairData.repairFinishedSoundPlayed = true
-                // console.log(`Recovery tank completed repair of ${target.type}`)
+                // window.logger(`Recovery tank completed repair of ${target.type}`)
               }
               tank.repairTarget = null
               tank.repairData = null
@@ -520,7 +520,7 @@ export const updateRecoveryTankLogic = logPerformance(function(units, gameState,
             repairData.soundCooldown -= delta
           }
         } else {
-          // console.log(`Recovery tank repair paused: insufficient funds (need ${spend.toFixed(2)}, have ${gameState.money.toFixed(2)})`)
+          // window.logger(`Recovery tank repair paused: insufficient funds (need ${spend.toFixed(2)}, have ${gameState.money.toFixed(2)})`)
         }
       }
     }

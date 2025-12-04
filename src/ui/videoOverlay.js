@@ -189,7 +189,7 @@ export class VideoOverlay {
     video.addEventListener('error', (e) => {
       // Only log/handle error if video is currently active and not during cleanup
       if (this.isPlaying && this.currentVideo === video && video.src) {
-        console.warn('Video playback error (video may have ended normally):', {
+        window.logger.warn('Video playback error (video may have ended normally):', {
           error: e,
           videoSrc: video.src,
           networkState: video.networkState,
@@ -252,7 +252,7 @@ export class VideoOverlay {
 
           const onError = (e) => {
             clearTimeout(timeout)
-            console.warn('Video failed to load:', videoPath, e)
+            window.logger.warn('Video failed to load:', videoPath, e)
             video.removeEventListener('canplay', onLoad)
             video.removeEventListener('error', onError)
             reject(e)
@@ -281,7 +281,7 @@ export class VideoOverlay {
           videoLoaded = true
           break
         } catch (e) {
-          console.warn(`Failed to load video from ${path}:`, e)
+          window.logger.warn(`Failed to load video from ${path}:`, e)
         }
       }
 
@@ -324,7 +324,7 @@ export class VideoOverlay {
             audioLoaded = true
             break
           } catch (e) {
-            console.warn(`Failed to load audio from ${path}:`, e)
+            window.logger.warn(`Failed to load audio from ${path}:`, e)
             if (this.currentAudio) {
               this.currentAudio = null
             }
@@ -332,7 +332,7 @@ export class VideoOverlay {
         }
 
         if (!audioLoaded) {
-          console.warn('Failed to load audio from all attempted paths, video will play without sound')
+          window.logger.warn('Failed to load audio from all attempted paths, video will play without sound')
           this.currentAudio = null
         }
       }
@@ -351,9 +351,9 @@ export class VideoOverlay {
         console.error('Video play() failed:', playError)
         // Try to handle specific play errors
         if (playError.name === 'NotAllowedError') {
-          console.warn('Video autoplay blocked by browser - user interaction required')
+          window.logger.warn('Video autoplay blocked by browser - user interaction required')
         } else if (playError.name === 'NotSupportedError') {
-          console.warn('Video format not supported')
+          window.logger.warn('Video format not supported')
         }
         throw playError // Re-throw to be caught by outer try-catch
       }
@@ -364,7 +364,7 @@ export class VideoOverlay {
         setTimeout(() => {
           if (this.isPlaying && this.currentAudio) {
             this.currentAudio.play().catch(e => {
-              console.warn('Audio playback failed:', e)
+              window.logger.warn('Audio playback failed:', e)
             })
           }
         }, 50)
@@ -404,7 +404,7 @@ export class VideoOverlay {
         this.currentVideo.removeAttribute('src')
         this.currentVideo.load() // Reset the video element
       } catch (e) {
-        console.warn('Error during video cleanup:', e)
+        window.logger.warn('Error during video cleanup:', e)
       } finally {
         this.currentVideo = null
       }
@@ -416,7 +416,7 @@ export class VideoOverlay {
         this.currentAudio.pause()
         this.currentAudio.currentTime = 0
       } catch (e) {
-        console.warn('Error during audio cleanup:', e)
+        window.logger.warn('Error during audio cleanup:', e)
       } finally {
         this.currentAudio = null
       }

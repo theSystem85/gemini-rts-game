@@ -32,7 +32,7 @@ function relativeName(file) {
 
 async function main() {
   const files = walk(ROOT_DIR)
-  console.log(`Processing ${files.length} image files...`)
+  window.logger(`Processing ${files.length} image files...`)
 
   // Process all images to TILE_SIZE and get their buffers
   const imageBuffers = []
@@ -93,7 +93,7 @@ async function main() {
 
   // Save the JSON mapping
   fs.writeFileSync(OUT_JSON, JSON.stringify(map, null, 2))
-  console.log(`Generated ${OUT_IMAGE} and ${OUT_JSON}`)
+  window.logger(`Generated ${OUT_IMAGE} and ${OUT_JSON}`)
 }
 
 main().catch(err => {

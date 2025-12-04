@@ -131,7 +131,7 @@ function requestTechTreeSync() {
     // Delay slightly to ensure all buildings are fully initialized
     setTimeout(() => {
       productionControllerRef.syncTechTreeWithBuildings()
-      console.log('[GameCommandSync] Tech tree synced with existing buildings')
+      window.logger('[GameCommandSync] Tech tree synced with existing buildings')
     }, 100)
   }
 }
@@ -241,7 +241,7 @@ function hasActiveRemoteSession() {
   const result = isRemote || Boolean(activeConn)
   // Debug log to understand session state
   if (!result) {
-    console.log('[hasActiveRemoteSession] No active session - isRemote:', isRemote, 'activeConn:', activeConn)
+    window.logger('[hasActiveRemoteSession] No active session - isRemote:', isRemote, 'activeConn:', activeConn)
   }
   return result
 }
@@ -287,7 +287,7 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
   
   // Only log non-snapshot commands to reduce console noise
   if (commandType !== COMMAND_TYPES.GAME_STATE_SNAPSHOT) {
-    console.log('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
+    window.logger('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
   }
   
   if (isHost()) {
@@ -296,16 +296,16 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
   } else {
     // Remote client sends to host
     const remoteConn = getActiveRemoteConnection()
-    console.log('[GameCommandSync] Client sending to host, connection:', remoteConn ? 'active' : 'null')
+    window.logger('[GameCommandSync] Client sending to host, connection:', remoteConn ? 'active' : 'null')
     if (remoteConn) {
       try {
         remoteConn.send(command)
-        console.log('[GameCommandSync] Command sent successfully')
+        window.logger('[GameCommandSync] Command sent successfully')
       } catch (err) {
-        console.warn('Failed to send game command to host:', err)
+        window.logger.warn('Failed to send game command to host:', err)
       }
     } else {
-      console.warn('[GameCommandSync] No active remote connection to send command')
+      window.logger.warn('[GameCommandSync] No active remote connection to send command')
     }
   }
 }
@@ -349,7 +349,7 @@ export function handleReceivedCommand(command, _sourceId) {
   // Validate the command comes from an authorized party
   const sourceParty = command.sourcePartyId
   if (!sourceParty) {
-    console.warn('Received game command without source party')
+    window.logger.warn('Received game command without source party')
     return
   }
   
@@ -358,19 +358,19 @@ export function handleReceivedCommand(command, _sourceId) {
     // Only accept commands from the party that the remote player controls (aiActive === false)
     const partyState = gameState.partyStates?.find(p => p.partyId === sourceParty)
     
-    console.log('[Host] Received command from party:', sourceParty, 'type:', command.commandType)
-    console.log('[Host] PartyState found:', partyState ? { partyId: partyState.partyId, aiActive: partyState.aiActive, owner: partyState.owner } : 'NOT FOUND')
-    console.log('[Host] All partyStates:', gameState.partyStates?.map(p => ({ partyId: p.partyId, aiActive: p.aiActive })))
+    window.logger('[Host] Received command from party:', sourceParty, 'type:', command.commandType)
+    window.logger('[Host] PartyState found:', partyState ? { partyId: partyState.partyId, aiActive: partyState.aiActive, owner: partyState.owner } : 'NOT FOUND')
+    window.logger('[Host] All partyStates:', gameState.partyStates?.map(p => ({ partyId: p.partyId, aiActive: p.aiActive })))
     
     if (!partyState) {
-      console.warn('Received command from unknown party:', sourceParty)
+      window.logger.warn('Received command from unknown party:', sourceParty)
       return
     }
     
     // Only reject if aiActive is explicitly true (AI controlled)
     // Accept if aiActive is false or undefined (human controlled)
     if (partyState.aiActive === true) {
-      console.warn('Received command from AI-controlled party:', sourceParty)
+      window.logger.warn('Received command from AI-controlled party:', sourceParty)
       return
     }
     
@@ -379,7 +379,7 @@ export function handleReceivedCommand(command, _sourceId) {
       ...command,
       receivedAt: Date.now()
     })
-    console.log('[Host] Command queued for processing, queue length:', pendingRemoteCommands.length)
+    window.logger('[Host] Command queued for processing, queue length:', pendingRemoteCommands.length)
     
     // Re-broadcast to other peers so they stay in sync
     broadcastToAllPeers(command)
@@ -396,7 +396,7 @@ export function handleReceivedCommand(command, _sourceId) {
     try {
       listener(command)
     } catch (err) {
-      console.warn('Command listener error:', err)
+      window.logger.warn('Command listener error:', err)
     }
   })
 }
@@ -908,7 +908,7 @@ function syncClientMap(seed, width, height, playerCount) {
     return true
   }
   
-  console.log('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height, 'playerCount:', playerCount)
+  window.logger('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height, 'playerCount:', playerCount)
   
   // Update map dimensions in config module
   setMapDimensions(width, height)
@@ -925,10 +925,10 @@ function syncClientMap(seed, width, height, playerCount) {
   // Call main.js function to regenerate map with host's seed, dimensions, and player count
   if (typeof regenerateMapForClient === 'function') {
     regenerateMapForClient(seed, width, height, playerCount)
-    console.log('[GameCommandSync] Client map regenerated with host seed:', seed, 'playerCount:', playerCount)
+    window.logger('[GameCommandSync] Client map regenerated with host seed:', seed, 'playerCount:', playerCount)
   } else {
     // Fallback: Initialize empty map grid if regenerateMapForClient is not available
-    console.warn('[GameCommandSync] regenerateMapForClient not available, creating empty map grid')
+    window.logger.warn('[GameCommandSync] regenerateMapForClient not available, creating empty map grid')
     gameState.mapGrid = []
     for (let y = 0; y < height; y++) {
       gameState.mapGrid[y] = []
@@ -941,7 +941,7 @@ function syncClientMap(seed, width, height, playerCount) {
   // Initialize occupancyMap
   if (!gameState.occupancyMap || gameState.occupancyMap.length !== height ||
       (gameState.occupancyMap[0] && gameState.occupancyMap[0].length !== width)) {
-    console.log('[GameCommandSync] Initializing client occupancyMap:', width, 'x', height)
+    window.logger('[GameCommandSync] Initializing client occupancyMap:', width, 'x', height)
     gameState.occupancyMap = []
     for (let y = 0; y < height; y++) {
       gameState.occupancyMap[y] = []
@@ -967,7 +967,7 @@ function applyGameStateSnapshot(snapshot) {
   // On first snapshot, initialize client with their partyId
   if (!clientInitialized && clientPartyId) {
     gameState.humanPlayer = clientPartyId
-    console.log('[GameCommandSync] Client initialized as party:', clientPartyId)
+    window.logger('[GameCommandSync] Client initialized as party:', clientPartyId)
     
     // Mark as initialized so we only do this once
     clientInitialized = true
@@ -1197,14 +1197,14 @@ function applyGameStateSnapshot(snapshot) {
     const mapGridReady = gameState.mapGrid && gameState.mapGrid.length > 0 && 
                          Array.isArray(gameState.mapGrid[0]) && gameState.mapGrid[0].length > 0
     if (newBuildings.length > 0 && mapGridReady) {
-      console.log('[GameCommandSync] Placing', newBuildings.length, 'new buildings in client mapGrid')
+      window.logger('[GameCommandSync] Placing', newBuildings.length, 'new buildings in client mapGrid')
       newBuildings.forEach(building => {
         // Verify building position is within map bounds before placing
         if (building.y >= 0 && building.y + (building.height || 1) <= gameState.mapGrid.length &&
             building.x >= 0 && building.x + (building.width || 1) <= (gameState.mapGrid[0]?.length || 0)) {
           placeBuilding(building, gameState.mapGrid, gameState.occupancyMap)
         } else {
-          console.warn('[GameCommandSync] Building outside map bounds:', building.type, 'at', building.x, building.y)
+          window.logger.warn('[GameCommandSync] Building outside map bounds:', building.type, 'at', building.x, building.y)
         }
       })
       
@@ -1214,7 +1214,7 @@ function applyGameStateSnapshot(snapshot) {
         requestTechTreeSync()
       }
     } else if (newBuildings.length > 0) {
-      console.warn('[GameCommandSync] Cannot place buildings - mapGrid not ready. newBuildings:', newBuildings.length, 'mapGrid length:', gameState.mapGrid?.length)
+      window.logger.warn('[GameCommandSync] Cannot place buildings - mapGrid not ready. newBuildings:', newBuildings.length, 'mapGrid length:', gameState.mapGrid?.length)
     }
   }
   
@@ -1485,7 +1485,7 @@ export function stopGameStateSync() {
  * This ensures the first snapshot includes all map configuration data
  */
 export function notifyClientConnected() {
-  console.log('[GameCommandSync] New client connected, first snapshot will include full map data')
+  window.logger('[GameCommandSync] New client connected, first snapshot will include full map data')
   // The mapSynced flag is only used on clients, not on the host
   // The host always includes map data in snapshots anyway
   // This function serves as a hook for any host-side initialization when a client connects

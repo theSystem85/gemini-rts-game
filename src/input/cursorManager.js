@@ -683,7 +683,7 @@ export class CursorManager {
   updateGuardMode(isActive) {
     if (this.isGuardMode !== isActive) {
       this.isGuardMode = isActive
-      console.log(`[GMF] Guard mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
+      window.logger(`[GMF] Guard mode ${isActive ? 'ENABLED' : 'DISABLED'}`)
     }
   }
 

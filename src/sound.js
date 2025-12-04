@@ -24,7 +24,7 @@ function loadVolumeFromStorage() {
       }
     }
   } catch (e) {
-    console.warn('Failed to load volume from localStorage:', e)
+    window.logger.warn('Failed to load volume from localStorage:', e)
   }
   return MASTER_VOLUME // Fall back to default
 }
@@ -34,7 +34,7 @@ function saveVolumeToStorage(volume) {
   try {
     localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString())
   } catch (e) {
-    console.warn('Failed to save volume to localStorage:', e)
+    window.logger.warn('Failed to save volume to localStorage:', e)
   }
 }
 
@@ -291,8 +291,8 @@ async function preloadAllSounds() {
   //   allSoundFiles.add('sound/music/' + filename)
   // })
 
-  console.log(`Preloading ${allSoundFiles.size} unique sound files into audio buffer cache...`)
-  console.log(`Background music (${backgroundMusicFiles.length} files) will be loaded on demand`)
+  window.logger(`Preloading ${allSoundFiles.size} unique sound files into audio buffer cache...`)
+  window.logger(`Background music (${backgroundMusicFiles.length} files) will be loaded on demand`)
 
   const loadPromises = []
 
@@ -300,7 +300,7 @@ async function preloadAllSounds() {
     // Use Web Audio API buffer cache for sound effects only
     loadPromises.push(
       getCachedAudioBuffer(soundPath).catch(e => {
-        console.warn(`Failed to preload sound buffer: ${soundPath}`, e)
+        window.logger.warn(`Failed to preload sound buffer: ${soundPath}`, e)
       })
     )
   })
@@ -308,7 +308,7 @@ async function preloadAllSounds() {
   // Wait for all sound effects to preload
   try {
     await Promise.allSettled(loadPromises)
-    console.log(`Sound effects preloaded into buffer cache! ${audioBufferCache.size} buffers cached.`)
+    window.logger(`Sound effects preloaded into buffer cache! ${audioBufferCache.size} buffers cached.`)
   } catch (error) {
     console.error('Error during sound preloading:', error)
   }
@@ -378,7 +378,7 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, op
       return null
     })
   } else {
-    console.warn(`No sound files found for event: ${eventName}`)
+    window.logger.warn(`No sound files found for event: ${eventName}`)
   }
 
   // Fallback beep sound.
@@ -454,11 +454,11 @@ export function playPositionalSound(eventName, x, y, volume = 1.0, throttleSecon
 
 // Test function for narrated sound stacking (can be called from browser console)
 export function testNarratedSounds() {
-  console.log('Testing narrated sound stacking...')
+  window.logger('Testing narrated sound stacking...')
   playSound('constructionStarted', 1.0, 0, true)
   playSound('constructionComplete', 1.0, 0, true)
   playSound('unitReady01', 1.0, 0, true)
-  console.log('Queued 3 narrated sounds. They should play one after another.')
+  window.logger('Queued 3 narrated sounds. They should play one after another.')
 }
 
 // --- Background Music Functionality ---
@@ -478,7 +478,7 @@ export async function initBackgroundMusic() {
   if (!backgroundMusicFiles || backgroundMusicFiles.length === 0) return
 
   backgroundMusicLoading = true
-  console.log('Loading background music on demand...')
+  window.logger('Loading background music on demand...')
 
   const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
   const musicPath = 'sound/music/' + file
@@ -513,9 +513,9 @@ export async function initBackgroundMusic() {
 
       // Cache the loaded element
       soundElementCache.set(musicPath, element)
-      console.log('Background music loaded and cached successfully')
+      window.logger('Background music loaded and cached successfully')
     } else {
-      console.log('Background music retrieved from cache')
+      window.logger('Background music retrieved from cache')
     }
 
     // Use the cached element directly (no cloning for background music)
@@ -540,13 +540,13 @@ export async function toggleBackgroundMusic() {
     if (bgMusicAudio.paused) {
       try {
         await bgMusicAudio.play()
-        console.log('Background music resumed from cache')
+        window.logger('Background music resumed from cache')
       } catch (e) {
         console.error('Error resuming background music:', e)
       }
     } else {
       bgMusicAudio.pause()
-      console.log('Background music paused')
+      window.logger('Background music paused')
     }
   }
 }
@@ -558,13 +558,13 @@ export function pauseAllSounds() {
     try {
       bgMusicAudio.pause()
     } catch (e) {
-      console.warn('Error pausing background music:', e)
+      window.logger.warn('Error pausing background music:', e)
     }
   }
 
   if (audioContext && audioContext.state === 'running') {
     audioContext.suspend().catch(e => {
-      console.warn('Failed to suspend audio context:', e)
+      window.logger.warn('Failed to suspend audio context:', e)
     })
   }
 }
@@ -573,13 +573,13 @@ export function pauseAllSounds() {
 export function resumeAllSounds() {
   if (bgMusicAudio && bgMusicAudio.paused) {
     bgMusicAudio.play().catch(e => {
-      console.warn('Error resuming background music:', e)
+      window.logger.warn('Error resuming background music:', e)
     })
   }
 
   if (audioContext && audioContext.state === 'suspended') {
     audioContext.resume().catch(e => {
-      console.warn('Failed to resume audio context:', e)
+      window.logger.warn('Failed to resume audio context:', e)
     })
   }
 }
@@ -619,14 +619,14 @@ export function getSoundCacheStatus() {
   const cachedBuffers = Array.from(audioBufferCache.keys())
   const cachedElements = Array.from(soundElementCache.keys())
 
-  console.log('Sound cache status:')
-  console.log(`- Audio buffers cached: ${bufferCacheSize} (sound effects)`)
-  console.log(`- Audio elements cached: ${elementCacheSize} (background music)`)
-  console.log(`- Background music initialized: ${backgroundMusicInitialized}`)
-  console.log(`- Background music loading: ${backgroundMusicLoading}`)
-  console.log(`- Currently loading: ${loadingCount}`)
-  console.log('- Buffer cache contents:', cachedBuffers)
-  console.log('- Element cache contents:', cachedElements)
+  window.logger('Sound cache status:')
+  window.logger(`- Audio buffers cached: ${bufferCacheSize} (sound effects)`)
+  window.logger(`- Audio elements cached: ${elementCacheSize} (background music)`)
+  window.logger(`- Background music initialized: ${backgroundMusicInitialized}`)
+  window.logger(`- Background music loading: ${backgroundMusicLoading}`)
+  window.logger(`- Currently loading: ${loadingCount}`)
+  window.logger('- Buffer cache contents:', cachedBuffers)
+  window.logger('- Element cache contents:', cachedElements)
 
   return {
     bufferCacheSize,
@@ -641,7 +641,7 @@ export function getSoundCacheStatus() {
 
 // Clear cache (for testing/debugging)
 export function clearSoundCache() {
-  console.log(`Clearing sound cache (${audioBufferCache.size} buffers, ${soundElementCache.size} elements)...`)
+  window.logger(`Clearing sound cache (${audioBufferCache.size} buffers, ${soundElementCache.size} elements)...`)
   audioBufferCache.clear()
   soundElementCache.clear()
   loadingPromises.clear()
@@ -654,7 +654,7 @@ export function clearSoundCache() {
     bgMusicAudio = null
   }
 
-  console.log('Sound cache cleared, background music reset')
+  window.logger('Sound cache cleared, background music reset')
 }
 
 // Export the audio context for other modules that need direct access

@@ -4,7 +4,7 @@ export function log(message) {
   const timestamp = new Date().toISOString()
   const entry = `[${timestamp}] ${message}`
   logEntries.push(entry)
-  console.log(entry)
+  window.logger(entry)
 }
 
 export function getLogs() {

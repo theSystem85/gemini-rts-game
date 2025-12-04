@@ -663,7 +663,7 @@ export class ProductionController {
         try {
           e.dataTransfer.setDragImage(dragImage, 0, 0)
         } catch (err) {
-          console.warn('Could not set custom drag image:', err)
+          window.logger.warn('Could not set custom drag image:', err)
         }
 
         setTimeout(() => {
@@ -735,7 +735,7 @@ export class ProductionController {
         try {
           e.dataTransfer.setDragImage(dragImage, 0, 0)
         } catch (err) {
-          console.warn('Could not set custom drag image:', err)
+          window.logger.warn('Could not set custom drag image:', err)
         }
 
         // Clean up the temporary element after a brief delay
@@ -806,7 +806,7 @@ export class ProductionController {
             if (productionQueue.enableBuildingPlacementMode(buildingType, button)) {
               // Placement mode enabled successfully
             } else {
-              console.warn('Failed to enable placement mode for building:', buildingType)
+              window.logger.warn('Failed to enable placement mode for building:', buildingType)
             }
           }
           return

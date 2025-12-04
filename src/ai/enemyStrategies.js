@@ -1390,7 +1390,7 @@ function isUnitAlreadyAssignedToRecovery(recoveryTanks, targetUnit) {
 
 function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, now) {
   if (!tank || !wreck || !unitCommands) {
-    console.warn('Recovery tank wreck assignment failed: missing tank, wreck, or commands', {
+    window.logger.warn('Recovery tank wreck assignment failed: missing tank, wreck, or commands', {
       hasTank: !!tank,
       hasWreck: !!wreck,
       hasCommands: !!unitCommands
@@ -1418,7 +1418,7 @@ function attemptAssignRecoveryTankToWreck(tank, wreck, mapGrid, unitCommands, no
   const queueSuccess = !!(queue && queue.mode === 'repair' && queue.currentTargetId === wreck.id && (queue.currentTargetType || 'unit') === 'wreck')
 
   if (!queueSuccess) {
-    console.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, {
+    window.logger.warn(`✗ Recovery tank ${tank.id} assignment to wreck ${wreck.id} failed`, {
       hasQueue: !!queue,
       queueMode: queue?.mode,
       currentTargetId: queue?.currentTargetId,
@@ -1468,7 +1468,7 @@ function attemptAssignRecoveryTankToUnit(tank, targetUnit, mapGrid, unitCommands
 export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
   const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
   if (!unitCommands) {
-    console.warn('manageAIRecoveryTanks: No unit commands handler available')
+    window.logger.warn('manageAIRecoveryTanks: No unit commands handler available')
     return
   }
 

@@ -25,7 +25,7 @@ export class UnitRenderer {
     this.repairIcon = new Image()
     this.repairIcon.src = '/cursors/wrench_cursor.svg'
     this.repairIcon.onerror = () => {
-      console.warn('Failed to load workshop repair indicator icon')
+      window.logger.warn('Failed to load workshop repair indicator icon')
       this.repairIcon = null
     }
   }
