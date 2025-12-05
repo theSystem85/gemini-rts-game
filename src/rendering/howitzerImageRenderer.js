@@ -71,11 +71,11 @@ export function preloadHowitzerImage(callback) {
   howitzerBarrelImg.onload = () => {
     BARREL_MOUNT_POINT = {
       x: 2,
-      y: howitzerBarrelImg.height
+      y: 0
     }
     barrelMuzzlePoint = {
       x: BARREL_MOUNT_POINT.x,
-      y: 0
+      y: howitzerBarrelImg.height
     }
     handleAssetLoaded()
   }
@@ -113,7 +113,7 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   ctx.translate(mountLocalX, mountLocalY)
 
   const barrelElevation = unit.barrelElevation || 0
-  ctx.rotate(-barrelElevation)
+  ctx.rotate(-barrelElevation + Math.PI)
 
   let recoilOffset = 0
   if (unit.recoilStartTime && now - unit.recoilStartTime <= RECOIL_DURATION) {
@@ -126,12 +126,12 @@ export function renderHowitzerWithImage(ctx, unit, centerX, centerY) {
   const barrelWidth = howitzerBarrelImg.width * barrelScale
   const barrelHeight = howitzerBarrelImg.height * barrelScale
   const drawX = -BARREL_MOUNT_POINT.x * barrelScale
-  const drawY = -BARREL_MOUNT_POINT.y * barrelScale + recoilOffset
+  const drawY = -BARREL_MOUNT_POINT.y * barrelScale - recoilOffset
 
   ctx.drawImage(howitzerBarrelImg, drawX, drawY, barrelWidth, barrelHeight)
 
   const muzzleLocalX = (barrelMuzzlePoint.x - BARREL_MOUNT_POINT.x) * barrelScale
-  const muzzleLocalY = (barrelMuzzlePoint.y - BARREL_MOUNT_POINT.y) * barrelScale + recoilOffset
+  const muzzleLocalY = (barrelMuzzlePoint.y - BARREL_MOUNT_POINT.y) * barrelScale - recoilOffset
 
   if (unit.muzzleFlashStartTime && now - unit.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
     const flashProgress = (now - unit.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
