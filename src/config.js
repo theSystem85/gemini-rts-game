@@ -708,7 +708,8 @@ export const UNIT_COSTS = {
   apache: 3000,
   howitzer: HOWITZER_COST,
   mineLayer: 1000,
-  mineSweeper: 1000
+  mineSweeper: 1000,
+  gatlingTank: 1200
 }
 
 // Unit properties
@@ -795,6 +796,13 @@ export const UNIT_PROPERTIES = {
     speed: 0.66, // 2x tank speed (tank_v1 is 0.33)
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0
+  },
+  gatlingTank: {
+    health: 120,
+    maxHealth: 120,
+    speed: 0.4,
+    rotationSpeed: TANK_WAGON_ROT * 1.5,
+    turretRotationSpeed: TANK_TURRET_ROT * 2
   },
   apache: {
     health: 40,
@@ -1096,6 +1104,7 @@ export const UNIT_AMMO_CAPACITY = {
   'tank-v3': 50,
   rocketTank: 21,
   howitzer: 30,
+  gatlingTank: 400,
   apache: 38
 }
 

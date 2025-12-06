@@ -1,450 +1,445 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    >
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>CodeAndConquer</title>
-    <meta name="description" content="A 2D tile-based Real-Time Strategy game built with vanilla JavaScript">
-    
-    <!-- Favicons -->
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
-    <link rel="icon" type="image/png" sizes="256x256" href="/favicon-256x256.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png">
-    <link rel="manifest" href="/site.webmanifest">
-    
-    <!-- Theme color for mobile browsers -->
-    <meta name="theme-color" content="#2c3e50">
-    <meta name="msapplication-TileColor" content="#2c3e50">
-    <meta name="msapplication-config" content="/browserconfig.xml">
-    
-    <link rel="preload" href="/cursors/default.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="./style.css">
-    <link rel="stylesheet" href="./cursors.css">
-    <style>
-      /* ...existing styles... */
-      .production-button.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        pointer-events: none; /* Prevent clicks */
-      }
-      /* ...existing styles... */
-    </style>
-  </head>
-  <body>
-    <!-- Host Paused Banner - shown to clients when host pauses the game -->
-    <div id="hostPausedBanner" class="host-paused-banner host-paused-banner--hidden" aria-hidden="true" role="alert">
-      <div class="host-paused-banner__content">
-        <span class="host-paused-banner__icon">⏸️</span>
-        <span class="host-paused-banner__text">Host has paused the game</span>
-      </div>
-    </div>
 
-    <div id="remoteInviteLanding" class="remote-invite-overlay remote-invite-overlay--hidden" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="remote-invite-card">
-        <div class="remote-invite-header">
-          <div class="remote-invite-header__icon">🎮</div>
-          <h2>Join Remote Match</h2>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>CodeAndConquer</title>
+  <meta name="description" content="A 2D tile-based Real-Time Strategy game built with vanilla JavaScript">
+
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="256x256" href="/favicon-256x256.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Theme color for mobile browsers -->
+  <meta name="theme-color" content="#2c3e50">
+  <meta name="msapplication-TileColor" content="#2c3e50">
+  <meta name="msapplication-config" content="/browserconfig.xml">
+
+  <link rel="preload" href="/cursors/default.svg" as="image" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./cursors.css">
+  <style>
+    /* ...existing styles... */
+    .production-button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+      /* Prevent clicks */
+    }
+
+    /* ...existing styles... */
+  </style>
+</head>
+
+<body>
+  <!-- Host Paused Banner - shown to clients when host pauses the game -->
+  <div id="hostPausedBanner" class="host-paused-banner host-paused-banner--hidden" aria-hidden="true" role="alert">
+    <div class="host-paused-banner__content">
+      <span class="host-paused-banner__icon">⏸️</span>
+      <span class="host-paused-banner__text">Host has paused the game</span>
+    </div>
+  </div>
+
+  <div id="remoteInviteLanding" class="remote-invite-overlay remote-invite-overlay--hidden" aria-hidden="true"
+    role="dialog" aria-modal="true">
+    <div class="remote-invite-card">
+      <div class="remote-invite-header">
+        <div class="remote-invite-header__icon">🎮</div>
+        <h2>Join Remote Match</h2>
+      </div>
+      <p class="remote-invite-description">You were invited to control a party. Enter your alias to start the connection
+        with the host.</p>
+      <div class="remote-invite-token">
+        <span class="remote-invite-token__label">Invite token:</span>
+        <code id="remoteInviteTokenText" class="remote-invite-token__value">loading...</code>
+      </div>
+      <form id="remoteInviteForm">
+        <label for="remoteAliasInput">Alias</label>
+        <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Enter your display name"
+          required>
+        <div class="remote-invite-buttons">
+          <button id="remoteInviteSubmit" type="submit" class="remote-invite-btn remote-invite-btn--primary">Join
+            game</button>
+          <button id="remoteInviteCancel" type="button"
+            class="remote-invite-btn remote-invite-btn--secondary">Cancel</button>
         </div>
-        <p class="remote-invite-description">You were invited to control a party. Enter your alias to start the connection with the host.</p>
-        <div class="remote-invite-token">
-          <span class="remote-invite-token__label">Invite token:</span>
-          <code id="remoteInviteTokenText" class="remote-invite-token__value">loading...</code>
-        </div>
-        <form id="remoteInviteForm">
-          <label for="remoteAliasInput">Alias</label>
-          <input id="remoteAliasInput" name="alias" type="text" autocomplete="off" placeholder="Enter your display name" required>
-          <div class="remote-invite-buttons">
-            <button id="remoteInviteSubmit" type="submit" class="remote-invite-btn remote-invite-btn--primary">Join game</button>
-            <button id="remoteInviteCancel" type="button" class="remote-invite-btn remote-invite-btn--secondary">Cancel</button>
-          </div>
-        </form>
-        <p id="remoteInviteStatus" class="remote-invite-status" aria-live="polite"></p>
+      </form>
+      <p id="remoteInviteStatus" class="remote-invite-status" aria-live="polite"></p>
+    </div>
+  </div>
+  <div id="mobileSidebarControls" aria-hidden="true">
+    <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-controls="sidebar" aria-expanded="true"
+      aria-label="Collapse sidebar">
+      <span class="sidebar-toggle-icon">☰</span>
+    </button>
+    <div id="mobileActionsContainer"></div>
+  </div>
+
+  <div id="mobileMinimapOverlay" aria-hidden="true"></div>
+
+  <div id="mobileJoystickContainer" aria-hidden="true">
+    <div class="mobile-joystick" data-joystick="left">
+      <div class="joystick-base">
+        <div class="joystick-thumb"></div>
       </div>
     </div>
-    <div id="mobileSidebarControls" aria-hidden="true">
-      <button
-        id="sidebarToggle"
-        type="button"
-        class="sidebar-toggle"
-        aria-controls="sidebar"
-        aria-expanded="true"
-        aria-label="Collapse sidebar"
-      >
-        <span class="sidebar-toggle-icon">☰</span>
+    <div class="mobile-joystick" data-joystick="right">
+      <div class="joystick-base">
+        <div class="joystick-thumb"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <canvas id="minimap"></canvas>
+
+    <!-- Money bar positioned right above the energy bar -->
+    <div id="moneyBarContainer"></div>
+
+    <!-- Energy bar positioned right above the minimap -->
+    <div id="energyBarContainer"></div>
+
+    <div id="sidebarUtilityButtons" aria-hidden="true"></div>
+
+    <div id="actions">
+      <button id="mobileSidebarMenuBtn" class="action-button icon-button mobile-sidebar-menu-button" title="Open menu"
+        aria-expanded="false" aria-controls="mobileSidebarModal" type="button">
+        <span class="button-icon settings-icon">☰</span>
       </button>
-      <div id="mobileActionsContainer"></div>
+      <button id="repairBtn" class="action-button icon-button" title="Repair">
+        <img src="/icons/wrench.svg" alt="Repair" class="button-icon white-icon">
+      </button>
+      <button id="sellBtn" class="action-button icon-button" title="Sell for 70% of the build price">
+        <span class="button-icon">$</span>
+      </button>
+      <button id="pauseBtn" class="action-button icon-button" title="Start/Pause Game">
+        <span class="button-icon play-pause-icon">▶</span>
+      </button>
+      <button id="restartBtn" class="action-button icon-button" title="Restart Game">
+        <span class="button-icon restart-icon">↻</span>
+      </button>
+      <button id="musicControl" class="action-button icon-button" title="Toggle Music">
+        <span class="button-icon music-icon">♪</span>
+      </button>
+      <button id="mobileMinimapButton" class="action-button icon-button" type="button"
+        title="Show minimap while pressed" aria-label="Show minimap while pressed">
+        <span class="button-icon minimap-icon" aria-hidden="true"></span>
+      </button>
     </div>
 
-    <div id="mobileMinimapOverlay" aria-hidden="true"></div>
-
-    <div id="mobileJoystickContainer" aria-hidden="true">
-      <div class="mobile-joystick" data-joystick="left">
-        <div class="joystick-base">
-          <div class="joystick-thumb"></div>
-        </div>
-      </div>
-      <div class="mobile-joystick" data-joystick="right">
-        <div class="joystick-base">
-          <div class="joystick-thumb"></div>
-        </div>
-      </div>
+    <!-- Master Volume Control -->
+    <div id="volumeControl">
+      <label style="display: flex; align-items: center; margin-bottom: 5px;">
+        Volume:
+        <input type="range" class="volume-slider" id="masterVolumeSlider" min="0" max="100" value="50"
+          style="margin-left: 10px; flex: 1;">
+        <span id="volumeValue" class="volume-value">50%</span>
+      </label>
     </div>
 
-    <div id="sidebar">
-      <canvas id="minimap"></canvas>
-      
-      <!-- Money bar positioned right above the energy bar -->
-      <div id="moneyBarContainer"></div>
-      
-      <!-- Energy bar positioned right above the minimap -->
-      <div id="energyBarContainer"></div>
-      
-      <div id="sidebarUtilityButtons" aria-hidden="true"></div>
+    <div id="sidebarScroll">
 
-      <div id="actions">
-        <button
-          id="mobileSidebarMenuBtn"
-          class="action-button icon-button mobile-sidebar-menu-button"
-          title="Open menu"
-          aria-expanded="false"
-          aria-controls="mobileSidebarModal"
-          type="button"
-        >
-          <span class="button-icon settings-icon">☰</span>
-        </button>
-        <button id="repairBtn" class="action-button icon-button" title="Repair">
-          <img src="/icons/wrench.svg" alt="Repair" class="button-icon white-icon">
-        </button>
-        <button id="sellBtn" class="action-button icon-button" title="Sell for 70% of the build price">
-          <span class="button-icon">$</span>
-        </button>
-        <button id="pauseBtn" class="action-button icon-button" title="Start/Pause Game">
-          <span class="button-icon play-pause-icon">▶</span>
-        </button>
-        <button id="restartBtn" class="action-button icon-button" title="Restart Game">
-          <span class="button-icon restart-icon">↻</span>
-        </button>
-        <button id="musicControl" class="action-button icon-button" title="Toggle Music">
-          <span class="button-icon music-icon">♪</span>
-        </button>
-        <button
-          id="mobileMinimapButton"
-          class="action-button icon-button"
-          type="button"
-          title="Show minimap while pressed"
-          aria-label="Show minimap while pressed"
-        >
-          <span class="button-icon minimap-icon" aria-hidden="true"></span>
-        </button>
-      </div>
+      <div id="productionArea">
+        <div id="productionTabs">
+          <button class="tab-button" data-tab="units">Units</button>
+          <button class="tab-button active" data-tab="buildings">Buildings</button>
+          <button id="mobileCategoryToggle" class="tab-toggle-button" type="button" aria-pressed="false"
+            aria-label="Switch to Units build options">
+            Buildings
+          </button>
+        </div>
 
-      <!-- Master Volume Control -->
-      <div id="volumeControl">
-        <label style="display: flex; align-items: center; margin-bottom: 5px;">
-          Volume:
-          <input type="range" class="volume-slider" id="masterVolumeSlider" min="0" max="100" value="50" style="margin-left: 10px; flex: 1;">
-          <span id="volumeValue" class="volume-value">50%</span>
-        </label>
-      </div>
-
-      <div id="sidebarScroll">
-
-        <div id="productionArea">
-          <div id="productionTabs">
-            <button class="tab-button" data-tab="units">Units</button>
-            <button class="tab-button active" data-tab="buildings">Buildings</button>
-            <button
-              id="mobileCategoryToggle"
-              class="tab-toggle-button"
-              type="button"
-              aria-pressed="false"
-              aria-label="Switch to Units build options"
-            >
-              Buildings
-            </button>
-          </div>
-
-          <div id="production">
-            <div id="productionContainer">
-              <div id="productionTabContent">
-                <div id="unitsTabContent" class="tab-content">
-              <button class="production-button" data-unit-type="tank">
-                <img src="images/sidebar/tank.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Tank V1</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="tank-v2">
-                <img src="images/sidebar/tank_v2.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Tank V2</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="tank-v3">
-                <img src="images/sidebar/tank_v3.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Tank V3</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="rocketTank">
-                <img src="images/sidebar/rocket_tank.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Rocket Tank</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="apache">
-                <img src="images/sidebar/apache_sidebar.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Apache</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="howitzer">
-                <img src="images/sidebar/howitzer_sidebar.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Howitzer</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="recoveryTank">
-                <img src="images/sidebar/recovery_tank.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Recovery Tank</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="harvester">
-                <img src="images/sidebar/harvester.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Harvester</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="ambulance">
-                <img src="images/sidebar/ambulance.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Ambulance</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="tankerTruck">
-                <img src="images/sidebar/tanker_truck.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Tanker Truck</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="ammunitionTruck">
-                <img src="images/sidebar/ammunition_truck_sidebar.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Ammunition Truck</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="mineLayer">
-                <img src="images/sidebar/mine_layer_sidebar.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Mine Layer</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-unit-type="mineSweeper">
-                <img src="images/sidebar/mine_sweeper_sidebar.webp" onerror="this.style.display='none'">
-                <span class="unit-name">Mine Sweeper</span>
-                <span class="unit-cost"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
+        <div id="production">
+          <div id="productionContainer">
+            <div id="productionTabContent">
+              <div id="unitsTabContent" class="tab-content">
+                <button class="production-button" data-unit-type="tank">
+                  <img src="images/sidebar/tank.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Tank V1</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="tank-v2">
+                  <img src="images/sidebar/tank_v2.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Tank V2</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="tank-v3">
+                  <img src="images/sidebar/tank_v3.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Tank V3</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="rocketTank">
+                  <img src="images/sidebar/rocket_tank.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Rocket Tank</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="gatlingTank">
+                  <img src="images/sidebar/gatling_tank.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Gatling Tank</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="apache">
+                  <img src="images/sidebar/apache_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Apache</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="howitzer">
+                  <img src="images/sidebar/howitzer_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Howitzer</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="recoveryTank">
+                  <img src="images/sidebar/recovery_tank.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Recovery Tank</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="harvester">
+                  <img src="images/sidebar/harvester.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Harvester</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="ambulance">
+                  <img src="images/sidebar/ambulance.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Ambulance</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="tankerTruck">
+                  <img src="images/sidebar/tanker_truck.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Tanker Truck</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="ammunitionTruck">
+                  <img src="images/sidebar/ammunition_truck_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Ammunition Truck</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="mineLayer">
+                  <img src="images/sidebar/mine_layer_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Mine Layer</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-unit-type="mineSweeper">
+                  <img src="images/sidebar/mine_sweeper_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="unit-name">Mine Sweeper</span>
+                  <span class="unit-cost"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+              </div>
+              <div id="buildingsTabContent" class="tab-content active">
+                <button class="production-button" data-building-type="powerPlant">
+                  <img draggable="true" src="images/sidebar/power_plant.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Power Plant</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="oreRefinery">
+                  <img draggable="true" src="images/sidebar/ore_refinery.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Ore Refinery</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="vehicleFactory">
+                  <img draggable="true" src="images/sidebar/vehicle_factory.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Vehicle Factory</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="radarStation">
+                  <img draggable="true" src="images/sidebar/radar_station.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Radar Station</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="gasStation">
+                  <img draggable="true" src="images/sidebar/gas_station.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Gas Station</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="vehicleWorkshop">
+                  <img draggable="true" src="images/sidebar/vehicle_workshop.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Vehicle Workshop</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="ammunitionFactory">
+                  <img draggable="true" src="images/sidebar/ammunition_factory_sidebar.webp"
+                    onerror="this.style.display='none'">
+                  <span class="building-name">Ammunition Factory</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="hospital">
+                  <img draggable="true" src="images/sidebar/hospital.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Hospital</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="helipad">
+                  <img draggable="true" src="images/sidebar/helipad_sidebar.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Helipad</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="turretGunV1">
+                  <img draggable="true" src="images/sidebar/turret_gun_v1.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Turret Gun V1</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="turretGunV2">
+                  <img draggable="true" src="images/sidebar/turret_gun_v2.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Turret Gun V2</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="turretGunV3">
+                  <img draggable="true" src="images/sidebar/turret_gun_v3.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Turret Gun V3</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="rocketTurret">
+                  <img draggable="true" src="images/sidebar/rocket_turret.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Rocket Turret</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="teslaCoil">
+                  <img draggable="true" src="images/sidebar/tesla_coil.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Tesla Coil</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="artilleryTurret">
+                  <img draggable="true" src="images/sidebar/artillery_turret.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Artillery Turret</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="concreteWall">
+                  <img draggable="true" src="images/sidebar/concrete_wall.webp" onerror="this.style.display='none'">
+                  <span class="building-name">Concrete Wall</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+                <button class="production-button" data-building-type="constructionYard">
+                  <img draggable="true" src="images/sidebar/construction_yard.png" onerror="this.style.display='none'">
+                  <span class="building-name">Construction Yard</span>
+                  <span class="building-cost"></span>
+                  <span class="building-power"></span>
+                  <div class="production-progress"></div>
+                  <div class="batch-counter" style="display:none">0</div>
+                  <div class="new-label" style="display:none">NEW</div>
+                </button>
+              </div>
             </div>
-                <div id="buildingsTabContent" class="tab-content active">
-              <button class="production-button" data-building-type="powerPlant">
-                <img draggable="true" src="images/sidebar/power_plant.webp" onerror="this.style.display='none'">
-                <span class="building-name">Power Plant</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="oreRefinery">
-                <img draggable="true" src="images/sidebar/ore_refinery.webp" onerror="this.style.display='none'">
-                <span class="building-name">Ore Refinery</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="vehicleFactory">
-                <img draggable="true" src="images/sidebar/vehicle_factory.webp" onerror="this.style.display='none'">
-                <span class="building-name">Vehicle Factory</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="radarStation">
-                <img draggable="true" src="images/sidebar/radar_station.webp" onerror="this.style.display='none'">
-                <span class="building-name">Radar Station</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="gasStation">
-                <img draggable="true" src="images/sidebar/gas_station.webp" onerror="this.style.display='none'">
-                <span class="building-name">Gas Station</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="vehicleWorkshop">
-                <img draggable="true" src="images/sidebar/vehicle_workshop.webp" onerror="this.style.display='none'">
-                <span class="building-name">Vehicle Workshop</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="ammunitionFactory">
-                <img draggable="true" src="images/sidebar/ammunition_factory_sidebar.webp" onerror="this.style.display='none'">
-                <span class="building-name">Ammunition Factory</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="hospital">
-                <img draggable="true" src="images/sidebar/hospital.webp" onerror="this.style.display='none'">
-                <span class="building-name">Hospital</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="helipad">
-                <img draggable="true" src="images/sidebar/helipad_sidebar.webp" onerror="this.style.display='none'">
-                <span class="building-name">Helipad</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="turretGunV1">
-                <img draggable="true" src="images/sidebar/turret_gun_v1.webp" onerror="this.style.display='none'">
-                <span class="building-name">Turret Gun V1</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="turretGunV2">
-                <img draggable="true" src="images/sidebar/turret_gun_v2.webp" onerror="this.style.display='none'">
-                <span class="building-name">Turret Gun V2</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="turretGunV3">
-                <img draggable="true" src="images/sidebar/turret_gun_v3.webp" onerror="this.style.display='none'">
-                <span class="building-name">Turret Gun V3</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="rocketTurret">
-                <img draggable="true" src="images/sidebar/rocket_turret.webp" onerror="this.style.display='none'">
-                <span class="building-name">Rocket Turret</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="teslaCoil">
-                <img draggable="true" src="images/sidebar/tesla_coil.webp" onerror="this.style.display='none'">
-                <span class="building-name">Tesla Coil</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="artilleryTurret">
-                <img draggable="true" src="images/sidebar/artillery_turret.webp" onerror="this.style.display='none'">
-                <span class="building-name">Artillery Turret</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="concreteWall">
-                <img draggable="true" src="images/sidebar/concrete_wall.webp" onerror="this.style.display='none'">
-                <span class="building-name">Concrete Wall</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-              <button class="production-button" data-building-type="constructionYard">
-                <img draggable="true" src="images/sidebar/construction_yard.png" onerror="this.style.display='none'">
-                <span class="building-name">Construction Yard</span>
-                <span class="building-cost"></span>
-                <span class="building-power"></span>
-                <div class="production-progress"></div>
-                <div class="batch-counter" style="display:none">0</div>
-                <div class="new-label" style="display:none">NEW</div>
-              </button>
-            </div>
-          </div>
           </div>
         </div>
         <div id="productionProgress"></div>
       </div>
-      
+
       <!-- Save/Load Game Menu -->
       <div id="saveLoadMenu">
         <h3>Save/Load Game</h3>
@@ -456,18 +451,19 @@
         </div>
         <ul id="saveGamesList" style="max-height: 120px; overflow-y: auto; margin: 8px 0 0 0; list-style: none;"></ul>
       </div>
-      
+
       <!-- Stats and game speed moved to the bottom -->
       <div id="stats">
         <p>Time: <span id="gameTime">0</span></p>
         <p>Wins: <span id="wins">0</span></p>
         <p>Losses: <span id="losses">0</span></p>
-        
+
         <!-- Game speed control added here at the bottom -->
         <div id="speedControl">
           <label style="display: flex; align-items: center; margin: 10px 0;">
-            Game Speed: 
-            <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1" style="width: 70px; margin-left: 10px;" id="speedMultiplier">
+            Game Speed:
+            <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1"
+              style="width: 70px; margin-left: 10px;" id="speedMultiplier">
           </label>
         </div>
 
@@ -476,25 +472,16 @@
           <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
             <span class="button-icon settings-icon">⚙</span>
           </button>
-          <button
-            id="cheatMenuBtn"
-            class="action-button icon-button"
-            type="button"
-            title="Open cheat console"
-          >
+          <button id="cheatMenuBtn" class="action-button icon-button" type="button" title="Open cheat console">
             <span class="button-icon">🃏</span>
           </button>
         </div>
 
         <!-- Map Settings Accordion -->
         <div id="mapSettingsAccordion" style="margin: 10px 0;">
-          <button 
-            id="mapSettingsToggle" 
-            class="action-button" 
+          <button id="mapSettingsToggle" class="action-button"
             style="width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center;"
-            aria-expanded="false"
-            aria-controls="mapSettingsContent"
-          >
+            aria-expanded="false" aria-controls="mapSettingsContent">
             <span>Map Settings</span>
             <span id="mapSettingsToggleIcon">▼</span>
           </button>
@@ -506,26 +493,32 @@
             </label>
             <label style="display: flex; align-items: center; margin: 10px 0;">
               Players:
-              <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2" style="width: 70px; margin-left: 10px;">
+              <input type="number" class="sidebar-input" id="playerCount" min="2" max="4" value="2"
+                style="width: 70px; margin-left: 10px;">
             </label>
             <label style="display: flex; align-items: center; margin: 10px 0;">
               Your alias:
-              <input type="text" class="sidebar-input" id="playerAliasInput" placeholder="Enter alias" autocomplete="off" style="width: 120px; margin-left: 10px;">
+              <input type="text" class="sidebar-input" id="playerAliasInput" placeholder="Enter alias"
+                autocomplete="off" style="width: 120px; margin-left: 10px;">
             </label>
             <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
             <div class="multiplayer-join-section">
               <label class="multiplayer-join-label">Join via invite link:</label>
               <div class="multiplayer-join-input-row">
-                <input type="text" id="inviteLinkInput" class="sidebar-input multiplayer-join-input" placeholder="Paste invite link here" autocomplete="off">
-                <button type="button" id="joinInviteLinkBtn" class="multiplayer-invite-button multiplayer-join-btn">Join</button>
-                <button type="button" id="scanQrBtn" class="multiplayer-invite-button multiplayer-scan-btn" title="Scan QR code" aria-label="Scan QR code">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                    <rect x="14" y="14" width="3" height="3"/>
-                    <line x1="21" y1="14" x2="21" y2="21"/>
-                    <line x1="14" y1="21" x2="21" y2="21"/>
+                <input type="text" id="inviteLinkInput" class="sidebar-input multiplayer-join-input"
+                  placeholder="Paste invite link here" autocomplete="off">
+                <button type="button" id="joinInviteLinkBtn"
+                  class="multiplayer-invite-button multiplayer-join-btn">Join</button>
+                <button type="button" id="scanQrBtn" class="multiplayer-invite-button multiplayer-scan-btn"
+                  title="Scan QR code" aria-label="Scan QR code">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="3" height="3" />
+                    <line x1="21" y1="14" x2="21" y2="21" />
+                    <line x1="14" y1="21" x2="21" y2="21" />
                   </svg>
                 </button>
               </div>
@@ -534,25 +527,12 @@
             <div style="display: flex; flex-direction: column; gap: 10px; margin: 10px 0;">
               <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
                 Width:
-                <input
-                  type="number"
-                  class="sidebar-input"
-                  id="mapWidthTiles"
-                  min="32"
-                  value="100"
-                  style="width: 70px;"
-                >
+                <input type="number" class="sidebar-input" id="mapWidthTiles" min="32" value="100" style="width: 70px;">
               </label>
               <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
                 Height:
-                <input
-                  type="number"
-                  class="sidebar-input"
-                  id="mapHeightTiles"
-                  min="32"
-                  value="100"
-                  style="width: 70px;"
-                >
+                <input type="number" class="sidebar-input" id="mapHeightTiles" min="32" value="100"
+                  style="width: 70px;">
               </label>
             </div>
             <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
@@ -585,175 +565,168 @@
             Run Performance Benchmark
           </button>
         </div>
-        </div>
-      </div>
-      </div>
-
-      <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
-      <canvas id="gameCanvasGL" aria-hidden="true"></canvas>
-      <canvas id="gameCanvas"></canvas>
-    
-    <!-- FPS Display Overlay -->
-    <div id="fpsDisplay" class="fps-overlay">
-      <div id="fpsValue">FPS: --</div>
-      <div id="frameTimeValue">Frame: -- ms</div>
-      <div id="frameTimeMin">Min: -- ms</div>
-      <div id="frameTimeMax">Max: -- ms</div>
-      <div id="networkStatsContainer" style="display: none;">
-        <div style="border-top: 1px solid rgba(255,255,255,0.3); margin: 4px 0;"></div>
-        <div id="networkSendRate">↑ 0 B/s</div>
-        <div id="networkRecvRate">↓ 0 B/s</div>
-        <div id="networkTotalSent">Sent: 0 KB</div>
-        <div id="networkTotalRecv">Recv: 0 KB</div>
       </div>
     </div>
-    <div id="benchmarkCountdown" class="benchmark-countdown" hidden aria-live="polite">
-      <span id="benchmarkCountdownText"></span>
-    </div>
-    <div id="performanceDialog" class="performance-dialog"></div>
+  </div>
 
-    <div id="configSettingsModal" class="config-modal" aria-hidden="true">
-      <div class="config-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
-        <div class="config-modal__header">
-          <h2 id="configModalTitle">Runtime Config</h2>
-          <button id="configModalCloseBtn" class="config-modal__close" aria-label="Close runtime config settings">×</button>
-        </div>
-        <div class="config-modal__body">
-          <label class="config-modal__field">
-            <span>Config entry</span>
-            <select id="configVariableSelect"></select>
-          </label>
-          <label class="config-modal__field">
-            <span>Value</span>
-            <input type="number" id="configValueInput" step="any" autocomplete="off">
-          </label>
-          <div id="configValueNote" class="config-modal__note"></div>
-          <div class="config-modal__actions">
-            <button id="configExportBtn" class="config-modal__button" type="button">
-              Download Overrides
-            </button>
-          </div>
-          <p class="config-modal__hint">
-            Overrides are saved to your browser automatically. Place
-            <code><span id="configOverridesFilename">config-overrides.json</span></code>
-            in the project root to preload them on startup.
-          </p>
-          <div id="configValueMessage" class="config-modal__message"></div>
-        </div>
+  <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
+  <canvas id="gameCanvasGL" aria-hidden="true"></canvas>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- FPS Display Overlay -->
+  <div id="fpsDisplay" class="fps-overlay">
+    <div id="fpsValue">FPS: --</div>
+    <div id="frameTimeValue">Frame: -- ms</div>
+    <div id="frameTimeMin">Min: -- ms</div>
+    <div id="frameTimeMax">Max: -- ms</div>
+    <div id="networkStatsContainer" style="display: none;">
+      <div style="border-top: 1px solid rgba(255,255,255,0.3); margin: 4px 0;"></div>
+      <div id="networkSendRate">↑ 0 B/s</div>
+      <div id="networkRecvRate">↓ 0 B/s</div>
+      <div id="networkTotalSent">Sent: 0 KB</div>
+      <div id="networkTotalRecv">Recv: 0 KB</div>
+    </div>
+  </div>
+  <div id="benchmarkCountdown" class="benchmark-countdown" hidden aria-live="polite">
+    <span id="benchmarkCountdownText"></span>
+  </div>
+  <div id="performanceDialog" class="performance-dialog"></div>
+
+  <div id="configSettingsModal" class="config-modal" aria-hidden="true">
+    <div class="config-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+      <div class="config-modal__header">
+        <h2 id="configModalTitle">Runtime Config</h2>
+        <button id="configModalCloseBtn" class="config-modal__close"
+          aria-label="Close runtime config settings">×</button>
       </div>
-    </div>
-
-    <!-- Kicked from session modal -->
-    <div id="kickedModal" class="kicked-modal" aria-hidden="true">
-      <div class="kicked-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="kickedModalTitle">
-        <div class="kicked-modal__header">
-          <h2 id="kickedModalTitle">Disconnected from Game</h2>
-        </div>
-        <div class="kicked-modal__body">
-          <p id="kickedModalMessage" class="kicked-modal__message">You were kicked from the session by the host.</p>
-          <p class="kicked-modal__info">You can continue playing locally with AI opponents, or start a fresh game.</p>
-          <div class="kicked-modal__actions">
-            <button id="kickedContinueBtn" class="kicked-modal__button kicked-modal__button--primary" type="button">
-              Continue with AI
-            </button>
-            <button id="kickedNewGameBtn" class="kicked-modal__button kicked-modal__button--secondary" type="button">
-              Start New Game
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="benchmarkModal" class="benchmark-modal" aria-hidden="true">
-      <div class="benchmark-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkModalTitle">
-        <div class="benchmark-modal__header">
-          <h2 id="benchmarkModalTitle">Performance Benchmark</h2>
-          <button id="benchmarkModalCloseBtn" class="benchmark-modal__close" aria-label="Close benchmark results">×</button>
-        </div>
-        <div class="benchmark-modal__body">
-          <p id="benchmarkModalStatus">Preparing benchmark…</p>
-          <div id="benchmarkResultsContainer" hidden>
-            <div class="benchmark-modal__summary">
-              <div class="benchmark-modal__metric">Min FPS: <span id="benchmarkMinFps">--</span></div>
-              <div class="benchmark-modal__metric">Max FPS: <span id="benchmarkMaxFps">--</span></div>
-              <div class="benchmark-modal__metric">Avg FPS: <span id="benchmarkAvgFps">--</span></div>
-              <div class="benchmark-modal__metric">Duration: <span id="benchmarkDuration">--</span></div>
-            </div>
-            <canvas id="benchmarkChart" width="480" height="240" aria-label="Benchmark FPS chart"></canvas>
-          </div>
-        </div>
-        <div class="benchmark-modal__footer">
-          <button id="benchmarkRunAgainBtn" class="benchmark-modal__button">Run Again</button>
-          <button id="benchmarkModalCloseFooterBtn" class="benchmark-modal__button benchmark-modal__button--primary">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <script src="/src/main.js" type="module"></script>
-    <script type="module">
-      import { UNIT_COSTS } from '/src/config.js'
-      import { buildingData } from '/src/buildings.js'
-
-      document.addEventListener('DOMContentLoaded', () => {
-        // Update unit costs
-        Object.entries(UNIT_COSTS).forEach(([type, cost]) => {
-          const btn = document.querySelector(`.production-button[data-unit-type="${type}"]`)
-          if (btn) {
-            const costSpan = btn.querySelector('.unit-cost')
-            if (costSpan) costSpan.textContent = `$${cost}`
-          }
-        })
-
-        // Update building costs and power
-        Object.entries(buildingData).forEach(([type, data]) => {
-          const btn = document.querySelector(`.production-button[data-building-type="${type}"]`)
-          if (btn) {
-            const costSpan = btn.querySelector('.building-cost')
-            if (costSpan) costSpan.textContent = `$${data.cost}`
-
-            const powerSpan = btn.querySelector('.building-power')
-            if (powerSpan) {
-              const val = data.power
-              powerSpan.textContent = `${val > 0 ? '+' : ''}${val} MW`
-            }
-          }
-        })
-      })
-    </script>
-    <script>
-      // Add this to ensure we have sound functions even if not defined elsewhere
-      function playSound(soundName) {
-        if (typeof sounds !== 'undefined' && sounds[soundName]) {
-          const sound = sounds[soundName]
-          sound.currentTime = 0
-          sound.play().catch(e => window.logger('Error playing sound:', e))
-        }
-      }
-    </script>
-
-    <div
-      id="mobileSidebarModal"
-      class="mobile-sidebar-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden="true"
-    >
-      <div class="mobile-sidebar-modal__backdrop" data-modal-dismiss="true"></div>
-      <div class="mobile-sidebar-modal__dialog" role="document">
-        <header class="mobile-sidebar-modal__header">
-          <h2 class="mobile-sidebar-modal__title">Menu</h2>
-          <button
-            id="mobileSidebarModalClose"
-            class="mobile-sidebar-modal__close"
-            type="button"
-            title="Close menu"
-            data-modal-dismiss="true"
-          >
-            ✕
+      <div class="config-modal__body">
+        <label class="config-modal__field">
+          <span>Config entry</span>
+          <select id="configVariableSelect"></select>
+        </label>
+        <label class="config-modal__field">
+          <span>Value</span>
+          <input type="number" id="configValueInput" step="any" autocomplete="off">
+        </label>
+        <div id="configValueNote" class="config-modal__note"></div>
+        <div class="config-modal__actions">
+          <button id="configExportBtn" class="config-modal__button" type="button">
+            Download Overrides
           </button>
-        </header>
-        <div id="mobileSidebarModalContent" class="mobile-sidebar-modal__content"></div>
+        </div>
+        <p class="config-modal__hint">
+          Overrides are saved to your browser automatically. Place
+          <code><span id="configOverridesFilename">config-overrides.json</span></code>
+          in the project root to preload them on startup.
+        </p>
+        <div id="configValueMessage" class="config-modal__message"></div>
       </div>
     </div>
-  </body>
+  </div>
+
+  <!-- Kicked from session modal -->
+  <div id="kickedModal" class="kicked-modal" aria-hidden="true">
+    <div class="kicked-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="kickedModalTitle">
+      <div class="kicked-modal__header">
+        <h2 id="kickedModalTitle">Disconnected from Game</h2>
+      </div>
+      <div class="kicked-modal__body">
+        <p id="kickedModalMessage" class="kicked-modal__message">You were kicked from the session by the host.</p>
+        <p class="kicked-modal__info">You can continue playing locally with AI opponents, or start a fresh game.</p>
+        <div class="kicked-modal__actions">
+          <button id="kickedContinueBtn" class="kicked-modal__button kicked-modal__button--primary" type="button">
+            Continue with AI
+          </button>
+          <button id="kickedNewGameBtn" class="kicked-modal__button kicked-modal__button--secondary" type="button">
+            Start New Game
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="benchmarkModal" class="benchmark-modal" aria-hidden="true">
+    <div class="benchmark-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkModalTitle">
+      <div class="benchmark-modal__header">
+        <h2 id="benchmarkModalTitle">Performance Benchmark</h2>
+        <button id="benchmarkModalCloseBtn" class="benchmark-modal__close"
+          aria-label="Close benchmark results">×</button>
+      </div>
+      <div class="benchmark-modal__body">
+        <p id="benchmarkModalStatus">Preparing benchmark…</p>
+        <div id="benchmarkResultsContainer" hidden>
+          <div class="benchmark-modal__summary">
+            <div class="benchmark-modal__metric">Min FPS: <span id="benchmarkMinFps">--</span></div>
+            <div class="benchmark-modal__metric">Max FPS: <span id="benchmarkMaxFps">--</span></div>
+            <div class="benchmark-modal__metric">Avg FPS: <span id="benchmarkAvgFps">--</span></div>
+            <div class="benchmark-modal__metric">Duration: <span id="benchmarkDuration">--</span></div>
+          </div>
+          <canvas id="benchmarkChart" width="480" height="240" aria-label="Benchmark FPS chart"></canvas>
+        </div>
+      </div>
+      <div class="benchmark-modal__footer">
+        <button id="benchmarkRunAgainBtn" class="benchmark-modal__button">Run Again</button>
+        <button id="benchmarkModalCloseFooterBtn"
+          class="benchmark-modal__button benchmark-modal__button--primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/src/main.js" type="module"></script>
+  <script type="module">
+    import { UNIT_COSTS } from '/src/config.js'
+    import { buildingData } from '/src/buildings.js'
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Update unit costs
+      Object.entries(UNIT_COSTS).forEach(([type, cost]) => {
+        const btn = document.querySelector(`.production-button[data-unit-type="${type}"]`)
+        if (btn) {
+          const costSpan = btn.querySelector('.unit-cost')
+          if (costSpan) costSpan.textContent = `$${cost}`
+        }
+      })
+
+      // Update building costs and power
+      Object.entries(buildingData).forEach(([type, data]) => {
+        const btn = document.querySelector(`.production-button[data-building-type="${type}"]`)
+        if (btn) {
+          const costSpan = btn.querySelector('.building-cost')
+          if (costSpan) costSpan.textContent = `$${data.cost}`
+
+          const powerSpan = btn.querySelector('.building-power')
+          if (powerSpan) {
+            const val = data.power
+            powerSpan.textContent = `${val > 0 ? '+' : ''}${val} MW`
+          }
+        }
+      })
+    })
+  </script>
+  <script>
+    // Add this to ensure we have sound functions even if not defined elsewhere
+    function playSound(soundName) {
+      if (typeof sounds !== 'undefined' && sounds[soundName]) {
+        const sound = sounds[soundName]
+        sound.currentTime = 0
+        sound.play().catch(e => window.logger('Error playing sound:', e))
+      }
+    }
+  </script>
+
+  <div id="mobileSidebarModal" class="mobile-sidebar-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="mobile-sidebar-modal__backdrop" data-modal-dismiss="true"></div>
+    <div class="mobile-sidebar-modal__dialog" role="document">
+      <header class="mobile-sidebar-modal__header">
+        <h2 class="mobile-sidebar-modal__title">Menu</h2>
+        <button id="mobileSidebarModalClose" class="mobile-sidebar-modal__close" type="button" title="Close menu"
+          data-modal-dismiss="true">
+          ✕
+        </button>
+      </header>
+      <div id="mobileSidebarModalContent" class="mobile-sidebar-modal__content"></div>
+    </div>
+  </div>
+</body>
+
 </html>

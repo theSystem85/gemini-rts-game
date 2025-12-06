@@ -122,11 +122,12 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       'tank-v2': 2000,
       'tank-v3': 3000,
       ambulance: 500,
-      recoveryTank: 3000
+      recoveryTank: 3000,
+      gatlingTank: 1200
     }
 
     const fullCrewTanks = ['tank_v1', 'tank-v2', 'tank-v3']
-    const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank']
+    const loaderUnits = ['tankerTruck', 'ambulance', 'recoveryTank', 'harvester', 'rocketTank', 'gatlingTank']
 
     // Apache helicopters don't have crew system
     if (unitType !== 'apache') {

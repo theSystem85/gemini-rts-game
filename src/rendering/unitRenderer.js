@@ -12,6 +12,7 @@ import { renderRecoveryTankWithImage, isRecoveryTankImageLoaded } from './recove
 import { renderAmmunitionTruckWithImage, isAmmunitionTruckImageLoaded } from './ammunitionTruckImageRenderer.js'
 import { renderMineLayerWithImage, isMineLayerImageLoaded } from './mineLayerImageRenderer.js'
 import { renderMineSweeperWithImage, isMineSweeperImageLoaded } from './mineSweeperImageRenderer.js'
+import { renderGatlingTankWithImage, isGatlingTankImageLoaded } from './gatlingTankImageRenderer.js'
 import { renderApacheWithImage } from './apacheImageRenderer.js'
 import { getExperienceProgress, initializeUnitLeveling, getBuildingIdentifier } from '../utils.js'
 
@@ -102,7 +103,7 @@ export class UnitRenderer {
       // no special fallback
     }
 
-    if (unit.type === 'howitzer') {
+    if (unit.type === 'howitzer' || unit.type === 'gatlingTank') {
       return
     }
 
@@ -783,6 +784,16 @@ export class UnitRenderer {
 
     if (unit.type === 'recoveryTank' && isRecoveryTankImageLoaded()) {
       const ok = renderRecoveryTankWithImage(ctx, unit, centerX, centerY)
+      if (ok) {
+        this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
+        this.renderSelection(ctx, unit, centerX, centerY)
+        this.renderAlertMode(ctx, unit, centerX, centerY)
+        return
+      }
+    }
+
+    if (unit.type === 'gatlingTank' && isGatlingTankImageLoaded()) {
+      const ok = renderGatlingTankWithImage(ctx, unit, centerX, centerY)
       if (ok) {
         this.renderUtilityServiceRange(ctx, unit, centerX, centerY)
         this.renderSelection(ctx, unit, centerX, centerY)

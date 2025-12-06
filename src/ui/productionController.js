@@ -22,7 +22,7 @@ const MOBILE_EDGE_SCROLL_MAX_FRAME_MS = 64
 
 export class ProductionController {
   constructor() {
-    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank', 'mineLayer', 'mineSweeper']
+    this.vehicleUnitTypes = ['tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer', 'ambulance', 'tankerTruck', 'recoveryTank', 'mineLayer', 'mineSweeper', 'gatlingTank']
     this.unitButtons = new Map()
     this.buildingButtons = new Map()
     this.isSetup = false // Flag to prevent duplicate event listeners
@@ -1192,6 +1192,10 @@ export class ProductionController {
       if (hasFactory) {
         this.forceUnlockUnitType('howitzer')
       }
+    }
+
+    if (hasFactory && hasRadar) {
+       this.forceUnlockUnitType('gatlingTank')
     }
 
     this.updateVehicleButtonStates()

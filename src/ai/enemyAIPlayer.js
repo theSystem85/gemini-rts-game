@@ -795,7 +795,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
         const aiRecoveryTanks = units.filter(u => u.owner === aiPlayerId && u.type === 'recoveryTank' && u.health > 0)
         const aiCombatUnits = units.filter(u =>
           u.owner === aiPlayerId &&
-          (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
+          (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank' || u.type === 'gatlingTank') &&
           u.health > 0
         )
 
@@ -814,21 +814,24 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
             // Delay other tank production until key defenses are built
             unitType = 'none' // No combat units until defenses are ready
           } else if (isVeryHighBudget) {
-            // Very high budget: Focus on elite units
+            // Very high budget: Focus on elite units & Gatling tanks
             if (rand < 0.1) unitType = 'tank_v1'
-            else if (rand < 0.3) unitType = 'tank-v2'
-            else if (rand < 0.6) unitType = 'tank-v3'
+            else if (rand < 0.25) unitType = 'tank-v2'
+            else if (rand < 0.5) unitType = 'tank-v3'
+            else if (rand < 0.75) unitType = 'gatlingTank'
             else unitType = 'rocketTank'
           } else if (isHighBudget) {
             // High budget: Balanced advanced units
-            if (rand < 0.2) unitType = 'tank_v1'
-            else if (rand < 0.5) unitType = 'tank-v2'
-            else if (rand < 0.75) unitType = 'rocketTank'
+            if (rand < 0.15) unitType = 'tank_v1'
+            else if (rand < 0.45) unitType = 'tank-v2'
+            else if (rand < 0.65) unitType = 'rocketTank'
+            else if (rand < 0.85) unitType = 'gatlingTank'
             else unitType = 'tank-v3'
           } else {
             // Normal budget: Mix of basic and medium units
-            if (rand < 0.5) unitType = 'tank_v1'
-            else if (rand < 0.8) unitType = 'tank-v2'
+            if (rand < 0.4) unitType = 'tank_v1'
+            else if (rand < 0.7) unitType = 'tank-v2'
+            else if (rand < 0.85) unitType = 'gatlingTank'
             else unitType = 'rocketTank'
           }
         }
@@ -849,7 +852,10 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
           unitType === 'rocketTank' ||
           unitType === 'ambulance' ||
           unitType === 'tankerTruck' ||
-          unitType === 'ammunitionTruck'
+          unitType === 'ambulance' ||
+          unitType === 'tankerTruck' ||
+          unitType === 'ammunitionTruck' ||
+          unitType === 'gatlingTank'
         ) {
           const aiVehicleFactories = gameState.buildings.filter(
             b => b.type === 'vehicleFactory' && b.owner === aiPlayerId
