@@ -42,6 +42,91 @@ import { refreshSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { stopHostInvite } from './network/webrtcSession.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
+const LAST_GAME_LABEL = 'lastGame'
+const LAST_GAME_STORAGE_KEY = `rts_save_${LAST_GAME_LABEL}`
+const LAST_GAME_RESUME_FLAG_KEY = 'rts_lastGame_resume_pending'
+const AUTO_SAVE_INTERVAL_MS = 60_000
+const PAUSE_OBSERVER_INTERVAL_MS = 1000
+
+let lastGameAutoSaveInterval = null
+let pauseWatchInterval = null
+let lastPauseState = Boolean(gameState.gamePaused)
+
+function markLastGameResumePending() {
+  if (typeof localStorage === 'undefined') return
+
+  try {
+    localStorage.setItem(LAST_GAME_RESUME_FLAG_KEY, 'true')
+  } catch (err) {
+    window.logger.warn('Failed to set auto-resume flag for last game:', err)
+  }
+}
+
+function clearLastGameResumePending() {
+  if (typeof localStorage === 'undefined') return
+
+  try {
+    localStorage.removeItem(LAST_GAME_RESUME_FLAG_KEY)
+  } catch (err) {
+    window.logger.warn('Failed to clear auto-resume flag for last game:', err)
+  }
+}
+
+function canPersistLastGame() {
+  return typeof localStorage !== 'undefined' && gameState.gameStarted && !gameState.gameOver
+}
+
+function saveLastGameCheckpoint(reason = '') {
+  if (!canPersistLastGame()) return
+
+  try {
+    saveGame(LAST_GAME_LABEL)
+    if (reason) {
+      window.logger(`Auto-saved ${LAST_GAME_LABEL} checkpoint (${reason})`)
+    }
+  } catch (err) {
+    window.logger.warn('Failed to auto-save last game checkpoint:', err)
+  }
+}
+
+function startLastGameAutoSaveLoop() {
+  if (lastGameAutoSaveInterval !== null) return
+
+  lastGameAutoSaveInterval = setInterval(() => {
+    saveLastGameCheckpoint('interval')
+  }, AUTO_SAVE_INTERVAL_MS)
+}
+
+function startPauseWatcher() {
+  if (pauseWatchInterval !== null) return
+
+  pauseWatchInterval = setInterval(() => {
+    const currentlyPaused = Boolean(gameState.gamePaused)
+
+    if (currentlyPaused && !lastPauseState) {
+      markLastGameResumePending()
+      saveLastGameCheckpoint('pause')
+    } else if (!currentlyPaused && lastPauseState) {
+      clearLastGameResumePending()
+    }
+
+    lastPauseState = currentlyPaused
+  }, PAUSE_OBSERVER_INTERVAL_MS)
+}
+
+function setupLifecycleSaves() {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        saveLastGameCheckpoint('hidden')
+      }
+    })
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => saveLastGameCheckpoint('pagehide'))
+  }
+}
 
 function syncLoadedMapSettings(widthTiles, heightTiles, mapSeed) {
   const widthInput = document.getElementById('mapWidthTiles')
@@ -1280,4 +1365,44 @@ export function initSaveGameSystem() {
 
   // Initial population of save games list
   updateSaveGamesList()
+}
+
+export function initLastGameRecovery() {
+  startLastGameAutoSaveLoop()
+  startPauseWatcher()
+  setupLifecycleSaves()
+}
+
+export function maybeResumeLastPausedGame() {
+  if (typeof localStorage === 'undefined') return false
+
+  let shouldResume = false
+
+  try {
+    shouldResume = localStorage.getItem(LAST_GAME_RESUME_FLAG_KEY) === 'true'
+  } catch (err) {
+    window.logger.warn('Failed to read auto-resume flag for last game:', err)
+    return false
+  }
+
+  let hasLastGame = false
+  try {
+    hasLastGame = Boolean(localStorage.getItem(LAST_GAME_STORAGE_KEY))
+  } catch (err) {
+    window.logger.warn('Failed to read last game checkpoint:', err)
+    return false
+  }
+
+  if (shouldResume && hasLastGame) {
+    loadGame(LAST_GAME_STORAGE_KEY)
+    clearLastGameResumePending()
+    showNotification('Resumed your last paused game automatically')
+    return true
+  }
+
+  if (shouldResume && !hasLastGame) {
+    clearLastGameResumePending()
+  }
+
+  return false
 }

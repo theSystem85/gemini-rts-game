@@ -28,7 +28,7 @@ import { setProductionControllerRef } from './network/gameCommandSync.js'
 import './ui/mobileJoysticks.js'
 import { initFactories } from './factories.js'
 import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFromBuildings } from './gameSetup.js'
-import { initSaveGameSystem } from './saveGame.js'
+import { initSaveGameSystem, initLastGameRecovery, maybeResumeLastPausedGame } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
 import { getTextureManager, preloadTileTextures, getMapRenderer } from './rendering.js'
@@ -1084,6 +1084,9 @@ class Game {
 
     // Start game loop
     this.startGameLoop()
+
+    // Start autosave/recovery helpers after the loop is running
+    this.setupAutoSaveResume()
   }
 
   async loadAssets() {
@@ -1272,6 +1275,11 @@ class Game {
     }
 
     // Background music is loaded on demand via the music control button
+  }
+
+  setupAutoSaveResume() {
+    initLastGameRecovery()
+    maybeResumeLastPausedGame()
   }
 
   setupSpeedControl() {
