@@ -31,16 +31,18 @@ import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFr
 import { initSaveGameSystem, initLastGameRecovery, maybeResumeLastPausedGame } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
-import { getTextureManager, preloadTileTextures, getMapRenderer } from './rendering.js'
+import { getTextureManager, preloadTileTextures, getMapRenderer, notifyTileMutation } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 import { initSpatialQuadtree } from './game/spatialQuadtree.js'
+import { registerMapEditorRendering } from './mapEditor.js'
 import { attachBenchmarkButton } from './benchmark/benchmarkRunner.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 import { getPlayableViewportWidth, getPlayableViewportHeight } from './utils/layoutMetrics.js'
+import { initMapEditorControls } from './ui/mapEditorControls.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -83,6 +85,7 @@ let lastMobileLayoutMode = null
 let portraitQuery = null
 
 initializeMobileViewportLock()
+registerMapEditorRendering(getTextureManager, notifyTileMutation)
 
 const mobileLayoutState = {
   productionArea: null,
@@ -1236,6 +1239,7 @@ class Game {
 
     // Setup map settings
     this.setupMapSettings()
+    initMapEditorControls()
 
     initSidebarMultiplayer()
     
@@ -1800,6 +1804,10 @@ export const mapGrid = []
 export const factories = []
 export const units = []
 export const bullets = []
+
+gameState.mapGrid = mapGrid
+gameState.units = units
+gameState.factories = factories
 
 /**
  * Regenerate the map for a client using the host's seed and dimensions

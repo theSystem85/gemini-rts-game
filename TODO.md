@@ -1,5 +1,6 @@
 ## Improvements
 - [ ] Add a persistent "lastGame" autosave that runs every minute, saves immediately on pause, and automatically reloads after iOS/PWA resumes from a killed paused session.
+- [x] Add a host-only map edit mode with tile painting, random brushes, and instant building/unit placement tools.
 - [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
 - [x] ✅ Make scrolling on the minimap on mobile super smooth.
 - [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.

@@ -14,6 +14,7 @@ import {
   getSafeAreaInset,
   getMobileActionBarWidth
 } from '../utils/layoutMetrics.js'
+import { applyProductionBrush } from './mapEditorControls.js'
 
 const MOBILE_EDGE_SCROLL_THRESHOLD = 20
 const MOBILE_EDGE_SCROLL_SPEED_PER_MS = 0.14
@@ -432,6 +433,11 @@ export class ProductionController {
           return
         }
 
+        if (gameState.mapEditMode) {
+          applyProductionBrush('unit', unitType)
+          return
+        }
+
         // Prevent action if game is paused or button is disabled
         if (gameState.gamePaused || button.classList.contains('disabled')) {
           // Optionally show a notification if disabled
@@ -775,6 +781,11 @@ export class ProductionController {
 
         if (!isUpperHalf) {
           this.removeQueuedBuilding(button)
+          return
+        }
+
+        if (gameState.mapEditMode) {
+          applyProductionBrush('building', buildingType)
           return
         }
 
