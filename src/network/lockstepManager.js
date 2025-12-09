@@ -14,19 +14,20 @@ import { computeStateHash, compareHashes } from './stateHash.js'
 // Lockstep configuration
 export const LOCKSTEP_CONFIG = {
   // Simulation tick rate in Hz (ticks per second)
-  TICK_RATE: 20,
+  // 60 Hz matches typical frame rate for smooth gameplay
+  TICK_RATE: 60,
   
   // Maximum ticks that can be simulated in one frame (catch-up limit)
   MAX_TICKS_PER_FRAME: 5,
   
   // How often to exchange state hashes (in ticks)
-  HASH_EXCHANGE_INTERVAL: 10,
+  HASH_EXCHANGE_INTERVAL: 30,
   
   // Maximum tick difference allowed before triggering resync
   MAX_TICK_DRIFT: 3,
   
   // Number of ticks to keep in history for rollback
-  HISTORY_LENGTH: 60,
+  HISTORY_LENGTH: 180,
   
   // Timeout for waiting on remote inputs (ms)
   INPUT_TIMEOUT_MS: 500

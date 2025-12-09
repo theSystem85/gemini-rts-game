@@ -9,7 +9,7 @@ import { getActiveHostMonitor } from './webrtcSession.js'
 import { placeBuilding } from '../buildings.js'
 import { units as mainUnits, bullets as mainBullets, factories as mainFactories, regenerateMapForClient } from '../main.js'
 import { setMapDimensions, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from '../config.js'
-import { lockstepManager, LOCKSTEP_CONFIG } from './lockstepManager.js'
+import { lockstepManager, LOCKSTEP_CONFIG, MS_PER_TICK } from './lockstepManager.js'
 import { deterministicRNG, initializeSessionRNG, syncRNGForTick } from './deterministicRandom.js'
 import { computeStateHash, compareHashes } from './stateHash.js'
 import { InputBuffer, LOCKSTEP_INPUT_TYPES, createLockstepInput } from './inputBuffer.js'
@@ -1838,7 +1838,7 @@ export function processLockstepTick(updateFn) {
   
   // Run the game update
   if (typeof updateFn === 'function') {
-    updateFn(LOCKSTEP_CONFIG.MS_PER_TICK)
+    updateFn(MS_PER_TICK)
   }
   
   // Broadcast hash at intervals
