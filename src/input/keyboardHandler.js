@@ -19,6 +19,7 @@ import {
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
 import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -664,7 +665,7 @@ export class KeyboardHandler {
       // Apply dodge logic based on requirements
       if (isForwardValid && isBackwardValid) {
         // Both are free - random decision
-        dodgeTarget = Math.random() < 0.5
+        dodgeTarget = gameRandom() < 0.5
           ? { x: forwardX, y: forwardY }
           : { x: backwardX, y: backwardY }
       } else if (isForwardValid && !isBackwardValid) {

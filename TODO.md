@@ -8,7 +8,20 @@
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
 - [x] ✅ ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
 - [x] ✅ when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands. Also: cancel button added to connecting modal, beautified modal UI.
-- [ ] Plan deterministic lockstep refactor so multiplayer only exchanges user inputs and map/hash verification with seeded randomness for determinism.
+- [x] ✅ **Spec 015** Deterministic lockstep multiplayer refactor:
+  - [x] ✅ Seedable PRNG module (`src/network/deterministicRandom.js`) - Mulberry32 algorithm with session seed
+  - [x] ✅ Lockstep manager (`src/network/lockstepManager.js`) - tick coordination, peer state tracking, 20 Hz tick rate
+  - [x] ✅ State hash system (`src/network/stateHash.js`) - FNV-1a inspired hashing with quantized positions
+  - [x] ✅ Input buffer system (`src/network/inputBuffer.js`) - 3-tick delay, duplicate detection, command queuing
+  - [x] ✅ Game random utilities (`src/utils/gameRandom.js`) - wrapper for game code to use deterministic random
+  - [x] ✅ Extended gameCommandSync.js with lockstep message types (LOCKSTEP_INPUT, LOCKSTEP_HASH, LOCKSTEP_RESYNC, etc.)
+  - [x] ✅ Added lockstep state properties to gameState.js
+  - [x] ✅ Integrated tick-based simulation into gameLoop.js with fixed timestep
+  - [x] ✅ Desync detection via periodic hash exchange and automatic resync from host
+  - [x] ✅ Replaced Math.random() calls in game-critical code with gameRandom imports
+  - [x] ✅ Integrated lockstep initialization into multiplayer game start flow (webrtcSession.js)
+  - [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
+- [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
 
 ## Netlify Deployment for Multiplayer
 - [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http

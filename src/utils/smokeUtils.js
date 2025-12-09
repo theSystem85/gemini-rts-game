@@ -5,6 +5,7 @@ import {
   SMOKE_PARTICLE_LIFETIME,
   SMOKE_PARTICLE_SIZE
 } from '../config.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const spread = 4
 
@@ -83,14 +84,14 @@ export function emitSmokeParticles(gameState, x, y, now, count = 1) {
 
     const particle = gameState.smokeParticlePool.pop() || {}
 
-    particle.x = x + (Math.random() - 0.5) * spread
-    particle.y = y + (Math.random() - 0.5) * spread
-    particle.vx = (Math.random() - 0.5) * 0.2
-    particle.vy = -0.6 + Math.random() * -0.2 // Increased upward velocity for higher flight
-    particle.size = SMOKE_PARTICLE_SIZE + Math.random() * 2
+    particle.x = x + (gameRandom() - 0.5) * spread
+    particle.y = y + (gameRandom() - 0.5) * spread
+    particle.vx = (gameRandom() - 0.5) * 0.2
+    particle.vy = -0.6 + gameRandom() * -0.2 // Increased upward velocity for higher flight
+    particle.size = SMOKE_PARTICLE_SIZE + gameRandom() * 2
     particle.startTime = now
-    particle.duration = SMOKE_PARTICLE_LIFETIME + Math.random() * 500 // Increased random duration variation
-    particle.alpha = 0.7 + Math.random() * 0.2
+    particle.duration = SMOKE_PARTICLE_LIFETIME + gameRandom() * 500 // Increased random duration variation
+    particle.alpha = 0.7 + gameRandom() * 0.2
 
     gameState.smokeParticles.push(particle)
   }

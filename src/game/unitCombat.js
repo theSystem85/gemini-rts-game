@@ -13,6 +13,7 @@ import { logPerformance } from '../performanceUtils.js'
 import { isPositionVisibleToPlayer } from './shadowOfWar.js'
 import { showNotification } from '../ui/notifications.js'
 import { isHowitzerGunReadyToFire, getHowitzerLaunchAngle } from './howitzerGunController.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 /**
  * Check if a party is controlled by a human player (not AI)
@@ -120,7 +121,7 @@ function applyTargetingSpread(shooterX, shooterY, targetX, targetY, projectileTy
     maxAngleOffset = 0.035 // about 2 degrees for standard tanks
   }
 
-  const angleOffset = (Math.random() * 2 - 1) * maxAngleOffset
+  const angleOffset = (gameRandom() * 2 - 1) * maxAngleOffset
   const finalAngle = baseAngle + angleOffset
 
   return {
@@ -354,7 +355,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
       }
 
       const bullet = {
-        id: Date.now() + Math.random(),
+        id: Date.now() + gameRandom(),
         x: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.x : unitCenterX,
         y: (isRocketTankRocket || isApacheRocket) ? rocketSpawn.y : unitCenterY,
         speed: bulletSpeed,
@@ -554,8 +555,8 @@ function handleApacheVolley(unit, target, bullets, now, targetCenterX, targetCen
   const perpendicularX = -forwardNormY
   const perpendicularY = forwardNormX
   const lateralSpan = Math.min(TILE_SIZE * 0.35, approachDistance * 0.25)
-  const lateralOffset = (Math.random() - 0.5) * 2 * lateralSpan
-  const forwardJitter = (Math.random() - 0.5) * Math.min(TILE_SIZE * 0.2, desiredImpactDistance * 0.4)
+  const lateralOffset = (gameRandom() - 0.5) * 2 * lateralSpan
+  const forwardJitter = (gameRandom() - 0.5) * Math.min(TILE_SIZE * 0.2, desiredImpactDistance * 0.4)
 
   let impactX = baseImpactX - forwardNormX * forwardJitter + perpendicularX * lateralOffset
   let impactY = baseImpactY - forwardNormY * forwardJitter + perpendicularY * lateralOffset
@@ -1659,7 +1660,7 @@ function fireHowitzerShell(unit, aimTarget, bullets, now) {
   const arcHeight = distance * 0.5
 
   const projectile = {
-    id: Date.now() + Math.random(),
+    id: Date.now() + gameRandom(),
     x: muzzleX,
     y: muzzleY,
     speed: HOWITZER_PROJECTILE_SPEED,

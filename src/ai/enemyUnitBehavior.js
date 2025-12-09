@@ -4,6 +4,7 @@ import { findPath } from '../units.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth, shouldAIStartAttacking } from './enemyStrategies.js'
 import { isEnemyTo } from './enemyUtils.js'
 import { buildingData } from '../buildings.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const ENABLE_DODGING = false
 const lastPositionCheckTimeDelay = 3000
@@ -594,7 +595,7 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
           if (mag > 0) {
             dodgeDir.x /= mag
             dodgeDir.y /= mag
-            const dodgeDistance = 1 + Math.floor(Math.random() * 2)
+            const dodgeDistance = 1 + Math.floor(gameRandom() * 2)
             const destTileX = Math.floor(unit.tileX + Math.round(dodgeDir.x * dodgeDistance))
             const destTileY = Math.floor(unit.tileY + Math.round(dodgeDir.y * dodgeDistance))
             if (destTileX >= 0 && destTileX < mapGrid[0].length &&

@@ -10,6 +10,7 @@ import {
   isAdjacentToBuilding,
   showUnloadingFeedback
 } from '../logic.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 // Track tiles currently being harvested
 const harvestedTiles = new Set()
@@ -548,7 +549,7 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
         if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
           findNewOreTarget(unit, mapGrid, occupancyMap)
         }
-      }, 100 + Math.random() * 200) // Random delay between 100-300ms
+      }, 100 + gameRandom() * 200) // Random delay between 100-300ms
       return
     }
 
@@ -574,7 +575,7 @@ function findNewOreTarget(unit, mapGrid, occupancyMap) {
       if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
         findNewOreTarget(unit, mapGrid, occupancyMap)
       }
-    }, 1000 + Math.random() * 1000) // Random delay between 1-2 seconds
+    }, 1000 + gameRandom() * 1000) // Random delay between 1-2 seconds
   }
 }
 
@@ -1023,7 +1024,7 @@ function handleManualOreTarget(unit, mapGrid, occupancyMap) {
       if (unit.health > 0 && unit.oreCarried === 0 && unit.manualOreTarget) {
         handleManualOreTarget(unit, mapGrid, occupancyMap)
       }
-    }, 500 + Math.random() * 1000) // Wait 0.5-1.5 seconds
+    }, 500 + gameRandom() * 1000) // Wait 0.5-1.5 seconds
     return
   }
 
@@ -1237,7 +1238,7 @@ function findAlternativeOreTarget(unit, mapGrid, occupancyMap) {
     if (unit.health > 0 && unit.oreCarried === 0 && !unit.oreField) {
       findNewOreTarget(unit, mapGrid, occupancyMap)
     }
-  }, 3000 + Math.random() * 2000) // Wait 3-5 seconds before trying again
+  }, 3000 + gameRandom() * 2000) // Wait 3-5 seconds before trying again
 }
 
 /**

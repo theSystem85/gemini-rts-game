@@ -1,12 +1,13 @@
 // utils.js
 import { TILE_SIZE, XP_MULTIPLIER, UNIT_COSTS } from './config.js'
+import { gameRandom } from './utils/gameRandom.js'
 
 export function tileToPixel(tileX, tileY) {
   return { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE }
 }
 
 export function getUniqueId() {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 5)
+  return Date.now().toString() + gameRandom().toString(36).substr(2, 5)
 }
 
 export function getBuildingIdentifier(building) {

@@ -1,6 +1,7 @@
 // rendering/minimapRenderer.js
 import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
+import { gameRandom } from '../utils/gameRandom.js'
 import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
@@ -369,10 +370,10 @@ export class MinimapRenderer {
 
       ctx.fillStyle = '#ffffff'
       for (let i = 0; i < 300; i++) {
-        const x = Math.random() * minimapWidth
-        const y = Math.random() * minimapHeight
-        const size = Math.random() * 3 + 1
-        const opacity = Math.random() * 0.3
+        const x = gameRandom() * minimapWidth
+        const y = gameRandom() * minimapHeight
+        const size = gameRandom() * 3 + 1
+        const opacity = gameRandom() * 0.3
         ctx.fillStyle = `rgba(255,255,255,${opacity})`
         ctx.fillRect(x, y, size, size)
       }

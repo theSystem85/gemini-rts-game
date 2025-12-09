@@ -37,6 +37,7 @@ import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { getMineAtTile, detonateMine } from './mineSystem.js'
 import { smoothRotateTowardsAngle as smoothRotate } from '../logic.js'
 import { getSpatialQuadtree } from './spatialQuadtree.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const BASE_FRAME_SECONDS = 1 / 60
 const ROTOR_AIRBORNE_SPEED = 0.35
@@ -1975,7 +1976,7 @@ export function rotateUnitInPlace(unit, targetDirection = null) {
     movement.targetRotation = targetDirection
   } else {
     // Random rotation to try different directions when stuck
-    movement.targetRotation = Math.random() * Math.PI * 2
+    movement.targetRotation = gameRandom() * Math.PI * 2
   }
 
   // Force rotation even if not moving
@@ -2008,7 +2009,7 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
   // Initialize stuck detection if not present
   if (!unit.movement.stuckDetection) {
     // Add random offset (0-500ms) to distribute stuck checks across time and prevent performance spikes
-    const randomOffset = Math.random() * STUCK_CHECK_INTERVAL
+    const randomOffset = gameRandom() * STUCK_CHECK_INTERVAL
     unit.movement.stuckDetection = {
       lastPosition: { x: unit.x, y: unit.y },
       stuckTime: 0,
@@ -2276,11 +2277,11 @@ function tryRandomStuckMovement(unit, mapGrid, occupancyMap, units) {
   }
 
   // Randomly choose left or right 90-degree turn
-  const turnDirection = Math.random() < 0.5 ? -Math.PI / 2 : Math.PI / 2 // -90 or +90 degrees
+  const turnDirection = gameRandom() < 0.5 ? -Math.PI / 2 : Math.PI / 2 // -90 or +90 degrees
   const newDirection = currentDirection + turnDirection
 
   // Randomly choose 1 or 2 tiles forward
-  const forwardDistance = Math.random() < 0.5 ? 1 : 2
+  const forwardDistance = gameRandom() < 0.5 ? 1 : 2
 
   // Calculate target position
   const targetX = Math.round(currentTileX + Math.cos(newDirection) * forwardDistance)
@@ -2334,7 +2335,7 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
 
   if (dodgePositions.length > 0) {
     // Choose a random dodge position from available options
-    const dodgePos = dodgePositions[Math.floor(Math.random() * dodgePositions.length)]
+    const dodgePos = dodgePositions[Math.floor(gameRandom() * dodgePositions.length)]
 
     // Store original path for restoration after dodge
     if (!unit.originalPath && unit.path) {

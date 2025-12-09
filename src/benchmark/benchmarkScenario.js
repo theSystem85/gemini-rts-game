@@ -8,6 +8,7 @@ import { cleanupOreFromBuildings } from '../gameSetup.js'
 import { TILE_SIZE } from '../config.js'
 import { getUniqueId } from '../utils.js'
 import { resetBenchmarkCameraFocus } from './benchmarkTracker.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const BUILDING_TYPES = Object.keys(buildingData)
 const BENCHMARK_BUILDING_TYPES = BUILDING_TYPES.filter(type => type !== 'constructionYard')
@@ -265,7 +266,7 @@ function assignBattleTargets(anchorEntries) {
         unit.target = null
         return
       }
-      const target = enemyUnits[Math.floor(Math.random() * enemyUnits.length)]
+      const target = enemyUnits[Math.floor(gameRandom() * enemyUnits.length)]
       unit.target = target
       unit.guardMode = false
     })

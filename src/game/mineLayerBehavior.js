@@ -2,6 +2,7 @@
 import { TILE_SIZE, MINE_DEPLOY_STOP_TIME, UNIT_PROPERTIES } from '../config.js'
 import { gameState } from '../gameState.js'
 import { deployMine } from './mineSystem.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 /**
  * Update Mine Layer behaviors - deployment mode, speed modulation, auto-refill
@@ -190,7 +191,7 @@ function moveAwayFromMinedTile(unit, minedTileX, minedTileY) {
   ]
 
   // Shuffle the offsets to randomize direction preference
-  const shuffledOffsets = [...adjacentOffsets].sort(() => Math.random() - 0.5)
+  const shuffledOffsets = [...adjacentOffsets].sort(() => gameRandom() - 0.5)
 
   for (const offset of shuffledOffsets) {
     const targetTileX = minedTileX + offset.x

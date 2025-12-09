@@ -11,9 +11,8 @@ import {
   WIND_STRENGTH
 } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
-import { explosions, triggerExplosion } from '../logic.js'
+import { explosions } from '../logic.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
-import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
@@ -25,6 +24,7 @@ import {
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
 import { distributeMineLayerPayload } from './mineSystem.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const MINIMAP_SCROLL_SMOOTHING = 0.2
 const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
@@ -168,7 +168,7 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
 
               // Only spread to land or street tiles that don't already have ore or seed crystals and don't have buildings or factories
               const tileType = mapGrid[ny][nx].type
-              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && Math.random() < spreadProb) {
+              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && gameRandom() < spreadProb) {
                 mapGrid[ny][nx].ore = true
               }
             }
@@ -228,8 +228,8 @@ export function updateSmokeParticles(gameState) {
       p.vy += WIND_DIRECTION.y * WIND_STRENGTH * 0.5
 
       // Add slight turbulence for realism (reduced)
-      p.vx += (Math.random() - 0.5) * 0.003
-      p.vy += (Math.random() - 0.5) * 0.003
+      p.vx += (gameRandom() - 0.5) * 0.003
+      p.vy += (gameRandom() - 0.5) * 0.003
 
       // Fade out alpha and expand size over time (reduced expansion)
       p.alpha = Math.max(0, (1 - progress) * p.alpha)

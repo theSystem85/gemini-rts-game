@@ -226,5 +226,25 @@ export const gameState = {
   pendingButtonUpdate: false,
 
   // Store current map seed so map generation stays consistent across restarts
-  mapSeed: '1'
+  mapSeed: '1',
+
+  // Lockstep deterministic multiplayer state (spec 015)
+  lockstep: {
+    enabled: false,             // Whether lockstep mode is active
+    currentTick: 0,             // Current simulation tick number
+    sessionSeed: null,          // Shared RNG seed for this session
+    hashInterval: 10,           // Ticks between hash exchanges
+    lastHashTick: 0,            // Last tick a hash was computed
+    desyncDetected: false,      // True if desync detected
+    desyncTick: null,           // Tick at which desync occurred
+    pendingResync: false,       // Waiting for resync from host
+    tickAccumulator: 0,         // Time accumulator for fixed timestep
+    lastTickTime: 0,            // Timestamp of last tick processing
+    inputDelay: 3,              // Ticks of input delay for network
+    peerStates: {},             // Per-peer tick and hash info
+    localInputQueue: [],        // Local inputs waiting to be sent
+    confirmedInputs: {},        // Inputs confirmed for each tick
+    stateHistory: [],           // Recent state snapshots for rollback
+    historyLength: 60           // Ticks of history to maintain
+  }
 }

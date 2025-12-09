@@ -2,6 +2,7 @@ import { buildingData, createBuilding, canPlaceBuilding, placeBuilding, isNearEx
 import { gameState } from '../gameState.js'
 import { isPartOfFactory } from './enemyUtils.js'
 import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const defensiveBuildingTypes = new Set([
   'rocketTurret',
@@ -199,7 +200,7 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
       const dotProduct = directionVector.x * checkVector.x + directionVector.y * checkVector.y
 
       // Skip angles that don't face toward the desired direction for defensive buildings
-      if (isDefensiveBuilding && dotProduct < 0.5 && Math.random() < 0.8) continue
+      if (isDefensiveBuilding && dotProduct < 0.5 && gameRandom() < 0.8) continue
 
       // Try each of our preferred distances
       for (const distance of preferredDistances) {
@@ -601,7 +602,7 @@ function fallbackBuildingPosition(buildingType, mapGrid, units, buildings, facto
           const dotProduct = defendDirection.x * dirVector.x + defendDirection.y * dirVector.y
 
           // Skip angles that don't face toward the preferred direction
-          if (dotProduct < 0.3 && Math.random() < 0.7) continue
+          if (dotProduct < 0.3 && gameRandom() < 0.7) continue
         }
 
         // Calculate position at this angle and distance
@@ -815,7 +816,7 @@ function replicatePlayerBuildPattern(gameState, enemyBuildings) {
 
     // Pick a random session from the last 20 (or however many we have)
     const lastSessions = gameState.playerBuildHistory.slice(-20)
-    const randomSession = lastSessions[Math.floor(Math.random() * lastSessions.length)]
+    const randomSession = lastSessions[Math.floor(gameRandom() * lastSessions.length)]
 
     if (!randomSession || !randomSession.buildings || randomSession.buildings.length === 0) {
       return null

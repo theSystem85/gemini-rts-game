@@ -12,6 +12,8 @@ import { FPSDisplay } from '../ui/fpsDisplay.js'
 import { logPerformance } from '../performanceUtils.js'
 import { pauseAllSounds, resumeAllSounds } from '../sound.js'
 import { updateMapScrolling } from './gameStateManager.js'
+import { isLockstepEnabled, processLockstepTick } from '../network/gameCommandSync.js'
+import { LOCKSTEP_CONFIG, MS_PER_TICK } from '../network/lockstepManager.js'
 
 export class GameLoop {
   constructor(canvasManager, productionController, mapGrid, factories, units, bullets, productionQueue, moneyEl, gameTimeEl) {
@@ -267,8 +269,33 @@ export class GameLoop {
       milestoneSystem.checkMilestones(gameState)
     }
 
-    // Update game elements
-    updateGame(delta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
+    // Update game elements - use lockstep or variable timestep
+    if (isLockstepEnabled()) {
+      // Lockstep mode: Fixed timestep tick-based simulation
+      // Accumulate time and process ticks
+      gameState.lockstep.tickAccumulator += delta
+      
+      // Process up to MAX_TICKS_PER_FRAME ticks to prevent spiral of death
+      let ticksProcessed = 0
+      while (gameState.lockstep.tickAccumulator >= MS_PER_TICK && 
+             ticksProcessed < LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME) {
+        // Process one tick with the fixed timestep
+        processLockstepTick((fixedDelta) => {
+          updateGame(fixedDelta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
+        })
+        
+        gameState.lockstep.tickAccumulator -= MS_PER_TICK
+        ticksProcessed++
+      }
+      
+      // Cap accumulator to prevent massive catch-up after lag
+      if (gameState.lockstep.tickAccumulator > MS_PER_TICK * LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME) {
+        gameState.lockstep.tickAccumulator = MS_PER_TICK * LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME
+      }
+    } else {
+      // Standard mode: Variable timestep
+      updateGame(delta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
+    }
 
     // Refresh production buttons if a building was destroyed
     if (gameState.pendingButtonUpdate) {

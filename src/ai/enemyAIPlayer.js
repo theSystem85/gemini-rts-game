@@ -33,6 +33,7 @@ const AI_SELL_PRIORITY = [
   'vehicleFactory',
   'powerPlant'
 ]
+import { gameRandom } from '../utils/gameRandom.js'
 
 const AI_SELL_PRIORITY_MAP = AI_SELL_PRIORITY.reduce((acc, type, index) => {
   acc[type] = index
@@ -806,7 +807,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
           unitType = 'recoveryTank'
         } else {
           // We have enough harvesters and ambulance, hospital exists, now focus on diverse combat units
-          const rand = Math.random()
+          const rand = gameRandom()
           if (forceHarvesterHunter) {
             // Always produce the harvester hunter tank immediately
             unitType = 'tank_v1'
@@ -902,7 +903,7 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
 
         // Reset attack directions periodically to ensure varied attack patterns
         // This happens roughly every 4-5 unit productions (40-50 seconds)
-        if (Math.random() < 0.25) {
+        if (gameRandom() < 0.25) {
           resetAttackDirections()
         }
       }
