@@ -9,6 +9,7 @@ import { playSound } from './sound.js'
 import { assignHarvesterToOptimalRefinery } from './game/harvesterLogic.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { broadcastBuildingPlace, broadcastUnitSpawn, isHost } from './network/gameCommandSync.js'
+import { gameRandom } from './utils/gameRandom.js'
 
 // List of unit types considered vehicles requiring a Vehicle Factory
 // Ambulance should spawn from the vehicle factory as well
@@ -474,7 +475,7 @@ export const productionQueue = {
         
         // Play sound locally for feedback
         const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
-        const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
+        const randomSound = readySounds[Math.floor(gameRandom() * readySounds.length)]
         playSound(randomSound, 1.0, 0, true)
       } else {
         // Host or single player: Spawn unit locally
@@ -492,7 +493,7 @@ export const productionQueue = {
           units.push(newUnit)
           // Play random unit ready sound
           const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
-          const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)]
+          const randomSound = readySounds[Math.floor(gameRandom() * readySounds.length)]
           playSound(randomSound, 1.0, 0, true)
 
           // If the produced unit is a harvester and no custom rally point was set, automatically send it to harvest

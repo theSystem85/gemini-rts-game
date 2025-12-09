@@ -7,6 +7,7 @@ import {
 } from '../config.js'
 import { getUnitCost } from '../utils.js'
 import { UNIT_COLLISION_MIN_DISTANCE } from './unifiedMovement.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 function adjustWreckOccupancy(wreck, occupancyMap, tileX, tileY) {
   if (!occupancyMap || occupancyMap.length === 0) {
@@ -107,7 +108,7 @@ export function registerUnitWreck(unit, gameState) {
     isBeingRecycled: false,
     recycleStartedAt: null,
     recycleDuration: null,
-    noiseSeed: Math.random(),
+    noiseSeed: gameRandom(),
     spriteCacheKey: unit.type,
     maxHealth: baseHealth,
     health: baseHealth,
@@ -258,7 +259,7 @@ export function applyDamageToWreck(wreck, damage, gameState, impactPosition = nu
     let distance = Math.hypot(dx, dy)
 
     if (distance === 0) {
-      const randomAngle = Math.random() * Math.PI * 2
+      const randomAngle = gameRandom() * Math.PI * 2
       dx = Math.cos(randomAngle)
       dy = Math.sin(randomAngle)
       distance = 1

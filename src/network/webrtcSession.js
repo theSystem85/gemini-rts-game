@@ -4,7 +4,7 @@ import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
 import { fetchPendingSessions, postAnswer, postCandidate } from './signalling.js'
-import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNetworkStats, notifyClientConnected } from './gameCommandSync.js'
+import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNetworkStats, notifyClientConnected, initializeLockstepSession, isLockstepEnabled, disableLockstep } from './gameCommandSync.js'
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_HOST_STATUS_INTERVAL_MS = 1500
@@ -381,6 +381,12 @@ class HostInviteMonitor {
       // Notify that a new client connected so mapGrid will be sent in snapshots
       notifyClientConnected()
       
+      // Initialize lockstep mode if not already enabled (host initializes when first client connects)
+      if (!isLockstepEnabled()) {
+        initializeLockstepSession()
+        window.logger('[WebRTC] Lockstep mode initialized for multiplayer session')
+      }
+      
       // Start game state synchronization when a player connects
       startGameStateSync()
     } else if (state === SESSION_STATES.DISCONNECTED || state === SESSION_STATES.FAILED) {
@@ -410,6 +416,11 @@ class HostInviteMonitor {
       )
       if (!hasActiveSessions) {
         stopGameStateSync()
+        // Disable lockstep mode when all clients disconnect
+        if (isLockstepEnabled()) {
+          disableLockstep()
+          window.logger('[WebRTC] Lockstep mode disabled - no active sessions')
+        }
       }
       
       // The invite token remains valid - new players can rejoin immediately

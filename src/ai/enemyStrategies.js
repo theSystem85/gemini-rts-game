@@ -6,6 +6,7 @@ import { createFormationOffsets } from '../game/pathfinding.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 import { assignAmbulanceToHealUnit } from '../game/ambulanceSystem.js'
 import { calculateRepairCost } from '../buildings.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -806,7 +807,7 @@ function coordinateMultiDirectionalAttack(unit, units, gameState) {
       lastAttackDirections.set(target.id, dir.name)
 
       // Spread out attack timings slightly
-      const attackDelay = Math.floor(Math.random() * 200) // Random delay up to 200ms
+      const attackDelay = Math.floor(gameRandom() * 200) // Random delay up to 200ms
       unit.attackTime = Date.now() + attackDelay
 
       // Attack in this direction
@@ -1133,7 +1134,7 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
  */
 export function resetAttackDirections() {
   lastAttackDirections.clear()
-  attackDirectionRotation = Math.floor(Math.random() * Object.values(ATTACK_DIRECTIONS).length)
+  attackDirectionRotation = Math.floor(gameRandom() * Object.values(ATTACK_DIRECTIONS).length)
 }
 
 /**

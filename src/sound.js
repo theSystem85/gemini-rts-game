@@ -2,6 +2,7 @@
 import { MASTER_VOLUME } from './config.js'
 import { videoOverlay } from './ui/videoOverlay.js'
 import { gameState } from './gameState.js'
+import { gameRandom } from './utils/gameRandom.js'
 
 let audioContext = null
 try {
@@ -322,7 +323,7 @@ const MAX_NARRATED_STACK = 3
 async function playAssetSound(eventName, volume = 1.0, onEnded, options = {}) {
   const files = soundFiles[eventName]
   if (files && files.length > 0) {
-    const file = files[Math.floor(Math.random() * files.length)]
+    const file = files[Math.floor(gameRandom() * files.length)]
     const soundPath = 'sound/' + file
 
     try {
@@ -330,7 +331,7 @@ async function playAssetSound(eventName, volume = 1.0, onEnded, options = {}) {
       const audioBuffer = await getCachedAudioBuffer(soundPath)
 
       // Track this audio instance
-      const audioId = soundPath + '_' + Date.now() + '_' + Math.random()
+      const audioId = soundPath + '_' + Date.now() + '_' + gameRandom()
 
       const cleanup = () => {
         activeAudioElements.delete(audioId)
@@ -480,7 +481,7 @@ export async function initBackgroundMusic() {
   backgroundMusicLoading = true
   window.logger('Loading background music on demand...')
 
-  const file = backgroundMusicFiles[Math.floor(Math.random() * backgroundMusicFiles.length)]
+  const file = backgroundMusicFiles[Math.floor(gameRandom() * backgroundMusicFiles.length)]
   const musicPath = 'sound/music/' + file
 
   try {

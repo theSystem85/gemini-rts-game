@@ -1,7 +1,7 @@
 // fpsDisplay.js - FPS overlay system using DOM element
 import { gameState } from '../gameState.js'
 import { notifyBenchmarkFrame } from '../benchmark/benchmarkTracker.js'
-import { getNetworkStats } from '../network/gameCommandSync.js'
+import { getNetworkStats, isLockstepEnabled } from '../network/gameCommandSync.js'
 
 export class FPSDisplay {
   constructor() {
@@ -42,6 +42,12 @@ export class FPSDisplay {
     this.networkRecvRateEl = document.getElementById('networkRecvRate')
     this.networkTotalSentEl = document.getElementById('networkTotalSent')
     this.networkTotalRecvEl = document.getElementById('networkTotalRecv')
+    
+    // Lockstep stats elements
+    this.lockstepStatsContainer = document.getElementById('lockstepStatsContainer')
+    this.lockstepStatusEl = document.getElementById('lockstepStatus')
+    this.lockstepTickEl = document.getElementById('lockstepTick')
+    this.lockstepDesyncEl = document.getElementById('lockstepDesync')
   }
 
   updateFPS(currentTime) {
@@ -132,6 +138,9 @@ export class FPSDisplay {
       
       // Update network stats if multiplayer is active
       this.updateNetworkStats(currentTime)
+      
+      // Update lockstep stats if lockstep is enabled
+      this.updateLockstepStats()
 
       this.fpsElement.classList.add('visible')
 
@@ -184,6 +193,44 @@ export class FPSDisplay {
       return `${(bytes / 1024).toFixed(1)} KB`
     } else {
       return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+    }
+  }
+  
+  updateLockstepStats() {
+    const lockstepEnabled = isLockstepEnabled()
+    
+    if (!lockstepEnabled || !this.lockstepStatsContainer) {
+      if (this.lockstepStatsContainer) {
+        this.lockstepStatsContainer.style.display = 'none'
+      }
+      return
+    }
+    
+    this.lockstepStatsContainer.style.display = 'block'
+    
+    // Get lockstep state from gameState
+    const lockstep = gameState.lockstep || {}
+    
+    // Update status
+    if (this.lockstepStatusEl) {
+      const role = gameState.multiplayerSession?.localRole === 'host' ? 'Host' : 'Client'
+      this.lockstepStatusEl.textContent = `⚙ Lockstep: ${role}`
+      this.lockstepStatusEl.style.color = lockstep.desyncDetected ? '#ff6b6b' : '#4ade80'
+    }
+    
+    // Update tick counter
+    if (this.lockstepTickEl) {
+      this.lockstepTickEl.textContent = `Tick: ${lockstep.currentTick || 0}`
+    }
+    
+    // Show/hide desync warning
+    if (this.lockstepDesyncEl) {
+      if (lockstep.desyncDetected) {
+        this.lockstepDesyncEl.style.display = 'block'
+        this.lockstepDesyncEl.textContent = `⚠ Desync at tick ${lockstep.desyncTick || '?'}!`
+      } else {
+        this.lockstepDesyncEl.style.display = 'none'
+      }
     }
   }
 

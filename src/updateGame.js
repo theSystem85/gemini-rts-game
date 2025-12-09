@@ -399,6 +399,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           return // Skip buildings without smoke spots
         }
 
+          if (!building.constructionFinished) {
+            return // Do not emit smoke before construction animation completes
+        }
+
         // Initialize smoke emission tracking for each spot if not exists (legacy building support)
         if (!building.smokeEmissionTrackers) {
           building.smokeEmissionTrackers = buildingConfig.smokeSpots.map(() => ({

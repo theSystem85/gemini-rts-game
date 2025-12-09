@@ -11,6 +11,7 @@ import { updateUnitSpeedModifier, awardExperience } from './utils.js'
 import { markBuildingForRepairPause } from './buildings.js'
 import { applyDamageToWreck } from './game/unitWreckManager.js'
 import { broadcastBuildingDamage } from './network/gameCommandSync.js'
+import { gameRandom } from './utils/gameRandom.js'
 
 export const explosions = [] // Global explosion effects for rocket impacts
 
@@ -364,7 +365,7 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
 
     if (closeCandidates.length > 1) {
       // Add unit ID based selection to ensure different harvesters pick different tiles
-      const unitId = unit.id || Math.floor(Math.random() * 1000) // Fallback to random if no ID
+      const unitId = unit.id || Math.floor(gameRandom() * 1000) // Fallback to random if no ID
       const unitBasedIndex = unitId % closeCandidates.length
       const selectedCandidate = closeCandidates[unitBasedIndex]
 

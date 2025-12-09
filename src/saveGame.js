@@ -40,6 +40,7 @@ import { rebuildMineLookup } from './game/mineSystem.js'
 import { regenerateAllInviteTokens, isHost } from './network/multiplayerStore.js'
 import { refreshSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { stopHostInvite } from './network/webrtcSession.js'
+import { gameRandom } from './utils/gameRandom.js'
 
 const BUILTIN_SAVE_PREFIX = 'builtin:'
 const LAST_GAME_LABEL = 'lastGame'
@@ -732,7 +733,7 @@ export function loadGame(key) {
         isBeingRecycled: Boolean(wreck.isBeingRecycled),
         recycleStartedAt: typeof wreck.recycleStartedAt === 'number' ? wreck.recycleStartedAt : null,
         recycleDuration: typeof wreck.recycleDuration === 'number' ? wreck.recycleDuration : null,
-        noiseSeed: typeof wreck.noiseSeed === 'number' ? wreck.noiseSeed : Math.random(),
+        noiseSeed: typeof wreck.noiseSeed === 'number' ? wreck.noiseSeed : gameRandom(),
         spriteCacheKey: wreck.spriteCacheKey || wreck.unitType || 'default',
         maxHealth: computedMaxHealth,
         health: computedHealth,

@@ -812,7 +812,7 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   // Consider moving harvester sound here too if spawnUnit handles initial harvester path.
   // if (type !== 'harvester') { // Only play if not a harvester (handled in productionQueue)
   //   const readySounds = ['unitReady01', 'unitReady02', 'unitReady03'];
-  //   const randomSound = readySounds[Math.floor(Math.random() * readySounds.length)];
+  //   const randomSound = readySounds[Math.floor(gameRandom() * readySounds.length)];
   //   playSound(randomSound, 1.0);
   // }
 

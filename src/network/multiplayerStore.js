@@ -8,6 +8,7 @@ import {
 import { composeInviteToken, buildInviteUrl, humanReadablePartyLabel } from './invites.js'
 import { showHostNotification } from './hostNotifications.js'
 import { STUN_HOST } from './signalling.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const inviteRecords = new Map()
 
@@ -47,7 +48,7 @@ export function generateRandomId(prefix = 'id') {
     return crypto.randomUUID()
   }
 
-  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+  return `${prefix}-${Date.now()}-${Math.floor(gameRandom() * 1e6)}`
 }
 
 function ensurePartyStates() {

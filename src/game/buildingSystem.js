@@ -11,6 +11,7 @@ import { updateDangerZoneMaps } from './dangerZoneMap.js'
 import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -134,13 +135,13 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
           // Create scattering ammunition particles
           const particleCount = 40 // Average of 30-50
           for (let i = 0; i < particleCount; i++) {
-            const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5
-            const speed = 0.5 + Math.random() * 1.5 // 0.5-2.0 tiles per second
+            const angle = (Math.PI * 2 * i) / particleCount + (gameRandom() - 0.5) * 0.5
+            const speed = 0.5 + gameRandom() * 1.5 // 0.5-2.0 tiles per second
             const lifetime = 5000 // 5 seconds
-            const damage = 30 + Math.random() * 20 // 30-50 damage
+            const damage = 30 + gameRandom() * 20 // 30-50 damage
             
             const particle = {
-              id: Date.now() + Math.random(),
+              id: Date.now() + gameRandom(),
               x: buildingCenterX,
               y: buildingCenterY,
               vx: Math.cos(angle) * speed * TILE_SIZE,
@@ -422,10 +423,10 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
                 // Store current target position for projectile calculation
                 building.currentTargetPosition = { x: targetX, y: targetY }
                 if (building.type === 'artilleryTurret') {
-                  if (Math.random() > 0.25) {
+                  if (gameRandom() > 0.25) {
                     const radius = TILE_SIZE * 3
-                    const ang = Math.random() * Math.PI * 2
-                    const dist = Math.random() * radius
+                    const ang = gameRandom() * Math.PI * 2
+                    const dist = gameRandom() * radius
                     building.currentTargetPosition.x += Math.cos(ang) * dist
                     building.currentTargetPosition.y += Math.sin(ang) * dist
                   }
@@ -478,7 +479,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
 
     // Allow up to ~2 degrees of deviation
     const maxAngleOffset = 0.035
-    const angleOffset = (Math.random() * 2 - 1) * maxAngleOffset
+    const angleOffset = (gameRandom() * 2 - 1) * maxAngleOffset
     const finalAngle = baseAngle + angleOffset
 
     return {
@@ -518,7 +519,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
 
   // Create a bullet object with all required properties
   const projectile = {
-    id: Date.now() + Math.random(),
+    id: Date.now() + gameRandom(),
     x: spawnX,
     y: spawnY,
     speed: building.projectileSpeed,

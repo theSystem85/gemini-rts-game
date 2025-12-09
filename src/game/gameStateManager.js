@@ -11,9 +11,9 @@ import {
   WIND_STRENGTH
 } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
-import { explosions, triggerExplosion } from '../logic.js'
+import { explosions } from '../logic.js'
+import { isHost } from '../network/gameCommandSync.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
-import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
 import { registerUnitWreck, releaseWreckAssignment } from './unitWreckManager.js'
@@ -25,6 +25,7 @@ import {
 import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
 import { distributeMineLayerPayload } from './mineSystem.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const MINIMAP_SCROLL_SMOOTHING = 0.2
 const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
@@ -168,7 +169,7 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
 
               // Only spread to land or street tiles that don't already have ore or seed crystals and don't have buildings or factories
               const tileType = mapGrid[ny][nx].type
-              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && Math.random() < spreadProb) {
+              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && gameRandom() < spreadProb) {
                 mapGrid[ny][nx].ore = true
               }
             }
@@ -186,13 +187,30 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
  */
 export function updateExplosions(gameState) {
   const now = performance.now()
+  const hostAuthority = isHost()
 
-  for (let i = explosions.length - 1; i >= 0; i--) {
-    if (now - explosions[i].startTime > explosions[i].duration) {
-      explosions.splice(i, 1)
+  if (!hostAuthority) {
+    if (!Array.isArray(gameState.explosions)) {
+      gameState.explosions = []
     }
   }
-  gameState.explosions = explosions
+
+  const activeExplosions = hostAuthority ? explosions : gameState.explosions
+
+  for (let i = activeExplosions.length - 1; i >= 0; i--) {
+    const exp = activeExplosions[i]
+    if (!exp || typeof exp.startTime !== 'number' || typeof exp.duration !== 'number') {
+      activeExplosions.splice(i, 1)
+      continue
+    }
+    if (now - exp.startTime > exp.duration) {
+      activeExplosions.splice(i, 1)
+    }
+  }
+
+  if (hostAuthority) {
+    gameState.explosions = explosions
+  }
 }
 
 /**
@@ -228,8 +246,8 @@ export function updateSmokeParticles(gameState) {
       p.vy += WIND_DIRECTION.y * WIND_STRENGTH * 0.5
 
       // Add slight turbulence for realism (reduced)
-      p.vx += (Math.random() - 0.5) * 0.003
-      p.vy += (Math.random() - 0.5) * 0.003
+      p.vx += (gameRandom() - 0.5) * 0.003
+      p.vy += (gameRandom() - 0.5) * 0.003
 
       // Fade out alpha and expand size over time (reduced expansion)
       p.alpha = Math.max(0, (1 - progress) * p.alpha)

@@ -1,10 +1,10 @@
 // ammunitionTruckLogic.js
 import { AMMO_RESUPPLY_TIME, AMMO_TRUCK_RANGE, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
-import { findPath } from '../units.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 import { triggerExplosion } from '../logic.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 /**
  * Check if a unit is adjacent to any tile of a building
@@ -197,11 +197,11 @@ export function detonateAmmunitionTruck(unit, units, factories = [], gameState =
     }
   ]
 
-  const randomBetween = (min, max) => Math.random() * (max - min) + min
+  const randomBetween = (min, max) => gameRandom() * (max - min) + min
 
   for (let i = 0; i < 10; i++) {
-    const round = roundTypes[Math.floor(Math.random() * roundTypes.length)]
-    const angle = Math.random() * Math.PI * 2
+    const round = roundTypes[Math.floor(gameRandom() * roundTypes.length)]
+    const angle = gameRandom() * Math.PI * 2
     const distance = TILE_SIZE * randomBetween(1.5, 4.5)
     const impactX = explosionX + Math.cos(angle) * distance
     const impactY = explosionY + Math.sin(angle) * distance

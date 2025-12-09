@@ -22,6 +22,7 @@ import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { broadcastBuildingDamage } from '../network/gameCommandSync.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
+import { gameRandom } from '../utils/gameRandom.js'
 
 const APACHE_REMOTE_DAMAGE = 10
 const APACHE_TANK_DAMAGE_MULTIPLIER = 1.67
@@ -161,8 +162,8 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
             for (let i = 0; i < numExplosions; i++) {
             // Random angle and distance within the explosion radius
-              const angle = Math.random() * Math.PI * 2
-              const distance = Math.random() * explosionRadius
+              const angle = gameRandom() * Math.PI * 2
+              const distance = gameRandom() * explosionRadius
 
               const explosionX = targetCenter.x + Math.cos(angle) * distance
               const explosionY = targetCenter.y + Math.sin(angle) * distance
@@ -449,8 +450,8 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             if (unit.type === 'apache' && bullet.projectileType === 'rocket') {
               const dodgeChance = typeof unit.dodgeChance === 'number' ? unit.dodgeChance : 0.6
               const canAttemptDodge = !unit.lastDodgeTime || now - unit.lastDodgeTime > 400
-              if (canAttemptDodge && Math.random() < dodgeChance) {
-                const lateralSign = Math.random() < 0.5 ? -1 : 1
+              if (canAttemptDodge && gameRandom() < dodgeChance) {
+                const lateralSign = gameRandom() < 0.5 ? -1 : 1
                 const dodgeAngle = (unit.direction || 0) + lateralSign * Math.PI / 2
                 const dodgeDistance = TILE_SIZE * 0.6
                 const offsetX = Math.cos(dodgeAngle) * dodgeDistance
@@ -481,7 +482,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             const hitZoneResult = calculateHitZoneDamageMultiplier(bullet, unit)
 
             // Apply damage with some randomization and hit zone multiplier
-            const damageMultiplier = 0.8 + Math.random() * 0.4
+            const damageMultiplier = 0.8 + gameRandom() * 0.4
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier * hitZoneResult.multiplier)
 
             // Check for god mode protection
@@ -505,7 +506,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               let crewLossOccurred = false
               if (unit.crew) {
                 for (const member of Object.keys(unit.crew)) {
-                  if (unit.crew[member] && Math.random() < CREW_KILL_CHANCE) {
+                  if (unit.crew[member] && gameRandom() < CREW_KILL_CHANCE) {
                     unit.crew[member] = false
                     crewLossOccurred = true
                     // Only play sound for human player units
@@ -598,7 +599,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         for (let j = gameState.unitWrecks.length - 1; j >= 0; j--) {
           const wreck = gameState.unitWrecks[j]
           if (checkWreckCollision(bullet, wreck)) {
-            const damageMultiplier = 0.8 + Math.random() * 0.4
+            const damageMultiplier = 0.8 + gameRandom() * 0.4
             const actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
             if (actualDamage > 0 && bullet.originType !== 'apacheRocket') {
               applyDamageToWreck(wreck, actualDamage, gameState, { x: bullet.x, y: bullet.y })
@@ -642,7 +643,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         for (const building of gameState.buildings) {
           if (checkBuildingCollision(bullet, building)) {
           // Apply damage with some randomization
-            const damageMultiplier = 0.8 + Math.random() * 0.4
+            const damageMultiplier = 0.8 + gameRandom() * 0.4
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
 
             if (bullet.projectileType === 'rocket') {
@@ -727,7 +728,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         for (const factory of factories) {
           if (checkFactoryCollision(bullet, factory)) {
           // Apply damage with some randomization
-            const damageMultiplier = 0.8 + Math.random() * 0.4
+            const damageMultiplier = 0.8 + gameRandom() * 0.4
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier)
 
             if (bullet.projectileType === 'rocket') {
@@ -833,7 +834,7 @@ export function fireBullet(unit, target, bullets, now) {
 
   if (unit.type === 'tank' || unit.type === 'tank_v1') {
     bullet = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + gameRandom(),
       x: unitCenterX,
       y: unitCenterY,
       speed: 12,
@@ -845,7 +846,7 @@ export function fireBullet(unit, target, bullets, now) {
     }
   } else if (unit.type === 'tank-v2') {
     bullet = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + gameRandom(),
       x: unitCenterX,
       y: unitCenterY,
       speed: 12,
@@ -857,7 +858,7 @@ export function fireBullet(unit, target, bullets, now) {
     }
   } else if (unit.type === 'tank-v3') {
     bullet = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + gameRandom(),
       x: unitCenterX,
       y: unitCenterY,
       speed: 14,
@@ -876,7 +877,7 @@ export function fireBullet(unit, target, bullets, now) {
     const flightDuration = distance / speed
 
     bullet = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + gameRandom(),
       x: spawn.x,
       y: spawn.y,
       speed,
@@ -907,7 +908,7 @@ export function fireBullet(unit, target, bullets, now) {
     const speed = 5
 
     bullet = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + gameRandom(),
       x: spawn.x,
       y: spawn.y,
       speed,
