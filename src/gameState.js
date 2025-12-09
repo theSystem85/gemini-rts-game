@@ -68,6 +68,8 @@ export const gameState = {
   enemyBuildSpeedModifier: 1.0,
   buildingPlacementMode: false,
   currentBuildingType: null,
+  mapEditMode: false,
+  mapEditRandomMode: true,
   cursorX: 0,
   cursorY: 0,
   draggedBuildingType: null,
