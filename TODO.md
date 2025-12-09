@@ -80,17 +80,17 @@
   - [x] Added fallback in updateGame.js to use `unit.health || 100` if maxHealth is missing
   - [x] Smoke now emits from back of unit (based on direction) instead of center
 - [x] Add short-range occupancy-based lookahead so moving units steer away from nearby blockers before colliding while keeping their planned paths unchanged.
-- [ ] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
+- [x] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
 - [x] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.
 - [x] Limit gas station explosion damage so construction yards retain 10% health.
 - [ ] Enemy AI should automatically build next what is the current production bottleneck regarding money supply. Highest prio is energy. When energy is too low it will build a power plant. When there is too little money it will build harvesters but only if there is less than 4 havesters per refinery otherwiese it will build a refinery but only if the money has reached 0 before. So whenevery the money supply reached 0 the highest prio is to build another refinery (given the power supply is sufficient). When money supply is sufficient focus on building a good base defence with at least 2 turrets and one tesla coil and one rocket launcher. If that is given focus on producing as many combat units as possible. When the money raises faster than tanks can be build then build more vehicle factories to speed up the production.
-- [ ] Enemy AI building placement must enforce a 2-tile gap to other structures (except defence-with-defence and wall-to-wall placements that may touch), only relaxing to a 1-tile gap after all nearby 2-gap options are blocked.
-- [ ] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
-- [ ] Enemy AI must build Apaches (one per helipad), use them to strike unprotected harvesters and bases, and retreat from rocket-based air defenses before re-engaging.
+- [x] Enemy AI building placement must enforce a 2-tile gap to other structures (except defence-with-defence and wall-to-wall placements that may touch), only relaxing to a 1-tile gap after all nearby 2-gap options are blocked.
+- [x] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
+- [x] Enemy AI must build Apaches (one per helipad), use them to strike unprotected harvesters and bases, and retreat from rocket-based air defenses before re-engaging.
 - [x] Ensure enemy AI sells non-essential buildings when broke and lacking refineries or harvesters so it can afford the missing structure and restart harvesting income.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
-- [ ] **Refactor:** move all constants into config.
+- [x] **Refactor:** move all constants into config.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 
@@ -294,22 +294,20 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [x] ✅ Helipad ammunition transfer to landed Apache helicopters implemented
   - [x] ✅ Cheat system supports ammunition manipulation for all unit types including Apache
   - [x] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`
-- [ ] Add online multiplayer support where humans can join an existing game and take over an AI party.
-  - [ ] The interface should be minimalistic
-  - [ ] in the sidebar below the "Players: " input there will be a label for each active party in the game like "Red: NameOfRedPlayer" and so on. Each row has another party listed.
-    - [ ] on the right of each row is a small invite button that generates an invite link to take over that party by a human player on the internet
-    - [ ] when a human opens the link in a browser the game is started and the browser connects to that game and the party is taken over by that player.
-  - [ ] Before connecting the new player has to enter his name/alias. After that he will join immediately to the running or paused game of the host.
-  - [ ] Use WebRTC to connect the browsers directs to one another so no gaming server is needed. The host browser will serve as the source of truth when more than 2 players are joined.
-  - [ ] the host will get a notification when a player joined successfully.
-  - [ ] when a party disconnects i.e. by closing the tab the party will immediately be taken over by an ai player again but the invite link will work again if opened again in a browser.
-  - [ ] the invite link is specific to a game instance and a party
-  - [ ] any party can save the game but when a non host will load the game this non host will be the new host and the game instance will be different and also the invite links will be different from the original.
-  - [ ] only the host can start/pause the game
+- [x] Add online multiplayer support where humans can join an existing game and take over an AI party.
+  - [x] The interface should be minimalistic
+  - [x] in the sidebar below the "Players: " input there will be a label for each active party in the game like "Red: NameOfRedPlayer" and so on. Each row has another party listed.
+    - [x] on the right of each row is a small invite button that generates an invite link to take over that party by a human player on the internet
+    - [x] when a human opens the link in a browser the game is started and the browser connects to that game and the party is taken over by that player.
+  - [x] Before connecting the new player has to enter his name/alias. After that he will join immediately to the running or paused game of the host.
+  - [x] Use WebRTC to connect the browsers directs to one another so no gaming server is needed. The host browser will serve as the source of truth when more than 2 players are joined.
+  - [x] the host will get a notification when a player joined successfully.
+  - [x] when a party disconnects i.e. by closing the tab the party will immediately be taken over by an ai player again but the invite link will work again if opened again in a browser.
+  - [x] the invite link is specific to a game instance and a party
+  - [x] any party can save the game but when a non host will load the game this non host will be the new host and the game instance will be different and also the invite links will be different from the original.
+  - [x] only the host can start/pause the game
   - [ ] For the initial webRTC connection setup use a small express server that provides STUN services to connect peers
-  - [ ] only the host can start/pause the game or use cheats, even after other players join
-  - [ ] Phase 2: foundation state, UI rows, invite/notification wiring still pending
-  - [ ] Phase 3: render the party invite rows, copy button, and host notifications
+  - [x] only the host can start/pause the game or use cheats, even after other players join
 ## Bugs
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
