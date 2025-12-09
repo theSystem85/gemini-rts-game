@@ -956,6 +956,7 @@ body.mobile-landscape {
 }
 
 body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
+  --mobile-build-menu-gutter: min(var(--safe-area-right), 6px);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -964,7 +965,7 @@ body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   bottom: 0;
   height: 100%;
   padding-top: var(--safe-area-top);
-  padding-right: var(--safe-area-right);
+  padding-right: var(--mobile-build-menu-gutter);
   padding-bottom: var(--safe-area-bottom);
   background: rgba(32, 32, 32, 0.94);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
@@ -973,7 +974,7 @@ body.mobile-landscape #mobileBuildMenuContainer[aria-hidden="false"] {
   padding-left: 0;
   gap: 0;
   box-sizing: border-box;
-  width: calc(var(--mobile-build-menu-width) + var(--safe-area-right));
+  width: calc(var(--mobile-build-menu-width) + var(--mobile-build-menu-gutter));
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #productionArea {
@@ -1041,9 +1042,10 @@ body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   margin: 0;
-  padding: 0 6px;
+  padding: 0;
+  width: 100%;
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
@@ -1052,6 +1054,8 @@ body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resourc
   font-weight: 400;
   letter-spacing: 0;
   color: #f2f2f2;
+  width: 100%;
+  text-align: center;
 }
 
 #mobileMoneyDisplay {
