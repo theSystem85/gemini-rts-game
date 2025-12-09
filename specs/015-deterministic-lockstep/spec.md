@@ -2,7 +2,7 @@
 
 **Feature Branch**: `015-deterministic-lockstep`
 **Created**: 2025-12-04
-**Status**: ✅ Fully Implemented
+**Status**: ⚠️ Follow-up Work Pending
 **Input**: "Refactor multiplayer to use deterministic lockstep so peers only exchange user inputs and map state hashes while guaranteeing both host and client remain synchronized with seeded randomness."
 
 ---
@@ -75,6 +75,11 @@ Implement deterministic lockstep networking to minimize bandwidth and ensure hos
   - Current tick counter display
   - Desync warning indicator with tick information
   - Host/Client role indicator
+
+### Outstanding
+- ❗ Ensure client-side explosion rendering remains animated when driven purely by lockstep inputs (currently explosions appear static compared to host).
+- ❗ Building construction received via network must replay the full fade/raise animation instead of instantly appearing completed on clients.
+- ❗ Smoke emissions tied to buildings should trigger only after the construction animation finishes to avoid smoke coming from invisible structures.
 
 ---
 

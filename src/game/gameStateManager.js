@@ -12,6 +12,7 @@ import {
 } from '../config.js'
 import { resolveUnitCollisions, removeUnitOccupancy } from '../units.js'
 import { explosions } from '../logic.js'
+import { isHost } from '../network/gameCommandSync.js'
 import { playSound, playPositionalSound, audioContext } from '../sound.js'
 import { clearFactoryFromMapGrid } from '../factories.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -186,13 +187,30 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
  */
 export function updateExplosions(gameState) {
   const now = performance.now()
+  const hostAuthority = isHost()
 
-  for (let i = explosions.length - 1; i >= 0; i--) {
-    if (now - explosions[i].startTime > explosions[i].duration) {
-      explosions.splice(i, 1)
+  if (!hostAuthority) {
+    if (!Array.isArray(gameState.explosions)) {
+      gameState.explosions = []
     }
   }
-  gameState.explosions = explosions
+
+  const activeExplosions = hostAuthority ? explosions : gameState.explosions
+
+  for (let i = activeExplosions.length - 1; i >= 0; i--) {
+    const exp = activeExplosions[i]
+    if (!exp || typeof exp.startTime !== 'number' || typeof exp.duration !== 'number') {
+      activeExplosions.splice(i, 1)
+      continue
+    }
+    if (now - exp.startTime > exp.duration) {
+      activeExplosions.splice(i, 1)
+    }
+  }
+
+  if (hostAuthority) {
+    gameState.explosions = explosions
+  }
 }
 
 /**

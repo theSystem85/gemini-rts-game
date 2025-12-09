@@ -785,29 +785,39 @@ function createGameStateSnapshot() {
   }))
   
   // Serialize buildings with essential properties
-  const buildings = (gameState.buildings || []).map(building => ({
-    id: building.id,
-    type: building.type,
-    owner: building.owner,
-    x: building.x,
-    y: building.y,
-    width: building.width,
-    height: building.height,
-    health: building.health,
-    maxHealth: building.maxHealth,
-    constructionProgress: building.constructionProgress,
-    constructionStartTime: building.constructionStartTime,
-    constructionFinished: building.constructionFinished,
-    isBeingBuilt: building.isBeingBuilt,
-    isBeingSold: building.isBeingSold,
-    sellStartTime: building.sellStartTime,
-    ammo: building.ammo,
-    maxAmmo: building.maxAmmo,
-    turretDirection: building.turretDirection,
-    // Animation state - convert to elapsed time for cross-machine sync
-    muzzleFlashElapsed: building.muzzleFlashStartTime ? now - building.muzzleFlashStartTime : null,
-    recoilElapsed: building.recoilStartTime ? now - building.recoilStartTime : null
-  }))
+  const buildings = (gameState.buildings || []).map(building => {
+    const constructionElapsed = typeof building.constructionStartTime === 'number'
+      ? Math.max(0, now - building.constructionStartTime)
+      : null
+    const sellElapsed = typeof building.sellStartTime === 'number'
+      ? Math.max(0, now - building.sellStartTime)
+      : null
+    return {
+      id: building.id,
+      type: building.type,
+      owner: building.owner,
+      x: building.x,
+      y: building.y,
+      width: building.width,
+      height: building.height,
+      health: building.health,
+      maxHealth: building.maxHealth,
+      constructionProgress: building.constructionProgress,
+      constructionStartTime: building.constructionStartTime,
+      constructionElapsed,
+      constructionFinished: building.constructionFinished,
+      isBeingBuilt: building.isBeingBuilt,
+      isBeingSold: building.isBeingSold,
+      sellStartTime: building.sellStartTime,
+      sellElapsed,
+      ammo: building.ammo,
+      maxAmmo: building.maxAmmo,
+      turretDirection: building.turretDirection,
+      // Animation state - convert to elapsed time for cross-machine sync
+      muzzleFlashElapsed: building.muzzleFlashStartTime ? now - building.muzzleFlashStartTime : null,
+      recoilElapsed: building.recoilStartTime ? now - building.recoilStartTime : null
+    }
+  })
   
   // Serialize bullets/projectiles with full properties - use mainBullets from main.js as that's the authoritative array
   const bullets = (mainBullets || []).map(bullet => ({
@@ -857,7 +867,7 @@ function createGameStateSnapshot() {
   const explosions = (gameState.explosions || []).map(exp => ({
     x: exp.x,
     y: exp.y,
-    startTime: exp.startTime,
+    startElapsed: typeof exp.startTime === 'number' ? Math.max(0, now - exp.startTime) : 0,
     duration: exp.duration,
     maxRadius: exp.maxRadius
   }))
@@ -1183,26 +1193,36 @@ function applyGameStateSnapshot(snapshot) {
         ? now - snapshotBuilding.recoilElapsed 
         : null
       
+      const constructionStartTime = snapshotBuilding.constructionElapsed != null
+        ? now - snapshotBuilding.constructionElapsed
+        : (snapshotBuilding.constructionStartTime ?? existing?.constructionStartTime ?? now)
+      const sellStartTime = snapshotBuilding.sellElapsed != null
+        ? now - snapshotBuilding.sellElapsed
+        : (snapshotBuilding.sellStartTime ?? existing?.sellStartTime ?? null)
+
       if (existing) {
         // Merge snapshot data into existing building to preserve non-synced properties
         // But respect construction animation state from snapshot
-        const { muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...buildingData } = snapshotBuilding
+        const { muzzleFlashElapsed: _mfe, recoilElapsed: _re, constructionElapsed: _ce, sellElapsed: _se, ...buildingData } = snapshotBuilding
         Object.assign(existing, buildingData)
         // Apply converted animation times
         existing.muzzleFlashStartTime = muzzleFlashStartTime
         existing.recoilStartTime = recoilStartTime
+        existing.constructionStartTime = constructionStartTime
+        existing.sellStartTime = sellStartTime
         return existing
       } else {
         // New building from host - use snapshot's construction state if available
         // Otherwise start construction animation
-        const { muzzleFlashElapsed: _mfe2, recoilElapsed: _re2, ...buildingData } = snapshotBuilding
+        const { muzzleFlashElapsed: _mfe2, recoilElapsed: _re2, constructionElapsed: _ce2, sellElapsed: _se2, ...buildingData } = snapshotBuilding
         const newBuilding = {
           ...buildingData,
           muzzleFlashStartTime,
           recoilStartTime,
           isBuilding: true,
           constructionFinished: snapshotBuilding.constructionFinished === true,
-          constructionStartTime: snapshotBuilding.constructionStartTime || now
+          constructionStartTime,
+          sellStartTime
         }
         newBuildings.push(newBuilding)
         return newBuilding
@@ -1325,9 +1345,18 @@ function applyGameStateSnapshot(snapshot) {
     const existingKeys = new Set(existingExplosions.map(e => `${e.x}_${e.y}_${e.startTime}`))
     
     snapshot.explosions.forEach(exp => {
-      const key = `${exp.x}_${exp.y}_${exp.startTime}`
+      const startTime = exp.startElapsed != null
+        ? now - exp.startElapsed
+        : (exp.startTime ?? now)
+      const normalized = {
+        ...exp,
+        startTime,
+        duration: exp.duration ?? 500
+      }
+      const key = `${normalized.x}_${normalized.y}_${Math.round(startTime)}`
       if (!existingKeys.has(key)) {
-        existingExplosions.push(exp)
+        existingExplosions.push(normalized)
+        existingKeys.add(key)
       }
     })
     gameState.explosions = existingExplosions
@@ -1370,6 +1399,7 @@ function applyGameStateSnapshot(snapshot) {
  * @returns {Object}
  */
 function createClientStateUpdate() {
+  const now = performance.now()
   const partyId = gameState.humanPlayer
   
   // Only include units owned by this client - use mainUnits as that's authoritative
@@ -1400,7 +1430,9 @@ function createClientStateUpdate() {
     .map(building => ({
       id: building.id,
       health: building.health,
+      constructionElapsed: typeof building.constructionStartTime === 'number' ? Math.max(0, now - building.constructionStartTime) : null,
       constructionStartTime: building.constructionStartTime,
+      sellElapsed: typeof building.sellStartTime === 'number' ? Math.max(0, now - building.sellStartTime) : null,
       constructionFinished: building.constructionFinished,
       ammo: building.ammo,
       turretDirection: building.turretDirection,
@@ -1411,7 +1443,7 @@ function createClientStateUpdate() {
   const explosions = (gameState.explosions || []).map(exp => ({
     x: exp.x,
     y: exp.y,
-    startTime: exp.startTime,
+    startElapsed: typeof exp.startTime === 'number' ? Math.max(0, now - exp.startTime) : 0,
     duration: exp.duration,
     maxRadius: exp.maxRadius
   }))

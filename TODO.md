@@ -22,6 +22,7 @@
   - [x] ✅ Integrated lockstep initialization into multiplayer game start flow (webrtcSession.js)
   - [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
 - [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
+  - [ ] Deterministic lockstep visuals: ensure multiplayer clients render explosion animations correctly, remote building construction plays its full animation instead of popping in, and building smoke only starts after the build animation completes.
 
 ## Netlify Deployment for Multiplayer
 - [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http
