@@ -648,10 +648,10 @@ body.mobile-landscape #mobileSidebarControls {
   align-items: flex-start;
   background: none;
   border-radius: 0;
-  padding: 0;
+  padding: 0 0 0 var(--safe-area-left);
   box-shadow: none;
   box-sizing: border-box;
-  width: var(--mobile-action-size);
+  width: calc(var(--mobile-action-size) + var(--safe-area-left));
   z-index: 2000;
 }
 
@@ -834,7 +834,7 @@ body.mobile-landscape #mobileActionsContainer {
   display: flex;
   width: 100%;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -887,12 +887,13 @@ body.mobile-landscape #mobileMinimapButton {
 body.mobile-landscape #actions {
   flex: 1;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin: 0;
   width: 100%;
   justify-content: flex-start;
   align-items: flex-start;
   height: 100%;
+  padding: 0 0 calc(var(--safe-area-bottom));
 }
 
 body.mobile-landscape #actions .action-button {
@@ -1206,7 +1207,7 @@ body.mobile-portrait.sidebar-collapsed #gameCanvasGL {
   position: fixed;
   top: calc(var(--safe-area-top));
   bottom: calc(var(--safe-area-bottom));
-  left: calc(var(--safe-area-left));
+  left: 0;
   display: none;
   flex-direction: column;
   align-items: flex-start;

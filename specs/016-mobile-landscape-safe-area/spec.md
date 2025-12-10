@@ -17,7 +17,7 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
    - The energy bar text must remain fully readable while centered inside the bar.
 
 4. **Action Button Placement**
-   - Mobile landscape action buttons must hug the left safe-area inset: Menu and Start/Pause sit at the top, Repair/Sell/Minimap align from the bottom up, leaving a central gap so the dynamic island never obscures them.
+   - Mobile landscape action buttons must hug the physical left edge while respecting the safe-area inset: Menu and Start/Pause sit at the top, Repair/Sell/Minimap align from the bottom up, leaving a central gap so the dynamic island never obscures them.
 
 5. **Device Scope**
    - Changes must specifically target landscape touch layouts and respect existing portrait sidebar logic.
