@@ -16,6 +16,9 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
    - The green power bar and money display in the mobile status bar must align with the build menu content and stay vertically stacked without overlap.
    - The energy bar text must remain fully readable while centered inside the bar.
 
-4. **Device Scope**
+4. **Action Button Placement**
+   - Mobile landscape action buttons must hug the left safe-area inset: Menu and Start/Pause sit at the top, Repair/Sell/Minimap align from the bottom up, leaving a central gap so the dynamic island never obscures them.
+
+5. **Device Scope**
    - Changes must specifically target landscape touch layouts and respect existing portrait sidebar logic.
    - Safe-area CSS variables continue to derive from `body.is-touch` so the solution works for other notch devices.

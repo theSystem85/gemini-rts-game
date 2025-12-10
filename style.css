@@ -838,7 +838,7 @@ body.mobile-landscape #mobileActionsContainer {
   gap: 6px;
   margin: 0;
   padding: 0;
-  margin-top: auto;
+  flex: 1;
 }
 
 #mobileMinimapButton {
@@ -885,12 +885,40 @@ body.mobile-landscape #mobileMinimapButton {
 }
 
 body.mobile-landscape #actions {
+  flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   width: 100%;
   justify-content: flex-start;
   align-items: flex-start;
+  height: 100%;
+}
+
+body.mobile-landscape #actions .action-button {
+  order: 10;
+  align-self: flex-start;
+}
+
+body.mobile-landscape #mobileSidebarMenuBtn {
+  order: 1;
+}
+
+body.mobile-landscape #pauseBtn {
+  order: 2;
+}
+
+body.mobile-landscape #repairBtn {
+  order: 4;
+  margin-top: auto;
+}
+
+body.mobile-landscape #sellBtn {
+  order: 5;
+}
+
+body.mobile-landscape #mobileMinimapButton {
+  order: 6;
 }
 
 body.mobile-landscape #actions .mobile-sidebar-menu-button {
