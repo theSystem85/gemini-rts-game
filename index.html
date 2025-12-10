@@ -555,6 +555,25 @@
                 >
               </label>
             </div>
+            <div class="map-edit-controls" style="display: flex; flex-direction: column; gap: 6px; margin: 10px 0;">
+              <button id="mapEditModeBtn" class="action-button" type="button">Edit Mode</button>
+              <label style="display:flex; align-items:center; gap:6px;">
+                Tile:
+                <select id="mapEditTileSelect" class="sidebar-input" style="flex:1;">
+                  <option value="grass">Grass</option>
+                  <option value="decor">Decoration</option>
+                  <option value="rugged">Rugged Grass</option>
+                  <option value="street">Street</option>
+                  <option value="rock">Rock</option>
+                  <option value="water">Water</option>
+                </select>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="mapEditRandomToggle" checked>
+                <span>Random variations</span>
+              </label>
+              <div id="mapEditStatus" class="map-edit-status" aria-live="polite" style="font-size: 12px; color: #ccc;"></div>
+            </div>
             <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
               <input type="checkbox" id="oreSpreadCheckbox">
               <span>ORE_SPREAD_ENABLED</span>

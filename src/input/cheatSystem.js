@@ -1,6 +1,6 @@
 // cheatSystem.js
 import { gameState } from '../gameState.js'
-import { units } from '../main.js'
+import { units, factories } from '../main.js'
 import { showNotification } from '../ui/notifications.js'
 import { playSound } from '../sound.js'
 import { productionQueue } from '../productionQueue.js'
@@ -213,6 +213,7 @@ export class CheatSystem {
           <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
           <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
           <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
+          <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
           <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
           <li><code>kill</code> - Destroy all selected units or buildings</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
@@ -418,6 +419,14 @@ export class CheatSystem {
         const spawn = this.parseSpawnCommand(code)
         if (spawn) {
           this.spawnUnitsAroundCursor(spawn.unitType, spawn.count, spawn.owner)
+        } else if (normalizedCode.startsWith('partyme ')) {
+          const target = normalizedCode.substring(8).trim()
+          const owner = this.resolvePartyAlias(target)
+          if (owner) {
+            this.setPlayerParty(owner)
+          } else {
+            this.showError('Invalid party. Use: partyme [green|red|blue|yellow|player1|player2|player3|player4]')
+          }
         } else if (normalizedCode.startsWith('party ')) {
           const target = normalizedCode.substring(6).trim()
           const owner = this.resolvePartyAlias(target)
@@ -1057,6 +1066,33 @@ export class CheatSystem {
       }
       showNotification(`🎨 Changed party to ${owner} for ${changed} item(s)`, 3000)
     }
+  }
+
+  setPlayerParty(owner) {
+    const previousOwner = gameState.humanPlayer
+    gameState.humanPlayer = owner
+
+    const updateOwner = (entity) => {
+      if (entity && typeof entity.owner !== 'undefined') {
+        entity.owner = owner
+      }
+      if (entity && typeof entity.id !== 'undefined' && entity.id === previousOwner) {
+        entity.id = owner
+      }
+    }
+
+    if (Array.isArray(gameState.units)) {
+      gameState.units.forEach(updateOwner)
+    }
+    units.forEach(updateOwner)
+
+    if (Array.isArray(gameState.buildings)) {
+      gameState.buildings.forEach(updateOwner)
+    }
+    factories.forEach(updateOwner)
+
+    updatePowerSupply(gameState.buildings, gameState)
+    showNotification(`🛡️ Switched player party to ${owner}`, 3200)
   }
 
   killSelectedTargets() {
