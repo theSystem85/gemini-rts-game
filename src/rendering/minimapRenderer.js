@@ -42,9 +42,25 @@ export class MinimapRenderer {
     const minimapLogicalWidth = parseInt(minimapCanvas.style.width, 10) || 250
     const minimapLogicalHeight = parseInt(minimapCanvas.style.height, 10) || 150
 
+    const gridReady = Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])
+
+    if (!gridReady) {
+      minimapCtx.fillStyle = '#000'
+      minimapCtx.fillRect(0, 0, minimapLogicalWidth, minimapLogicalHeight)
+      minimapCtx.fillStyle = '#fff'
+      minimapCtx.font = '12px Arial'
+      minimapCtx.textAlign = 'center'
+      minimapCtx.textBaseline = 'middle'
+      minimapCtx.fillText('Generating map…', minimapLogicalWidth / 2, minimapLogicalHeight / 2)
+      return
+    }
+
+    const mapWidth = mapGrid[0].length
+    const mapHeight = mapGrid.length
+
     // Calculate scale based on logical dimensions
-    const scaleX = minimapLogicalWidth / (mapGrid[0].length * TILE_SIZE)
-    const scaleY = minimapLogicalHeight / (mapGrid.length * TILE_SIZE)
+    const scaleX = minimapLogicalWidth / (mapWidth * TILE_SIZE)
+    const scaleY = minimapLogicalHeight / (mapHeight * TILE_SIZE)
 
     // Apply pixel ratio scaling
     minimapCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
@@ -145,14 +161,14 @@ export class MinimapRenderer {
     )
 
     if (shadowEnabled) {
-      const tileWidth = minimapLogicalWidth / mapGrid[0].length
-      const tileHeight = minimapLogicalHeight / mapGrid.length
+      const tileWidth = minimapLogicalWidth / mapWidth
+      const tileHeight = minimapLogicalHeight / mapHeight
       const undiscoveredRects = []
       const fogRects = []
 
-      for (let y = 0; y < mapGrid.length; y++) {
+      for (let y = 0; y < mapHeight; y++) {
         const row = visibilityMap[y]
-        for (let x = 0; x < mapGrid[0].length; x++) {
+        for (let x = 0; x < mapWidth; x++) {
           const cell = row ? row[x] : null
           const destX = x * tileWidth
           const destY = y * tileHeight
@@ -317,6 +333,9 @@ export class MinimapRenderer {
   }
 
   ensureMapCache(mapGrid) {
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+      return
+    }
     const width = mapGrid[0].length
     const height = mapGrid.length
 
@@ -383,6 +402,10 @@ export class MinimapRenderer {
   }
 
   installTileWatchers(mapGrid) {
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+      return
+    }
+
     if (mapGrid.__minimapWatchersInstalled) {
       return
     }
@@ -391,9 +414,15 @@ export class MinimapRenderer {
       this.cacheDirty = true
     }
 
-    for (let y = 0; y < mapGrid.length; y++) {
-      for (let x = 0; x < mapGrid[0].length; x++) {
-        const tile = mapGrid[y][x]
+    const height = mapGrid.length
+    const width = mapGrid[0].length
+
+    for (let y = 0; y < height; y++) {
+      const row = mapGrid[y]
+      if (!Array.isArray(row)) continue
+      for (let x = 0; x < width; x++) {
+        const tile = row[x]
+        if (!tile) continue
         if (tile.__minimapWatchersInstalled) {
           continue
         }

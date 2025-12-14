@@ -326,6 +326,12 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [ ] For the initial webRTC connection setup use a small express server that provides STUN services to connect peers
   - [x] only the host can start/pause the game or use cheats, even after other players join
 ## Bugs
+- [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
+- [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
+- [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).
+- [ ] Fix `MinimapRenderer.render` crash when `mapGrid` or its rows are undefined during initialization.
+- [ ] Fix `updateOreSpread` (gameStateManager.js) assuming `mapGrid` rows exist, causing `Cannot read properties of undefined (reading 'length')` during updateGame initialization.
+- [x] ✅ Game loads without an auto-generated map; restore default random map generation on start and ensure map edit mode is disabled until explicitly toggled.
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
 

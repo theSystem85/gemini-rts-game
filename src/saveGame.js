@@ -568,6 +568,15 @@ export function loadGame(key) {
 
     Object.assign(gameState, loaded.gameState)
 
+    // Clear defeat/victory state when loading - let the game check conditions fresh
+    gameState.gameOver = false
+    gameState.gameOverMessage = null
+    gameState.gameResult = null
+    gameState.localPlayerDefeated = false
+    gameState.isSpectator = false
+    // Ensure game is marked as started
+    gameState.gameStarted = true
+
     const savedWidthTiles = Number.isFinite(loaded?.gameState?.mapTilesX)
       ? loaded.gameState.mapTilesX
       : DEFAULT_MAP_TILES_X
@@ -782,6 +791,11 @@ export function loadGame(key) {
       if (!factory) {
         // fallback: use first factory of that owner
         factory = factories.find(f => f.owner === u.owner) || factories[0]
+      }
+      // Skip this unit if no factory exists (shouldn't happen in valid save games)
+      if (!factory) {
+        window.logger.warn('Skipping unit with no factory:', u.type, 'owner:', u.owner)
+        return
       }
       // Use tileX/tileY if present, else calculate from x/y
       const tileX = u.tileX !== undefined ? u.tileX : Math.floor(u.x / TILE_SIZE)
@@ -1110,9 +1124,15 @@ export function loadGame(key) {
       })
     }
     // Sync mapGrid with gameState
+    if (!gameState.mapGrid) {
+      gameState.mapGrid = []
+    }
     gameState.mapGrid.length = 0
     gameState.mapGrid.push(...mapGrid)
     // Initialize occupancyMap as 2D array
+    if (!gameState.occupancyMap) {
+      gameState.occupancyMap = []
+    }
     gameState.occupancyMap.length = 0
     for (let y = 0; y < mapHeight; y++) {
       gameState.occupancyMap[y] = []
@@ -1395,6 +1415,25 @@ export function maybeResumeLastPausedGame() {
   }
 
   if (shouldResume && hasLastGame) {
+    // Check if the saved game was already over (don't auto-resume finished games)
+    try {
+      const raw = localStorage.getItem(LAST_GAME_STORAGE_KEY)
+      if (raw) {
+        const saveObj = JSON.parse(raw)
+        if (saveObj?.state) {
+          const stateString = typeof saveObj.state === 'string' ? saveObj.state : JSON.stringify(saveObj.state)
+          const loaded = JSON.parse(stateString)
+          if (loaded?.gameState?.gameOver) {
+            window.logger('Not auto-resuming - saved game was already finished')
+            clearLastGameResumePending()
+            return false
+          }
+        }
+      }
+    } catch (err) {
+      window.logger.warn('Failed to check saved game state:', err)
+    }
+
     loadGame(LAST_GAME_STORAGE_KEY)
     clearLastGameResumePending()
     showNotification('Resumed your last paused game automatically')

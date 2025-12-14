@@ -1,6 +1,6 @@
 import { TILE_SIZE } from './config.js'
 import { gameState } from './gameState.js'
-import { initializeOccupancyMap, createUnit } from './units.js'
+import { initializeOccupancyMap, createUnit, unitCosts } from './units.js'
 import { buildingData, canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply } from './buildings.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { gameRandom } from './utils/gameRandom.js'
@@ -32,6 +32,11 @@ const mapEditorState = {
 
 let textureManagerGetter = null
 let tileMutationNotifier = null
+let renderScheduler = null
+let productionControllerRef = null
+
+// Store original tech tree state to restore when leaving edit mode
+let savedTechTreeState = null
 
 function currentMapGrid() {
   return gameState.mapGrid || []
@@ -44,6 +49,20 @@ function currentUnits() {
 export function registerMapEditorRendering(getter, notifier) {
   textureManagerGetter = getter
   tileMutationNotifier = notifier
+}
+
+export function setMapEditorRenderScheduler(scheduler) {
+  renderScheduler = scheduler
+}
+
+export function setMapEditorProductionController(controller) {
+  productionControllerRef = controller
+}
+
+function requestRenderFrame() {
+  if (renderScheduler) {
+    renderScheduler()
+  }
 }
 
 function getTextureInfo() {
@@ -106,7 +125,7 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
   tile.noBuild = 0
 
   const variant = pickVariant(entry, tileX, tileY, randomize)
-  const textureManager = getTextureManager()
+  const textureManager = textureManagerGetter ? textureManagerGetter() : null
   if (textureManager) {
     textureManager.tileVariationMap[`${entry.type}_${tileX}_${tileY}`] = variant
   }
@@ -116,6 +135,8 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
   }
   mapEditorState.lastPaintKey = `${tileX},${tileY},${entry.id}`
   scheduleOccupancyRefresh()
+  // Request render when game is paused so player sees their changes
+  requestRenderFrame()
 }
 
 function scheduleOccupancyRefresh() {
@@ -158,6 +179,8 @@ function applyBuilding(tileX, tileY) {
   updatePowerSupply(gameState.buildings, gameState)
   updateDangerZoneMaps(gameState)
   scheduleOccupancyRefresh()
+  // Request render when game is paused so player sees their changes
+  requestRenderFrame()
 }
 
 function applyUnit(tileX, tileY) {
@@ -175,6 +198,8 @@ function applyUnit(tileX, tileY) {
     gameState.units = [unit]
   }
   scheduleOccupancyRefresh()
+  // Request render when game is paused so player sees their changes
+  requestRenderFrame()
 }
 
 function applyBrush(tileX, tileY, { button = 0 } = {}) {
@@ -242,6 +267,22 @@ export function activateMapEditMode() {
   gameState.gamePaused = true
   mapEditorState.randomMode = gameState.mapEditRandomMode !== false
   mapEditorState.brushKind = mapEditorState.brushKind || 'tile'
+  
+  // Save current tech tree state and unlock everything
+  if (productionControllerRef) {
+    savedTechTreeState = {
+      units: new Set(gameState.availableUnitTypes),
+      buildings: new Set(gameState.availableBuildingTypes)
+    }
+    
+    // Unlock all unit types
+    const allUnitTypes = Object.keys(unitCosts)
+    allUnitTypes.forEach(type => productionControllerRef.forceUnlockUnitType(type))
+    
+    // Unlock all building types
+    const allBuildingTypes = Object.keys(buildingData)
+    allBuildingTypes.forEach(type => productionControllerRef.forceUnlockBuildingType(type))
+  }
 }
 
 export function deactivateMapEditMode() {
@@ -252,6 +293,30 @@ export function deactivateMapEditMode() {
   mapEditorState.brushKind = 'tile'
   mapEditorState.brushPayload = null
   mapEditorState.previewKey = null
+  
+  // Restore original tech tree state
+  if (productionControllerRef && savedTechTreeState) {
+    // Clear all unlocks first
+    gameState.availableUnitTypes.clear()
+    gameState.availableBuildingTypes.clear()
+    
+    // Restore saved units
+    savedTechTreeState.units.forEach(type => {
+      gameState.availableUnitTypes.add(type)
+    })
+    
+    // Restore saved buildings
+    savedTechTreeState.buildings.forEach(type => {
+      gameState.availableBuildingTypes.add(type)
+    })
+    
+    // Update UI to reflect restored state
+    productionControllerRef.updateVehicleButtonStates()
+    productionControllerRef.updateBuildingButtonStates()
+    productionControllerRef.updateTabStates()
+    
+    savedTechTreeState = null
+  }
 }
 
 export function handlePointerDown(tileX, tileY, { button = 0, shiftKey = false } = {}) {
@@ -292,27 +357,54 @@ export function handlePointerUp(tileX, tileY, { button = 0 } = {}) {
 
 export function renderMapEditorOverlay(ctx, scrollOffset) {
   if (!mapEditorState.active) return
-  if (mapEditorState.brushKind !== 'tile') {
-    const { x, y } = mapEditorState.hoverTile
-    const screenX = x * TILE_SIZE - scrollOffset.x
-    const screenY = y * TILE_SIZE - scrollOffset.y
+  
+  const { x, y } = mapEditorState.hoverTile
+  const screenX = x * TILE_SIZE - scrollOffset.x
+  const screenY = y * TILE_SIZE - scrollOffset.y
+  
+  // Handle building preview
+  if (mapEditorState.brushKind === 'building' && mapEditorState.brushPayload) {
+    const buildingType = mapEditorState.brushPayload
+    const entry = buildingData[buildingType]
+    if (entry) {
+      const width = entry.width || 1
+      const height = entry.height || 1
+      ctx.save()
+      ctx.fillStyle = 'rgba(0, 183, 255, 0.25)'
+      ctx.fillRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
+      ctx.strokeStyle = '#00b7ff'
+      ctx.lineWidth = 2
+      ctx.strokeRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
+      ctx.fillStyle = '#fff'
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText(buildingType, screenX + (width * TILE_SIZE) / 2, screenY - 4)
+      ctx.restore()
+    }
+    return
+  }
+  
+  // Handle unit preview
+  if (mapEditorState.brushKind === 'unit' && mapEditorState.brushPayload) {
     ctx.save()
-    ctx.fillStyle = 'rgba(0, 183, 255, 0.25)'
+    ctx.fillStyle = 'rgba(0, 255, 183, 0.25)'
     ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
-    ctx.strokeStyle = '#00b7ff'
+    ctx.strokeStyle = '#00ffb7'
     ctx.lineWidth = 2
     ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
     ctx.fillStyle = '#fff'
     ctx.font = '12px Arial'
-    ctx.fillText(describeBrush(), screenX + TILE_SIZE / 2, screenY - 4)
+    ctx.textAlign = 'center'
+    ctx.fillText(mapEditorState.brushPayload, screenX + TILE_SIZE / 2, screenY - 4)
     ctx.restore()
     return
   }
+  
+  // Handle tile preview
+  if (mapEditorState.brushKind !== 'tile') return
+  
   const entry = getPaletteEntry()
   const { textureManager } = getTextureInfo()
-  const { x, y } = mapEditorState.hoverTile
-  const screenX = x * TILE_SIZE - scrollOffset.x
-  const screenY = y * TILE_SIZE - scrollOffset.y
 
   const key = `${entry.id}:${x},${y}:${mapEditorState.randomMode}`
   if (mapEditorState.previewKey !== key) {

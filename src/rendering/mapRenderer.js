@@ -776,6 +776,10 @@ export class MapRenderer {
 
   render(ctx, mapGrid, scrollOffset, gameCanvas, gameState, occupancyMap = null, options = {}) {
     const { skipBaseLayer = false } = options || {}
+    // Guard against empty or invalid mapGrid
+    if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0 || !mapGrid[0]) {
+      return
+    }
     // Calculate visible tile range - improved for better performance
     const startTileX = Math.max(0, Math.floor(scrollOffset.x / TILE_SIZE))
     const startTileY = Math.max(0, Math.floor(scrollOffset.y / TILE_SIZE))

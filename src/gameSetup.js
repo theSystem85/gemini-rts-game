@@ -1,8 +1,9 @@
 import { preloadTileTextures } from './rendering.js'
 import { preloadBuildingImages } from './buildingImageMap.js'
 import { preloadTurretImages } from './rendering/turretImageRenderer.js'
-import { MAP_TILES_X, MAP_TILES_Y, PLAYER_POSITIONS } from './config.js'
+import { PLAYER_POSITIONS } from './config.js'
 import { gameState } from './gameState.js'
+import { sanitizeSeed } from './utils/seedUtils.js'
 
 let texturesLoaded = false
 let buildingImagesLoaded = false
@@ -134,7 +135,8 @@ function createOptimizedStreetNetwork(mapGrid, points, type) {
 
 // Generate a new map using the given seed and organic features
 export function generateMap(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y) {
-  const rand = seededRandom(parseInt(seed))
+  const { value: normalizedSeed } = sanitizeSeed(seed)
+  const rand = seededRandom(normalizedSeed)
   // Clear any old content
   mapGrid.length = 0
   for (let y = 0; y < MAP_TILES_Y; y++) {

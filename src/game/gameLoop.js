@@ -92,6 +92,8 @@ export class GameLoop {
     if (!this.running) {
       return
     }
+    // Set forceRender to ensure paused frames render (needed for map editor)
+    this.forceRender = true
     this.scheduleNextFrame()
   }
 

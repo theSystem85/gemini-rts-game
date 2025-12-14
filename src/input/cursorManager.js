@@ -74,22 +74,30 @@ export class CursorManager {
   // Function to check if a location is a blocked tile (water, rock, building)
   isBlockedTerrain(tileX, tileY, mapGrid) {
     // First check if mapGrid is defined and properly structured
-    if (!mapGrid || !Array.isArray(mapGrid) || mapGrid.length === 0) {
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
       return false // Can't determine if blocked, assume not blocked
     }
 
+    const height = mapGrid.length
+    const firstRow = mapGrid[0]
+    const width = Array.isArray(firstRow) ? firstRow.length : 0
+    if (width === 0) {
+      return false
+    }
+
     // Check if tile coordinates are valid
-    if (tileX < 0 || tileY < 0 || tileX >= mapGrid[0].length || tileY >= mapGrid.length) {
+    if (tileX < 0 || tileY < 0 || tileX >= width || tileY >= height) {
       return true
     }
 
     // Ensure we have a valid row before accessing the tile
-    if (!mapGrid[tileY] || !mapGrid[tileY][tileX]) {
+    const row = mapGrid[tileY]
+    if (!Array.isArray(row) || !row[tileX]) {
       return false // Can't determine if blocked, assume not blocked
     }
 
     // Check if the tile type is impassable
-    const tile = mapGrid[tileY][tileX]
+    const tile = row[tileX]
     const tileType = tile.type
     const hasBuilding = tile.building
     const hasSeedCrystal = tile.seedCrystal
@@ -148,9 +156,15 @@ export class CursorManager {
     const tileX = Math.floor(worldX / TILE_SIZE)
     const tileY = Math.floor(worldY / TILE_SIZE)
 
+    const gridReady = Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])
+    const gridWidth = gridReady ? mapGrid[0].length : 0
+    const gridHeight = gridReady ? mapGrid.length : 0
+    const tileWithinBounds = gridReady && tileX >= 0 && tileY >= 0 && tileX < gridWidth && tileY < gridHeight
+    const hoveredTile = tileWithinBounds && mapGrid[tileY] ? mapGrid[tileY][tileX] : null
+
     // Check if mouse is over blocked terrain when in game canvas, with added safety check
     this.isOverBlockedTerrain = this.isOverGameCanvas &&
-      mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
+      gridReady &&
       this.isBlockedTerrain(tileX, tileY, mapGrid)
 
     // Check if mouse is over a player refinery when harvesters are selected
@@ -169,8 +183,8 @@ export class CursorManager {
     this.isOverFriendlyHelipad = false
     // Check if mouse is over ammo-receivable units/buildings when ammo trucks are selected
     this.isOverAmmoReceivableTarget = false
-    if (this.isOverGameCanvas && gameState.buildings && Array.isArray(gameState.buildings) &&
-        tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+    if (this.isOverGameCanvas && gridReady && tileWithinBounds &&
+      gameState.buildings && Array.isArray(gameState.buildings)) {
       // Only show refinery cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
       // Check for ambulance healing
@@ -358,11 +372,10 @@ export class CursorManager {
 
     // Check if mouse is over an ore tile when harvesters are selected
     this.isOverOreTile = false
-    if (this.isOverGameCanvas && mapGrid && Array.isArray(mapGrid) && mapGrid.length > 0 &&
-        tileX >= 0 && tileY >= 0 && tileX < mapGrid[0].length && tileY < mapGrid.length) {
+    if (this.isOverGameCanvas && gridReady && tileWithinBounds && hoveredTile) {
       // Only show ore tile cursor if harvesters are selected
       const hasSelectedHarvesters = selectedUnits.some(unit => unit.type === 'harvester')
-      if (hasSelectedHarvesters && mapGrid[tileY][tileX].ore) {
+      if (hasSelectedHarvesters && hoveredTile.ore) {
         this.isOverOreTile = true
       }
     }
@@ -374,10 +387,8 @@ export class CursorManager {
       this.isOverGameCanvas &&
       gameState.buildings &&
       Array.isArray(gameState.buildings) &&
-      tileX >= 0 &&
-      tileY >= 0 &&
-      tileX < mapGrid[0].length &&
-      tileY < mapGrid.length
+      gridReady &&
+      tileWithinBounds
     ) {
       const needsWorkshop = selectedUnits.some(
         unit => unit.health < unit.maxHealth || unit.type === 'tankerTruck'
@@ -435,7 +446,7 @@ export class CursorManager {
       // Check player factory first - Player factory can't be sold
 
       // Check player buildings
-      if (gameState.buildings && gameState.buildings.length > 0) {
+      if (gameState.buildings && gameState.buildings.length > 0 && gridReady && tileWithinBounds) {
         for (const building of gameState.buildings) {
           if (building.owner === gameState.humanPlayer &&
               tileX >= building.x && tileX < (building.x + building.width) &&
