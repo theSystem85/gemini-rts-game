@@ -775,7 +775,7 @@ export const UNIT_PROPERTIES = {
   ambulance: {
     health: 25,
     maxHealth: 25,
-    speed: 0.5, // Base speed (1.5x tank v1 on grass: 0.33 * 1.5 = 0.495)
+    speed: 0.175, // 65% slower than previous base (0.5 -> 0.175) for reduced mobility
     streetSpeedMultiplier: 4.0,
     rotationSpeed: TANK_WAGON_ROT,
     turretRotationSpeed: 0,
@@ -799,7 +799,7 @@ export const UNIT_PROPERTIES = {
   apache: {
     health: 40,
     maxHealth: 40,
-    speed: 4.5,
+    speed: 6.75, // 50% faster than previous base (4.5 -> 6.75)
     rotationSpeed: 0.18,
     turretRotationSpeed: 0,
     accelerationMultiplier: 1.25

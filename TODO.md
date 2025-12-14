@@ -255,7 +255,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [ ] 7) Ensure that the enemy AI will move the tanks with missing crew members back to hospital before continuing the battle.
 - [x] ✅ **Spec 003** 8) Ambulance: When a hospital is build it unlocks the build button of an ambulance unit
 - [x] ✅ 8.1 an ambulance unit costs 500 and has 25 health
-- [x] ✅ 8.2 it is 3 times as fast as tank_v1 on streets and 1.5 times as fast as tank_v1 on grass
+- [x] ✅ 8.2 it now runs at reduced mobility: base speed 0.175 (65% slower) with a 4.0x street multiplier
 - [x] ✅ 8.3 when freshly build the ambulance has 10 people on board
 - [x] ✅ 8.4 when an ambulance is selected and the mouse hovers over a friendly unit with missing crew members than the cursor turns into a "moveInto" cursor and the user can left click to command the ambulance to go to the target unit to restore the missing crew members.
 - [x] ✅ 8.5 the ambulance has a loading bar (like the harvester) that correlates to the amount of loaded people (10 people equals 100%)
@@ -307,6 +307,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [x] ✅ Units with 0 ammunition cannot fire, display "No Ammunition" notification when attack commanded
   - [x] ✅ Apache helicopter ammunition system implemented with `rocketAmmo` field (38 rounds capacity)
   - [x] ✅ Apache combat system checks `rocketAmmo` before firing, enforces 300ms volley delay
+  - [x] ✅ Apache helicopter base speed increased by 50% (now 6.75)
   - [x] ✅ Helipad ammunition transfer to landed Apache helicopters implemented
   - [x] ✅ Cheat system supports ammunition manipulation for all unit types including Apache
   - [x] Image assets: `/public/images/map/buildings/ammunition_factory_map.webp`, `/public/images/sidebar/ammunition_factory_sidebar.webp`, `/public/images/map/units/ammunition_truck_map.webp`, `/public/images/sidebar/ammunition_truck_sidebar.webp`

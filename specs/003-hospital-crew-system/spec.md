@@ -60,7 +60,7 @@ As a player, I want to build ambulance units that can restore crew members in th
 **Acceptance Scenarios**:
 
 1. **Given** a hospital exists, **When** viewing vehicle factory build menu, **Then** ambulance unit becomes available for 500 credits with 25 health
-2. **Given** an ambulance is built, **When** deployed, **Then** unit starts with 10 people on board (100% loading bar), moves 3x faster than tank on streets and 1.5x faster on grass
+2. **Given** an ambulance is built, **When** deployed, **Then** unit starts with 10 people on board (100% loading bar) and operates at the reduced mobility setting (base speed 0.175 with a 4.0x street multiplier, reflecting a 65% slowdown from the prior configuration)
 3. **Given** an ambulance is selected, **When** hovering over friendly unit with missing crew, **Then** cursor changes to "moveInto" cursor indicating restoration is possible
 4. **Given** ambulance is commanded to restore unit, **When** within 1 tile range, **Then** restoration begins taking 2 seconds per crew member
 5. **Given** restoration is in progress, **When** crew transfers, **Then** ambulance loading bar decreases proportionally and unit crew indicators appear
