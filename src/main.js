@@ -1131,16 +1131,12 @@ class Game {
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     // Initialize factories and units
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     // Treat initial factories as standard buildings
     gameState.buildings.push(...factories)
 
@@ -1550,16 +1546,12 @@ class Game {
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     factories.length = 0
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     gameState.buildings.push(...factories)
 
     // Ensure no ore overlaps with buildings or factories
@@ -1600,6 +1592,12 @@ class Game {
     window.logger('Resetting game...')
 
     deactivateMapEditMode()
+
+    // Invalidate cached map chunks/SOT mask so a new game can't render stale overlays
+    const mapRenderer = getMapRenderer()
+    if (mapRenderer) {
+      mapRenderer.invalidateAllChunks()
+    }
 
     // Stop existing game loop to prevent conflicts
     if (this.gameLoop) {
@@ -1662,16 +1660,12 @@ class Game {
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     factories.length = 0
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     gameState.buildings.push(...factories)
 
     // Ensure no ore overlaps with buildings or factories
@@ -1857,10 +1851,8 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   // Clear and regenerate the map grid
   mapGrid.length = 0
   generateMapFromSetup(normalizedSeed, mapGrid, widthTiles, heightTiles)
-  
-  // Sync mapGrid with gameState
-  gameState.mapGrid.length = 0
-  gameState.mapGrid.push(...mapGrid)
+
+  // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
   
   // Rebuild occupancy map for the new map
   gameState.occupancyMap = []

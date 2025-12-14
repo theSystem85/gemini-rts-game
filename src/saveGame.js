@@ -37,7 +37,7 @@ import { getKeyboardHandler } from './inputHandler.js'
 import { ensurePlayerBuildHistoryLoaded } from './savePlayerBuildPatterns.js'
 import { getUniqueId } from './utils.js'
 import { rebuildMineLookup } from './game/mineSystem.js'
-import { regenerateAllInviteTokens, isHost } from './network/multiplayerStore.js'
+import { regenerateAllInviteTokens } from './network/multiplayerStore.js'
 import { refreshSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { stopHostInvite } from './network/webrtcSession.js'
 import { gameRandom } from './utils/gameRandom.js'
@@ -1086,7 +1086,10 @@ export function loadGame(key) {
           building.rallyPoint = null
         }
         factories.push(building)
-        gameState.factories.push(building)
+        // Avoid double-push when gameState.factories is the same reference as factories
+        if (gameState.factories !== factories) {
+          gameState.factories.push(building)
+        }
       }
     })
 
@@ -1123,12 +1126,10 @@ export function loadGame(key) {
         mapGrid[index] = row
       })
     }
-    // Sync mapGrid with gameState
-    if (!gameState.mapGrid) {
-      gameState.mapGrid = []
+    // Ensure gameState.mapGrid points at the canonical exported mapGrid (avoid destructive sync)
+    if (gameState.mapGrid !== mapGrid) {
+      gameState.mapGrid = mapGrid
     }
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
     // Initialize occupancyMap as 2D array
     if (!gameState.occupancyMap) {
       gameState.occupancyMap = []
@@ -1329,7 +1330,7 @@ export function updateSaveGamesList() {
       label.title = save.description
       label.style.cursor = 'help'
       // For touch devices, show description on click
-      label.addEventListener('click', (e) => {
+      label.addEventListener('click', (_e) => {
         if (window.matchMedia('(pointer: coarse)').matches) {
           // Touch device - show alert with description
           alert(`${save.label}\n\n${save.description}`)

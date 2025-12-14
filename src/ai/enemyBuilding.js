@@ -49,6 +49,11 @@ export function findBuildingPosition(buildingType, mapGrid, units, buildings, fa
     return null
   }
 
+  // Guard against invalid/empty mapGrid (can occur briefly during save-game restore)
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0]) || mapGrid[0].length === 0) {
+    return null
+  }
+
   if (!buildingData[buildingType]) {
     console.error(`findBuildingPosition called with unknown buildingType: ${buildingType}`, {
       buildingType,
@@ -385,62 +390,6 @@ function ensurePathsAroundBuilding(x, y, width, height, mapGrid, buildings, fact
 
   // All spacing layers passed - building has adequate separation from other structures
   return true
-}
-
-// Simple pathfinding function for testing connectivity (BFS approach)
-function checkSimplePath(start, end, mapGrid, maxSteps) {
-  const queue = [{ x: start.x, y: start.y, steps: 0 }]
-  const visited = new Set()
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-
-    // Check if we reached the destination
-    if (current.x === end.x && current.y === end.y) {
-      return true
-    }
-
-    // Check if we've reached the step limit
-    if (current.steps >= maxSteps) {
-      return false
-    }
-
-    // Mark as visited
-    const key = `${current.x},${current.y}`
-    if (visited.has(key)) continue
-    visited.add(key)
-
-    // Check all 8 directions
-    const directions = [
-      { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, // Cardinals
-      { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 } // Diagonals
-    ]
-
-    for (const dir of directions) {
-      const nextX = current.x + dir.x
-      const nextY = current.y + dir.y
-
-      // Check bounds
-      if (nextX < 0 || nextY < 0 || nextX >= mapGrid[0].length || nextY >= mapGrid.length) {
-        continue
-      }
-
-      // Check if passable
-      if (mapGrid[nextY][nextX].building ||
-          mapGrid[nextY][nextX].type === 'water' ||
-          mapGrid[nextY][nextX].type === 'rock' ||
-          mapGrid[nextY][nextX].seedCrystal ||
-          mapGrid[nextY][nextX].noBuild) {
-        continue
-      }
-
-      // Add to queue
-      queue.push({ x: nextX, y: nextY, steps: current.steps + 1 })
-    }
-  }
-
-  // No path found
-  return false
 }
 
 // Calculate direction to the closest ore field from a given position

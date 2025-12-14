@@ -1,5 +1,8 @@
 ## Improvements
 - [ ] Fix mobile landscape layout on iPhone 13 Pro Max so the right-side safe-area strip renders map content, build buttons align to the far edge, and the top-right power bar lines up with the sidebar.
+- [x] Fix startup Defeat screen + missing random map: prevent mapGrid/factories from being cleared by incorrect sync logic on initialization.
+- [x] Fix crash on auto-resume restore: prevent save load from wiping mapGrid (AI building placement should not run with empty map).
+- [x] Fix stale SOT overlays after victory/defeat when starting a new game: invalidate map renderer chunk cache + SOT mask in reset flow.
 - [ ] Add a persistent "lastGame" autosave that runs every minute, saves immediately on pause, and automatically reloads after iOS/PWA resumes from a killed paused session.
 - [x] Add a host-only map edit mode with tile painting, random brushes, and instant building/unit placement tools.
 - [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
