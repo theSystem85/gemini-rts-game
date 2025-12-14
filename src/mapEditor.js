@@ -10,7 +10,8 @@ const baseTilePalette = [
   { id: 'rugged', type: 'land', label: 'Rugged Grass', variantGroup: 'impassable' },
   { id: 'street', type: 'street', label: 'Street' },
   { id: 'rock', type: 'rock', label: 'Rock' },
-  { id: 'water', type: 'water', label: 'Water' }
+  { id: 'water', type: 'water', label: 'Water' },
+  { id: 'ore', type: 'ore', label: 'Ore' }
 ]
 
 const mapEditorState = {
@@ -119,10 +120,46 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
   if (!row || !row[tileX]) return
   const tile = row[tileX]
 
-  tile.type = entry.type
-  tile.ore = entry.type === 'ore'
-  tile.seedCrystal = entry.type === 'seedCrystal'
-  tile.noBuild = 0
+  // Special handling for ore placement
+  if (entry.type === 'ore') {
+    // Check if ore can be placed on this tile (same rules as ore spreading)
+    const tileType = tile.type
+    if (tileType !== 'land' && tileType !== 'street') {
+      return // Can only place ore on land or street tiles
+    }
+    
+    // Check for buildings
+    const buildings = gameState.buildings || []
+    const hasBuilding = buildings.some(building => {
+      const bx = building.x, by = building.y
+      const bw = building.width || 1, bh = building.height || 1
+      return tileX >= bx && tileX < bx + bw && tileY >= by && tileY < by + bh
+    })
+    if (hasBuilding) return
+    
+    // Check for factories
+    const factories = gameState.factories || []
+    const hasFactory = factories.some(factory => {
+      return tileX >= factory.x && tileX < factory.x + factory.width &&
+             tileY >= factory.y && tileY < factory.y + factory.height
+    })
+    if (hasFactory) return
+    
+    // Check occupancy
+    const occupancyMap = gameState.occupancyMap || []
+    if (occupancyMap[tileY]?.[tileX] > 0) return
+    
+    // Place ore without changing underlying tile type
+    tile.ore = true
+    tile.seedCrystal = false // Remove seed crystal if present
+    tile.noBuild = 0
+  } else {
+    // Normal tile placement - change the tile type
+    tile.type = entry.type
+    tile.ore = entry.type === 'ore'
+    tile.seedCrystal = entry.type === 'seedCrystal'
+    tile.noBuild = 0
+  }
 
   const variant = pickVariant(entry, tileX, tileY, randomize)
   const textureManager = textureManagerGetter ? textureManagerGetter() : null
