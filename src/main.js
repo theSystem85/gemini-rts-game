@@ -21,6 +21,7 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
+import { initSettingsModal } from './ui/settingsModal.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import { initAiPartySync } from './network/aiPartySync.js'
@@ -1409,6 +1410,7 @@ class Game {
     const configSettingsBtn = document.getElementById('configSettingsBtn')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
     attachBenchmarkButton()
+    initSettingsModal()
 
     // Handle map settings accordion toggle
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
@@ -1491,13 +1493,6 @@ class Game {
           window.logger.warn('Failed to save shadow of war setting to localStorage:', err)
         }
         updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
-      })
-    }
-
-    // Use the new runtime config dialog instead of the old eval-based modal
-    if (configSettingsBtn) {
-      configSettingsBtn.addEventListener('click', () => {
-        runtimeConfigDialog.openDialog()
       })
     }
 

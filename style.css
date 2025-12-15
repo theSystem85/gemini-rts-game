@@ -2236,6 +2236,133 @@ body.config-modal-open {
   gap: 14px;
 }
 
+.config-modal__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-modal__tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.config-modal__tab {
+  background: #232b33;
+  border: 1px solid #2d3640;
+  color: #cfd8e3;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.config-modal__tab--active {
+  background: linear-gradient(90deg, rgba(77, 163, 255, 0.2), rgba(76, 110, 255, 0.25));
+  border-color: #4da3ff;
+  color: #ffffff;
+}
+
+.config-modal__content {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-modal__content--active {
+  display: flex;
+}
+
+.keybinding-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keybinding-intro {
+  color: #c7d5e0;
+  margin: 0;
+}
+
+.keybinding-device {
+  background: rgba(26, 32, 40, 0.7);
+  border: 1px solid #2d3640;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.keybinding-device h3 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
+.keybinding-context {
+  border: 1px solid #2d3640;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 10px;
+  background: rgba(20, 24, 32, 0.6);
+}
+
+.keybinding-context__title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #9fb3c8;
+}
+
+.keybinding-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.keybinding-row--custom {
+  background: rgba(255, 223, 122, 0.14);
+}
+
+.keybinding-row__label {
+  font-size: 14px;
+}
+
+.keybinding-row__value {
+  background: #1f252e;
+  border: 1px solid #2d3640;
+  color: #e5e5e5;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: left;
+}
+
+.keybinding-row__value--listening {
+  border-color: #4da3ff;
+  box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.2);
+}
+
+.keybinding-row__reset {
+  background: transparent;
+  border: 1px solid #3c4a58;
+  color: #cfd8e3;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.keybinding-row__reset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .config-modal__field {
   display: flex;
   flex-direction: column;

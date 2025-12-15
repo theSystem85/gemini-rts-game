@@ -648,30 +648,35 @@
     <div id="configSettingsModal" class="config-modal" aria-hidden="true">
       <div class="config-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
         <div class="config-modal__header">
-          <h2 id="configModalTitle">Runtime Config</h2>
-          <button id="configModalCloseBtn" class="config-modal__close" aria-label="Close runtime config settings">×</button>
+          <div class="config-modal__title-group">
+            <h2 id="configModalTitle">Settings</h2>
+            <div class="config-modal__tabs" role="tablist">
+              <button class="config-modal__tab config-modal__tab--active" data-config-tab="runtime" role="tab" aria-selected="true">Runtime Config</button>
+              <button class="config-modal__tab" data-config-tab="keybindings" role="tab" aria-selected="false">Key Bindings</button>
+            </div>
+          </div>
+          <button id="configModalCloseBtn" class="config-modal__close" aria-label="Close settings">×</button>
         </div>
         <div class="config-modal__body">
-          <label class="config-modal__field">
-            <span>Config entry</span>
-            <select id="configVariableSelect"></select>
-          </label>
-          <label class="config-modal__field">
-            <span>Value</span>
-            <input type="number" id="configValueInput" step="any" autocomplete="off">
-          </label>
-          <div id="configValueNote" class="config-modal__note"></div>
-          <div class="config-modal__actions">
-            <button id="configExportBtn" class="config-modal__button" type="button">
-              Download Overrides
-            </button>
+          <div class="config-modal__content config-modal__content--active" data-config-tab-panel="runtime">
+            <p class="config-modal__hint">
+              Runtime configuration editing still uses the advanced dialog. Open it to tweak live values without restarting the match.
+            </p>
+            <div class="config-modal__actions">
+              <button id="openRuntimeConfigDialogBtn" class="config-modal__button config-modal__button--primary" type="button">Open Runtime Config Dialog</button>
+            </div>
           </div>
-          <p class="config-modal__hint">
-            Overrides are saved to your browser automatically. Place
-            <code><span id="configOverridesFilename">config-overrides.json</span></code>
-            in the project root to preload them on startup.
-          </p>
-          <div id="configValueMessage" class="config-modal__message"></div>
+          <div class="config-modal__content" data-config-tab-panel="keybindings" hidden>
+            <div class="keybinding-toolbar">
+              <div>
+                <button id="keybindingsExportBtn" class="config-modal__button" type="button">Export as JSON</button>
+                <button id="keybindingsImportBtn" class="config-modal__button" type="button">Import JSON</button>
+                <input id="keybindingsImportInput" type="file" accept="application/json" style="display:none" />
+              </div>
+              <div id="keybindingsMessage" class="config-modal__message" aria-live="polite"></div>
+            </div>
+            <div id="keybindingsEditor"></div>
+          </div>
         </div>
       </div>
     </div>
