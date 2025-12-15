@@ -87,6 +87,49 @@ User requested improvements to the Key Bindings Settings modal:
    - Shows conflict warning if key is already used
    - Clears conflicting binding if user confirms reassignment
 
+### src/ui/runtimeConfigDialog.js (Follow-up)
+
+Updated the Runtime Configuration dialog to match the new design system:
+
+1. **Dialog Container**:
+   - Same dark theme (#1b1f24 background)
+   - Matching border radius (12px)
+   - System sans-serif font stack
+   - Proper width constraints for mobile
+
+2. **Header**:
+   - Same gradient background as config modal
+   - Matching close button style
+   - Consistent typography
+
+3. **Category Buttons**:
+   - Same styling as config modal tabs
+   - Blue gradient for active state
+   - Hover states
+
+4. **Config Items**:
+   - Card-style with subtle background
+   - Left border accent
+   - Hover states
+   - Blue accent color for values
+
+5. **Inputs**:
+   - Dark background matching the theme
+   - Blue focus ring
+   - Monospace font for values
+
+6. **Action Buttons**:
+   - Primary button with blue gradient (matching config modal)
+   - Secondary button with standard dark style
+   - Proper hover states
+
+7. **Mobile Responsive**:
+   - Full-width on mobile
+   - Stacked buttons
+   - Adjusted padding
+   - Larger touch targets
+   - iOS zoom prevention (16px font on inputs)
+
 ## Commit Message
 
 ```
@@ -99,4 +142,5 @@ feat(ui): improve keybindings modal styling and add conflict warnings
 - Improve tab and button styling for consistency
 - Add pulse animation for listening state
 - Add hover states throughout for better interactivity
+- Update runtime config dialog to match new design system
 ```
