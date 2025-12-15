@@ -10,11 +10,13 @@ import {
 } from '../configRegistry.js'
 import { showNotification } from './notifications.js'
 import { playSound } from '../sound.js'
+import { renderKeyBindingsEditor } from './keyBindingsEditor.js'
 
 export class RuntimeConfigDialog {
   constructor() {
     this.isDialogOpen = false
     this.selectedCategory = null
+    this.activeTab = 'runtime'
     this.setupStyles()
   }
 
@@ -231,6 +233,189 @@ export class RuntimeConfigDialog {
         .runtime-config-button.secondary:hover {
           background: #7f8c8d;
         }
+
+        .runtime-config-tabs {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 8px;
+        }
+
+        .runtime-config-tab {
+          background: #3a3a3a;
+          color: #ecf0f1;
+          border: 1px solid #555;
+          border-radius: 6px;
+          padding: 6px 14px;
+          cursor: pointer;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .runtime-config-tab:hover {
+          background: #4c4c4c;
+          transform: translateY(-1px);
+        }
+
+        .runtime-config-tab.active {
+          background: linear-gradient(135deg, #4b75ff, #6cb4ff);
+          border-color: #7bb1ff;
+          color: #0b1021;
+        }
+
+        .runtime-config-panels {
+          margin-top: 10px;
+        }
+
+        .runtime-config-panel {
+          display: none;
+        }
+
+        .runtime-config-panel--active {
+          display: block;
+        }
+
+        .keybinds-container {
+          background: rgba(40, 40, 40, 0.6);
+          border-radius: 8px;
+          padding: 12px;
+          border: 1px solid #444;
+        }
+
+        .keybinds-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .keybinds-subtitle {
+          margin: 4px 0 0;
+          color: #b0bec5;
+          font-size: 12px;
+        }
+
+        .keybinds-actions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .keybinds-section {
+          margin-top: 14px;
+          border: 1px solid #444;
+          border-radius: 8px;
+          padding: 12px;
+          background: rgba(32, 32, 32, 0.6);
+        }
+
+        .keybinds-section__header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 8px;
+        }
+
+        .keybinds-section__description {
+          margin: 4px 0 0;
+          color: #a0a0a0;
+          font-size: 12px;
+        }
+
+        .keybinds-device-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 10px;
+          margin-top: 10px;
+        }
+
+        .keybinds-device {
+          background: rgba(28, 28, 28, 0.8);
+          border: 1px solid #3f3f3f;
+          border-radius: 8px;
+          padding: 10px;
+        }
+
+        .keybinds-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .keybinds-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 10px;
+          border-radius: 6px;
+          border: 1px solid #444;
+          background: rgba(24, 24, 24, 0.8);
+        }
+
+        .keybinds-row--custom {
+          background: rgba(255, 238, 170, 0.12);
+          border-color: #d9c97a;
+        }
+
+        .keybinds-row__info {
+          flex: 1;
+        }
+
+        .keybinds-row__label {
+          font-weight: 700;
+          color: #e8eaed;
+        }
+
+        .keybinds-row__description {
+          margin-top: 4px;
+          color: #b8c0c5;
+          font-size: 12px;
+        }
+
+        .keybinds-row__controls {
+          display: flex;
+          gap: 6px;
+          align-items: center;
+        }
+
+        .keybinds-row__binding {
+          min-width: 120px;
+          background: #2f3640;
+          color: #fff;
+          border: 1px solid #4b5d6b;
+          border-radius: 6px;
+          padding: 8px 10px;
+          cursor: pointer;
+          font-weight: 700;
+          letter-spacing: 0.4px;
+          transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .keybinds-row__binding--capturing {
+          background: linear-gradient(135deg, #ffd166, #f7a33b);
+          color: #2a2a2a;
+          border-color: #f0a835;
+        }
+
+        .keybinds-row__binding:hover {
+          background: #3b4855;
+          transform: translateY(-1px);
+        }
+
+        .keybinds-row__reset {
+          background: #444;
+          color: #fff;
+          border: 1px solid #555;
+          border-radius: 6px;
+          padding: 8px 10px;
+          cursor: pointer;
+        }
+
+        .keybinds-row__reset:hover {
+          background: #555;
+        }
       `
       document.head.appendChild(style)
     }
@@ -256,11 +441,24 @@ export class RuntimeConfigDialog {
 
     dialog.innerHTML = `
       <div class="runtime-config-header">
-        <h2>⚙️ Runtime Configuration</h2>
+        <div>
+          <h2>⚙️ Settings</h2>
+          <div class="runtime-config-tabs" id="runtime-config-tabs">
+            <button class="runtime-config-tab active" data-tab="runtime">Runtime Config</button>
+            <button class="runtime-config-tab" data-tab="bindings">Key Bindings</button>
+          </div>
+        </div>
         <button class="runtime-config-close" id="runtime-config-close">✕</button>
       </div>
-      <div class="runtime-config-categories" id="runtime-config-categories"></div>
-      <div class="runtime-config-content" id="runtime-config-content"></div>
+      <div class="runtime-config-panels">
+        <div class="runtime-config-panel runtime-config-panel--active" id="runtime-config-panel">
+          <div class="runtime-config-categories" id="runtime-config-categories"></div>
+          <div class="runtime-config-content" id="runtime-config-content"></div>
+        </div>
+        <div class="runtime-config-panel" id="runtime-bindings-panel">
+          <div id="runtime-bindings-container" class="keybinds-container"></div>
+        </div>
+      </div>
       <div class="runtime-config-buttons">
         <button class="runtime-config-button secondary" id="runtime-config-refresh">Refresh</button>
         <button class="runtime-config-button primary" id="runtime-config-done">Done</button>
@@ -270,11 +468,14 @@ export class RuntimeConfigDialog {
     overlay.appendChild(dialog)
     document.body.appendChild(overlay)
 
+    this.activeTab = 'runtime'
+
     // Render categories
     this.renderCategories(categories)
 
     // Render content for selected category
     this.renderContent()
+    this.renderKeyBindingsTab()
 
     // Add event listeners
     this.setupDialogEventListeners(overlay)
@@ -402,6 +603,30 @@ export class RuntimeConfigDialog {
     })
   }
 
+  renderKeyBindingsTab() {
+    const container = document.getElementById('runtime-bindings-container')
+    if (!container) return
+    renderKeyBindingsEditor(container)
+  }
+
+  updateTabVisibility() {
+    const runtimePanel = document.getElementById('runtime-config-panel')
+    const bindingsPanel = document.getElementById('runtime-bindings-panel')
+    const tabs = document.querySelectorAll('.runtime-config-tab')
+
+    tabs.forEach(tab => {
+      const isActive = tab.dataset.tab === this.activeTab
+      tab.classList.toggle('active', isActive)
+    })
+
+    if (runtimePanel) {
+      runtimePanel.classList.toggle('runtime-config-panel--active', this.activeTab === 'runtime')
+    }
+    if (bindingsPanel) {
+      bindingsPanel.classList.toggle('runtime-config-panel--active', this.activeTab === 'bindings')
+    }
+  }
+
   formatValue(value, type) {
     if (type === 'boolean') {
       return value ? 'true' : 'false'
@@ -428,19 +653,38 @@ export class RuntimeConfigDialog {
     const closeBtn = document.getElementById('runtime-config-close')
     const doneBtn = document.getElementById('runtime-config-done')
     const refreshBtn = document.getElementById('runtime-config-refresh')
+    const tabButtons = document.querySelectorAll('.runtime-config-tab')
 
     const closeDialog = () => {
       this.closeDialog()
     }
 
     const refreshDialog = () => {
-      this.renderContent()
-      showNotification('Configuration refreshed', 1500)
+      if (this.activeTab === 'runtime') {
+        this.renderContent()
+        showNotification('Configuration refreshed', 1500)
+      } else {
+        this.renderKeyBindingsTab()
+        showNotification('Key bindings refreshed', 1500)
+      }
     }
 
     if (closeBtn) closeBtn.addEventListener('click', closeDialog)
     if (doneBtn) doneBtn.addEventListener('click', closeDialog)
     if (refreshBtn) refreshBtn.addEventListener('click', refreshDialog)
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.activeTab = btn.dataset.tab === 'bindings' ? 'bindings' : 'runtime'
+        this.updateTabVisibility()
+        if (this.activeTab === 'bindings') {
+          this.renderKeyBindingsTab()
+        } else {
+          this.renderContent()
+        }
+      })
+    })
+
+    this.updateTabVisibility()
 
     // ESC key to close
     const keyHandler = (e) => {

@@ -18,6 +18,7 @@ import {
 import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
 import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
 import * as mineInput from './mineInputHandler.js'
+import { captureMouseGesture, getMouseMatches } from './keyBindingsManager.js'
 
 export class MouseHandler {
   constructor() {
@@ -166,21 +167,28 @@ export class MouseHandler {
     gameCanvas.addEventListener('mousedown', e => {
       // Don't process input if game is paused
       if (gameState.paused) return
-      
+
       // Don't process game commands in spectator mode, when locally defeated, or when host has paused
       // (allow camera panning but not unit selection/commands)
       const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
+
+      const gesture = captureMouseGesture(e) || (e.button === 0 ? 'left-click' : e.button === 2 ? 'right-click' : '')
+      const gestureActions = getMouseMatches(gesture, gameState).map(match => match.actionId)
+      const wantsSelect = gestureActions.includes('select') || gestureActions.includes('select-same')
+      const wantsCommand = gestureActions.includes('command')
+      const wantsPan = gestureActions.includes('pan')
+      if (!wantsSelect && !wantsCommand && !wantsPan) return
 
       const rect = gameCanvas.getBoundingClientRect()
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
-      if (e.button === 2) {
-        // Right-click: start scrolling (allowed for spectators and when host paused)
-        this.handleRightMouseDown(e, gameCanvas, cursorManager)
-      } else if (e.button === 0 && !isSpectatorOrDefeated) {
-        // Left-click: start selection or force attack (blocked for spectators and when host paused)
+      if (wantsSelect && !isSpectatorOrDefeated) {
+        // Selection flow
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
+      } else if (wantsCommand || wantsPan) {
+        // Command or camera pan flow
+        this.handleRightMouseDown(e, gameCanvas, cursorManager)
       }
     })
 
