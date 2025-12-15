@@ -50,6 +50,17 @@ export class ProductionController {
 
   // Function to update the enabled/disabled state of vehicle production buttons
   updateVehicleButtonStates() {
+    // In edit mode, enable all units regardless of tech tree
+    if (gameState.mapEditMode) {
+      const unitButtons = document.querySelectorAll('.production-button[data-unit-type]')
+      unitButtons.forEach(button => {
+        button.classList.remove('disabled')
+        button.title = ''
+        button.style.display = ''
+      })
+      return
+    }
+
     const hasVehicleFactory = gameState.buildings.some(
       b => b.type === 'vehicleFactory' && b.owner === gameState.humanPlayer && b.health > 0
     )
@@ -165,6 +176,17 @@ export class ProductionController {
 
   // Update enabled/disabled state of building production buttons
   updateBuildingButtonStates() {
+    // In edit mode, enable all buildings regardless of tech tree
+    if (gameState.mapEditMode) {
+      const buildingButtons = document.querySelectorAll('.production-button[data-building-type]')
+      buildingButtons.forEach(button => {
+        button.classList.remove('disabled')
+        button.title = ''
+        button.style.display = ''
+      })
+      return
+    }
+
     const playerBuildings = gameState.buildings.filter(
       b => b.owner === gameState.humanPlayer && b.health > 0
     )
@@ -425,6 +447,8 @@ export class ProductionController {
           return
         }
 
+        const unitType = button.getAttribute('data-unit-type')
+
         const isUpperHalf = this.isUpperHalfClick(event, button)
         this.showStackDirectionIndicator(button, isUpperHalf ? 'increase' : 'decrease')
 
@@ -446,8 +470,6 @@ export class ProductionController {
           }
           return
         }
-
-        const unitType = button.getAttribute('data-unit-type')
         unitCosts[unitType] || 0 // Cost is used for validation but not directly referenced
 
         // Check requirements for the unit type

@@ -17,6 +17,11 @@
 - [x] ✅ Change right-click erase in edit mode to require Shift + Right Click, allowing normal map scrolling with right-click alone.
 - [x] ✅ Fix right-click scrolling in edit mode by allowing right-click events to pass through to normal scrolling logic.
 - [x] ✅ Add Command/Ctrl+click eraser, right-click pipette tool, prevent same-tile redraw flickering, instant building/unit placement in edit mode.
+- [x] ✅ Enable all buildings and units in edit mode regardless of tech tree requirements.
+- [x] ✅ Fix edit mode: remove buildings when drawing tiles over them, fix unitType initialization error.
+- [x] ✅ Add image preview for buildings/units under cursor in edit mode, disable range-to-base restrictions in edit mode.
+- [x] ✅ Fix image preview rendering: add onload handlers to trigger re-render when images load.
+- [x] ✅ Enforce edit mode unit placement rules: units replace existing buildings/units at placement location, prevent placement on water/rock tiles.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
 - [x] ✅ ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
 - [x] ✅ when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands. Also: cancel button added to connecting modal, beautified modal UI.

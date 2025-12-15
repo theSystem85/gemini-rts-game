@@ -30,7 +30,8 @@ const mapEditorState = {
   pendingOccupancyFrame: null,
   lockReason: null,
   previewKey: null,
-  previewVariant: 0
+  previewVariant: 0,
+  imageCache: {} // Cache for building/unit preview images
 }
 
 let textureManagerGetter = null
@@ -222,15 +223,78 @@ function applyBuilding(tileX, tileY) {
   requestRenderFrame()
 }
 
+function removeBuildingAtTile(tileX, tileY) {
+  if (!gameState.buildings) return
+  
+  // Find and remove any building that overlaps with this tile
+  for (let i = gameState.buildings.length - 1; i >= 0; i--) {
+    const building = gameState.buildings[i]
+    const bx = building.x
+    const by = building.y
+    const bw = building.width || 1
+    const bh = building.height || 1
+    
+    // Check if the tile is within the building's bounds
+    if (tileX >= bx && tileX < bx + bw && tileY >= by && tileY < by + bh) {
+      // Remove from buildings array
+      gameState.buildings.splice(i, 1)
+      
+      // Clear occupancy map for this building
+      const occupancyMap = gameState.occupancyMap
+      if (occupancyMap) {
+        for (let y = by; y < by + bh; y++) {
+          if (!occupancyMap[y]) continue
+          for (let x = bx; x < bx + bw; x++) {
+            if (occupancyMap[y][x] > 0) {
+              occupancyMap[y][x] = 0
+            }
+          }
+        }
+      }
+      
+      // Update power supply and danger zones
+      updatePowerSupply(gameState.buildings, gameState)
+      updateDangerZoneMaps(gameState)
+      scheduleOccupancyRefresh()
+      requestRenderFrame()
+    }
+  }
+}
+
 function applyUnit(tileX, tileY) {
   if (!mapEditorState.brushPayload) return
+  
+  // Check if tile is water or rock - cannot place units on these tiles
+  const grid = currentMapGrid()
+  if (grid[tileY] && grid[tileY][tileX]) {
+    const tile = grid[tileY][tileX]
+    if (tile.type === 'water' || tile.type === 'rock') {
+      return // Cannot place units on water or rock tiles
+    }
+  }
+  
+  // Remove any existing buildings at this location
+  removeBuildingAtTile(tileX, tileY)
+  
+  // Remove any existing units at this location
+  const unitList = currentUnits()
+  if (Array.isArray(unitList)) {
+    for (let i = unitList.length - 1; i >= 0; i--) {
+      const existingUnit = unitList[i]
+      const unitTileX = Math.floor(existingUnit.x / TILE_SIZE)
+      const unitTileY = Math.floor(existingUnit.y / TILE_SIZE)
+      if (unitTileX === tileX && unitTileY === tileY) {
+        unitList.splice(i, 1)
+      }
+    }
+  }
+  
   const unitType = mapEditorState.brushPayload
   const ownerFactory = { owner: gameState.humanPlayer, x: tileX, y: tileY, width: 1, height: 1, type: 'editor' }
   const unit = createUnit(ownerFactory, unitType, tileX, tileY, {
     worldPosition: { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE }
   })
   if (!unit) return
-  const unitList = currentUnits()
   if (Array.isArray(unitList)) {
     unitList.push(unit)
   } else {
@@ -251,6 +315,8 @@ function applyBrush(tileX, tileY, { button = 0, shiftKey = false, metaKey = fals
 
   // Shift + right-click or Command/Ctrl + left-click = eraser (draw grass)
   if ((button === 2 && shiftKey) || (button === 0 && metaKey)) {
+    // Remove any buildings at this location
+    removeBuildingAtTile(tileX, tileY)
     applyTile(tileX, tileY, baseTilePalette[0], { randomize: true })
     return
   }
@@ -264,6 +330,9 @@ function applyBrush(tileX, tileY, { button = 0, shiftKey = false, metaKey = fals
     applyUnit(tileX, tileY)
     return
   }
+
+  // When drawing tiles, remove any buildings at this location
+  removeBuildingAtTile(tileX, tileY)
 
   const entry = getPaletteEntry()
   // Use random mode unless pipette override is active
@@ -386,6 +455,11 @@ export function activateMapEditMode() {
     // Unlock all building types
     const allBuildingTypes = Object.keys(buildingData)
     allBuildingTypes.forEach(type => productionControllerRef.forceUnlockBuildingType(type))
+    
+    // Update UI to enable all buttons in edit mode
+    productionControllerRef.updateVehicleButtonStates()
+    productionControllerRef.updateBuildingButtonStates()
+    productionControllerRef.updateTabStates()
   }
 }
 
@@ -475,16 +549,49 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
     if (entry) {
       const width = entry.width || 1
       const height = entry.height || 1
+      
       ctx.save()
-      ctx.fillStyle = 'rgba(0, 183, 255, 0.25)'
-      ctx.fillRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
+      
+      // Try to get preloaded building image
+      const imageName = entry.imageName || buildingType
+      const imgPath = `/images/map/buildings/${imageName}.webp`
+      
+      // Cache images in mapEditorState
+      if (!mapEditorState.imageCache) {
+        mapEditorState.imageCache = {}
+      }
+      
+      if (!mapEditorState.imageCache[imgPath]) {
+        const img = new Image()
+        img.onload = () => {
+          // Trigger re-render when image loads
+          requestRenderFrame()
+        }
+        img.src = imgPath
+        mapEditorState.imageCache[imgPath] = img
+      }
+      
+      const img = mapEditorState.imageCache[imgPath]
+      
+      ctx.globalAlpha = 0.7
+      
+      // Check if image is loaded
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
+      } else {
+        // Fallback to colored rectangle if image not loaded
+        ctx.fillStyle = 'rgba(0, 183, 255, 0.25)'
+        ctx.fillRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
+      }
+      
+      ctx.globalAlpha = 1.0
       ctx.strokeStyle = '#00b7ff'
       ctx.lineWidth = 2
       ctx.strokeRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
       ctx.fillStyle = '#fff'
       ctx.font = '12px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText(buildingType, screenX + (width * TILE_SIZE) / 2, screenY - 4)
+      ctx.fillText(entry.displayName || buildingType, screenX + (width * TILE_SIZE) / 2, screenY - 4)
       ctx.restore()
     }
     return
@@ -492,16 +599,48 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
   
   // Handle unit preview
   if (mapEditorState.brushKind === 'unit' && mapEditorState.brushPayload) {
+    const unitType = mapEditorState.brushPayload
+    
+    // Try to get preloaded unit image
+    const imgPath = `/images/map/units/${unitType}.webp`
+    
+    // Cache images in mapEditorState
+    if (!mapEditorState.imageCache) {
+      mapEditorState.imageCache = {}
+    }
+    
+    if (!mapEditorState.imageCache[imgPath]) {
+      const img = new Image()
+      img.onload = () => {
+        // Trigger re-render when image loads
+        requestRenderFrame()
+      }
+      img.src = imgPath
+      mapEditorState.imageCache[imgPath] = img
+    }
+    
+    const img = mapEditorState.imageCache[imgPath]
+    
     ctx.save()
-    ctx.fillStyle = 'rgba(0, 255, 183, 0.25)'
-    ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+    ctx.globalAlpha = 0.7
+    
+    // Check if image is loaded
+    if (img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, screenX, screenY, TILE_SIZE, TILE_SIZE)
+    } else {
+      // Fallback to colored rectangle if image not loaded
+      ctx.fillStyle = 'rgba(0, 255, 183, 0.25)'
+      ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+    }
+    
+    ctx.globalAlpha = 1.0
     ctx.strokeStyle = '#00ffb7'
     ctx.lineWidth = 2
     ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
     ctx.fillStyle = '#fff'
     ctx.font = '12px Arial'
     ctx.textAlign = 'center'
-    ctx.fillText(mapEditorState.brushPayload, screenX + TILE_SIZE / 2, screenY - 4)
+    ctx.fillText(unitType, screenX + TILE_SIZE / 2, screenY - 4)
     ctx.restore()
     return
   }
