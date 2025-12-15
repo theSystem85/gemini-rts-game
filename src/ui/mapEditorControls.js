@@ -57,7 +57,7 @@ function syncControlsFromState() {
     randomCheckbox.checked = state.randomMode
   }
   const entry = state.tilePalette[state.currentTileIndex] || state.tilePalette[0]
-  if (tileSelect && entry) {
+  if (!state.pipetteEntry && tileSelect && entry) {
     tileSelect.value = entry.id
   }
   if (statusEl) {

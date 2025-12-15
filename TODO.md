@@ -14,6 +14,9 @@
 - [x] ✅ Move edit mode button to the top of map settings.
 - [x] ✅ Add ore to the tile options available in edit mode.
 - [x] ✅ Ensure ore placement in edit mode follows same rules as ore spreading (land/street tiles only, no buildings/factories/occupancy).
+- [x] ✅ Change right-click erase in edit mode to require Shift + Right Click, allowing normal map scrolling with right-click alone.
+- [x] ✅ Fix right-click scrolling in edit mode by allowing right-click events to pass through to normal scrolling logic.
+- [x] ✅ Add Command/Ctrl+click eraser, right-click pipette tool, prevent same-tile redraw flickering, instant building/unit placement in edit mode.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
 - [x] ✅ ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
 - [x] ✅ when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands. Also: cancel button added to connecting modal, beautified modal UI.

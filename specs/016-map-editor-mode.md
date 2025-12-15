@@ -8,6 +8,8 @@ A host-only map editor lets the host pause gameplay to paint terrain, place buil
 - A floating preview under the cursor shows the current brush: tile image for terrain brushes or a labeled marker for building/unit brushes.
 - Use the mouse wheel while editing to cycle the active tile brush. The sidebar controls mirror the current selection and random mode.
 - Left-click and drag to paint the selected brush. Hold **Shift** while dragging to draw a fill box; the selection fills on release.
+- Hold **Ctrl** while left-dragging to paint grass as a rubber stroke for quick cleanup.
+- Press **Alt + Left Click** to sample the tile under the cursor (pipette). Sampled tiles keep their specific variation regardless of the random toggle until a new brush is selected.
 - Right-click paints random grass as an eraser, clearing overlays like ore/seed flags and no-build markers.
 - Brushes respect random mode for terrain, choosing randomized variations for grass, street, rock, and water. Randomization is not applied to building or unit brushes.
 

@@ -17,9 +17,11 @@ const baseTilePalette = [
 const mapEditorState = {
   active: false,
   randomMode: true,
+  pipetteOverride: false, // When true, pipette picked a tile and random mode is disabled until user picks another tile
   tilePalette: [...baseTilePalette],
   currentTileIndex: 0,
   hoverTile: { x: 0, y: 0 },
+  lastPaintedTile: null, // Track last painted tile to prevent redrawing same tile
   dragging: false,
   boxStart: null,
   lastPaintKey: null,
@@ -239,8 +241,16 @@ function applyUnit(tileX, tileY) {
   requestRenderFrame()
 }
 
-function applyBrush(tileX, tileY, { button = 0 } = {}) {
-  if (button === 2) {
+function applyBrush(tileX, tileY, { button = 0, shiftKey = false, metaKey = false } = {}) {
+  // Check if this is the same tile we just painted (prevent redraw flickering)
+  const tileKey = `${tileX},${tileY}`
+  if (mapEditorState.lastPaintedTile === tileKey) {
+    return
+  }
+  mapEditorState.lastPaintedTile = tileKey
+
+  // Shift + right-click or Command/Ctrl + left-click = eraser (draw grass)
+  if ((button === 2 && shiftKey) || (button === 0 && metaKey)) {
     applyTile(tileX, tileY, baseTilePalette[0], { randomize: true })
     return
   }
@@ -256,10 +266,12 @@ function applyBrush(tileX, tileY, { button = 0 } = {}) {
   }
 
   const entry = getPaletteEntry()
-  applyTile(tileX, tileY, entry, { randomize: mapEditorState.randomMode })
+  // Use random mode unless pipette override is active
+  const useRandom = mapEditorState.randomMode && !mapEditorState.pipetteOverride
+  applyTile(tileX, tileY, entry, { randomize: useRandom })
 }
 
-function fillBox(toX, toY, button = 0) {
+function fillBox(toX, toY, button = 0, shiftKey = false, metaKey = false) {
   if (!mapEditorState.boxStart) return
   const startX = Math.min(mapEditorState.boxStart.x, toX)
   const startY = Math.min(mapEditorState.boxStart.y, toY)
@@ -268,7 +280,9 @@ function fillBox(toX, toY, button = 0) {
 
   for (let y = startY; y <= endY; y++) {
     for (let x = startX; x <= endX; x++) {
-      applyBrush(x, y, { button })
+      // Clear lastPaintedTile for each tile in the box so all tiles get painted
+      mapEditorState.lastPaintedTile = null
+      applyBrush(x, y, { button, shiftKey, metaKey })
     }
   }
 }
@@ -286,7 +300,60 @@ export function setTileBrushById(id) {
     mapEditorState.brushKind = 'tile'
     mapEditorState.brushPayload = null
     mapEditorState.previewKey = null
+    mapEditorState.pipetteOverride = false // User selected a tile, disable pipette override
   }
+}
+
+/**
+ * Pipette tool: sample a tile from the map and use it as the current brush
+ * This enables pipette override mode which disables random variations until user picks another tile
+ */
+export function pipetteTile(tileX, tileY) {
+  const grid = currentMapGrid()
+  const row = grid[tileY]
+  if (!row || !row[tileX]) return false
+  const tile = row[tileX]
+
+  // Find the matching palette entry based on tile properties
+  let matchedId = 'grass' // default
+  if (tile.ore) {
+    matchedId = 'ore'
+  } else if (tile.seedCrystal) {
+    matchedId = 'seedCrystal'
+  } else if (tile.type === 'land') {
+    // Check variant to determine which land type
+    const textureManager = textureManagerGetter ? textureManagerGetter() : null
+    const grassInfo = textureManager?.grassTileMetadata
+    if (grassInfo) {
+      const variantKey = `land_${tileX}_${tileY}`
+      const variant = textureManager?.tileVariationMap?.[variantKey] ?? 0
+      const { passableCount, decorativeCount } = grassInfo
+      if (variant < passableCount) {
+        matchedId = 'grass'
+      } else if (variant < passableCount + decorativeCount) {
+        matchedId = 'decor'
+      } else {
+        matchedId = 'rugged'
+      }
+    }
+  } else if (tile.type === 'street') {
+    matchedId = 'street'
+  } else if (tile.type === 'rock') {
+    matchedId = 'rock'
+  } else if (tile.type === 'water') {
+    matchedId = 'water'
+  }
+
+  const idx = mapEditorState.tilePalette.findIndex(p => p.id === matchedId)
+  if (idx >= 0) {
+    mapEditorState.currentTileIndex = idx
+    mapEditorState.brushKind = 'tile'
+    mapEditorState.brushPayload = null
+    mapEditorState.previewKey = null
+    mapEditorState.pipetteOverride = true // Enable pipette mode to disable random variations
+    return true
+  }
+  return false
 }
 
 export function toggleRandomMode(enabled) {
@@ -356,20 +423,21 @@ export function deactivateMapEditMode() {
   }
 }
 
-export function handlePointerDown(tileX, tileY, { button = 0, shiftKey = false } = {}) {
+export function handlePointerDown(tileX, tileY, { button = 0, shiftKey = false, metaKey = false } = {}) {
   if (!mapEditorState.active) return
   mapEditorState.dragging = true
   mapEditorState.lastPaintKey = null
+  mapEditorState.lastPaintedTile = null // Reset on new stroke
   mapEditorState.hoverTile = { x: tileX, y: tileY }
-  if (shiftKey && button === 0) {
+  if (shiftKey && (button === 0 || button === 2)) {
     mapEditorState.boxStart = { x: tileX, y: tileY }
   } else {
-    applyBrush(tileX, tileY, { button })
+    applyBrush(tileX, tileY, { button, shiftKey, metaKey })
     mapEditorState.boxStart = null
   }
 }
 
-export function handlePointerMove(tileX, tileY, buttons = 0) {
+export function handlePointerMove(tileX, tileY, buttons = 0, shiftKey = false, metaKey = false) {
   if (!mapEditorState.active) return
   mapEditorState.hoverTile = { x: tileX, y: tileY }
   if (!mapEditorState.dragging || mapEditorState.boxStart) return
@@ -378,18 +446,19 @@ export function handlePointerMove(tileX, tileY, buttons = 0) {
   const paintKey = `${tileX},${tileY},${mapEditorState.brushKind}:${mapEditorState.brushPayload}`
   if (paintKey === mapEditorState.lastPaintKey) return
   const button = (buttons & 2) === 2 ? 2 : 0
-  applyBrush(tileX, tileY, { button })
+  applyBrush(tileX, tileY, { button, shiftKey, metaKey })
 }
 
-export function handlePointerUp(tileX, tileY, { button = 0 } = {}) {
+export function handlePointerUp(tileX, tileY, { button = 0, shiftKey = false, metaKey = false } = {}) {
   if (!mapEditorState.active) return
   mapEditorState.hoverTile = { x: tileX, y: tileY }
   if (mapEditorState.boxStart) {
-    fillBox(tileX, tileY, button)
+    fillBox(tileX, tileY, button, shiftKey, metaKey)
   }
   mapEditorState.dragging = false
   mapEditorState.boxStart = null
   mapEditorState.lastPaintKey = null
+  mapEditorState.lastPaintedTile = null // Reset after stroke ends
 }
 
 export function renderMapEditorOverlay(ctx, scrollOffset) {

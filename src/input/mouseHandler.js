@@ -21,7 +21,8 @@ import * as mineInput from './mineInputHandler.js'
 import {
   handlePointerDown as handleMapEditPointerDown,
   handlePointerMove as handleMapEditPointerMove,
-  handlePointerUp as handleMapEditPointerUp
+  handlePointerUp as handleMapEditPointerUp,
+  pipetteTile
 } from '../mapEditor.js'
 import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
 
@@ -174,10 +175,11 @@ export class MouseHandler {
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
-      if (gameState.mapEditMode) {
+      if (gameState.mapEditMode && e.button === 0) {
+        // Left-click in edit mode: handle painting
         const tileX = Math.floor(worldX / TILE_SIZE)
         const tileY = Math.floor(worldY / TILE_SIZE)
-        handleMapEditPointerDown(tileX, tileY, { button: e.button, shiftKey: e.shiftKey })
+        handleMapEditPointerDown(tileX, tileY, { button: e.button, shiftKey: e.shiftKey, metaKey: e.metaKey || e.ctrlKey })
         if (this.requestRenderFrame) this.requestRenderFrame()
         return
       }
@@ -190,7 +192,14 @@ export class MouseHandler {
       const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
 
       if (e.button === 2) {
-        // Right-click: start scrolling (allowed for spectators and when host paused)
+        // Right-click: in edit mode, pipette on single click (no shift), else start scrolling
+        if (gameState.mapEditMode && !e.shiftKey) {
+          const tileX = Math.floor(worldX / TILE_SIZE)
+          const tileY = Math.floor(worldY / TILE_SIZE)
+          pipetteTile(tileX, tileY)
+          if (this.requestRenderFrame) this.requestRenderFrame()
+        }
+        // Still start scrolling regardless
         this.handleRightMouseDown(e, gameCanvas, cursorManager)
       } else if (e.button === 0 && !isSpectatorOrDefeated) {
         // Left-click: start selection or force attack (blocked for spectators and when host paused)
@@ -203,10 +212,11 @@ export class MouseHandler {
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
-      if (gameState.mapEditMode) {
+      if (gameState.mapEditMode && (e.buttons & 1) && !(e.buttons & 2)) {
+        // Left mouse button held in edit mode (but not right button): handle painting
         const tileX = Math.floor(worldX / TILE_SIZE)
         const tileY = Math.floor(worldY / TILE_SIZE)
-        handleMapEditPointerMove(tileX, tileY, e.buttons)
+        handleMapEditPointerMove(tileX, tileY, e.buttons, e.shiftKey, e.metaKey || e.ctrlKey)
         if (this.requestRenderFrame) this.requestRenderFrame()
         return
       }
@@ -239,11 +249,17 @@ export class MouseHandler {
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
       if (gameState.mapEditMode) {
+        // Handle map editor for both left and right clicks
         const tileX = Math.floor(worldX / TILE_SIZE)
         const tileY = Math.floor(worldY / TILE_SIZE)
-        handleMapEditPointerUp(tileX, tileY, { button: e.button })
+        handleMapEditPointerUp(tileX, tileY, { button: e.button, shiftKey: e.shiftKey, metaKey: e.metaKey || e.ctrlKey })
         if (this.requestRenderFrame) this.requestRenderFrame()
-        return
+        // For right-click, continue to normal right-click handling to reset dragging state
+        if (e.button === 2) {
+          // Don't return, continue to handleRightMouseUp
+        } else {
+          return
+        }
       }
 
       // Don't process input if game is paused
