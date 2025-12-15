@@ -21,7 +21,7 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
-import { initSettingsModal } from './ui/settingsModal.js'
+import { initSettingsModal, openSettingsModal } from './ui/settingsModal.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import { initAiPartySync } from './network/aiPartySync.js'
@@ -1411,6 +1411,15 @@ class Game {
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
     attachBenchmarkButton()
     initSettingsModal()
+
+    if (configSettingsBtn) {
+      configSettingsBtn.addEventListener('click', () => {
+        openSettingsModal('keybindings')
+        if (settingsMenu) {
+          settingsMenu.style.display = 'none'
+        }
+      })
+    }
 
     // Handle map settings accordion toggle
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {

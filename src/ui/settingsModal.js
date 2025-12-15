@@ -31,6 +31,7 @@ function bindTabs(modal) {
 function openModal(modal, defaultTab = 'keybindings') {
   setActiveTab(modal, defaultTab)
   modal.classList.add('config-modal--open')
+  modal.setAttribute('aria-hidden', 'false')
   document.body.classList.add('config-modal-open')
   const keybindingsPanel = modal.querySelector('[data-config-tab-panel="keybindings"]')
   if (keybindingsPanel) {
@@ -40,22 +41,30 @@ function openModal(modal, defaultTab = 'keybindings') {
 
 function closeModal(modal) {
   modal.classList.remove('config-modal--open')
+  modal.setAttribute('aria-hidden', 'true')
   document.body.classList.remove('config-modal-open')
+}
+
+export function openSettingsModal(defaultTab = 'keybindings') {
+  const modal = document.getElementById('configSettingsModal')
+  if (!modal) return
+  openModal(modal, defaultTab)
+}
+
+export function closeSettingsModal() {
+  const modal = document.getElementById('configSettingsModal')
+  if (!modal) return
+  closeModal(modal)
 }
 
 export function initSettingsModal() {
   const modal = document.getElementById('configSettingsModal')
   const closeBtn = document.getElementById('configModalCloseBtn')
-  const openBtn = document.getElementById('configSettingsBtn')
   const runtimeLaunchBtn = document.getElementById('openRuntimeConfigDialogBtn')
 
   if (!modal) return
 
   bindTabs(modal)
-
-  if (openBtn) {
-    openBtn.addEventListener('click', () => openModal(modal, 'keybindings'))
-  }
 
   if (closeBtn) {
     closeBtn.addEventListener('click', () => closeModal(modal))
