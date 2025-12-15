@@ -8,7 +8,7 @@ import { CheatSystem } from './cheatSystem.js'
 import { isInputFieldFocused } from '../utils/inputUtils.js'
 import { toggleUnitLogging } from '../utils/logger.js'
 import { cancelUnitMovement } from '../game/unifiedMovement.js'
-import { handleAltKeyRelease, resetWaypointTracking } from '../game/waypointSounds.js'
+import { handleAltKeyRelease, markWaypointsAdded, resetWaypointTracking } from '../game/waypointSounds.js'
 import { performanceDialog } from '../ui/performanceDialog.js'
 import { runtimeConfigDialog } from '../ui/runtimeConfigDialog.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
@@ -20,6 +20,7 @@ import {
 } from '../utils/layoutMetrics.js'
 import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { getKeyboardMatches } from './keyBindingsManager.js'
 
 export class KeyboardHandler {
   constructor() {
@@ -72,25 +73,26 @@ export class KeyboardHandler {
         return
       }
 
+      const matches = getKeyboardMatches(e, gameState)
+      const hasAction = (id) => matches.some(match => match.actionId === id)
+      const getDetail = (id) => matches.find(match => match.actionId === id)?.detail
+
       // Some keys should work even when paused
-      // New: Toggle keybindings overview when I is pressed
-      if (e.key.toLowerCase() === 'i') {
+      if (hasAction('toggle-help')) {
         e.preventDefault()
         e.stopPropagation()
         this.helpSystem.showControlsHelp()
         return
       }
 
-      // C key for cheat console (works even when paused)
-      if (e.key.toLowerCase() === 'c' && !gameState.cheatDialogOpen) {
+      if (hasAction('toggle-cheats') && !gameState.cheatDialogOpen) {
         e.preventDefault()
         e.stopPropagation()
         this.cheatSystem.openDialog()
         return
       }
 
-      // K key for runtime config dialog (works even when paused)
-      if (e.key.toLowerCase() === 'k' && !gameState.runtimeConfigDialogOpen) {
+      if (hasAction('toggle-runtime-config') && !gameState.runtimeConfigDialogOpen) {
         e.preventDefault()
         e.stopPropagation()
         runtimeConfigDialog.openDialog()
@@ -104,119 +106,117 @@ export class KeyboardHandler {
       // (allow view-only commands like grid toggle, FPS toggle, camera movement)
       const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
 
-      // ESC key to cancel attack group mode
-      if (e.key === 'Escape') {
+      if (hasAction('escape')) {
         e.preventDefault()
         e.stopPropagation()
         this.handleEscapeKey()
         return
       }
 
-      // View-only commands that work in spectator mode
-      if (e.key.toLowerCase() === 'g') {
+      if (hasAction('toggle-grid')) {
         e.preventDefault()
         this.handleGridToggle()
         return
       }
-      if (e.key.toLowerCase() === 'o') {
+      if (hasAction('toggle-occupancy')) {
         e.preventDefault()
         this.handleOccupancyMapToggle()
         return
       }
-      if (e.key.toLowerCase() === 'z') {
+      if (hasAction('toggle-dzm')) {
         e.preventDefault()
         this.handleDzmToggle()
         return
       }
-      if (e.key.toLowerCase() === 't') {
+      if (hasAction('toggle-tank-images')) {
         e.preventDefault()
         this.handleTankImageToggle()
         return
       }
-      if (e.key.toLowerCase() === 'p') {
+      if (hasAction('toggle-fps')) {
         e.preventDefault()
         this.handleFpsDisplayToggle()
         return
       }
-      if (e.key.toLowerCase() === 'm') {
+      if (hasAction('toggle-performance')) {
         e.preventDefault()
         this.handlePerformanceToggle()
         return
       }
-      
-      // Block all game action commands for spectators
+
       if (isSpectatorOrDefeated) return
 
-      // A key for alert mode
-      if (e.key.toLowerCase() === 'a') {
+      if (hasAction('alert-mode')) {
         e.preventDefault()
         this.handleAlertMode(selectedUnits)
-      }
-      // S key for sell mode or stop attacking
-      else if (e.key.toLowerCase() === 's') {
+      } else if (hasAction('sell-mode')) {
         e.preventDefault()
         this.handleSellMode()
-      }
-      // R key to toggle repair mode
-      else if (e.key.toLowerCase() === 'r') {
+      } else if (hasAction('repair-mode')) {
         e.preventDefault()
         this.handleRepairMode()
-      }
-      // W key to send damaged units to workshop
-      else if (e.key.toLowerCase() === 'w') {
+      } else if (hasAction('workshop-repair')) {
         e.preventDefault()
         const queue = e.altKey
         if (this.unitCommands) {
           this.unitCommands.handleWorkshopRepairHotkey(selectedUnits, mapGrid, queue, false)
         }
         if (queue) markWaypointsAdded()
-      }
-      // X key for dodge
-      else if (e.key.toLowerCase() === 'x') {
+      } else if (hasAction('dodge')) {
         e.preventDefault()
         this.handleDodgeCommand(selectedUnits, units, mapGrid)
-      }
-      // H key to focus on factory
-      else if (e.key.toLowerCase() === 'h') {
+      } else if (hasAction('focus-factory')) {
         e.preventDefault()
         this.handleFactoryFocus(mapGrid)
-      }
-      // E key to focus on selected unit(s)
-      else if (e.key.toLowerCase() === 'e') {
+      } else if (hasAction('focus-selection')) {
         e.preventDefault()
         if (e.shiftKey || gameState.shiftKeyDown) {
           this.toggleAutoFocus(selectedUnits, mapGrid)
         } else {
           this.handleSelectedUnitFocus(selectedUnits, mapGrid)
         }
-      }
-      // Control group assignment (ctrl+number)
-      else if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+      } else if (hasAction('control-group-assign')) {
         e.preventDefault()
-        this.handleControlGroupAssignment(e.key, selectedUnits)
-      }
-      // Control group selection (just number keys 1-9)
-      else if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9') {
+        const detail = getDetail('control-group-assign')
+        this.handleControlGroupAssignment(detail?.digit || e.key, selectedUnits)
+      } else if (hasAction('control-group-select')) {
         e.preventDefault()
-        this.handleControlGroupSelection(e.key, units, selectedUnits, mapGrid)
-      }
-      // F key to toggle formation mode
-      else if (e.key.toLowerCase() === 'f') {
+        const detail = getDetail('control-group-select')
+        this.handleControlGroupSelection(detail?.digit || e.key, units, selectedUnits, mapGrid)
+      } else if (hasAction('formation-mode')) {
         e.preventDefault()
         this.handleFormationToggle(selectedUnits)
-      }
-      // L key to toggle logging for selected units
-      else if (e.key.toLowerCase() === 'l') {
+      } else if (hasAction('logging-toggle')) {
         e.preventDefault()
         this.handleLoggingToggle(selectedUnits)
       }
-      // M key to toggle performance dialog
-      else if (e.key.toLowerCase() === 'm') {
+
+      const remoteTurretLeft = hasAction('remote-turret-left')
+      const remoteTurretRight = hasAction('remote-turret-right')
+
+      if (remoteTurretLeft) {
         e.preventDefault()
-        this.handlePerformanceToggle()
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (!getRemoteControlActionState('turretLeft')) {
+            window.logger('Remote control: turret left key down')
+          }
+          setRemoteControlAction('turretLeft', 'keyboard', true)
+          return
+        }
       }
-      // Arrow keys and Space for remote control or map scrolling
-      else if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
+
+      if (remoteTurretRight) {
+        e.preventDefault()
+        if (this.selectedUnits && this.selectedUnits.length > 0) {
+          if (!getRemoteControlActionState('turretRight')) {
+            window.logger('Remote control: turret right key down')
+          }
+          setRemoteControlAction('turretRight', 'keyboard', true)
+          return
+        }
+      }
+
+      if (hasAction('scroll-up')) {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (!getRemoteControlActionState('forward')) {
@@ -235,7 +235,10 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
+        return
+      }
+
+      if (hasAction('scroll-down')) {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (!getRemoteControlActionState('backward')) {
@@ -254,20 +257,16 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
+        return
+      }
+
+      if (hasAction('scroll-left')) {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
-          if (gameState.shiftKeyDown) {
-            if (!getRemoteControlActionState('turretLeft')) {
-              window.logger('Remote control: turret left key down')
-            }
-            setRemoteControlAction('turretLeft', 'keyboard', true)
-          } else {
-            if (!getRemoteControlActionState('turnLeft')) {
-              window.logger('Remote control: left key down')
-            }
-            setRemoteControlAction('turnLeft', 'keyboard', true)
+          if (!getRemoteControlActionState('turnLeft')) {
+            window.logger('Remote control: left key down')
           }
+          setRemoteControlAction('turnLeft', 'keyboard', true)
         } else {
           if (gameState.smoothScroll) {
             gameState.smoothScroll.active = false
@@ -280,20 +279,16 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
+        return
+      }
+
+      if (hasAction('scroll-right')) {
         e.preventDefault()
         if (this.selectedUnits && this.selectedUnits.length > 0) {
-          if (gameState.shiftKeyDown) {
-            if (!getRemoteControlActionState('turretRight')) {
-              window.logger('Remote control: turret right key down')
-            }
-            setRemoteControlAction('turretRight', 'keyboard', true)
-          } else {
-            if (!getRemoteControlActionState('turnRight')) {
-              window.logger('Remote control: right key down')
-            }
-            setRemoteControlAction('turnRight', 'keyboard', true)
+          if (!getRemoteControlActionState('turnRight')) {
+            window.logger('Remote control: right key down')
           }
+          setRemoteControlAction('turnRight', 'keyboard', true)
         } else {
           if (gameState.smoothScroll) {
             gameState.smoothScroll.active = false
@@ -306,7 +301,10 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+        return
+      }
+
+      if (hasAction('remote-fire')) {
         e.preventDefault()
         const shiftActive = e.shiftKey || gameState.shiftKeyDown
         if (shiftActive && !e.repeat) {
@@ -316,7 +314,7 @@ export class KeyboardHandler {
           }
         }
         if (!getRemoteControlActionState('fire')) {
-          window.logger('Remote control: space pressed')
+          window.logger('Remote control: fire pressed')
         }
         setRemoteControlAction('fire', 'keyboard', true)
       }
@@ -335,7 +333,10 @@ export class KeyboardHandler {
         gameState.altKeyDown = false
         handleAltKeyRelease() // Check if waypoints were added and play sound
       }
-      if (e.code === 'ArrowUp' || e.key === 'ArrowUp' || e.key === 'Up' || e.keyCode === 38) {
+      const matches = getKeyboardMatches(e, gameState)
+      const hasAction = (id) => matches.some(match => match.actionId === id)
+
+      if (hasAction('scroll-up')) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('forward')) {
             window.logger('Remote control: up key up')
@@ -347,7 +348,7 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowDown' || e.key === 'ArrowDown' || e.key === 'Down' || e.keyCode === 40) {
+      } else if (hasAction('scroll-down')) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('backward')) {
             window.logger('Remote control: down key up')
@@ -359,7 +360,7 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37) {
+      } else if (hasAction('scroll-left')) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('turnLeft') || getRemoteControlActionState('turretLeft')) {
             window.logger('Remote control: left key up')
@@ -372,7 +373,7 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'ArrowRight' || e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39) {
+      } else if (hasAction('scroll-right')) {
         if (this.selectedUnits && this.selectedUnits.length > 0) {
           if (getRemoteControlActionState('turnRight') || getRemoteControlActionState('turretRight')) {
             window.logger('Remote control: right key up')
@@ -385,9 +386,17 @@ export class KeyboardHandler {
             this.requestRenderFrame()
           }
         }
-      } else if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+      }
+
+      if (hasAction('remote-turret-left')) {
+        setRemoteControlAction('turretLeft', 'keyboard', false)
+      }
+      if (hasAction('remote-turret-right')) {
+        setRemoteControlAction('turretRight', 'keyboard', false)
+      }
+      if (hasAction('remote-fire')) {
         if (getRemoteControlActionState('fire')) {
-          window.logger('Remote control: space released')
+          window.logger('Remote control: fire released')
         }
         setRemoteControlAction('fire', 'keyboard', false)
       }
