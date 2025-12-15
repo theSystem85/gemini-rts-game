@@ -7,6 +7,7 @@
 - [x] Add a host-only map edit mode with tile painting, random brushes, and instant building/unit placement tools.
 - [x] Restore the sidebar Settings button so it opens the settings modal (runtime + keybindings) reliably again.
 - [x] Add a tabbed sidebar settings modal with a Key Bindings editor (keyboard/mouse/touch), map-edit context groupings, and JSON export/import with version metadata.
+- [x] Route the map Settings gear directly into the modal (runtime tab + benchmark), move sidebar settings actions into the modal, keep the keybindings tab scrollable with flush section headers, and always show the app version in the sidebar footer.
 - [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
 - [x] ✅ Make scrolling on the minimap on mobile super smooth.
 - [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.

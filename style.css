@@ -2190,7 +2190,7 @@ body.config-modal-open {
   border-radius: 8px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   color: #e5e5e5;
-  width: min(420px, 100%);
+  width: min(520px, 100%);
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -2234,6 +2234,8 @@ body.config-modal-open {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .config-modal__title-group {
@@ -2269,6 +2271,7 @@ body.config-modal-open {
   display: none;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 .config-modal__content--active {
@@ -2283,36 +2286,41 @@ body.config-modal-open {
   flex-wrap: wrap;
 }
 
+#keybindingsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .keybinding-intro {
   color: #c7d5e0;
   margin: 0;
 }
 
+
 .keybinding-device {
-  background: rgba(26, 32, 40, 0.7);
-  border: 1px solid #2d3640;
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 8px;
+  border-top: 1px solid #2d3640;
+  padding: 12px 0 4px;
+  margin-top: 4px;
 }
 
 .keybinding-device h3 {
   margin: 0 0 8px 0;
   font-size: 15px;
   letter-spacing: 0.2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2d3640;
 }
 
 .keybinding-context {
-  border: 1px solid #2d3640;
-  border-radius: 6px;
-  padding: 8px;
-  margin-bottom: 10px;
-  background: rgba(20, 24, 32, 0.6);
+  border-bottom: 1px solid #2d3640;
+  padding: 8px 0 4px;
+  margin-bottom: 8px;
 }
 
 .keybinding-context__title {
   font-weight: 600;
-  margin-bottom: 6px;
+  margin: 0 0 6px 0;
   color: #9fb3c8;
 }
 
@@ -2321,8 +2329,7 @@ body.config-modal-open {
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: 6px 0;
 }
 
 .keybinding-row--custom {
@@ -2356,6 +2363,31 @@ body.config-modal-open {
   padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.sidebar-version {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cfd8e3;
+  font-size: 12px;
+  background: rgba(17, 22, 30, 0.65);
+}
+
+.sidebar-version__row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sidebar-version__label {
+  color: #9fb3c8;
+}
+
+.sidebar-version__commit {
+  color: #96a7c2;
+  margin-top: 2px;
+  min-height: 14px;
 }
 
 .keybinding-row__reset:disabled {

@@ -1,10 +1,11 @@
 # Spec: Key Bindings Editor Modal
 
 ## Overview
-- The sidebar "Runtime Config Settings" button opens a tabbed settings modal with a **Key Bindings** tab and a **Runtime Config** tab.
-- The Key Bindings tab lists keyboard, mouse, and touch bindings grouped by context (in-game, map edit enabled, map edit disabled).
+- The sidebar gear button opens a tabbed settings modal with a **Key Bindings** tab and a **Runtime Config** tab (plus benchmark trigger).
+- The Key Bindings tab lists keyboard, mouse, and touch bindings grouped by context (in-game, map edit enabled, map edit disabled) with section headers stacked vertically (no horizontal inset padding) and a scrollable body for long lists.
 - Non-default bindings are highlighted with a subtle yellow tint.
-- Modal open/close is handled through shared helpers so the sidebar button reliably launches the modal even when the map settings panel is toggled.
+- Modal open/close is handled through shared helpers so the sidebar button reliably launches the modal.
+- Runtime actions (open runtime config dialog, run performance benchmark) live inside the modal instead of the sidebar.
 
 ## Interaction
 - Clicking a binding enters capture mode and records the next keyboard combination, mouse click (including modifier keys and double-click), or touch gesture (tap, double tap, or double-finger tap).

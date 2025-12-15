@@ -597,23 +597,14 @@
           </div>
         </div>
 
-        <div id="mapSettingsMenu" style="display:none; margin-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:5px; margin: 10px 0; font-size: 12px; color: #999;">
-            <span>Version:</span>
-            <span id="appVersion">-</span>
-          </div>
-          <div id="appCommitInfo" style="font-size: 11px; color: #999; margin: -6px 0 10px;">
-            <span id="appCommitMessage"></span>
-          </div>
-          <button id="configSettingsBtn" class="action-button" style="width: 100%; margin: 10px 0;">
-            Runtime Config Settings
-          </button>
-          <button id="runBenchmarkBtn" class="action-button" style="width: 100%; margin: 10px 0;">
-            Run Performance Benchmark
-          </button>
+      <div id="sidebarFooterVersion" class="sidebar-version">
+        <div class="sidebar-version__row">
+          <span class="sidebar-version__label">Version:</span>
+          <span id="appVersion">-</span>
         </div>
+        <div id="appCommitInfo" class="sidebar-version__commit">
+          <span id="appCommitMessage"></span>
         </div>
-      </div>
       </div>
 
       <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
@@ -664,6 +655,7 @@
             </p>
             <div class="config-modal__actions">
               <button id="openRuntimeConfigDialogBtn" class="config-modal__button config-modal__button--primary" type="button">Open Runtime Config Dialog</button>
+              <button id="runBenchmarkBtn" class="config-modal__button" type="button">Run Performance Benchmark</button>
             </div>
           </div>
           <div class="config-modal__content" data-config-tab-panel="keybindings" hidden>

@@ -1399,7 +1399,6 @@ class Game {
 
   setupMapSettings() {
     const settingsBtn = document.getElementById('mapSettingsBtn')
-    const settingsMenu = document.getElementById('mapSettingsMenu')
     const mapSettingsToggle = document.getElementById('mapSettingsToggle')
     const mapSettingsContent = document.getElementById('mapSettingsContent')
     const mapSettingsToggleIcon = document.getElementById('mapSettingsToggleIcon')
@@ -1407,19 +1406,9 @@ class Game {
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
-    const configSettingsBtn = document.getElementById('configSettingsBtn')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
     attachBenchmarkButton()
     initSettingsModal()
-
-    if (configSettingsBtn) {
-      configSettingsBtn.addEventListener('click', () => {
-        openSettingsModal('keybindings')
-        if (settingsMenu) {
-          settingsMenu.style.display = 'none'
-        }
-      })
-    }
 
     // Handle map settings accordion toggle
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
@@ -1452,7 +1441,7 @@ class Game {
       })
     }
 
-    if (!settingsBtn || !settingsMenu) return
+    if (!settingsBtn) return
 
     // Display version number
     if (versionElement) {
@@ -1483,7 +1472,7 @@ class Game {
     }
 
     settingsBtn.addEventListener('click', () => {
-      settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
+      openSettingsModal('runtime')
     })
 
     if (oreCheckbox) {
