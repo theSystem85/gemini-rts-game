@@ -9,6 +9,7 @@ html, body {
   cursor: var(--game-default-cursor);
   touch-action: manipulation;
   -ms-touch-action: manipulation;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 :root {
@@ -2187,14 +2188,15 @@ body.config-modal-open {
 .config-modal__dialog {
   background: #1b1f24;
   border: 1px solid #2d3640;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   color: #e5e5e5;
-  width: min(520px, 100%);
-  max-height: 90vh;
+  width: min(560px, calc(100% - 24px));
+  max-height: min(90vh, 700px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .config-modal__header {
@@ -2253,18 +2255,29 @@ body.config-modal-open {
 .config-modal__tab {
   background: #232b33;
   border: 1px solid #2d3640;
-  color: #cfd8e3;
-  padding: 6px 10px;
-  border-radius: 4px;
+  color: #9fb3c8;
+  padding: 10px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 
+.config-modal__tab:hover {
+  background: #2a343e;
+  color: #cfd8e3;
+}
+
 .config-modal__tab--active {
-  background: linear-gradient(90deg, rgba(77, 163, 255, 0.2), rgba(76, 110, 255, 0.25));
+  background: linear-gradient(135deg, rgba(77, 163, 255, 0.2), rgba(76, 110, 255, 0.25));
   border-color: #4da3ff;
   color: #ffffff;
+}
+
+.config-modal__tab--active:hover {
+  background: linear-gradient(135deg, rgba(77, 163, 255, 0.25), rgba(76, 110, 255, 0.3));
 }
 
 .config-modal__content {
@@ -2293,76 +2306,128 @@ body.config-modal-open {
 }
 
 .keybinding-intro {
-  color: #c7d5e0;
+  color: #9fb3c8;
   margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(77, 163, 255, 0.06);
+  border-radius: 6px;
+  border-left: 3px solid #4da3ff;
 }
 
-
 .keybinding-device {
-  border-top: 1px solid #2d3640;
-  padding: 12px 0 4px;
-  margin-top: 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  margin-top: 8px;
 }
 
 .keybinding-device h3 {
-  margin: 0 0 8px 0;
-  font-size: 15px;
-  letter-spacing: 0.2px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #2d3640;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #9fb3c8;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .keybinding-context {
-  border-bottom: 1px solid #2d3640;
-  padding: 8px 0 4px;
-  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
 .keybinding-context__title {
   font-weight: 600;
-  margin: 0 0 6px 0;
-  color: #9fb3c8;
+  font-size: 12px;
+  margin: 0 0 10px 0;
+  color: #4da3ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .keybinding-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.keybinding-row:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .keybinding-row--custom {
-  background: rgba(255, 223, 122, 0.14);
+  background: rgba(255, 204, 102, 0.08);
+  border-left: 3px solid #ffcc66;
+  padding-left: 10px;
+}
+
+.keybinding-row--custom:hover {
+  background: rgba(255, 204, 102, 0.12);
 }
 
 .keybinding-row__label {
-  font-size: 14px;
+  font-size: 13px;
+  color: #cfd8e3;
+  line-height: 1.4;
 }
 
 .keybinding-row__value {
-  background: #1f252e;
-  border: 1px solid #2d3640;
+  background: #1a1f27;
+  border: 1px solid #3c4a58;
   color: #e5e5e5;
-  padding: 6px 10px;
-  border-radius: 4px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
-  min-width: 120px;
-  text-align: left;
+  min-width: 110px;
+  text-align: center;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.keybinding-row__value:hover {
+  background: #232b35;
+  border-color: #4da3ff;
 }
 
 .keybinding-row__value--listening {
+  background: rgba(77, 163, 255, 0.15);
   border-color: #4da3ff;
-  box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2);
+  color: #4da3ff;
+  animation: keybind-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes keybind-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2); }
+  50% { box-shadow: 0 0 0 5px rgba(77, 163, 255, 0.3); }
 }
 
 .keybinding-row__reset {
   background: transparent;
   border: 1px solid #3c4a58;
-  color: #cfd8e3;
-  padding: 6px 10px;
-  border-radius: 4px;
+  color: #9fb3c8;
+  padding: 8px 12px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.keybinding-row__reset:hover:not(:disabled) {
+  background: rgba(255, 100, 100, 0.1);
+  border-color: #ff6b6b;
+  color: #ff8080;
 }
 
 .sidebar-version {
@@ -2456,11 +2521,12 @@ body.config-modal-open {
 .config-modal__button {
   background: #2d3640;
   border: 1px solid #3c4a58;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #e5e5e5;
   cursor: pointer;
   font-size: 14px;
-  padding: 8px 12px;
+  font-family: inherit;
+  padding: 10px 14px;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -2469,6 +2535,19 @@ body.config-modal-open {
   background: #3a4a5c;
   border-color: #4da3ff;
   color: #ffffff;
+}
+
+.config-modal__button--primary {
+  background: linear-gradient(135deg, #4da3ff, #3a7bd5);
+  border-color: #4da3ff;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.config-modal__button--primary:hover,
+.config-modal__button--primary:focus {
+  background: linear-gradient(135deg, #5eb3ff, #4a8be5);
+  border-color: #5eb3ff;
 }
 
 .config-modal__button:disabled {
@@ -2500,6 +2579,282 @@ body.config-modal-open {
 .config-modal__field select option[data-overridden='true'] {
   color: #7dffb0;
   font-weight: 600;
+}
+
+/* Keybinding conflict warning dialog */
+.keybinding-conflict-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+  animation: conflict-fade-in 0.15s ease-out;
+}
+
+@keyframes conflict-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.keybinding-conflict-dialog {
+  background: #1b1f24;
+  border: 2px solid #ffcc66;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(255, 204, 102, 0.2);
+  width: min(400px, calc(100% - 32px));
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  animation: conflict-dialog-in 0.2s ease-out;
+}
+
+@keyframes conflict-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.keybinding-conflict-dialog__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 204, 102, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.keybinding-conflict-dialog__icon {
+  font-size: 24px;
+  color: #ffcc66;
+}
+
+.keybinding-conflict-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffcc66;
+}
+
+.keybinding-conflict-dialog__body {
+  padding: 16px 20px;
+  color: #cfd8e3;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.keybinding-conflict-dialog__key {
+  display: inline-block;
+  background: rgba(77, 163, 255, 0.15);
+  border: 1px solid #4da3ff;
+  color: #4da3ff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  margin: 4px 2px;
+}
+
+.keybinding-conflict-dialog__existing {
+  background: rgba(255, 100, 100, 0.1);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0 0 0;
+}
+
+.keybinding-conflict-dialog__existing-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ff8080;
+  margin-bottom: 6px;
+}
+
+.keybinding-conflict-dialog__existing-action {
+  color: #e5e5e5;
+  font-weight: 500;
+}
+
+.keybinding-conflict-dialog__footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.keybinding-conflict-dialog__btn {
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.keybinding-conflict-dialog__btn--cancel {
+  background: transparent;
+  border: 1px solid #3c4a58;
+  color: #9fb3c8;
+}
+
+.keybinding-conflict-dialog__btn--cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #5c6a78;
+}
+
+.keybinding-conflict-dialog__btn--confirm {
+  background: linear-gradient(135deg, #ffcc66, #e6a800);
+  border: none;
+  color: #1b1f24;
+}
+
+.keybinding-conflict-dialog__btn--confirm:hover {
+  background: linear-gradient(135deg, #ffd480, #ffb800);
+}
+
+/* Mobile responsive styles for config modal and keybindings */
+@media screen and (max-width: 600px) {
+  .config-modal {
+    padding: 10px;
+  }
+
+  .config-modal__dialog {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    border-radius: 10px;
+  }
+
+  .config-modal__header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .config-modal__header h2 {
+    font-size: 16px;
+  }
+
+  .config-modal__tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .config-modal__tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .config-modal__body {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .keybinding-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .keybinding-toolbar > div {
+    display: flex;
+    gap: 8px;
+  }
+
+  .keybinding-toolbar .config-modal__button {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .keybinding-intro {
+    font-size: 12px;
+    padding: 10px;
+  }
+
+  .keybinding-device {
+    padding: 10px;
+  }
+
+  .keybinding-device h3 {
+    font-size: 13px;
+  }
+
+  .keybinding-context {
+    padding: 8px 10px;
+  }
+
+  .keybinding-context__title {
+    font-size: 11px;
+  }
+
+  .keybinding-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .keybinding-row__label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .keybinding-row__value {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .keybinding-row__reset {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .keybinding-conflict-dialog {
+    width: calc(100% - 24px);
+  }
+
+  .keybinding-conflict-dialog__header {
+    padding: 14px 16px;
+  }
+
+  .keybinding-conflict-dialog__body {
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+
+  .keybinding-conflict-dialog__footer {
+    padding: 14px 16px;
+    flex-direction: column;
+  }
+
+  .keybinding-conflict-dialog__btn {
+    width: 100%;
+    padding: 12px;
+    justify-content: center;
+  }
+}
+
+/* Extra small screens */
+@media screen and (max-width: 380px) {
+  .config-modal__tab {
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+
+  .keybinding-row__label {
+    font-size: 12px;
+  }
 }
 
 /* Kicked from session modal */

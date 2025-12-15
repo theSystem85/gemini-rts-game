@@ -14,6 +14,111 @@ function formatContextLabel(context) {
   return CONTEXT_LABELS[context] || 'General'
 }
 
+/**
+ * Check if a key/input is already used by another binding
+ * @returns {Object|null} The conflicting binding or null
+ */
+function findConflictingBinding(device, currentBindingId, newInput, context) {
+  const bindings = keybindingManager.getBindingsByDevice(device)
+  const normalizedNew = normalizeInputForComparison(newInput)
+  
+  return bindings.find(binding => {
+    if (binding.id === currentBindingId) return false
+    // Only check conflicts within the same context or with DEFAULT context
+    if (binding.context !== context && binding.context !== KEYBINDING_CONTEXTS.DEFAULT && context !== KEYBINDING_CONTEXTS.DEFAULT) {
+      return false
+    }
+    const normalizedExisting = normalizeInputForComparison(binding.input)
+    return normalizedExisting === normalizedNew
+  })
+}
+
+function normalizeInputForComparison(input) {
+  if (!input) return ''
+  return input.toLowerCase().split('+').sort().join('+')
+}
+
+/**
+ * Show a conflict warning dialog and return a promise that resolves to user's choice
+ */
+function showConflictDialog(newInput, conflictingBinding) {
+  return new Promise(resolve => {
+    // Remove any existing dialog
+    const existingDialog = document.querySelector('.keybinding-conflict-overlay')
+    if (existingDialog) existingDialog.remove()
+
+    const overlay = document.createElement('div')
+    overlay.className = 'keybinding-conflict-overlay'
+
+    const dialog = document.createElement('div')
+    dialog.className = 'keybinding-conflict-dialog'
+    dialog.setAttribute('role', 'alertdialog')
+    dialog.setAttribute('aria-modal', 'true')
+    dialog.setAttribute('aria-labelledby', 'conflict-title')
+
+    dialog.innerHTML = `
+      <div class="keybinding-conflict-dialog__header">
+        <span class="keybinding-conflict-dialog__icon">⚠️</span>
+        <h3 id="conflict-title" class="keybinding-conflict-dialog__title">Key Already Assigned</h3>
+      </div>
+      <div class="keybinding-conflict-dialog__body">
+        <p>
+          The key <span class="keybinding-conflict-dialog__key">${escapeHtml(newInput)}</span> 
+          is already assigned to another action.
+        </p>
+        <div class="keybinding-conflict-dialog__existing">
+          <div class="keybinding-conflict-dialog__existing-label">Currently used by:</div>
+          <div class="keybinding-conflict-dialog__existing-action">${escapeHtml(conflictingBinding.label)}</div>
+        </div>
+        <p style="margin-top: 12px;">Do you want to reassign it anyway? The previous binding will be cleared.</p>
+      </div>
+      <div class="keybinding-conflict-dialog__footer">
+        <button type="button" class="keybinding-conflict-dialog__btn keybinding-conflict-dialog__btn--cancel">Cancel</button>
+        <button type="button" class="keybinding-conflict-dialog__btn keybinding-conflict-dialog__btn--confirm">Reassign</button>
+      </div>
+    `
+
+    overlay.appendChild(dialog)
+    document.body.appendChild(overlay)
+
+    const cancelBtn = dialog.querySelector('.keybinding-conflict-dialog__btn--cancel')
+    const confirmBtn = dialog.querySelector('.keybinding-conflict-dialog__btn--confirm')
+
+    const cleanup = () => {
+      overlay.remove()
+    }
+
+    cancelBtn.addEventListener('click', () => {
+      cleanup()
+      resolve(false)
+    })
+
+    confirmBtn.addEventListener('click', () => {
+      cleanup()
+      resolve(true)
+    })
+
+    // Close on Escape key
+    const handleKeydown = event => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        cleanup()
+        resolve(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeydown, { capture: true, once: true })
+
+    // Focus the cancel button for accessibility
+    cancelBtn.focus()
+  })
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
 function renderDeviceSection(container, device, bindings) {
   const deviceSection = document.createElement('section')
   deviceSection.className = 'keybinding-device'
@@ -80,12 +185,27 @@ function beginCapture(device, binding, buttonEl) {
   buttonEl.textContent = 'Press keys or click…'
   buttonEl.classList.add('keybinding-row__value--listening')
 
-  const finish = input => {
+  const context = binding.context || KEYBINDING_CONTEXTS.DEFAULT
+
+  const finish = async (input) => {
     buttonEl.classList.remove('keybinding-row__value--listening')
     if (!input) {
-      buttonEl.textContent = binding.input
+      buttonEl.textContent = binding.input || 'Unassigned'
       return
     }
+
+    // Check for conflicts
+    const conflict = findConflictingBinding(device, binding.id, input, context)
+    if (conflict) {
+      const shouldReassign = await showConflictDialog(input, conflict)
+      if (!shouldReassign) {
+        buttonEl.textContent = binding.input || 'Unassigned'
+        return
+      }
+      // Clear the conflicting binding before assigning the new one
+      keybindingManager.updateBinding(device, conflict.id, '')
+    }
+
     keybindingManager.updateBinding(device, binding.id, input)
     const editorRoot = buttonEl.closest('#keybindingsEditor')
     if (editorRoot) {
