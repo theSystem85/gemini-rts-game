@@ -536,20 +536,23 @@ export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, 
   }
 
   // Check if ANY tile of the building is within range of an existing building
-  let isAnyTileInRange = false
-  for (let y = tileY; y < tileY + height; y++) {
-    for (let x = tileX; x < tileX + width; x++) {
-      if (isNearExistingBuilding(x, y, buildings, factories, MAX_BUILDING_GAP_TILES, owner)) {
-        isAnyTileInRange = true
-        break
+  // Skip range check in edit mode
+  if (!gameState.mapEditMode) {
+    let isAnyTileInRange = false
+    for (let y = tileY; y < tileY + height; y++) {
+      for (let x = tileX; x < tileX + width; x++) {
+        if (isNearExistingBuilding(x, y, buildings, factories, MAX_BUILDING_GAP_TILES, owner)) {
+          isAnyTileInRange = true
+          break
+        }
       }
+      if (isAnyTileInRange) break
     }
-    if (isAnyTileInRange) break
-  }
 
-  // If no tile is in range, return false
-  if (!isAnyTileInRange) {
-    return false
+    // If no tile is in range, return false
+    if (!isAnyTileInRange) {
+      return false
+    }
   }
 
   // Check if any tile is blocked

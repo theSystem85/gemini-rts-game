@@ -50,6 +50,15 @@ export class HelpSystem {
           <li><strong>P Key:</strong> Toggle FPS display (performance monitor)</li>
           <li><strong>L Key:</strong> Toggle logging for selected units</li>
         </ul>
+        <h3>Map Editor Controls (when Edit Mode is active)</h3>
+        <ul>
+          <li><strong>Left Click:</strong> Paint selected tile type</li>
+          <li><strong>Command/Ctrl + Left Click:</strong> Erase tiles (paint grass)</li>
+          <li><strong>Shift + Left Click + Drag:</strong> Select rectangular area to paint</li>
+          <li><strong>Right Click:</strong> Pipette tool (sample tile) + Scroll map</li>
+          <li><strong>Shift + Right Click:</strong> Erase tiles (paint grass)</li>
+          <li><strong>Mouse Wheel:</strong> Change brush size</li>
+        </ul>
         <p>Press I again to close and resume the game</p>
       `
       document.body.appendChild(helpOverlay)

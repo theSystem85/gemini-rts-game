@@ -132,10 +132,20 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
     return
   }
 
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0]) || mapGrid[0].length === 0) {
+    return
+  }
+
+  if (typeof gameState.lastOreUpdate !== 'number') {
+    gameState.lastOreUpdate = 0
+  }
+
   if (now - gameState.lastOreUpdate >= ORE_SPREAD_INTERVAL) {
     const occupancyMap = Array.isArray(gameState.occupancyMap) ? gameState.occupancyMap : null
     const buildings = Array.isArray(gameState.buildings) ? gameState.buildings : []
     const factoryList = Array.isArray(factories) ? factories : []
+    const height = mapGrid.length
+    const width = mapGrid[0].length
 
     const directions = [
       { x: 1, y: 0 },
@@ -144,13 +154,17 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
       { x: 0, y: -1 }
     ]
 
-    for (let y = 0; y < mapGrid.length; y++) {
-      for (let x = 0; x < mapGrid[0].length; x++) {
-        if (mapGrid[y][x].ore || mapGrid[y][x].seedCrystal) {
-          const spreadProb = (mapGrid[y][x].seedCrystal ? ORE_SPREAD_PROBABILITY * 2 : ORE_SPREAD_PROBABILITY)
+    for (let y = 0; y < height; y++) {
+      const row = mapGrid[y]
+      if (!Array.isArray(row)) continue
+      for (let x = 0; x < width; x++) {
+        const tile = row[x]
+        if (!tile) continue
+        if (tile.ore || tile.seedCrystal) {
+          const spreadProb = (tile.seedCrystal ? ORE_SPREAD_PROBABILITY * 2 : ORE_SPREAD_PROBABILITY)
           directions.forEach(dir => {
             const nx = x + dir.x, ny = y + dir.y
-            if (nx >= 0 && nx < mapGrid[0].length && ny >= 0 && ny < mapGrid.length) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height && Array.isArray(mapGrid[ny])) {
               if ((occupancyMap?.[ny]?.[nx] || 0) > 0) {
                 return
               }
@@ -168,9 +182,14 @@ export const updateOreSpread = logPerformance(function updateOreSpread(gameState
               })
 
               // Only spread to land or street tiles that don't already have ore or seed crystals and don't have buildings or factories
-              const tileType = mapGrid[ny][nx].type
-              if ((tileType === 'land' || tileType === 'street') && !mapGrid[ny][nx].ore && !mapGrid[ny][nx].seedCrystal && !hasBuilding && !hasFactory && gameRandom() < spreadProb) {
-                mapGrid[ny][nx].ore = true
+              const neighborRow = mapGrid[ny]
+              const neighborTile = neighborRow?.[nx]
+              if (!neighborTile) {
+                return
+              }
+              const tileType = neighborTile.type
+              if ((tileType === 'land' || tileType === 'street') && !neighborTile.ore && !neighborTile.seedCrystal && !hasBuilding && !hasFactory && gameRandom() < spreadProb) {
+                neighborTile.ore = true
               }
             }
           })
@@ -452,6 +471,8 @@ function getPlayerDefeatSound(playerId) {
 export function checkGameEndConditions(factories, gameState) {
   if (gameState.gameOver) return true
   if (!gameState.buildings) return false
+  // Don't check victory conditions until the game has properly started
+  if (!gameState.gameStarted) return false
 
   const shouldCountBuilding = (building) => {
     if (!building || building.health <= 0) return false

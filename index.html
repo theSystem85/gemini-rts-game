@@ -457,6 +457,30 @@
         <ul id="saveGamesList" style="max-height: 120px; overflow-y: auto; margin: 8px 0 0 0; list-style: none;"></ul>
       </div>
       
+      <!-- Multiplayer Settings -->
+      <div id="multiplayerSettings">
+        <h3>Multiplayer</h3>
+        <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
+        <div class="multiplayer-join-section">
+          <label class="multiplayer-join-label">Join via invite link:</label>
+          <div class="multiplayer-join-input-row">
+            <input type="text" id="inviteLinkInput" class="sidebar-input multiplayer-join-input" placeholder="Paste invite link here" autocomplete="off">
+            <button type="button" id="joinInviteLinkBtn" class="multiplayer-invite-button multiplayer-join-btn">Join</button>
+            <button type="button" id="scanQrBtn" class="multiplayer-invite-button multiplayer-scan-btn" title="Scan QR code" aria-label="Scan QR code">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+                <rect x="14" y="14" width="3" height="3"/>
+                <line x1="21" y1="14" x2="21" y2="21"/>
+                <line x1="14" y1="21" x2="21" y2="21"/>
+              </svg>
+            </button>
+          </div>
+          <span id="joinInviteLinkStatus" class="multiplayer-join-status"></span>
+        </div>
+      </div>
+      
       <!-- Stats and game speed moved to the bottom -->
       <div id="stats">
         <p>Time: <span id="gameTime">0</span></p>
@@ -499,6 +523,9 @@
             <span id="mapSettingsToggleIcon">▼</span>
           </button>
           <div id="mapSettingsContent" style="display: none; margin-top: 10px;">
+            <div class="map-edit-controls" style="display: flex; flex-direction: column; gap: 6px; margin: 10px 0;">
+              <button id="mapEditModeBtn" class="action-button" type="button">Edit Mode</button>
+            </div>
             <button id="shuffleMapBtn" class="action-button" style="width: 100%; margin: 10px 0;">Shuffle Map</button>
             <label style="display: flex; align-items: center; margin: 10px 0;">
               Seed:
@@ -512,25 +539,6 @@
               Your alias:
               <input type="text" class="sidebar-input" id="playerAliasInput" placeholder="Enter alias" autocomplete="off" style="width: 120px; margin-left: 10px;">
             </label>
-            <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
-            <div class="multiplayer-join-section">
-              <label class="multiplayer-join-label">Join via invite link:</label>
-              <div class="multiplayer-join-input-row">
-                <input type="text" id="inviteLinkInput" class="sidebar-input multiplayer-join-input" placeholder="Paste invite link here" autocomplete="off">
-                <button type="button" id="joinInviteLinkBtn" class="multiplayer-invite-button multiplayer-join-btn">Join</button>
-                <button type="button" id="scanQrBtn" class="multiplayer-invite-button multiplayer-scan-btn" title="Scan QR code" aria-label="Scan QR code">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                    <rect x="14" y="14" width="3" height="3"/>
-                    <line x1="21" y1="14" x2="21" y2="21"/>
-                    <line x1="14" y1="21" x2="21" y2="21"/>
-                  </svg>
-                </button>
-              </div>
-              <span id="joinInviteLinkStatus" class="multiplayer-join-status"></span>
-            </div>
             <div style="display: flex; flex-direction: column; gap: 10px; margin: 10px 0;">
               <label style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
                 Width:
@@ -554,6 +562,25 @@
                   style="width: 70px;"
                 >
               </label>
+            </div>
+            <div class="map-edit-controls" style="display: flex; flex-direction: column; gap: 6px; margin: 10px 0;">
+              <label style="display:flex; align-items:center; gap:6px;">
+                Tile:
+                <select id="mapEditTileSelect" class="sidebar-input" style="flex:1;">
+                  <option value="grass">Grass</option>
+                  <option value="decor">Decoration</option>
+                  <option value="rugged">Rugged Grass</option>
+                  <option value="street">Street</option>
+                  <option value="rock">Rock</option>
+                  <option value="water">Water</option>
+                  <option value="ore">Ore</option>
+                </select>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="mapEditRandomToggle" checked>
+                <span>Random variations</span>
+              </label>
+              <div id="mapEditStatus" class="map-edit-status" aria-live="polite" style="font-size: 12px; color: #ccc;"></div>
             </div>
             <label style="display:flex; align-items:center; gap:5px; margin: 10px 0;">
               <input type="checkbox" id="oreSpreadCheckbox">

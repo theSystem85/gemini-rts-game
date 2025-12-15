@@ -28,12 +28,27 @@ export const unitCosts = UNIT_COSTS
 
 // Build an occupancy map indicating which tiles are occupied by a unit.
 export function buildOccupancyMap(units, mapGrid, textureManager = null) {
-  const occupancy = []
+  const safeUnits = Array.isArray(units) ? units : []
+
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+    if (window?.logger?.warn) {
+      window.logger.warn('buildOccupancyMap: mapGrid not ready or malformed, skipping rebuild', {
+        hasMapGrid: Boolean(mapGrid),
+        rows: Array.isArray(mapGrid) ? mapGrid.length : 0
+      })
+    } else if (window?.logger) {
+      window.logger('buildOccupancyMap: mapGrid not ready or malformed, skipping rebuild')
+    }
+    return null
+  }
+
+  const height = mapGrid.length
+  const width = mapGrid[0].length
+  const occupancy = Array.from({ length: height }, () => Array(width).fill(0))
   let impassableGrassCount = 0
 
-  for (let y = 0; y < mapGrid.length; y++) {
-    occupancy[y] = []
-    for (let x = 0; x < mapGrid[0].length; x++) {
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
       const tile = mapGrid[y][x]
 
       // Check if this is an impassable grass tile
@@ -58,7 +73,7 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
     window.logger(`Occupancy map built: ${impassableGrassCount} impassable grass tiles found`)
   }
 
-  units.forEach(unit => {
+  safeUnits.forEach(unit => {
     if (unit.isAirUnit && unit.flightState !== 'grounded') {
       return
     }
@@ -66,9 +81,9 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
     const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
     if (
       tileY >= 0 &&
-      tileY < mapGrid.length &&
+      tileY < height &&
       tileX >= 0 &&
-      tileX < mapGrid[0].length
+      tileX < width
     ) {
       occupancy[tileY][tileX] += 1
     }
@@ -80,9 +95,9 @@ export function buildOccupancyMap(units, mapGrid, textureManager = null) {
       const tileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
       if (
         tileY >= 0 &&
-        tileY < mapGrid.length &&
+        tileY < height &&
         tileX >= 0 &&
-        tileX < mapGrid[0].length
+        tileX < width
       ) {
         occupancy[tileY][tileX] = (occupancy[tileY][tileX] || 0) + 1
       }

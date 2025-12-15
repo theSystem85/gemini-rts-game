@@ -37,7 +37,7 @@ import { getKeyboardHandler } from './inputHandler.js'
 import { ensurePlayerBuildHistoryLoaded } from './savePlayerBuildPatterns.js'
 import { getUniqueId } from './utils.js'
 import { rebuildMineLookup } from './game/mineSystem.js'
-import { regenerateAllInviteTokens, isHost } from './network/multiplayerStore.js'
+import { regenerateAllInviteTokens } from './network/multiplayerStore.js'
 import { refreshSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { stopHostInvite } from './network/webrtcSession.js'
 import { gameRandom } from './utils/gameRandom.js'
@@ -568,6 +568,15 @@ export function loadGame(key) {
 
     Object.assign(gameState, loaded.gameState)
 
+    // Clear defeat/victory state when loading - let the game check conditions fresh
+    gameState.gameOver = false
+    gameState.gameOverMessage = null
+    gameState.gameResult = null
+    gameState.localPlayerDefeated = false
+    gameState.isSpectator = false
+    // Ensure game is marked as started
+    gameState.gameStarted = true
+
     const savedWidthTiles = Number.isFinite(loaded?.gameState?.mapTilesX)
       ? loaded.gameState.mapTilesX
       : DEFAULT_MAP_TILES_X
@@ -782,6 +791,11 @@ export function loadGame(key) {
       if (!factory) {
         // fallback: use first factory of that owner
         factory = factories.find(f => f.owner === u.owner) || factories[0]
+      }
+      // Skip this unit if no factory exists (shouldn't happen in valid save games)
+      if (!factory) {
+        window.logger.warn('Skipping unit with no factory:', u.type, 'owner:', u.owner)
+        return
       }
       // Use tileX/tileY if present, else calculate from x/y
       const tileX = u.tileX !== undefined ? u.tileX : Math.floor(u.x / TILE_SIZE)
@@ -1072,7 +1086,10 @@ export function loadGame(key) {
           building.rallyPoint = null
         }
         factories.push(building)
-        gameState.factories.push(building)
+        // Avoid double-push when gameState.factories is the same reference as factories
+        if (gameState.factories !== factories) {
+          gameState.factories.push(building)
+        }
       }
     })
 
@@ -1109,10 +1126,14 @@ export function loadGame(key) {
         mapGrid[index] = row
       })
     }
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Ensure gameState.mapGrid points at the canonical exported mapGrid (avoid destructive sync)
+    if (gameState.mapGrid !== mapGrid) {
+      gameState.mapGrid = mapGrid
+    }
     // Initialize occupancyMap as 2D array
+    if (!gameState.occupancyMap) {
+      gameState.occupancyMap = []
+    }
     gameState.occupancyMap.length = 0
     for (let y = 0; y < mapHeight; y++) {
       gameState.occupancyMap[y] = []
@@ -1309,7 +1330,7 @@ export function updateSaveGamesList() {
       label.title = save.description
       label.style.cursor = 'help'
       // For touch devices, show description on click
-      label.addEventListener('click', (e) => {
+      label.addEventListener('click', (_e) => {
         if (window.matchMedia('(pointer: coarse)').matches) {
           // Touch device - show alert with description
           alert(`${save.label}\n\n${save.description}`)
@@ -1395,6 +1416,25 @@ export function maybeResumeLastPausedGame() {
   }
 
   if (shouldResume && hasLastGame) {
+    // Check if the saved game was already over (don't auto-resume finished games)
+    try {
+      const raw = localStorage.getItem(LAST_GAME_STORAGE_KEY)
+      if (raw) {
+        const saveObj = JSON.parse(raw)
+        if (saveObj?.state) {
+          const stateString = typeof saveObj.state === 'string' ? saveObj.state : JSON.stringify(saveObj.state)
+          const loaded = JSON.parse(stateString)
+          if (loaded?.gameState?.gameOver) {
+            window.logger('Not auto-resuming - saved game was already finished')
+            clearLastGameResumePending()
+            return false
+          }
+        }
+      }
+    } catch (err) {
+      window.logger.warn('Failed to check saved game state:', err)
+    }
+
     loadGame(LAST_GAME_STORAGE_KEY)
     clearLastGameResumePending()
     showNotification('Resumed your last paused game automatically')

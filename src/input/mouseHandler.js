@@ -18,6 +18,13 @@ import {
 import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
 import { notifyBenchmarkManualCameraControl } from '../benchmark/benchmarkTracker.js'
 import * as mineInput from './mineInputHandler.js'
+import {
+  handlePointerDown as handleMapEditPointerDown,
+  handlePointerMove as handleMapEditPointerMove,
+  handlePointerUp as handleMapEditPointerUp,
+  pipetteTile
+} from '../mapEditor.js'
+import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
 
 export class MouseHandler {
   constructor() {
@@ -164,19 +171,35 @@ export class MouseHandler {
     gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
     gameCanvas.addEventListener('mousedown', e => {
-      // Don't process input if game is paused
-      if (gameState.paused) return
-      
-      // Don't process game commands in spectator mode, when locally defeated, or when host has paused
-      // (allow camera panning but not unit selection/commands)
-      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
-
       const rect = gameCanvas.getBoundingClientRect()
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
+      if (gameState.mapEditMode && e.button === 0) {
+        // Left-click in edit mode: handle painting
+        const tileX = Math.floor(worldX / TILE_SIZE)
+        const tileY = Math.floor(worldY / TILE_SIZE)
+        handleMapEditPointerDown(tileX, tileY, { button: e.button, shiftKey: e.shiftKey, metaKey: e.metaKey || e.ctrlKey })
+        if (this.requestRenderFrame) this.requestRenderFrame()
+        return
+      }
+
+      // Don't process input if game is paused
+      if (gameState.paused) return
+
+      // Don't process game commands in spectator mode, when locally defeated, or when host has paused
+      // (allow camera panning but not unit selection/commands)
+      const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
+
       if (e.button === 2) {
-        // Right-click: start scrolling (allowed for spectators and when host paused)
+        // Right-click: in edit mode, pipette on single click (no shift), else start scrolling
+        if (gameState.mapEditMode && !e.shiftKey) {
+          const tileX = Math.floor(worldX / TILE_SIZE)
+          const tileY = Math.floor(worldY / TILE_SIZE)
+          pipetteTile(tileX, tileY)
+          if (this.requestRenderFrame) this.requestRenderFrame()
+        }
+        // Still start scrolling regardless
         this.handleRightMouseDown(e, gameCanvas, cursorManager)
       } else if (e.button === 0 && !isSpectatorOrDefeated) {
         // Left-click: start selection or force attack (blocked for spectators and when host paused)
@@ -185,12 +208,21 @@ export class MouseHandler {
     })
 
     gameCanvas.addEventListener('mousemove', e => {
-      // Don't process input if game is paused
-      if (gameState.paused) return
-
       const rect = gameCanvas.getBoundingClientRect()
       const worldX = e.clientX - rect.left + gameState.scrollOffset.x
       const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+
+      if (gameState.mapEditMode && (e.buttons & 1) && !(e.buttons & 2)) {
+        // Left mouse button held in edit mode (but not right button): handle painting
+        const tileX = Math.floor(worldX / TILE_SIZE)
+        const tileY = Math.floor(worldY / TILE_SIZE)
+        handleMapEditPointerMove(tileX, tileY, e.buttons, e.shiftKey, e.metaKey || e.ctrlKey)
+        if (this.requestRenderFrame) this.requestRenderFrame()
+        return
+      }
+
+      // Don't process input if game is paused
+      if (gameState.paused) return
 
       // Update enemy hover detection
       this.updateEnemyHover(worldX, worldY, units, factories, selectedUnits, cursorManager)
@@ -212,9 +244,27 @@ export class MouseHandler {
     })
 
     gameCanvas.addEventListener('mouseup', e => {
+      const rect = gameCanvas.getBoundingClientRect()
+      const worldX = e.clientX - rect.left + gameState.scrollOffset.x
+      const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+
+      if (gameState.mapEditMode) {
+        // Handle map editor for both left and right clicks
+        const tileX = Math.floor(worldX / TILE_SIZE)
+        const tileY = Math.floor(worldY / TILE_SIZE)
+        handleMapEditPointerUp(tileX, tileY, { button: e.button, shiftKey: e.shiftKey, metaKey: e.metaKey || e.ctrlKey })
+        if (this.requestRenderFrame) this.requestRenderFrame()
+        // For right-click, continue to normal right-click handling to reset dragging state
+        if (e.button === 2) {
+          // Don't return, continue to handleRightMouseUp
+        } else {
+          return
+        }
+      }
+
       // Don't process input if game is paused
       if (gameState.paused) return
-      
+
       // Don't process game commands in spectator mode, when locally defeated, or when host has paused
       const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
 
@@ -230,6 +280,12 @@ export class MouseHandler {
     gameCanvas.addEventListener('contextmenu', (e) => {
       this.handleContextMenu(e, gameCanvas)
     })
+
+    gameCanvas.addEventListener('wheel', (e) => {
+      if (!gameState.mapEditMode) return
+      notifyMapEditorWheel(e.deltaY)
+      if (this.requestRenderFrame) this.requestRenderFrame()
+    }, { passive: true })
 
     document.addEventListener('mouseup', (e) => {
       if (e.button === 2 && gameState.isRightDragging) {

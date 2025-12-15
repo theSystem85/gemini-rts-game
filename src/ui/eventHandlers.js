@@ -24,6 +24,7 @@ import { playSound } from '../sound.js'
 import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
 import { TILE_SIZE } from '../config.js'
 import { GAME_DEFAULT_CURSOR } from '../input/cursorStyles.js'
+import { endMapEditOnPlay } from './mapEditorControls.js'
 
 export class EventHandlers {
   constructor(canvasManager, factories, units, mapGrid, moneyEl, gameInstance = null) {
@@ -48,6 +49,9 @@ export class EventHandlers {
 
     // Pause/resume functionality
     pauseBtn.addEventListener('click', () => {
+      if (gameState.mapEditMode) {
+        endMapEditOnPlay()
+      }
       gameState.gamePaused = !gameState.gamePaused
 
       // Update button icon based on game state
@@ -136,6 +140,7 @@ export class EventHandlers {
 
     // Add building placement handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
+      if (gameState.mapEditMode) return
       if (gameState.chainBuildMode) {
         this.handleChainBuildingPlacement(e)
       } else {
@@ -145,6 +150,7 @@ export class EventHandlers {
 
     // Add mousemove event to show building placement overlay
     gameCanvas.addEventListener('mousemove', (e) => {
+      if (gameState.mapEditMode) return
       if (gameState.chainBuildMode) {
         this.handleChainBuildingOverlay(e)
       } else {
@@ -154,6 +160,7 @@ export class EventHandlers {
 
     // Drag and drop placement
     gameCanvas.addEventListener('dragover', (e) => {
+      if (gameState.mapEditMode) return
       if (gameState.draggedBuildingType) {
         e.preventDefault()
         gameState.buildingPlacementMode = true
@@ -165,12 +172,14 @@ export class EventHandlers {
     })
 
     gameCanvas.addEventListener('dragleave', () => {
+      if (gameState.mapEditMode) return
       if (gameState.draggedBuildingType) {
         gameState.buildingPlacementMode = false
       }
     })
 
     gameCanvas.addEventListener('drop', (e) => {
+      if (gameState.mapEditMode) return
       if (gameState.draggedBuildingType) {
         e.preventDefault()
         this.handleDragDropPlacement({
@@ -193,12 +202,14 @@ export class EventHandlers {
     })
 
     // Add building repair handling to the canvas click event
-    gameCanvas.addEventListener('click', (e) =>
+    gameCanvas.addEventListener('click', (e) => {
+      if (gameState.mapEditMode) return
       buildingRepairHandler(e, gameState, gameCanvas, gameState.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)
-    )
+    })
 
     // Add building sell handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
+      if (gameState.mapEditMode) return
       const sold = buildingSellHandler(e, gameState, gameCanvas, this.mapGrid, this.units, this.factories, this.moneyEl)
       // If a building was successfully sold, update button states
       if (sold && this.productionController) {

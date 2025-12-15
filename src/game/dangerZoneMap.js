@@ -5,12 +5,20 @@ export function computeBuildingDps(building) {
 }
 
 export function generateDangerZoneMapForPlayer(playerId, mapGrid, buildings, gameState) {
-  if (!mapGrid || mapGrid.length === 0) return []
-  const h = mapGrid.length
-  const w = mapGrid[0].length
-  const map = Array.from({ length: h }, () => Array(w).fill(0))
+  if (!Array.isArray(mapGrid) || mapGrid.length === 0) {
+    return []
+  }
+  const firstRow = mapGrid[0]
+  if (!Array.isArray(firstRow) || firstRow.length === 0) {
+    return []
+  }
 
-  buildings.forEach(b => {
+  const h = mapGrid.length
+  const w = firstRow.length
+  const map = Array.from({ length: h }, () => Array(w).fill(0))
+  const sourceBuildings = Array.isArray(buildings) ? buildings : []
+
+  sourceBuildings.forEach(b => {
     if (!b || !b.fireRange || b.health <= 0) return
     if (!(b.type && (b.type.startsWith('turretGun') || b.type === 'rocketTurret' || b.type === 'teslaCoil' || b.type === 'artilleryTurret'))) return
     if (b.owner === playerId) return
@@ -43,7 +51,9 @@ export function generateDangerZoneMapForPlayer(playerId, mapGrid, buildings, gam
 }
 
 export function updateDangerZoneMaps(gameState) {
-  if (!gameState || !gameState.mapGrid) return
+  if (!gameState || !Array.isArray(gameState.mapGrid) || gameState.mapGrid.length === 0 || !Array.isArray(gameState.mapGrid[0])) {
+    return
+  }
   const players = []
   for (let i = 1; i <= (gameState.playerCount || 2); i++) players.push(`player${i}`)
   gameState.dangerZoneMaps = {}

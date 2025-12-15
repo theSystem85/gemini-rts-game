@@ -4,6 +4,7 @@ import { buildingData, isTileValid, canPlaceBuilding } from '../buildings.js'
 import { gameState } from '../gameState.js'
 import { showNotification } from '../ui/notifications.js'
 import { getCurrentGame } from '../main.js'
+import { renderMapEditorOverlay } from '../mapEditor.js'
 import {
   getCanvasLogicalHeight,
   getCanvasLogicalWidth,
@@ -623,5 +624,6 @@ export class UIRenderer {
     this.renderBlueprints(ctx, gameState.blueprints || [], scrollOffset)
     this.renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units)
     this.renderChainPlacement(ctx, gameState, scrollOffset, mapGrid, units)
+    renderMapEditorOverlay(ctx, scrollOffset)
   }
 }

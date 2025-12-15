@@ -31,16 +31,19 @@ import { initializeGameAssets, generateMap as generateMapFromSetup, cleanupOreFr
 import { initSaveGameSystem, initLastGameRecovery, maybeResumeLastPausedGame } from './saveGame.js'
 import { showNotification } from './ui/notifications.js'
 import { resetAttackDirections } from './ai/enemyStrategies.js'
-import { getTextureManager, preloadTileTextures, getMapRenderer } from './rendering.js'
+import { getTextureManager, preloadTileTextures, getMapRenderer, notifyTileMutation } from './rendering.js'
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
 import versionInfo from './version.json'
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 import { initSpatialQuadtree } from './game/spatialQuadtree.js'
+import { registerMapEditorRendering, deactivateMapEditMode, setMapEditorRenderScheduler, setMapEditorProductionController } from './mapEditor.js'
 import { attachBenchmarkButton } from './benchmark/benchmarkRunner.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 import { getPlayableViewportWidth, getPlayableViewportHeight } from './utils/layoutMetrics.js'
+import { initMapEditorControls } from './ui/mapEditorControls.js'
+import { sanitizeSeed } from './utils/seedUtils.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -83,6 +86,7 @@ let lastMobileLayoutMode = null
 let portraitQuery = null
 
 initializeMobileViewportLock()
+registerMapEditorRendering(getTextureManager, notifyTileMutation)
 
 const mobileLayoutState = {
   productionArea: null,
@@ -952,7 +956,7 @@ import { EventHandlers } from './ui/eventHandlers.js'
 import { GameLoop } from './game/gameLoop.js'
 import { setupMinimapHandlers } from './ui/minimap.js'
 import { addPowerIndicator, updateEnergyBar } from './ui/energyBar.js'
-import { addMoneyIndicator, updateMoneyBar } from './ui/moneyBar.js'
+import { addMoneyIndicator } from './ui/moneyBar.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -1051,6 +1055,11 @@ function loadPersistedSettings() {
   }
 }
 
+function resolveMapSeed(rawSeed) {
+  const { value } = sanitizeSeed(rawSeed, { allowRandomKeyword: true })
+  return value.toString()
+}
+
 // Initialize loading states
 let allAssetsLoaded = false
 
@@ -1110,24 +1119,24 @@ class Game {
   }
 
   setupGameWorld() {
+    deactivateMapEditMode()
+    // Set gameStarted early to prevent premature defeat checks
+    gameState.gameStarted = true
     // Generate map using the seed from the input and store it
-    const seed = document.getElementById('mapSeed').value || '1'
+    const seedInput = document.getElementById('mapSeed')
+    const seed = resolveMapSeed(seedInput ? seedInput.value : '1')
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
 
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     // Initialize factories and units
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     // Treat initial factories as standard buildings
     gameState.buildings.push(...factories)
 
@@ -1236,6 +1245,7 @@ class Game {
 
     // Setup map settings
     this.setupMapSettings()
+    initMapEditorControls()
 
     initSidebarMultiplayer()
     
@@ -1263,8 +1273,7 @@ class Game {
     // Initialize save game system
     initSaveGameSystem()
 
-    // Set game state
-    gameState.gameStarted = true
+    // Set game state (gameStarted is already true from setupGameWorld)
     gameState.gamePaused = false  // Start the game immediately
 
     // Update pause button to show pause icon since game is now running
@@ -1506,6 +1515,8 @@ class Game {
   }
 
   resetGameWithNewMap(seed) {
+    deactivateMapEditMode()
+    const normalizedSeed = resolveMapSeed(seed || '1')
     // Clear existing buildings before generating new map
     gameState.buildings.length = 0
     gameState.powerSupply = 0
@@ -1529,22 +1540,18 @@ class Game {
     }
 
     // Remember the seed so further restarts use the same map
-    gameState.mapSeed = seed
-    generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
+    gameState.mapSeed = normalizedSeed
+    generateMapFromSetup(normalizedSeed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
 
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     factories.length = 0
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     gameState.buildings.push(...factories)
 
     // Ensure no ore overlaps with buildings or factories
@@ -1583,6 +1590,14 @@ class Game {
 
   async resetGame() {
     window.logger('Resetting game...')
+
+    deactivateMapEditMode()
+
+    // Invalidate cached map chunks/SOT mask so a new game can't render stale overlays
+    const mapRenderer = getMapRenderer()
+    if (mapRenderer) {
+      mapRenderer.invalidateAllChunks()
+    }
 
     // Stop existing game loop to prevent conflicts
     if (this.gameLoop) {
@@ -1637,23 +1652,20 @@ class Game {
     gameState.losses = preservedLosses
 
     // Reset map and units using the stored seed so the layout stays the same
-    const seed = gameState.mapSeed || document.getElementById('mapSeed').value || '1'
+    const seedInput = document.getElementById('mapSeed')
+    const seed = resolveMapSeed(gameState.mapSeed || seedInput?.value || '1')
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
 
     gameState.mapTilesX = MAP_TILES_X
     gameState.mapTilesY = MAP_TILES_Y
 
-    // Sync mapGrid with gameState
-    gameState.mapGrid.length = 0
-    gameState.mapGrid.push(...mapGrid)
+    // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
 
     factories.length = 0
     initFactories(factories, mapGrid)
 
-    // Sync factories with gameState
-    gameState.factories.length = 0
-    gameState.factories.push(...factories)
+    // Note: gameState.factories is the same reference as factories (set at module scope)
     gameState.buildings.push(...factories)
 
     // Ensure no ore overlaps with buildings or factories
@@ -1778,6 +1790,8 @@ class Game {
     )
 
     setRenderScheduler(() => this.gameLoop.requestRender())
+    setMapEditorRenderScheduler(() => this.gameLoop.requestRender())
+    setMapEditorProductionController(this.productionController)
 
     this.gameLoop.setAssetsLoaded(allAssetsLoaded)
     this.gameLoop.start()
@@ -1801,6 +1815,10 @@ export const factories = []
 export const units = []
 export const bullets = []
 
+gameState.mapGrid = mapGrid
+gameState.units = units
+gameState.factories = factories
+
 /**
  * Regenerate the map for a client using the host's seed and dimensions
  * Called by gameCommandSync when the client receives the first game state snapshot
@@ -1811,13 +1829,16 @@ export const bullets = []
  */
 export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCount) {
   window.logger('[Main] Regenerating map for client with seed:', seed, 'dimensions:', widthTiles, 'x', heightTiles, 'playerCount:', playerCount)
+  deactivateMapEditMode()
+  const { value: clientSeed } = sanitizeSeed(seed)
+  const normalizedSeed = clientSeed.toString()
   
   // Update map dimensions in config
   setMapDimensions(widthTiles, heightTiles)
   
   // Store the seed and player count BEFORE map generation
   // Player count is used by generateMap for road generation
-  gameState.mapSeed = seed
+  gameState.mapSeed = normalizedSeed
   gameState.mapTilesX = widthTiles
   gameState.mapTilesY = heightTiles
   if (playerCount) {
@@ -1829,11 +1850,9 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   
   // Clear and regenerate the map grid
   mapGrid.length = 0
-  generateMapFromSetup(seed, mapGrid, widthTiles, heightTiles)
-  
-  // Sync mapGrid with gameState
-  gameState.mapGrid.length = 0
-  gameState.mapGrid.push(...mapGrid)
+  generateMapFromSetup(normalizedSeed, mapGrid, widthTiles, heightTiles)
+
+  // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
   
   // Rebuild occupancy map for the new map
   gameState.occupancyMap = []
