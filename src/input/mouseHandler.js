@@ -203,7 +203,7 @@ export class MouseHandler {
 
       if (commandBinding || e.button === 2) {
         // Right-click: start scrolling (allowed for spectators and when host paused)
-        this.handleRightMouseDown(e, gameCanvas, cursorManager)
+        this.handleRightMouseDown(e, worldX, worldY, gameCanvas, cursorManager)
       } else if ((selectionBinding || e.button === 0) && !isSpectatorOrDefeated) {
         // Left-click: start selection or force attack (blocked for spectators and when host paused)
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
@@ -315,7 +315,7 @@ export class MouseHandler {
     )
   }
 
-  handleRightMouseDown(e, gameCanvas, cursorManager) {
+  handleRightMouseDown(e, worldX, worldY, gameCanvas, cursorManager) {
     gameState.isRightDragging = true
     if (gameState.smoothScroll) {
       gameState.smoothScroll.active = false
