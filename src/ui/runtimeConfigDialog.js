@@ -30,141 +30,163 @@ export class RuntimeConfigDialog {
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(0, 0, 0, 0.55);
           display: flex;
           justify-content: center;
           align-items: center;
           z-index: 10000;
           backdrop-filter: blur(2px);
+          padding: 16px;
+          box-sizing: border-box;
         }
 
         .runtime-config-dialog {
-          background: linear-gradient(135deg, #2a2a2a, #333333);
-          border: 2px solid #555555;
-          border-radius: 8px;
-          padding: 20px;
-          min-width: 600px;
-          max-width: 800px;
-          max-height: 80vh;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-          font-family: 'Arial', sans-serif;
+          background: #1b1f24;
+          border: 1px solid #2d3640;
+          border-radius: 12px;
+          padding: 0;
+          width: min(680px, calc(100% - 24px));
+          max-height: min(85vh, 700px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
 
         .runtime-config-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 15px;
+          padding: 16px 20px;
+          border-bottom: 1px solid #2d3640;
+          background: linear-gradient(90deg, rgba(45, 65, 90, 0.6), rgba(25, 33, 46, 0.6));
         }
 
         .runtime-config-dialog h2 {
-          color: #ecf0f1;
+          color: #e5e5e5;
           margin: 0;
           font-size: 18px;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+          font-weight: 600;
+          letter-spacing: 0.5px;
         }
 
         .runtime-config-close {
-          background: #e74c3c;
-          color: white;
+          background: transparent;
           border: none;
-          border-radius: 4px;
-          padding: 6px 12px;
+          color: #e5e5e5;
+          font-size: 22px;
           cursor: pointer;
-          font-weight: bold;
-          transition: background 0.3s ease;
+          padding: 4px 8px;
+          line-height: 1;
+          transition: color 0.2s ease;
+          border-radius: 4px;
         }
 
         .runtime-config-close:hover {
-          background: #c0392b;
+          color: #ffcc66;
         }
 
         .runtime-config-categories {
           display: flex;
           gap: 8px;
-          margin-bottom: 15px;
+          padding: 12px 20px;
           flex-wrap: wrap;
+          border-bottom: 1px solid #2d3640;
+          background: rgba(0, 0, 0, 0.15);
         }
 
         .runtime-config-category-btn {
-          background: #444444;
-          color: #ecf0f1;
-          border: 1px solid #666666;
-          border-radius: 4px;
-          padding: 6px 12px;
+          background: #232b33;
+          color: #9fb3c8;
+          border: 1px solid #2d3640;
+          border-radius: 6px;
+          padding: 10px 16px;
           cursor: pointer;
           font-size: 13px;
-          transition: all 0.3s ease;
+          font-family: inherit;
+          font-weight: 500;
+          transition: all 0.2s ease;
         }
 
         .runtime-config-category-btn:hover {
-          background: #555555;
+          background: #2a343e;
+          color: #cfd8e3;
         }
 
         .runtime-config-category-btn.active {
-          background: #666666;
-          border-color: #888888;
+          background: linear-gradient(135deg, rgba(77, 163, 255, 0.2), rgba(76, 110, 255, 0.25));
+          border-color: #4da3ff;
+          color: #ffffff;
         }
 
         .runtime-config-content {
           flex: 1;
           overflow-y: auto;
-          padding: 10px;
-          background: rgba(40, 40, 40, 0.5);
-          border-radius: 4px;
-          margin-bottom: 15px;
+          padding: 16px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
         }
 
         .runtime-config-item {
-          margin-bottom: 15px;
-          padding: 10px;
-          background: rgba(50, 50, 50, 0.5);
-          border-radius: 4px;
-          border-left: 3px solid #777777;
+          padding: 12px 14px;
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 8px;
+          border-left: 3px solid #3c4a58;
+          transition: background-color 0.15s ease;
+        }
+
+        .runtime-config-item:hover {
+          background: rgba(255, 255, 255, 0.04);
         }
 
         .runtime-config-item-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 5px;
+          margin-bottom: 6px;
+          gap: 12px;
         }
 
         .runtime-config-item-name {
-          color: #aaaaaa;
-          font-weight: bold;
+          color: #e5e5e5;
+          font-weight: 600;
           font-size: 14px;
         }
 
         .runtime-config-item-value {
-          color: #ecf0f1;
-          font-family: 'Courier New', monospace;
+          color: #4da3ff;
+          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
           font-size: 13px;
+          background: rgba(77, 163, 255, 0.1);
+          padding: 3px 8px;
+          border-radius: 4px;
         }
 
         .runtime-config-item-description {
-          color: #bdc3c7;
+          color: #9fb3c8;
           font-size: 12px;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
+          line-height: 1.5;
         }
 
         .runtime-config-item-control {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .runtime-config-input {
           flex: 1;
-          padding: 6px 10px;
-          font-size: 13px;
-          border: 1px solid #666666;
-          border-radius: 4px;
-          background: #444444;
-          color: #ecf0f1;
-          font-family: 'Courier New', monospace;
+          padding: 10px 14px;
+          font-size: 14px;
+          border: 1px solid #3c4a58;
+          border-radius: 6px;
+          background: #1a1f27;
+          color: #e5e5e5;
+          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+          transition: all 0.15s ease;
         }
 
         .runtime-config-input:disabled {
@@ -173,15 +195,16 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-input:focus {
-          border-color: #888888;
+          border-color: #4da3ff;
           outline: none;
-          box-shadow: 0 0 5px rgba(136, 136, 136, 0.5);
+          box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2);
         }
 
         .runtime-config-checkbox {
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           cursor: pointer;
+          accent-color: #4da3ff;
         }
 
         .runtime-config-checkbox:disabled {
@@ -190,46 +213,122 @@ export class RuntimeConfigDialog {
         }
 
         .runtime-config-readonly {
-          color: #95a5a6;
+          color: #ffcc66;
           font-size: 11px;
           font-style: italic;
         }
 
         .runtime-config-buttons {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end;
           gap: 10px;
+          padding: 16px 20px;
+          border-top: 1px solid #2d3640;
+          background: rgba(0, 0, 0, 0.1);
         }
 
         .runtime-config-button {
-          padding: 8px 16px;
+          padding: 10px 20px;
           font-size: 14px;
-          border: none;
-          border-radius: 4px;
+          border: 1px solid #3c4a58;
+          border-radius: 6px;
           cursor: pointer;
-          transition: all 0.3s ease;
-          font-weight: bold;
-          text-transform: uppercase;
+          transition: all 0.2s ease;
+          font-weight: 500;
+          font-family: inherit;
         }
 
         .runtime-config-button.primary {
-          background: #27ae60;
-          color: white;
-          flex: 1;
+          background: linear-gradient(135deg, #4da3ff, #3a7bd5);
+          border-color: #4da3ff;
+          color: #ffffff;
         }
 
         .runtime-config-button.primary:hover {
-          background: #2ecc71;
+          background: linear-gradient(135deg, #5eb3ff, #4a8be5);
+          border-color: #5eb3ff;
         }
 
         .runtime-config-button.secondary {
-          background: #95a5a6;
-          color: white;
-          flex: 1;
+          background: #2d3640;
+          border-color: #3c4a58;
+          color: #e5e5e5;
         }
 
         .runtime-config-button.secondary:hover {
-          background: #7f8c8d;
+          background: #3a4a5c;
+          border-color: #4da3ff;
+          color: #ffffff;
+        }
+
+        /* Mobile responsive styles */
+        @media screen and (max-width: 600px) {
+          .runtime-config-overlay {
+            padding: 10px;
+          }
+
+          .runtime-config-dialog {
+            width: 100%;
+            max-height: calc(100vh - 20px);
+            border-radius: 10px;
+          }
+
+          .runtime-config-header {
+            padding: 12px 14px;
+          }
+
+          .runtime-config-header h2 {
+            font-size: 16px;
+          }
+
+          .runtime-config-categories {
+            padding: 10px 14px;
+          }
+
+          .runtime-config-category-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+            flex: 1;
+            text-align: center;
+          }
+
+          .runtime-config-content {
+            padding: 12px 14px;
+          }
+
+          .runtime-config-item {
+            padding: 10px 12px;
+          }
+
+          .runtime-config-item-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+          }
+
+          .runtime-config-item-name {
+            font-size: 13px;
+          }
+
+          .runtime-config-item-description {
+            font-size: 11px;
+          }
+
+          .runtime-config-input {
+            padding: 12px 14px;
+            font-size: 16px; /* Prevent iOS zoom */
+          }
+
+          .runtime-config-buttons {
+            padding: 12px 14px;
+            flex-direction: column;
+          }
+
+          .runtime-config-button {
+            width: 100%;
+            padding: 12px;
+            justify-content: center;
+          }
         }
       `
       document.head.appendChild(style)

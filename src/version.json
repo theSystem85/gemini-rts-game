@@ -1,4 +1,4 @@
 {
-  "commit": "e413406",
-  "message": "FEAT: Add apache production and air-defense-aware AI behavior"
+  "commit": "4b8af5b",
+  "message": "Fix: Ensure mobile portrait sidebar fills viewport"
 }

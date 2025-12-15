@@ -25,6 +25,7 @@ import {
   pipetteTile
 } from '../mapEditor.js'
 import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
+import { keybindingManager, KEYBINDING_CONTEXTS } from './keybindings.js'
 
 export class MouseHandler {
   constructor() {
@@ -191,17 +192,19 @@ export class MouseHandler {
       // (allow camera panning but not unit selection/commands)
       const isSpectatorOrDefeated = gameState.isSpectator || gameState.localPlayerDefeated || gameState.hostPausedByRemote
 
-      if (e.button === 2) {
-        // Right-click: in edit mode, pipette on single click (no shift), else start scrolling
-        if (gameState.mapEditMode && !e.shiftKey) {
-          const tileX = Math.floor(worldX / TILE_SIZE)
-          const tileY = Math.floor(worldY / TILE_SIZE)
-          pipetteTile(tileX, tileY)
-          if (this.requestRenderFrame) this.requestRenderFrame()
-        }
-        // Still start scrolling regardless
-        this.handleRightMouseDown(e, gameCanvas, cursorManager)
-      } else if (e.button === 0 && !isSpectatorOrDefeated) {
+      const pointerContext = gameState.mapEditMode ? KEYBINDING_CONTEXTS.MAP_EDIT_ON : KEYBINDING_CONTEXTS.MAP_EDIT_OFF
+      const commandBinding = keybindingManager.matchesPointerAction('mouse', e, 'command', pointerContext) ||
+        keybindingManager.matchesPointerAction('mouse', e, 'queue-command', pointerContext)
+      const selectionBinding = keybindingManager.matchesPointerAction('mouse', e, 'select', pointerContext) ||
+        keybindingManager.matchesPointerAction('mouse', e, 'select-add', pointerContext) ||
+        keybindingManager.matchesPointerAction('mouse', e, 'select-type', pointerContext) ||
+        keybindingManager.matchesPointerAction('mouse', e, 'force-attack', pointerContext) ||
+        keybindingManager.matchesPointerAction('mouse', e, 'guard', pointerContext)
+
+      if (commandBinding || e.button === 2) {
+        // Right-click: start scrolling (allowed for spectators and when host paused)
+        this.handleRightMouseDown(e, worldX, worldY, gameCanvas, cursorManager)
+      } else if ((selectionBinding || e.button === 0) && !isSpectatorOrDefeated) {
         // Left-click: start selection or force attack (blocked for spectators and when host paused)
         this.handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager)
       }
@@ -312,7 +315,7 @@ export class MouseHandler {
     )
   }
 
-  handleRightMouseDown(e, gameCanvas, cursorManager) {
+  handleRightMouseDown(e, worldX, worldY, gameCanvas, cursorManager) {
     gameState.isRightDragging = true
     if (gameState.smoothScroll) {
       gameState.smoothScroll.active = false
@@ -331,6 +334,15 @@ export class MouseHandler {
     if (this.requestRenderFrame) {
       this.requestRenderFrame()
     }
+
+    // Right-click: in edit mode, pipette on single click (no shift), else start scrolling
+    if (gameState.mapEditMode && !e.shiftKey) {
+      const tileX = Math.floor(worldX / TILE_SIZE)
+      const tileY = Math.floor(worldY / TILE_SIZE)
+      pipetteTile(tileX, tileY)
+      if (this.requestRenderFrame) this.requestRenderFrame()
+    }
+    // Still start scrolling regardless
   }
 
   handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager) {

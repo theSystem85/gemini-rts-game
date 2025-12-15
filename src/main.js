@@ -21,6 +21,7 @@ import {
   setMapDimensions
 } from './config.js'
 import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
+import { initSettingsModal, openSettingsModal } from './ui/settingsModal.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import { initAiPartySync } from './network/aiPartySync.js'
@@ -1398,7 +1399,6 @@ class Game {
 
   setupMapSettings() {
     const settingsBtn = document.getElementById('mapSettingsBtn')
-    const settingsMenu = document.getElementById('mapSettingsMenu')
     const mapSettingsToggle = document.getElementById('mapSettingsToggle')
     const mapSettingsContent = document.getElementById('mapSettingsContent')
     const mapSettingsToggleIcon = document.getElementById('mapSettingsToggleIcon')
@@ -1406,9 +1406,9 @@ class Game {
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
-    const configSettingsBtn = document.getElementById('configSettingsBtn')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
     attachBenchmarkButton()
+    initSettingsModal()
 
     // Handle map settings accordion toggle
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
@@ -1441,7 +1441,7 @@ class Game {
       })
     }
 
-    if (!settingsBtn || !settingsMenu) return
+    if (!settingsBtn) return
 
     // Display version number
     if (versionElement) {
@@ -1472,7 +1472,7 @@ class Game {
     }
 
     settingsBtn.addEventListener('click', () => {
-      settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none'
+      openSettingsModal('runtime')
     })
 
     if (oreCheckbox) {
@@ -1491,13 +1491,6 @@ class Game {
           window.logger.warn('Failed to save shadow of war setting to localStorage:', err)
         }
         updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
-      })
-    }
-
-    // Use the new runtime config dialog instead of the old eval-based modal
-    if (configSettingsBtn) {
-      configSettingsBtn.addEventListener('click', () => {
-        runtimeConfigDialog.openDialog()
       })
     }
 

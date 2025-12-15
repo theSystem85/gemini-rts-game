@@ -1,0 +1,5 @@
+2025-12-15T10:20:41Z
+LLM: GPT-5.1-Codex-Max
+
+Prompt:
+Add a KeyBindings Editor Modal to the game that can be opened from the sidebar settings Modal (so it will be another tab of that modal). There the user can see all current Keyboard, Mouse or TouchDevice bindings and modify them on click and capture. Make sure all context dependent mappings (like map edit mode on or off) are also separated in the mapping options under separate sections. Make sure to also support mapping with simultaneously pressed keys like when modifier keys are pressed like (strg/ctrl, shift, alt/option). Also support tab and double tap and double finger click gestured. Color all non default bindings in slight yellow background color highlight so the user can see it was modified. Ensure the non default user key bindings are stored in local storage and can be exported and imported as json file (with app version and commit hash mentioned in file). Make sure the KeyBindings Modal Tab looks beautify and matches the other tabs design theme.
