@@ -489,6 +489,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 
 ## Bugs
 - [ ] On mobile PWA portrait mode, stretch the sidebar to the very bottom so no unused black bar remains.
+- [ ] Remove the blue progress bar from sidebar build buttons once a unit finishes production.
 - [ ] Airborne units must never collide with each other or take impact damage; they should only use predictive, position-based avoidance.
 - [ ] Slow Apache rocket volley cadence by 50% and shorten the reload cooldown between volleys by 30% so bursts fire slower but rearm faster.
 - [x] Prevent Apache rockets from damaging ground units or buildings when engaging airborne targets.

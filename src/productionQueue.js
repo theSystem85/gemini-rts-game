@@ -536,6 +536,12 @@ export const productionQueue = {
 
     // Reset and start next production
     this.currentUnit.button.classList.remove('active', 'paused')
+
+    const progressBar = this.currentUnit.button.querySelector('.production-progress')
+    if (progressBar) {
+      progressBar.style.width = '0%'
+    }
+
     this.currentUnit = null
     this.pausedUnit = false  // Clear pause state when unit completes
 
