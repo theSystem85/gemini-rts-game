@@ -484,6 +484,25 @@ body.is-touch {
   color: #6efc4b;
 }
 
+@media screen and (orientation: portrait) {
+  .config-modal,
+  .multiplayer-qr-modal,
+  .qr-scanner-modal,
+  .kicked-modal,
+  .benchmark-modal {
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .config-modal__dialog,
+  .multiplayer-qr-modal__dialog,
+  .qr-scanner-modal__dialog,
+  .kicked-modal__dialog,
+  .benchmark-modal__dialog {
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);
+  }
+}
+
 #sidebarScroll {
   flex: 1;
   overflow-y: auto;
