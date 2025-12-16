@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Limit tanker trucks' automatic refueling to units below 50% fuel and prioritize the lowest-fuel targets first.
 - [x] Fix mobile landscape layout on iPhone 13 Pro Max so the right-side safe-area strip renders map content, build buttons align to the far edge, and the top-right power bar lines up with the sidebar.
 - [x] Fix startup Defeat screen + missing random map: prevent mapGrid/factories from being cleared by incorrect sync logic on initialization.
 - [x] Fix crash on auto-resume restore: prevent save load from wiping mapGrid (AI building placement should not run with empty map).

@@ -1596,7 +1596,7 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
       }
       if (u.gas <= 0) {
         criticalUnits.push(u)
-      } else if (u.gas / u.maxGas < 0.3) { // Changed from 0.2 to 0.3 (30% threshold)
+      } else if (u.gas / u.maxGas < 0.5) { // Units below 50% fuel need service
         lowGasUnits.push(u)
       }
     })
@@ -1652,17 +1652,23 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
 
       // Third priority: low gas units
       if (lowGasUnits.length > 0) {
-        let target = lowGasUnits[0]
-        let best = Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY)
-        lowGasUnits.forEach(u => {
-          const d = Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
-          if (d < best) {
-            best = d
-            target = u
-          }
-        })
-        sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
-        return
+        const target = lowGasUnits.reduce((best, unit) => {
+          const unitRatio = unit.gas / unit.maxGas
+          const bestRatio = best ? best.gas / best.maxGas : Infinity
+          if (unitRatio < bestRatio) return unit
+          if (unitRatio > bestRatio) return best
+
+          const unitDistance = Math.hypot(unit.tileX - tanker.tileX, unit.tileY - tanker.tileY)
+          const bestDistance = best
+            ? Math.hypot(best.tileX - tanker.tileX, best.tileY - tanker.tileY)
+            : Infinity
+          return unitDistance < bestDistance ? unit : best
+        }, null)
+
+        if (target) {
+          sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+          return
+        }
       }
 
       // Fourth priority: guard harvesters

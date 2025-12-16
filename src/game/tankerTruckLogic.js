@@ -111,16 +111,22 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
             u.id !== tanker.id &&
             u.owner === tanker.owner &&
             typeof u.maxGas === 'number' &&
-            u.gas < (u.maxGas * 0.95) &&
+            u.gas < (u.maxGas * 0.5) &&
             u.health > 0 &&
             !(u.movement && u.movement.isMoving)
           )
           .map(u => ({
             unit: u,
-            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY),
+            fuelRatio: u.gas / u.maxGas
           }))
           .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
-          .sort((a, b) => a.distance - b.distance)
+          .sort((a, b) => {
+            if (a.fuelRatio !== b.fuelRatio) {
+              return a.fuelRatio - b.fuelRatio
+            }
+            return a.distance - b.distance
+          })
 
         const targetEntry = candidates[0]
 
@@ -143,15 +149,27 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     if (!tanker.refuelTarget && !queueActive && !tanker.alertMode) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
-      const target = units.find(u =>
-        u.id !== tanker.id &&
-        u.owner === tanker.owner &&
-        typeof u.maxGas === 'number' &&
-        u.gas < (u.maxGas * 0.95) && // Only refuel if unit has less than 95% gas
-        u.health > 0 && // Ensure target is alive
-        Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY) <= SERVICE_SERVING_RANGE &&
-        !(u.movement && u.movement.isMoving)
-      )
+      const target = units
+        .filter(u =>
+          u.id !== tanker.id &&
+          u.owner === tanker.owner &&
+          typeof u.maxGas === 'number' &&
+          u.gas < (u.maxGas * 0.5) && // Only refuel if unit has less than 50% gas
+          u.health > 0 && // Ensure target is alive
+          Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY) <= SERVICE_SERVING_RANGE &&
+          !(u.movement && u.movement.isMoving)
+        )
+        .reduce((best, current) => {
+          const currentRatio = current.gas / current.maxGas
+          const bestRatio = best ? best.gas / best.maxGas : Infinity
+          if (currentRatio < bestRatio) return current
+          if (currentRatio > bestRatio) return best
+          const bestDistance = best
+            ? Math.hypot(best.tileX - tanker.tileX, best.tileY - tanker.tileY)
+            : Infinity
+          const currentDistance = Math.hypot(current.tileX - tanker.tileX, current.tileY - tanker.tileY)
+          return currentDistance < bestDistance ? current : best
+        }, null)
       if (target && (tanker.supplyGas > 0 || tanker.supplyGas === undefined)) {
         // Initialize supply gas if not set
         if (tanker.supplyGas === undefined) {
