@@ -396,9 +396,68 @@ export function findAdjacentTile(factory, mapGrid) {
   return null
 }
 
+function isTargetBuildingTile(target, tileX, tileY) {
+  if (!target || target.tileX !== undefined) return false
+
+  const targetWidth = target.width || 1
+  const targetHeight = target.height || 1
+
+  return (
+    tileX >= target.x && tileX < target.x + targetWidth &&
+    tileY >= target.y && tileY < target.y + targetHeight
+  )
+}
+
+function isLineObstructedByBuilding(shooterCenter, target, mapGrid) {
+  if (!target) return false
+  if (!mapGrid || mapGrid.length === 0) return false
+
+  const startTileX = Math.floor(shooterCenter.x / TILE_SIZE)
+  const startTileY = Math.floor(shooterCenter.y / TILE_SIZE)
+  const targetTileX = target.tileX !== undefined
+    ? target.tileX
+    : target.x + Math.floor((target.width || 1) / 2)
+  const targetTileY = target.tileY !== undefined
+    ? target.tileY
+    : target.y + Math.floor((target.height || 1) / 2)
+
+  let x0 = startTileX
+  let y0 = startTileY
+  const x1 = targetTileX
+  const y1 = targetTileY
+
+  const dx = Math.abs(x1 - x0)
+  const sx = x0 < x1 ? 1 : -1
+  const dy = -Math.abs(y1 - y0)
+  const sy = y0 < y1 ? 1 : -1
+  let err = dx + dy
+
+  while (true) {
+    if (!(x0 === startTileX && y0 === startTileY) && !(x0 === x1 && y0 === y1)) {
+      if (mapGrid[y0] && mapGrid[y0][x0] && mapGrid[y0][x0].building && !isTargetBuildingTile(target, x0, y0)) {
+        return true
+      }
+    }
+
+    if (x0 === x1 && y0 === y1) break
+
+    const e2 = 2 * err
+    if (e2 >= dy) {
+      err += dy
+      x0 += sx
+    }
+    if (e2 <= dx) {
+      err += dx
+      y0 += sy
+    }
+  }
+
+  return false
+}
+
 // Prevent friendly fire by ensuring clear line-of-sight.
 // Returns true if no friendly unit (other than shooter and target) is in the bullet's path.
-export function hasClearShot(shooter, target, units) {
+export function hasClearShot(shooter, target, units, mapGrid) {
   const shooterCenter = { x: shooter.x + TILE_SIZE / 2, y: shooter.y + TILE_SIZE / 2 }
   const targetCenter = target.tileX !== undefined
     ? { x: target.x + TILE_SIZE / 2, y: target.y + TILE_SIZE / 2 }
@@ -408,6 +467,10 @@ export function hasClearShot(shooter, target, units) {
   const segmentLengthSq = dx * dx + dy * dy
   // Threshold distance that counts as being "in the way"
   const threshold = TILE_SIZE / 2.5
+
+  if (isLineObstructedByBuilding(shooterCenter, target, mapGrid)) {
+    return false
+  }
 
   for (const other of units) {
     // Only check for friendly units that are not the shooter or the intended target.
@@ -453,31 +516,33 @@ export function findPositionWithClearShot(unit, target, units, mapGrid) {
   let bestPosition = null
   let bestDistance = Infinity
 
-  for (const dir of directions) {
-    const testX = unitTileX + dir.x
-    const testY = unitTileY + dir.y
+  for (let radius = 1; radius <= 2; radius++) {
+    for (const dir of directions) {
+      const testX = unitTileX + dir.x * radius
+      const testY = unitTileY + dir.y * radius
 
-    // Check if tile is valid and passable
-    if (testX >= 0 && testX < mapGrid[0].length &&
-        testY >= 0 && testY < mapGrid.length &&
-        !mapGrid[testY][testX].building &&
-        mapGrid[testY][testX].type !== 'water') {
+      // Check if tile is valid and passable
+      if (testX >= 0 && testX < mapGrid[0].length &&
+          testY >= 0 && testY < mapGrid.length &&
+          !mapGrid[testY][testX].building &&
+          mapGrid[testY][testX].type !== 'water') {
 
-      // Check if tile is not occupied using the occupancy map
-      if (!occupancyMap[testY][testX]) {
-        // Position test unit at this tile to check line of sight
-        testUnit.x = testX * TILE_SIZE
-        testUnit.y = testY * TILE_SIZE
-        testUnit.tileX = testX
-        testUnit.tileY = testY
+        // Check if tile is not occupied using the occupancy map
+        if (!occupancyMap[testY][testX]) {
+          // Position test unit at this tile to check line of sight
+          testUnit.x = testX * TILE_SIZE
+          testUnit.y = testY * TILE_SIZE
+          testUnit.tileX = testX
+          testUnit.tileY = testY
 
-        // Check if there's a clear shot from this position
-        if (hasClearShot(testUnit, target, units)) {
-          // Calculate distance to current position to find the nearest valid spot
-          const distance = Math.hypot(testX - unitTileX, testY - unitTileY)
-          if (distance < bestDistance) {
-            bestDistance = distance
-            bestPosition = { x: testX, y: testY }
+          // Check if there's a clear shot from this position
+          if (hasClearShot(testUnit, target, units, mapGrid)) {
+            // Calculate distance to current position to find the nearest valid spot
+            const distance = Math.hypot(testX - unitTileX, testY - unitTileY)
+            if (distance < bestDistance) {
+              bestDistance = distance
+              bestPosition = { x: testX, y: testY }
+            }
           }
         }
       }
