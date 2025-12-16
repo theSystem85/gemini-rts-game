@@ -1,7 +1,7 @@
 // unitCombat.js - Handles all unit combat and targeting logic
 import { TILE_SIZE, TANK_FIRE_RANGE, TANK_BULLET_SPEED, TURRET_AIMING_THRESHOLD, TANK_V3_BURST, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, HOWITZER_PROJECTILE_SPEED, HOWITZER_EXPLOSION_RADIUS_TILES, APACHE_RANGE_REDUCTION } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
-import { hasClearShot, angleDiff, smoothRotateTowardsAngle } from '../logic.js'
+import { hasClearShot, angleDiff, smoothRotateTowardsAngle, findPositionWithClearShot } from '../logic.js'
 import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
@@ -229,6 +229,25 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
   return { distance, targetCenterX, targetCenterY }
 }
 
+function ensureLineOfSight(unit, target, units, mapGrid) {
+  if (!target) {
+    return false
+  }
+
+  if (!mapGrid) {
+    return true
+  }
+
+  const clearShot = hasClearShot(unit, target, units, mapGrid)
+
+  if (!clearShot && !unit.findingClearShot) {
+    unit.findingClearShot = true
+    findPositionWithClearShot(unit, target, units, mapGrid)
+  }
+
+  return clearShot
+}
+
 // Combat configuration constants
 const COMBAT_CONFIG = {
   CHASE_MULTIPLIER: {
@@ -265,7 +284,7 @@ const COMBAT_CONFIG = {
 /**
  * Common firing logic helper - handles bullet creation
  */
-function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null) {
+function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, targetCenterY, projectileType = 'bullet', units, mapGrid, usePredictiveAiming = false, overrideTarget = null, clearShotOverride = null) {
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
 
@@ -294,7 +313,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
-    const clearShot = unit.type === 'rocketTank' || unit.type === 'apache' || hasClearShot(unit, target, units)
+    const clearShot = unit.type === 'apache' ? true : (clearShotOverride ?? hasClearShot(unit, target, units, mapGrid))
     const turretAimed = unit.type === 'apache' ? true : isTurretAimedAtTarget(unit, target)
     if (unit.canFire !== false && clearShot && turretAimed) {
       const targetIsAirborneApache = target && target.type === 'apache' && target.flightState !== 'grounded'
@@ -934,9 +953,10 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
     const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
-    if (distance <= effectiveRange && canAttack) {
+    const clearShot = ensureLineOfSight(unit, unit.target, units, mapGrid)
+    if (distance <= effectiveRange && canAttack && clearShot) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
-      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null)
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null, clearShot)
     }
   }
 }
@@ -1042,9 +1062,10 @@ function updateTankV2Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
     const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
-    if (distance <= effectiveRange && canAttack) {
+    const clearShot = ensureLineOfSight(unit, unit.target, units, mapGrid)
+    if (distance <= effectiveRange && canAttack && clearShot) {
       const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
-      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null)
+      handleTankFiring(unit, unit.target, bullets, now, effectiveFireRate, targetCenterX, targetCenterY, 'bullet', units, mapGrid, false, null, clearShot)
     }
   }
 }
@@ -1065,13 +1086,14 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
     const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit)
-    if (distance <= effectiveRange && canAttack) {
+    const clearShot = ensureLineOfSight(unit, unit.target, units, mapGrid)
+    if (distance <= effectiveRange && canAttack && clearShot) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed
         const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.STANDARD)
         if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-          if (unit.canFire !== false && hasClearShot(unit, unit.target, units)) {
+          if (unit.canFire !== false && clearShot) {
             unit.burstState = {
               bulletsToFire: COMBAT_CONFIG.TANK_V3_BURST.COUNT,
               lastBulletTime: 0
@@ -1102,7 +1124,8 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
     const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
     const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
-    if (distance <= effectiveRange && canAttack) {
+    const clearShot = ensureLineOfSight(unit, unit.target, units, mapGrid)
+    if (distance <= effectiveRange && canAttack && clearShot) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {
         // Start new burst if cooldown has passed

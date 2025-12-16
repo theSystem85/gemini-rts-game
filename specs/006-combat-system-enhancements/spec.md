@@ -210,6 +210,10 @@ As a player, I want to see visual indicators showing where my units are moving a
 - **FR-049**: System MUST save and load all combat states through save/load system
 - **FR-050**: System MUST apply combat enhancements to both player and AI units equally
 
+**Line-of-Sight & Obstructions:**
+- **FR-051**: Tank projectiles MUST respect building collision for all parties; shots cannot pass through allied or enemy structures.
+- **FR-052**: Tank combat AI MUST seek alternate positions when buildings block line-of-sight and resume firing only after a clear lane is available.
+
 ### Key Entities
 
 - **Hit Zone**: Angular region around tank defining damage multiplier (front 1.0x, side 1.3x, rear 2.0x)
