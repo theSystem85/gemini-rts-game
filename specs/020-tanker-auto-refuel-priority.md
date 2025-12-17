@@ -2,7 +2,9 @@
 
 ## Summary
 - Tanker trucks only auto-assign refueling when a unit's fuel is below 50% of its maximum.
-- When multiple candidates exist, choose the unit with the lowest fuel percentage; if tied, prefer the closer target.
+- Auto-service builds a stable to-do list every 10 seconds when idle, ordered by lowest fuel percentage (distance as a tiebreaker) and served without re-prioritizing mid-queue.
+- User-issued queues (including AGF drag selections) replace any auto-selected targets and block new auto scans until all user targets are finished.
+- When selected, tanker trucks render the queued target list with the standard yellow utility markers/lines used by recovery tanks.
 - Emergency refueling for empty units still bypasses normal thresholds.
 
 ## Notes

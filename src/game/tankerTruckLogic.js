@@ -9,6 +9,8 @@ import {
   updateKamikazeTargetPoint
 } from './tankerTruckUtils.js'
 
+const AUTO_REFUEL_SCAN_INTERVAL = 10000
+
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
   if (tankers.length === 0) return
@@ -28,6 +30,10 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     const queueActive = queueState && queueState.mode === 'refuel' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+    if (queueState?.lockedByUser && !queueActive && !queueState.currentTargetId && (!queueState.targets || queueState.targets.length === 0)) {
+      queueState.lockedByUser = false
+      queueState.source = null
+    }
     const now = performance?.now ? performance.now() : Date.now()
     const wasServing = Boolean(tanker._alertWasServing)
 
@@ -102,7 +108,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       tanker.nextUtilityScanTime = null
     }
 
-    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode
+    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode && !queueState?.lockedByUser
     if (canAutoScan && unitCommands) {
       const nextScan = tanker.nextUtilityScanTime || 0
       if (now >= nextScan) {
@@ -128,25 +134,23 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
             return a.distance - b.distance
           })
 
-        const targetEntry = candidates[0]
+        const targets = candidates.map(entry => entry.unit)
 
-        if (targetEntry) {
-          const assigned = unitCommands.assignTankerToTarget(tanker, targetEntry.unit, gameState.mapGrid, {
-            suppressNotifications: true
+        if (targets.length > 0) {
+          const result = unitCommands.setUtilityQueue(tanker, targets, 'refuel', gameState.mapGrid, {
+            suppressNotifications: true,
+            source: 'auto'
           })
-          if (assigned) {
+          if (result.addedTargets.length > 0 || result.started) {
             tanker.alertActiveService = true
-            tanker.alertAssignmentId = targetEntry.unit.id
-          } else {
-            tanker.nextUtilityScanTime = now + 2000
+            tanker.alertAssignmentId = targets[0].id
           }
-        } else {
-          tanker.nextUtilityScanTime = now + 2000
         }
+        tanker.nextUtilityScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
       }
     }
 
-    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode) {
+    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode && !queueState?.lockedByUser) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
       const target = units
@@ -267,7 +271,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     if (wasServing && !isCurrentlyServing) {
       tanker.alertActiveService = false
       tanker.alertAssignmentId = null
-      tanker.nextUtilityScanTime = now + 2000
+      tanker.nextUtilityScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
     }
     if (isCurrentlyServing) {
       tanker.alertActiveService = true

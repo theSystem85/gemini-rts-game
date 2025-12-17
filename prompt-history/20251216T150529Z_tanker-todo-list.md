@@ -1,0 +1,4 @@
+2025-12-16T15:05:29Z
+Model: GPT-5.1-Codex-Max
+
+ensure the tanker truck is not constantly changing its targets but makes a todo list of vehicles to serve and works on it without ever changing its priorities and targets. Ensure when the user selects the tanker truck, that the user can see the list of targets for the tanker truck. Use the same visualization that is used for recovery tanks when they are serving multiple targets (yellow markers with connected lines and numbers). Also ensure that when the user has selected a tanker truck and then marks multiple targets using AGF attack box selection that then the automatic targets selection gets removed by the targets from the user. Only after all targets selected by the user for the tanker truck got served, then it can start again to auto select targets to serve. Ensure the Autoselect check interval is 10s.
