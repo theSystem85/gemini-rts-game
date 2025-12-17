@@ -648,10 +648,10 @@ body.mobile-landscape #mobileSidebarControls {
   align-items: flex-start;
   background: none;
   border-radius: 0;
-  padding: 0 0 0 var(--safe-area-left);
+  padding: 0;
   box-shadow: none;
   box-sizing: border-box;
-  width: calc(var(--mobile-action-size) + var(--safe-area-left));
+  width: var(--mobile-action-size);
   z-index: 2000;
 }
 
@@ -841,6 +841,10 @@ body.mobile-landscape #mobileActionsContainer {
   flex: 1;
 }
 
+.mobile-actions-group {
+  display: contents;
+}
+
 #mobileMinimapButton {
   display: none;
 }
@@ -886,40 +890,31 @@ body.mobile-landscape #mobileMinimapButton {
 
 body.mobile-landscape #actions {
   flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 0;
   margin: 0;
   width: 100%;
-  justify-content: flex-start;
   align-items: flex-start;
   height: 100%;
   padding: 0 0 calc(var(--safe-area-bottom));
 }
 
-body.mobile-landscape #actions .action-button {
-  order: 10;
-  align-self: flex-start;
+body.mobile-landscape #actions .mobile-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
-body.mobile-landscape #mobileSidebarMenuBtn {
-  order: 1;
-}
-
-body.mobile-landscape #pauseBtn {
-  order: 2;
-}
-
-body.mobile-landscape #repairBtn {
-  order: 4;
+body.mobile-landscape #actions .mobile-actions-group--bottom {
   margin-top: auto;
 }
 
-body.mobile-landscape #sellBtn {
-  order: 5;
-}
-
-body.mobile-landscape #mobileMinimapButton {
-  order: 6;
+body.mobile-landscape #actions .action-button {
+  order: 0;
+  align-self: stretch;
 }
 
 body.mobile-landscape #actions .mobile-sidebar-menu-button {

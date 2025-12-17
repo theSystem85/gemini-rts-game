@@ -113,39 +113,43 @@
       <div id="sidebarUtilityButtons" aria-hidden="true"></div>
 
       <div id="actions">
-        <button
-          id="mobileSidebarMenuBtn"
-          class="action-button icon-button mobile-sidebar-menu-button"
-          title="Open menu"
-          aria-expanded="false"
-          aria-controls="mobileSidebarModal"
-          type="button"
-        >
-          <span class="button-icon settings-icon">☰</span>
-        </button>
-        <button id="repairBtn" class="action-button icon-button" title="Repair">
-          <img src="/icons/wrench.svg" alt="Repair" class="button-icon white-icon">
-        </button>
-        <button id="sellBtn" class="action-button icon-button" title="Sell for 70% of the build price">
-          <span class="button-icon">$</span>
-        </button>
-        <button id="pauseBtn" class="action-button icon-button" title="Start/Pause Game">
-          <span class="button-icon play-pause-icon">▶</span>
-        </button>
+        <div class="mobile-actions-group mobile-actions-group--top">
+          <button
+            id="mobileSidebarMenuBtn"
+            class="action-button icon-button mobile-sidebar-menu-button"
+            title="Open menu"
+            aria-expanded="false"
+            aria-controls="mobileSidebarModal"
+            type="button"
+          >
+            <span class="button-icon settings-icon">☰</span>
+          </button>
+          <button id="pauseBtn" class="action-button icon-button" title="Start/Pause Game">
+            <span class="button-icon play-pause-icon">▶</span>
+          </button>
+        </div>
+        <div class="mobile-actions-group mobile-actions-group--bottom">
+          <button id="repairBtn" class="action-button icon-button" title="Repair">
+            <img src="/icons/wrench.svg" alt="Repair" class="button-icon white-icon">
+          </button>
+          <button id="sellBtn" class="action-button icon-button" title="Sell for 70% of the build price">
+            <span class="button-icon">$</span>
+          </button>
+          <button
+            id="mobileMinimapButton"
+            class="action-button icon-button"
+            type="button"
+            title="Show minimap while pressed"
+            aria-label="Show minimap while pressed"
+          >
+            <span class="button-icon minimap-icon" aria-hidden="true"></span>
+          </button>
+        </div>
         <button id="restartBtn" class="action-button icon-button" title="Restart Game">
           <span class="button-icon restart-icon">↻</span>
         </button>
         <button id="musicControl" class="action-button icon-button" title="Toggle Music">
           <span class="button-icon music-icon">♪</span>
-        </button>
-        <button
-          id="mobileMinimapButton"
-          class="action-button icon-button"
-          type="button"
-          title="Show minimap while pressed"
-          aria-label="Show minimap while pressed"
-        >
-          <span class="button-icon minimap-icon" aria-hidden="true"></span>
         </button>
       </div>
 
