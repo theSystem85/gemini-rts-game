@@ -916,6 +916,8 @@ export class UnitCommandsHandler {
       capabilityCheck = unit => this.canTankerProvideFuel(unit)
     } else if (mode === UTILITY_QUEUE_MODES.REPAIR) {
       capabilityCheck = unit => this.canRecoveryTankRepair(unit)
+    } else if (mode === UTILITY_QUEUE_MODES.AMMO) {
+      capabilityCheck = unit => this.canAmmunitionTruckProvideAmmo(unit)
     } else {
       return false
     }
@@ -1690,18 +1692,7 @@ export class UnitCommandsHandler {
       priority: true
     })
 
-    let anyMoved = false
-    eligibleTargets.forEach(target => {
-      const plan = computeUtilityApproachPath(target, provider, mode, mapGrid)
-      if (plan) {
-        target.path = plan.path.slice(1)
-        target.moveTarget = { ...plan.moveTarget }
-        target.target = null
-        anyMoved = true
-      }
-    })
-
-    if ((queueResult.addedTargets && queueResult.addedTargets.length > 0) || queueResult.started || anyMoved) {
+    if ((queueResult.addedTargets && queueResult.addedTargets.length > 0) || queueResult.started) {
       playSound('movement', 0.5)
       return true
     }
@@ -1984,46 +1975,15 @@ export class UnitCommandsHandler {
       return
     }
 
-    damagedUnits.forEach(unit => {
-      // Calculate the position where the damaged unit should move to get repaired
-      const tankTileX = recoveryTank.tileX
-      const tankTileY = recoveryTank.tileY
-
-      // Find a position within 1 tile of the recovery tank
-      const repairPositions = [
-        { x: tankTileX - 1, y: tankTileY },     // Left
-        { x: tankTileX + 1, y: tankTileY },     // Right
-        { x: tankTileX, y: tankTileY - 1 },     // Above
-        { x: tankTileX, y: tankTileY + 1 },     // Below
-        { x: tankTileX - 1, y: tankTileY - 1 }, // Top-left
-        { x: tankTileX + 1, y: tankTileY - 1 }, // Top-right
-        { x: tankTileX - 1, y: tankTileY + 1 }, // Bottom-left
-        { x: tankTileX + 1, y: tankTileY + 1 }  // Bottom-right
-      ]
-
-      let destinationFound = false
-      for (const pos of repairPositions) {
-        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap, unit.owner)
-          if (path && path.length > 0) {
-            unit.path = path.slice(1) // Remove the first node (current position)
-            unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
-            unit.target = null // Clear any attack target
-            // Set guard mode to protect the recovery tank while being repaired
-            unit.guardMode = true
-            unit.guardTarget = recoveryTank
-            destinationFound = true
-            break
-          }
-        }
-      }
-
-      if (!destinationFound) {
-        showNotification('Cannot reach recovery tank for repair!', 2000)
-      }
+    const result = this.setUtilityQueue(recoveryTank, damagedUnits, UTILITY_QUEUE_MODES.REPAIR, mapGrid, {
+      append: true,
+      suppressNotifications: true,
+      priority: true
     })
 
-    playSound('movement', 0.5)
+    if ((result.addedTargets && result.addedTargets.length > 0) || result.started) {
+      playSound('movement', 0.5)
+    }
   }
 
   issueTankerKamikazeCommand(tanker, target, mapGrid) {

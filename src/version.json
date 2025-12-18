@@ -1,4 +1,4 @@
 {
-  "commit": "4b8af5b",
-  "message": "Fix: Ensure mobile portrait sidebar fills viewport"
+  "commit": "034abd9",
+  "message": "IMPROVE: Enforce tank line-of-sight around buildings"
 }

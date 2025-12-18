@@ -82,7 +82,7 @@ export class MouseHandler {
   isUtilityUnit(unit) {
     if (!unit) return false
     if (unit.isUtilityUnit) return true
-    return unit.type === 'ambulance' || unit.type === 'tankerTruck' || unit.type === 'recoveryTank'
+    return unit.type === 'ambulance' || unit.type === 'tankerTruck' || unit.type === 'recoveryTank' || unit.type === 'ammunitionTruck'
   }
 
   shouldStartUtilityQueueMode(selectedUnits) {
@@ -90,7 +90,7 @@ export class MouseHandler {
       return false
     }
     const utilityUnits = selectedUnits.filter(unit => this.isUtilityUnit(unit))
-    return utilityUnits.length > 0 && utilityUnits.length === selectedUnits.length
+    return utilityUnits.length > 0
   }
 
   processUtilityQueueSelection(units, mapGrid, selectedUnits, selectionManager, unitCommands) {
@@ -107,6 +107,7 @@ export class MouseHandler {
     const healTargets = []
     const refuelTargets = []
     const repairTargets = []
+    const ammoTargets = []
     const wreckTargets = []
 
     units.forEach(unit => {
@@ -126,6 +127,12 @@ export class MouseHandler {
       }
       if (unit.health < unit.maxHealth) {
         repairTargets.push(unit)
+      }
+      const needsAmmo = (unit.type === 'apache'
+        ? typeof unit.maxRocketAmmo === 'number' && unit.rocketAmmo < unit.maxRocketAmmo
+        : typeof unit.maxAmmunition === 'number' && unit.ammunition < unit.maxAmmunition)
+      if (needsAmmo) {
+        ammoTargets.push(unit)
       }
     })
 
@@ -149,6 +156,13 @@ export class MouseHandler {
     const tankers = selectedUnits.filter(unit => unit.type === 'tankerTruck')
     if (tankers.length > 0 && refuelTargets.length > 0) {
       if (unitCommands.queueUtilityTargets(tankers, refuelTargets, 'refuel', mapGrid)) {
+        anyQueued = true
+      }
+    }
+
+    const ammoTrucks = selectedUnits.filter(unit => unit.type === 'ammunitionTruck')
+    if (ammoTrucks.length > 0 && ammoTargets.length > 0) {
+      if (unitCommands.queueUtilityTargets(ammoTrucks, ammoTargets, 'ammoResupply', mapGrid)) {
         anyQueued = true
       }
     }

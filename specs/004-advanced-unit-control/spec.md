@@ -159,9 +159,10 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-042**: System MUST maintain feature independence (each can be used without others)
 
 **Logistics Symmetry:**
-- **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider and move the requesters toward it.
-- **FR-044**: Cursor MUST switch to the move-into indicator when hovering a supply provider capable of serving the currently selected units.
-- **FR-045**: Supply provider queues MUST add new service requests in LIFO order when already serving other targets.
+- **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
+- **FR-044**: System MUST allow dragging a selection box with any supply provider selected to enqueue every serviceable friendly unit in that box for the appropriate service type.
+- **FR-045**: Cursor MUST switch to the move-into indicator when hovering a supply provider capable of serving the currently selected units.
+- **FR-046**: Supply provider queues MUST add new service requests in LIFO order when already serving other targets.
 
 ### Key Entities
 
