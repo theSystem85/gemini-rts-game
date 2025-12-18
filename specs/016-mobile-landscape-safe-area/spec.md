@@ -18,6 +18,7 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
 
 4. **Action Button Placement**
    - Mobile landscape action buttons must hug the physical left edge with no extra left padding. Menu and Start/Pause stack at the top, Repair/Sell/Minimap stack upward from the bottom, and the center of the column stays clear (e.g., via flex spacing) so the dynamic island is avoided.
+   - Tighten the vertical gaps between action buttons and keep the top pair close to the top safe area while the bottom trio rides the bottom safe area.
 
 5. **Device Scope**
    - Changes must specifically target landscape touch layouts and respect existing portrait sidebar logic.

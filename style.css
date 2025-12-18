@@ -835,7 +835,7 @@ body.mobile-landscape #mobileActionsContainer {
   width: 100%;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   flex: 1;
@@ -898,13 +898,13 @@ body.mobile-landscape #actions {
   width: 100%;
   align-items: flex-start;
   height: 100%;
-  padding: 0 0 calc(var(--safe-area-bottom));
+  padding: calc(var(--safe-area-top)) 0 calc(var(--safe-area-bottom));
 }
 
 body.mobile-landscape #actions .mobile-actions-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 

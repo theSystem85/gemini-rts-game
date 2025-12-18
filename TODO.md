@@ -1,6 +1,6 @@
 ## Improvements
 - [ ] Fix mobile landscape layout on iPhone 13 Pro Max so the right-side safe-area strip renders map content, build buttons align to the far edge, and the top-right power bar lines up with the sidebar.
-- [ ] Re-stack mobile landscape action buttons flush to the left edge (no extra padding), with Menu and Start/Pause grouped at the top, Repair/Sell/Minimap grouped from the bottom, and a flexible middle gap that keeps clear of the dynamic island.
+- [ ] Re-stack mobile landscape action buttons flush to the left edge (no extra padding), with Menu and Start/Pause grouped at the top, Repair/Sell/Minimap grouped from the bottom, a flexible middle gap that keeps clear of the dynamic island, and tightened spacing so the top pair sits near the top safe area while the bottom trio hugs the bottom.
 - [ ] Add a persistent "lastGame" autosave that runs every minute, saves immediately on pause, and automatically reloads after iOS/PWA resumes from a killed paused session.
 - [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
 - [x] ✅ Make scrolling on the minimap on mobile super smooth.
