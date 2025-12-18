@@ -116,6 +116,7 @@
   - [x] Smoke now emits from back of unit (based on direction) instead of center
 - [x] Add short-range occupancy-based lookahead so moving units steer away from nearby blockers before colliding while keeping their planned paths unchanged.
 - [x] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
+- [ ] Ground units should drive 30% slower when moving over crystal tiles, with harvesters unaffected.
 - [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
 - [x] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.
 - [x] Limit gas station explosion damage so construction yards retain 10% health.
