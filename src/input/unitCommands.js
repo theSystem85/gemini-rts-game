@@ -196,7 +196,15 @@ export class UnitCommandsHandler {
   ensureUtilityQueueState(unit, mode = null) {
     if (!unit) return null
     if (!unit.utilityQueue) {
-      unit.utilityQueue = { mode: null, targets: [], currentTargetId: null, currentTargetType: null, currentTargetAction: null }
+      unit.utilityQueue = {
+        mode: null,
+        targets: [],
+        currentTargetId: null,
+        currentTargetType: null,
+        currentTargetAction: null,
+        source: null,
+        lockedByUser: false
+      }
     }
     if (mode && unit.utilityQueue.mode !== mode) {
       unit.utilityQueue.mode = mode
@@ -204,6 +212,8 @@ export class UnitCommandsHandler {
       unit.utilityQueue.currentTargetId = null
       unit.utilityQueue.currentTargetType = null
       unit.utilityQueue.currentTargetAction = null
+      unit.utilityQueue.source = null
+      unit.utilityQueue.lockedByUser = false
     }
     return unit.utilityQueue
   }
@@ -215,6 +225,8 @@ export class UnitCommandsHandler {
     unit.utilityQueue.currentTargetId = null
     unit.utilityQueue.currentTargetType = null
     unit.utilityQueue.currentTargetAction = null
+    unit.utilityQueue.source = null
+    unit.utilityQueue.lockedByUser = false
   }
 
   cancelCurrentUtilityTask(unit) {
@@ -776,11 +788,13 @@ export class UnitCommandsHandler {
       queue.mode = null
       queue.currentTargetType = null
       queue.currentTargetAction = null
+      queue.source = null
+      queue.lockedByUser = false
     }
     return false
   }
 
-  setUtilityQueue(unit, targets, mode, mapGrid, { append = false, suppressNotifications = false, priority = false } = {}) {
+  setUtilityQueue(unit, targets, mode, mapGrid, { append = false, suppressNotifications = false, priority = false, source = 'user' } = {}) {
     if (!unit) {
       return { addedTargets: [], started: false }
     }
@@ -795,6 +809,15 @@ export class UnitCommandsHandler {
       queue.currentTargetType = null
       queue.currentTargetAction = null
       queue.mode = mode
+      queue.source = source
+      queue.lockedByUser = source === 'user'
+    } else {
+      if (source && !queue.source) {
+        queue.source = source
+      }
+      if (source === 'user') {
+        queue.lockedByUser = true
+      }
     }
 
     const existing = new Set()
@@ -837,6 +860,8 @@ export class UnitCommandsHandler {
 
     if (!queue.currentTargetId && queue.targets.length === 0 && !append) {
       queue.mode = null
+      queue.source = null
+      queue.lockedByUser = false
     }
 
     return { addedTargets, started }
@@ -853,6 +878,8 @@ export class UnitCommandsHandler {
     if (!started && unit.utilityQueue.targets.length === 0) {
       unit.utilityQueue.mode = null
       unit.utilityQueue.currentTargetType = null
+      unit.utilityQueue.source = null
+      unit.utilityQueue.lockedByUser = false
     }
     return started
   }

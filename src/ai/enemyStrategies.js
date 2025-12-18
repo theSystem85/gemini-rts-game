@@ -39,6 +39,7 @@ const AI_CRITICAL_BUILDINGS = new Set([
   'vehicleWorkshop',
   'radarStation'
 ])
+const AUTO_REFUEL_SCAN_INTERVAL = 10000
 
 const RECOVERY_COMMAND_COOLDOWN = 2000
 const crewScanCooldowns = new Map()
@@ -1575,6 +1576,8 @@ export function manageAIRecoveryTanks(units, gameState, mapGrid, now) {
  * Manages tanker truck refueling and guard behavior for all AI players
  */
 export function manageAITankerTrucks(units, gameState, mapGrid) {
+  const unitCommands = getUnitCommandsHandler ? getUnitCommandsHandler() : null
+  const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
   const aiPlayers = getAIPlayers(gameState)
 
   aiPlayers.forEach(aiPlayerId => {
@@ -1586,6 +1589,31 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
     const gasStations = (gameState.buildings || []).filter(
       b => b.owner === aiPlayerId && b.type === 'gasStation' && b.health > 0
     )
+    const refineries = (gameState.buildings || []).filter(
+      b => b.owner === aiPlayerId && b.type === 'oreRefinery' && b.health > 0
+    )
+
+    const activeAssignments = new Set()
+    tankers.forEach(t => {
+      if (t.refuelTarget) {
+        activeAssignments.add(t.refuelTarget.id)
+      }
+      const queueState = t.utilityQueue
+      if (queueState?.mode === 'refuel') {
+        if (queueState.currentTargetId) {
+          activeAssignments.add(queueState.currentTargetId)
+        }
+        if (Array.isArray(queueState.targets)) {
+          queueState.targets.forEach(entry => {
+            if (!entry) return
+            const id = typeof entry === 'object' ? entry.id : entry
+            if (id) {
+              activeAssignments.add(id)
+            }
+          })
+        }
+      }
+    })
 
     // Separate critical (gas <= 0) and low gas units for priority handling
     const criticalUnits = []
@@ -1596,10 +1624,29 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
       }
       if (u.gas <= 0) {
         criticalUnits.push(u)
-      } else if (u.gas / u.maxGas < 0.3) { // Changed from 0.2 to 0.3 (30% threshold)
+      } else if (u.gas / u.maxGas < 0.5) { // Units below 50% fuel need service
         lowGasUnits.push(u)
       }
     })
+
+    // Designate one tanker as the refinery station tanker if we have harvesters and refineries
+    let refineryStationTanker = null
+    if (refineries.length > 0 && harvesters.length > 0 && tankers.length > 0) {
+      // Find the tanker closest to any refinery to be the station tanker
+      let closestDistance = Infinity
+      refineries.forEach(refinery => {
+        const refineryX = refinery.x + Math.floor(refinery.width / 2)
+        const refineryY = refinery.y + refinery.height + 1
+        
+        tankers.forEach(tanker => {
+          const distance = Math.hypot(tanker.tileX - refineryX, tanker.tileY - refineryY)
+          if (distance < closestDistance) {
+            closestDistance = distance
+            refineryStationTanker = tanker
+          }
+        })
+      })
+    }
 
     tankers.forEach(tanker => {
       // First priority: tanker needs refill
@@ -1609,6 +1656,9 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
           tanker.supplyGas / tanker.maxSupplyGas < 0.2)
 
       if (needsRefill && gasStations.length > 0) {
+        if (unitCommands) {
+          unitCommands.clearUtilityQueueState(tanker)
+        }
         sendTankerToGasStation(tanker, gasStations[0], mapGrid)
         return
       }
@@ -1637,6 +1687,9 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
 
         if (target) {
           // INTERRUPT current non-critical tasks for emergency response
+          if (unitCommands) {
+            unitCommands.cancelCurrentUtilityTask(tanker)
+          }
           if (tanker.refuelTarget && tanker.refuelTarget.gas > 0) {
             tanker.refuelTarget = null
             tanker.refuelTimer = 0
@@ -1651,22 +1704,94 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
       }
 
       // Third priority: low gas units
-      if (lowGasUnits.length > 0) {
-        let target = lowGasUnits[0]
-        let best = Math.hypot(target.tileX - tanker.tileX, target.tileY - tanker.tileY)
-        lowGasUnits.forEach(u => {
-          const d = Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
-          if (d < best) {
-            best = d
-            target = u
-          }
-        })
-        sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+      const queueState = tanker.utilityQueue
+      const queueActive = queueState && queueState.mode === 'refuel' && (
+        queueState.currentTargetId || (Array.isArray(queueState.targets) && queueState.targets.length > 0)
+      )
+      if (queueState?.lockedByUser && !queueActive && !queueState.currentTargetId && (!queueState.targets || queueState.targets.length === 0)) {
+        queueState.lockedByUser = false
+        queueState.source = null
+      }
+
+      if (tanker.refuelTarget || queueActive) {
         return
       }
 
-      // Fourth priority: guard harvesters
-      if (harvesters.length > 0) {
+      if (unitCommands && lowGasUnits.length > 0) {
+        const nextScan = tanker.nextAITankerScanTime || 0
+        if (now >= nextScan) {
+          const candidates = lowGasUnits
+            .filter(unit => !activeAssignments.has(unit.id))
+            .map(unit => ({
+              unit,
+              ratio: unit.gas / unit.maxGas,
+              distance: Math.hypot(unit.tileX - tanker.tileX, unit.tileY - tanker.tileY)
+            }))
+            .sort((a, b) => {
+              if (a.ratio !== b.ratio) return a.ratio - b.ratio
+              return a.distance - b.distance
+            })
+            .map(entry => entry.unit)
+
+          if (candidates.length > 0) {
+            unitCommands.setUtilityQueue(tanker, candidates, 'refuel', mapGrid, {
+              suppressNotifications: true,
+              source: 'auto'
+            })
+          }
+          tanker.nextAITankerScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
+        }
+        if (queueState && queueState.currentTargetId) {
+          return
+        }
+      } else if (lowGasUnits.length > 0) {
+        // Apply cooldown mechanism to prevent frequent target changes
+        const nextScan = tanker.nextAITankerScanTime || 0
+        if (now < nextScan) {
+          // Cooldown not expired, skip target assignment
+          return
+        }
+
+        const target = lowGasUnits.reduce((best, unit) => {
+          const unitRatio = unit.gas / unit.maxGas
+          const bestRatio = best ? best.gas / best.maxGas : Infinity
+          if (unitRatio < bestRatio) return unit
+          if (unitRatio > bestRatio) return best
+
+          const unitDistance = Math.hypot(unit.tileX - tanker.tileX, unit.tileY - tanker.tileY)
+          const bestDistance = best
+            ? Math.hypot(best.tileX - tanker.tileX, best.tileY - tanker.tileY)
+            : Infinity
+          return unitDistance < bestDistance ? unit : best
+        }, null)
+
+        if (target) {
+          sendTankerToUnit(tanker, target, mapGrid, gameState.occupancyMap)
+          tanker.nextAITankerScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
+          return
+        }
+      }
+
+      // Fourth priority: station tanker at refinery, others guard harvesters
+      if (tanker === refineryStationTanker && refineries.length > 0) {
+        // Position the station tanker near the primary refinery
+        const primaryRefinery = refineries[0]
+        const refineryX = primaryRefinery.x + Math.floor(primaryRefinery.width / 2)
+        const refineryY = primaryRefinery.y + primaryRefinery.height + 1
+        const distance = Math.hypot(tanker.tileX - refineryX, tanker.tileY - refineryY)
+        
+        // If the tanker is far from the refinery, send it there
+        if (distance > 5) {
+          const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
+          const path = findPath(startNode, { x: refineryX, y: refineryY }, mapGrid, null, undefined, { unitOwner: tanker.owner })
+          if (path && path.length > 1) {
+            tanker.path = path.slice(1)
+            tanker.moveTarget = { x: refineryX, y: refineryY }
+          }
+        }
+        tanker.guardTarget = null
+      } else if (harvesters.length > 0) {
+        // Other tankers guard harvesters
         const guardTarget = harvesters.find(h => !lowGasUnits.includes(h) && !criticalUnits.includes(h)) || harvesters[0]
         if (!tanker.guardTarget || tanker.guardTarget.health <= 0 || tanker.guardTarget.id !== guardTarget.id) {
           tanker.guardTarget = guardTarget

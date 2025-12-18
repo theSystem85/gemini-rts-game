@@ -9,6 +9,8 @@ import {
   updateKamikazeTargetPoint
 } from './tankerTruckUtils.js'
 
+const AUTO_REFUEL_SCAN_INTERVAL = 10000
+
 export const updateTankerTruckLogic = logPerformance(function(units, gameState, delta) {
   const tankers = units.filter(u => u.type === 'tankerTruck' && u.health > 0)
   if (tankers.length === 0) return
@@ -28,6 +30,10 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     const queueActive = queueState && queueState.mode === 'refuel' && (
       (Array.isArray(queueState.targets) && queueState.targets.length > 0) || queueState.currentTargetId
     )
+    if (queueState?.lockedByUser && !queueActive && !queueState.currentTargetId && (!queueState.targets || queueState.targets.length === 0)) {
+      queueState.lockedByUser = false
+      queueState.source = null
+    }
     const now = performance?.now ? performance.now() : Date.now()
     const wasServing = Boolean(tanker._alertWasServing)
 
@@ -102,7 +108,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       tanker.nextUtilityScanTime = null
     }
 
-    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode
+    const canAutoScan = tanker.alertMode && !tanker.refuelTarget && !queueActive && !tanker.emergencyTarget && !tanker.emergencyMode && !queueState?.lockedByUser
     if (canAutoScan && unitCommands) {
       const nextScan = tanker.nextUtilityScanTime || 0
       if (now >= nextScan) {
@@ -111,47 +117,63 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
             u.id !== tanker.id &&
             u.owner === tanker.owner &&
             typeof u.maxGas === 'number' &&
-            u.gas < (u.maxGas * 0.95) &&
+            u.gas < (u.maxGas * 0.5) &&
             u.health > 0 &&
             !(u.movement && u.movement.isMoving)
           )
           .map(u => ({
             unit: u,
-            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY)
+            distance: Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY),
+            fuelRatio: u.gas / u.maxGas
           }))
           .filter(entry => entry.distance <= SERVICE_DISCOVERY_RANGE)
-          .sort((a, b) => a.distance - b.distance)
-
-        const targetEntry = candidates[0]
-
-        if (targetEntry) {
-          const assigned = unitCommands.assignTankerToTarget(tanker, targetEntry.unit, gameState.mapGrid, {
-            suppressNotifications: true
+          .sort((a, b) => {
+            if (a.fuelRatio !== b.fuelRatio) {
+              return a.fuelRatio - b.fuelRatio
+            }
+            return a.distance - b.distance
           })
-          if (assigned) {
+
+        const targets = candidates.map(entry => entry.unit)
+
+        if (targets.length > 0) {
+          const result = unitCommands.setUtilityQueue(tanker, targets, 'refuel', gameState.mapGrid, {
+            suppressNotifications: true,
+            source: 'auto'
+          })
+          if (result.addedTargets.length > 0 || result.started) {
             tanker.alertActiveService = true
-            tanker.alertAssignmentId = targetEntry.unit.id
-          } else {
-            tanker.nextUtilityScanTime = now + 2000
+            tanker.alertAssignmentId = targets[0].id
           }
-        } else {
-          tanker.nextUtilityScanTime = now + 2000
         }
+        tanker.nextUtilityScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
       }
     }
 
-    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode) {
+    if (!tanker.refuelTarget && !queueActive && !tanker.alertMode && !queueState?.lockedByUser) {
       // This logic is now mainly for player-controlled tankers that get close without a specific target
       // AI tankers should have refuelTarget set by the AI strategy system
-      const target = units.find(u =>
-        u.id !== tanker.id &&
-        u.owner === tanker.owner &&
-        typeof u.maxGas === 'number' &&
-        u.gas < (u.maxGas * 0.95) && // Only refuel if unit has less than 95% gas
-        u.health > 0 && // Ensure target is alive
-        Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY) <= SERVICE_SERVING_RANGE &&
-        !(u.movement && u.movement.isMoving)
-      )
+      const target = units
+        .filter(u =>
+          u.id !== tanker.id &&
+          u.owner === tanker.owner &&
+          typeof u.maxGas === 'number' &&
+          u.gas < (u.maxGas * 0.5) && // Only refuel if unit has less than 50% gas
+          u.health > 0 && // Ensure target is alive
+          Math.hypot(u.tileX - tanker.tileX, u.tileY - tanker.tileY) <= SERVICE_SERVING_RANGE &&
+          !(u.movement && u.movement.isMoving)
+        )
+        .reduce((best, current) => {
+          const currentRatio = current.gas / current.maxGas
+          const bestRatio = best ? best.gas / best.maxGas : Infinity
+          if (currentRatio < bestRatio) return current
+          if (currentRatio > bestRatio) return best
+          const bestDistance = best
+            ? Math.hypot(best.tileX - tanker.tileX, best.tileY - tanker.tileY)
+            : Infinity
+          const currentDistance = Math.hypot(current.tileX - tanker.tileX, current.tileY - tanker.tileY)
+          return currentDistance < bestDistance ? current : best
+        }, null)
       if (target && (tanker.supplyGas > 0 || tanker.supplyGas === undefined)) {
         // Initialize supply gas if not set
         if (tanker.supplyGas === undefined) {
@@ -249,7 +271,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
     if (wasServing && !isCurrentlyServing) {
       tanker.alertActiveService = false
       tanker.alertAssignmentId = null
-      tanker.nextUtilityScanTime = now + 2000
+      tanker.nextUtilityScanTime = now + AUTO_REFUEL_SCAN_INTERVAL
     }
     if (isCurrentlyServing) {
       tanker.alertActiveService = true
