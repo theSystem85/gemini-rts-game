@@ -29,7 +29,8 @@ import { resetUnitVelocityForNewPath } from '../game/unifiedMovement.js'
 const UTILITY_QUEUE_MODES = {
   HEAL: 'heal',
   REFUEL: 'refuel',
-  REPAIR: 'repair'
+  REPAIR: 'repair',
+  AMMO: 'ammoResupply'
 }
 
 const AMBULANCE_APPROACH_OFFSETS = [
@@ -91,7 +92,7 @@ function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTil
     cost: path.length
   })
 
-  if (mode === UTILITY_QUEUE_MODES.HEAL || mode === UTILITY_QUEUE_MODES.REFUEL) {
+  if (mode === UTILITY_QUEUE_MODES.HEAL || mode === UTILITY_QUEUE_MODES.REFUEL || mode === UTILITY_QUEUE_MODES.AMMO) {
     const offsets = AMBULANCE_APPROACH_OFFSETS
     let bestPlan = null
     offsets.forEach(offset => {
@@ -320,6 +321,24 @@ export class UnitCommandsHandler {
     if (mode === UTILITY_QUEUE_MODES.REFUEL) {
       return typeof actualTarget.maxGas === 'number' && actualTarget.gas < actualTarget.maxGas
     }
+    if (mode === UTILITY_QUEUE_MODES.AMMO) {
+      const isApache = actualTarget.type === 'apache'
+      const isBuilding = actualTarget.isBuilding || typeof actualTarget.tileX !== 'number'
+
+      if (actualTarget.type === 'ammunitionFactory') {
+        return serviceUnit.ammoCargo < serviceUnit.maxAmmoCargo
+      }
+
+      if (isBuilding) {
+        return typeof actualTarget.maxAmmo === 'number' && actualTarget.ammo < actualTarget.maxAmmo
+      }
+
+      if (isApache) {
+        return typeof actualTarget.maxRocketAmmo === 'number' && actualTarget.rocketAmmo < actualTarget.maxRocketAmmo
+      }
+
+      return typeof actualTarget.maxAmmunition === 'number' && actualTarget.ammunition < actualTarget.maxAmmunition
+    }
     if (mode === UTILITY_QUEUE_MODES.REPAIR) {
       if (actualTarget.restorationProtectedFromRecovery) {
         return false
@@ -437,6 +456,10 @@ export class UnitCommandsHandler {
       return false
     }
 
+    if (!isReloadMode) {
+      this.ensureUtilityQueueState(ammoTruck, UTILITY_QUEUE_MODES.AMMO)
+    }
+
     const isUnit = typeof target.tileX === 'number'
 
     if (!isReloadMode) {
@@ -516,6 +539,10 @@ export class UnitCommandsHandler {
             ammoTruck.ammoResupplyTimer = 0
             if (ammoTruck.ammoReloadTargetId) {
               ammoTruck.ammoReloadTargetId = null
+            }
+            if (ammoTruck.utilityQueue && ammoTruck.utilityQueue.mode === UTILITY_QUEUE_MODES.AMMO) {
+              ammoTruck.utilityQueue.currentTargetId = target.id
+              ammoTruck.utilityQueue.currentTargetType = isUnit ? 'unit' : 'building'
             }
           }
           return true
@@ -688,6 +715,9 @@ export class UnitCommandsHandler {
     if (mode === UTILITY_QUEUE_MODES.REPAIR) {
       return this.assignRecoveryTankToTarget(unit, targetUnit, mapGrid, { suppressNotifications })
     }
+    if (mode === UTILITY_QUEUE_MODES.AMMO) {
+      return this.assignAmmunitionTruckToTarget(unit, targetUnit, mapGrid, { suppressNotifications })
+    }
     return false
   }
 
@@ -750,7 +780,7 @@ export class UnitCommandsHandler {
     return false
   }
 
-  setUtilityQueue(unit, targets, mode, mapGrid, { append = false, suppressNotifications = false } = {}) {
+  setUtilityQueue(unit, targets, mode, mapGrid, { append = false, suppressNotifications = false, priority = false } = {}) {
     if (!unit) {
       return { addedTargets: [], started: false }
     }
@@ -791,7 +821,11 @@ export class UnitCommandsHandler {
       if (target.queueAction) {
         entry.action = target.queueAction
       }
-      queue.targets.push(entry)
+      if (priority) {
+        queue.targets.unshift(entry)
+      } else {
+        queue.targets.push(entry)
+      }
       existing.add(key)
       addedTargets.push(target)
     })
@@ -882,6 +916,8 @@ export class UnitCommandsHandler {
       capabilityCheck = unit => this.canTankerProvideFuel(unit)
     } else if (mode === UTILITY_QUEUE_MODES.REPAIR) {
       capabilityCheck = unit => this.canRecoveryTankRepair(unit)
+    } else if (mode === UTILITY_QUEUE_MODES.AMMO) {
+      capabilityCheck = unit => this.canAmmunitionTruckProvideAmmo(unit)
     } else {
       return false
     }
@@ -1621,6 +1657,49 @@ export class UnitCommandsHandler {
     }
   }
 
+  handleServiceProviderRequest(provider, selectedUnits, mapGrid) {
+    if (!provider || !Array.isArray(selectedUnits) || selectedUnits.length === 0) {
+      return false
+    }
+
+    let mode = null
+    if (provider.type === 'ambulance') {
+      if (!this.canAmbulanceProvideCrew(provider)) return false
+      mode = UTILITY_QUEUE_MODES.HEAL
+    } else if (provider.type === 'tankerTruck') {
+      if (!this.canTankerProvideFuel(provider)) return false
+      mode = UTILITY_QUEUE_MODES.REFUEL
+    } else if (provider.type === 'recoveryTank') {
+      if (!this.canRecoveryTankRepair(provider)) return false
+      mode = UTILITY_QUEUE_MODES.REPAIR
+    } else if (provider.type === 'ammunitionTruck') {
+      if (!this.canAmmunitionTruckProvideAmmo(provider)) return false
+      mode = UTILITY_QUEUE_MODES.AMMO
+    }
+
+    if (!mode) {
+      return false
+    }
+
+    const eligibleTargets = selectedUnits.filter(unit => this.isUtilityTargetValid(mode, provider, unit))
+    if (eligibleTargets.length === 0) {
+      return false
+    }
+
+    const queueResult = this.setUtilityQueue(provider, eligibleTargets, mode, mapGrid, {
+      append: true,
+      suppressNotifications: true,
+      priority: true
+    })
+
+    if ((queueResult.addedTargets && queueResult.addedTargets.length > 0) || queueResult.started) {
+      playSound('movement', 0.5)
+      return true
+    }
+
+    return false
+  }
+
   handleAmbulanceRefillCommand(selectedUnits, hospital, mapGrid) {
     // Filter for ambulances that need refilling
     const ambulances = selectedUnits.filter(unit =>
@@ -1896,46 +1975,15 @@ export class UnitCommandsHandler {
       return
     }
 
-    damagedUnits.forEach(unit => {
-      // Calculate the position where the damaged unit should move to get repaired
-      const tankTileX = recoveryTank.tileX
-      const tankTileY = recoveryTank.tileY
-
-      // Find a position within 1 tile of the recovery tank
-      const repairPositions = [
-        { x: tankTileX - 1, y: tankTileY },     // Left
-        { x: tankTileX + 1, y: tankTileY },     // Right
-        { x: tankTileX, y: tankTileY - 1 },     // Above
-        { x: tankTileX, y: tankTileY + 1 },     // Below
-        { x: tankTileX - 1, y: tankTileY - 1 }, // Top-left
-        { x: tankTileX + 1, y: tankTileY - 1 }, // Top-right
-        { x: tankTileX - 1, y: tankTileY + 1 }, // Bottom-left
-        { x: tankTileX + 1, y: tankTileY + 1 }  // Bottom-right
-      ]
-
-      let destinationFound = false
-      for (const pos of repairPositions) {
-        if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-          const path = findPathForOwner({ x: unit.tileX, y: unit.tileY }, { x: pos.x, y: pos.y }, mapGrid, gameState.occupancyMap, unit.owner)
-          if (path && path.length > 0) {
-            unit.path = path.slice(1) // Remove the first node (current position)
-            unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
-            unit.target = null // Clear any attack target
-            // Set guard mode to protect the recovery tank while being repaired
-            unit.guardMode = true
-            unit.guardTarget = recoveryTank
-            destinationFound = true
-            break
-          }
-        }
-      }
-
-      if (!destinationFound) {
-        showNotification('Cannot reach recovery tank for repair!', 2000)
-      }
+    const result = this.setUtilityQueue(recoveryTank, damagedUnits, UTILITY_QUEUE_MODES.REPAIR, mapGrid, {
+      append: true,
+      suppressNotifications: true,
+      priority: true
     })
 
-    playSound('movement', 0.5)
+    if ((result.addedTargets && result.addedTargets.length > 0) || result.started) {
+      playSound('movement', 0.5)
+    }
   }
 
   issueTankerKamikazeCommand(tanker, target, mapGrid) {

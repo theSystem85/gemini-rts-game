@@ -183,6 +183,7 @@ export class CursorManager {
     this.isOverFriendlyHelipad = false
     // Check if mouse is over ammo-receivable units/buildings when ammo trucks are selected
     this.isOverAmmoReceivableTarget = false
+    this.isOverServiceProvider = false
     if (this.isOverGameCanvas && gridReady && tileWithinBounds &&
       gameState.buildings && Array.isArray(gameState.buildings)) {
       // Only show refinery cursor if harvesters are selected
@@ -320,6 +321,54 @@ export class CursorManager {
                 break
               }
             }
+          }
+        }
+      }
+      // Check for service providers when units in need are selected
+      this.isOverServiceProvider = false
+      if (units && Array.isArray(units)) {
+        const needsCrew = selectedUnits.some(unit =>
+          unit.owner === gameState.humanPlayer && unit.crew && typeof unit.crew === 'object' &&
+          Object.values(unit.crew).some(alive => !alive)
+        )
+        const needsFuel = selectedUnits.some(unit =>
+          unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number' && unit.gas < unit.maxGas
+        )
+        const needsRepair = selectedUnits.some(unit =>
+          unit.owner === gameState.humanPlayer && unit.health < unit.maxHealth
+        )
+        const needsAmmo = selectedUnits.some(unit => {
+          if (unit.owner !== gameState.humanPlayer) return false
+          if (unit.type === 'apache') {
+            return typeof unit.maxRocketAmmo === 'number' && unit.rocketAmmo < unit.maxRocketAmmo
+          }
+          return typeof unit.maxAmmunition === 'number' && unit.ammunition < unit.maxAmmunition
+        })
+
+        for (const unit of units) {
+          if (unit.owner !== gameState.humanPlayer) continue
+
+          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+          if (unitTileX !== tileX || unitTileY !== tileY) {
+            continue
+          }
+
+          if (unit.type === 'ambulance' && needsCrew && unit.medics > 0) {
+            this.isOverServiceProvider = true
+            break
+          }
+          if (unit.type === 'tankerTruck' && needsFuel && (!unit.crew || unit.crew.loader !== false)) {
+            this.isOverServiceProvider = true
+            break
+          }
+          if (unit.type === 'recoveryTank' && needsRepair && (!unit.crew || unit.crew.loader !== false)) {
+            this.isOverServiceProvider = true
+            break
+          }
+          if (unit.type === 'ammunitionTruck' && needsAmmo && unit.ammoCargo > 0) {
+            this.isOverServiceProvider = true
+            break
           }
         }
       }
@@ -562,7 +611,8 @@ export class CursorManager {
           this.isOverRecoveryTank ||
           this.isOverPlayerWorkshop ||
           this.isOverFriendlyHelipad ||
-          this.isOverAmmoReceivableTarget
+          this.isOverAmmoReceivableTarget ||
+          this.isOverServiceProvider
 
       if (hasImmediateMoveIntoTarget) {
         setMoveIntoCursor()
@@ -576,7 +626,8 @@ export class CursorManager {
             this.isOverPlayerGasStation ||
             this.isOverPlayerWorkshop ||
             this.isOverFriendlyHelipad ||
-            this.isOverAmmoReceivableTarget
+            this.isOverAmmoReceivableTarget ||
+            this.isOverServiceProvider
 
         if (isSupportTarget) {
           setMoveIntoCursor()
@@ -644,7 +695,8 @@ export class CursorManager {
         this.isOverPlayerHospital ||
         this.isOverPlayerGasStation ||
         this.isOverPlayerRefinery ||
-        this.isOverAmmoReceivableTarget
+        this.isOverAmmoReceivableTarget ||
+        this.isOverServiceProvider
 
       if (isLogisticsTarget) {
         setMoveIntoCursor()

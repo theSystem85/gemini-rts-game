@@ -40,8 +40,9 @@
   - [x] ✅ Desync detection via periodic hash exchange and automatic resync from host
   - [x] ✅ Replaced Math.random() calls in game-critical code with gameRandom imports
   - [x] ✅ Integrated lockstep initialization into multiplayer game start flow (webrtcSession.js)
-  - [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
-- [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
+- [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
+  - [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
+- [ ] Enable symmetrical supply interactions: supply vehicles should travel to the requesting units (not vice versa), dragging a box with any selected service unit queues every serviceable unit inside (ammo truck, ambulance, tanker, recovery), show move-into cursor, and queue requests LIFO when the provider is busy.
   - [ ] Deterministic lockstep visuals: ensure multiplayer clients render explosion animations correctly, remote building construction plays its full animation instead of popping in, and building smoke only starts after the build animation completes.
 - [ ] Disable the Buildings tab when the construction yard is destroyed and auto-switch to the Units tab if a vehicle factory remains available.
 
