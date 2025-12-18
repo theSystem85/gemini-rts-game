@@ -187,7 +187,7 @@ export class ProductionController {
       return
     }
 
-    const playerBuildings = gameState.buildings.filter(
+    const playerBuildings = (gameState.buildings || []).filter(
       b => b.owner === gameState.humanPlayer && b.health > 0
     )
 
@@ -1266,6 +1266,19 @@ export class ProductionController {
     const unitsTab = document.querySelector('.tab-button[data-tab="units"]')
     const buildingsTab = document.querySelector('.tab-button[data-tab="buildings"]')
 
+    if (!unitsTab || !buildingsTab) {
+      return
+    }
+
+    const playerBuildings = (gameState.buildings || []).filter(
+      b => b.owner === gameState.humanPlayer && b.health > 0
+    )
+
+    const hasConstructionYard = gameState.mapEditMode
+      ? true
+      : playerBuildings.some(b => b.type === 'constructionYard')
+    const hasVehicleFactory = playerBuildings.some(b => b.type === 'vehicleFactory')
+
     // Check if units tab should be enabled (any unit types available)
     const hasAvailableUnits = gameState.availableUnitTypes.size > 0
     if (hasAvailableUnits) {
@@ -1275,7 +1288,9 @@ export class ProductionController {
     }
 
     // Check if buildings tab should be enabled (any building types available)
-    const hasAvailableBuildings = gameState.availableBuildingTypes.size > 0
+    const hasAvailableBuildings =
+      (gameState.mapEditMode || hasConstructionYard) &&
+      gameState.availableBuildingTypes.size > 0
     if (hasAvailableBuildings) {
       buildingsTab.classList.remove('disabled')
     } else {
@@ -1284,7 +1299,12 @@ export class ProductionController {
 
     // If current active tab becomes disabled, switch to the other tab
     const activeTab = document.querySelector('.tab-button.active')
-    if (activeTab && activeTab.classList.contains('disabled')) {
+    const activeTabDisabled = activeTab && activeTab.classList.contains('disabled')
+    const lostConstructionYard = !gameState.mapEditMode && !hasConstructionYard
+
+    if (lostConstructionYard && buildingsTab?.classList.contains('active') && hasVehicleFactory && !unitsTab.classList.contains('disabled')) {
+      this.activateTab('units', { scrollIntoView: false })
+    } else if (activeTabDisabled) {
       // Find the first non-disabled tab and activate it
       const enabledTab = document.querySelector('.tab-button:not(.disabled)')
       if (enabledTab) {

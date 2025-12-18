@@ -207,6 +207,9 @@ As a player, I want to set unique rally points for each factory independently, s
 **Mobile Drag Enhancements:**
 - **FR-045**: System MUST auto-scroll the map only within the final 20px band at the canvas edges during drag-to-build interactions on touch devices, with scroll speed increasing toward the edge and delivering roughly double the previous baseline pace while leaving the central area stationary.
 
+**Loss Handling:**
+- **FR-046**: System MUST disable the Buildings production tab when the player has no active construction yards and automatically switch focus to the Units tab when a vehicle factory is available for continued production.
+
 ### Key Entities
 
 - **Blueprint**: Visual representation of pending building placement (blue overlay with name text), does not block tiles

@@ -43,6 +43,7 @@
   - [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
 - [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
   - [ ] Deterministic lockstep visuals: ensure multiplayer clients render explosion animations correctly, remote building construction plays its full animation instead of popping in, and building smoke only starts after the build animation completes.
+- [ ] Disable the Buildings tab when the construction yard is destroyed and auto-switch to the Units tab if a vehicle factory remains available.
 
 ## Netlify Deployment for Multiplayer
 - [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http
