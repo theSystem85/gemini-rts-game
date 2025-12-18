@@ -301,8 +301,11 @@ export class GameLoop {
 
     // Refresh production buttons if a building was destroyed
     if (gameState.pendingButtonUpdate) {
-      this.productionController.updateVehicleButtonStates()
-      this.productionController.updateBuildingButtonStates()
+      if (this.productionController) {
+        this.productionController.updateVehicleButtonStates()
+        this.productionController.updateBuildingButtonStates()
+        this.productionController.updateTabStates()
+      }
       gameState.pendingButtonUpdate = false
     }
 
