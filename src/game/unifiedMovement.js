@@ -545,7 +545,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
   const speedModifier = unit.speedModifier || 1
   const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
   const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-  const onStreet = mapGrid[tileY] && mapGrid[tileY][tileX] && mapGrid[tileY][tileX].type === 'street'
+  const tile = mapGrid[tileY] && mapGrid[tileY][tileX]
+  const onStreet = tile && tile.type === 'street'
+  const onOre = Boolean(tile && tile.ore)
+  const isGroundMover = !isAirborne
 
   // Special handling for ambulance speed on streets
   let terrainMultiplier = onStreet ? STREET_SPEED_MULTIPLIER : 1
@@ -553,6 +556,10 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     // Use ambulance-specific street speed multiplier from config
     const ambulanceProps = unit.ambulanceProps || { streetSpeedMultiplier: 6.0 }
     terrainMultiplier = ambulanceProps.streetSpeedMultiplier || 6.0
+  }
+
+  if (isGroundMover && onOre && unit.type !== 'harvester') {
+    terrainMultiplier *= 0.7
   }
 
   const effectiveMaxSpeed = MOVEMENT_CONFIG.MAX_SPEED * speedModifier * terrainMultiplier
@@ -2607,4 +2614,3 @@ function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
 
   return { x: avoidanceX, y: avoidanceY }
 }
-
