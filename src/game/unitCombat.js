@@ -164,6 +164,10 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
       // Target is a unit
       targetCenterX = target.x + TILE_SIZE / 2
       targetCenterY = target.y + TILE_SIZE / 2
+      // Adjust for Apache altitude visual offset
+      if (target.type === 'apache' && target.altitude) {
+        targetCenterY -= target.altitude * 0.4
+      }
     } else {
       // Target is a building
       targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
@@ -183,6 +187,10 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
     // Target is a unit
     targetCenterX = target.x + TILE_SIZE / 2
     targetCenterY = target.y + TILE_SIZE / 2
+    // Adjust for Apache altitude visual offset
+    if (target.type === 'apache' && target.altitude) {
+      targetCenterY -= target.altitude * 0.4
+    }
     targetTileX = target.tileX
     targetTileY = target.tileY
   } else {
@@ -272,8 +280,8 @@ const COMBAT_CONFIG = {
     ROCKET: 1.5
   },
   ROCKET_BURST: {
-    COUNT: 3,
-    DELAY: 200
+    COUNT: 4,
+    DELAY: 300
   },
   TANK_V3_BURST: {
     COUNT: TANK_V3_BURST.COUNT,
@@ -381,11 +389,17 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         baseDamage: getDamageForUnitType(unit.type),
         active: true,
         shooter: unit,
-        homing: isRocketTankRocket ? false : (isApacheRocket ? false : (projectileType === 'rocket')),
+        homing: isRocketTankRocket ? true : (isApacheRocket ? false : (projectileType === 'rocket')),
         target: projectileType === 'rocket' && !isApacheRocket ? target : null,
         targetPosition: { x: finalTarget.x, y: finalTarget.y },
         startTime: now,
         projectileType
+      }
+      
+      // For rocket tank rockets, explicitly ensure target is set for burst consistency
+      if (isRocketTankRocket && target) {
+        bullet.target = target
+        bullet.burstRocket = true // Mark as part of a burst for debugging/tracking
       }
 
       if (isApacheRocket) {
@@ -419,6 +433,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         bullet.flightDuration = distance / bulletSpeed
         bullet.ballisticDuration = bullet.flightDuration / 2
         bullet.arcHeight = Math.max(50, distance * 0.3)
+        bullet.originType = 'rocketTank'
+        // Skip collision checks so rockets fly over units/wrecks/buildings to hit their target
+        bullet.skipCollisionChecks = true
+        bullet.maxFlightTime = 5000
+        bullet.creationTime = now
       } else if (!bullet.homing) {
         bullet.vx = bullet.speed * Math.cos(angle)
         bullet.vy = bullet.speed * Math.sin(angle)
@@ -428,8 +447,11 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
       // Deplete ammunition when firing (skip Apache - handled in handleApacheVolley)
       if (unit.type !== 'apache') {
-        if (typeof unit.ammunition === 'number' && typeof unit.ammoPerShot === 'number') {
-          unit.ammunition = Math.max(0, unit.ammunition - unit.ammoPerShot)
+        if (typeof unit.ammunition === 'number') {
+          // Rocket tanks fire 1 rocket at a time in burst, so deplete by 1
+          // Other units use ammoPerShot
+          const ammoToUse = unit.type === 'rocketTank' ? 1 : (unit.ammoPerShot || 1)
+          unit.ammunition = Math.max(0, unit.ammunition - ammoToUse)
         }
       }
 
@@ -472,18 +494,44 @@ function getDamageForUnitType(unitType) {
  * Handle burst fire for rocket tanks (replaces setTimeout)
  */
 function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, targetCenterY, units, mapGrid) {
-  if (!unit.burstState) {
-    unit.burstState = {
-      rocketsToFire: COMBAT_CONFIG.ROCKET_BURST.COUNT,
-      lastRocketTime: 0
-    }
+  // Initialize full burst state on first fire (might have been partially initialized in updateRocketTankCombat)
+  if (!unit.burstState.burstTarget) {
+    // Complete the burst state initialization - store target reference for all rockets in this burst
+    unit.burstState.burstTarget = target
+    unit.burstState.burstTargetCenter = { x: targetCenterX, y: targetCenterY }
   }
 
   // Fire rockets with proper timing in the game loop
   if (unit.burstState.rocketsToFire > 0 &&
         now - unit.burstState.lastRocketTime >= COMBAT_CONFIG.ROCKET_BURST.DELAY) {
 
-    const fired = handleTankFiring(unit, target, bullets, now, 0, targetCenterX, targetCenterY, 'rocket', units, mapGrid, false, null)
+    // Use the stored burst target to ensure all rockets in the burst target the same unit
+    const burstTarget = unit.burstState.burstTarget && unit.burstState.burstTarget.health > 0 ? unit.burstState.burstTarget : target
+    
+    // Use current target center position for dynamic tracking (target may have moved)
+    let currentTargetCenterX = targetCenterX
+    let currentTargetCenterY = targetCenterY
+    
+    // If target is alive, use its current position for homing
+    if (burstTarget && burstTarget.health > 0) {
+      if (typeof burstTarget.width === 'number' && typeof burstTarget.height === 'number') {
+        // Building target
+        currentTargetCenterX = burstTarget.x * TILE_SIZE + (burstTarget.width * TILE_SIZE) / 2
+        currentTargetCenterY = burstTarget.y * TILE_SIZE + (burstTarget.height * TILE_SIZE) / 2
+      } else {
+        // Unit target - use current position
+        currentTargetCenterX = burstTarget.x + TILE_SIZE / 2
+        currentTargetCenterY = burstTarget.y + TILE_SIZE / 2
+        // Adjust for Apache altitude visual offset
+        if (burstTarget.type === 'apache' && burstTarget.altitude) {
+          currentTargetCenterY -= burstTarget.altitude * 0.4
+        }
+      }
+    }
+    
+    // Fire the rocket - no overrideTarget, let normal targeting spread apply per-rocket
+    // The target unit reference ensures homing works correctly
+    const fired = handleTankFiring(unit, burstTarget, bullets, now, 0, currentTargetCenterX, currentTargetCenterY, 'rocket', units, mapGrid, false, null)
 
     if (fired) {
       unit.burstState.rocketsToFire--
@@ -1112,13 +1160,36 @@ function updateTankV3Combat(unit, units, bullets, mapGrid, now, occupancyMap) {
  * Updates rocket tank combat
  */
 function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+  // Clear target and burst if target is destroyed
+  if (unit.target && unit.target.health <= 0) {
+    unit.target = null
+    unit.burstState = null
+    return
+  }
+
   if (unit.target && unit.target.health > 0) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.ROCKET
 
-    // Handle movement using common logic
+    // Handle movement using common logic - this already adjusts for Apache altitude
     const { distance, targetCenterX, targetCenterY } = handleTankMovement(
       unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     )
+
+    // Rocket tanks have no turret - must rotate entire body to face target
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    const unitCenterY = unit.y + TILE_SIZE / 2
+    const angleToTarget = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+    
+    // Rotate body towards target using normal rotation speed
+    const rotationSpeed = unit.rotationSpeed || 0.1
+    const currentDirection = unit.direction !== undefined ? unit.direction : (unit.movement?.rotation || 0)
+    const newDirection = smoothRotateTowardsAngle(currentDirection, angleToTarget, rotationSpeed)
+    
+    // Update all direction properties
+    unit.direction = newDirection
+    if (unit.movement) {
+      unit.movement.rotation = newDirection
+    }
 
     // Fire rockets if in range and allowed to attack
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
@@ -1131,9 +1202,16 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
         // Start new burst if cooldown has passed
         const effectiveFireRate = getEffectiveFireRate(unit, COMBAT_CONFIG.FIRE_RATES.ROCKET)
         if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveFireRate) {
-          if (unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
+          // Check if we have at least 1 rocket to fire
+          const hasAmmo = typeof unit.ammunition !== 'number' || unit.ammunition > 0
+          if (hasAmmo && unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
+            // Fire as many rockets as we have ammo for, up to burst count
+            const rocketsToFire = typeof unit.ammunition === 'number' 
+              ? Math.min(COMBAT_CONFIG.ROCKET_BURST.COUNT, unit.ammunition)
+              : COMBAT_CONFIG.ROCKET_BURST.COUNT
+            // Start burst - don't set lastShotTime yet, only after burst completes
             unit.burstState = {
-              rocketsToFire: COMBAT_CONFIG.ROCKET_BURST.COUNT,
+              rocketsToFire: rocketsToFire,
               lastRocketTime: 0
             }
           }

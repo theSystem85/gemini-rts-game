@@ -533,6 +533,12 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
     // Rocket projectile - homing but also store target position for explosion
     projectile.homing = true
     projectile.target = target
+    projectile.projectileType = 'rocket'
+    projectile.originType = 'rocketTurret'
+    // Skip collision checks so rockets fly over units/wrecks/buildings to hit their target
+    projectile.skipCollisionChecks = true
+    projectile.maxFlightTime = 5000 // 5 seconds max flight time
+    projectile.creationTime = now
 
     // Store target position for explosion even if homing
     if (building.currentTargetPosition) {

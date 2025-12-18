@@ -30,8 +30,18 @@ export function checkUnitCollision(bullet, unit) {
     }
 
     // Calculate distance from bullet to unit center
-    const dx = (unit.x + TILE_SIZE / 2) - bullet.x
-    const dy = (unit.y + TILE_SIZE / 2) - bullet.y
+    const unitCenterX = unit.x + TILE_SIZE / 2
+    let unitCenterY = unit.y + TILE_SIZE / 2
+    
+    // For Apache helicopters, adjust the collision Y to account for altitude visual offset
+    // The Apache visual is rendered at y - (altitude * 0.4), so collision should match
+    if (unit.type === 'apache' && unit.altitude) {
+      const altitudeLift = unit.altitude * 0.4
+      unitCenterY -= altitudeLift
+    }
+    
+    const dx = unitCenterX - bullet.x
+    const dy = unitCenterY - bullet.y
     const distance = Math.hypot(dx, dy)
 
     // Return true if collision detected (within threshold)

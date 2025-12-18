@@ -556,6 +556,9 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
     // Use ambulance-specific street speed multiplier from config
     const ambulanceProps = unit.ambulanceProps || { streetSpeedMultiplier: 6.0 }
     terrainMultiplier = ambulanceProps.streetSpeedMultiplier || 6.0
+  } else if (unit.type === 'rocketTank' && onStreet) {
+    // Rocket tanks are 30% faster on streets than regular tanks
+    terrainMultiplier = STREET_SPEED_MULTIPLIER * 1.3
   }
 
   if (isGroundMover && onOre && unit.type !== 'harvester') {
