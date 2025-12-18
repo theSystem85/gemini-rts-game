@@ -1474,6 +1474,16 @@ export class MouseHandler {
     const clickedIsEnemy = clickedUnit && !selectionManager.isHumanPlayerUnit(clickedUnit)
 
     if (clickedUnit && !(friendlySelected && clickedIsEnemy)) {
+      const handledService = friendlySelected && this.handleServiceProviderClick(
+        clickedUnit,
+        selectedUnits,
+        unitCommands,
+        mapGrid
+      )
+      if (handledService) {
+        return
+      }
+
       // Only allow enemy selection when no friendly units are currently selected
       selectionManager.handleUnitSelection(clickedUnit, e, units, factories, selectedUnits)
       // Update AGF capability after unit selection
@@ -1608,6 +1618,31 @@ export class MouseHandler {
         }
       }
     }
+  }
+
+  handleServiceProviderClick(provider, selectedUnits, unitCommands, mapGrid) {
+    if (!unitCommands || !provider) {
+      return false
+    }
+    const selectionManager = this.selectionManager
+    if (!selectionManager || !selectionManager.isHumanPlayerUnit(provider)) {
+      return false
+    }
+
+    const providerTypes = ['ammunitionTruck', 'tankerTruck', 'ambulance', 'recoveryTank']
+    if (!providerTypes.includes(provider.type)) {
+      return false
+    }
+
+    const requesters = selectedUnits.filter(unit =>
+      selectionManager.isHumanPlayerUnit(unit) && unit.id !== provider.id
+    )
+
+    if (requesters.length === 0) {
+      return false
+    }
+
+    return unitCommands.handleServiceProviderRequest(provider, requesters, mapGrid)
   }
 
   findEnemyTarget(worldX, worldY) {

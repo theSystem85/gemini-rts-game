@@ -158,6 +158,11 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-041**: System MUST allow PPF to queue any combination of move/attack/retreat/AGF commands
 - **FR-042**: System MUST maintain feature independence (each can be used without others)
 
+**Logistics Symmetry:**
+- **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider and move the requesters toward it.
+- **FR-044**: Cursor MUST switch to the move-into indicator when hovering a supply provider capable of serving the currently selected units.
+- **FR-045**: Supply provider queues MUST add new service requests in LIFO order when already serving other targets.
+
 ### Key Entities
 
 - **Remote Control State**: Real-time keyboard input processing for direct unit manipulation (arrow keys + space)
