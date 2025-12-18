@@ -8,6 +8,18 @@ import {
   getPlayableViewportWidth
 } from '../utils/layoutMetrics.js'
 
+export function getUnitSelectionCenter(unit) {
+  const centerX = unit.x + TILE_SIZE / 2
+  let centerY = unit.y + TILE_SIZE / 2
+
+  if (unit.type === 'apache') {
+    const altitudeLift = (unit.altitude || 0) * 0.4
+    centerY -= altitudeLift
+  }
+
+  return { centerX, centerY }
+}
+
 export class SelectionManager {
   constructor() {
     this.lastClickTime = 0
@@ -251,8 +263,7 @@ export class SelectionManager {
       let anySelected = false
       for (const unit of units) {
         if (this.isSelectableUnit(unit) && unit.health > 0) {
-          const centerX = unit.x + TILE_SIZE / 2
-          const centerY = unit.y + TILE_SIZE / 2
+          const { centerX, centerY } = getUnitSelectionCenter(unit)
 
           if (centerX >= x1 && centerX <= x2 && centerY >= y1 && centerY <= y2) {
             unit.selected = true
