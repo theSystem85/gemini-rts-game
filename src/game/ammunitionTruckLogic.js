@@ -49,10 +49,16 @@ export const updateAmmunitionTruckLogic = logPerformance(function(units, gameSta
       const target = units.find(u => u.id === ammoTruck.ammoResupplyTarget.id) ||
                     gameState.buildings?.find(b => b.id === ammoTruck.ammoResupplyTarget.id)
 
+      // Clear target if it doesn't exist
+      if (!target) {
+        ammoTruck.ammoResupplyTarget = null
+        ammoTruck.ammoResupplyTimer = 0
+        return
+      }
+
       // Clear target if it's gone, dead, or full
       const isUnit = typeof target.tileX === 'number'
-      if (!target ||
-          target.health <= 0 ||
+      if (target.health <= 0 ||
           (isUnit && target.type === 'apache' && typeof target.maxRocketAmmo === 'number' && target.rocketAmmo >= target.maxRocketAmmo) ||
           (isUnit && target.type !== 'apache' && typeof target.maxAmmunition === 'number' && target.ammunition >= target.maxAmmunition) ||
           (!isUnit && typeof target.maxAmmo === 'number' && target.ammo >= target.maxAmmo)) {

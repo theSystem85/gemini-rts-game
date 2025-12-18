@@ -109,6 +109,37 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         bullet.startTime = now
         bullet.x = bullet.startX
         bullet.y = bullet.startY - bullet.arcHeight
+        
+        // Initialize velocity toward target immediately for smooth homing transition
+        let targetX, targetY
+        if (bullet.target && bullet.target.health > 0) {
+          if (typeof bullet.target.width === 'number' && typeof bullet.target.height === 'number') {
+            // Building target
+            targetX = (bullet.target.x * TILE_SIZE) + (bullet.target.width * TILE_SIZE) / 2
+            targetY = (bullet.target.y * TILE_SIZE) + (bullet.target.height * TILE_SIZE) / 2
+          } else {
+            // Unit target
+            targetX = bullet.target.x + TILE_SIZE / 2
+            targetY = bullet.target.y + TILE_SIZE / 2
+            // Adjust for Apache altitude visual offset
+            if (bullet.target.type === 'apache' && bullet.target.altitude) {
+              targetY -= bullet.target.altitude * 0.4
+            }
+          }
+        } else if (bullet.targetPosition) {
+          targetX = bullet.targetPosition.x
+          targetY = bullet.targetPosition.y
+        }
+        
+        if (targetX !== undefined && targetY !== undefined) {
+          const dx = targetX - bullet.x
+          const dy = targetY - bullet.y
+          const distance = Math.hypot(dx, dy)
+          if (distance > 5) {
+            bullet.vx = (dx / distance) * bullet.effectiveSpeed
+            bullet.vy = (dy / distance) * bullet.effectiveSpeed
+          }
+        }
       } else {
         // Vertical ascent
         const eased = Math.sin((progress * Math.PI) / 2)
@@ -206,7 +237,9 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         }
 
         // Update homing logic
-        if (bullet.target && bullet.target.health > 0) {
+        // Handle both real targets (with health) and position-based targets (remote control mode)
+        const hasRealTarget = bullet.target && (bullet.target.health > 0 || bullet.target.health === undefined)
+        if (hasRealTarget) {
           let targetCenterX_pixels
           let targetCenterY_pixels
 
@@ -216,24 +249,79 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             targetCenterX_pixels = (bullet.target.x * TILE_SIZE) + (bullet.target.width * TILE_SIZE) / 2
             targetCenterY_pixels = (bullet.target.y * TILE_SIZE) + (bullet.target.height * TILE_SIZE) / 2
           } else {
-          // Target is likely a unit. Assume unit.x, .y are pixel coordinates (top-left).
-          // Assume units are TILE_SIZE x TILE_SIZE for centering.
-            targetCenterX_pixels = bullet.target.x + TILE_SIZE / 2
-            targetCenterY_pixels = bullet.target.y + TILE_SIZE / 2
+          // Target is either a unit or a position object (remote control mode).
+          // Assume x, y are pixel coordinates. For units, center them; for position objects, use as-is.
+            targetCenterX_pixels = bullet.target.x + (typeof bullet.target.width === 'undefined' ? TILE_SIZE / 2 : 0)
+            targetCenterY_pixels = bullet.target.y + (typeof bullet.target.height === 'undefined' ? TILE_SIZE / 2 : 0)
+            
+            // For Apache helicopters, adjust target Y to account for altitude visual offset
+            // The Apache visual is rendered at y - (altitude * 0.4), so we need to aim higher
+            if (bullet.target.type === 'apache' && bullet.target.altitude) {
+              const altitudeLift = bullet.target.altitude * 0.4
+              targetCenterY_pixels -= altitudeLift
+            }
           }
 
           const dx = targetCenterX_pixels - bullet.x
           const dy = targetCenterY_pixels - bullet.y
           const distance = Math.hypot(dx, dy)
 
-          if (distance > 5) { // Only adjust if not too close
+          if (distance > 10) { // Only adjust if not too close
             bullet.vx = (dx / distance) * bullet.effectiveSpeed
             bullet.vy = (dy / distance) * bullet.effectiveSpeed
+          } else if (bullet.originType === 'rocketTank') {
+            // Rocket tank rockets explode when close enough to target (distance <= 10)
+            // This handles the case where rockets have skipCollisionChecks: true
+            triggerExplosion(
+              bullet.x,
+              bullet.y,
+              bullet.baseDamage,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              bullet.explosionRadius || TILE_SIZE,
+              undefined,
+              rocketExplosionOptions
+            )
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.5)
+            bullets.splice(i, 1)
+            continue
           }
-        // If distance <= 5, velocity is not updated by this homing logic step.
+        // If distance <= 10, velocity is not updated by this homing logic step.
         // The bullet continues with its current velocity. Collision detection should handle impact.
+        } else if (bullet.originType === 'rocketTank' && bullet.targetPosition) {
+          // For rocket tank rockets without a valid target, fall back to targeting the targetPosition
+          // This handles cases where the target was destroyed but we want rockets to still home to the location
+          const dx = bullet.targetPosition.x - bullet.x
+          const dy = bullet.targetPosition.y - bullet.y
+          const distance = Math.hypot(dx, dy)
+          
+          if (distance > 10) {
+            bullet.vx = (dx / distance) * bullet.effectiveSpeed
+            bullet.vy = (dy / distance) * bullet.effectiveSpeed
+          } else {
+            // Explode at target position when close enough
+            triggerExplosion(
+              bullet.targetPosition.x,
+              bullet.targetPosition.y,
+              bullet.baseDamage,
+              units,
+              factories,
+              bullet.shooter,
+              now,
+              mapGrid,
+              bullet.explosionRadius || TILE_SIZE,
+              undefined,
+              rocketExplosionOptions
+            )
+            playPositionalSound('explosion', bullet.x, bullet.y, 0.5)
+            bullets.splice(i, 1)
+            continue
+          }
         }
-      // If target is null or dead, bullet continues on current trajectory until timeout.
+      // If target is null or dead and no fallback targetPosition, bullet continues on current trajectory until timeout.
       } else {
       // Handle non-homing projectiles - check if they've traveled too far or too long
       // Non-homing projectile flight limits
@@ -415,6 +503,56 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         }
       }
 
+      // Check if rocket turret or rocket tank rocket has reached its target
+      if ((bullet.originType === 'rocketTurret' || bullet.originType === 'rocketTank') && bullet.targetPosition) {
+        const flightTime = now - (bullet.creationTime || bullet.startTime || now)
+        const maxFlightTime = bullet.maxFlightTime || 5000
+        
+        // For homing rockets, check distance to current target position (target may have moved)
+        let targetX = bullet.targetPosition.x
+        let targetY = bullet.targetPosition.y
+        
+        // Update target position for homing rockets following live targets
+        if (bullet.homing && bullet.target && bullet.target.health > 0) {
+          if (typeof bullet.target.width === 'number' && typeof bullet.target.height === 'number') {
+            // Building target
+            targetX = (bullet.target.x * TILE_SIZE) + (bullet.target.width * TILE_SIZE) / 2
+            targetY = (bullet.target.y * TILE_SIZE) + (bullet.target.height * TILE_SIZE) / 2
+          } else {
+            // Unit target
+            targetX = bullet.target.x + TILE_SIZE / 2
+            targetY = bullet.target.y + TILE_SIZE / 2
+          }
+        }
+        
+        const distanceToTarget = Math.hypot(bullet.x - targetX, bullet.y - targetY)
+        const proximityThreshold = TILE_SIZE * 0.5 // Explode when within half a tile of target
+        
+        if (distanceToTarget <= proximityThreshold || flightTime >= maxFlightTime) {
+          // Rocket has reached target or timed out - explode at target location
+          const explosionX = distanceToTarget <= proximityThreshold ? targetX : bullet.x
+          const explosionY = distanceToTarget <= proximityThreshold ? targetY : bullet.y
+          
+          triggerExplosion(
+            explosionX,
+            explosionY,
+            bullet.baseDamage,
+            units,
+            factories,
+            bullet.shooter,
+            now,
+            mapGrid,
+            bullet.explosionRadius || TILE_SIZE * 1.5,
+            false,
+            rocketExplosionOptions
+          )
+          
+          playPositionalSound('explosion', explosionX, explosionY, 0.7)
+          bullets.splice(i, 1)
+          continue
+        }
+      }
+
       // Persist smoke trail for rockets (skip smoke for Apache rockets)
       if ((bullet.homing || bullet.ballistic) && bullet.originType !== 'apacheRocket') {
         if (!bullet.lastTrail || now - bullet.lastTrail > 60) {
@@ -482,7 +620,17 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             const hitZoneResult = calculateHitZoneDamageMultiplier(bullet, unit)
 
             // Apply damage with some randomization and hit zone multiplier
-            const damageMultiplier = 0.8 + gameRandom() * 0.4
+            let damageMultiplier = 0.8 + gameRandom() * 0.4
+            
+            // Rocket tank projectiles are balanced against tanks
+            const isTankTarget = unit.type && ['tank_v1', 'tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer'].includes(unit.type)
+            if (bullet.originType === 'rocketTank' && isTankTarget) {
+              // Ensure one rocket makes exactly 23% damage on a normal tank (100 HP)
+              // 23% of 100 = 23 damage. Base damage is 120.
+              // We use a fixed multiplier to ensure the exact damage value for front hits.
+              damageMultiplier = 0.1
+            }
+            
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier * hitZoneResult.multiplier)
 
             // Check for god mode protection
@@ -824,6 +972,10 @@ export function fireBullet(unit, target, bullets, now) {
   if (target.tileX !== undefined) {
     targetCenterX = target.x + TILE_SIZE / 2
     targetCenterY = target.y + TILE_SIZE / 2
+    // Adjust for Apache altitude visual offset
+    if (target.type === 'apache' && target.altitude) {
+      targetCenterY -= target.altitude * 0.4
+    }
   } else {
     targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
     targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
@@ -884,7 +1036,7 @@ export function fireBullet(unit, target, bullets, now) {
       baseDamage: BULLET_DAMAGES.rocketTank,
       active: true,
       shooter: unit,
-      homing: false,
+      homing: true,
       target,
       ballistic: true,
       startX: spawn.x,
@@ -897,7 +1049,13 @@ export function fireBullet(unit, target, bullets, now) {
       flightDuration,
       ballisticDuration: flightDuration / 2,
       arcHeight: Math.max(50, distance * 0.3),
-      targetPosition: { x: targetCenterX, y: targetCenterY }
+      targetPosition: { x: targetCenterX, y: targetCenterY },
+      projectileType: 'rocket',
+      originType: 'rocketTank',
+      // Skip collision checks so rockets fly over units/wrecks/buildings to hit their target
+      skipCollisionChecks: true,
+      maxFlightTime: 5000,
+      creationTime: now
     }
   } else if (unit.type === 'apache') {
     const spawnPoints = getApacheRocketSpawnPoints(unit, unitCenterX, unitCenterY)

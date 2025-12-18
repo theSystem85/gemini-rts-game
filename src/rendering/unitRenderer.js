@@ -420,9 +420,29 @@ export class UnitRenderer {
 
     let ratio = 0
     let hasAmmo = false
+    let barColor = '#FFA500' // Default orange color for ammunition
+    let reloadRatio = null // Additional reload indicator for rocket tanks
 
-    // Special handling for Apache helicopters
-    if (unit.type === 'apache') {
+    // Special handling for rocket tanks - show ammunition with reload overlay
+    if (unit.type === 'rocketTank') {
+      // Show ammunition as main bar fill
+      if (typeof unit.maxAmmunition === 'number') {
+        ratio = unit.ammunition / unit.maxAmmunition
+        hasAmmo = true
+      }
+      barColor = '#FFA500' // Orange for ammunition
+      
+      // Calculate reload progress as overlay indicator
+      const now = performance.now()
+      const fireRate = 12000 // COMBAT_CONFIG.FIRE_RATES.ROCKET
+      const timeSinceLastShot = unit.lastShotTime ? now - unit.lastShotTime : fireRate
+      
+      if (unit.burstState) {
+        reloadRatio = 0 // Reloading (0%)
+      } else {
+        reloadRatio = Math.min(1, timeSinceLastShot / fireRate) // Progress toward next shot
+      }
+    } else if (unit.type === 'apache') {
       // Check if Apache is landed on a helipad
       if (unit.landedHelipadId && gameState.buildings) {
         const helipad = gameState.buildings.find(b => b.type === 'helipad' && getBuildingIdentifier(b) === unit.landedHelipadId)
@@ -472,8 +492,19 @@ export class UnitRenderer {
     ctx.fillRect(barX, barTop, barWidth, barHeight)
 
     const fillHeight = barHeight * ratio
-    ctx.fillStyle = '#FFA500' // Orange color for ammunition
+    ctx.fillStyle = barColor
     ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+    // Draw reload indicator overlay for rocket tanks (light blue 1px line)
+    if (reloadRatio !== null) {
+      const reloadLineY = barTop + barHeight - (barHeight * reloadRatio)
+      ctx.strokeStyle = '#87CEEB' // Light blue
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(barX, reloadLineY)
+      ctx.lineTo(barX + barWidth, reloadLineY)
+      ctx.stroke()
+    }
 
     ctx.strokeStyle = '#000'
     ctx.strokeRect(barX, barTop, barWidth, barHeight)
@@ -926,7 +957,8 @@ export class UnitRenderer {
   }
 
   renderApacheRemoteReticle(ctx, unit, scrollOffset) {
-    if (!unit || unit.type !== 'apache') {
+    // Handle both Apache and Rocket Tank reticles
+    if (!unit || (unit.type !== 'apache' && unit.type !== 'rocketTank')) {
       return
     }
 
@@ -946,6 +978,15 @@ export class UnitRenderer {
     ctx.save()
     ctx.strokeStyle = '#ff3b30'
     ctx.lineWidth = 2
+    
+    // For rocket tanks, rotate crosshair with unit direction
+    if (unit.type === 'rocketTank') {
+      ctx.translate(screenX, screenY)
+      const direction = unit.turretDirection !== undefined ? unit.turretDirection : (unit.movement?.rotation || unit.direction || 0)
+      ctx.rotate(direction)
+      ctx.translate(-screenX, -screenY)
+    }
+    
     ctx.beginPath()
     ctx.moveTo(screenX - size, screenY)
     ctx.lineTo(screenX + size, screenY)

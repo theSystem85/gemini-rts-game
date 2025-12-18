@@ -109,6 +109,55 @@ function getApacheRemoteRange(unit) {
   return baseRange * APACHE_REMOTE_RANGE_MULTIPLIER
 }
 
+// Rocket Tank remote range is the same as its normal fire range
+function getRocketTankRemoteRange(unit) {
+  let baseRange = TANK_FIRE_RANGE * TILE_SIZE
+  if (unit.level >= 1) {
+    baseRange *= unit.rangeMultiplier || 1.2
+  }
+  return baseRange
+}
+
+// Compute remote aim target for rocket tank (similar to Apache)
+function computeRocketTankRemoteAim(unit, direction) {
+  const centerX = unit.x + TILE_SIZE / 2
+  const centerY = unit.y + TILE_SIZE / 2
+  const baseRange = getRocketTankRemoteRange(unit)
+  const viewportLimitedRange = clampRangeToViewport(baseRange, centerX, centerY, direction)
+
+  const cosDir = Math.cos(direction)
+  const sinDir = Math.sin(direction)
+  let targetX = centerX + cosDir * viewportLimitedRange
+  let targetY = centerY + sinDir * viewportLimitedRange
+
+  const mapGrid = gameState.mapGrid || []
+  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
+    const mapWidth = mapGrid[0].length * TILE_SIZE
+    const mapHeight = mapGrid.length * TILE_SIZE
+    const minX = TILE_SIZE * 0.5
+    const minY = TILE_SIZE * 0.5
+    const maxX = Math.max(minX, mapWidth - TILE_SIZE * 0.5)
+    const maxY = Math.max(minY, mapHeight - TILE_SIZE * 0.5)
+    const clampedX = Math.max(minX, Math.min(targetX, maxX))
+    const clampedY = Math.max(minY, Math.min(targetY, maxY))
+    targetX = clampedX
+    targetY = clampedY
+  }
+
+  const actualRange = Math.min(
+    viewportLimitedRange,
+    Math.hypot(targetX - centerX, targetY - centerY)
+  )
+
+  return {
+    x: targetX,
+    y: targetY,
+    tileX: Math.max(0, Math.floor(targetX / TILE_SIZE)),
+    tileY: Math.max(0, Math.floor(targetY / TILE_SIZE)),
+    range: actualRange
+  }
+}
+
 let lastAutoFocusUnitId = null
 let autoFocusSuppressed = false
 let autoFocusResumeArmed = false
@@ -607,6 +656,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     if (unit.type === 'ambulance' && onStreet) {
       const props = unit.ambulanceProps || { streetSpeedMultiplier: 6.0 }
       terrainMultiplier = props.streetSpeedMultiplier || 6.0
+    } else if (unit.type === 'rocketTank' && onStreet) {
+      // Rocket tanks are 30% faster on streets than regular tanks
+      terrainMultiplier = STREET_SPEED_MULTIPLIER * 1.3
     }
     const effectiveMaxSpeed = 0.9 * speedModifier * terrainMultiplier
 
@@ -684,8 +736,145 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       aimTurretAtTarget(unit, unit.target)
     }
 
-    // Fire forward when requested
-    if (hasTurret && fireIntensity > 0 && unit.canFire !== false) {
+    // Handle remote control aim reticle and firing for rocket tanks
+    const isRocketTank = unit.type === 'rocketTank'
+    if (isRocketTank) {
+      // Track remote control activity
+      const remoteControlActive = hasMovementInput || manualTurretInput || fireIntensity > 0
+      if (remoteControlActive) {
+        unit.lastRemoteControlTime = now
+      }
+      
+      // Determine aim target: use selected target if available, otherwise use forward direction
+      let aimTarget = null
+      let targetDir = unit.movement.rotation
+      
+      if (unit.target && unit.target.health > 0) {
+        // Use selected target's current position
+        const targetCenterX = unit.target.x + TILE_SIZE / 2
+        const targetCenterY = unit.target.y + TILE_SIZE / 2
+        const centerX = unit.x + TILE_SIZE / 2
+        const centerY = unit.y + TILE_SIZE / 2
+        targetDir = Math.atan2(targetCenterY - centerY, targetCenterX - centerX)
+        
+        // Create aim target at the selected unit's position
+        aimTarget = {
+          x: targetCenterX,
+          y: targetCenterY,
+          tileX: Math.floor(targetCenterX / TILE_SIZE),
+          tileY: Math.floor(targetCenterY / TILE_SIZE),
+          range: Math.hypot(targetCenterX - centerX, targetCenterY - centerY)
+        }
+      } else {
+        // Clear dead target
+        if (unit.target && unit.target.health <= 0) {
+          unit.target = null
+        }
+        // No target: compute aim direction based on current rotation
+        const dir = unit.movement.rotation
+        aimTarget = computeRocketTankRemoteAim(unit, dir)
+        targetDir = dir
+      }
+      
+      if (Number.isFinite(aimTarget.x) && Number.isFinite(aimTarget.y)) {
+        unit.remoteRocketTarget = aimTarget
+        // Show reticle only up to 1s after remote control ends
+        const timeSinceLastControl = unit.lastRemoteControlTime ? (now - unit.lastRemoteControlTime) : Infinity
+        unit.remoteReticleVisible = timeSinceLastControl <= 1000
+      } else {
+        unit.remoteRocketTarget = null
+        unit.remoteReticleVisible = false
+      }
+      
+      // Rotate unit towards remote rocket target - use fast rotation for immediate response
+      if (unit.remoteRocketTarget) {
+        const centerX = unit.x + TILE_SIZE / 2
+        const centerY = unit.y + TILE_SIZE / 2
+        
+        // If there's a selected target, rotate immediately and aggressively towards it
+        // Otherwise, smoothly rotate in the current direction
+        let rotationSpeed = unit.rotationSpeed || 0.1
+        if (unit.target && unit.target.health > 0) {
+          // Fast rotation towards selected target (10x normal speed)
+          rotationSpeed = Math.max(0.5, rotationSpeed * 10)
+        }
+        
+        unit.movement.rotation = smoothRotateTowardsAngle(
+          unit.movement.rotation,
+          targetDir,
+          rotationSpeed
+        )
+        
+        // Check if unit is facing the target (within 5 degrees)
+        const angleDifference = Math.abs(angleDiff(unit.movement.rotation, targetDir))
+        const isFacingTarget = angleDifference < (5 * Math.PI / 180)
+        
+        // Store facing state and fire when ready
+        unit.isFacingRemoteTarget = isFacingTarget
+      }
+      
+      // Fire rocket burst when space is pressed OR when unit is reloaded and has a target
+      const shouldFire = fireIntensity > 0 || (unit.remoteRocketTarget && unit.isFacingRemoteTarget)
+      if (shouldFire && unit.canFire !== false) {
+        const baseRate = getFireRateForUnit(unit)
+        const effectiveRate = unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate
+        
+        // Check if we need to start a new burst or continue existing one
+        if (!unit.burstState) {
+          // Start new burst if cooldown has passed
+          if (!unit.lastShotTime || now - unit.lastShotTime >= effectiveRate) {
+            // Check ammunition
+            const hasAmmo = unit.ammunition === undefined || unit.ammunition > 0
+            if (hasAmmo && unit.isFacingRemoteTarget) {
+              // Fire as many rockets as we have ammo for, up to 4
+              const rocketsToFire = typeof unit.ammunition === 'number'
+                ? Math.min(4, unit.ammunition)
+                : 4
+              // Start burst - don't set lastShotTime yet, only after burst completes
+              unit.burstState = {
+                rocketsToFire: rocketsToFire,
+                lastRocketTime: 0,
+                remoteControlTarget: {
+                  tileX: aimTarget.tileX,
+                  tileY: aimTarget.tileY,
+                  x: aimTarget.x,
+                  y: aimTarget.y
+                }
+              }
+            }
+          }
+        } else {
+          // Continue existing burst (fire remaining rockets)
+          if (unit.burstState.rocketsToFire > 0 &&
+              now - unit.burstState.lastRocketTime >= 200) { // 200ms delay between rockets
+            const target = unit.burstState.remoteControlTarget
+            // Only fire if we have a valid remote control target (burst may have been started by normal combat)
+            if (target) {
+              fireBullet(unit, target, bullets, now)
+              unit.burstState.rocketsToFire--
+              unit.burstState.lastRocketTime = now
+              
+              if (unit.burstState.rocketsToFire <= 0) {
+                unit.burstState = null // Reset burst state
+                unit.lastShotTime = now // Set cooldown for next burst - reload phase begins now
+              }
+            } else {
+              // Burst was started by normal combat, not remote control - clear it and let normal combat handle it
+              // Or if in remote control mode, reinitialize with current aim target
+              if (aimTarget) {
+                unit.burstState.remoteControlTarget = {
+                  tileX: aimTarget.tileX,
+                  tileY: aimTarget.tileY,
+                  x: aimTarget.x,
+                  y: aimTarget.y
+                }
+              }
+            }
+          }
+        }
+      }
+    } else if (hasTurret && fireIntensity > 0 && unit.canFire !== false) {
+      // Fire forward when requested (for non-rocket tank turret units)
       const baseRate = getFireRateForUnit(unit)
       const effectiveRate =
         unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate
@@ -706,6 +895,12 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         }
         fireBullet(unit, target, bullets, now)
       }
+    }
+    
+    // Clear reticle for non-rocket tank turret units
+    if (!isRocketTank && hasTurret) {
+      unit.remoteReticleVisible = false
+      unit.remoteRocketTarget = null
     }
   })
 

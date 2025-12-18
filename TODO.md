@@ -376,6 +376,31 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 ## Bug Fixes (2025-11-27)
 - [x] ✅ Defeat modal subtitle overlapping statistics — now subtitle lines are wrapped and stats start below the subtitle (fix: `src/rendering/uiRenderer.js`)
 
+## Bug Fixes (2025-01-26)
+- [x] ✅ Fixed rocket tank rockets not homing toward moving targets - simplified burst fire to dynamically track target position each rocket
+- [x] ✅ Fixed rockets targeting Apache helicopters aiming at center between Apache image and shadow - added altitude visual offset compensation (altitude * 0.4) in multiple locations: handleTankMovement, handleRocketBurstFire, fireBullet, homing logic, and collision detection
+
+## Bug Fixes (2025-12-16)
+- [x] ✅ Rockets from rocket turret and rocket tank now fly over units, wrecks, and buildings to hit their intended target
+- [x] ✅ Rocket tank remote control mode added with red crosshair reticle (similar to Apache)
+- [x] ✅ Rocket tanks are 30% faster on streets than regular tanks
+- [x] ✅ Fixed rocket tank firing only once - ammunition was being depleted 3x per burst (9 instead of 3)
+- [x] ✅ Rocket tanks can now fire partial bursts when low on ammo (1-2 rockets if that's all that remains)
+- [x] ✅ Rocket tank left bar now shows reload progress instead of ammunition
+- [x] ✅ Fixed ammunitionTruckLogic.js crash when target is undefined
+
+## Bug Fixes (2025-12-18)
+- [x] ✅ Rocket tank reload phase now begins only after entire 4-rocket burst completes (both normal and remote control)
+- [x] ✅ Rocket tank in remote control mode immediately rotates towards selected target (10x faster than normal rotation)
+- [x] ✅ Rocket tank no longer fires at old target position when target unit dies
+- [x] ✅ Rocket tank remote control now tracks actual selected unit position instead of just using current direction
+- [x] ✅ Rocket tank now actively rotates body towards target in normal combat mode (normal rotation speed)
+- [x] ✅ Rocket tank projectiles now deal exactly 23% damage to normal tanks (100 HP) per rocket
+- [x] ✅ Rocket tank ammunition capacity set to 24 rockets
+- [x] ✅ Rocket tank stops attacking when target is destroyed
+- [x] ✅ Rocket tank rotation speed normalized to 0.1 radians/frame in all modes
+- [x] ✅ Rocket tank reload phase begins only after entire 4-rocket burst completes
+
 ## Improvements
 - [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
 - [x] Make sure narrated sounds like (unitReady) can be chained and will not be played at the same time but one after another up until a stacking size of 3 everything after that will be skipped if it comes before the stackable sounds are finished playing. So for all playSound calls in the code that play a "narrated sound" make sure to add the new stacking boolean to true and update playSound so it is able to provide stacking behaviour as described.

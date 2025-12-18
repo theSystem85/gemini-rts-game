@@ -1094,7 +1094,7 @@ export const UNIT_AMMO_CAPACITY = {
   tank_v1: 42,
   'tank-v2': 42,
   'tank-v3': 50,
-  rocketTank: 21,
+  rocketTank: 24,
   howitzer: 30,
   apache: 38
 }
