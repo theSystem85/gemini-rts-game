@@ -26,6 +26,7 @@ import {
 } from '../mapEditor.js'
 import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
 import { keybindingManager, KEYBINDING_CONTEXTS } from './keybindings.js'
+import { getUnitSelectionCenter } from './selectionManager.js'
 
 export class MouseHandler {
   constructor() {
@@ -114,8 +115,7 @@ export class MouseHandler {
       if (!selectionManager.isHumanPlayerUnit(unit)) return
       if (unit.health <= 0) return
 
-      const centerX = unit.x + TILE_SIZE / 2
-      const centerY = unit.y + TILE_SIZE / 2
+      const { centerX, centerY } = getUnitSelectionCenter(unit)
       if (centerX < x1 || centerX > x2 || centerY < y1 || centerY > y2) return
 
       if (unit.crew && typeof unit.crew === 'object' && Object.values(unit.crew).some(alive => !alive)) {
@@ -474,8 +474,7 @@ export class MouseHandler {
         const humanPlayer = gameState.humanPlayer || 'player1'
         for (const unit of units) {
           if (unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')) {
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
+            const { centerX, centerY } = getUnitSelectionCenter(unit)
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
               isOverFriendlyUnit = true
               break
@@ -490,8 +489,7 @@ export class MouseHandler {
         for (const unit of units) {
           // Check if unit is NOT owned by human player
           if (unit.owner !== humanPlayer && !(humanPlayer === 'player1' && unit.owner === 'player')) {
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
+            const { centerX, centerY } = getUnitSelectionCenter(unit)
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
               isOverEnemy = true
               break
@@ -982,8 +980,7 @@ export class MouseHandler {
       if (!forceAttackTarget) {
         for (const unit of units) {
           if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
-            const centerX = unit.x + TILE_SIZE / 2
-            const centerY = unit.y + TILE_SIZE / 2
+            const { centerX, centerY } = getUnitSelectionCenter(unit)
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
               forceAttackTarget = unit
               break
@@ -1048,8 +1045,7 @@ export class MouseHandler {
     let guardTarget = null
     for (const unit of units) {
       if (selectionManager.isHumanPlayerUnit(unit) && !unit.selected) {
-        const centerX = unit.x + TILE_SIZE / 2
-        const centerY = unit.y + TILE_SIZE / 2
+        const { centerX, centerY } = getUnitSelectionCenter(unit)
         if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
           guardTarget = unit
           break
@@ -1455,12 +1451,7 @@ export class MouseHandler {
     let clickedUnit = null
     for (const unit of units) {
       if (selectionManager.isSelectableUnit(unit)) {
-        const centerX = unit.x + TILE_SIZE / 2
-        let centerY = unit.y + TILE_SIZE / 2
-        if (unit.type === 'apache') {
-          const altitudeLift = (unit.altitude || 0) * 0.4
-          centerY -= altitudeLift
-        }
+        const { centerX, centerY } = getUnitSelectionCenter(unit)
         const dx = worldX - centerX
         const dy = worldY - centerY
         if (Math.hypot(dx, dy) < TILE_SIZE / 2) {
@@ -1646,8 +1637,7 @@ export class MouseHandler {
     // Check enemy units if no building or factory was targeted
     for (const unit of units) {
       if (unit.owner !== 'player') {
-        const centerX = unit.x + TILE_SIZE / 2
-        const centerY = unit.y + TILE_SIZE / 2
+        const { centerX, centerY } = getUnitSelectionCenter(unit)
         const distance = Math.hypot(worldX - centerX, worldY - centerY)
         if (distance < TILE_SIZE / 2) {
           return unit

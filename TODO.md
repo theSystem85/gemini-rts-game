@@ -488,6 +488,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
 ## Bugs
+- [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
 - [ ] On mobile PWA portrait mode, stretch the sidebar to the very bottom so no unused black bar remains.
 - [ ] Remove the blue progress bar from sidebar build buttons once a unit finishes production.
