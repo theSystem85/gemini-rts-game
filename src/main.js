@@ -45,6 +45,7 @@ import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 import { getPlayableViewportWidth, getPlayableViewportHeight } from './utils/layoutMetrics.js'
 import { initMapEditorControls } from './ui/mapEditorControls.js'
 import { sanitizeSeed } from './utils/seedUtils.js'
+import { initTutorialSystem } from './ui/tutorialSystem.js'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1247,6 +1248,7 @@ class Game {
     // Setup map settings
     this.setupMapSettings()
     initMapEditorControls()
+    initTutorialSystem()
 
     initSidebarMultiplayer()
     
