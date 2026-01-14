@@ -814,7 +814,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       }
       
       // Fire rocket burst when space is pressed OR when unit is reloaded and has a target
-      const shouldFire = fireIntensity > 0 || (unit.remoteRocketTarget && unit.isFacingRemoteTarget)
+      const shouldFire =
+        fireIntensity > 0 ||
+        (remoteControlActive && unit.remoteRocketTarget && unit.isFacingRemoteTarget)
       if (shouldFire && unit.canFire !== false) {
         const baseRate = getFireRateForUnit(unit)
         const effectiveRate = unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate

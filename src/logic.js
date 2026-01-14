@@ -35,7 +35,8 @@ export function triggerExplosion(
   const {
     buildingDamageMultiplier = 1,
     factoryDamageMultiplier = 1,
-    buildingDamageCaps = {}
+    buildingDamageCaps = {},
+    allowAirborneDamage = false
   } = options || {}
 
   // Add explosion visual effect
@@ -61,7 +62,7 @@ export function triggerExplosion(
       const isAirUnit = unit.isAirUnit || unit.type === 'apache'
       const airborneStates = ['takeoff', 'airborne', 'landing']
       const isAirborne = isAirUnit && airborneStates.includes(unit.flightState)
-      if (isAirborne) {
+      if (isAirborne && !allowAirborneDamage) {
         return
       }
       let damage
