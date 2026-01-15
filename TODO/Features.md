@@ -1,4 +1,5 @@
 ## Features
+- [ ] **Spec 021** Tutorial system: guided onboarding with demo cursor, action replication gates, tech tree walkthrough, speech narration, settings toggles, and localStorage persistence.
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
   - [x] ✅ 20-mine capacity using ammo HUD bar, refilled by ammo truck/factory, 20% slower than tanker (half speed while deploying)

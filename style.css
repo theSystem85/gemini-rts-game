@@ -2503,6 +2503,168 @@ body.config-modal-open {
   color: #9fb3c8;
 }
 
+.config-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.config-modal__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #cfd8e3;
+}
+
+.config-modal__toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1200;
+}
+
+.tutorial-overlay--visible {
+  opacity: 1;
+}
+
+.tutorial-panel {
+  pointer-events: auto;
+  background: rgba(18, 22, 30, 0.92);
+  border: 1px solid rgba(77, 163, 255, 0.35);
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 380px;
+  color: #f3f6fb;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.tutorial-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tutorial-progress {
+  font-size: 12px;
+  color: #9fb3c8;
+}
+
+.tutorial-instruction {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tutorial-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #9fb3c8;
+}
+
+.tutorial-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.tutorial-button {
+  background: #2a3441;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5fb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tutorial-button--primary {
+  background: #4da3ff;
+  border-color: #4da3ff;
+  color: #0c1320;
+  font-weight: 600;
+}
+
+.tutorial-button--secondary:hover {
+  background: #364150;
+}
+
+.tutorial-highlight {
+  position: fixed;
+  border: 2px solid rgba(77, 163, 255, 0.9);
+  box-shadow: 0 0 0 4px rgba(77, 163, 255, 0.2);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, width 0.2s ease, height 0.2s ease;
+  z-index: 1100;
+}
+
+.tutorial-highlight--visible {
+  opacity: 1;
+}
+
+.tutorial-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #4da3ff;
+  box-shadow: 0 0 12px rgba(77, 163, 255, 0.7);
+  transform: translate(-9999px, -9999px);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1201;
+}
+
+.tutorial-cursor--visible {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .tutorial-panel {
+    max-width: 320px;
+  }
+}
+
+.tutorial-cursor--click {
+  animation: tutorial-click 0.2s ease;
+}
+
+@keyframes tutorial-click {
+  0% { box-shadow: 0 0 12px rgba(77, 163, 255, 0.7); }
+  50% { box-shadow: 0 0 18px rgba(77, 163, 255, 0.9); }
+  100% { box-shadow: 0 0 12px rgba(77, 163, 255, 0.7); }
+}
+
 .config-modal__message--error {
   color: #ff8080;
 }

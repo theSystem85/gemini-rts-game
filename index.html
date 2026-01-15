@@ -106,10 +106,10 @@
     <canvas id="minimap"></canvas>
 
     <!-- Money bar positioned right above the energy bar -->
-    <div id="moneyBarContainer"></div>
+    <div id="moneyBarContainer" data-tutorial-match="moneyBarContainer"></div>
 
     <!-- Energy bar positioned right above the minimap -->
-    <div id="energyBarContainer"></div>
+    <div id="energyBarContainer" data-tutorial-match="energyBarContainer"></div>
 
     <div id="sidebarUtilityButtons" aria-hidden="true"></div>
 
@@ -165,7 +165,7 @@
           <div id="productionContainer">
             <div id="productionTabContent">
               <div id="unitsTabContent" class="tab-content">
-                <button class="production-button" data-unit-type="tank">
+                <button class="production-button" data-unit-type="tank" data-tutorial-match="tank">
                   <img src="images/sidebar/tank.webp" onerror="this.style.display='none'">
                   <span class="unit-name">Tank V1</span>
                   <span class="unit-cost"></span>
@@ -221,7 +221,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-unit-type="harvester">
+                <button class="production-button" data-unit-type="harvester" data-tutorial-match="harvester">
                   <img src="images/sidebar/harvester.webp" onerror="this.style.display='none'">
                   <span class="unit-name">Harvester</span>
                   <span class="unit-cost"></span>
@@ -271,7 +271,7 @@
                 </button>
               </div>
               <div id="buildingsTabContent" class="tab-content active">
-                <button class="production-button" data-building-type="powerPlant">
+                <button class="production-button" data-building-type="powerPlant" data-tutorial-match="powerPlant">
                   <img draggable="true" src="images/sidebar/power_plant.webp" onerror="this.style.display='none'">
                   <span class="building-name">Power Plant</span>
                   <span class="building-cost"></span>
@@ -280,7 +280,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="oreRefinery">
+                <button class="production-button" data-building-type="oreRefinery" data-tutorial-match="oreRefinery">
                   <img draggable="true" src="images/sidebar/ore_refinery.webp" onerror="this.style.display='none'">
                   <span class="building-name">Ore Refinery</span>
                   <span class="building-cost"></span>
@@ -289,7 +289,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="vehicleFactory">
+                <button class="production-button" data-building-type="vehicleFactory" data-tutorial-match="vehicleFactory">
                   <img draggable="true" src="images/sidebar/vehicle_factory.webp" onerror="this.style.display='none'">
                   <span class="building-name">Vehicle Factory</span>
                   <span class="building-cost"></span>
@@ -307,7 +307,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="gasStation">
+                <button class="production-button" data-building-type="gasStation" data-tutorial-match="gasStation">
                   <img draggable="true" src="images/sidebar/gas_station.webp" onerror="this.style.display='none'">
                   <span class="building-name">Gas Station</span>
                   <span class="building-cost"></span>
@@ -316,7 +316,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="vehicleWorkshop">
+                <button class="production-button" data-building-type="vehicleWorkshop" data-tutorial-match="vehicleWorkshop">
                   <img draggable="true" src="images/sidebar/vehicle_workshop.webp" onerror="this.style.display='none'">
                   <span class="building-name">Vehicle Workshop</span>
                   <span class="building-cost"></span>
@@ -325,7 +325,8 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="ammunitionFactory">
+                <button class="production-button" data-building-type="ammunitionFactory"
+                  data-tutorial-match="ammunitionFactory">
                   <img draggable="true" src="images/sidebar/ammunition_factory_sidebar.webp"
                     onerror="this.style.display='none'">
                   <span class="building-name">Ammunition Factory</span>
@@ -335,7 +336,7 @@
                   <div class="batch-counter" style="display:none">0</div>
                   <div class="new-label" style="display:none">NEW</div>
                 </button>
-                <button class="production-button" data-building-type="hospital">
+                <button class="production-button" data-building-type="hospital" data-tutorial-match="hospital">
                   <img draggable="true" src="images/sidebar/hospital.webp" onerror="this.style.display='none'">
                   <span class="building-name">Hospital</span>
                   <span class="building-cost"></span>
@@ -622,6 +623,7 @@
               aria-selected="true">Runtime Config</button>
             <button class="config-modal__tab" data-config-tab="keybindings" role="tab" aria-selected="false">Key
               Bindings</button>
+            <button class="config-modal__tab" data-config-tab="tutorial" role="tab" aria-selected="false">Tutorial</button>
           </div>
         </div>
         <button id="configModalCloseBtn" class="config-modal__close" aria-label="Close settings">×</button>
@@ -648,6 +650,19 @@
             <div id="keybindingsMessage" class="config-modal__message" aria-live="polite"></div>
           </div>
           <div id="keybindingsEditor"></div>
+        </div>
+        <div class="config-modal__content" data-config-tab-panel="tutorial" hidden>
+          <div class="config-modal__section">
+            <label class="config-modal__toggle">
+              <input id="tutorialShowCheckbox" type="checkbox">
+              Show tutorial on start
+            </label>
+            <label class="config-modal__toggle">
+              <input id="tutorialVoiceCheckbox" type="checkbox">
+              Enable narration (Speech API)
+            </label>
+            <button id="tutorialRestartBtn" class="config-modal__button" type="button">Restart Tutorial</button>
+          </div>
         </div>
       </div>
     </div>
@@ -700,6 +715,27 @@
       </div>
     </div>
   </div>
+
+  <div id="tutorialOverlay" class="tutorial-overlay" aria-hidden="true">
+    <div class="tutorial-panel" data-tutorial-match="tutorialOverlay">
+      <div class="tutorial-header">
+        <h3 id="tutorialTitle" class="tutorial-title">Tutorial</h3>
+        <span id="tutorialProgress" class="tutorial-progress"></span>
+      </div>
+      <p id="tutorialInstruction" class="tutorial-instruction"></p>
+      <p id="tutorialHint" class="tutorial-hint"></p>
+      <div class="tutorial-actions">
+        <button id="tutorialRepeatBtn" class="tutorial-button tutorial-button--secondary" type="button">Replay
+          Demo</button>
+        <button id="tutorialSkipStepBtn" class="tutorial-button tutorial-button--secondary" type="button">Skip
+          Step</button>
+        <button id="tutorialSkipAllBtn" class="tutorial-button tutorial-button--primary" type="button">Skip
+          Tutorial</button>
+      </div>
+    </div>
+  </div>
+  <div id="tutorialHighlight" class="tutorial-highlight" aria-hidden="true"></div>
+  <div id="tutorialCursor" class="tutorial-cursor" aria-hidden="true"></div>
 
   <script src="/src/main.js" type="module"></script>
   <script type="module">
