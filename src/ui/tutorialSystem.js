@@ -230,8 +230,12 @@ class TutorialSystem {
     this.nextButton = null
     this.skipButton = null
     this.skipStepButton = null
+    this.minimizeButton = null
+    this.speechButton = null
+    this.floatingButton = null
     this.highlighted = null
     this.lastAction = null
+    this.minimized = false
     this.stepState = {}
     this.animationFrame = null
     this.speaking = false
@@ -260,6 +264,9 @@ class TutorialSystem {
       this.nextButton = this.overlay.querySelector('[data-tutorial-action="next"]')
       this.skipButton = this.overlay.querySelector('[data-tutorial-action="skip"]')
       this.skipStepButton = this.overlay.querySelector('[data-tutorial-action="skip-step"]')
+      this.minimizeButton = this.overlay.querySelector('[data-tutorial-action="minimize"]')
+      this.speechButton = this.overlay.querySelector('[data-tutorial-action="toggle-speech"]')
+      this.floatingButton = document.getElementById('tutorialFloatingButton')
       return
     }
 
@@ -280,8 +287,16 @@ class TutorialSystem {
     const stepPhase = document.createElement('span')
     stepPhase.className = 'tutorial-phase'
 
+    const minimizeButton = document.createElement('button')
+    minimizeButton.type = 'button'
+    minimizeButton.className = 'tutorial-minimize'
+    minimizeButton.textContent = '–'
+    minimizeButton.setAttribute('aria-label', 'Minimize tutorial')
+    minimizeButton.setAttribute('data-tutorial-action', 'minimize')
+
     header.appendChild(stepCount)
     header.appendChild(stepPhase)
+    header.appendChild(minimizeButton)
 
     const title = document.createElement('h3')
     title.className = 'tutorial-title'
@@ -294,6 +309,12 @@ class TutorialSystem {
 
     const actions = document.createElement('div')
     actions.className = 'tutorial-actions'
+
+    const speechButton = document.createElement('button')
+    speechButton.type = 'button'
+    speechButton.className = 'tutorial-button'
+    speechButton.textContent = 'Voice: On'
+    speechButton.setAttribute('data-tutorial-action', 'toggle-speech')
 
     const skipStepButton = document.createElement('button')
     skipStepButton.type = 'button'
@@ -313,6 +334,7 @@ class TutorialSystem {
     nextButton.textContent = 'Continue'
     nextButton.setAttribute('data-tutorial-action', 'next')
 
+    actions.appendChild(speechButton)
     actions.appendChild(skipStepButton)
     actions.appendChild(skipButton)
     actions.appendChild(nextButton)
@@ -330,8 +352,17 @@ class TutorialSystem {
     cursor.hidden = true
     cursor.innerHTML = '<div class="tutorial-cursor-dot"></div>'
 
+    const floatingButton = document.createElement('button')
+    floatingButton.id = 'tutorialFloatingButton'
+    floatingButton.className = 'tutorial-floating-button'
+    floatingButton.type = 'button'
+    floatingButton.textContent = '?'
+    floatingButton.setAttribute('aria-label', 'Show tutorial')
+    floatingButton.hidden = true
+
     document.body.appendChild(overlay)
     document.body.appendChild(cursor)
+    document.body.appendChild(floatingButton)
 
     this.overlay = overlay
     this.cursor = cursor
@@ -343,16 +374,23 @@ class TutorialSystem {
     this.nextButton = nextButton
     this.skipButton = skipButton
     this.skipStepButton = skipStepButton
+    this.minimizeButton = minimizeButton
+    this.speechButton = speechButton
+    this.floatingButton = floatingButton
 
     nextButton.addEventListener('click', () => this.handleNext())
     skipButton.addEventListener('click', () => this.skipTutorial())
     skipStepButton.addEventListener('click', () => this.skipStep())
+    minimizeButton.addEventListener('click', () => this.minimize())
+    speechButton.addEventListener('click', () => this.toggleSpeech())
+    floatingButton.addEventListener('click', () => this.restore())
   }
 
   bindSettingsControls() {
     const showToggle = document.getElementById('tutorialShowOnStartup')
     const speechToggle = document.getElementById('tutorialSpeechEnabled')
     const startButton = document.getElementById('tutorialStartBtn')
+    const speechButton = document.getElementById('tutorialSpeechToggleBtn')
 
     if (showToggle) {
       showToggle.checked = this.settings.showTutorial
@@ -370,6 +408,16 @@ class TutorialSystem {
           window.speechSynthesis?.cancel?.()
         }
         writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+        this.updateSpeechButtonLabel()
+      })
+    }
+
+    if (speechButton) {
+      speechButton.addEventListener('click', () => {
+        this.toggleSpeech()
+        if (speechToggle) {
+          speechToggle.checked = this.settings.speechEnabled
+        }
       })
     }
 
@@ -428,6 +476,11 @@ class TutorialSystem {
     if (this.cursor) {
       this.cursor.hidden = false
     }
+    if (this.floatingButton) {
+      this.floatingButton.hidden = true
+    }
+    this.minimized = false
+    this.updateSpeechButtonLabel()
   }
 
   hideUI() {
@@ -436,6 +489,9 @@ class TutorialSystem {
     }
     if (this.cursor) {
       this.cursor.hidden = true
+    }
+    if (this.floatingButton) {
+      this.floatingButton.hidden = true
     }
   }
 
@@ -450,6 +506,26 @@ class TutorialSystem {
       cancelAnimationFrame(this.animationFrame)
       this.animationFrame = null
     }
+    this.minimized = false
+  }
+
+  minimize() {
+    if (!this.active) return
+    if (this.overlay) {
+      this.overlay.hidden = true
+    }
+    if (this.cursor) {
+      this.cursor.hidden = true
+    }
+    if (this.floatingButton) {
+      this.floatingButton.hidden = false
+    }
+    this.minimized = true
+  }
+
+  restore() {
+    if (!this.active) return
+    this.showUI()
   }
 
   skipTutorial() {
@@ -533,6 +609,8 @@ class TutorialSystem {
     if (this.nextButton) {
       this.nextButton.disabled = Boolean(step.completion)
     }
+
+    this.updateSpeechButtonLabel()
 
     this.clearHighlight()
     if (step.highlightSelector) {
@@ -629,6 +707,20 @@ class TutorialSystem {
       this.speaking = false
     }
     window.speechSynthesis?.speak?.(utterance)
+  }
+
+  toggleSpeech() {
+    this.settings.speechEnabled = !this.settings.speechEnabled
+    if (!this.settings.speechEnabled) {
+      window.speechSynthesis?.cancel?.()
+    }
+    writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+    this.updateSpeechButtonLabel()
+  }
+
+  updateSpeechButtonLabel() {
+    if (!this.speechButton) return
+    this.speechButton.textContent = `Voice: ${this.settings.speechEnabled ? 'On' : 'Off'}`
   }
 
   stopSpeech() {

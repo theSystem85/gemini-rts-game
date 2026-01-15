@@ -2642,6 +2642,17 @@ body.config-modal-open {
   gap: 8px;
 }
 
+.tutorial-minimize {
+  margin-left: auto;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
 .tutorial-button {
   border: none;
   border-radius: 6px;
@@ -2699,6 +2710,22 @@ body.config-modal-open {
   position: relative;
   z-index: 11000;
   box-shadow: 0 0 0 3px rgba(127, 214, 255, 0.9), 0 0 14px rgba(127, 214, 255, 0.6);
+}
+
+.tutorial-floating-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: #2c7be5;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  z-index: 12002;
 }
 
 .config-modal__field select option[data-overridden='true'] {

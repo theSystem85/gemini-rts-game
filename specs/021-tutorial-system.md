@@ -10,8 +10,9 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - **Device-aware**: Instruction text adapts to desktop (mouse + keyboard) vs. mobile (touch + joystick).
 - **Speech narration**: All step instructions are read aloud using the browser Speech Synthesis API. Speech is enabled by default and can be disabled in settings.
 - **Persistence**: Store tutorial progress and settings (show tutorial + voice) in localStorage.
-- **Settings integration**: Add "Show tutorial on startup" and "Enable tutorial voice" toggles plus a "Start Tutorial" button.
+- **Settings integration**: Add "Show tutorial on startup" and "Enable tutorial voice" toggles, a voice toggle button, plus a "Start Tutorial" button.
 - **Extensibility**: Steps are data-driven and easy to expand.
+- **Minimizable UI**: The tutorial popup can be minimized into a bottom-right "?" button and restored later.
 
 ## Required Step Coverage
 1. **Resources**: Show where money and energy are displayed in the UI.
