@@ -233,6 +233,7 @@ class TutorialSystem {
     this.skipButton = null
     this.skipStepButton = null
     this.minimizeButton = null
+    this.voiceToggleButton = null
     this.highlighted = null
     this.lastAction = null
     this.stepState = {}
@@ -267,8 +268,12 @@ class TutorialSystem {
       this.skipButton = this.overlay.querySelector('[data-tutorial-action="skip"]')
       this.skipStepButton = this.overlay.querySelector('[data-tutorial-action="skip-step"]')
       this.minimizeButton = this.overlay.querySelector('[data-tutorial-action="minimize"]')
+      this.voiceToggleButton = this.overlay.querySelector('[data-tutorial-action="voice-toggle"]')
       if (this.minimizeButton) {
         this.minimizeButton.addEventListener('click', () => this.toggleMinimize())
+      }
+      if (this.voiceToggleButton) {
+        this.voiceToggleButton.addEventListener('click', () => this.toggleVoice())
       }
       if (this.dockButton) {
         this.dockButton.addEventListener('click', () => this.toggleMinimize())
@@ -300,8 +305,16 @@ class TutorialSystem {
     minimizeButton.setAttribute('data-tutorial-action', 'minimize')
     minimizeButton.setAttribute('aria-pressed', 'false')
 
+    const voiceToggleButton = document.createElement('button')
+    voiceToggleButton.type = 'button'
+    voiceToggleButton.className = 'tutorial-voice-toggle'
+    voiceToggleButton.textContent = 'Voice: On'
+    voiceToggleButton.setAttribute('data-tutorial-action', 'voice-toggle')
+    voiceToggleButton.setAttribute('aria-pressed', 'true')
+
     header.appendChild(stepCount)
     header.appendChild(stepPhase)
+    header.appendChild(voiceToggleButton)
     header.appendChild(minimizeButton)
 
     const title = document.createElement('h3')
@@ -375,11 +388,13 @@ class TutorialSystem {
     this.skipButton = skipButton
     this.skipStepButton = skipStepButton
     this.minimizeButton = minimizeButton
+    this.voiceToggleButton = voiceToggleButton
 
     nextButton.addEventListener('click', () => this.handleNext())
     skipButton.addEventListener('click', () => this.skipTutorial())
     skipStepButton.addEventListener('click', () => this.skipStep())
     minimizeButton.addEventListener('click', () => this.toggleMinimize())
+    voiceToggleButton.addEventListener('click', () => this.toggleVoice())
     dockButton.addEventListener('click', () => this.toggleMinimize())
   }
 
@@ -573,9 +588,19 @@ class TutorialSystem {
       this.minimizeButton.textContent = this.minimized ? 'Expand' : 'Minimize'
       this.minimizeButton.setAttribute('aria-pressed', this.minimized ? 'true' : 'false')
     }
+    if (this.voiceToggleButton) {
+      this.voiceToggleButton.textContent = `Voice: ${this.settings.speechEnabled ? 'On' : 'Off'}`
+      this.voiceToggleButton.setAttribute('aria-pressed', this.settings.speechEnabled ? 'true' : 'false')
+    }
 
     if (this.nextButton) {
-      this.nextButton.disabled = Boolean(step.completion)
+      if (this.phase === 'demo') {
+        this.nextButton.disabled = true
+      } else if (step.completion) {
+        this.nextButton.disabled = !step.completion(this)
+      } else {
+        this.nextButton.disabled = false
+      }
     }
 
     this.clearHighlight()
@@ -596,6 +621,15 @@ class TutorialSystem {
     if (this.dockButton) {
       this.dockButton.hidden = !this.minimized
     }
+    this.renderStep(this.steps[this.stepIndex])
+  }
+
+  toggleVoice() {
+    this.settings.speechEnabled = !this.settings.speechEnabled
+    if (!this.settings.speechEnabled) {
+      window.speechSynthesis?.cancel?.()
+    }
+    writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
     this.renderStep(this.steps[this.stepIndex])
   }
 

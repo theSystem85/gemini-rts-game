@@ -1,6 +1,8 @@
 ## Bugs
 - [x] Tutorial minimize button does not collapse the tutorial overlay on mobile; ensure the button toggles a minimized state.
 - [x] Avoid AudioContext start warnings by resuming audio only after a user gesture.
+- [x] Tutorial continue button loses enabled state after minimize/restore; ensure state is preserved.
+- [x] Restore a voice on/off toggle inside the tutorial window.
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
 - [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).

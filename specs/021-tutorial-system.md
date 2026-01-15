@@ -33,6 +33,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - The tutorial cursor must be clearly visible and animated during demo actions.
 - Step instructions remain on screen during practice phase.
 - Provide a minimize/expand control so the tutorial can be collapsed without skipping, showing a small dock button for reopening.
+- Include an in-tutorial voice toggle so narration can be switched on/off without opening settings.
 - Use clear, concise copy with short actionable prompts.
 
 ## Data & Storage
