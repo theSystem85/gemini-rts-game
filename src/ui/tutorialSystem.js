@@ -222,6 +222,8 @@ class TutorialSystem {
     this.stepIndex = this.progress.stepIndex || 0
     this.overlay = null
     this.cursor = null
+    this.card = null
+    this.dockButton = null
     this.stepTitle = null
     this.stepText = null
     this.stepHint = null
@@ -254,6 +256,8 @@ class TutorialSystem {
     if (document.getElementById('tutorialOverlay')) {
       this.overlay = document.getElementById('tutorialOverlay')
       this.cursor = document.getElementById('tutorialCursor')
+      this.card = this.overlay.querySelector('.tutorial-card')
+      this.dockButton = document.getElementById('tutorialDock')
       this.stepTitle = this.overlay.querySelector('.tutorial-title')
       this.stepText = this.overlay.querySelector('.tutorial-text')
       this.stepHint = this.overlay.querySelector('.tutorial-hint')
@@ -265,6 +269,9 @@ class TutorialSystem {
       this.minimizeButton = this.overlay.querySelector('[data-tutorial-action="minimize"]')
       if (this.minimizeButton) {
         this.minimizeButton.addEventListener('click', () => this.toggleMinimize())
+      }
+      if (this.dockButton) {
+        this.dockButton.addEventListener('click', () => this.toggleMinimize())
       }
       return
     }
@@ -338,6 +345,13 @@ class TutorialSystem {
     card.appendChild(actions)
     overlay.appendChild(card)
 
+    const dockButton = document.createElement('button')
+    dockButton.id = 'tutorialDock'
+    dockButton.type = 'button'
+    dockButton.className = 'tutorial-dock'
+    dockButton.textContent = '?'
+    dockButton.hidden = true
+
     const cursor = document.createElement('div')
     cursor.id = 'tutorialCursor'
     cursor.className = 'tutorial-cursor'
@@ -345,10 +359,13 @@ class TutorialSystem {
     cursor.innerHTML = '<div class="tutorial-cursor-dot"></div>'
 
     document.body.appendChild(overlay)
+    document.body.appendChild(dockButton)
     document.body.appendChild(cursor)
 
     this.overlay = overlay
     this.cursor = cursor
+    this.card = card
+    this.dockButton = dockButton
     this.stepTitle = title
     this.stepText = text
     this.stepHint = hint
@@ -363,6 +380,7 @@ class TutorialSystem {
     skipButton.addEventListener('click', () => this.skipTutorial())
     skipStepButton.addEventListener('click', () => this.skipStep())
     minimizeButton.addEventListener('click', () => this.toggleMinimize())
+    dockButton.addEventListener('click', () => this.toggleMinimize())
   }
 
   bindSettingsControls() {
@@ -444,6 +462,9 @@ class TutorialSystem {
     if (this.cursor) {
       this.cursor.hidden = false
     }
+    if (this.dockButton) {
+      this.dockButton.hidden = !this.minimized
+    }
   }
 
   hideUI() {
@@ -452,6 +473,9 @@ class TutorialSystem {
     }
     if (this.cursor) {
       this.cursor.hidden = true
+    }
+    if (this.dockButton) {
+      this.dockButton.hidden = true
     }
   }
 
@@ -568,6 +592,9 @@ class TutorialSystem {
     this.minimized = !this.minimized
     if (this.overlay) {
       this.overlay.classList.toggle('tutorial-overlay--minimized', this.minimized)
+    }
+    if (this.dockButton) {
+      this.dockButton.hidden = !this.minimized
     }
     this.renderStep(this.steps[this.stepIndex])
   }

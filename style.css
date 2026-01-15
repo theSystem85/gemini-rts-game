@@ -2726,6 +2726,32 @@ body.config-modal-open {
   box-shadow: 0 0 0 3px rgba(127, 214, 255, 0.9), 0 0 14px rgba(127, 214, 255, 0.6);
 }
 
+.tutorial-dock {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(44, 123, 229, 0.95);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 12002;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tutorial-dock:focus,
+.tutorial-dock:hover {
+  background: rgba(44, 123, 229, 1);
+}
+
+.tutorial-overlay--minimized .tutorial-card {
+  display: none;
+}
+
 .config-modal__field select option[data-overridden='true'] {
   color: #7dffb0;
   font-weight: 600;

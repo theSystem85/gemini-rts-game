@@ -32,7 +32,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Tutorial overlay is non-invasive and uses the same HUD elements the player will use in gameplay.
 - The tutorial cursor must be clearly visible and animated during demo actions.
 - Step instructions remain on screen during practice phase.
-- Provide a minimize/expand control so the tutorial can be collapsed without skipping.
+- Provide a minimize/expand control so the tutorial can be collapsed without skipping, showing a small dock button for reopening.
 - Use clear, concise copy with short actionable prompts.
 
 ## Data & Storage
@@ -47,3 +47,4 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Provide a `TutorialSystem` module in `src/ui` with a steps array and demo + completion callbacks.
 - Initialize the tutorial in the main UI setup flow after settings are available.
 - Ensure demo actions call the same production, selection, and command systems used by players.
+- Resume Web Audio only after a user gesture to avoid browser AudioContext warnings.

@@ -1894,6 +1894,7 @@ document.addEventListener('DOMContentLoaded', async() => {
   updateMobileLayoutClasses()
   setupDoubleTapPrevention()
   loadPersistedSettings()
+  setupAudioUnlock()
   initRemoteInviteLanding()
   gameInstance = new Game()
 
@@ -1906,11 +1907,23 @@ document.addEventListener('DOMContentLoaded', async() => {
 window.debugGetSelectedUnits = () => selectedUnits
 
 // Debug helper to test narrated sound stacking
-import { testNarratedSounds, playSound, preloadSounds, getSoundCacheStatus, clearSoundCache } from './sound.js'
+import { testNarratedSounds, playSound, preloadSounds, getSoundCacheStatus, clearSoundCache, resumeAllSounds } from './sound.js'
 window.testNarratedSounds = testNarratedSounds
 window.debugPlaySound = playSound
 window.getSoundCacheStatus = getSoundCacheStatus
 window.clearSoundCache = clearSoundCache
+
+function setupAudioUnlock() {
+  const unlock = () => {
+    resumeAllSounds()
+    window.removeEventListener('pointerdown', unlock)
+    window.removeEventListener('keydown', unlock)
+    window.removeEventListener('touchstart', unlock)
+  }
+  window.addEventListener('pointerdown', unlock, { once: true })
+  window.addEventListener('keydown', unlock, { once: true })
+  window.addEventListener('touchstart', unlock, { once: true })
+}
 
 // Preload all sound files for optimal performance (async)
 preloadSounds().then(() => {
