@@ -232,6 +232,7 @@ class TutorialSystem {
     this.nextButton = null
     this.skipButton = null
     this.skipStepButton = null
+    this.backButton = null
     this.minimizeButton = null
     this.voiceToggleButton = null
     this.highlighted = null
@@ -267,6 +268,7 @@ class TutorialSystem {
       this.nextButton = this.overlay.querySelector('[data-tutorial-action="next"]')
       this.skipButton = this.overlay.querySelector('[data-tutorial-action="skip"]')
       this.skipStepButton = this.overlay.querySelector('[data-tutorial-action="skip-step"]')
+      this.backButton = this.overlay.querySelector('[data-tutorial-action="back"]')
       this.minimizeButton = this.overlay.querySelector('[data-tutorial-action="minimize"]')
       this.voiceToggleButton = this.overlay.querySelector('[data-tutorial-action="voice-toggle"]')
       if (this.minimizeButton) {
@@ -274,6 +276,9 @@ class TutorialSystem {
       }
       if (this.voiceToggleButton) {
         this.voiceToggleButton.addEventListener('click', () => this.toggleVoice())
+      }
+      if (this.backButton) {
+        this.backButton.addEventListener('click', () => this.goToPreviousStep())
       }
       if (this.dockButton) {
         this.dockButton.addEventListener('click', () => this.toggleMinimize())
@@ -329,6 +334,12 @@ class TutorialSystem {
     const actions = document.createElement('div')
     actions.className = 'tutorial-actions'
 
+    const backButton = document.createElement('button')
+    backButton.type = 'button'
+    backButton.className = 'tutorial-button tutorial-button--ghost'
+    backButton.textContent = 'Back'
+    backButton.setAttribute('data-tutorial-action', 'back')
+
     const skipStepButton = document.createElement('button')
     skipStepButton.type = 'button'
     skipStepButton.className = 'tutorial-button tutorial-button--ghost'
@@ -347,6 +358,7 @@ class TutorialSystem {
     nextButton.textContent = 'Continue'
     nextButton.setAttribute('data-tutorial-action', 'next')
 
+    actions.appendChild(backButton)
     actions.appendChild(skipStepButton)
     actions.appendChild(skipButton)
     actions.appendChild(nextButton)
@@ -387,12 +399,14 @@ class TutorialSystem {
     this.nextButton = nextButton
     this.skipButton = skipButton
     this.skipStepButton = skipStepButton
+    this.backButton = backButton
     this.minimizeButton = minimizeButton
     this.voiceToggleButton = voiceToggleButton
 
     nextButton.addEventListener('click', () => this.handleNext())
     skipButton.addEventListener('click', () => this.skipTutorial())
     skipStepButton.addEventListener('click', () => this.skipStep())
+    backButton.addEventListener('click', () => this.goToPreviousStep())
     minimizeButton.addEventListener('click', () => this.toggleMinimize())
     voiceToggleButton.addEventListener('click', () => this.toggleVoice())
     dockButton.addEventListener('click', () => this.toggleMinimize())
@@ -408,6 +422,12 @@ class TutorialSystem {
       showToggle.addEventListener('change', () => {
         this.settings.showTutorial = Boolean(showToggle.checked)
         writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+        if (!this.settings.showTutorial) {
+          this.stop()
+        }
+        if (startButton) {
+          startButton.disabled = !this.settings.showTutorial
+        }
       })
     }
 
@@ -423,6 +443,7 @@ class TutorialSystem {
     }
 
     if (startButton) {
+      startButton.disabled = !this.settings.showTutorial
       startButton.addEventListener('click', () => {
         this.start({ reset: true, manual: true })
       })
@@ -497,9 +518,13 @@ class TutorialSystem {
   stop() {
     this.active = false
     this.phase = 'demo'
+    this.minimized = false
     this.clearHighlight()
     this.hideUI()
     this.stopSpeech()
+    if (this.overlay) {
+      this.overlay.classList.remove('tutorial-overlay--minimized')
+    }
     clearRemoteControlSource(TUTORIAL_REMOTE_SOURCE)
     if (this.animationFrame) {
       cancelAnimationFrame(this.animationFrame)
@@ -508,6 +533,16 @@ class TutorialSystem {
   }
 
   skipTutorial() {
+    this.settings.showTutorial = false
+    writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+    const showToggle = document.getElementById('tutorialShowOnStartup')
+    if (showToggle) {
+      showToggle.checked = false
+    }
+    const startButton = document.getElementById('tutorialStartBtn')
+    if (startButton) {
+      startButton.disabled = true
+    }
     this.progress.completed = true
     this.progress.stepIndex = this.steps.length
     writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
@@ -516,6 +551,14 @@ class TutorialSystem {
 
   skipStep() {
     this.advanceStep()
+  }
+
+  goToPreviousStep() {
+    if (this.stepIndex <= 0) return
+    this.stepIndex -= 1
+    this.progress.stepIndex = this.stepIndex
+    writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
+    this.runCurrentStep()
   }
 
   handleNext() {
@@ -554,6 +597,7 @@ class TutorialSystem {
       action: null,
       resourceClicked: new Set(),
       selectionSeen: false,
+      completed: false,
       startSelectedCount: selectedUnits.length,
       startPowerPlants: countPlayerBuildings('powerPlant'),
       startRefineries: countPlayerBuildings('oreRefinery'),
@@ -593,14 +637,9 @@ class TutorialSystem {
       this.voiceToggleButton.setAttribute('aria-pressed', this.settings.speechEnabled ? 'true' : 'false')
     }
 
-    if (this.nextButton) {
-      if (this.phase === 'demo') {
-        this.nextButton.disabled = true
-      } else if (step.completion) {
-        this.nextButton.disabled = !step.completion(this)
-      } else {
-        this.nextButton.disabled = false
-      }
+    this.updateContinueState(step)
+    if (this.backButton) {
+      this.backButton.disabled = this.stepIndex === 0
     }
 
     this.clearHighlight()
@@ -613,6 +652,11 @@ class TutorialSystem {
     }
   }
 
+  setContinueEnabled() {
+    this.markStepCompleted()
+    this.updateContinueState(this.steps[this.stepIndex])
+  }
+
   toggleMinimize() {
     this.minimized = !this.minimized
     if (this.overlay) {
@@ -622,6 +666,35 @@ class TutorialSystem {
       this.dockButton.hidden = !this.minimized
     }
     this.renderStep(this.steps[this.stepIndex])
+  }
+
+  updateContinueState(step) {
+    if (!this.nextButton) return
+    if (this.phase === 'demo') {
+      this.nextButton.disabled = true
+      return
+    }
+
+    if (!step.completion) {
+      this.nextButton.disabled = false
+      return
+    }
+
+    const satisfied = this.stepState.completed || step.completion(this)
+    this.nextButton.disabled = !satisfied
+  }
+
+  markStepCompleted() {
+    if (this.stepState.completed) return
+    this.stepState.completed = true
+    if (this.nextButton) {
+      this.nextButton.classList.remove('tutorial-continue--ready')
+      void this.nextButton.offsetWidth
+      this.nextButton.classList.add('tutorial-continue--ready')
+      setTimeout(() => {
+        this.nextButton?.classList.remove('tutorial-continue--ready')
+      }, 1200)
+    }
   }
 
   toggleVoice() {
@@ -661,11 +734,10 @@ class TutorialSystem {
 
     const check = () => {
       if (!this.active) return
-      const done = step.completion(this)
-      if (this.nextButton) {
-        this.nextButton.disabled = !done
-      }
+      const done = this.stepState.completed || step.completion(this)
+      this.updateContinueState(step)
       if (done) {
+        this.markStepCompleted()
         return
       }
       this.animationFrame = requestAnimationFrame(check)

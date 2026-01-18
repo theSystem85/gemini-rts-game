@@ -34,6 +34,8 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Step instructions remain on screen during practice phase.
 - Provide a minimize/expand control so the tutorial can be collapsed without skipping, showing a small dock button for reopening.
 - Include an in-tutorial voice toggle so narration can be switched on/off without opening settings.
+- Allow stepping backward and forward, with Continue locked until the current step is completed.
+- Reward completion by animating the Continue button when a step goal is met.
 - Use clear, concise copy with short actionable prompts.
 
 ## Data & Storage
