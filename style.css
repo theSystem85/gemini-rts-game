@@ -2467,6 +2467,27 @@ body.config-modal-open {
   font-size: 14px;
 }
 
+.config-modal__field--toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-modal__field--toggle input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #4da3ff;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.config-modal__field--toggle span {
+  flex: 1;
+}
+
 .config-modal__field select,
 .config-modal__field input {
   background: #11161e;
@@ -2568,12 +2589,226 @@ body.config-modal-open {
   font-family: 'Courier New', Courier, monospace;
 }
 
+.config-modal__section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.config-modal__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
 .config-modal__field select option:disabled {
   color: #5f6a79;
 }
 
 .config-modal__option--disabled {
   color: #5f6a79;
+}
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  pointer-events: none;
+}
+
+.tutorial-card {
+  pointer-events: auto;
+  background: rgba(18, 18, 18, 0.95);
+  color: #fff;
+  margin: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  width: min(420px, calc(100% - 40px));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+}
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+}
+
+.tutorial-title {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.tutorial-text {
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.tutorial-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tutorial-button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tutorial-button--primary {
+  background: #2c7be5;
+}
+
+.tutorial-button--ghost {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tutorial-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tutorial-minimize {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tutorial-minimize:hover,
+.tutorial-minimize:focus {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.tutorial-voice-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tutorial-voice-toggle:hover,
+.tutorial-voice-toggle:focus {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.tutorial-continue--ready {
+  animation: tutorial-continue-pulse 1.1s ease-out;
+  box-shadow: 0 0 0 0 rgba(77, 163, 255, 0.7);
+}
+
+@keyframes tutorial-continue-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(77, 163, 255, 0.7);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 8px rgba(77, 163, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(77, 163, 255, 0);
+  }
+}
+
+.tutorial-overlay--minimized .tutorial-text,
+.tutorial-overlay--minimized .tutorial-hint,
+.tutorial-overlay--minimized .tutorial-actions {
+  display: none;
+}
+
+.tutorial-cursor {
+  position: fixed;
+  z-index: 12001;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  margin-top: -17px;
+  border-radius: 50%;
+  border: 2px solid #7fd6ff;
+  box-shadow: 0 0 16px rgba(127, 214, 255, 0.6);
+  pointer-events: none;
+  transition: left 0.3s ease, top 0.3s ease;
+}
+
+.tutorial-cursor-dot {
+  width: 8px;
+  height: 8px;
+  background: #7fd6ff;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tutorial-cursor--click {
+  transform: scale(0.9);
+  box-shadow: 0 0 24px rgba(127, 214, 255, 0.85);
+}
+
+.tutorial-highlight {
+  position: relative;
+  z-index: 11000;
+  box-shadow: 0 0 0 3px rgba(127, 214, 255, 0.9), 0 0 14px rgba(127, 214, 255, 0.6);
+}
+
+.tutorial-dock {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(44, 123, 229, 0.95);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 12002;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tutorial-dock:focus,
+.tutorial-dock:hover {
+  background: rgba(44, 123, 229, 1);
+}
+
+.tutorial-overlay--minimized .tutorial-card {
+  display: none;
 }
 
 .config-modal__field select option[data-overridden='true'] {

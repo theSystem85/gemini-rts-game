@@ -357,6 +357,10 @@ function playImmediate(eventName, volume = 1.0, throttleSeconds = 0, onEnded, op
     if (onEnded) setTimeout(onEnded, 0)
     return Promise.resolve(null)
   }
+  if (audioContext.state === 'suspended') {
+    if (onEnded) setTimeout(onEnded, 0)
+    return Promise.resolve(null)
+  }
 
   // Check throttling if throttleSeconds > 0
   if (throttleSeconds > 0) {
