@@ -477,6 +477,10 @@ class TutorialSystem {
   }
 
   start({ reset = false, resume = false } = {}) {
+    if (!this.settings.showTutorial) {
+      this.stop()
+      return
+    }
     if (reset) {
       this.progress = { ...DEFAULT_PROGRESS }
       this.stepIndex = 0
@@ -1132,6 +1136,8 @@ class TutorialSystem {
           }
         },
         completion: () => selectedUnits.some(unit => unit.target)
+          || selectedUnits.some(unit => unit.remoteFireCommandActive)
+          || (gameState.remoteControl?.fire || 0) > 0
       },
       {
         id: 'tech-tree',

@@ -36,6 +36,8 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Include an in-tutorial voice toggle so narration can be switched on/off without opening settings.
 - Allow stepping backward and forward, with Continue locked until the current step is completed.
 - Reward completion by animating the Continue button when a step goal is met.
+- Allow attack completion via manual/remote control firing as well as standard target orders.
+- Do not auto-start the tutorial when the show tutorial setting is disabled.
 - Use clear, concise copy with short actionable prompts.
 
 ## Data & Storage
