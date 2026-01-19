@@ -347,6 +347,10 @@ function handleApacheRemoteControl(unit, params) {
   const remoteActive = hasMovementInput || hasFlightInput
   unit.remoteControlActive = remoteActive
 
+  if (unit.remoteControlActive && !unit.hasUsedRemoteControl) {
+    unit.hasUsedRemoteControl = true
+  }
+
   if (remoteActive) {
     unit.flightPlan = null
     unit.helipadLandingRequested = false
@@ -587,6 +591,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     // Track whether this unit is actively being moved via remote control
     unit.remoteControlActive = !!hasMovementInput
 
+    if (unit.remoteControlActive && !unit.hasUsedRemoteControl) {
+      unit.hasUsedRemoteControl = true
+    }
+
     // Adjust rotation of the wagon directly so movement aligns with it
     const rotationSpeed = unit.rotationSpeed || 0.05
     let absoluteMovementDirectionSign = 1
@@ -741,6 +749,11 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     if (isRocketTank) {
       // Track remote control activity
       const remoteControlActive = hasMovementInput || manualTurretInput || fireIntensity > 0
+      unit.remoteControlActive = remoteControlActive
+
+      if (unit.remoteControlActive && !unit.hasUsedRemoteControl) {
+        unit.hasUsedRemoteControl = true
+      }
       if (remoteControlActive) {
         unit.lastRemoteControlTime = now
       }

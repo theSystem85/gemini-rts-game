@@ -7,6 +7,7 @@ import { setRemoteControlAction, clearRemoteControlSource } from '../input/remot
 
 const TUTORIAL_SETTINGS_KEY = 'rts_tutorial_settings'
 const TUTORIAL_PROGRESS_KEY = 'rts_tutorial_progress'
+const TUTORIAL_POSITION_KEY = 'rts_tutorial_position'
 const TUTORIAL_REMOTE_SOURCE = 'tutorial'
 
 const DEFAULT_SETTINGS = {
@@ -217,6 +218,7 @@ class TutorialSystem {
   constructor() {
     this.settings = readFromStorage(TUTORIAL_SETTINGS_KEY, DEFAULT_SETTINGS)
     this.progress = readFromStorage(TUTORIAL_PROGRESS_KEY, DEFAULT_PROGRESS)
+    this.position = readFromStorage(TUTORIAL_POSITION_KEY, { left: 'calc(var(--sidebar-width) + 20px)', top: 'auto', bottom: '20px', right: 'auto' })
     this.active = false
     this.phase = 'demo'
     this.stepIndex = this.progress.stepIndex || 0
@@ -283,13 +285,13 @@ class TutorialSystem {
       if (this.dockButton) {
         this.dockButton.addEventListener('click', () => this.toggleMinimize())
       }
+      this.setupDragHandlers()
       return
     }
 
     const overlay = document.createElement('div')
     overlay.id = 'tutorialOverlay'
     overlay.className = 'tutorial-overlay'
-    overlay.hidden = true
 
     const card = document.createElement('div')
     card.className = 'tutorial-card'
@@ -370,6 +372,9 @@ class TutorialSystem {
     card.appendChild(actions)
     overlay.appendChild(card)
 
+    // Apply saved position
+    Object.assign(card.style, this.position)
+
     const dockButton = document.createElement('button')
     dockButton.id = 'tutorialDock'
     dockButton.type = 'button'
@@ -410,6 +415,86 @@ class TutorialSystem {
     minimizeButton.addEventListener('click', () => this.toggleMinimize())
     voiceToggleButton.addEventListener('click', () => this.toggleVoice())
     dockButton.addEventListener('click', () => this.toggleMinimize())
+
+    this.setupDragHandlers()
+  }
+
+  setupDragHandlers() {
+    if (!this.card) return
+
+    let isDragging = false
+    let dragStartX = 0
+    let dragStartY = 0
+    let initialLeft = 0
+    let initialTop = 0
+
+    const startDrag = (clientX, clientY) => {
+      isDragging = true
+      dragStartX = clientX
+      dragStartY = clientY
+      const rect = this.card.getBoundingClientRect()
+      initialLeft = rect.left
+      initialTop = rect.top
+      this.card.style.cursor = 'grabbing'
+      document.body.style.userSelect = 'none'
+    }
+
+    const moveDrag = (clientX, clientY) => {
+      if (!isDragging) return
+      const deltaX = clientX - dragStartX
+      const deltaY = clientY - dragStartY
+      const newLeft = Math.max(0, Math.min(window.innerWidth - this.card.offsetWidth, initialLeft + deltaX))
+      const newTop = Math.max(0, Math.min(window.innerHeight - this.card.offsetHeight, initialTop + deltaY))
+      this.card.style.left = `${newLeft}px`
+      this.card.style.top = `${newTop}px`
+      this.card.style.bottom = 'auto'
+      this.card.style.right = 'auto'
+    }
+
+    const endDrag = () => {
+      if (!isDragging) return
+      isDragging = false
+      this.card.style.cursor = 'move'
+      document.body.style.userSelect = ''
+      // Save position
+      this.position = {
+        left: this.card.style.left,
+        top: this.card.style.top,
+        bottom: this.card.style.bottom,
+        right: this.card.style.right
+      }
+      writeToStorage(TUTORIAL_POSITION_KEY, this.position)
+    }
+
+    // Mouse events
+    this.card.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return
+      e.preventDefault()
+      startDrag(e.clientX, e.clientY)
+    })
+
+    document.addEventListener('mousemove', (e) => {
+      moveDrag(e.clientX, e.clientY)
+    })
+
+    document.addEventListener('mouseup', endDrag)
+
+    // Touch events
+    this.card.addEventListener('touchstart', (e) => {
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return
+      e.preventDefault()
+      const touch = e.touches[0]
+      startDrag(touch.clientX, touch.clientY)
+    }, { passive: false })
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return
+      e.preventDefault()
+      const touch = e.touches[0]
+      moveDrag(touch.clientX, touch.clientY)
+    }, { passive: false })
+
+    document.addEventListener('touchend', endDrag)
   }
 
   bindSettingsControls() {
@@ -1106,7 +1191,7 @@ class TutorialSystem {
         id: 'tank-control',
         title: 'Command & Remote Control Tanks',
         text: {
-          desktop: 'When the tank finishes, right-click to move it, or hold the arrow keys (and Space to fire) for remote control driving.',
+          desktop: 'When the tank finishes, left-click to move it, or hold the arrow keys (and Space to fire) for remote control driving.',
           mobile: 'When the tank finishes, tap to move it, or use the on-screen joystick to drive it manually.'
         },
         hint: 'Move a tank and use manual control to continue.',
@@ -1125,12 +1210,12 @@ class TutorialSystem {
             setRemoteControlAction('forward', TUTORIAL_REMOTE_SOURCE, true)
             await sleep(600)
             setRemoteControlAction('forward', TUTORIAL_REMOTE_SOURCE, false)
+            ctx.stepState.remoteControlDone = true
           }
         },
-        completion: () => {
-          const anyRemote = Object.values(gameState.remoteControl || {}).some(value => value > 0)
-          const movedTank = (gameState.units || []).some(unit => unit.type === 'tank' && unit.moveTarget)
-          return anyRemote && movedTank
+        completion: (ctx) => {
+          const units = (gameState.units || []).filter(unit => isHumanOwner(unit.owner))
+          return ctx.stepState.remoteControlDone || units.some(unit => unit.hasUsedRemoteControl)
         }
       },
       {

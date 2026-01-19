@@ -1,4 +1,6 @@
 ## Features
+- [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
+- [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
 - [ ] Add an interactive tutorial system that demonstrates UI/UX actions with a tutorial cursor, speech narration, skip controls, restart control, and persistent settings (show tutorial + voice). Include steps for building the starter economy, unit selection/movement, tank production/rally points, remote control, combat goals, and tech tree explanations for tanker/gas station, ambulance/hospital/crew, ammo factory/ammo truck, and workshop/recovery tank.
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
