@@ -1,5 +1,4 @@
 ## Improvements
-- [x] Limit tanker trucks' automatic refueling to units below 50% fuel and prioritize the lowest-fuel targets first.
 - [x] Stabilize tanker truck refueling: build visible to-do lists (10s auto-scan interval), lock in priorities, and let user AGF selections override auto targets until finished.
 - [x] Apply 10-second cooldown to enemy AI tanker truck target assignment in both unitCommands and non-unitCommands paths to prevent frequent target switching.
 - [x] Ensure enemy AI has at least one tanker truck stationed at the refinery to refuel harvesters (designate closest tanker as refinery station tanker).

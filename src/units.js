@@ -877,6 +877,8 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     path: [],
     target: null,
     selected: false,
+    remoteControlActive: false,
+    hasUsedRemoteControl: false,
     oreCarried: 0,
     harvesting: false,
     // Add rotation properties
