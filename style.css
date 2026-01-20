@@ -2629,6 +2629,48 @@ body.config-modal-open {
   bottom: 20px;
   left: 20px;
   cursor: move;
+  transform-origin: bottom right;
+}
+
+/* Minimizing animation - card shrinks and moves to dock button position */
+.tutorial-card--minimizing {
+  animation: tutorial-card-minimize 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+@keyframes tutorial-card-minimize {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.1) translateX(calc(100vw - 100px));
+    border-radius: 50%;
+  }
+}
+
+/* Maximizing animation - card grows from dock button position */
+.tutorial-card--maximizing {
+  animation: tutorial-card-maximize 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes tutorial-card-maximize {
+  0% {
+    opacity: 0;
+    transform: scale(0.1) translateX(calc(100vw - 100px));
+    border-radius: 50%;
+  }
+  40% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+    border-radius: 10px;
+  }
 }
 
 .tutorial-header {
@@ -2800,11 +2842,45 @@ body.config-modal-open {
   cursor: pointer;
   z-index: 12002;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  transform-origin: center center;
 }
 
 .tutorial-dock:focus,
 .tutorial-dock:hover {
   background: rgba(44, 123, 229, 1);
+  box-shadow: 0 0 20px rgba(44, 123, 229, 0.6), 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Dock button appearing animation (when minimizing tutorial) */
+.tutorial-dock--appearing {
+  animation: tutorial-dock-appear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes tutorial-dock-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-180deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Dock button disappearing animation (when maximizing tutorial) */
+.tutorial-dock--disappearing {
+  animation: tutorial-dock-disappear 0.25s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+@keyframes tutorial-dock-disappear {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(180deg);
+  }
 }
 
 .tutorial-overlay--minimized .tutorial-card {

@@ -12,7 +12,8 @@ const TUTORIAL_REMOTE_SOURCE = 'tutorial'
 
 const DEFAULT_SETTINGS = {
   showTutorial: true,
-  speechEnabled: true
+  speechEnabled: true,
+  selectedVoice: null
 }
 
 const DEFAULT_PROGRESS = {
@@ -251,8 +252,17 @@ class TutorialSystem {
     this.bindSettingsControls()
     this.bindActionTracking()
 
+    // Hide dock button if tutorial is disabled or completed
+    if ((!this.settings.showTutorial || this.progress.completed) && this.dockButton) {
+      this.dockButton.hidden = true
+    }
+
+    // Only start tutorial if enabled and not completed
     if (this.settings.showTutorial && !this.progress.completed) {
       setTimeout(() => this.start({ resume: true }), 600)
+    } else {
+      // Ensure overlay is hidden when tutorial is completed or disabled
+      this.hideUI()
     }
   }
 
@@ -531,6 +541,69 @@ class TutorialSystem {
       })
     }
 
+    const voiceSelect = document.getElementById('tutorialVoiceSelect')
+    if (voiceSelect) {
+      // Populate voices - filter to English only
+      const populateVoices = () => {
+        const allVoices = window.speechSynthesis?.getVoices?.() || []
+        const englishVoices = allVoices.filter(voice => voice.lang.startsWith('en'))
+        voiceSelect.innerHTML = '<option value="">Browser Default</option>'
+        
+        // Auto-select preferred voice if no voice is stored
+        if (this.settings.selectedVoice === null || this.settings.selectedVoice === undefined) {
+          // Priority 1: Google US English (en-US)
+          let preferredVoice = allVoices.findIndex(v => 
+            v.name.toLowerCase().includes('google') && 
+            v.name.toLowerCase().includes('us') &&
+            v.lang.toLowerCase().startsWith('en-us')
+          )
+          
+          // Priority 2: Any Google English voice
+          if (preferredVoice === -1) {
+            preferredVoice = allVoices.findIndex(v => 
+              v.name.toLowerCase().includes('google') && 
+              v.lang.toLowerCase().startsWith('en')
+            )
+          }
+          
+          // Priority 3: Any available English voice
+          if (preferredVoice === -1 && englishVoices.length > 0) {
+            preferredVoice = allVoices.indexOf(englishVoices[0])
+          }
+          
+          // Store the auto-selected voice
+          if (preferredVoice !== -1) {
+            this.settings.selectedVoice = preferredVoice
+            writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+          }
+        }
+        
+        englishVoices.forEach((voice) => {
+          // Find original index in full voices array for proper selection
+          const originalIndex = allVoices.indexOf(voice)
+          const option = document.createElement('option')
+          option.value = originalIndex
+          option.textContent = `${voice.name} (${voice.lang})`
+          if (this.settings.selectedVoice === originalIndex) {
+            option.selected = true
+          }
+          voiceSelect.appendChild(option)
+        })
+      }
+      
+      // Voices may load asynchronously
+      if (window.speechSynthesis) {
+        populateVoices()
+        window.speechSynthesis.onvoiceschanged = populateVoices
+      }
+      
+      voiceSelect.addEventListener('change', () => {
+        const value = voiceSelect.value
+        this.settings.selectedVoice = value === '' ? null : parseInt(value, 10)
+        writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
+      })
+    }
+
     if (startButton) {
       startButton.disabled = !this.settings.showTutorial
       startButton.addEventListener('click', () => {
@@ -572,11 +645,18 @@ class TutorialSystem {
     })
   }
 
-  start({ reset = false, resume = false } = {}) {
+  start({ reset = false, resume = false, manual = false } = {}) {
     if (!this.settings.showTutorial) {
       this.stop()
       return
     }
+    
+    // Don't allow starting if completed (unless reset or manual restart)
+    if (this.progress.completed && !reset && !manual) {
+      this.hideUI()
+      return
+    }
+    
     if (reset) {
       this.progress = { ...DEFAULT_PROGRESS }
       this.stepIndex = 0
@@ -584,6 +664,13 @@ class TutorialSystem {
       writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
     } else if (resume) {
       this.stepIndex = this.progress.stepIndex || 0
+    }
+
+    // Validate step exists before showing UI
+    const step = this.steps[this.stepIndex]
+    if (!step || !step.title) {
+      this.stop()
+      return
     }
 
     this.active = true
@@ -594,13 +681,16 @@ class TutorialSystem {
   showUI() {
     if (this.overlay) {
       this.overlay.hidden = false
+      this.overlay.classList.remove('tutorial-overlay--minimized')
     }
     if (this.cursor) {
       this.cursor.hidden = false
     }
+    // Always hide dock button when tutorial overlay is visible
     if (this.dockButton) {
-      this.dockButton.hidden = !this.minimized
+      this.dockButton.hidden = true
     }
+    this.minimized = false
   }
 
   hideUI() {
@@ -651,6 +741,10 @@ class TutorialSystem {
     this.progress.stepIndex = this.steps.length
     writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
     this.stop()
+    // Permanently hide dock button when skipping
+    if (this.dockButton) {
+      this.dockButton.hidden = true
+    }
   }
 
   skipStep() {
@@ -680,7 +774,16 @@ class TutorialSystem {
     if (this.stepIndex >= this.steps.length) {
       this.progress.completed = true
       writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
-      this.stop()
+      // Speak completion message
+      this.speak('Great, you completed the basic tutorial!')
+      // Wait for speech to finish, then stop
+      setTimeout(() => {
+        this.stop()
+        // Permanently hide dock button after completion
+        if (this.dockButton) {
+          this.dockButton.hidden = true
+        }
+      }, 3000)
       return
     }
     writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
@@ -690,7 +793,8 @@ class TutorialSystem {
   runCurrentStep() {
     if (!this.active) return
     const step = this.steps[this.stepIndex]
-    if (!step) {
+    // Never show empty tutorial - stop if no valid step
+    if (!step || !step.title) {
       this.stop()
       return
     }
@@ -763,12 +867,50 @@ class TutorialSystem {
 
   toggleMinimize() {
     this.minimized = !this.minimized
-    if (this.overlay) {
-      this.overlay.classList.toggle('tutorial-overlay--minimized', this.minimized)
+    
+    if (this.minimized) {
+      // Minimizing: animate card out, then show dock button
+      if (this.card) {
+        this.card.classList.add('tutorial-card--minimizing')
+        this.card.addEventListener('animationend', () => {
+          this.card.classList.remove('tutorial-card--minimizing')
+          if (this.overlay) {
+            this.overlay.classList.add('tutorial-overlay--minimized')
+            // Hide overlay completely when minimized
+            this.overlay.hidden = true
+          }
+          // Show dock button only when minimized and tutorial active
+          if (this.dockButton && this.active && this.settings.showTutorial && !this.progress.completed) {
+            this.dockButton.hidden = false
+            this.dockButton.classList.add('tutorial-dock--appearing')
+            this.dockButton.addEventListener('animationend', () => {
+              this.dockButton.classList.remove('tutorial-dock--appearing')
+            }, { once: true })
+          }
+        }, { once: true })
+      }
+    } else {
+      // Maximizing: hide dock button, animate card in
+      if (this.dockButton) {
+        this.dockButton.classList.add('tutorial-dock--disappearing')
+        this.dockButton.addEventListener('animationend', () => {
+          this.dockButton.classList.remove('tutorial-dock--disappearing')
+          this.dockButton.hidden = true
+        }, { once: true })
+      }
+      if (this.overlay) {
+        this.overlay.classList.remove('tutorial-overlay--minimized')
+        // Show overlay when maximizing
+        this.overlay.hidden = false
+      }
+      if (this.card) {
+        this.card.classList.add('tutorial-card--maximizing')
+        this.card.addEventListener('animationend', () => {
+          this.card.classList.remove('tutorial-card--maximizing')
+        }, { once: true })
+      }
     }
-    if (this.dockButton) {
-      this.dockButton.hidden = !this.minimized
-    }
+    
     this.renderStep(this.steps[this.stepIndex])
   }
 
@@ -889,6 +1031,15 @@ class TutorialSystem {
     window.speechSynthesis?.cancel?.()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-US'
+    
+    // Apply selected voice if configured
+    if (this.settings.selectedVoice !== null && this.settings.selectedVoice !== undefined) {
+      const voices = window.speechSynthesis?.getVoices?.() || []
+      if (voices[this.settings.selectedVoice]) {
+        utterance.voice = voices[this.settings.selectedVoice]
+      }
+    }
+    
     this.speaking = true
     utterance.onend = () => {
       this.speaking = false
