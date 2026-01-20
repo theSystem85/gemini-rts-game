@@ -46,3 +46,9 @@ Touch users holding the device in portrait orientation need the ability to recla
 
 - **Invisible Toggle When Expanded**: In portrait mode the floating toggle must be hidden entirely whenever the sidebar is expanded. The open state is dismissed exclusively through leftward swipe gestures, so the toggle should not be focusable, clickable, or visually present until the sidebar collapses again.
 - **Map Coverage Guarantee**: Collapsing the portrait sidebar must immediately reclaim the entire viewport for the canvas at both the CSS and actual canvas resolution levels. This includes updating inline dimensions from the canvas manager so no residual left offset or reduced width leaves a black bar.
+
+## Update 2026-01-20
+
+- **Portrait Visual Polish**: In portrait mode, the sidebar should use a narrower clamp-based width, refined padding, and a subtle gradient/border treatment to feel more premium on small screens.
+- **Action Button Layout**: The portrait sidebar action buttons should stack into a tidy grid with consistent sizing and spacing for touch ergonomics.
+- **Minimap Fit**: Keep the minimap compact with a softer radius and tighter spacing so it reads cleanly within the portrait column.

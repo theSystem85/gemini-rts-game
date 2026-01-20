@@ -39,6 +39,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Allow attack completion via manual/remote control firing as well as standard target orders.
 - Do not auto-start the tutorial when the show tutorial setting is disabled.
 - Use clear, concise copy with short actionable prompts.
+- Ensure portrait mobile layouts keep the tutorial card within the visible canvas area, with tighter spacing and adjusted typography so actions remain accessible.
 
 ## Data & Storage
 - `rts_tutorial_settings` (localStorage):
