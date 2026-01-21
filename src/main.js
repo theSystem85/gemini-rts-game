@@ -102,6 +102,12 @@ const mobileLayoutState = {
   actionsOriginalParent: null,
   actionsOriginalNextSibling: null,
   mobileActionsContainer: null,
+  portraitHud: null,
+  portraitMinimapDock: null,
+  portraitActionsContainer: null,
+  minimap: null,
+  minimapOriginalParent: null,
+  minimapOriginalNextSibling: null,
   mobileControls: null,
   mobileJoystickContainer: null,
   mobileStatusBar: null,
@@ -123,6 +129,7 @@ const mobileLayoutState = {
   sidebarModalDismissListenerAttached: false,
   sidebarModalKeydownListenerAttached: false,
   sidebarModalVisible: false,
+  isSidebarCondensed: null,
   saveLoadMenu: null,
   saveLoadOriginalParent: null,
   saveLoadOriginalNextSibling: null,
@@ -167,6 +174,29 @@ function ensureMobileLayoutElements() {
 
   if (!mobileLayoutState.mobileActionsContainer || !mobileLayoutState.mobileActionsContainer.isConnected) {
     mobileLayoutState.mobileActionsContainer = document.getElementById('mobileActionsContainer')
+  }
+
+  if (!mobileLayoutState.portraitHud || !mobileLayoutState.portraitHud.isConnected) {
+    mobileLayoutState.portraitHud = document.getElementById('mobilePortraitHud')
+  }
+
+  if (!mobileLayoutState.portraitMinimapDock || !mobileLayoutState.portraitMinimapDock.isConnected) {
+    mobileLayoutState.portraitMinimapDock = document.getElementById('mobilePortraitMinimapDock')
+  }
+
+  if (!mobileLayoutState.portraitActionsContainer || !mobileLayoutState.portraitActionsContainer.isConnected) {
+    mobileLayoutState.portraitActionsContainer = document.getElementById('mobilePortraitActions')
+  }
+
+  if (!mobileLayoutState.minimap || !mobileLayoutState.minimap.isConnected) {
+    const minimap = document.getElementById('minimap')
+    if (minimap) {
+      mobileLayoutState.minimap = minimap
+      if (!mobileLayoutState.minimapOriginalParent) {
+        mobileLayoutState.minimapOriginalParent = minimap.parentNode || null
+        mobileLayoutState.minimapOriginalNextSibling = minimap.nextSibling || null
+      }
+    }
   }
 
   if (!mobileLayoutState.mobileControls || !mobileLayoutState.mobileControls.isConnected) {
@@ -387,6 +417,11 @@ function setSidebarCollapsed(collapsed, options = {}) {
   }
 
   const previouslyCollapsed = document.body.classList.contains('sidebar-collapsed')
+  if (collapsed) {
+    document.body.classList.remove('sidebar-condensed')
+    mobileLayoutState.isSidebarCondensed = false
+    clearPortraitCondensedLayout()
+  }
   document.body.classList.toggle('sidebar-collapsed', collapsed)
   const nowCollapsed = document.body.classList.contains('sidebar-collapsed')
   if (!options.preservePreference) {
@@ -410,6 +445,36 @@ function setSidebarCollapsed(collapsed, options = {}) {
 
   if (
     previouslyCollapsed !== nowCollapsed &&
+    gameInstance &&
+    gameInstance.canvasManager &&
+    typeof gameInstance.canvasManager.resizeCanvases === 'function'
+  ) {
+    gameInstance.canvasManager.resizeCanvases()
+  }
+}
+
+function setSidebarCondensed(condensed) {
+  if (!document.body) {
+    return
+  }
+
+  const wasCondensed = document.body.classList.contains('sidebar-condensed')
+  if (condensed) {
+    document.body.classList.add('sidebar-condensed')
+    document.body.classList.remove('sidebar-collapsed')
+    mobileLayoutState.isSidebarCondensed = true
+    mobileLayoutState.isSidebarCollapsed = false
+  } else {
+    document.body.classList.remove('sidebar-condensed')
+    mobileLayoutState.isSidebarCondensed = false
+  }
+
+  if (wasCondensed !== condensed && document.body.classList.contains('mobile-portrait')) {
+    applyMobileSidebarLayout('portrait')
+  }
+
+  if (
+    wasCondensed !== condensed &&
     gameInstance &&
     gameInstance.canvasManager &&
     typeof gameInstance.canvasManager.resizeCanvases === 'function'
@@ -462,6 +527,7 @@ function ensureSidebarSwipeHandlers(enable) {
 
     const touch = event.touches[0]
     const collapsed = body.classList.contains('sidebar-collapsed')
+    const condensed = body.classList.contains('sidebar-condensed')
     const edgeThreshold = 28
     const activeThreshold = 140
     const getSidebarWidthEstimate = () => {
@@ -511,19 +577,51 @@ function ensureSidebarSwipeHandlers(enable) {
       return
     }
 
-    if (
-      isPortrait &&
-      !collapsed &&
-      (startedInsideSidebar || touch.clientX <= portraitCloseThreshold)
-    ) {
-      mobileLayoutState.sidebarSwipeState = {
-        type: 'close',
-        identifier: touch.identifier,
-        startX: touch.clientX,
-        startY: touch.clientY,
-        lastX: touch.clientX,
-        lastY: touch.clientY
+    if (isPortrait) {
+      if (
+        !collapsed &&
+        !condensed &&
+        (startedInsideSidebar || touch.clientX <= portraitCloseThreshold)
+      ) {
+        mobileLayoutState.sidebarSwipeState = {
+          type: 'condense',
+          identifier: touch.identifier,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastX: touch.clientX,
+          lastY: touch.clientY
+        }
+        return
       }
+
+      if (condensed) {
+        const startedInBuildBar = !!(touchTarget && typeof touchTarget.closest === 'function' && touchTarget.closest('#mobileBuildMenuContainer'))
+        if (startedInBuildBar) {
+          mobileLayoutState.sidebarSwipeState = {
+            type: 'hide',
+            identifier: touch.identifier,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            lastX: touch.clientX,
+            lastY: touch.clientY
+          }
+          return
+        }
+
+        if (touch.clientX <= edgeThreshold) {
+          mobileLayoutState.sidebarSwipeState = {
+            type: 'expand',
+            identifier: touch.identifier,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            lastX: touch.clientX,
+            lastY: touch.clientY
+          }
+          return
+        }
+      }
+
+      mobileLayoutState.sidebarSwipeState = null
     } else {
       mobileLayoutState.sidebarSwipeState = null
     }
@@ -550,7 +648,7 @@ function ensureSidebarSwipeHandlers(enable) {
 
     const deltaX = Math.abs(touch.clientX - swipeState.startX)
     const deltaY = Math.abs(touch.clientY - swipeState.startY)
-    if (deltaX > deltaY && deltaX > 10) {
+    if (swipeState.type !== 'hide' && deltaX > deltaY && deltaX > 10) {
       event.preventDefault()
     }
   }
@@ -572,8 +670,9 @@ function ensureSidebarSwipeHandlers(enable) {
     }
 
     const deltaX = touch.clientX - swipeState.startX
-    const deltaY = Math.abs(touch.clientY - swipeState.startY)
-    const horizontal = Math.abs(deltaX) > deltaY
+    const deltaY = touch.clientY - swipeState.startY
+    const absoluteDeltaY = Math.abs(deltaY)
+    const horizontal = Math.abs(deltaX) > absoluteDeltaY
     const activationThreshold = 40
 
     if (horizontal) {
@@ -581,7 +680,13 @@ function ensureSidebarSwipeHandlers(enable) {
         setSidebarCollapsed(false)
       } else if (swipeState.type === 'close' && deltaX < -activationThreshold) {
         setSidebarCollapsed(true)
+      } else if (swipeState.type === 'condense' && deltaX < -activationThreshold) {
+        setSidebarCondensed(true)
+      } else if (swipeState.type === 'expand' && deltaX > activationThreshold) {
+        setSidebarCondensed(false)
       }
+    } else if (swipeState.type === 'hide' && absoluteDeltaY > activationThreshold && deltaY > 0) {
+      setSidebarCollapsed(true)
     }
 
     mobileLayoutState.sidebarSwipeState = null
@@ -617,6 +722,76 @@ function restoreProductionArea() {
     } else {
       originalParent.appendChild(productionArea)
     }
+  }
+}
+
+function moveMinimapToPortraitDock() {
+  const { minimap, portraitMinimapDock } = mobileLayoutState
+  if (!minimap || !portraitMinimapDock) {
+    return
+  }
+  if (minimap.parentNode !== portraitMinimapDock) {
+    portraitMinimapDock.appendChild(minimap)
+  }
+}
+
+function restoreMinimap() {
+  const { minimap, minimapOriginalParent, minimapOriginalNextSibling } = mobileLayoutState
+  if (!minimap || !minimapOriginalParent) {
+    return
+  }
+  if (minimap.parentNode !== minimapOriginalParent) {
+    if (minimapOriginalNextSibling && minimapOriginalNextSibling.parentNode === minimapOriginalParent) {
+      minimapOriginalParent.insertBefore(minimap, minimapOriginalNextSibling)
+    } else {
+      minimapOriginalParent.appendChild(minimap)
+    }
+  }
+}
+
+function applyPortraitCondensedLayout() {
+  const {
+    productionArea,
+    mobileContainer,
+    actions,
+    portraitActionsContainer,
+    portraitHud
+  } = mobileLayoutState
+
+  if (!productionArea || !mobileContainer) {
+    return
+  }
+
+  if (productionArea.parentNode !== mobileContainer) {
+    mobileContainer.appendChild(productionArea)
+  }
+  mobileContainer.setAttribute('aria-hidden', 'false')
+  mobileContainer.setAttribute('data-orientation', 'portrait-condensed')
+
+  if (actions && portraitActionsContainer && actions.parentNode !== portraitActionsContainer) {
+    portraitActionsContainer.appendChild(actions)
+  }
+
+  moveMinimapToPortraitDock()
+
+  if (portraitHud) {
+    portraitHud.setAttribute('aria-hidden', 'false')
+    portraitHud.setAttribute('data-orientation', 'portrait-condensed')
+  }
+}
+
+function clearPortraitCondensedLayout() {
+  const { mobileContainer, portraitHud } = mobileLayoutState
+  restoreProductionArea()
+  restoreActions()
+  restoreMinimap()
+  if (mobileContainer) {
+    mobileContainer.setAttribute('aria-hidden', 'true')
+    mobileContainer.removeAttribute('data-orientation')
+  }
+  if (portraitHud) {
+    portraitHud.setAttribute('aria-hidden', 'true')
+    portraitHud.removeAttribute('data-orientation')
   }
 }
 
@@ -746,7 +921,14 @@ function applyMobileSidebarLayout(mode) {
   const isPortrait = mode === 'portrait'
   const isMobile = isLandscape || isPortrait
 
+  const isCondensed = isPortrait && document.body.classList.contains('sidebar-condensed')
+
   if (isLandscape) {
+    restoreMinimap()
+    if (mobileLayoutState.portraitHud) {
+      mobileLayoutState.portraitHud.setAttribute('aria-hidden', 'true')
+      mobileLayoutState.portraitHud.removeAttribute('data-orientation')
+    }
     ensureMobileStatusBar(mobileContainer, mode)
     if (productionArea.parentNode !== mobileContainer) {
       mobileContainer.appendChild(productionArea)
@@ -781,10 +963,11 @@ function applyMobileSidebarLayout(mode) {
       : true
     setSidebarCollapsed(shouldCollapse)
   } else {
-    restoreProductionArea()
-    restoreActions()
-    mobileContainer.setAttribute('aria-hidden', 'true')
-    mobileContainer.removeAttribute('data-orientation')
+    if (isCondensed) {
+      applyPortraitCondensedLayout()
+    } else {
+      clearPortraitCondensedLayout()
+    }
     if (sidebarUtilityContainer) {
       sidebarUtilityContainer.setAttribute('aria-hidden', 'true')
     }

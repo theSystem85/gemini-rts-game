@@ -52,3 +52,10 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Portrait Visual Polish**: In portrait mode, the sidebar should use a narrower clamp-based width, refined padding, and a subtle gradient/border treatment to feel more premium on small screens.
 - **Action Button Layout**: The portrait sidebar action buttons should stack into a tidy grid with consistent sizing and spacing for touch ergonomics.
 - **Minimap Fit**: Keep the minimap compact with a softer radius and tighter spacing so it reads cleanly within the portrait column.
+
+## Update 2026-01-20 (Condensed Mode)
+
+- **Condensed Portrait State**: Swiping left on the expanded portrait sidebar should collapse it into a condensed HUD state (not fully hidden).
+- **Bottom Build Bar**: The condensed state must show a horizontal, scrollable build bar along the bottom with the units/buildings toggle button aligned on the right.
+- **Side HUD Elements**: The condensed state must place the minimap on the lower-left above the build bar and the action buttons stacked on the lower-right above the build bar.
+- **Swipe-to-Hide**: A downward swipe on the condensed build bar should fully hide the sidebar, leaving only the restore menu button.
