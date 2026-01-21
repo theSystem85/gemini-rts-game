@@ -902,7 +902,7 @@ body.mobile-landscape #actions .mobile-sidebar-menu-button {
 }
 
 body.mobile-portrait #actions .mobile-sidebar-menu-button {
-  display: inline-flex;
+  display: none;
 }
 
 body.mobile-landscape #actions .action-button {
@@ -1219,6 +1219,12 @@ body.mobile-portrait.sidebar-condensed #sidebar {
   transform: translateX(-100%);
 }
 
+body.mobile-portrait.sidebar-condensed #sidebar #minimap,
+body.mobile-portrait.sidebar-collapsed #sidebar #minimap {
+  display: none !important;
+  visibility: hidden;
+}
+
 body.mobile-portrait.sidebar-collapsed #gameCanvas,
 body.mobile-portrait.sidebar-collapsed #gameCanvasGL {
   left: 0;
@@ -1297,7 +1303,7 @@ body.mobile-landscape #sidebarUtilityButtons {
   box-shadow: none;
   display: none;
   pointer-events: none;
-  z-index: 2100;
+  z-index: 2102;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   overflow: hidden;
@@ -1305,7 +1311,8 @@ body.mobile-landscape #sidebarUtilityButtons {
 }
 
 body.mobile-landscape #mobileMinimapOverlay.visible,
-body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible {
+body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible,
+body.mobile-portrait.sidebar-collapsed #mobileMinimapOverlay.visible {
   display: block;
   pointer-events: auto;
 }
@@ -1313,12 +1320,25 @@ body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible {
 body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible {
   width: 250px;
   height: 150px;
+  left: auto !important;
+  right: var(--safe-area-right) !important;
+  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + var(--mobile-action-size) + 24px);
+  border-radius: 0 !important;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobileMinimapOverlay.visible {
+  width: 250px;
+  height: 150px;
+  left: auto !important;
+  right: var(--safe-area-right) !important;
+  bottom: calc(var(--safe-area-bottom) + var(--mobile-action-size) + 24px);
+  border-radius: 0 !important;
 }
 
 #mobileMinimapOverlay canvas {
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: 0 !important;
   display: block;
   -webkit-user-select: none;
   user-select: none;
@@ -1357,13 +1377,16 @@ body.mobile-portrait.sidebar-condensed #mobilePortraitHud {
 
 #mobilePortraitMinimapDock {
   position: fixed;
-  left: calc(var(--safe-area-left) + 12px);
-  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + 12px);
+  left: auto;
+  right: calc(var(--safe-area-right) + 12px);
+  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + var(--mobile-action-size) + 24px);
   width: 200px;
   height: 120px;
   overflow: hidden;
-  pointer-events: auto;
-  display: none;
+  pointer-events: none;
+  display: none !important;
+  visibility: hidden;
+  z-index: 2102;
 }
 
 #mobilePortraitMinimapDock #minimap {
@@ -1377,20 +1400,35 @@ body.mobile-portrait.sidebar-condensed #mobilePortraitHud {
 #mobilePortraitActions {
   position: fixed;
   left: calc(var(--safe-area-left) + 12px);
+  right: calc(var(--safe-area-right) + 12px);
   bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + 12px);
   display: none;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   pointer-events: auto;
   z-index: 2101;
+  transition: bottom 0.25s ease;
+}
+
+#mobilePortraitActionsLeft {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 body.mobile-portrait.sidebar-condensed #mobilePortraitActions {
   display: flex;
 }
 
-body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button {
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions {
+  display: flex;
+  bottom: calc(var(--safe-area-bottom) + 12px);
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button {
   width: var(--mobile-action-size);
   height: var(--mobile-action-size);
   padding: 0;
@@ -1401,17 +1439,22 @@ body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button {
 }
 
 body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button .button-icon,
-body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button img {
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button img,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button .button-icon,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button img {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button:hover,
-body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button:focus {
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button:focus,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:hover,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:focus {
   transform: none;
   background-color: transparent;
 }
 
-body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions {
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #actions {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1419,13 +1462,10 @@ body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions {
   margin: 0;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileMinimapButton {
-  order: -1;
-}
-
-body.mobile-portrait.sidebar-condensed #mobileSidebarMenuBtn,
 body.mobile-portrait.sidebar-condensed #restartBtn,
-body.mobile-portrait.sidebar-condensed #musicControl {
+body.mobile-portrait.sidebar-condensed #musicControl,
+body.mobile-portrait.sidebar-collapsed #restartBtn,
+body.mobile-portrait.sidebar-collapsed #musicControl {
   display: none;
 }
 
@@ -1497,6 +1537,15 @@ body.mobile-portrait.sidebar-condensed #mobileCategoryToggle {
 
 body.mobile-portrait.sidebar-condensed #mobileCategoryToggle:hover {
   background-color: rgba(46, 46, 46, 0.95);
+}
+
+body.mobile-portrait.sidebar-condensed #mobileSidebarExpandBtn {
+  display: inline-flex;
+  order: -2;
+}
+
+body.mobile-portrait:not(.sidebar-condensed) #mobileSidebarExpandBtn {
+  display: none;
 }
 
 body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionContainer {
@@ -1600,6 +1649,7 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.ac
   background: #222;
   margin-bottom: 10px;
   border: none;
+  border-radius: 0;
   cursor: pointer;
 }
 

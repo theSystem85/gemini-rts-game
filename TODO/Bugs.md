@@ -19,6 +19,7 @@
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
 - [x] ✅ Fixed minimap toggle button not working in portrait condensed mode - added z-index: 2101 to #mobilePortraitActions and conditional display.
 - [x] ✅ Fixed map scrolling not working in portrait mode - swipe handler was capturing canvas touches near sidebar edge with position threshold; changed to only activate swipe when touch starts inside sidebar element.
+- [x] ✅ Fixed swipe-up gesture in portrait condensed mode conflicting with drag-to-build - removed expand-from-bar gesture and added dedicated sidebar expand button instead.
 
 ### Closed Issues
 
