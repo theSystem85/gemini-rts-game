@@ -463,6 +463,13 @@ function endMobileMinimapHold(pointerId) {
 }
 
 function handleMobileMinimapPointerDown(event) {
+  // Dynamically check if layout should be enabled for portrait condensed
+  if (document.body) {
+    const isLandscape = document.body.classList.contains('mobile-landscape')
+    const isPortraitCondensed = document.body.classList.contains('mobile-portrait') && document.body.classList.contains('sidebar-condensed')
+    mobileMinimapState.layoutEnabled = isLandscape || isPortraitCondensed
+  }
+
   if (!mobileMinimapState.layoutEnabled) {
     return
   }
@@ -574,7 +581,9 @@ if (typeof document !== 'undefined') {
   const init = () => {
     initializeMobileMinimapToggle()
     if (document.body) {
-      mobileMinimapState.layoutEnabled = document.body.classList.contains('mobile-landscape')
+      const isLandscape = document.body.classList.contains('mobile-landscape')
+      const isPortraitCondensed = document.body.classList.contains('mobile-portrait') && document.body.classList.contains('sidebar-condensed')
+      mobileMinimapState.layoutEnabled = isLandscape || isPortraitCondensed
     }
     if (!mobileMinimapState.layoutEnabled) {
       setMobileMinimapOverlayVisible(false)
@@ -589,8 +598,9 @@ if (typeof document !== 'undefined') {
 
   document.addEventListener('mobile-landscape-layout-changed', (event) => {
     const enabled = !!(event && event.detail && event.detail.enabled)
-    mobileMinimapState.layoutEnabled = enabled
-    if (!enabled) {
+    const isPortraitCondensed = document.body && document.body.classList.contains('mobile-portrait') && document.body.classList.contains('sidebar-condensed')
+    mobileMinimapState.layoutEnabled = enabled || isPortraitCondensed
+    if (!mobileMinimapState.layoutEnabled) {
       disableMobileMinimapOverlay()
     } else if (mobileMinimapState.initialized) {
       // Ensure the minimap returns to its sidebar when re-entering mobile layout
@@ -598,6 +608,18 @@ if (typeof document !== 'undefined') {
       setMobileMinimapOverlayVisible(false)
     }
     scheduleMobileOverlayPositionUpdate()
+  })
+
+  document.addEventListener('sidebar-condensed-changed', (event) => {
+    const condensed = !!(event && event.detail && event.detail.condensed)
+    const isPortrait = !!(event && event.detail && event.detail.isPortrait)
+    if (isPortrait) {
+      mobileMinimapState.layoutEnabled = condensed
+      if (!condensed) {
+        disableMobileMinimapOverlay()
+      }
+      scheduleMobileOverlayPositionUpdate()
+    }
   })
 
   window.addEventListener('blur', () => {

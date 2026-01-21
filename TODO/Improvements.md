@@ -1,4 +1,8 @@
 ## Improvements
+- [x] Fix portrait condensed mode issues: squared build buttons (64px) fitting in bar height, landscape-proportioned minimap (200x120), action buttons stacking vertically in column layout.
+- [x] Fix portrait condensed mode follow-up: action buttons matching landscape style with background/borders, moved 10px right, toggle button stretching full height with no border-radius, build buttons visibility ensured.
+- [x] Portrait condensed mode UX refinement: action buttons horizontal left-aligned with no background/borders (icon-only), hide menu/restart/music buttons, swipe up on build bar to expand sidebar.
+- [x] Portrait condensed mode minimap: add toggle button on left of action bar, show minimap only when button held (matching landscape behavior), use overlay approach instead of static dock.
 - [x] In portrait condensed mode, stack action icons bottom-up without button chrome, match the landscape minimap styling, and rotate the build category toggle text vertically.
 - [x] Add a portrait-only condensed sidebar state with a bottom build bar, right-side actions, and left-side minimap, plus swipe-to-hide behavior from the condensed build bar.
 - [x] Optimize the mobile portrait sidebar layout and tutorial overlay spacing/typography for a more professional small-screen presentation.

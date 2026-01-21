@@ -471,6 +471,10 @@ function setSidebarCondensed(condensed) {
 
   if (wasCondensed !== condensed && document.body.classList.contains('mobile-portrait')) {
     applyMobileSidebarLayout('portrait')
+    // Dispatch event for minimap and other components to update
+    document.dispatchEvent(new CustomEvent('sidebar-condensed-changed', {
+      detail: { condensed, isPortrait: true }
+    }))
   }
 
   if (
@@ -530,21 +534,6 @@ function ensureSidebarSwipeHandlers(enable) {
     const condensed = body.classList.contains('sidebar-condensed')
     const edgeThreshold = 28
     const activeThreshold = 140
-    const getSidebarWidthEstimate = () => {
-      let width = 250
-      if (typeof window !== 'undefined' && window.getComputedStyle) {
-        const rootStyles = window.getComputedStyle(document.documentElement)
-        if (rootStyles) {
-          const varValue = rootStyles.getPropertyValue('--sidebar-width')
-          const parsed = parseFloat(varValue)
-          if (!Number.isNaN(parsed)) {
-            width = parsed
-          }
-        }
-      }
-      return width
-    }
-    const portraitCloseThreshold = Math.max(96, Math.min(getSidebarWidthEstimate() + 40, 320))
     const touchTarget = event.target
     const startedInsideSidebar = !!(touchTarget && typeof touchTarget.closest === 'function' && touchTarget.closest('#sidebar'))
 
@@ -581,7 +570,7 @@ function ensureSidebarSwipeHandlers(enable) {
       if (
         !collapsed &&
         !condensed &&
-        (startedInsideSidebar || touch.clientX <= portraitCloseThreshold)
+        startedInsideSidebar
       ) {
         mobileLayoutState.sidebarSwipeState = {
           type: 'condense',
@@ -598,7 +587,7 @@ function ensureSidebarSwipeHandlers(enable) {
         const startedInBuildBar = !!(touchTarget && typeof touchTarget.closest === 'function' && touchTarget.closest('#mobileBuildMenuContainer'))
         if (startedInBuildBar) {
           mobileLayoutState.sidebarSwipeState = {
-            type: 'hide',
+            type: 'expand-from-bar',
             identifier: touch.identifier,
             startX: touch.clientX,
             startY: touch.clientY,
@@ -648,7 +637,9 @@ function ensureSidebarSwipeHandlers(enable) {
 
     const deltaX = Math.abs(touch.clientX - swipeState.startX)
     const deltaY = Math.abs(touch.clientY - swipeState.startY)
-    if (swipeState.type !== 'hide' && deltaX > deltaY && deltaX > 10) {
+    if (swipeState.type === 'expand-from-bar' && deltaY > deltaX && deltaY > 10) {
+      event.preventDefault()
+    } else if (swipeState.type !== 'expand-from-bar' && deltaX > deltaY && deltaX > 10) {
       event.preventDefault()
     }
   }
@@ -685,8 +676,14 @@ function ensureSidebarSwipeHandlers(enable) {
       } else if (swipeState.type === 'expand' && deltaX > activationThreshold) {
         setSidebarCondensed(false)
       }
-    } else if (swipeState.type === 'hide' && absoluteDeltaY > activationThreshold && deltaY > 0) {
-      setSidebarCollapsed(true)
+    } else if (swipeState.type === 'expand-from-bar' && absoluteDeltaY > activationThreshold) {
+      // Swipe up from build bar to expand sidebar (negative deltaY)
+      if (deltaY < 0) {
+        setSidebarCondensed(false)
+      } else if (deltaY > 0) {
+        // Swipe down from build bar to hide sidebar
+        setSidebarCollapsed(true)
+      }
     }
 
     mobileLayoutState.sidebarSwipeState = null
@@ -772,8 +769,6 @@ function applyPortraitCondensedLayout() {
     portraitActionsContainer.appendChild(actions)
   }
 
-  moveMinimapToPortraitDock()
-
   if (portraitHud) {
     portraitHud.setAttribute('aria-hidden', 'false')
     portraitHud.setAttribute('data-orientation', 'portrait-condensed')
@@ -784,7 +779,6 @@ function clearPortraitCondensedLayout() {
   const { mobileContainer, portraitHud } = mobileLayoutState
   restoreProductionArea()
   restoreActions()
-  restoreMinimap()
   if (mobileContainer) {
     mobileContainer.setAttribute('aria-hidden', 'true')
     mobileContainer.removeAttribute('data-orientation')
