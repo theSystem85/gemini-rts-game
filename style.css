@@ -1193,19 +1193,18 @@ body.mobile-portrait #minimap {
 }
 
 body.mobile-portrait #actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
   margin: 12px 0 14px;
-  justify-content: stretch;
 }
 
 body.mobile-portrait #actions .action-button.icon-button {
-  width: 100%;
-  height: 44px;
-  border-radius: 10px;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
   background-color: rgba(55, 55, 55, 0.9);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  flex: 1;
 }
 
 body.mobile-portrait #actions .action-button.icon-button:hover {
