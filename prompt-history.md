@@ -47,3 +47,4 @@ use public/images/map/units/tankV1_barrel.png also for the howitzer so that when
 
 ## 2025-11-11 - gpt-5-codex
 - When in drag to build mode on mobile ensure the map scrolls slowly when dragging to the edges
+2026-01-21T10:30:00Z - GitHub Copilot: Refined mobile portrait condensed build bar. Swapped toggle to left, reduced width, fixed label orientation, and ensured buttons are visible by adjusting grid/flex hierarchy.

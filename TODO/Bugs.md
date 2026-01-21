@@ -8,6 +8,7 @@
 - [x] Attack step should unlock when remote-control firing is used.
 - [x] Tutorial should not start when the show tutorial setting is disabled on reload.
 - [x] ✅ Fixed tutorial step 12 completion not unlocking when user uses remote control by adding hasUsedRemoteControl flag to units and updating completion check.
+- [ ] Portrait condensed build bar hides production buttons; ensure buttons render left-to-right with horizontal scroll and toggle sits on the right.
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
 - [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).

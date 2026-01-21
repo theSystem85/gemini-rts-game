@@ -62,3 +62,8 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Icon-Only Actions**: Action buttons in condensed mode should stack from bottom to top and use icon-only styling with no background or border.
 - **Landscape-Matched Minimap**: The condensed minimap should match the landscape appearance and behavior.
 - **Vertical Toggle Label**: The build category toggle should use vertical text to minimize horizontal space usage.
+
+## Update 2026-01-21
+
+- **Condensed Build Bar Visibility**: The portrait condensed build bar must always render production buttons; the row should lay out left-to-right and scroll horizontally with no visible scrollbar.
+- **Right-Aligned Toggle**: The build category toggle stays docked on the right edge of the build bar while buttons occupy the remaining horizontal space.
