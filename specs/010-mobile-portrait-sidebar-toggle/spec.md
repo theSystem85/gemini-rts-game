@@ -46,3 +46,24 @@ Touch users holding the device in portrait orientation need the ability to recla
 
 - **Invisible Toggle When Expanded**: In portrait mode the floating toggle must be hidden entirely whenever the sidebar is expanded. The open state is dismissed exclusively through leftward swipe gestures, so the toggle should not be focusable, clickable, or visually present until the sidebar collapses again.
 - **Map Coverage Guarantee**: Collapsing the portrait sidebar must immediately reclaim the entire viewport for the canvas at both the CSS and actual canvas resolution levels. This includes updating inline dimensions from the canvas manager so no residual left offset or reduced width leaves a black bar.
+
+## Update 2026-01-20
+
+- **Portrait Visual Polish**: In portrait mode, the sidebar should use a narrower clamp-based width, refined padding, and a subtle gradient/border treatment to feel more premium on small screens.
+- **Action Button Layout**: The portrait sidebar action buttons should stack into a tidy grid with consistent sizing and spacing for touch ergonomics.
+- **Minimap Fit**: Keep the minimap compact with a softer radius and tighter spacing so it reads cleanly within the portrait column.
+
+## Update 2026-01-20 (Condensed Mode)
+
+- **Condensed Portrait State**: Swiping left on the expanded portrait sidebar should collapse it into a condensed HUD state (not fully hidden).
+- **Bottom Build Bar**: The condensed state must show a horizontal, scrollable build bar along the bottom with the units/buildings toggle button aligned on the right.
+- **Side HUD Elements**: The condensed state must place the minimap on the lower-left above the build bar and the action buttons stacked on the lower-right above the build bar.
+- **Swipe-to-Hide**: A downward swipe on the condensed build bar should fully hide the sidebar, leaving only the restore menu button.
+- **Icon-Only Actions**: Action buttons in condensed mode should stack from bottom to top and use icon-only styling with no background or border.
+- **Landscape-Matched Minimap**: The condensed minimap should match the landscape appearance and behavior.
+- **Vertical Toggle Label**: The build category toggle should use vertical text to minimize horizontal space usage.
+
+## Update 2026-01-21
+
+- **Condensed Build Bar Visibility**: The portrait condensed build bar must always render production buttons; the row should lay out left-to-right and scroll horizontally with no visible scrollbar.
+- **Right-Aligned Toggle**: The build category toggle stays docked on the right edge of the build bar while buttons occupy the remaining horizontal space.

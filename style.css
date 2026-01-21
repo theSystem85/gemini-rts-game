@@ -848,7 +848,8 @@ body.mobile-landscape #mobileActionsContainer {
   display: none;
 }
 
-body.mobile-landscape #mobileMinimapButton {
+body.mobile-landscape #mobileMinimapButton,
+body.mobile-portrait.sidebar-condensed #mobileMinimapButton {
   display: flex;
 }
 
@@ -901,7 +902,7 @@ body.mobile-landscape #actions .mobile-sidebar-menu-button {
 }
 
 body.mobile-portrait #actions .mobile-sidebar-menu-button {
-  display: inline-flex;
+  display: none;
 }
 
 body.mobile-landscape #actions .action-button {
@@ -1167,12 +1168,71 @@ body.mobile-portrait #sidebar {
   transition: transform 0.25s ease;
 }
 
+body.mobile-portrait {
+  --sidebar-width: clamp(220px, 74vw, 320px);
+  --portrait-condensed-bar-height: 96px;
+}
+
+body.mobile-portrait #sidebar {
+  background: linear-gradient(180deg, rgba(46, 46, 46, 0.98) 0%, rgba(30, 30, 30, 0.98) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 12px 0 28px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  padding-bottom: calc(12px + var(--safe-area-bottom));
+}
+
+body.mobile-portrait #sidebarScroll {
+  padding-bottom: 8px;
+}
+
+body.mobile-portrait #minimap {
+  height: 130px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body.mobile-portrait #actions {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  margin: 12px 0 14px;
+}
+
+body.mobile-portrait #actions .action-button.icon-button {
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  background-color: rgba(55, 55, 55, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  flex: 1;
+}
+
+body.mobile-portrait #actions .action-button.icon-button:hover {
+  transform: none;
+}
+
 body.mobile-portrait.sidebar-collapsed #sidebar {
   transform: translateX(-100%);
 }
 
+body.mobile-portrait.sidebar-condensed #sidebar {
+  transform: translateX(-100%);
+}
+
+body.mobile-portrait.sidebar-condensed #sidebar #minimap,
+body.mobile-portrait.sidebar-collapsed #sidebar #minimap {
+  display: none !important;
+  visibility: hidden;
+}
+
 body.mobile-portrait.sidebar-collapsed #gameCanvas,
 body.mobile-portrait.sidebar-collapsed #gameCanvasGL {
+  left: 0;
+  width: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed #gameCanvas,
+body.mobile-portrait.sidebar-condensed #gameCanvasGL {
   left: 0;
   width: 100%;
 }
@@ -1243,22 +1303,42 @@ body.mobile-landscape #sidebarUtilityButtons {
   box-shadow: none;
   display: none;
   pointer-events: none;
-  z-index: 2100;
+  z-index: 2102;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   overflow: hidden;
   touch-action: none;
 }
 
-body.mobile-landscape #mobileMinimapOverlay.visible {
+body.mobile-landscape #mobileMinimapOverlay.visible,
+body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible,
+body.mobile-portrait.sidebar-collapsed #mobileMinimapOverlay.visible {
   display: block;
   pointer-events: auto;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileMinimapOverlay.visible {
+  width: 250px;
+  height: 150px;
+  left: auto !important;
+  right: var(--safe-area-right) !important;
+  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + var(--mobile-action-size) + 24px);
+  border-radius: 0 !important;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobileMinimapOverlay.visible {
+  width: 250px;
+  height: 150px;
+  left: auto !important;
+  right: var(--safe-area-right) !important;
+  bottom: calc(var(--safe-area-bottom) + var(--mobile-action-size) + 24px);
+  border-radius: 0 !important;
 }
 
 #mobileMinimapOverlay canvas {
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: 0 !important;
   display: block;
   -webkit-user-select: none;
   user-select: none;
@@ -1283,6 +1363,274 @@ body.mobile-landscape #sidebarUtilityButtons .action-button:focus {
   background-color: rgba(54, 54, 54, 0.95);
 }
 
+#mobilePortraitHud {
+  position: fixed;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  z-index: 2100;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitHud {
+  display: block;
+}
+
+#mobilePortraitMinimapDock {
+  position: fixed;
+  left: auto;
+  right: calc(var(--safe-area-right) + 12px);
+  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + var(--mobile-action-size) + 24px);
+  width: 200px;
+  height: 120px;
+  overflow: hidden;
+  pointer-events: none;
+  display: none !important;
+  visibility: hidden;
+  z-index: 2102;
+}
+
+#mobilePortraitMinimapDock #minimap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#mobilePortraitActions {
+  position: fixed;
+  left: calc(var(--safe-area-left) + 12px);
+  right: calc(var(--safe-area-right) + 12px);
+  bottom: calc(var(--safe-area-bottom) + var(--portrait-condensed-bar-height) + 12px);
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: auto;
+  z-index: 2101;
+  transition: bottom 0.25s ease;
+}
+
+#mobilePortraitActionsLeft {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions {
+  display: flex;
+}
+
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions {
+  display: flex;
+  bottom: calc(var(--safe-area-bottom) + 12px);
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button {
+  width: var(--mobile-action-size);
+  height: var(--mobile-action-size);
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button .button-icon,
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button img,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button .button-icon,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button img {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button:hover,
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions .action-button:focus,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:hover,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:focus {
+  transform: none;
+  background-color: transparent;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+body.mobile-portrait.sidebar-condensed #restartBtn,
+body.mobile-portrait.sidebar-condensed #musicControl,
+body.mobile-portrait.sidebar-collapsed #restartBtn,
+body.mobile-portrait.sidebar-collapsed #musicControl {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer[aria-hidden="false"] {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--portrait-condensed-bar-height);
+  padding: 0;
+  background: rgba(20, 20, 20, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  box-sizing: border-box;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionArea {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionTabs {
+  display: flex;
+  flex-direction: column;
+  order: 2;
+  height: 100%;
+  flex-shrink: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  position: static;
+  margin: 0;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionTabs .tab-button {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileCategoryToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  margin: 0;
+  min-width: calc(var(--mobile-action-size) * 0.44);
+  width: calc(var(--mobile-action-size) * 0.44);
+  height: 100%;
+  border-radius: 0;
+  background-color: rgba(36, 36, 36, 0.95);
+  color: #f5f5f5;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0;
+  transform: none;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileCategoryToggle:hover {
+  background-color: rgba(46, 46, 46, 0.95);
+}
+
+body.mobile-portrait.sidebar-condensed #mobileSidebarExpandBtn {
+  display: inline-flex;
+  order: -2;
+}
+
+body.mobile-portrait:not(.sidebar-condensed) #mobileSidebarExpandBtn {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionContainer {
+  display: flex !important;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionTabContent {
+  display: flex !important;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #production {
+  display: flex !important;
+  flex: 1;
+  min-width: calc(100% - 20px);
+  height: 100%;
+  order: 1;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #production::-webkit-scrollbar {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #production::-webkit-scrollbar {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content {
+  display: none !important;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active {
+  display: flex !important;
+  flex: 1;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  min-width: max-content;
+  height: 100%;
+  width: max-content;
+}
+
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--portrait-condensed-bar-height);
+  min-width: var(--portrait-condensed-bar-height);
+  max-width: var(--portrait-condensed-bar-height);
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  flex-shrink: 0;
+  position: relative;
+  background-color: #333;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
 #mobileCategoryToggle:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -1301,6 +1649,7 @@ body.mobile-landscape #sidebarUtilityButtons .action-button:focus {
   background: #222;
   margin-bottom: 10px;
   border: none;
+  border-radius: 0;
   cursor: pointer;
 }
 
@@ -2885,6 +3234,58 @@ body.config-modal-open {
 
 .tutorial-overlay--minimized .tutorial-card {
   display: none;
+}
+
+body.mobile-portrait .tutorial-card {
+  left: calc(var(--sidebar-width) + 12px);
+  right: 12px;
+  bottom: calc(var(--safe-area-bottom) + 12px);
+  width: auto;
+  max-width: none;
+  max-height: calc(100vh - 140px);
+  border-radius: 14px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55);
+}
+
+body.mobile-portrait.sidebar-collapsed .tutorial-card {
+  left: 12px;
+  right: 12px;
+}
+
+body.mobile-portrait .tutorial-header {
+  padding: 10px 12px;
+  font-size: 11px;
+}
+
+body.mobile-portrait .tutorial-title {
+  padding: 12px 12px 8px;
+  font-size: 16px;
+}
+
+body.mobile-portrait .tutorial-text {
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+body.mobile-portrait .tutorial-hint {
+  margin: 8px 12px 0;
+  font-size: 12px;
+}
+
+body.mobile-portrait .tutorial-actions {
+  padding: 12px;
+  gap: 8px;
+}
+
+body.mobile-portrait .tutorial-button {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+body.mobile-portrait .tutorial-dock {
+  right: 16px;
+  bottom: calc(var(--safe-area-bottom) + 16px);
 }
 
 .config-modal__field select option[data-overridden='true'] {

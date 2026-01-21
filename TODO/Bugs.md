@@ -8,6 +8,7 @@
 - [x] Attack step should unlock when remote-control firing is used.
 - [x] Tutorial should not start when the show tutorial setting is disabled on reload.
 - [x] ✅ Fixed tutorial step 12 completion not unlocking when user uses remote control by adding hasUsedRemoteControl flag to units and updating completion check.
+- [ ] Portrait condensed build bar hides production buttons; ensure buttons render left-to-right with horizontal scroll and toggle sits on the right.
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
 - [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).
@@ -16,6 +17,9 @@
 - [x] ✅ Game loads without an auto-generated map; restore default random map generation on start and ensure map edit mode is disabled until explicitly toggled.
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
+- [x] ✅ Fixed minimap toggle button not working in portrait condensed mode - added z-index: 2101 to #mobilePortraitActions and conditional display.
+- [x] ✅ Fixed map scrolling not working in portrait mode - swipe handler was capturing canvas touches near sidebar edge with position threshold; changed to only activate swipe when touch starts inside sidebar element.
+- [x] ✅ Fixed swipe-up gesture in portrait condensed mode conflicting with drag-to-build - removed expand-from-bar gesture and added dedicated sidebar expand button instead.
 
 ### Closed Issues
 
