@@ -59,3 +59,6 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Bottom Build Bar**: The condensed state must show a horizontal, scrollable build bar along the bottom with the units/buildings toggle button aligned on the right.
 - **Side HUD Elements**: The condensed state must place the minimap on the lower-left above the build bar and the action buttons stacked on the lower-right above the build bar.
 - **Swipe-to-Hide**: A downward swipe on the condensed build bar should fully hide the sidebar, leaving only the restore menu button.
+- **Icon-Only Actions**: Action buttons in condensed mode should stack from bottom to top and use icon-only styling with no background or border.
+- **Landscape-Matched Minimap**: The condensed minimap should match the landscape appearance and behavior.
+- **Vertical Toggle Label**: The build category toggle should use vertical text to minimize horizontal space usage.

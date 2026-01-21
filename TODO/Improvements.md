@@ -1,4 +1,5 @@
 ## Improvements
+- [x] In portrait condensed mode, stack action icons bottom-up without button chrome, match the landscape minimap styling, and rotate the build category toggle text vertically.
 - [x] Add a portrait-only condensed sidebar state with a bottom build bar, right-side actions, and left-side minimap, plus swipe-to-hide behavior from the condensed build bar.
 - [x] Optimize the mobile portrait sidebar layout and tutorial overlay spacing/typography for a more professional small-screen presentation.
 - [x] Stabilize tanker truck refueling: build visible to-do lists (10s auto-scan interval), lock in priorities, and let user AGF selections override auto targets until finished.
