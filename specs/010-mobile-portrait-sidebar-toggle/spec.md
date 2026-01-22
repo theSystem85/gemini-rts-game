@@ -65,5 +65,6 @@ Touch users holding the device in portrait orientation need the ability to recla
 
 ## Update 2026-01-21
 
-- **Condensed Build Bar Visibility**: The portrait condensed build bar must always render production buttons; the row should lay out left-to-right and scroll horizontally with no visible scrollbar.
+- **Condensed Build Bar Visibility**: The portrait condensed build bar must render only unlocked production buttons; the row should lay out left-to-right and scroll horizontally with no visible scrollbar.
 - **Right-Aligned Toggle**: The build category toggle stays docked on the right edge of the build bar while buttons occupy the remaining horizontal space.
+- **PWA Bottom Edge**: In standalone/PWA mode, the condensed build bar background should extend to the bottom edge of the screen without leaving a visual gap.
