@@ -1104,12 +1104,31 @@ function updateTouchClass() {
   }
 }
 
+function updateStandaloneClass() {
+  if (!document.body) {
+    return
+  }
+  const standaloneMatch = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(display-mode: standalone)').matches
+    : false
+  const isStandalone = standaloneMatch || window.navigator.standalone === true
+  document.body.classList.toggle('pwa-standalone', isStandalone)
+}
+
 const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 updateTouchClass()
 if (typeof coarsePointerQuery.addEventListener === 'function') {
   coarsePointerQuery.addEventListener('change', updateTouchClass)
 } else if (typeof coarsePointerQuery.addListener === 'function') {
   coarsePointerQuery.addListener(updateTouchClass)
+}
+
+const standaloneQuery = window.matchMedia('(display-mode: standalone)')
+updateStandaloneClass()
+if (typeof standaloneQuery.addEventListener === 'function') {
+  standaloneQuery.addEventListener('change', updateStandaloneClass)
+} else if (typeof standaloneQuery.addListener === 'function') {
+  standaloneQuery.addListener(updateStandaloneClass)
 }
 
 portraitQuery = window.matchMedia('(orientation: portrait)')
