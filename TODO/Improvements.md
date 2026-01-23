@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.
 - [x] Refined portrait condensed build bar: Moved toggle to left, reduced width by 33%, and ensured Buildings/Units label is visible as a vertical column of letters. Optimized CSS hierarchy for reliable production button visibility and scrolling.
 - [x] Fix portrait condensed mode issues: squared build buttons (64px) fitting in bar height, landscape-proportioned minimap (200x120), action buttons stacking vertically in column layout.
 - [x] Fix portrait condensed mode follow-up: action buttons matching landscape style with background/borders, moved 10px right, toggle button stretching full height with no border-radius, build buttons visibility ensured.
