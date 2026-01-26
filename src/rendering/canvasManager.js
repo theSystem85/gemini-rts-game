@@ -193,6 +193,15 @@ export class CanvasManager {
     this.minimapCtx.scale(pixelRatio, pixelRatio)
     this.minimapCtx.imageSmoothingEnabled = true
     this.minimapCtx.imageSmoothingQuality = 'high'
+
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(new CustomEvent('canvas-resized', {
+        detail: {
+          width: canvasCssWidth,
+          height: canvasCssHeight
+        }
+      }))
+    }
   }
 
   getGameCanvas() {
