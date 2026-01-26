@@ -1089,6 +1089,12 @@ function updateMobileLayoutClasses() {
   }))
 }
 
+function requestRenderAfterResize() {
+  if (gameInstance && gameInstance.gameLoop && typeof gameInstance.gameLoop.requestRender === 'function') {
+    gameInstance.gameLoop.requestRender()
+  }
+}
+
 function updateTouchClass() {
   const isTouch = window.matchMedia('(pointer: coarse)').matches
   if (document.body) {
@@ -1121,6 +1127,10 @@ if (typeof coarsePointerQuery.addEventListener === 'function') {
   coarsePointerQuery.addEventListener('change', updateTouchClass)
 } else if (typeof coarsePointerQuery.addListener === 'function') {
   coarsePointerQuery.addListener(updateTouchClass)
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('canvas-resized', requestRenderAfterResize)
 }
 
 const standaloneQuery = window.matchMedia('(display-mode: standalone)')

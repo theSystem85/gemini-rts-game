@@ -10,6 +10,7 @@
 - [x] ✅ Fixed tutorial step 12 completion not unlocking when user uses remote control by adding hasUsedRemoteControl flag to units and updating completion check.
 - [x] ✅ Portrait condensed build bar now hides locked production buttons while keeping unlocked ones visible in the scrollable row.
 - [x] ✅ PWA portrait condensed build bar now reaches the bottom edge of the screen without leaving a gap.
+- [ ] When the game is paused, rotating the screen should trigger a fresh map render so the canvas is drawn in the new orientation.
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
 - [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).
