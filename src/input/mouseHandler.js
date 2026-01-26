@@ -1,5 +1,11 @@
 // mouseHandler.js
-import { TILE_SIZE } from '../config.js'
+import {
+  APACHE_RANGE_REDUCTION,
+  HOWITZER_FIRE_RANGE,
+  SHADOW_OF_WAR_CONFIG,
+  TANK_FIRE_RANGE,
+  TILE_SIZE
+} from '../config.js'
 import { gameState } from '../gameState.js'
 import { units } from '../main.js'
 import { playSound, playPositionalSound } from '../sound.js'
@@ -444,6 +450,7 @@ export class MouseHandler {
     if (selectedUnits.length > 0) {
       let isOverEnemy = false
       let isOverFriendlyUnit = false
+      let hoveredEnemyCenter = null
 
       // Check enemy factories
       for (const factory of factories) {
@@ -456,6 +463,10 @@ export class MouseHandler {
               worldY >= factoryPixelY &&
               worldY < factoryPixelY + factory.height * TILE_SIZE) {
             isOverEnemy = true
+            hoveredEnemyCenter = {
+              x: factoryPixelX + (factory.width * TILE_SIZE) / 2,
+              y: factoryPixelY + (factory.height * TILE_SIZE) / 2
+            }
             break
           }
         }
@@ -477,6 +488,10 @@ export class MouseHandler {
                 worldY >= buildingY &&
                 worldY < buildingY + buildingHeight) {
               isOverEnemy = true
+              hoveredEnemyCenter = {
+                x: buildingX + buildingWidth / 2,
+                y: buildingY + buildingHeight / 2
+              }
               break
             }
           }
@@ -506,6 +521,7 @@ export class MouseHandler {
             const { centerX, centerY } = getUnitSelectionCenter(unit)
             if (Math.hypot(worldX - centerX, worldY - centerY) < TILE_SIZE / 2) {
               isOverEnemy = true
+              hoveredEnemyCenter = { x: centerX, y: centerY }
               break
             }
           }
@@ -518,6 +534,7 @@ export class MouseHandler {
       // Update artillery turret range detection for cursor changes
       let enemyInRange = false
       let enemyOutOfRange = false
+      let hasAttackers = false
 
       // Check if any selected unit is an artillery turret (for both enemy targeting and force attack mode)
       const selectedArtilleryTurrets = selectedUnits.filter(unit =>
@@ -534,12 +551,85 @@ export class MouseHandler {
 
       const allArtilleryTurrets = [...selectedArtilleryTurrets, ...additionalArtilleryTurrets]
 
+      const resolveUnitAttackRange = (unit) => {
+        if (!unit) {
+          return null
+        }
+
+        if (typeof unit.fireRange === 'number') {
+          const minRange = typeof unit.minFireRange === 'number' ? unit.minFireRange * TILE_SIZE : 0
+          return { maxRange: unit.fireRange * TILE_SIZE, minRange }
+        }
+
+        const baseRange = TANK_FIRE_RANGE * TILE_SIZE
+        let range = baseRange
+
+        if (unit.type === 'howitzer') {
+          range = HOWITZER_FIRE_RANGE * TILE_SIZE
+        } else if (unit.type === 'apache') {
+          range = baseRange * APACHE_RANGE_REDUCTION
+        }
+
+        if (unit.level >= 1) {
+          range *= unit.rangeMultiplier || 1.2
+        }
+
+        if (unit.type === 'rocketTank') {
+          range *= SHADOW_OF_WAR_CONFIG.rocketRangeMultiplier || 1.5
+        }
+
+        const attackCapableTypes = new Set([
+          'tank',
+          'tank_v1',
+          'tank-v2',
+          'tank-v3',
+          'rocketTank',
+          'howitzer',
+          'apache'
+        ])
+
+        if (!attackCapableTypes.has(unit.type)) {
+          return null
+        }
+
+        return { maxRange: range, minRange: 0 }
+      }
+
+      if (isOverEnemy && hoveredEnemyCenter) {
+        for (const unit of selectedUnits) {
+          const rangeInfo = resolveUnitAttackRange(unit)
+          if (!rangeInfo) {
+            continue
+          }
+
+          hasAttackers = true
+          const center = unit.isBuilding
+            ? {
+              x: (unit.x + unit.width / 2) * TILE_SIZE,
+              y: (unit.y + unit.height / 2) * TILE_SIZE
+            }
+            : getUnitSelectionCenter(unit)
+          const distance = Math.hypot(hoveredEnemyCenter.x - center.x, hoveredEnemyCenter.y - center.y)
+
+          if (distance <= rangeInfo.maxRange && distance >= rangeInfo.minRange) {
+            enemyInRange = true
+            break
+          }
+        }
+
+        if (hasAttackers && !enemyInRange) {
+          enemyOutOfRange = true
+        }
+      }
+
       // Calculate range for artillery turrets when they are selected (both for enemy targeting and force attack)
       if (allArtilleryTurrets.length > 0) {
         for (const turret of allArtilleryTurrets) {
           const turretCenterX = (turret.x + turret.width / 2) * TILE_SIZE
           const turretCenterY = (turret.y + turret.height / 2) * TILE_SIZE
-          const distance = Math.hypot(worldX - turretCenterX, worldY - turretCenterY)
+          const targetX = hoveredEnemyCenter ? hoveredEnemyCenter.x : worldX
+          const targetY = hoveredEnemyCenter ? hoveredEnemyCenter.y : worldY
+          const distance = Math.hypot(targetX - turretCenterX, targetY - turretCenterY)
           const maxRange = turret.fireRange * TILE_SIZE
           const minRange = (turret.minFireRange || 0) * TILE_SIZE
 

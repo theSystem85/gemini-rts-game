@@ -151,7 +151,7 @@ function getApacheTargetCenter(target) {
 /**
  * Common combat logic helper - handles movement and pathfinding
  */
-function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, mapGrid) {
+function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, mapGrid, rangeOverride = null) {
   // Skip movement handling if unit is retreating (retreat behavior handles movement)
   if (unit.isRetreating) {
     // Still calculate distance for firing decisions
@@ -205,7 +205,7 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
 
   // Combat movement logic - stop and attack if in range
   // Exception: Don't stop movement if unit is retreating
-  const effectiveRange = getEffectiveFireRange(unit)
+  const effectiveRange = typeof rangeOverride === 'number' ? rangeOverride : getEffectiveFireRange(unit)
   if (distance <= effectiveRange && !unit.isRetreating && !unit.remoteControlActive) {
     // In firing range - stop all movement and clear path
     if (unit.path && unit.path.length > 0) {
@@ -215,10 +215,10 @@ function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, map
     // Force stop using unified movement system
     stopUnitMovement(unit)
 
-  } else if (distance > chaseThreshold && !unit.isRetreating) {
+  } else if (distance > effectiveRange && !unit.isRetreating) {
     // Only create new path if attack path cooldown has passed (3 seconds)
     if (!unit.lastAttackPathCalcTime || now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL) {
-      if (!unit.path || unit.path.length === 0) {
+      if (!unit.path || unit.path.length === 0 || distance > chaseThreshold) {
         const path = findPath(
           { x: unit.tileX, y: unit.tileY },
           { x: targetTileX, y: targetTileY },
@@ -321,7 +321,9 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
 
   if (!unit.lastShotTime || now - unit.lastShotTime >= fireRate) {
     // Check if turret is properly aimed at the target before firing
-    const clearShot = unit.type === 'apache' ? true : (clearShotOverride ?? hasClearShot(unit, target, units, mapGrid))
+    const clearShot = (unit.type === 'apache' || unit.type === 'rocketTank')
+      ? true
+      : (clearShotOverride ?? hasClearShot(unit, target, units, mapGrid))
     const turretAimed = unit.type === 'apache' ? true : isTurretAimedAtTarget(unit, target)
     if (unit.canFire !== false && clearShot && turretAimed) {
       const targetIsAirborneApache = target && target.type === 'apache' && target.flightState !== 'grounded'
@@ -993,8 +995,9 @@ function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.STANDARD
 
     // Handle movement using common logic
+    const rocketRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
     const { distance, targetCenterX, targetCenterY } = handleTankMovement(
-      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
+      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid, rocketRange
     )
 
     // Fire if in range and allowed to attack
@@ -1170,9 +1173,11 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
   if (unit.target && unit.target.health > 0) {
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.ROCKET
 
+    const rocketRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
+
     // Handle movement using common logic - this already adjusts for Apache altitude
     const { distance, targetCenterX, targetCenterY } = handleTankMovement(
-      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
+      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid, rocketRange
     )
 
     // Rocket tanks have no turret - must rotate entire body to face target
@@ -1194,8 +1199,8 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     // Fire rockets if in range and allowed to attack
     // Human player units (including remote multiplayer players) can always attack, AI units need AI permission
     const canAttack = isHumanControlledParty(unit.owner) || unit.allowedToAttack === true
-    const effectiveRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
-    const clearShot = ensureLineOfSight(unit, unit.target, units, mapGrid)
+    const effectiveRange = rocketRange
+    const clearShot = true
     if (distance <= effectiveRange && canAttack && clearShot) {
       // Check if we need to start a new burst or continue existing one
       if (!unit.burstState) {

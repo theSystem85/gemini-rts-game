@@ -14,6 +14,7 @@ const CURSOR_CLASS_NAMES = [
   'move-blocked-mode',
   'attack-mode',
   'attack-blocked-mode',
+  'attack-out-of-range-mode',
   'guard-mode'
 ]
 
@@ -548,6 +549,7 @@ export class CursorManager {
       const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
       const setAttackCursor = () => setCursor('none', 'attack-mode')
       const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
+      const setAttackOutOfRangeCursor = () => setCursor('none', 'attack-out-of-range-mode')
       const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')
       const setMoveCursor = () => setCursor('none', 'move-mode')
       const setDefaultCursor = () => setCursor('default')
@@ -579,7 +581,7 @@ export class CursorManager {
         }
 
         if (this.isOverEnemyOutOfRange) {
-          setAttackBlockedCursor()
+          setAttackOutOfRangeCursor()
           return true
         }
 
@@ -631,6 +633,8 @@ export class CursorManager {
 
         if (isSupportTarget) {
           setMoveIntoCursor()
+        } else if (this.isOverEnemyOutOfRange) {
+          setAttackOutOfRangeCursor()
         } else if (this.isOverEnemy) {
           setAttackCursor()
         } else if (this.isOverBlockedTerrain) {
@@ -680,12 +684,16 @@ export class CursorManager {
           if (this.isInArtilleryRange) {
             setAttackCursor()
           } else if (this.isOutOfArtilleryRange) {
-            setAttackBlockedCursor()
+            setAttackOutOfRangeCursor()
           } else {
             setAttackCursor()
           }
         } else {
-          setAttackCursor()
+          if (this.isOverEnemyOutOfRange) {
+            setAttackOutOfRangeCursor()
+          } else {
+            setAttackCursor()
+          }
         }
         return
       }
@@ -709,6 +717,11 @@ export class CursorManager {
       }
 
       if (applyArtilleryTargeting()) {
+        return
+      }
+
+      if (this.isOverEnemyOutOfRange) {
+        setAttackOutOfRangeCursor()
         return
       }
 

@@ -1,0 +1,49 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" id="attack-out-of-range-cursor">
+<defs>
+    <style>
+    #attack-out-of-range-cursor .ring {
+        stroke: #ffb74d;
+        fill: none;
+        stroke-width: 1.5;
+        opacity: 0.6;
+        stroke-dasharray: 3 2;
+    }
+
+    #attack-out-of-range-cursor .glow {
+        filter: drop-shadow(0 0 2px #ffb74d) drop-shadow(0 0 3px #ffb74d);
+    }
+
+    #attack-out-of-range-cursor .cross {
+        stroke: #ffb74d;
+        stroke-width: 1.5;
+        opacity: 0.85;
+    }
+
+    #attack-out-of-range-cursor .range-line {
+        stroke: #ffb74d;
+        stroke-width: 2;
+        opacity: 0.85;
+    }
+    </style>
+</defs>
+
+<!-- Dashed rings to indicate out-of-range -->
+<circle class="ring glow" cx="16" cy="16" r="12">
+    <animate attributeName="stroke-width" values="1.2;2.4;1.2" dur="1.2s" begin="0s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.25;0.8;0.25" dur="1.2s" begin="0s" repeatCount="indefinite" />
+</circle>
+
+<circle class="ring glow" cx="16" cy="16" r="8">
+    <animate attributeName="stroke-width" values="1.2;2.4;1.2" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.25;0.8;0.25" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+</circle>
+
+<!-- Crosshair center -->
+<line class="cross" x1="16" y1="14" x2="16" y2="18" />
+<line class="cross" x1="14" y1="16" x2="18" y2="16" />
+
+<!-- Range indicator tick -->
+<line class="range-line" x1="22" y1="10" x2="26" y2="6" />
+<line class="range-line" x1="24" y1="6" x2="26" y2="6" />
+<line class="range-line" x1="26" y1="6" x2="26" y2="8" />
+</svg>

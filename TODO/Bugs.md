@@ -1,4 +1,5 @@
 ## Bugs
+- [ ] Rocket tanks should advance into range and fire through obstacles; attack cursor should show out-of-range targets for all units.
 - [ ] Rocket tank rockets should detonate on airborne targets and stop firing at move destinations (range and impact behavior regression).
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
