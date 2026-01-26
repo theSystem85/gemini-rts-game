@@ -60,6 +60,15 @@ function getTextForDevice(step) {
   return getIsTouchLayout() ? step.text.mobile : step.text.desktop
 }
 
+function getSpokenTextForStep(step) {
+  const mainText = getTextForDevice(step).trim()
+  const hintText = (step?.hint || '').trim()
+  if (mainText && hintText) {
+    return `${mainText} ${hintText}`
+  }
+  return mainText || hintText
+}
+
 function getBoundingCenter(element) {
   const rect = element.getBoundingClientRect()
   return {
@@ -966,7 +975,7 @@ class TutorialSystem {
     }
     this.phase = 'practice'
     this.renderStep(step)
-    this.speak(getTextForDevice(step))
+    this.speak(getSpokenTextForStep(step))
     this.awaitCompletion(step)
   }
 
