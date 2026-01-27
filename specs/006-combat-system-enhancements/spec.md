@@ -107,6 +107,11 @@ As a player, I want rocket tanks to fire multiple projectiles per volley with sl
 5. **Given** rocket tank is built, **When** viewing unit, **Then** unit displays 3 static tubes on top (no rotating turret)
 6. **Given** rocket tank engages, **When** aiming, **Then** entire wagon rotates to point at target (no independent turret)
 7. **Given** rocket tank fires, **When** projectiles hit, **Then** explosions occur at impact points creating visual distinction from bullets
+8. **Given** rocket tank targets an airborne Apache, **When** rockets reach the helicopter, **Then** they detonate on contact and apply damage immediately
+9. **Given** rocket tank receives a move order after attacking, **When** the move command is issued, **Then** the burst is cancelled and the unit drives to the destination without firing at that point
+10. **Given** rocket tank rockets are in flight, **When** they pass over other units or buildings, **Then** they do not detonate until reaching the designated target
+11. **Given** rocket tank is ordered to attack a target outside its range, **When** the target is selected, **Then** the rocket tank advances until it reaches firing range
+12. **Given** rocket tank has line-of-sight blocked by walls, **When** the target is within range, **Then** the rocket tank still fires rockets that arc over the obstruction
 
 ---
 
@@ -128,6 +133,7 @@ As a player, I want to see visual indicators showing where my units are moving a
 6. **Given** indicators are visible, **When** units move during combat, **Then** indicators update position in real-time following targets
 7. **Given** attack completes or target destroyed, **When** order finishes, **Then** indicator disappears automatically
 8. **Given** unit is reselected, **When** viewing unit, **Then** active order indicators reappear showing current status
+9. **Given** an enemy is hovered outside weapon range, **When** combat units are selected, **Then** the cursor changes to an out-of-range attack cursor
 
 ### Edge Cases
 
@@ -193,26 +199,32 @@ As a player, I want to see visual indicators showing where my units are moving a
 - **FR-036**: System MUST render rocket tank with 3 static tubes on top (no rotating turret)
 - **FR-037**: System MUST make rocket tank rotate entire wagon to aim (no independent turret rotation)
 - **FR-038**: System MUST create explosion effects at rocket impact points
+- **FR-039**: System MUST detonate rocket tank projectiles when they reach airborne targets, applying damage immediately
+- **FR-040**: System MUST cancel rocket tank burst fire when a move command is issued, preventing rockets from firing at the move destination
+- **FR-041**: System MUST ensure rocket tank rockets ignore mid-flight collisions so they detonate only at the intended target
+- **FR-042**: System MUST move rocket tanks toward targets until they are within rocket firing range
+- **FR-043**: System MUST allow rocket tanks to fire at targets in range even when line-of-sight is blocked
 
 **Target Indicators:**
-- **FR-039**: System MUST display green upside-down triangles at movement destination tiles
-- **FR-040**: System MUST display red upside-down triangles above attack target units
-- **FR-041**: System MUST show indicators only when attacking/moving unit is selected
-- **FR-042**: System MUST update indicator positions in real-time as targets move
-- **FR-043**: System MUST remove indicators when orders complete or targets are destroyed
-- **FR-044**: System MUST restore indicators when unit is reselected (persistent order visualization)
-- **FR-045**: System MUST support both red and green indicators simultaneously during AGF mode
-- **FR-046**: System MUST render indicators above health bars but below other HUD elements
+- **FR-044**: System MUST display green upside-down triangles at movement destination tiles
+- **FR-045**: System MUST display red upside-down triangles above attack target units
+- **FR-046**: System MUST show indicators only when attacking/moving unit is selected
+- **FR-047**: System MUST update indicator positions in real-time as targets move
+- **FR-048**: System MUST remove indicators when orders complete or targets are destroyed
+- **FR-049**: System MUST restore indicators when unit is reselected (persistent order visualization)
+- **FR-050**: System MUST support both red and green indicators simultaneously during AGF mode
+- **FR-051**: System MUST render indicators above health bars but below other HUD elements
+- **FR-052**: System MUST show a distinct attack cursor when a hovered target is out of range for selected units
 
 **Integration & Performance:**
-- **FR-047**: System MUST maintain 60fps with 100+ units using all combat enhancements simultaneously
-- **FR-048**: System MUST integrate combat enhancements with unit leveling system (bonuses apply)
-- **FR-049**: System MUST save and load all combat states through save/load system
-- **FR-050**: System MUST apply combat enhancements to both player and AI units equally
+- **FR-053**: System MUST maintain 60fps with 100+ units using all combat enhancements simultaneously
+- **FR-054**: System MUST integrate combat enhancements with unit leveling system (bonuses apply)
+- **FR-055**: System MUST save and load all combat states through save/load system
+- **FR-056**: System MUST apply combat enhancements to both player and AI units equally
 
 **Line-of-Sight & Obstructions:**
-- **FR-051**: Tank projectiles MUST respect building collision for all parties; shots cannot pass through allied or enemy structures.
-- **FR-052**: Tank combat AI MUST seek alternate positions when buildings block line-of-sight and resume firing only after a clear lane is available.
+- **FR-057**: Tank projectiles MUST respect building collision for all parties; shots cannot pass through allied or enemy structures.
+- **FR-058**: Tank combat AI MUST seek alternate positions when buildings block line-of-sight and resume firing only after a clear lane is available.
 
 ### Key Entities
 

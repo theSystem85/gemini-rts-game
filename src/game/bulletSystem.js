@@ -56,7 +56,11 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
     }
 
     const rocketExplosionOptions = bullet.projectileType === 'rocket'
-      ? { buildingDamageMultiplier: 2, factoryDamageMultiplier: 2 }
+      ? {
+        buildingDamageMultiplier: 2,
+        factoryDamageMultiplier: 2,
+        allowAirborneDamage: bullet.originType === 'rocketTank' || bullet.originType === 'rocketTurret'
+      }
       : undefined
 
     let apacheTargetUnit = null
@@ -522,6 +526,9 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             // Unit target
             targetX = bullet.target.x + TILE_SIZE / 2
             targetY = bullet.target.y + TILE_SIZE / 2
+            if (bullet.target.type === 'apache' && bullet.target.altitude) {
+              targetY -= bullet.target.altitude * 0.4
+            }
           }
         }
         

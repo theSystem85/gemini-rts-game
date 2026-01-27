@@ -1,4 +1,6 @@
 ## Bugs
+- [ ] Rocket tanks should advance into range and fire through obstacles; attack cursor should show out-of-range targets for all units.
+- [ ] Rocket tank rockets should detonate on airborne targets and stop firing at move destinations (range and impact behavior regression).
 - [x] Tutorial minimize button does not collapse the tutorial overlay on mobile; ensure the button toggles a minimized state.
 - [x] Avoid AudioContext start warnings by resuming audio only after a user gesture.
 - [x] Tutorial continue button loses enabled state after minimize/restore; ensure state is preserved.

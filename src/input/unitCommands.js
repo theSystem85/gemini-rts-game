@@ -1167,6 +1167,9 @@ export class UnitCommandsHandler {
         unit.path = path.length > 1 ? path.slice(1) : path
         // Clear any existing target when issuing a move command - but preserve turret direction
         unit.target = null
+        unit.burstState = null
+        unit.remoteRocketTarget = null
+        unit.remoteReticleVisible = false
         unit.moveTarget = destTile // Store the final destination
         // Clear any previous target when moving
         unit.originalTarget = null

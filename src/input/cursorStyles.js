@@ -15,6 +15,7 @@ const CURSOR_ASSET_URLS = [
   '/cursors/move_blocked.svg',
   '/cursors/attack.svg',
   '/cursors/attack_blocked.svg',
+  '/cursors/attack_out_of_range.svg',
   '/cursors/guard.svg'
 ]
 

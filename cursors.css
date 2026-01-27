@@ -46,6 +46,11 @@
   cursor: url('/cursors/attack_blocked.svg') 16 16, auto !important;
 }
 
+/* Attack out-of-range cursor */
+.attack-out-of-range-mode {
+  cursor: url('/cursors/attack_out_of_range.svg') 16 16, auto !important;
+}
+
 /* Guard cursor */
 .guard-mode {
   cursor: url('/cursors/guard.svg') 16 16, auto !important;
@@ -79,6 +84,10 @@
   cursor: url('/cursors/attack_blocked.svg') 16 16, auto !important;
 }
 
+#gameCanvas.attack-out-of-range-mode {
+  cursor: url('/cursors/attack_out_of_range.svg') 16 16, auto !important;
+}
+
 #gameCanvas.guard-mode {
   cursor: url('/cursors/guard.svg') 16 16, auto !important;
 }
@@ -93,6 +102,7 @@
 .move-blocked-mode.active,
 .attack-mode.active,
 .attack-blocked-mode.active,
+.attack-out-of-range-mode.active,
 .guard-mode.active {
   z-index: 10001;
 }
