@@ -322,6 +322,9 @@ class TutorialSystem {
       this.stepTitle = this.overlay.querySelector('.tutorial-title')
       this.stepText = this.overlay.querySelector('.tutorial-text')
       this.stepHint = this.overlay.querySelector('.tutorial-hint')
+      this.stepProgress = this.overlay.querySelector('.tutorial-progress')
+      this.stepProgressFill = this.overlay.querySelector('.tutorial-progress-fill')
+      this.stepProgressLabel = this.overlay.querySelector('.tutorial-progress-label')
       this.stepCount = this.overlay.querySelector('.tutorial-step-count')
       this.stepPhase = this.overlay.querySelector('.tutorial-phase')
       this.nextButton = this.overlay.querySelector('[data-tutorial-action="next"]')
@@ -390,6 +393,22 @@ class TutorialSystem {
     const hint = document.createElement('p')
     hint.className = 'tutorial-hint'
 
+    const progress = document.createElement('div')
+    progress.className = 'tutorial-progress'
+
+    const progressLabel = document.createElement('span')
+    progressLabel.className = 'tutorial-progress-label'
+
+    const progressTrack = document.createElement('div')
+    progressTrack.className = 'tutorial-progress-track'
+
+    const progressFill = document.createElement('div')
+    progressFill.className = 'tutorial-progress-fill'
+
+    progressTrack.appendChild(progressFill)
+    progress.appendChild(progressLabel)
+    progress.appendChild(progressTrack)
+
     const actions = document.createElement('div')
     actions.className = 'tutorial-actions'
 
@@ -426,6 +445,7 @@ class TutorialSystem {
     card.appendChild(title)
     card.appendChild(text)
     card.appendChild(hint)
+    card.appendChild(progress)
     card.appendChild(actions)
     overlay.appendChild(card)
 
@@ -456,6 +476,9 @@ class TutorialSystem {
     this.stepTitle = title
     this.stepText = text
     this.stepHint = hint
+    this.stepProgress = progress
+    this.stepProgressFill = progressFill
+    this.stepProgressLabel = progressLabel
     this.stepCount = stepCount
     this.stepPhase = stepPhase
     this.nextButton = nextButton
@@ -877,6 +900,7 @@ class TutorialSystem {
     if (this.stepHint) {
       this.stepHint.textContent = step.hint || ''
     }
+    this.updateStepProgress(step)
     if (this.stepCount) {
       this.stepCount.textContent = `Step ${this.stepIndex + 1} of ${this.steps.length}`
     }
@@ -1006,6 +1030,18 @@ class TutorialSystem {
     }
   }
 
+  updateStepProgress(step) {
+    if (!this.stepProgress || !this.stepProgressFill || !this.stepProgressLabel) return
+    if (!step?.progress) {
+      this.stepProgress.hidden = true
+      return
+    }
+    const value = Math.max(0, Math.min(1, step.progress(this)))
+    this.stepProgress.hidden = false
+    this.stepProgressFill.style.width = `${Math.round(value * 100)}%`
+    this.stepProgressLabel.textContent = step.progressLabel || 'Progress'
+  }
+
   async runDemo(step) {
     this.stopSpeech()
     if (step.demo) {
@@ -1029,6 +1065,7 @@ class TutorialSystem {
       if (!this.active) return
       const done = this.stepState.completed || step.completion(this)
       this.updateContinueState(step)
+      this.updateStepProgress(step)
       if (done) {
         this.markStepCompleted()
         return
@@ -1446,6 +1483,17 @@ class TutorialSystem {
         },
         hint: 'Restore every crew marker on the empty tank to continue.',
         highlightSelector: '.production-button[data-building-type="hospital"]',
+        progressLabel: 'Crew recovery progress',
+        progress: (ctx) => {
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0
+          const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
+          const crewRestored = tank?.crew && Object.values(tank.crew).every(Boolean)
+          if (crewRestored) return 1
+          if (ambulanceBuilt) return 2 / 3
+          if (hospitalBuilt) return 1 / 3
+          return 0
+        },
         completion: (ctx) => {
           const hospitalBuilt = countPlayerBuildings('hospital') > 0
           const ambulanceBuilt = countPlayerUnits('ambulance') > 0
@@ -1457,9 +1505,6 @@ class TutorialSystem {
           ensureTutorialUnits(1, 'tank')
           const tank = findPlayerUnit('tank')
           if (tank?.crew) {
-            Object.keys(tank.crew).forEach(role => {
-              tank.crew[role] = false
-            })
             ctx.stepState.crewTankId = tank.id
             focusCameraOnUnit(tank)
             const tankTile = getUnitTile(tank)
@@ -1470,11 +1515,19 @@ class TutorialSystem {
                 await sleep(200)
               }
               await ctx.clickCanvasTile(tankTile)
-              await sleep(600)
             } else {
               await ctx.demoSelectUnit(tank)
-              await sleep(600)
             }
+            await sleep(350)
+            if (window.cheatSystem?.processCheatCode) {
+              const roles = ['driver', 'commander', 'gunner', 'loader']
+              roles.forEach(role => {
+                if (tank.crew?.[role]) {
+                  window.cheatSystem.processCheatCode(role)
+                }
+              })
+            }
+            await sleep(600)
           }
 
           const buildingTab = document.querySelector('.tab-button[data-tab="buildings"]')
