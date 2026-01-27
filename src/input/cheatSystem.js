@@ -17,6 +17,7 @@ import { createUnit, updateUnitOccupancy } from '../units.js'
 import { updatePowerSupply } from '../buildings.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { deployMine } from '../game/mineSystem.js'
+import { getWreckById, removeWreckById } from '../game/unitWreckManager.js'
 
 export class CheatSystem {
   constructor() {
@@ -216,6 +217,7 @@ export class CheatSystem {
           <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
           <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
           <li><code>kill</code> - Destroy all selected units or buildings</li>
+          <li><code>recover [party]</code> - Recover the selected wreck for a party (defaults to player)</li>
           <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
           <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
           <li title="Supported unit types: harvester, tank_v1, tank-v2, tank-v3, rocketTank, recoveryTank, ambulance, tankerTruck, ammunitionTruck, apache, howitzer, mineLayer, mineSweeper"><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
@@ -403,6 +405,22 @@ export class CheatSystem {
         }
       } else if (normalizedCode === 'kill') {
         this.killSelectedTargets()
+      } else if (normalizedCode.startsWith('recover')) {
+        const tokens = normalizedCode.split(/\s+/).filter(Boolean)
+        let owner = gameState.humanPlayer
+        if (tokens.length > 1) {
+          if (tokens.length > 2) {
+            this.showError('Invalid recover command. Use: recover [party]')
+            return
+          }
+          const resolvedOwner = this.resolvePartyAlias(tokens[1])
+          if (!resolvedOwner) {
+            this.showError('Unknown party. Use: red, green, blue, or yellow')
+            return
+          }
+          owner = resolvedOwner
+        }
+        this.recoverSelectedWreck(owner)
       } else if (normalizedCode.split(/\s+/)[0] === 'mine') {
         const tokens = normalizedCode.split(/\s+/)
         let owner = gameState.humanPlayer
@@ -1148,6 +1166,69 @@ export class CheatSystem {
 
     showNotification(`💥 Destroyed ${parts.join(' and ')}`, 4000)
     playSound('explosion', 0.7)
+  }
+
+  recoverSelectedWreck(owner = gameState.humanPlayer) {
+    if (!gameState.selectedWreckId) {
+      this.showError('No wreck selected')
+      return
+    }
+
+    const wreck = getWreckById(gameState, gameState.selectedWreckId)
+    if (!wreck) {
+      this.showError('Selected wreck not found')
+      return
+    }
+
+    if (wreck.isBeingRestored || wreck.isBeingRecycled) {
+      this.showError('Selected wreck is already being processed')
+      return
+    }
+
+    const clearRecoveryTankState = (tankId) => {
+      if (!tankId) return
+      const tank = units.find(unit => unit.id === tankId)
+      if (!tank) return
+      if (tank.towedWreck && tank.towedWreck.id === wreck.id) {
+        tank.towedWreck = null
+      }
+      if (tank.recoveryTask && tank.recoveryTask.wreckId === wreck.id) {
+        tank.recoveryTask = null
+        tank.recoveryProgress = 0
+      }
+    }
+
+    clearRecoveryTankState(wreck.towedBy)
+    clearRecoveryTankState(wreck.assignedTankId)
+
+    const spawnTileX = Math.floor((wreck.x + TILE_SIZE / 2) / TILE_SIZE)
+    const spawnTileY = Math.floor((wreck.y + TILE_SIZE / 2) / TILE_SIZE)
+    const restored = createUnit(
+      { owner },
+      wreck.unitType,
+      spawnTileX,
+      spawnTileY,
+      {
+        worldPosition: { x: wreck.x, y: wreck.y },
+        buildDuration: wreck.buildDuration
+      }
+    )
+
+    restored.health = restored.maxHealth
+    restored.direction = wreck.direction || restored.direction
+    if (restored.turretDirection !== undefined) {
+      restored.turretDirection = wreck.turretDirection || restored.direction
+    }
+
+    units.push(restored)
+
+    updateUnitOccupancy(restored, -1, -1, gameState.occupancyMap)
+    this.updateNewUnit(restored)
+
+    removeWreckById(gameState, wreck.id)
+
+    showNotification(`🛠️ Recovered ${wreck.unitType} for ${this.getPartyDisplayName(owner)}`, 3500)
+    playSound('repairFinished', 0.7)
   }
 
   showError(message) {
