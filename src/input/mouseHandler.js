@@ -617,15 +617,11 @@ export class MouseHandler {
             closestDistance = distance
             closestMaxRange = rangeInfo.maxRange
           }
-
-          if (distance <= rangeInfo.maxRange && distance >= rangeInfo.minRange) {
-            enemyInRange = true
-            break
-          }
         }
 
-        if (hasAttackers && !enemyInRange && closestMaxRange !== null) {
-          enemyOutOfRange = true
+        if (hasAttackers && closestMaxRange !== null) {
+          enemyInRange = closestDistance <= closestMaxRange
+          enemyOutOfRange = closestDistance > closestMaxRange
         }
       }
 
