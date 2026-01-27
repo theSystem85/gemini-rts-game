@@ -142,6 +142,9 @@ export const gameState = {
   // Occupancy map visibility toggle
   occupancyVisible: false,
 
+  // Movement waypoint visualization toggle
+  moveWaypointsVisible: true,
+
   // Performance dialog visibility toggle
   performanceVisible: false,
 

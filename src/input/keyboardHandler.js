@@ -143,6 +143,11 @@ export class KeyboardHandler {
         this.handlePerformanceToggle()
         return
       }
+      if (keybindingManager.matchesKeyboardAction(e, 'toggle-waypoints', kbContext)) {
+        e.preventDefault()
+        this.handleWaypointToggle()
+        return
+      }
       if (keybindingManager.matchesKeyboardAction(e, 'map-edit-toggle', kbContext)) {
         e.preventDefault()
         gameState.mapEditMode = !gameState.mapEditMode
@@ -1046,6 +1051,13 @@ export class KeyboardHandler {
     performanceDialog.toggle()
     const status = gameState.performanceVisible ? 'ON' : 'OFF'
     this.showNotification(`Performance stats: ${status}`, 2000)
+    playSound('confirmed', 0.5)
+  }
+
+  handleWaypointToggle() {
+    gameState.moveWaypointsVisible = !gameState.moveWaypointsVisible
+    const status = gameState.moveWaypointsVisible ? 'ON' : 'OFF'
+    this.showNotification(`Movement waypoints: ${status}`, 2000)
     playSound('confirmed', 0.5)
   }
 
