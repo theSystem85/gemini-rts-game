@@ -624,7 +624,7 @@ export class MouseHandler {
           }
         }
 
-        if (hasAttackers && !enemyInRange) {
+        if (hasAttackers && !enemyInRange && closestMaxRange !== null) {
           enemyOutOfRange = true
         }
       }

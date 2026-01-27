@@ -50,6 +50,10 @@ export class CursorManager {
       return null
     }
 
+    if (!document.body) {
+      return null
+    }
+
     const existing = document.querySelector('.range-cursor-info')
     if (existing) {
       return {
@@ -81,6 +85,10 @@ export class CursorManager {
   }
 
   updateRangeCursorDisplay(position, show) {
+    if (!this.rangeCursorElements) {
+      this.rangeCursorElements = this.createRangeCursorElements()
+    }
+
     if (!this.rangeCursorElements) {
       return
     }
@@ -705,6 +713,8 @@ export class CursorManager {
 
         if (isSupportTarget) {
           setMoveIntoCursor()
+        } else if (this.isOverEnemyInRange) {
+          setAttackCursor()
         } else if (this.isOverEnemyOutOfRange) {
           setAttackOutOfRangeCursor()
         } else if (this.isOverEnemy) {
@@ -789,6 +799,11 @@ export class CursorManager {
       }
 
       if (applyArtilleryTargeting()) {
+        return
+      }
+
+      if (this.isOverEnemyInRange) {
+        setAttackCursor()
         return
       }
 
