@@ -1,6 +1,6 @@
 ## Improvements
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
-- [x] Add a tutorial progress bar for multi-stage steps like the crew/ambulance flow (hospital built → ambulance built → crew restored).
+- [x] Add a tutorial progress bar for the crew/ambulance step only (hospital built → ambulance built → any crew restored).
 - [x] Add a tutorial step explaining D/C/G/L crew indicators, focusing on an empty-crew tank, and requiring hospital/ambulance recovery before continuing.
 - [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.
 - [x] Refined portrait condensed build bar: Moved toggle to left, reduced width by 33%, and ensured Buildings/Units label is visible as a vertical column of letters. Optimized CSS hierarchy for reliable production button visibility and scrolling.

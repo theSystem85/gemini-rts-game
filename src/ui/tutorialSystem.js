@@ -1485,20 +1485,20 @@ class TutorialSystem {
         highlightSelector: '.production-button[data-building-type="hospital"]',
         progressLabel: 'Crew recovery progress',
         progress: (ctx) => {
-          const hospitalBuilt = countPlayerBuildings('hospital') > 0
-          const ambulanceBuilt = countPlayerUnits('ambulance') > 0
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
           const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
-          const crewRestored = tank?.crew && Object.values(tank.crew).every(Boolean)
+          const crewRestored = tank?.crew && Object.values(tank.crew).some(Boolean)
           if (crewRestored) return 1
           if (ambulanceBuilt) return 2 / 3
           if (hospitalBuilt) return 1 / 3
           return 0
         },
         completion: (ctx) => {
-          const hospitalBuilt = countPlayerBuildings('hospital') > 0
-          const ambulanceBuilt = countPlayerUnits('ambulance') > 0
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
           const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
-          const crewRestored = tank?.crew && Object.values(tank.crew).every(Boolean)
+          const crewRestored = tank?.crew && Object.values(tank.crew).some(Boolean)
           return hospitalBuilt && ambulanceBuilt && crewRestored
         },
         demo: async (ctx) => {
