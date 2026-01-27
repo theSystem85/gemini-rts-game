@@ -1,6 +1,18 @@
 ## Bugs
 - [ ] Rocket tanks should advance into range and fire through obstacles; attack cursor should show out-of-range targets for all units.
 - [ ] Rocket tank rockets should detonate on airborne targets and stop firing at move destinations (range and impact behavior regression).
+- [x] Tutorial minimize button does not collapse the tutorial overlay on mobile; ensure the button toggles a minimized state.
+- [x] Avoid AudioContext start warnings by resuming audio only after a user gesture.
+- [x] Tutorial continue button loses enabled state after minimize/restore; ensure state is preserved.
+- [x] Restore a voice on/off toggle inside the tutorial window.
+- [x] Skip tutorial should hide the overlay and dock until re-enabled in settings.
+- [x] Continue button should unlock with a reward animation only after step goals are met.
+- [x] Attack step should unlock when remote-control firing is used.
+- [x] Tutorial should not start when the show tutorial setting is disabled on reload.
+- [x] ✅ Fixed tutorial step 12 completion not unlocking when user uses remote control by adding hasUsedRemoteControl flag to units and updating completion check.
+- [x] ✅ Portrait condensed build bar now hides locked production buttons while keeping unlocked ones visible in the scrollable row.
+- [x] ✅ PWA portrait condensed build bar now reaches the bottom edge of the screen without leaving a gap.
+- [ ] When the game is paused, rotating the screen should trigger a fresh map render so the canvas is drawn in the new orientation.
 - [ ] Fix `buildOccupancyMap` throwing when `gameState.mapGrid` (or its row) is undefined, causing "Cannot read properties of undefined (reading 'length')" errors on load.
 - [ ] Fix `generateDangerZoneMapForPlayer` crash when `mapGrid` rows are missing at startup.
 - [ ] Fix `CursorManager.isBlockedTerrain` assuming `mapGrid` is ready (crashes reading `.length`).
@@ -9,6 +21,9 @@
 - [x] ✅ Game loads without an auto-generated map; restore default random map generation on start and ensure map edit mode is disabled until explicitly toggled.
 - [x] Ensure factories spawn units only on unoccupied tiles by searching outward from the intended spawn tile until a free neighbor is found.
 - [x] (still an issue?) When about 10 units get stuck the game slows down significantly.
+- [x] ✅ Fixed minimap toggle button not working in portrait condensed mode - added z-index: 2101 to #mobilePortraitActions and conditional display.
+- [x] ✅ Fixed map scrolling not working in portrait mode - swipe handler was capturing canvas touches near sidebar edge with position threshold; changed to only activate swipe when touch starts inside sidebar element.
+- [x] ✅ Fixed swipe-up gesture in portrait condensed mode conflicting with drag-to-build - removed expand-from-bar gesture and added dedicated sidebar expand button instead.
 
 ### Closed Issues
 

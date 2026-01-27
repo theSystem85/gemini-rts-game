@@ -28,7 +28,10 @@
   <meta name="msapplication-config" content="/browserconfig.xml">
 
   <link rel="preload" href="/cursors/default.svg" as="image" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./styles/base.css">
+  <link rel="stylesheet" href="./styles/sidebar.css">
+  <link rel="stylesheet" href="./styles/overlays.css">
+  <link rel="stylesheet" href="./styles/modals.css">
   <link rel="stylesheet" href="./cursors.css">
   <style>
     /* ...existing styles... */
@@ -583,6 +586,17 @@
     </div>
   </div>
 
+  <div id="mobilePortraitHud" aria-hidden="true">
+    <div id="mobilePortraitMinimapDock"></div>
+    <div id="mobilePortraitActions">
+      <div id="mobilePortraitActionsLeft"></div>
+      <button id="mobileSidebarExpandBtn" class="action-button icon-button" type="button" 
+        aria-label="Expand sidebar" title="Expand sidebar">
+        <span class="button-icon">☰</span>
+      </button>
+    </div>
+  </div>
+
   <div id="mobileBuildMenuContainer" aria-hidden="true"></div>
   <canvas id="gameCanvasGL" aria-hidden="true"></canvas>
   <canvas id="gameCanvas"></canvas>
@@ -636,6 +650,27 @@
             <button id="openRuntimeConfigDialogBtn" class="config-modal__button config-modal__button--primary"
               type="button">Open Runtime Config Dialog</button>
             <button id="runBenchmarkBtn" class="config-modal__button" type="button">Run Performance Benchmark</button>
+          </div>
+          <div class="config-modal__section">
+            <h3 class="config-modal__section-title">Tutorial</h3>
+            <label class="config-modal__field config-modal__field--toggle">
+              <input type="checkbox" id="tutorialShowOnStartup">
+              <span>Show tutorial on startup</span>
+            </label>
+            <label class="config-modal__field config-modal__field--toggle">
+              <input type="checkbox" id="tutorialSpeechEnabled">
+              <span>Enable tutorial voice</span>
+            </label>
+            <label class="config-modal__field">
+              <span>Tutorial voice:</span>
+              <select id="tutorialVoiceSelect" class="config-modal__select">
+                <option value="">Default</option>
+              </select>
+            </label>
+            <div class="config-modal__actions">
+              <button id="tutorialStartBtn" class="config-modal__button" type="button">Start Tutorial</button>
+              <button id="tutorialRestartBtn" class="config-modal__button" type="button">Restart Tutorial</button>
+            </div>
           </div>
         </div>
         <div class="config-modal__content" data-config-tab-panel="keybindings" hidden>

@@ -2,7 +2,10 @@ const CACHE_NAME = 'codeandconquer-cache-v1'
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/style.css',
+  '/styles/base.css',
+  '/styles/sidebar.css',
+  '/styles/overlays.css',
+  '/styles/modals.css',
   '/cursors.css',
   '/site.webmanifest'
 ]

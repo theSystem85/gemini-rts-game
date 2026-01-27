@@ -113,7 +113,9 @@ export class CanvasManager {
     const rawSidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 250
     const mobileLandscape = body ? body.classList.contains('mobile-landscape') : false
     const mobilePortrait = body ? body.classList.contains('mobile-portrait') : false
-    const sidebarCollapsed = body ? body.classList.contains('sidebar-collapsed') : false
+    const sidebarCollapsed = body
+      ? body.classList.contains('sidebar-collapsed') || body.classList.contains('sidebar-condensed')
+      : false
     const reserveSidebarSpace = !mobileLandscape && !(mobilePortrait && sidebarCollapsed)
     const safeAdjustment = mobileLandscape ? safeLeft : 0
     const sidebarBaseWidth = Math.max(0, rawSidebarWidth - safeAdjustment)
@@ -191,6 +193,15 @@ export class CanvasManager {
     this.minimapCtx.scale(pixelRatio, pixelRatio)
     this.minimapCtx.imageSmoothingEnabled = true
     this.minimapCtx.imageSmoothingQuality = 'high'
+
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(new CustomEvent('canvas-resized', {
+        detail: {
+          width: canvasCssWidth,
+          height: canvasCssHeight
+        }
+      }))
+    }
   }
 
   getGameCanvas() {

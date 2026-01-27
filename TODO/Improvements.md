@@ -1,5 +1,14 @@
 ## Improvements
-- [x] Limit tanker trucks' automatic refueling to units below 50% fuel and prioritize the lowest-fuel targets first.
+- [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
+- [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.
+- [x] Refined portrait condensed build bar: Moved toggle to left, reduced width by 33%, and ensured Buildings/Units label is visible as a vertical column of letters. Optimized CSS hierarchy for reliable production button visibility and scrolling.
+- [x] Fix portrait condensed mode issues: squared build buttons (64px) fitting in bar height, landscape-proportioned minimap (200x120), action buttons stacking vertically in column layout.
+- [x] Fix portrait condensed mode follow-up: action buttons matching landscape style with background/borders, moved 10px right, toggle button stretching full height with no border-radius, build buttons visibility ensured.
+- [x] Portrait condensed mode UX refinement: action buttons horizontal left-aligned with no background/borders (icon-only), hide menu/restart/music buttons, swipe up on build bar to expand sidebar.
+- [x] Portrait condensed mode minimap: add toggle button on left of action bar, show minimap only when button held (matching landscape behavior), use overlay approach instead of static dock.
+- [x] In portrait condensed mode, stack action icons bottom-up without button chrome, match the landscape minimap styling, and rotate the build category toggle text vertically.
+- [x] Add a portrait-only condensed sidebar state with a bottom build bar, right-side actions, and left-side minimap, plus swipe-to-hide behavior from the condensed build bar.
+- [x] Optimize the mobile portrait sidebar layout and tutorial overlay spacing/typography for a more professional small-screen presentation.
 - [x] Stabilize tanker truck refueling: build visible to-do lists (10s auto-scan interval), lock in priorities, and let user AGF selections override auto targets until finished.
 - [x] Apply 10-second cooldown to enemy AI tanker truck target assignment in both unitCommands and non-unitCommands paths to prevent frequent target switching.
 - [x] Ensure enemy AI has at least one tanker truck stationed at the refinery to refuel harvesters (designate closest tanker as refinery station tanker).
