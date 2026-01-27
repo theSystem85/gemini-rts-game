@@ -535,6 +535,8 @@ export class MouseHandler {
       let enemyInRange = false
       let enemyOutOfRange = false
       let hasAttackers = false
+      let closestDistance = Infinity
+      let closestMaxRange = null
 
       // Check if any selected unit is an artillery turret (for both enemy targeting and force attack mode)
       const selectedArtilleryTurrets = selectedUnits.filter(unit =>
@@ -611,6 +613,11 @@ export class MouseHandler {
             : getUnitSelectionCenter(unit)
           const distance = Math.hypot(hoveredEnemyCenter.x - center.x, hoveredEnemyCenter.y - center.y)
 
+          if (distance < closestDistance) {
+            closestDistance = distance
+            closestMaxRange = rangeInfo.maxRange
+          }
+
           if (distance <= rangeInfo.maxRange && distance >= rangeInfo.minRange) {
             enemyInRange = true
             break
@@ -652,6 +659,11 @@ export class MouseHandler {
 
       cursorManager.setIsOverEnemyInRange(isOverEnemy && enemyInRange)
       cursorManager.setIsOverEnemyOutOfRange(isOverEnemy && enemyOutOfRange)
+      cursorManager.setRangeCursorInfo(
+        isOverEnemy && enemyOutOfRange && closestMaxRange !== null
+          ? { distance: closestDistance, maxRange: closestMaxRange }
+          : null
+      )
 
       // For force attack mode with artillery turrets, set range flags regardless of enemy presence
       if (allArtilleryTurrets.length > 0) {
@@ -669,6 +681,7 @@ export class MouseHandler {
       cursorManager.setIsOverEnemyOutOfRange(false)
       cursorManager.setIsInArtilleryRange(false)
       cursorManager.setIsOutOfArtilleryRange(false)
+      cursorManager.setRangeCursorInfo(null)
     }
   }
 

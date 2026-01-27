@@ -41,6 +41,70 @@ export class CursorManager {
     this.isOutOfArtilleryRange = false
     this.activeCursorStyle = ''
     this.activeCursorClasses = new Set()
+    this.rangeCursorInfo = null
+    this.rangeCursorElements = this.createRangeCursorElements()
+  }
+
+  createRangeCursorElements() {
+    if (typeof document === 'undefined') {
+      return null
+    }
+
+    const existing = document.querySelector('.range-cursor-info')
+    if (existing) {
+      return {
+        container: existing,
+        distance: existing.querySelector('.range-cursor-info__distance'),
+        max: existing.querySelector('.range-cursor-info__max')
+      }
+    }
+
+    const container = document.createElement('div')
+    container.className = 'range-cursor-info'
+
+    const distance = document.createElement('div')
+    distance.className = 'range-cursor-info__distance'
+
+    const max = document.createElement('div')
+    max.className = 'range-cursor-info__max'
+
+    container.appendChild(distance)
+    container.appendChild(max)
+    document.body.appendChild(container)
+
+    return { container, distance, max }
+  }
+
+  formatRangeValue(value) {
+    const rounded = Math.round(value * 10) / 10
+    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1)
+  }
+
+  updateRangeCursorDisplay(position, show) {
+    if (!this.rangeCursorElements) {
+      return
+    }
+
+    const { container, distance, max } = this.rangeCursorElements
+    if (!container || !distance || !max) {
+      return
+    }
+
+    if (!show || !this.rangeCursorInfo) {
+      container.classList.remove('visible')
+      return
+    }
+
+    const { distance: distanceValue, maxRange } = this.rangeCursorInfo
+    const distanceTiles = distanceValue / TILE_SIZE
+    const maxRangeTiles = maxRange / TILE_SIZE
+
+    distance.textContent = this.formatRangeValue(distanceTiles)
+    max.textContent = this.formatRangeValue(maxRangeTiles)
+
+    container.style.left = `${position.x}px`
+    container.style.top = `${position.y}px`
+    container.classList.add('visible')
   }
 
   applyCursor(gameCanvas, cursorStyle, classNames = []) {
@@ -125,6 +189,7 @@ export class CursorManager {
     const rect = gameCanvas.getBoundingClientRect()
     const x = e.clientX
     const y = e.clientY
+    const rangeCursorPosition = { x, y }
 
     const setCursor = (style, classes = []) => {
       const resolvedStyle =
@@ -136,6 +201,13 @@ export class CursorManager {
       const classList = Array.isArray(classes) ? classes.filter(Boolean) : [classes].filter(Boolean)
       this.applyCursor(gameCanvas, resolvedStyle, classList)
     }
+
+    const setOutOfRangeCursor = () => {
+      setCursor('none', 'attack-out-of-range-mode')
+      this.updateRangeCursorDisplay(rangeCursorPosition, true)
+    }
+
+    this.updateRangeCursorDisplay(rangeCursorPosition, false)
 
     // Check if cursor is over the game canvas
     this.isOverGameCanvas = (
@@ -549,7 +621,7 @@ export class CursorManager {
       const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
       const setAttackCursor = () => setCursor('none', 'attack-mode')
       const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
-      const setAttackOutOfRangeCursor = () => setCursor('none', 'attack-out-of-range-mode')
+      const setAttackOutOfRangeCursor = () => setOutOfRangeCursor()
       const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')
       const setMoveCursor = () => setCursor('none', 'move-mode')
       const setDefaultCursor = () => setCursor('default')
@@ -792,5 +864,9 @@ export class CursorManager {
 
   setIsOutOfArtilleryRange(value) {
     this.isOutOfArtilleryRange = value
+  }
+
+  setRangeCursorInfo(value) {
+    this.rangeCursorInfo = value
   }
 }
