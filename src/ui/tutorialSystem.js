@@ -1400,6 +1400,19 @@ class TutorialSystem {
           || (gameState.remoteControl?.fire || 0) > 0
       },
       {
+        id: 'crew-system',
+        title: 'Crew, Hospitals, and Ambulances',
+        text: {
+          desktop: 'Each tank has a four-person crew. Losing crew disables movement, turret control, or firing. Hospitals restore missing crew when tanks park on the three tiles below the hospital and you pay per medic. Ambulances unlock with hospitals—select an ambulance, then click a unit with missing crew to send medics in the field.',
+          mobile: 'Each tank has a four-person crew. Losing crew disables movement, turret control, or firing. Hospitals restore missing crew when tanks park on the three tiles below the hospital and you pay per medic. Ambulances unlock with hospitals—select an ambulance, then tap a unit with missing crew to send medics in the field.'
+        },
+        hint: 'Use hospitals to heal crews at base, and ambulances to refill crews in the field.',
+        completion: () => true,
+        demo: async () => {
+          await sleep(350)
+        }
+      },
+      {
         id: 'tech-tree',
         title: 'Unlocking the Tech Tree',
         text: {

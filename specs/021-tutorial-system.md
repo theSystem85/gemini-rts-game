@@ -22,7 +22,8 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 6. **Tank production**: Show building a tank and setting a Vehicle Factory rally point (waypoint).
 7. **Tank control**: Show sending the finished tank to a location and switching to manual/remote control.
 8. **Combat**: Show attacking targets and explain the win condition (destroy all enemy buildings).
-9. **Tech tree**: Explain building unlock chains through the full tech tree, with details on:
+9. **Crew system**: Explain crew roles, how tanks lose functionality when crew are missing, and how Hospitals + Ambulances restore crew.
+10. **Tech tree**: Explain building unlock chains through the full tech tree, with details on:
    - Tanker Truck + Gas Station (refueling)
    - Ambulance + Hospital + crew system
    - Ammunition Factory + Ammunition Truck + ammunition display
