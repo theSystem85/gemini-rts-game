@@ -1403,13 +1403,44 @@ class TutorialSystem {
         id: 'crew-system',
         title: 'Crew, Hospitals, and Ambulances',
         text: {
-          desktop: 'Each tank has a four-person crew. Losing crew disables movement, turret control, or firing. Hospitals restore missing crew when tanks park on the three tiles below the hospital and you pay per medic. Ambulances unlock with hospitals—select an ambulance, then click a unit with missing crew to send medics in the field.',
-          mobile: 'Each tank has a four-person crew. Losing crew disables movement, turret control, or firing. Hospitals restore missing crew when tanks park on the three tiles below the hospital and you pay per medic. Ambulances unlock with hospitals—select an ambulance, then tap a unit with missing crew to send medics in the field.'
+          desktop: 'Each tank has a four-person crew with HUD markers: D (Driver, blue) moves the tank, C (Commander, green) enables player control, G (Gunner, red) rotates the turret, and L (Loader, orange) lets the tank fire. When all crew are gone, the markers disappear. Build a Hospital from the Buildings tab and an Ambulance from the Units tab. Hospitals restore missing crew when tanks park on the three tiles below the hospital (cost per medic). Ambulances are selected and sent to a unit with missing crew to refill it in the field.',
+          mobile: 'Each tank has a four-person crew with HUD markers: D (Driver, blue) moves the tank, C (Commander, green) enables player control, G (Gunner, red) rotates the turret, and L (Loader, orange) lets the tank fire. When all crew are gone, the markers disappear. Build a Hospital from the Buildings tab and an Ambulance from the Units tab. Hospitals restore missing crew when tanks park on the three tiles below the hospital (cost per medic). Ambulances are selected and sent to a unit with missing crew to refill it in the field.'
         },
-        hint: 'Use hospitals to heal crews at base, and ambulances to refill crews in the field.',
-        completion: () => true,
-        demo: async () => {
-          await sleep(350)
+        hint: 'Restore every crew marker on the empty tank to continue.',
+        highlightSelector: '.production-button[data-building-type="hospital"]',
+        completion: (ctx) => {
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0
+          const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
+          const crewRestored = tank?.crew && Object.values(tank.crew).every(Boolean)
+          return hospitalBuilt && ambulanceBuilt && crewRestored
+        },
+        demo: async (ctx) => {
+          ensureTutorialUnits(1, 'tank')
+          const tank = findPlayerUnit('tank')
+          if (tank?.crew) {
+            Object.keys(tank.crew).forEach(role => {
+              tank.crew[role] = false
+            })
+            ctx.stepState.crewTankId = tank.id
+            await ctx.demoSelectUnit(tank)
+            await sleep(350)
+          }
+
+          const buildingTab = document.querySelector('.tab-button[data-tab="buildings"]')
+          if (buildingTab) {
+            await ctx.clickElement(buildingTab)
+          }
+          const hospitalButton = document.querySelector('.production-button[data-building-type="hospital"]')
+          await ctx.moveCursorToElement(hospitalButton)
+          await sleep(300)
+
+          const unitTab = document.querySelector('.tab-button[data-tab="units"]')
+          if (unitTab) {
+            await ctx.clickElement(unitTab)
+          }
+          const ambulanceButton = document.querySelector('.production-button[data-unit-type="ambulance"]')
+          await ctx.moveCursorToElement(ambulanceButton)
         }
       },
       {
