@@ -68,6 +68,31 @@ export class PathPlanningRenderer {
       return list
     }
 
+    const drawTriangleIndicator = (screenX, screenY, idx, options = {}) => {
+      const half = MOVE_TARGET_INDICATOR_SIZE / 2
+      const fillStyle = options.fillStyle || 'rgba(255, 165, 0, 0.6)'
+      const strokeStyle = options.strokeStyle || 'rgba(230, 150, 0, 0.9)'
+
+      if (options.drawTriangle !== false) {
+        ctx.fillStyle = fillStyle
+        ctx.strokeStyle = strokeStyle
+
+        ctx.beginPath()
+        ctx.moveTo(screenX, screenY + half)
+        ctx.lineTo(screenX - half, screenY - half)
+        ctx.lineTo(screenX + half, screenY - half)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+      }
+
+      ctx.fillStyle = options.textColor || '#000'
+      ctx.font = options.font || '8px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
+    }
+
     units.forEach(unit => {
       if (!unit.selected) return
       const queue = actionsForUnit(unit)
@@ -161,42 +186,64 @@ export class PathPlanningRenderer {
         ctx.lineTo(screenX, screenY)
         ctx.stroke()
 
-        const half = MOVE_TARGET_INDICATOR_SIZE / 2
-
         if (action.type !== 'utility') {
-          ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'
-          ctx.strokeStyle = 'rgba(230, 150, 0, 0.9)'
+          const markerStyle = {
+            fillStyle: 'rgba(255, 165, 0, 0.6)',
+            strokeStyle: 'rgba(230, 150, 0, 0.9)'
+          }
           
           // Custom colors for mine commands
           if (action.type === 'deployMine') {
-            ctx.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines
-            ctx.strokeStyle = 'rgba(200, 0, 0, 0.9)'
+            markerStyle.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines
+            markerStyle.strokeStyle = 'rgba(200, 0, 0, 0.9)'
           } else if (action.type === 'sweepArea') {
-            ctx.fillStyle = 'rgba(200, 200, 50, 0.6)' // Yellowish for sweep
-            ctx.strokeStyle = 'rgba(180, 180, 0, 0.9)'
+            markerStyle.fillStyle = 'rgba(200, 200, 50, 0.6)' // Yellowish for sweep
+            markerStyle.strokeStyle = 'rgba(180, 180, 0, 0.9)'
           }
 
-          ctx.beginPath()
-          ctx.moveTo(screenX, screenY + half)
-          ctx.lineTo(screenX - half, screenY - half)
-          ctx.lineTo(screenX + half, screenY - half)
-          ctx.closePath()
-          ctx.fill()
-          ctx.stroke()
+          drawTriangleIndicator(screenX, screenY, idx, markerStyle)
+        } else {
+          drawTriangleIndicator(screenX, screenY, idx, { drawTriangle: false })
         }
-
-        ctx.fillStyle = '#000'
-        ctx.font = '8px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        // Keep the label slightly offset so it sits nicely within the indicator footprint
-        ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
         ctx.restore()
 
         prevX = targetX
         prevY = targetY
       })
     })
+
+    if (gameState.moveWaypointsVisible) {
+      units.forEach(unit => {
+        if (!unit.selected || !unit.path || unit.path.length === 0) return
+
+        let prevX = unit.x + TILE_SIZE / 2
+        let prevY = unit.y + TILE_SIZE / 2
+
+        unit.path.forEach((tile, idx) => {
+          const targetX = tile.x * TILE_SIZE + TILE_SIZE / 2
+          const targetY = tile.y * TILE_SIZE + TILE_SIZE / 2
+
+          const screenPrevX = prevX - scrollOffset.x
+          const screenPrevY = prevY - scrollOffset.y
+          const screenX = targetX - scrollOffset.x
+          const screenY = targetY - scrollOffset.y
+
+          ctx.save()
+          ctx.strokeStyle = 'rgba(255, 165, 0, 0.5)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(screenPrevX, screenPrevY)
+          ctx.lineTo(screenX, screenY)
+          ctx.stroke()
+
+          drawTriangleIndicator(screenX, screenY, idx)
+          ctx.restore()
+
+          prevX = targetX
+          prevY = targetY
+        })
+      })
+    }
     
     // Render detailed sweep paths for sweepArea commands
     units.forEach(unit => {
@@ -253,4 +300,3 @@ export class PathPlanningRenderer {
     })
   }
 }
-

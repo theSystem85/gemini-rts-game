@@ -28,10 +28,11 @@ const DEFAULT_BINDINGS = {
     { id: 'toggle-tanks', label: 'Toggle Tank Images', input: 't', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'toggle-fps', label: 'Toggle FPS Overlay', input: 'p', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'toggle-performance', label: 'Toggle Performance Dialog', input: 'm', context: KEYBINDING_CONTEXTS.DEFAULT },
+    { id: 'toggle-waypoints', label: 'Toggle Waypoint Paths', input: 'w', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'toggle-alert', label: 'Toggle Alert Mode', input: 'a', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'toggle-sell', label: 'Toggle Sell/Stop', input: 's', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'toggle-repair', label: 'Toggle Repair Mode', input: 'r', context: KEYBINDING_CONTEXTS.DEFAULT },
-    { id: 'repair-to-workshop', label: 'Send to Workshop', input: 'w', context: KEYBINDING_CONTEXTS.DEFAULT },
+    { id: 'repair-to-workshop', label: 'Send to Workshop', input: 'Shift+W', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'dodge', label: 'Dodge Command', input: 'x', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'focus-factory', label: 'Focus on Factory', input: 'h', context: KEYBINDING_CONTEXTS.DEFAULT },
     { id: 'focus-selection', label: 'Focus on Selection / Toggle Auto Focus', input: 'e', context: KEYBINDING_CONTEXTS.DEFAULT },
@@ -247,4 +248,3 @@ export class KeybindingManager {
 }
 
 export const keybindingManager = new KeybindingManager()
-

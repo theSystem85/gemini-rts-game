@@ -157,6 +157,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-040**: System MUST allow guard mode to coexist with AGF (guards don't join AGF)
 - **FR-041**: System MUST allow PPF to queue any combination of move/attack/retreat/AGF commands
 - **FR-042**: System MUST maintain feature independence (each can be used without others)
+- **FR-047**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
@@ -227,6 +228,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **SC-032**: Features enhance gameplay without requiring mastery (optional advanced tactics)
 - **SC-033**: Keyboard shortcuts don't conflict with existing game controls
 - **SC-034**: Features work identically for all combat unit types (tanks, rocket tanks, etc.)
+- **SC-035**: Selected player units show numbered movement waypoints, and the W key toggles that waypoint visualization on/off
 
 ## User Scenarios & Testing *(mandatory)*
 
