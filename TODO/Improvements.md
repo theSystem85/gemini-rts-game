@@ -1,5 +1,6 @@
 ## Improvements
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
+- [x] Add meaningful unit tests for `src/ai/enemySpawner.js` covering spawn placement, harvester setup, crew/gas initialization, and cheat-system handling.
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
 - [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests
 - [x] Add additional unit tests for smokeUtils.js (26 tests), debugLogger.js (19 tests), logic.js (42 tests), retreat.js (33 tests) - total 120 new tests bringing test count from 1002 to 1128
