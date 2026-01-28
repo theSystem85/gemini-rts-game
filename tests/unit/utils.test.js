@@ -1,11 +1,11 @@
 /**
  * Unit tests for utils.js
- * 
+ *
  * Tests the utility functions for unit management, leveling system,
  * coordinate conversions, and other game utilities.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   tileToPixel,
   getUniqueId,
@@ -21,7 +21,7 @@ import {
   getExperienceProgress,
   handleSelfRepair
 } from '../../src/utils.js'
-import { TILE_SIZE, UNIT_COSTS } from '../../src/config.js'
+import { TILE_SIZE } from '../../src/config.js'
 
 describe('utils', () => {
   describe('tileToPixel()', () => {
@@ -401,11 +401,11 @@ describe('utils', () => {
     })
 
     it('should not repair units that are moving', () => {
-      const unit = { 
-        type: 'tank', 
-        level: 3, 
-        health: 50, 
-        maxHealth: 100, 
+      const unit = {
+        type: 'tank',
+        level: 3,
+        health: 50,
+        maxHealth: 100,
         selfRepair: true,
         path: [{ x: 5, y: 5 }]
       }
@@ -415,11 +415,11 @@ describe('utils', () => {
 
     it('should set lastRepairTime on first call', () => {
       const now = Date.now()
-      const unit = { 
-        type: 'tank', 
-        level: 3, 
-        health: 50, 
-        maxHealth: 100, 
+      const unit = {
+        type: 'tank',
+        level: 3,
+        health: 50,
+        maxHealth: 100,
         selfRepair: true,
         path: []
       }
@@ -429,16 +429,16 @@ describe('utils', () => {
 
     it('should repair after 3 seconds', () => {
       const startTime = 1000
-      const unit = { 
-        type: 'tank', 
-        level: 3, 
-        health: 50, 
-        maxHealth: 100, 
+      const unit = {
+        type: 'tank',
+        level: 3,
+        health: 50,
+        maxHealth: 100,
         selfRepair: true,
         path: [],
         lastRepairTime: startTime
       }
-      
+
       // After 3+ seconds
       handleSelfRepair(unit, startTime + 3001)
       // Health should increase by 1% of maxHealth (1)
@@ -447,16 +447,16 @@ describe('utils', () => {
 
     it('should not exceed maxHealth', () => {
       const startTime = 1000
-      const unit = { 
-        type: 'tank', 
-        level: 3, 
-        health: 99.5, 
-        maxHealth: 100, 
+      const unit = {
+        type: 'tank',
+        level: 3,
+        health: 99.5,
+        maxHealth: 100,
         selfRepair: true,
         path: [],
         lastRepairTime: startTime
       }
-      
+
       handleSelfRepair(unit, startTime + 3001)
       // Health should not exceed maxHealth
       expect(unit.health).toBeLessThanOrEqual(100)

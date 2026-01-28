@@ -1,6 +1,6 @@
 /**
  * Unit tests for game/mineSystem.js
- * 
+ *
  * Tests the land mine deployment, detonation, chain reaction mechanics,
  * and mine sweeper interactions.
  */
@@ -29,7 +29,6 @@ import {
 } from '../../src/game/mineSystem.js'
 import {
   MINE_HEALTH,
-  MINE_DAMAGE_CENTER,
   MINE_EXPLOSION_RADIUS,
   MINE_ARM_DELAY,
   TILE_SIZE

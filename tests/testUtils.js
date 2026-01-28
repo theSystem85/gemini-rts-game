@@ -1,12 +1,12 @@
 /**
  * Test utilities for headless game testing
- * 
+ *
  * Provides utilities for creating test game states and running
  * the game loop without rendering
  */
 
 // Import config first (no dependencies)
-import { MAX_BUILDING_GAP_TILES, TILE_SIZE, DEFAULT_MAP_TILES_X, DEFAULT_MAP_TILES_Y } from '../src/config.js'
+import { MAX_BUILDING_GAP_TILES, DEFAULT_MAP_TILES_X, DEFAULT_MAP_TILES_Y } from '../src/config.js'
 
 // Import gameState (minimal dependencies)
 import { gameState } from '../src/gameState.js'
@@ -33,7 +33,7 @@ function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factori
  */
 export function createTestMapGrid(width = DEFAULT_MAP_TILES_X, height = DEFAULT_MAP_TILES_Y) {
   const mapGrid = []
-  
+
   for (let y = 0; y < height; y++) {
     mapGrid[y] = []
     for (let x = 0; x < width; x++) {
@@ -48,7 +48,7 @@ export function createTestMapGrid(width = DEFAULT_MAP_TILES_X, height = DEFAULT_
       }
     }
   }
-  
+
   return mapGrid
 }
 
@@ -68,12 +68,12 @@ export function resetGameState() {
   gameState.unitWrecks = []
   gameState.mines = []
   gameState.blueprints = []
-  
+
   // Reset numeric values
   gameState.money = 12000
   gameState.gameTime = 0
   gameState.frameCount = 0
-  
+
   // Reset power tracking
   gameState.powerSupply = 0
   gameState.playerPowerSupply = 0
@@ -82,16 +82,16 @@ export function resetGameState() {
   gameState.enemyPowerSupply = 0
   gameState.enemyTotalPowerProduction = 0
   gameState.enemyPowerConsumption = 0
-  
+
   // Reset game flags
   gameState.gameStarted = true
   gameState.gamePaused = false
   gameState.gameOver = false
   gameState.mapEditMode = false
-  
+
   // Reset scroll offset
   gameState.scrollOffset = { x: 0, y: 0 }
-  
+
   return gameState
 }
 
@@ -117,7 +117,7 @@ export function createTestFactory(x, y, owner = 'player', mapGrid = null) {
     rallyPoint: null,
     selected: false
   }
-  
+
   // Mark tiles as occupied in map grid
   if (mapGrid) {
     for (let dy = 0; dy < factory.height; dy++) {
@@ -128,7 +128,7 @@ export function createTestFactory(x, y, owner = 'player', mapGrid = null) {
       }
     }
   }
-  
+
   return factory
 }
 
@@ -146,7 +146,7 @@ export function createTestBuilding(type, x, y, owner = 'player', mapGrid = null)
   if (!data) {
     throw new Error(`Unknown building type: ${type}`)
   }
-  
+
   const building = {
     id: `${type}-${x}-${y}-${Date.now()}`,
     owner: owner,
@@ -159,7 +159,7 @@ export function createTestBuilding(type, x, y, owner = 'player', mapGrid = null)
     maxHealth: data.health,
     power: data.power || 0
   }
-  
+
   // Mark tiles as occupied in map grid
   if (mapGrid) {
     for (let dy = 0; dy < building.height; dy++) {
@@ -170,7 +170,7 @@ export function createTestBuilding(type, x, y, owner = 'player', mapGrid = null)
       }
     }
   }
-  
+
   return building
 }
 
@@ -186,7 +186,7 @@ export class TestGameContext {
     this.buildings = []
     this.factories = []
     this.bullets = []
-    
+
     // Reset and configure game state
     resetGameState()
     gameState.mapGrid = this.mapGrid
@@ -195,11 +195,11 @@ export class TestGameContext {
     gameState.factories = this.factories
     gameState.mapTilesX = this.mapWidth
     gameState.mapTilesY = this.mapHeight
-    
+
     this.tickCount = 0
     this.elapsedTime = 0
   }
-  
+
   /**
    * Add a construction yard (factory) to the test context
    * @param {number} x - X position in tiles
@@ -215,7 +215,7 @@ export class TestGameContext {
     gameState.buildings = this.buildings
     return factory
   }
-  
+
   /**
    * Add a building to the test context
    * @param {string} type - Building type
@@ -230,7 +230,7 @@ export class TestGameContext {
     gameState.buildings = this.buildings
     return building
   }
-  
+
   /**
    * Check if a building can be placed at the specified position
    * @param {string} type - Building type
@@ -251,7 +251,7 @@ export class TestGameContext {
       owner
     )
   }
-  
+
   /**
    * Check distance from a position to nearest building
    * @param {number} x - X position in tiles
@@ -269,7 +269,7 @@ export class TestGameContext {
       owner
     )
   }
-  
+
   /**
    * Run the game loop for a specified number of ticks
    * This simulates game progression without rendering
@@ -283,16 +283,16 @@ export class TestGameContext {
       this.elapsedTime += deltaMs
       gameState.gameTime = this.elapsedTime / 1000
       gameState.frameCount = this.tickCount
-      
+
       if (onTick) {
         await onTick(this.tickCount, this.elapsedTime)
       }
-      
+
       // Allow async operations to complete
       await new Promise(resolve => setTimeout(resolve, 0))
     }
   }
-  
+
   /**
    * Clean up the test context
    */

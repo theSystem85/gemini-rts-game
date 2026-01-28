@@ -1,11 +1,12 @@
 /**
  * Vitest setup file for RTS Game testing
- * 
+ *
  * This file sets up the testing environment for headless integration tests
  * without video, audio, or rendering.
  */
 
-import { vi } from 'vitest'
+// Note: vi is available globally in vitest tests - import kept for explicit usage
+import { vi as _vi } from 'vitest'
 
 // Mock the global logger that the game expects
 globalThis.window = globalThis.window || {}
@@ -96,7 +97,7 @@ class MockCanvasRenderingContext2D {
     this.textBaseline = 'alphabetic'
     this.globalAlpha = 1
   }
-  
+
   // Drawing methods
   fillRect() {}
   strokeRect() {}
@@ -104,7 +105,7 @@ class MockCanvasRenderingContext2D {
   fillText() {}
   strokeText() {}
   measureText(text) { return { width: text.length * 8 } }
-  
+
   // Path methods
   beginPath() {}
   closePath() {}
@@ -116,7 +117,7 @@ class MockCanvasRenderingContext2D {
   fill() {}
   stroke() {}
   clip() {}
-  
+
   // Transform methods
   save() {}
   restore() {}
@@ -125,17 +126,17 @@ class MockCanvasRenderingContext2D {
   scale() {}
   setTransform() {}
   resetTransform() {}
-  
+
   // Image methods
   drawImage() {}
   createPattern() { return null }
-  createLinearGradient() { 
+  createLinearGradient() {
     return { addColorStop: () => {} }
   }
   createRadialGradient() {
     return { addColorStop: () => {} }
   }
-  
+
   // Pixel manipulation
   getImageData() {
     return { data: new Uint8ClampedArray(4), width: 1, height: 1 }
@@ -193,7 +194,7 @@ class MockWebGLRenderingContext {
 const originalCreateElement = document.createElement.bind(document)
 document.createElement = function(tagName, options) {
   const element = originalCreateElement(tagName, options)
-  
+
   if (tagName.toLowerCase() === 'canvas') {
     element.getContext = function(contextType) {
       if (contextType === '2d') {
@@ -204,7 +205,7 @@ document.createElement = function(tagName, options) {
       return null
     }
   }
-  
+
   return element
 }
 
@@ -218,14 +219,14 @@ class MockImage {
     this.naturalWidth = 32
     this.naturalHeight = 32
   }
-  
+
   addEventListener(event, callback) {
     if (event === 'load') {
       // Simulate async load
       setTimeout(callback, 0)
     }
   }
-  
+
   removeEventListener() {}
 }
 

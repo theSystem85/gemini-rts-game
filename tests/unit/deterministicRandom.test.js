@@ -1,6 +1,6 @@
 /**
  * Unit tests for network/deterministicRandom.js
- * 
+ *
  * Tests the deterministic PRNG used for lockstep networking
  * to ensure reproducible random sequences across all peers.
  */
@@ -154,7 +154,7 @@ describe('deterministicRandom', () => {
       it('should increment call count when enabled', () => {
         deterministicRNG.setSeed(100)
         deterministicRNG.enable()
-        
+
         const initial = deterministicRNG.getCallCount()
         deterministicRNG.random()
         deterministicRNG.random()
@@ -274,12 +274,12 @@ describe('deterministicRandom', () => {
 
       it('should respect probability', () => {
         deterministicRNG.enable()
-        
+
         let trueCount = 0
         for (let i = 0; i < 1000; i++) {
           if (deterministicRNG.randomBool(0.7)) trueCount++
         }
-        
+
         // Expect ~70% true (with some tolerance)
         expect(trueCount).toBeGreaterThan(600)
         expect(trueCount).toBeLessThan(800)
@@ -329,13 +329,13 @@ describe('deterministicRandom', () => {
       it('should restore state correctly', () => {
         deterministicRNG.setSeed(12345)
         deterministicRNG.enable()
-        
+
         // Make some calls
         deterministicRNG.random()
         deterministicRNG.random()
-        
+
         const savedState = deterministicRNG.getState()
-        
+
         // Get next values
         const val1 = deterministicRNG.random()
         const val2 = deterministicRNG.random()
@@ -360,9 +360,9 @@ describe('deterministicRandom', () => {
       it('should use global deterministicRNG instance', () => {
         deterministicRNG.setSeed(111)
         deterministicRNG.enable()
-        
+
         const val1 = random()
-        
+
         deterministicRNG.setSeed(111)
         const val2 = random()
 
@@ -374,9 +374,9 @@ describe('deterministicRandom', () => {
       it('should use global deterministicRNG instance', () => {
         deterministicRNG.setSeed(222)
         deterministicRNG.enable()
-        
+
         const val1 = randomInt(0, 100)
-        
+
         deterministicRNG.setSeed(222)
         const val2 = randomInt(0, 100)
 
@@ -388,9 +388,9 @@ describe('deterministicRandom', () => {
       it('should use global deterministicRNG instance', () => {
         deterministicRNG.setSeed(333)
         deterministicRNG.enable()
-        
+
         const val1 = randomFloat(0, 100)
-        
+
         deterministicRNG.setSeed(333)
         const val2 = randomFloat(0, 100)
 
@@ -401,11 +401,11 @@ describe('deterministicRandom', () => {
     describe('randomElement()', () => {
       it('should use global deterministicRNG instance', () => {
         const arr = [1, 2, 3, 4, 5]
-        
+
         deterministicRNG.setSeed(444)
         deterministicRNG.enable()
         const val1 = randomElement(arr)
-        
+
         deterministicRNG.setSeed(444)
         const val2 = randomElement(arr)
 
@@ -417,10 +417,10 @@ describe('deterministicRandom', () => {
       it('should use global deterministicRNG instance', () => {
         deterministicRNG.setSeed(555)
         deterministicRNG.enable()
-        
+
         const arr1 = [1, 2, 3, 4, 5]
         shuffle(arr1)
-        
+
         deterministicRNG.setSeed(555)
         const arr2 = [1, 2, 3, 4, 5]
         shuffle(arr2)
@@ -434,7 +434,7 @@ describe('deterministicRandom', () => {
         deterministicRNG.setSeed(666)
         deterministicRNG.enable()
         const val1 = randomBool()
-        
+
         deterministicRNG.setSeed(666)
         const val2 = randomBool()
 
@@ -557,7 +557,7 @@ describe('deterministicRandom', () => {
 
     it('should detect desync if call counts differ', () => {
       const sessionSeed = 12345
-      
+
       // Client A makes 3 calls
       initializeSessionRNG(sessionSeed, true)
       random()

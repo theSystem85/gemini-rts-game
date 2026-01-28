@@ -1,6 +1,6 @@
 /**
  * Unit tests for gameRandom.js
- * 
+ *
  * Tests the random number generation utilities used throughout the game.
  * These functions wrap the deterministic RNG system but are also used
  * in single-player mode.
@@ -236,7 +236,7 @@ describe('gameRandom', () => {
 
     it('should be deterministic with same seed', () => {
       const array = ['apple', 'banana', 'cherry', 'date', 'elderberry']
-      
+
       deterministicRNG.setSeed(11111)
       deterministicRNG.enable()
       const firstSequence = []
@@ -271,7 +271,7 @@ describe('gameRandom', () => {
     it('should not always return the same order', () => {
       const original = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
       let differentOrderCount = 0
-      
+
       for (let i = 0; i < 20; i++) {
         const array = [...original]
         gameShuffle(array)
@@ -390,7 +390,7 @@ describe('gameRandom', () => {
     it('should track call count in deterministic mode', () => {
       deterministicRNG.setSeed(88888)
       deterministicRNG.enable()
-      
+
       const initialState = getRNGState()
       const initialCount = initialState.callCount
 
@@ -407,7 +407,7 @@ describe('gameRandom', () => {
   describe('deterministicRNG integration', () => {
     it('should produce identical sequences across sessions', () => {
       const seed = 42
-      
+
       // Session 1
       deterministicRNG.setSeed(seed)
       deterministicRNG.enable()
@@ -424,7 +424,7 @@ describe('gameRandom', () => {
       // Simulate new session
       deterministicRNG.setSeed(seed)
       deterministicRNG.reset?.()
-      
+
       const session2 = []
       for (let i = 0; i < 20; i++) {
         session2.push({

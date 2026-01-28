@@ -1,6 +1,6 @@
 /**
  * Unit tests for baseUtils.js
- * 
+ *
  * Tests the utility functions for managing base structures,
  * distance calculations, and structure normalization.
  */
@@ -19,7 +19,7 @@ describe('baseUtils', () => {
     // Save original state
     originalBuildings = gameState.buildings
     originalFactories = gameState.factories
-    
+
     // Reset to empty arrays
     gameState.buildings = []
     gameState.factories = []
@@ -43,7 +43,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(1)
       expect(structures[0]).toEqual({ x: 10, y: 10, width: 3, height: 3 })
     })
@@ -54,7 +54,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(1)
       expect(structures[0]).toEqual({ x: 20, y: 20, width: 3, height: 3 })
     })
@@ -69,7 +69,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(3)
     })
 
@@ -85,7 +85,7 @@ describe('baseUtils', () => {
 
       const playerStructures = getBaseStructures('player')
       const enemyStructures = getBaseStructures('enemy')
-      
+
       expect(playerStructures).toHaveLength(2)
       expect(enemyStructures).toHaveLength(2)
     })
@@ -97,7 +97,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(1)
     })
 
@@ -107,7 +107,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(1)
       expect(structures[0].width).toBe(1)
       expect(structures[0].height).toBe(1)
@@ -119,7 +119,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(1)
       expect(structures[0].x).toBe(0)
       expect(structures[0].y).toBe(0)
@@ -137,7 +137,7 @@ describe('baseUtils', () => {
         buildings: customBuildings,
         factories: customFactories
       })
-      
+
       expect(structures).toHaveLength(2)
     })
 
@@ -153,7 +153,7 @@ describe('baseUtils', () => {
       ]
 
       const structures = getBaseStructures('player')
-      
+
       expect(structures).toHaveLength(2)
     })
   })
@@ -244,7 +244,7 @@ describe('baseUtils', () => {
       // Position at distance 5
       const resultWithDefault = isWithinBaseRange(15, 10, 'player')
       const resultWithCustom = isWithinBaseRange(15, 10, 'player', { maxDistance: 10 })
-      
+
       // With MAX_BUILDING_GAP_TILES = 3, distance 5 should fail with default
       expect(resultWithDefault).toBe(false)
       // But should pass with maxDistance = 10
@@ -305,7 +305,7 @@ describe('baseUtils', () => {
 
       const structures = getBaseStructures('player')
       expect(structures).toHaveLength(1)
-      
+
       const result = isWithinBaseRange(-3, -5, 'player')
       expect(result).toBe(true)
     })
