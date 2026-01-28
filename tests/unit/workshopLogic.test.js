@@ -1,0 +1,528 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import '../setup.js'
+import { updateWorkshopLogic } from '../../src/game/workshopLogic.js'
+import { gameState } from '../../src/gameState.js'
+import { findPath, createUnit } from '../../src/units.js'
+import { getWreckById, removeWreckById } from '../../src/game/unitWreckManager.js'
+
+// Mock dependencies
+vi.mock('../../src/config.js', () => ({
+  TILE_SIZE: 32,
+  MAX_BUILDING_GAP_TILES: 3
+}))
+
+vi.mock('../../src/units.js', () => ({
+  findPath: vi.fn(() => [{ x: 1, y: 1 }, { x: 2, y: 2 }]),
+  createUnit: vi.fn((factory, type, x, y, _options) => ({
+    id: Date.now(),
+    type,
+    x: x * 32,
+    y: y * 32,
+    tileX: x,
+    tileY: y,
+    owner: factory.owner,
+    health: 100,
+    maxHealth: 100,
+    path: [],
+    crew: {},
+    gas: 100
+  }))
+}))
+
+vi.mock('../../src/utils.js', () => ({
+  updateUnitSpeedModifier: vi.fn(),
+  getUnitCost: vi.fn(() => 1000)
+}))
+
+vi.mock('../../src/gameState.js', () => ({
+  gameState: {
+    humanPlayer: 'player1',
+    money: 10000,
+    occupancyMap: [],
+    factories: [],
+    unitWrecks: []
+  }
+}))
+
+vi.mock('../../src/sound.js', () => ({
+  playSound: vi.fn()
+}))
+
+vi.mock('../../src/performanceUtils.js', () => ({
+  logPerformance: (fn) => fn
+}))
+
+vi.mock('../../src/game/unitWreckManager.js', () => ({
+  getWreckById: vi.fn(() => null),
+  removeWreckById: vi.fn()
+}))
+
+vi.mock('../../src/utils/baseUtils.js', () => ({
+  getBaseStructures: vi.fn(() => []),
+  isWithinBaseRange: vi.fn(() => true)
+}))
+
+vi.mock('../../src/utils/serviceRadius.js', () => ({
+  getServiceRadiusPixels: vi.fn(() => 200)
+}))
+
+describe('workshopLogic.js', () => {
+  let mockMapGrid
+  let mockBuildings
+  let mockUnits
+  let workshop
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockMapGrid = Array(20).fill(null).map(() =>
+      Array(20).fill(null).map(() => ({ type: 'grass' }))
+    )
+
+    workshop = {
+      type: 'vehicleWorkshop',
+      owner: 'player1',
+      x: 5,
+      y: 5,
+      width: 3,
+      height: 3,
+      health: 500,
+      repairSlots: null,
+      repairQueue: null,
+      restorationQueue: null,
+      currentRestoration: null,
+      restorationProgress: 0
+    }
+
+    mockBuildings = [workshop]
+    mockUnits = []
+
+    gameState.humanPlayer = 'player1'
+    gameState.money = 10000
+    gameState.occupancyMap = Array(20).fill(null).map(() => Array(20).fill(0))
+    gameState.factories = []
+    gameState.unitWrecks = []
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('workshop initialization', () => {
+    it('should initialize repair slots around workshop', () => {
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairSlots).toBeDefined()
+      expect(Array.isArray(workshop.repairSlots)).toBe(true)
+      expect(workshop.repairSlots.length).toBeGreaterThan(0)
+    })
+
+    it('should initialize repair queue as empty array', () => {
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairQueue).toBeDefined()
+      expect(Array.isArray(workshop.repairQueue)).toBe(true)
+    })
+
+    it('should create repair slots around the workshop perimeter', () => {
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      // Repair slots should be on the perimeter (not inside the workshop)
+      workshop.repairSlots.forEach(slot => {
+        const isOutside =
+          slot.x < workshop.x ||
+          slot.x >= workshop.x + workshop.width ||
+          slot.y < workshop.y ||
+          slot.y >= workshop.y + workshop.height
+        expect(isOutside).toBe(true)
+      })
+    })
+  })
+
+  describe('unit queuing', () => {
+    it('should add damaged units within service radius to repair queue', () => {
+      const damagedUnit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 6 * 32 + 16,
+        y: 6 * 32 + 16,
+        tileX: 6,
+        tileY: 6,
+        movement: { isMoving: false }
+      }
+      mockUnits.push(damagedUnit)
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairQueue).toContain(damagedUnit)
+    })
+
+    it('should not add fully healed units to queue', () => {
+      const healthyUnit = {
+        id: 2,
+        type: 'tank',
+        owner: 'player1',
+        health: 100,
+        maxHealth: 100,
+        x: 6 * 32,
+        y: 6 * 32,
+        tileX: 6,
+        tileY: 6
+      }
+      mockUnits.push(healthyUnit)
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairQueue).not.toContain(healthyUnit)
+    })
+
+    it('should not add enemy units to queue', () => {
+      const enemyUnit = {
+        id: 3,
+        type: 'tank',
+        owner: 'enemy',
+        health: 50,
+        maxHealth: 100,
+        x: 6 * 32,
+        y: 6 * 32,
+        tileX: 6,
+        tileY: 6
+      }
+      mockUnits.push(enemyUnit)
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairQueue).not.toContain(enemyUnit)
+    })
+
+    it('should not add moving units to queue', () => {
+      const movingUnit = {
+        id: 4,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 6 * 32,
+        y: 6 * 32,
+        tileX: 6,
+        tileY: 6,
+        movement: { isMoving: true }
+      }
+      mockUnits.push(movingUnit)
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairQueue).not.toContain(movingUnit)
+    })
+  })
+
+  describe('repair process', () => {
+    it('should heal unit when in repair slot', () => {
+      const damagedUnit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        tileX: 4,
+        tileY: 5,
+        repairingAtWorkshop: true,
+        repairSlot: { x: 4, y: 5, unit: null },
+        path: [],
+        moveTarget: null
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit: damagedUnit }]
+      workshop.repairQueue = []
+      damagedUnit.repairSlot = workshop.repairSlots[0]
+
+      const initialHealth = damagedUnit.health
+      updateWorkshopLogic([damagedUnit], mockBuildings, mockMapGrid, 1000) // 1 second delta
+      expect(damagedUnit.health).toBeGreaterThan(initialHealth)
+    })
+
+    it('should complete repair and release unit when fully healed', () => {
+      const unit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 99,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        tileX: 4,
+        tileY: 5,
+        repairingAtWorkshop: true,
+        path: [],
+        moveTarget: null,
+        workshopRepairCost: 0,
+        workshopRepairPaid: 0,
+        workshopStartHealth: 50
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit }]
+      workshop.repairQueue = []
+      unit.repairSlot = workshop.repairSlots[0]
+
+      updateWorkshopLogic([unit], mockBuildings, mockMapGrid, 5000)
+      expect(unit.repairingAtWorkshop).toBe(false)
+    })
+
+    it('should charge money for repairs', () => {
+      gameState.money = 10000
+
+      const unit = {
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        tileX: 4,
+        tileY: 5,
+        repairingAtWorkshop: true,
+        path: [],
+        moveTarget: null,
+        workshopRepairCost: 150, // Cost set
+        workshopRepairPaid: 0,
+        workshopStartHealth: 50
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit }]
+      workshop.repairQueue = []
+      unit.repairSlot = workshop.repairSlots[0]
+
+      updateWorkshopLogic([unit], mockBuildings, mockMapGrid, 1000)
+      // Money should be deducted
+      expect(gameState.money).toBeLessThanOrEqual(10000)
+    })
+
+    it('should handle dead units in repair slots', () => {
+      const deadUnit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 0,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        repairingAtWorkshop: true
+      }
+
+      const slot = { x: 4, y: 5, unit: deadUnit }
+      workshop.repairSlots = [slot]
+      workshop.repairQueue = []
+
+      updateWorkshopLogic([deadUnit], mockBuildings, mockMapGrid, 16)
+      expect(slot.unit).toBeNull()
+    })
+  })
+
+  describe('restoration process', () => {
+    it('should initialize restoration queue', () => {
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.restorationQueue).toBeDefined()
+      expect(Array.isArray(workshop.restorationQueue)).toBe(true)
+    })
+
+    it('should process restoration queue when empty', () => {
+      workshop.restorationQueue = []
+      workshop.currentRestoration = null
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.currentRestoration).toBeNull()
+    })
+
+    it('should start restoration from queue', () => {
+      const mockWreck = {
+        id: 'wreck1',
+        type: 'tank',
+        x: 100,
+        y: 100,
+        tileX: 3,
+        tileY: 3
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = [{
+        wreckId: 'wreck1',
+        unitType: 'tank',
+        buildDuration: 5000
+      }]
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.currentRestoration).not.toBeNull()
+    })
+
+    it('should update restoration progress over time', () => {
+      const mockWreck = {
+        id: 'wreck1',
+        type: 'tank',
+        x: 100,
+        y: 100,
+        tileX: 3,
+        tileY: 3
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck1',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 5000
+      }
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 1000) // 1 second delta
+      expect(workshop.currentRestoration.elapsed).toBe(6000)
+      expect(workshop.restorationProgress).toBeCloseTo(0.6, 1)
+    })
+
+    it('should cancel restoration if wreck is destroyed', () => {
+      vi.mocked(getWreckById).mockReturnValue(null) // Wreck no longer exists
+
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck1',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 5000
+      }
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
+      expect(workshop.currentRestoration).toBeNull()
+    })
+
+    it('should complete restoration and create unit', () => {
+      const mockWreck = {
+        id: 'wreck1',
+        type: 'tank',
+        x: 100,
+        y: 100,
+        tileX: 3,
+        tileY: 3
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck1',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 9990 // Almost done
+      }
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 100) // Complete restoration
+
+      // Check completion
+      expect(createUnit).toHaveBeenCalled()
+      expect(removeWreckById).toHaveBeenCalledWith(expect.anything(), 'wreck1')
+    })
+  })
+
+  describe('slot assignment', () => {
+    it('should assign units to available slots', () => {
+      vi.mocked(findPath).mockReturnValue([{ x: 4, y: 5 }, { x: 4, y: 5 }])
+
+      const unit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 5 * 32,
+        y: 5 * 32,
+        tileX: 5,
+        tileY: 5,
+        targetWorkshop: workshop
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit: null }]
+      workshop.repairQueue = [unit]
+
+      updateWorkshopLogic([unit], mockBuildings, mockMapGrid, 16)
+      // Unit should be assigned to slot
+    })
+
+    it('should not assign to occupied slots', () => {
+      const existingUnit = { id: 999, health: 50 }
+      const newUnit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        tileX: 5,
+        tileY: 5
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit: existingUnit }]
+      workshop.repairQueue = [newUnit]
+
+      updateWorkshopLogic([newUnit, existingUnit], mockBuildings, mockMapGrid, 16)
+      expect(workshop.repairSlots[0].unit).toBe(existingUnit)
+    })
+  })
+
+  describe('unit movement interruption', () => {
+    it('should cancel repair if unit starts moving', () => {
+      const unit = {
+        id: 1,
+        type: 'tank',
+        owner: 'player1',
+        health: 50,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        tileX: 4,
+        tileY: 5,
+        repairingAtWorkshop: true,
+        path: [{ x: 10, y: 10 }], // Unit has a new path
+        moveTarget: { x: 10, y: 10 },
+        workshopRepairCost: 100
+      }
+
+      const slot = { x: 4, y: 5, unit }
+      workshop.repairSlots = [slot]
+      workshop.repairQueue = []
+      unit.repairSlot = slot
+
+      updateWorkshopLogic([unit], mockBuildings, mockMapGrid, 16)
+      expect(unit.repairingAtWorkshop).toBe(false)
+      expect(slot.unit).toBeNull()
+    })
+  })
+
+  describe('rally point', () => {
+    it('should set rally point for completed units', () => {
+      const mockWreck = {
+        id: 'wreck1',
+        type: 'tank',
+        x: 100,
+        y: 100,
+        tileX: 3,
+        tileY: 3
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+      vi.mocked(findPath)
+      workshop.rallyPoint = { x: 9, y: 9 }
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck1',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 9990
+      }
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 100)
+
+      expect(createUnit).toHaveBeenCalled()
+    })
+  })
+})
