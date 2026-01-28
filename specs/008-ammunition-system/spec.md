@@ -159,6 +159,12 @@ This specification defines a comprehensive ammunition management system for the 
 
 1. **Given** an enemy AI player with a Construction Yard and sufficient resources, **When** the AI establishes its base economy (power, barracks, vehicle factory), **Then** the AI builds at least one Ammunition Factory within the first 10 minutes of gameplay
 
+---
+
+## Automated Test Coverage Notes
+
+- Unit command input should validate ammunition resupply and reload queueing for trucks, including queue metadata updates and pathing setup for resupply targets.
+
 2. **Given** an enemy AI with an Ammunition Factory and Vehicle Factory, **When** the AI has active combat units in the field, **Then** the AI produces at least 1-2 Ammunition Supply Trucks to support field operations
 
 3. **Given** enemy AI combat units with low ammunition (<20%), **When** the units are engaged in combat, **Then** the AI commands units to retreat toward the nearest Ammunition Factory or Supply Truck for resupply before re-engaging

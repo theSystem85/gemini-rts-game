@@ -27,6 +27,10 @@ As a player, I want to directly control selected tanks using arrow keys and spac
 6. **Given** remote control is active, **When** tanks move or turn, **Then** turrets continue tracking targets independently of wagon rotation
 7. **Given** remote control keys are released, **When** player gives normal move/attack commands, **Then** units seamlessly transition back to standard control mode
 
+**Automated Tests**
+
+- Unit tests cover remote control action aggregation, clamping, snapshot application, and remote broadcast gating in `src/input/remoteControlState.js` to keep keyboard/remote inputs deterministic.
+
 ---
 
 ### User Story 2 - Guard Mode Feature (Priority: P2)
