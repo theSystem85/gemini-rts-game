@@ -84,6 +84,7 @@ Example: `buildingPlacement.test.js`
 Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
+- Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
 
 ## Best Practices
 

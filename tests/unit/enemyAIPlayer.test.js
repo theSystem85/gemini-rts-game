@@ -1,0 +1,299 @@
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import '../setup.js'
+
+const mockBuildingData = {
+  oreRefinery: { cost: 2000, width: 3, height: 3, power: -30 },
+  powerPlant: { cost: 500, width: 2, height: 2, power: 100 },
+  vehicleFactory: { cost: 1500, width: 3, height: 3, power: -40 },
+  turretGunV1: { cost: 1000, width: 1, height: 1, power: -5 },
+  constructionYard: { cost: 3000, width: 3, height: 3, power: 50 },
+  helipad: { cost: 1200, width: 2, height: 2, power: -15 },
+  hospital: { cost: 800, width: 2, height: 2, power: -10 }
+}
+
+vi.mock('../../src/performanceUtils.js', () => ({
+  logPerformance: (fn) => fn
+}))
+
+vi.mock('../../src/buildings.js', () => ({
+  buildingData: mockBuildingData,
+  createBuilding: vi.fn((type, x, y) => ({ type, x, y, health: 100 })),
+  canPlaceBuilding: vi.fn(),
+  placeBuilding: vi.fn(),
+  updatePowerSupply: vi.fn()
+}))
+
+vi.mock('../../src/ai/enemySpawner.js', () => ({
+  spawnEnemyUnit: vi.fn()
+}))
+
+vi.mock('../../src/ai/enemyStrategies.js', () => ({
+  resetAttackDirections: vi.fn(),
+  manageAICrewHealing: vi.fn(),
+  manageAITankerTrucks: vi.fn(),
+  manageAIRecoveryTanks: vi.fn(),
+  manageAIAmmunitionTrucks: vi.fn(),
+  manageAIAmmunitionMonitoring: vi.fn(),
+  manageAIRepairs: vi.fn()
+}))
+
+vi.mock('../../src/utils.js', () => ({
+  getUnitCost: vi.fn()
+}))
+
+vi.mock('../../src/ai/enemyUnitBehavior.js', () => ({
+  updateAIUnit: vi.fn()
+}))
+
+vi.mock('../../src/ai/enemyBuilding.js', () => ({
+  findBuildingPosition: vi.fn()
+}))
+
+vi.mock('../../src/game/dangerZoneMap.js', () => ({
+  updateDangerZoneMaps: vi.fn()
+}))
+
+vi.mock('../../src/config.js', () => ({
+  RECOVERY_TANK_RATIO: 3,
+  UNIT_COSTS: { harvester: 1500 }
+}))
+
+vi.mock('../../src/gameState.js', () => ({
+  gameState: { humanPlayer: 'player1' }
+}))
+
+vi.mock('../../src/utils/gameRandom.js', () => ({
+  gameRandom: vi.fn()
+}))
+
+import {
+  buildingData,
+  createBuilding,
+  canPlaceBuilding,
+  placeBuilding,
+  updatePowerSupply
+} from '../../src/buildings.js'
+import {
+  manageAICrewHealing,
+  manageAITankerTrucks,
+  manageAIRecoveryTanks,
+  manageAIAmmunitionTrucks,
+  manageAIAmmunitionMonitoring,
+  manageAIRepairs
+} from '../../src/ai/enemyStrategies.js'
+import { updateAIUnit } from '../../src/ai/enemyUnitBehavior.js'
+import { updateDangerZoneMaps } from '../../src/game/dangerZoneMap.js'
+import { getUnitCost } from '../../src/utils.js'
+import { gameRandom } from '../../src/utils/gameRandom.js'
+
+const createMapGrid = (width, height) =>
+  Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => ({ type: 'land' }))
+  )
+
+let updateAIPlayer
+
+beforeAll(async() => {
+  ;({ updateAIPlayer } = await import('../../src/ai/enemyAIPlayer.js'))
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  getUnitCost.mockImplementation((type) => {
+    const costs = {
+      harvester: 200,
+      apache: 500,
+      tankerTruck: 200,
+      ammunitionTruck: 200,
+      ambulance: 200,
+      tank_v1: 300,
+      'tank-v2': 500,
+      'tank-v3': 800,
+      rocketTank: 700,
+      recoveryTank: 400
+    }
+    return costs[type] ?? 0
+  })
+  gameRandom.mockReturnValue(0.5)
+})
+
+describe('enemyAIPlayer updateAIPlayer', () => {
+  it('sells non-protected buildings to recover refinery funds', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 100
+    }
+    const constructionYard = {
+      type: 'constructionYard',
+      owner: aiPlayerId,
+      health: 100,
+      isBeingSold: false
+    }
+    const turretGun = {
+      type: 'turretGunV1',
+      owner: aiPlayerId,
+      health: 100,
+      isBeingSold: false
+    }
+    const gameState = {
+      buildings: [constructionYard, turretGun],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+
+    updateAIPlayer(
+      aiPlayerId,
+      [],
+      [aiFactory],
+      [],
+      createMapGrid(5, 5),
+      gameState,
+      null,
+      0,
+      []
+    )
+
+    expect(turretGun.isBeingSold).toBe(true)
+    expect(aiFactory.budget).toBe(100 + Math.floor(buildingData.turretGunV1.cost * 0.7))
+    expect(constructionYard.isBeingSold).toBe(false)
+    expect(manageAIRepairs).toHaveBeenCalled()
+  })
+
+  it('places completed buildings and updates power and danger zones', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 0,
+      currentlyBuilding: 'powerPlant',
+      buildStartTime: 0,
+      buildDuration: 100,
+      buildingPosition: { x: 1, y: 1 }
+    }
+    const gameState = {
+      buildings: [],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+    canPlaceBuilding.mockReturnValue(true)
+
+    updateAIPlayer(
+      aiPlayerId,
+      [],
+      [aiFactory],
+      [],
+      createMapGrid(5, 5),
+      gameState,
+      null,
+      200,
+      []
+    )
+
+    expect(createBuilding).toHaveBeenCalledWith('powerPlant', 1, 1)
+    expect(gameState.buildings).toHaveLength(1)
+    expect(gameState.buildings[0].owner).toBe(aiPlayerId)
+    expect(placeBuilding).toHaveBeenCalled()
+    expect(updatePowerSupply).toHaveBeenCalled()
+    expect(updateDangerZoneMaps).toHaveBeenCalledWith(gameState)
+    expect(aiFactory.currentlyBuilding).toBe(null)
+    expect(aiFactory.buildingPosition).toBe(null)
+  })
+
+  it('assigns vehicle factories as spawn points for harvester production', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 800
+    }
+    const vehicleFactory = { type: 'vehicleFactory', owner: aiPlayerId, health: 100 }
+    const gameState = {
+      buildings: [
+        { type: 'powerPlant', owner: aiPlayerId, health: 100 },
+        vehicleFactory,
+        { type: 'oreRefinery', owner: aiPlayerId, health: 100 }
+      ],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+
+    updateAIPlayer(
+      aiPlayerId,
+      [],
+      [aiFactory],
+      [],
+      createMapGrid(6, 6),
+      gameState,
+      null,
+      10000,
+      []
+    )
+
+    expect(aiFactory.currentlyProducingUnit).toBe('harvester')
+    expect(aiFactory.unitSpawnBuilding).toBe(vehicleFactory)
+    expect(aiFactory.unitBuildStartTime).toBe(10000)
+    expect(gameState.nextai1VehicleFactoryIndex).toBe(1)
+  })
+
+  it('spawns apache production from helipads when capacity exists', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 2000
+    }
+    const helipad = { type: 'helipad', owner: aiPlayerId, health: 100 }
+    const units = [
+      { owner: aiPlayerId, type: 'harvester', health: 100 },
+      { owner: aiPlayerId, type: 'harvester', health: 100 },
+      { owner: aiPlayerId, type: 'harvester', health: 100 },
+      { owner: aiPlayerId, type: 'harvester', health: 100 },
+      { owner: aiPlayerId, type: 'tankerTruck', health: 100 },
+      { owner: aiPlayerId, type: 'ambulance', health: 100 },
+      { owner: aiPlayerId, type: 'tank_v1', health: 100, harvesterHunter: true }
+    ]
+    const gameState = {
+      buildings: [
+        { type: 'powerPlant', owner: aiPlayerId, health: 100 },
+        { type: 'vehicleFactory', owner: aiPlayerId, health: 100 },
+        { type: 'oreRefinery', owner: aiPlayerId, health: 100 },
+        { type: 'hospital', owner: aiPlayerId, health: 100 },
+        helipad
+      ],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+
+    updateAIPlayer(
+      aiPlayerId,
+      units,
+      [aiFactory],
+      [],
+      createMapGrid(6, 6),
+      gameState,
+      null,
+      10000,
+      []
+    )
+
+    expect(aiFactory.currentlyProducingUnit).toBe('apache')
+    expect(aiFactory.unitSpawnBuilding).toBe(helipad)
+    expect(gameState.nextai1HelipadIndex).toBe(1)
+    expect(updateAIUnit).toHaveBeenCalled()
+    expect(manageAICrewHealing).toHaveBeenCalled()
+    expect(manageAITankerTrucks).toHaveBeenCalled()
+    expect(manageAIRecoveryTanks).toHaveBeenCalled()
+    expect(manageAIAmmunitionTrucks).toHaveBeenCalled()
+    expect(manageAIAmmunitionMonitoring).toHaveBeenCalled()
+  })
+})
