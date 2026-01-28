@@ -115,6 +115,11 @@ Located in `tests/unit/`
    - Match actual building dimensions
    - Use valid map coordinates
 
+5. **Mock render/audio dependencies in loop tests**
+   - Unit tests for `GameLoop` should mock rendering, audio, and lockstep helpers.
+   - Assert behavior through game state changes and scheduled frame calls rather than DOM rendering.
+
+
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
 
