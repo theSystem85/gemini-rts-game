@@ -1,6 +1,6 @@
 /**
  * State Hash System for Deterministic Lockstep
- * 
+ *
  * Computes deterministic hashes of game state for sync verification.
  * Uses a fast, order-independent hashing approach for arrays/collections.
  */
@@ -56,28 +56,28 @@ function hashString(str) {
  */
 function hashUnit(unit) {
   let hash = 2166136261
-  
+
   // Hash stable identifier
   hash = hashCombine(hash, hashString(unit.id))
   hash = hashCombine(hash, hashString(unit.type))
   hash = hashCombine(hash, hashString(unit.owner))
-  
+
   // Hash position (quantized)
   hash = hashCombine(hash, quantize(unit.x, POSITION_PRECISION))
   hash = hashCombine(hash, quantize(unit.y, POSITION_PRECISION))
   hash = hashCombine(hash, quantize(unit.tileX, 1))
   hash = hashCombine(hash, quantize(unit.tileY, 1))
-  
+
   // Hash health
   hash = hashCombine(hash, quantize(unit.health, 1))
   hash = hashCombine(hash, quantize(unit.maxHealth, 1))
-  
+
   // Hash direction (quantized)
   hash = hashCombine(hash, quantize(unit.direction, DIRECTION_PRECISION))
   if (unit.turretDirection !== undefined) {
     hash = hashCombine(hash, quantize(unit.turretDirection, DIRECTION_PRECISION))
   }
-  
+
   // Hash resources
   if (unit.gas !== undefined) {
     hash = hashCombine(hash, quantize(unit.gas, 1))
@@ -88,7 +88,7 @@ function hashUnit(unit) {
   if (unit.oreCarried !== undefined) {
     hash = hashCombine(hash, quantize(unit.oreCarried, 1))
   }
-  
+
   // Hash movement state
   if (unit.path) {
     hash = hashCombine(hash, unit.path.length)
@@ -97,16 +97,16 @@ function hashUnit(unit) {
     hash = hashCombine(hash, quantize(unit.moveTarget.x, 1))
     hash = hashCombine(hash, quantize(unit.moveTarget.y, 1))
   }
-  
+
   // Hash target
   if (unit.target && unit.target.id) {
     hash = hashCombine(hash, hashString(unit.target.id))
   }
-  
+
   // Hash level/experience
   hash = hashCombine(hash, quantize(unit.level || 0, 1))
   hash = hashCombine(hash, quantize(unit.bountyCounter || 0, 1))
-  
+
   return hash >>> 0
 }
 
@@ -117,39 +117,39 @@ function hashUnit(unit) {
  */
 function hashBuilding(building) {
   let hash = 2166136261
-  
+
   // Hash stable identifier
   hash = hashCombine(hash, hashString(building.id))
   hash = hashCombine(hash, hashString(building.type))
   hash = hashCombine(hash, hashString(building.owner))
-  
+
   // Hash position
   hash = hashCombine(hash, quantize(building.x, 1))
   hash = hashCombine(hash, quantize(building.y, 1))
-  
+
   // Hash health
   hash = hashCombine(hash, quantize(building.health, 1))
   hash = hashCombine(hash, quantize(building.maxHealth, 1))
-  
+
   // Hash construction state
   hash = hashCombine(hash, building.constructionFinished ? 1 : 0)
   if (building.constructionProgress !== undefined) {
     hash = hashCombine(hash, quantize(building.constructionProgress, 100))
   }
-  
+
   // Hash sell state
   hash = hashCombine(hash, building.isBeingSold ? 1 : 0)
-  
+
   // Hash turret direction if applicable
   if (building.turretDirection !== undefined) {
     hash = hashCombine(hash, quantize(building.turretDirection, DIRECTION_PRECISION))
   }
-  
+
   // Hash ammunition
   if (building.ammo !== undefined) {
     hash = hashCombine(hash, quantize(building.ammo, 1))
   }
-  
+
   return hash >>> 0
 }
 
@@ -160,22 +160,22 @@ function hashBuilding(building) {
  */
 function hashBullet(bullet) {
   let hash = 2166136261
-  
+
   hash = hashCombine(hash, hashString(bullet.id?.toString() || ''))
   hash = hashCombine(hash, hashString(bullet.type || ''))
   hash = hashCombine(hash, hashString(bullet.owner || ''))
-  
+
   // Hash position (quantized)
   hash = hashCombine(hash, quantize(bullet.x, POSITION_PRECISION))
   hash = hashCombine(hash, quantize(bullet.y, POSITION_PRECISION))
-  
+
   // Hash target
   hash = hashCombine(hash, quantize(bullet.targetX, POSITION_PRECISION))
   hash = hashCombine(hash, quantize(bullet.targetY, POSITION_PRECISION))
-  
+
   // Hash damage
   hash = hashCombine(hash, quantize(bullet.damage, 1))
-  
+
   return hash >>> 0
 }
 
@@ -186,14 +186,14 @@ function hashBullet(bullet) {
  */
 function hashMine(mine) {
   let hash = 2166136261
-  
+
   hash = hashCombine(hash, hashString(mine.id?.toString() || ''))
   hash = hashCombine(hash, hashString(mine.owner || ''))
   hash = hashCombine(hash, quantize(mine.x, 1))
   hash = hashCombine(hash, quantize(mine.y, 1))
   hash = hashCombine(hash, quantize(mine.health || 0, 1))
   hash = hashCombine(hash, mine.armed ? 1 : 0)
-  
+
   return hash >>> 0
 }
 
@@ -206,16 +206,16 @@ function hashMine(mine) {
  */
 function hashArrayUnordered(array, hashFn) {
   if (!array || array.length === 0) return 0
-  
+
   // XOR all individual hashes (order-independent)
   let result = 0
   for (const item of array) {
     result ^= hashFn(item)
   }
-  
+
   // Include length in hash
   result = hashCombine(result, array.length)
-  
+
   return result >>> 0
 }
 
@@ -227,13 +227,13 @@ function hashArrayUnordered(array, hashFn) {
  */
 export function hashArrayOrdered(array, hashFn) {
   if (!array || array.length === 0) return 0
-  
+
   let hash = 2166136261
   for (const item of array) {
     hash = hashCombine(hash, hashFn(item))
   }
   hash = hashCombine(hash, array.length)
-  
+
   return hash >>> 0
 }
 
@@ -244,9 +244,9 @@ export function hashArrayOrdered(array, hashFn) {
  */
 export function hashMapGrid(mapGrid) {
   if (!mapGrid || mapGrid.length === 0) return 0
-  
+
   let hash = 2166136261
-  
+
   // Only hash ore positions to reduce computation
   // Terrain is immutable after generation
   for (let y = 0; y < mapGrid.length; y++) {
@@ -259,7 +259,7 @@ export function hashMapGrid(mapGrid) {
       }
     }
   }
-  
+
   return hash >>> 0
 }
 
@@ -271,26 +271,26 @@ export function hashMapGrid(mapGrid) {
  */
 export function computeStateHash(gameState, tick) {
   let hash = 2166136261
-  
+
   // Include tick number
   hash = hashCombine(hash, tick)
-  
+
   // Hash units (unordered - units can be in any order in array)
   const unitsHash = hashArrayUnordered(gameState.units || [], hashUnit)
   hash = hashCombine(hash, unitsHash)
-  
+
   // Hash buildings (unordered)
   const buildingsHash = hashArrayUnordered(gameState.buildings || [], hashBuilding)
   hash = hashCombine(hash, buildingsHash)
-  
+
   // Hash bullets (unordered)
   const bulletsHash = hashArrayUnordered(gameState.bullets || [], hashBullet)
   hash = hashCombine(hash, bulletsHash)
-  
+
   // Hash mines (unordered)
   const minesHash = hashArrayUnordered(gameState.mines || [], hashMine)
   hash = hashCombine(hash, minesHash)
-  
+
   // Hash party states (money, power)
   if (gameState.partyStates) {
     for (const party of gameState.partyStates) {
@@ -298,14 +298,14 @@ export function computeStateHash(gameState, tick) {
       hash = hashCombine(hash, quantize(party.money || 0, 1))
     }
   }
-  
+
   // Hash global money
   hash = hashCombine(hash, quantize(gameState.money || 0, 1))
-  
+
   // Hash map ore state (expensive, do periodically)
   // const mapHash = hashMapGrid(gameState.mapGrid)
   // hash = hashCombine(hash, mapHash)
-  
+
   // Convert to hex string for easy comparison
   const finalHash = hash >>> 0
   return finalHash.toString(16).padStart(8, '0')
@@ -329,30 +329,30 @@ export function compareHashes(hash1, hash2) {
  */
 export function computeQuickHash(gameState, tick) {
   let hash = 2166136261
-  
+
   hash = hashCombine(hash, tick)
-  
+
   // Just count entities and total health
   const units = gameState.units || []
   const buildings = gameState.buildings || []
-  
+
   hash = hashCombine(hash, units.length)
   hash = hashCombine(hash, buildings.length)
-  
+
   let totalUnitHealth = 0
   for (const unit of units) {
     totalUnitHealth += unit.health || 0
   }
   hash = hashCombine(hash, quantize(totalUnitHealth, 1))
-  
+
   let totalBuildingHealth = 0
   for (const building of buildings) {
     totalBuildingHealth += building.health || 0
   }
   hash = hashCombine(hash, quantize(totalBuildingHealth, 1))
-  
+
   hash = hashCombine(hash, quantize(gameState.money || 0, 1))
-  
+
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 

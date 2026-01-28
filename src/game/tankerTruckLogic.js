@@ -64,9 +64,9 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
       )
       if (nearbyUnits.length > 0) {
         nearbyUnits.forEach(u => {
-          const distance = Math.abs(u.tileX - tanker.tileX) + Math.abs(u.tileY - tanker.tileY)
-          const gasPercent = Math.round((u.gas / u.maxGas) * 100)
-          const needsFuel = u.gas < (u.maxGas * 0.95) ? ' NEEDS FUEL' : ' (full)'
+          const _distance = Math.abs(u.tileX - tanker.tileX) + Math.abs(u.tileY - tanker.tileY)
+          const _gasPercent = Math.round((u.gas / u.maxGas) * 100)
+          const _needsFuel = u.gas < (u.maxGas * 0.95) ? ' NEEDS FUEL' : ' (full)'
         })
       }
       tanker.lastDebugTime = performance.now()
@@ -203,13 +203,15 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
           target.health <= 0 ||
           distanceToTarget > SERVICE_SERVING_RANGE ||
           (target.movement && target.movement.isMoving)) {
-        const distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
+        const _distance = target ? Math.abs(target.tileX - tanker.tileX) + Math.abs(target.tileY - tanker.tileY) : 'N/A'
 
         tanker.refuelTarget = null
         tanker.refuelTimer = 0
       } else if (tanker.supplyGas > 0 && target.gas < (target.maxGas * 0.95)) {
         // Log when tanker starts refueling (within serving range)
+        // Note: Empty block kept for potential future debugging
         if (!tanker.refuelTimer || tanker.refuelTimer === 0) {
+          // Placeholder for start-refuel logging
         }
         // Emergency units get faster refueling rate
         const isEmergencyRefuel = target.gas <= 0
@@ -224,6 +226,7 @@ export const updateTankerTruckLogic = logPerformance(function(units, gameState, 
 
         // Log refueling progress occasionally
         if (Math.floor(tanker.refuelTimer / 1000) !== Math.floor((tanker.refuelTimer - delta) / 1000)) {
+          // Placeholder for progress logging
         }
 
         // For emergency refueling, only fill to 20% to quickly get unit moving

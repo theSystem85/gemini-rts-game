@@ -1,6 +1,18 @@
 import js from '@eslint/js'
 
 export default [
+  // Global ignores (replaces .eslintignore)
+  {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      'coverage/**',
+      'public/**',
+      '.vscode/**',
+      '*.min.js'
+    ]
+  },
   js.configs.recommended,
   {
     languageOptions: {
@@ -25,7 +37,20 @@ export default [
         clearTimeout: 'readonly',
         clearInterval: 'readonly',
         requestAnimationFrame: 'readonly',
-        cancelAnimationFrame: 'readonly'
+        cancelAnimationFrame: 'readonly',
+        CustomEvent: 'readonly',
+        RTCPeerConnection: 'readonly',
+        crypto: 'readonly',
+        caches: 'readonly',
+        MouseEvent: 'readonly',
+        Element: 'readonly',
+        SpeechSynthesisUtterance: 'readonly',
+        FileReader: 'readonly',
+        TextEncoder: 'readonly',
+        BarcodeDetector: 'readonly',
+        WebGL2RenderingContext: 'readonly',
+        alert: 'readonly',
+        process: 'readonly'
       }
     },
     rules: {
@@ -70,16 +95,10 @@ export default [
       'template-curly-spacing': ['error', 'never'],
 
       // Common error prevention
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'off', // Allow console for game development
       'no-debugger': 'warn'
     },
-    files: ['**/*.js'],
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      'build/**',
-      '*.min.js'
-    ]
+    files: ['**/*.js']
   }
 ]

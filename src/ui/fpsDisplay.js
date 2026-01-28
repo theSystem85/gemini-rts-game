@@ -19,7 +19,7 @@ export class FPSDisplay {
     this.minFrameTime = 0
     this.maxFrameTime = 0
     this.lastDomUpdate = performance.now()
-    
+
     // Network stats tracking
     this.lastNetworkUpdate = performance.now()
     this.lastBytesSent = 0
@@ -35,14 +35,14 @@ export class FPSDisplay {
     this.frameTimeEl = document.getElementById('frameTimeValue')
     this.frameTimeMinEl = document.getElementById('frameTimeMin')
     this.frameTimeMaxEl = document.getElementById('frameTimeMax')
-    
+
     // Network stats elements
     this.networkStatsContainer = document.getElementById('networkStatsContainer')
     this.networkSendRateEl = document.getElementById('networkSendRate')
     this.networkRecvRateEl = document.getElementById('networkRecvRate')
     this.networkTotalSentEl = document.getElementById('networkTotalSent')
     this.networkTotalRecvEl = document.getElementById('networkTotalRecv')
-    
+
     // Lockstep stats elements
     this.lockstepStatsContainer = document.getElementById('lockstepStatsContainer')
     this.lockstepStatusEl = document.getElementById('lockstepStatus')
@@ -135,10 +135,10 @@ export class FPSDisplay {
       if (this.frameTimeMaxEl) {
         this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
       }
-      
+
       // Update network stats if multiplayer is active
       this.updateNetworkStats(currentTime)
-      
+
       // Update lockstep stats if lockstep is enabled
       this.updateLockstepStats()
 
@@ -154,23 +154,23 @@ export class FPSDisplay {
       this.fpsElement.classList.remove('visible')
     }
   }
-  
+
   updateNetworkStats(_currentTime) {
     // Get current network stats
     const stats = getNetworkStats()
-    
+
     // Only show network stats if there's any network activity
     const hasNetworkActivity = stats.bytesSent > 0 || stats.bytesReceived > 0
-    
+
     if (!hasNetworkActivity || !this.networkStatsContainer) {
       if (this.networkStatsContainer) {
         this.networkStatsContainer.style.display = 'none'
       }
       return
     }
-    
+
     this.networkStatsContainer.style.display = 'block'
-    
+
     // Format rates (already calculated by gameCommandSync)
     if (this.networkSendRateEl) {
       this.networkSendRateEl.textContent = `↑ ${this.formatBytes(stats.sendRate)}/s`
@@ -185,7 +185,7 @@ export class FPSDisplay {
       this.networkTotalRecvEl.textContent = `Recv: ${this.formatBytes(stats.bytesReceived)}`
     }
   }
-  
+
   formatBytes(bytes) {
     if (bytes < 1024) {
       return `${Math.round(bytes)} B`
@@ -195,34 +195,34 @@ export class FPSDisplay {
       return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
     }
   }
-  
+
   updateLockstepStats() {
     const lockstepEnabled = isLockstepEnabled()
-    
+
     if (!lockstepEnabled || !this.lockstepStatsContainer) {
       if (this.lockstepStatsContainer) {
         this.lockstepStatsContainer.style.display = 'none'
       }
       return
     }
-    
+
     this.lockstepStatsContainer.style.display = 'block'
-    
+
     // Get lockstep state from gameState
     const lockstep = gameState.lockstep || {}
-    
+
     // Update status
     if (this.lockstepStatusEl) {
       const role = gameState.multiplayerSession?.localRole === 'host' ? 'Host' : 'Client'
       this.lockstepStatusEl.textContent = `⚙ Lockstep: ${role}`
       this.lockstepStatusEl.style.color = lockstep.desyncDetected ? '#ff6b6b' : '#4ade80'
     }
-    
+
     // Update tick counter
     if (this.lockstepTickEl) {
       this.lockstepTickEl.textContent = `Tick: ${lockstep.currentTick || 0}`
     }
-    
+
     // Show/hide desync warning
     if (this.lockstepDesyncEl) {
       if (lockstep.desyncDetected) {

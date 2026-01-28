@@ -1,9 +1,9 @@
 /**
  * Building placement validation functions
- * 
+ *
  * Pure functions for validating building placement that can be imported
  * without triggering the full import chain of buildings.js.
- * 
+ *
  * These functions are re-exported from buildings.js for backwards compatibility.
  */
 

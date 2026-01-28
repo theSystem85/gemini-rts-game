@@ -191,7 +191,7 @@ export class PathPlanningRenderer {
             fillStyle: 'rgba(255, 165, 0, 0.6)',
             strokeStyle: 'rgba(230, 150, 0, 0.9)'
           }
-          
+
           // Custom colors for mine commands
           if (action.type === 'deployMine') {
             markerStyle.fillStyle = 'rgba(255, 50, 50, 0.6)' // Reddish for mines
@@ -244,12 +244,12 @@ export class PathPlanningRenderer {
         })
       })
     }
-    
+
     // Render detailed sweep paths for sweepArea commands
     units.forEach(unit => {
       if (!unit.selected || !unit.commandQueue) return
-      
-      unit.commandQueue.forEach((action, cmdIdx) => {
+
+      unit.commandQueue.forEach((action, _cmdIdx) => {
         if (action.type === 'sweepArea' && action.path && action.path.length > 1) {
           // Draw path line
           ctx.save()
@@ -257,7 +257,7 @@ export class PathPlanningRenderer {
           ctx.lineWidth = 2
           ctx.setLineDash([4, 4])
           ctx.beginPath()
-          
+
           action.path.forEach((tile, idx) => {
             const screenX = tile.x * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.x
             const screenY = tile.y * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.y
@@ -269,23 +269,23 @@ export class PathPlanningRenderer {
           })
           ctx.stroke()
           ctx.setLineDash([])
-          
+
           // Draw small numbered markers along the path (only show first 10 for clarity)
           const maxToShow = Math.min(action.path.length, 10)
           const step = Math.max(1, Math.floor(action.path.length / maxToShow))
-          
+
           for (let i = 0; i < action.path.length; i += step) {
             if (i >= maxToShow) break
             const tile = action.path[i]
             const screenX = tile.x * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.x
             const screenY = tile.y * TILE_SIZE + TILE_SIZE / 2 - scrollOffset.y
-            
+
             // Small circle
             ctx.fillStyle = 'rgba(255, 200, 0, 0.5)'
             ctx.beginPath()
             ctx.arc(screenX, screenY, 4, 0, Math.PI * 2)
             ctx.fill()
-            
+
             // Number
             ctx.fillStyle = '#000'
             ctx.font = '7px Arial'
@@ -293,7 +293,7 @@ export class PathPlanningRenderer {
             ctx.textBaseline = 'middle'
             ctx.fillText(String(i + 1), screenX, screenY)
           }
-          
+
           ctx.restore()
         }
       })

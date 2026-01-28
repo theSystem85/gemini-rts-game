@@ -10,7 +10,7 @@ import { UNIT_PROPERTIES, TILE_SIZE } from '../config.js'
 export function updateMineSweeperBehavior(units, gameState, now) {
   units.forEach(unit => {
     if (unit.type !== 'mineSweeper') return
-    
+
     // Initialize speed properties if not set
     if (!unit.normalSpeed) {
       unit.normalSpeed = UNIT_PROPERTIES.mineSweeper.speed

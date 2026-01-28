@@ -368,7 +368,7 @@ export class MouseHandler {
   handleLeftMouseDown(e, worldX, worldY, gameCanvas, selectedUnits, cursorManager) {
     // Track mouse down time and position
     this.mouseDownTime = performance.now()
-    
+
     // Track if Ctrl key is pressed for freeform sweep painting
     this.ctrlKeyPressed = e.ctrlKey
 
@@ -774,7 +774,7 @@ export class MouseHandler {
       // Generate mine deployment or sweep preview during drag
       if (this.wasDragging) {
         const selectedUnits = gameState.selectedUnits || []
-        
+
         // Mine Layer deployment preview (checkerboard pattern)
         if (mineInput.hasMineLayerSelected(selectedUnits)) {
           const area = {
@@ -795,13 +795,13 @@ export class MouseHandler {
             if (!gameState.mineFreeformPaint) {
               gameState.mineFreeformPaint = new Set()
             }
-            
+
             // Collect tiles from current position
             const currentTileX = Math.floor(this.selectionEnd.x / TILE_SIZE)
             const currentTileY = Math.floor(this.selectionEnd.y / TILE_SIZE)
             const tileKey = `${currentTileX},${currentTileY}`
             gameState.mineFreeformPaint.add(tileKey)
-            
+
             // Clear rectangle preview when doing freeform
             gameState.sweepAreaPreview = null
             gameState.mineDeploymentPreview = null
@@ -833,8 +833,8 @@ export class MouseHandler {
 
     // Check if any unit-producing factory/building is selected BEFORE deselecting
     const rect = gameCanvas.getBoundingClientRect()
-    const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-    const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    const _worldX = e.clientX - rect.left + gameState.scrollOffset.x
+    const _worldY = e.clientY - rect.top + gameState.scrollOffset.y
 
     // Right click no longer sets rally points, it only deselects
 
@@ -1157,7 +1157,7 @@ export class MouseHandler {
     return false
   }
 
-  handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, mapGrid) {
+  handleGuardCommand(worldX, worldY, units, selectedUnits, unitCommands, selectionManager, _mapGrid) {
     const commandableUnits = selectedUnits.filter(u => selectionManager.isCommandableUnit(u))
     if (commandableUnits.length === 0) {
       return false
@@ -1265,7 +1265,7 @@ export class MouseHandler {
       (unit.isBuilding && (unit.type === 'vehicleFactory' || unit.type === 'constructionYard')) ||
       (unit.id && (unit.id === gameState.humanPlayer))
     )
-    const isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
+    const _isAGFCapable = hasSelectedUnits && hasCombatUnits && !hasSelectedFactory &&
                         !gameState.buildingPlacementMode &&
                         !gameState.repairMode &&
                         !gameState.sellMode &&

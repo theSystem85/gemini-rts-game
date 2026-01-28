@@ -308,7 +308,7 @@ export function updateDustParticles(gameState) {
 
       // Fade out alpha
       p.alpha = 1 - progress
-      
+
       // Expand size slightly
       p.currentSize = p.size * (1 + progress * 0.5)
     }
@@ -480,7 +480,7 @@ export function checkGameEndConditions(factories, gameState) {
   }
 
   // In multiplayer, check if the local player is already a spectator
-  const isMultiplayer = gameState.multiplayerSession?.isRemote || 
+  const isMultiplayer = gameState.multiplayerSession?.isRemote ||
     (gameState.partyStates && gameState.partyStates.some(p => !p.aiActive))
 
   // Track if defeat sound was already played to prevent looping
@@ -597,7 +597,7 @@ export function checkGameEndConditions(factories, gameState) {
         totalRemainingPlayers++
       }
     }
-    
+
     // If only one player remains, that player wins
     if (totalRemainingPlayers <= 1) {
       gameState.gameOver = true
@@ -612,7 +612,7 @@ export function checkGameEndConditions(factories, gameState) {
         return playerBuildings.length + playerFactories.length > 0
       })
       gameState.gameResult = 'spectator_end'
-      gameState.gameOverMessage = winner 
+      gameState.gameOverMessage = winner
         ? `GAME OVER - ${winner.replace('player', 'Player ')} wins!`
         : 'GAME OVER - No survivors!'
       return true

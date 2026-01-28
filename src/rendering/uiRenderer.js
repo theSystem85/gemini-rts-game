@@ -267,10 +267,10 @@ export class UIRenderer {
     // Modal dimensions - centered with max size
     const maxModalWidth = Math.min(adjustedWidth * 0.9, 480)
     const maxModalHeight = Math.min(adjustedHeight * 0.9, 520)
-    
+
     const modalWidth = Math.max(280, maxModalWidth)
     const modalHeight = Math.max(320, maxModalHeight)
-    
+
     const modalX = safeLeft + (adjustedWidth - modalWidth) / 2
     const modalY = safeTop + (adjustedHeight - modalHeight) / 2
 
@@ -298,7 +298,7 @@ export class UIRenderer {
     // Calculate how many buttons we need
     const numButtons = isMultiplayerDefeat ? 2 : 1
     const totalButtonsHeight = numButtons * buttonHeight + (numButtons - 1) * buttonGap
-    
+
     // Stats layout
     const statsStartY = headingY + headingFontSize + padding * 0.5
     const statsSpacing = Math.max(statsFontSize * 1.3, 20)
@@ -348,7 +348,7 @@ export class UIRenderer {
   renderGameOver(ctx, gameCanvas, gameState) {
     // Check if we should show the defeat modal for multiplayer
     const isMultiplayerDefeat = gameState?.localPlayerDefeated && !gameState?.isSpectator && !gameState?.gameOver
-    
+
     // If game over or multiplayer defeat, render win/lose overlay
     if ((gameState?.gameOver && gameState?.gameOverMessage) || isMultiplayerDefeat) {
       const layout = this.calculateGameOverLayout(gameCanvas, isMultiplayerDefeat)
@@ -365,47 +365,47 @@ export class UIRenderer {
 
       // Draw modal background with rounded corners effect
       const { modal } = layout
-      
+
       // Modal shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
       ctx.fillRect(modal.x + 4, modal.y + 4, modal.width, modal.height)
-      
+
       // Modal background - gradient effect
       const gradient = ctx.createLinearGradient(modal.x, modal.y, modal.x, modal.y + modal.height)
       gradient.addColorStop(0, '#2a2a3a')
       gradient.addColorStop(1, '#1a1a2a')
       ctx.fillStyle = gradient
       ctx.fillRect(modal.x, modal.y, modal.width, modal.height)
-      
+
       // Modal border
-      ctx.strokeStyle = gameState.gameResult === 'victory' ? '#4CAF50' : 
-                       gameState.gameResult === 'defeat' ? '#f44336' : '#666'
+      ctx.strokeStyle = gameState.gameResult === 'victory' ? '#4CAF50' :
+        gameState.gameResult === 'defeat' ? '#f44336' : '#666'
       ctx.lineWidth = 2
       ctx.strokeRect(modal.x, modal.y, modal.width, modal.height)
 
       // Render game over message with glow effect and text wrapping
       const message = gameState.gameResult === 'victory' ? 'VICTORY' : 'DEFEAT'
-      const subMessage = gameState.gameResult === 'victory' 
+      const subMessage = gameState.gameResult === 'victory'
         ? 'All enemy buildings destroyed!'
         : 'All your buildings have been destroyed!'
-      
+
       ctx.font = `bold ${layout.heading.fontSize}px Arial`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
-      
+
       // Text glow for main title
       ctx.shadowColor = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
       ctx.shadowBlur = 10
       ctx.fillStyle = gameState.gameResult === 'victory' ? '#4CAF50' : '#f44336'
       ctx.fillText(message, layout.heading.x, layout.heading.y)
       ctx.shadowBlur = 0
-      
+
       // Render subtitle (wrapped if needed) below the main title
       const subtitleY = layout.heading.y + layout.heading.fontSize + 8
       const subtitleFontSize = Math.max(12, layout.heading.fontSize * 0.6)
       ctx.font = `${subtitleFontSize}px Arial`
       ctx.fillStyle = '#ccc'
-      
+
       // Wrap subtitle text into lines (don't rely on layout.stats.startY yet)
       const maxTextWidth = modal.width - layout.padding * 2
       const words = subMessage.split(' ')
@@ -443,7 +443,7 @@ export class UIRenderer {
       ctx.font = `${layout.stats.fontSize}px Arial`
       ctx.textBaseline = 'top'
       ctx.fillStyle = '#ddd'
-      
+
       const statsLines = [
         { icon: '🎖️', label: 'Your Units Lost', value: gameState.playerUnitsDestroyed || 0 },
         { icon: '💀', label: 'Enemy Units Destroyed', value: gameState.enemyUnitsDestroyed || 0 },
@@ -466,20 +466,20 @@ export class UIRenderer {
 
       // Render buttons
       const { buttons } = layout
-      
+
       if (isMultiplayerDefeat) {
         // Two buttons for multiplayer defeat: New Game and Spectator Mode
-        
+
         // New Game button
         const newGameY = buttons.startY
-        this.renderButton(ctx, buttons.x, newGameY, buttons.width, buttons.height, 
+        this.renderButton(ctx, buttons.x, newGameY, buttons.width, buttons.height,
           '🔄 New Game', buttons.fontSize, '#f44336', '#fff')
-        
+
         // Spectator Mode button
         const spectatorY = buttons.startY + buttons.height + buttons.gap
         this.renderButton(ctx, buttons.x, spectatorY, buttons.width, buttons.height,
           '👁️ Watch as Spectator', buttons.fontSize, '#2196F3', '#fff')
-          
+
         // Store button positions for click handling
         this.newGameButton = { x: buttons.x, y: newGameY, width: buttons.width, height: buttons.height }
         this.spectatorButton = { x: buttons.x, y: spectatorY, width: buttons.width, height: buttons.height }
@@ -541,19 +541,19 @@ export class UIRenderer {
     // Button shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
     ctx.fillRect(x + 2, y + 2, width, height)
-    
+
     // Button background with gradient
     const gradient = ctx.createLinearGradient(x, y, x, y + height)
     gradient.addColorStop(0, bgColor)
     gradient.addColorStop(1, this.darkenColor(bgColor, 30))
     ctx.fillStyle = gradient
     ctx.fillRect(x, y, width, height)
-    
+
     // Button border
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
     ctx.lineWidth = 1
     ctx.strokeRect(x, y, width, height)
-    
+
     // Button text
     ctx.font = `bold ${fontSize}px Arial`
     ctx.fillStyle = textColor
@@ -600,16 +600,16 @@ export class UIRenderer {
     // Enable spectator mode - player can watch but not interact
     gameState.isSpectator = true
     gameState.localPlayerDefeated = false // Clear the defeat flag so modal disappears
-    
+
     // Disable shadow of war so spectator can see the whole map
     gameState.spectatorShadowOfWarDisabled = gameState.shadowOfWarEnabled
     gameState.shadowOfWarEnabled = false
-    
+
     // Deselect all units
     if (gameState.units) {
       gameState.units.forEach(unit => { unit.selected = false })
     }
-    
+
     showNotification('👁️ Spectator Mode - You can now watch the remaining players', 4000)
   }
 

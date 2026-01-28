@@ -1,6 +1,6 @@
 /**
  * Building data definitions
- * 
+ *
  * This module is kept minimal with only essential dependencies to avoid
  * circular import issues. It exports the pure building data that can be
  * safely imported by any module including tests.

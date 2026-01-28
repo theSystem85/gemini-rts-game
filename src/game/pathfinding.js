@@ -67,23 +67,23 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
 
   // IMMEDIATE path calculation for units with moveTarget but no path
   // This ensures remote player units get paths right away without waiting for the interval
-  const unitsNeedingImmediatePath = units.filter(u => 
-    u.moveTarget && 
+  const unitsNeedingImmediatePath = units.filter(u =>
+    u.moveTarget &&
     (!u.path || u.path.length === 0) &&
     !u.lastPathCalcTime // Only units that haven't had paths calculated yet
   )
-  
+
   unitsNeedingImmediatePath.forEach(unit => {
     const targetPos = unit.moveTarget
     const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
     const cacheOptions = { unitOwner: unit.owner }
     const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
     const useOccupancyMap = distance <= PATHFINDING_THRESHOLD
-    
+
     const newPath = useOccupancyMap
       ? getCachedPath(startNode, targetPos, mapGrid, occupancyMap, cacheOptions)
       : getCachedPath(startNode, targetPos, mapGrid, null, cacheOptions)
-    
+
     if (newPath.length > 1) {
       unit.path = newPath.slice(1)
       unit.lastPathCalcTime = now

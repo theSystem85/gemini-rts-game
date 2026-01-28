@@ -202,7 +202,7 @@ export function invalidateInviteToken(partyId) {
   if (!party || !party.inviteToken) {
     return
   }
-  
+
   // Remove from local records
   inviteRecords.delete(party.inviteToken)
   party.inviteToken = null
@@ -215,11 +215,11 @@ export function invalidateInviteToken(partyId) {
  */
 export async function regenerateAllInviteTokens() {
   const parties = ensureMultiplayerState()
-  
+
   // Generate a new game instance ID for the freshly loaded save
   gameState.gameInstanceId = generateRandomId('game-instance')
   gameState.hostId = generateRandomId('host')
-  
+
   // Set the local session as the new host
   gameState.multiplayerSession = {
     ...gameState.multiplayerSession,
@@ -230,17 +230,17 @@ export async function regenerateAllInviteTokens() {
     inviteToken: null,
     connectedAt: null
   }
-  
+
   // Regenerate tokens for all non-host parties
   const regenerationPromises = parties
     .filter(party => party.partyId !== gameState.humanPlayer)
-    .map(async (party) => {
+    .map(async(party) => {
       // Reset party to AI control initially
       party.owner = 'AI'
       party.aiActive = true
       party.lastConnectedAt = null
       party.inviteToken = null
-      
+
       // Generate new invite token
       try {
         await generateInviteForParty(party.partyId)
@@ -248,9 +248,9 @@ export async function regenerateAllInviteTokens() {
         window.logger.warn(`Failed to regenerate invite token for party ${party.partyId}:`, err)
       }
     })
-  
+
   await Promise.all(regenerationPromises)
-  
+
   showHostNotification('Multiplayer tokens regenerated - you are now the host')
 }
 
@@ -277,10 +277,10 @@ export function markPartyControlledByHuman(partyId, alias) {
   party.aiActive = false
   party.lastConnectedAt = Date.now()
   showHostNotification(`Party ${partyId} taken over by ${party.owner}`)
-  
+
   // Emit event so UI components can update
   emitPartyOwnershipChange(partyId, party.owner, false)
-  
+
   return party
 }
 
@@ -294,10 +294,10 @@ export function markPartyControlledByAi(partyId) {
   party.aiActive = true
   party.lastConnectedAt = null
   showHostNotification(`Party ${partyId} returned to AI control`)
-  
+
   // Emit event so UI components can update
   emitPartyOwnershipChange(partyId, 'AI', true)
-  
+
   return party
 }
 

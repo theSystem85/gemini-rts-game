@@ -130,7 +130,7 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
     if (tileType !== 'land' && tileType !== 'street') {
       return // Can only place ore on land or street tiles
     }
-    
+
     // Check for buildings
     const buildings = gameState.buildings || []
     const hasBuilding = buildings.some(building => {
@@ -139,7 +139,7 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
       return tileX >= bx && tileX < bx + bw && tileY >= by && tileY < by + bh
     })
     if (hasBuilding) return
-    
+
     // Check for factories
     const factories = gameState.factories || []
     const hasFactory = factories.some(factory => {
@@ -147,11 +147,11 @@ function applyTile(tileX, tileY, entry, { randomize = false } = {}) {
              tileY >= factory.y && tileY < factory.y + factory.height
     })
     if (hasFactory) return
-    
+
     // Check occupancy
     const occupancyMap = gameState.occupancyMap || []
     if (occupancyMap[tileY]?.[tileX] > 0) return
-    
+
     // Place ore without changing underlying tile type
     tile.ore = true
     tile.seedCrystal = false // Remove seed crystal if present
@@ -225,7 +225,7 @@ function applyBuilding(tileX, tileY) {
 
 function removeBuildingAtTile(tileX, tileY) {
   if (!gameState.buildings) return
-  
+
   // Find and remove any building that overlaps with this tile
   for (let i = gameState.buildings.length - 1; i >= 0; i--) {
     const building = gameState.buildings[i]
@@ -233,12 +233,12 @@ function removeBuildingAtTile(tileX, tileY) {
     const by = building.y
     const bw = building.width || 1
     const bh = building.height || 1
-    
+
     // Check if the tile is within the building's bounds
     if (tileX >= bx && tileX < bx + bw && tileY >= by && tileY < by + bh) {
       // Remove from buildings array
       gameState.buildings.splice(i, 1)
-      
+
       // Clear occupancy map for this building
       const occupancyMap = gameState.occupancyMap
       if (occupancyMap) {
@@ -251,7 +251,7 @@ function removeBuildingAtTile(tileX, tileY) {
           }
         }
       }
-      
+
       // Update power supply and danger zones
       updatePowerSupply(gameState.buildings, gameState)
       updateDangerZoneMaps(gameState)
@@ -263,7 +263,7 @@ function removeBuildingAtTile(tileX, tileY) {
 
 function applyUnit(tileX, tileY) {
   if (!mapEditorState.brushPayload) return
-  
+
   // Check if tile is water or rock - cannot place units on these tiles
   const grid = currentMapGrid()
   if (grid[tileY] && grid[tileY][tileX]) {
@@ -272,10 +272,10 @@ function applyUnit(tileX, tileY) {
       return // Cannot place units on water or rock tiles
     }
   }
-  
+
   // Remove any existing buildings at this location
   removeBuildingAtTile(tileX, tileY)
-  
+
   // Remove any existing units at this location
   const unitList = currentUnits()
   if (Array.isArray(unitList)) {
@@ -288,7 +288,7 @@ function applyUnit(tileX, tileY) {
       }
     }
   }
-  
+
   const unitType = mapEditorState.brushPayload
   const ownerFactory = { owner: gameState.humanPlayer, x: tileX, y: tileY, width: 1, height: 1, type: 'editor' }
   const unit = createUnit(ownerFactory, unitType, tileX, tileY, {
@@ -440,22 +440,22 @@ export function activateMapEditMode() {
   gameState.gamePaused = true
   mapEditorState.randomMode = gameState.mapEditRandomMode !== false
   mapEditorState.brushKind = mapEditorState.brushKind || 'tile'
-  
+
   // Save current tech tree state and unlock everything
   if (productionControllerRef) {
     savedTechTreeState = {
       units: new Set(gameState.availableUnitTypes),
       buildings: new Set(gameState.availableBuildingTypes)
     }
-    
+
     // Unlock all unit types
     const allUnitTypes = Object.keys(unitCosts)
     allUnitTypes.forEach(type => productionControllerRef.forceUnlockUnitType(type))
-    
+
     // Unlock all building types
     const allBuildingTypes = Object.keys(buildingData)
     allBuildingTypes.forEach(type => productionControllerRef.forceUnlockBuildingType(type))
-    
+
     // Update UI to enable all buttons in edit mode
     productionControllerRef.updateVehicleButtonStates()
     productionControllerRef.updateBuildingButtonStates()
@@ -471,28 +471,28 @@ export function deactivateMapEditMode() {
   mapEditorState.brushKind = 'tile'
   mapEditorState.brushPayload = null
   mapEditorState.previewKey = null
-  
+
   // Restore original tech tree state
   if (productionControllerRef && savedTechTreeState) {
     // Clear all unlocks first
     gameState.availableUnitTypes.clear()
     gameState.availableBuildingTypes.clear()
-    
+
     // Restore saved units
     savedTechTreeState.units.forEach(type => {
       gameState.availableUnitTypes.add(type)
     })
-    
+
     // Restore saved buildings
     savedTechTreeState.buildings.forEach(type => {
       gameState.availableBuildingTypes.add(type)
     })
-    
+
     // Update UI to reflect restored state
     productionControllerRef.updateVehicleButtonStates()
     productionControllerRef.updateBuildingButtonStates()
     productionControllerRef.updateTabStates()
-    
+
     savedTechTreeState = null
   }
 }
@@ -537,11 +537,11 @@ export function handlePointerUp(tileX, tileY, { button = 0, shiftKey = false, me
 
 export function renderMapEditorOverlay(ctx, scrollOffset) {
   if (!mapEditorState.active) return
-  
+
   const { x, y } = mapEditorState.hoverTile
   const screenX = x * TILE_SIZE - scrollOffset.x
   const screenY = y * TILE_SIZE - scrollOffset.y
-  
+
   // Handle building preview
   if (mapEditorState.brushKind === 'building' && mapEditorState.brushPayload) {
     const buildingType = mapEditorState.brushPayload
@@ -549,18 +549,18 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
     if (entry) {
       const width = entry.width || 1
       const height = entry.height || 1
-      
+
       ctx.save()
-      
+
       // Try to get preloaded building image
       const imageName = entry.imageName || buildingType
       const imgPath = `/images/map/buildings/${imageName}.webp`
-      
+
       // Cache images in mapEditorState
       if (!mapEditorState.imageCache) {
         mapEditorState.imageCache = {}
       }
-      
+
       if (!mapEditorState.imageCache[imgPath]) {
         const img = new Image()
         img.onload = () => {
@@ -570,11 +570,11 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
         img.src = imgPath
         mapEditorState.imageCache[imgPath] = img
       }
-      
+
       const img = mapEditorState.imageCache[imgPath]
-      
+
       ctx.globalAlpha = 0.7
-      
+
       // Check if image is loaded
       if (img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
@@ -583,7 +583,7 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
         ctx.fillStyle = 'rgba(0, 183, 255, 0.25)'
         ctx.fillRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
       }
-      
+
       ctx.globalAlpha = 1.0
       ctx.strokeStyle = '#00b7ff'
       ctx.lineWidth = 2
@@ -596,19 +596,19 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
     }
     return
   }
-  
+
   // Handle unit preview
   if (mapEditorState.brushKind === 'unit' && mapEditorState.brushPayload) {
     const unitType = mapEditorState.brushPayload
-    
+
     // Try to get preloaded unit image
     const imgPath = `/images/map/units/${unitType}.webp`
-    
+
     // Cache images in mapEditorState
     if (!mapEditorState.imageCache) {
       mapEditorState.imageCache = {}
     }
-    
+
     if (!mapEditorState.imageCache[imgPath]) {
       const img = new Image()
       img.onload = () => {
@@ -618,12 +618,12 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
       img.src = imgPath
       mapEditorState.imageCache[imgPath] = img
     }
-    
+
     const img = mapEditorState.imageCache[imgPath]
-    
+
     ctx.save()
     ctx.globalAlpha = 0.7
-    
+
     // Check if image is loaded
     if (img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, screenX, screenY, TILE_SIZE, TILE_SIZE)
@@ -632,7 +632,7 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
       ctx.fillStyle = 'rgba(0, 255, 183, 0.25)'
       ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
     }
-    
+
     ctx.globalAlpha = 1.0
     ctx.strokeStyle = '#00ffb7'
     ctx.lineWidth = 2
@@ -644,10 +644,10 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
     ctx.restore()
     return
   }
-  
+
   // Handle tile preview
   if (mapEditorState.brushKind !== 'tile') return
-  
+
   const entry = getPaletteEntry()
   const { textureManager } = getTextureInfo()
 

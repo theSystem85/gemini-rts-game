@@ -10,7 +10,7 @@ const ENABLE_DODGING = false
 const lastPositionCheckTimeDelay = 3000
 const dodgeTimeDelay = 3000
 const useSafeAttackDistance = false
-const HARVESTER_REMOTE_DISTANCE = 8 * TILE_SIZE // Harvesters 8+ tiles from base are considered remote
+const _HARVESTER_REMOTE_DISTANCE = 8 * TILE_SIZE // Harvesters 8+ tiles from base are considered remote
 const PLAYER_DEFENSE_RADIUS = 10 * TILE_SIZE
 const PLAYER_DEFENSE_BUILDINGS = new Set([
   'turretGunV1',
@@ -1026,7 +1026,7 @@ function updateHarvesterHunterTank(unit, units, gameState, mapGrid, now, aiPlaye
     })
 
     const targetHarvester = remoteHarvesters[0]
-    const distanceToHarvester = Math.hypot(
+    const _distanceToHarvester = Math.hypot(
       (targetHarvester.x + TILE_SIZE / 2) - unitCenterX,
       (targetHarvester.y + TILE_SIZE / 2) - unitCenterY
     )

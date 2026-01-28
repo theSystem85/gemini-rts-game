@@ -1,11 +1,11 @@
 /**
  * Custom Debug Logger
  * Only logs when ?debug query parameter is present in the URL
- * 
+ *
  * Usage:
  *   window.logger('message', arg1, arg2)  // like console.log
  *   window.logger.warn('message', arg1)   // like console.warn
- * 
+ *
  * Enable by adding ?debug to the URL:
  *   http://localhost:5173/?debug
  *   http://localhost:5173/?debug&invite=token

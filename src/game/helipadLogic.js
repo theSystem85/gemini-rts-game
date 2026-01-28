@@ -15,7 +15,7 @@ function isUnitAdjacentToBuilding(unit, building, range) {
   const unitTileY = Math.floor(unit.y / TILE_SIZE)
   const buildingWidth = building.width || 1
   const buildingHeight = building.height || 1
-  
+
   // Check if unit is within range of any tile occupied by the building
   for (let bx = building.x; bx < building.x + buildingWidth; bx++) {
     for (let by = building.y; by < building.y + buildingHeight; by++) {
@@ -84,7 +84,7 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
       // Check for nearby ammo trucks
       const ammoTrucks = units.filter(u => u.type === 'ammunitionTruck' && u.health > 0 && typeof u.ammoCargo === 'number' && u.ammoCargo > 0)
       let ammoRefilled = false
-      
+
       ammoTrucks.forEach(ammoTruck => {
         // Check if truck is adjacent to any tile of the helipad
         const isAdjacent = isUnitAdjacentToBuilding(ammoTruck, helipad, AMMO_TRUCK_RANGE)
@@ -98,7 +98,7 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
           }
         }
       })
-      
+
       // If no ammo trucks nearby and ammo is below capacity, do not refill automatically
       if (!ammoRefilled) {
         // Ammo stays at current level until ammo truck arrives

@@ -64,14 +64,14 @@ export function setStoredPlayerAlias(alias) {
 function setupAliasInput() {
   const aliasInput = document.getElementById('playerAliasInput')
   const remoteAliasInput = document.getElementById('remoteAliasInput')
-  
+
   if (aliasInput) {
     // Load stored alias on init
     const storedAlias = getStoredPlayerAlias()
     if (storedAlias) {
       aliasInput.value = storedAlias
     }
-    
+
     // Save on change and sync to remote input
     aliasInput.addEventListener('input', (e) => {
       const value = e.target.value
@@ -81,7 +81,7 @@ function setupAliasInput() {
         remoteAliasInput.value = value
       }
     })
-    
+
     // Also save on blur
     aliasInput.addEventListener('blur', (e) => {
       setStoredPlayerAlias(e.target.value)
@@ -98,12 +98,12 @@ function extractInviteToken(input) {
   if (!input || typeof input !== 'string') {
     return null
   }
-  
+
   const trimmed = input.trim()
   if (!trimmed) {
     return null
   }
-  
+
   // Try to parse as URL first
   try {
     const url = new URL(trimmed)
@@ -114,7 +114,7 @@ function extractInviteToken(input) {
   } catch {
     // Not a valid URL, check if it's a raw token
   }
-  
+
   // Check if it looks like a URL with invite param but missing protocol
   if (trimmed.includes('?invite=') || trimmed.includes('&invite=')) {
     try {
@@ -128,13 +128,13 @@ function extractInviteToken(input) {
       // Still not valid
     }
   }
-  
+
   // Check if it's just the raw token (alphanumeric with dashes/underscores)
   // Invite tokens are typically in format: partyId-timestamp-random
   if (/^[a-zA-Z0-9_-]+$/.test(trimmed) && trimmed.length > 10) {
     return trimmed
   }
-  
+
   return null
 }
 
@@ -145,11 +145,11 @@ function setupJoinInviteLinkInput() {
   const input = document.getElementById('inviteLinkInput')
   const button = document.getElementById('joinInviteLinkBtn')
   const status = document.getElementById('joinInviteLinkStatus')
-  
+
   if (!input || !button) {
     return
   }
-  
+
   const showStatus = (message, isError = false, isSuccess = false) => {
     if (status) {
       status.textContent = message
@@ -157,41 +157,41 @@ function setupJoinInviteLinkInput() {
       status.classList.toggle('success', isSuccess)
     }
   }
-  
+
   const clearStatus = () => {
     if (status) {
       status.textContent = ''
       status.classList.remove('error', 'success')
     }
   }
-  
+
   const handleJoin = () => {
     const inputValue = input.value
     const token = extractInviteToken(inputValue)
-    
+
     if (!token) {
       showStatus('Invalid invite link or token', true)
       return
     }
-    
+
     // Clear the input
     input.value = ''
     clearStatus()
-    
+
     // Navigate to the URL with the invite token
     // This will trigger the remoteInviteLanding flow
     const baseUrl = window.location.origin + window.location.pathname
     const inviteUrl = `${baseUrl}?invite=${encodeURIComponent(token)}`
-    
+
     showStatus('Connecting...', false, false)
-    
+
     // Use location.href to navigate (this will reload the page with the invite token)
     window.location.href = inviteUrl
   }
-  
+
   // Handle button click
   button.addEventListener('click', handleJoin)
-  
+
   // Handle Enter key in input
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -199,7 +199,7 @@ function setupJoinInviteLinkInput() {
       handleJoin()
     }
   })
-  
+
   // Clear status when user starts typing
   input.addEventListener('input', () => {
     clearStatus()
@@ -219,7 +219,7 @@ async function isQrScannerSupported() {
   if (!('BarcodeDetector' in window)) {
     return false
   }
-  
+
   try {
     const formats = await BarcodeDetector.getSupportedFormats()
     return formats.includes('qr_code')
@@ -236,14 +236,14 @@ function getOrCreateQrScannerModal() {
   if (qrScannerModal && document.body.contains(qrScannerModal)) {
     return qrScannerModal
   }
-  
+
   qrScannerModal = document.createElement('div')
   qrScannerModal.className = 'qr-scanner-modal'
   qrScannerModal.setAttribute('aria-hidden', 'true')
   qrScannerModal.setAttribute('role', 'dialog')
   qrScannerModal.setAttribute('aria-modal', 'true')
   qrScannerModal.setAttribute('aria-labelledby', 'qr-scanner-title')
-  
+
   qrScannerModal.innerHTML = `
     <div class="qr-scanner-modal__backdrop"></div>
     <div class="qr-scanner-modal__dialog">
@@ -262,21 +262,21 @@ function getOrCreateQrScannerModal() {
       </div>
     </div>
   `
-  
+
   // Add event listeners
   const backdrop = qrScannerModal.querySelector('.qr-scanner-modal__backdrop')
   const closeBtn = qrScannerModal.querySelector('.qr-scanner-modal__close')
-  
+
   backdrop.addEventListener('click', stopQrScanner)
   closeBtn.addEventListener('click', stopQrScanner)
-  
+
   // Close on Escape key
   qrScannerModal.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       stopQrScanner()
     }
   })
-  
+
   document.body.appendChild(qrScannerModal)
   return qrScannerModal
 }
@@ -303,17 +303,17 @@ function updateQrScannerStatus(message, isError = false, isSuccess = false) {
 async function startQrScanner() {
   const modal = getOrCreateQrScannerModal()
   const video = modal.querySelector('.qr-scanner-modal__video')
-  
+
   // Show modal
   modal.classList.add('visible')
   modal.setAttribute('aria-hidden', 'false')
-  
+
   // Focus close button for accessibility
   const closeBtn = modal.querySelector('.qr-scanner-modal__close')
   closeBtn.focus()
-  
+
   updateQrScannerStatus('Requesting camera access...')
-  
+
   try {
     // Request camera access
     qrScannerStream = await navigator.mediaDevices.getUserMedia({
@@ -323,37 +323,37 @@ async function startQrScanner() {
         height: { ideal: 640 }
       }
     })
-    
+
     video.srcObject = qrScannerStream
     await video.play()
-    
+
     updateQrScannerStatus('Point your camera at a QR code')
-    
+
     // Create barcode detector
     const barcodeDetector = new BarcodeDetector({
       formats: ['qr_code']
     })
-    
+
     // Start scanning loop
-    const scanFrame = async () => {
+    const scanFrame = async() => {
       if (!qrScannerStream || video.readyState !== video.HAVE_ENOUGH_DATA) {
         qrScannerAnimationId = requestAnimationFrame(scanFrame)
         return
       }
-      
+
       try {
         const barcodes = await barcodeDetector.detect(video)
-        
+
         if (barcodes.length > 0) {
           const qrValue = barcodes[0].rawValue
           const token = extractInviteToken(qrValue)
-          
+
           if (token) {
             updateQrScannerStatus('QR code detected! Connecting...', false, true)
-            
+
             // Stop scanner and navigate
             stopQrScanner()
-            
+
             // Navigate to the invite URL
             const baseUrl = window.location.origin + window.location.pathname
             const inviteUrl = `${baseUrl}?invite=${encodeURIComponent(token)}`
@@ -365,15 +365,15 @@ async function startQrScanner() {
         // Detection failed, continue scanning
         window.logger.warn('QR detection error:', err)
       }
-      
+
       qrScannerAnimationId = requestAnimationFrame(scanFrame)
     }
-    
+
     qrScannerAnimationId = requestAnimationFrame(scanFrame)
-    
+
   } catch (err) {
     window.logger.warn('Camera access failed:', err)
-    
+
     if (err.name === 'NotAllowedError') {
       updateQrScannerStatus('Camera access denied. Please allow camera access.', true)
     } else if (err.name === 'NotFoundError') {
@@ -393,13 +393,13 @@ function stopQrScanner() {
     cancelAnimationFrame(qrScannerAnimationId)
     qrScannerAnimationId = null
   }
-  
+
   // Stop camera stream
   if (qrScannerStream) {
     qrScannerStream.getTracks().forEach(track => track.stop())
     qrScannerStream = null
   }
-  
+
   // Hide modal
   if (qrScannerModal) {
     const video = qrScannerModal.querySelector('.qr-scanner-modal__video')
@@ -416,22 +416,22 @@ function stopQrScanner() {
  */
 async function setupQrScanner() {
   const scanBtn = document.getElementById('scanQrBtn')
-  
+
   if (!scanBtn) {
     return
   }
-  
+
   // Check if QR scanning is supported
   const supported = await isQrScannerSupported()
-  
+
   if (!supported) {
     // Hide button if not supported
     scanBtn.style.display = 'none'
     return
   }
-  
+
   // Handle button click
-  scanBtn.addEventListener('click', async () => {
+  scanBtn.addEventListener('click', async() => {
     await startQrScanner()
   })
 }
@@ -546,10 +546,10 @@ function createPartyRow(partyState) {
   const status = document.createElement('span')
   status.className = 'multiplayer-party-status'
   status.setAttribute('aria-live', 'polite')
-  
+
   // Check if a human player is connected (not AI and not the host)
   const isHumanConnected = !partyState.aiActive && partyState.partyId !== gameState.humanPlayer
-  
+
   if (isHumanConnected) {
     // Human player is connected - show empty status and kick button
     status.textContent = ''
@@ -571,7 +571,7 @@ function createPartyRow(partyState) {
     inviteButton.className = 'multiplayer-invite-button'
     inviteButton.textContent = 'Invite'
     inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
-    
+
     controls.appendChild(inviteButton)
   }
 
@@ -654,7 +654,7 @@ async function handleInviteClick(partyState, button, status) {
 function handleKickClick(partyState, button) {
   button.disabled = true
   button.textContent = 'Kicking…'
-  
+
   // kickPlayer is now async
   kickPlayer(partyState.partyId).then(success => {
     if (!success) {
@@ -694,7 +694,7 @@ function getOrCreateQRModal() {
   if (qrModal && document.body.contains(qrModal)) {
     return qrModal
   }
-  
+
   // Create modal structure
   qrModal = document.createElement('div')
   qrModal.className = 'multiplayer-qr-modal'
@@ -702,7 +702,7 @@ function getOrCreateQRModal() {
   qrModal.setAttribute('role', 'dialog')
   qrModal.setAttribute('aria-modal', 'true')
   qrModal.setAttribute('aria-labelledby', 'qr-modal-title')
-  
+
   qrModal.innerHTML = `
     <div class="multiplayer-qr-modal__backdrop"></div>
     <div class="multiplayer-qr-modal__dialog">
@@ -720,16 +720,16 @@ function getOrCreateQRModal() {
       </div>
     </div>
   `
-  
+
   // Add event listeners
   const backdrop = qrModal.querySelector('.multiplayer-qr-modal__backdrop')
   const closeBtn = qrModal.querySelector('.multiplayer-qr-modal__close')
   const copyBtn = qrModal.querySelector('.multiplayer-qr-modal__copy-btn')
   const linkInput = qrModal.querySelector('.multiplayer-qr-modal__link-input')
-  
+
   backdrop.addEventListener('click', hideQRCodeModal)
   closeBtn.addEventListener('click', hideQRCodeModal)
-  copyBtn.addEventListener('click', async () => {
+  copyBtn.addEventListener('click', async() => {
     const success = await tryCopyToClipboard(linkInput.value)
     if (success) {
       copyBtn.textContent = 'Copied!'
@@ -738,14 +738,14 @@ function getOrCreateQRModal() {
       }, 2000)
     }
   })
-  
+
   // Close on Escape key
   qrModal.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       hideQRCodeModal()
     }
   })
-  
+
   document.body.appendChild(qrModal)
   return qrModal
 }
@@ -757,17 +757,17 @@ function getOrCreateQRModal() {
  */
 function showQRCodeModal(partyState, inviteUrl) {
   const modal = getOrCreateQRModal()
-  
+
   // Update modal content
   const title = modal.querySelector('.multiplayer-qr-modal__title')
   const qrContainer = modal.querySelector('.multiplayer-qr-modal__qr-container')
   const linkInput = modal.querySelector('.multiplayer-qr-modal__link-input')
   const copyBtn = modal.querySelector('.multiplayer-qr-modal__copy-btn')
-  
+
   // Set title with party color
   const partyName = getPartyDisplayName(partyState.partyId, partyState.color)
   title.textContent = `Invite to ${partyName}`
-  
+
   // Clear and regenerate QR code
   qrContainer.innerHTML = ''
   try {
@@ -778,15 +778,15 @@ function showQRCodeModal(partyState, inviteUrl) {
     window.logger.warn('Failed to generate QR code:', err)
     qrContainer.innerHTML = '<p class="multiplayer-qr-modal__error">Failed to generate QR code</p>'
   }
-  
+
   // Set link input value
   linkInput.value = inviteUrl
   copyBtn.textContent = 'Copy'
-  
+
   // Show modal
   modal.classList.add('visible')
   modal.setAttribute('aria-hidden', 'false')
-  
+
   // Focus close button for accessibility
   const closeBtn = modal.querySelector('.multiplayer-qr-modal__close')
   closeBtn.focus()

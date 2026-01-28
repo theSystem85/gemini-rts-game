@@ -62,8 +62,6 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
         } else if (building.owner !== gameState.humanPlayer) {
           gameState.enemyBuildingsDestroyed++
           // Play enemy building destroyed sound when an enemy building is killed
-          const centerX = building.x * TILE_SIZE + (building.width * TILE_SIZE / 2)
-          const centerY = building.y * TILE_SIZE + (building.height * TILE_SIZE / 2)
           playSound('enemyBuildingDestroyed', 1.0, 0, true)
         }
 
@@ -131,7 +129,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             initialRadius,
             false
           )
-          
+
           // Create scattering ammunition particles
           const particleCount = 40 // Average of 30-50
           for (let i = 0; i < particleCount; i++) {
@@ -139,7 +137,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
             const speed = 0.5 + gameRandom() * 1.5 // 0.5-2.0 tiles per second
             const lifetime = 5000 // 5 seconds
             const damage = 30 + gameRandom() * 20 // 30-50 damage
-            
+
             const particle = {
               id: Date.now() + gameRandom(),
               x: buildingCenterX,
@@ -155,10 +153,10 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
               projectileType: 'ammoParticle',
               size: 4
             }
-            
+
             bullets.push(particle)
           }
-          
+
           playPositionalSound('explosion', buildingCenterX, buildingCenterY, 0.7)
         } else {
           // Add standard explosion effect
@@ -191,7 +189,7 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
   const now = performance.now()
 
   // Debug: Count Tesla coils
-  const teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
+  const _teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
 
   buildings.forEach(building => {
     // Defensive buildings: turrets and tesla coil

@@ -1,10 +1,10 @@
 /**
  * Deterministic Random Number Generator (PRNG) for Lockstep Networking
- * 
+ *
  * This module provides a seedable, deterministic random number generator
  * that can be shared across all peers in a multiplayer session to ensure
  * identical simulation results.
- * 
+ *
  * Based on the Mulberry32 algorithm for high-quality, fast PRNG.
  */
 

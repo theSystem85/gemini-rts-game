@@ -47,10 +47,10 @@ export function fetchPendingSessions(inviteToken) {
 
   // Add cache-busting timestamp to prevent CDN/edge caching
   const cacheBuster = `_t=${Date.now()}`
-  const url = STUN_HOST === '' 
+  const url = STUN_HOST === ''
     ? `/api/signalling/pending/${encodeURIComponent(inviteToken)}?${cacheBuster}`
     : `${STUN_HOST}/signalling/pending/${encodeURIComponent(inviteToken)}?${cacheBuster}`
-  
+
   return fetch(url, {
     cache: 'no-store'
   }).then((response) => {

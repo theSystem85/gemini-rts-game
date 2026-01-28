@@ -1,5 +1,5 @@
 import { TILE_SIZE } from './config.js'
-import { canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply, calculateRepairCost, repairBuilding } from './buildings.js'
+import { canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply, calculateRepairCost } from './buildings.js'
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { buildingData } from './buildings.js'
@@ -8,7 +8,7 @@ import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
 import { updateMoneyBar } from './ui/moneyBar.js'
 import { broadcastBuildingPlace } from './network/gameCommandSync.js'
 
-export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, moneyEl) {
+export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, _moneyEl) {
   // If repair mode is active, check for buildings and factories to repair
   if (gameState.repairMode) {
     const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x

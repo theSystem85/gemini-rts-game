@@ -37,12 +37,12 @@ export function isUnitAiControlled(unit) {
   if (!unit || !unit.owner) {
     return false
   }
-  
+
   // The human player is never AI controlled
   if (unit.owner === gameState.humanPlayer) {
     return false
   }
-  
+
   return isPartyAiControlled(unit.owner)
 }
 
@@ -55,12 +55,12 @@ export function isBuildingAiControlled(building) {
   if (!building || !building.owner) {
     return false
   }
-  
+
   // The human player is never AI controlled
   if (building.owner === gameState.humanPlayer) {
     return false
   }
-  
+
   return isPartyAiControlled(building.owner)
 }
 
@@ -73,16 +73,16 @@ export function reinitializeAiForParty(partyId) {
   if (!partyId) {
     return
   }
-  
+
   const party = getPartyState(partyId)
   if (!party || !party.aiActive) {
     return
   }
-  
+
   // Clear any pending human commands for units of this party
   // Units will automatically be picked up by the AI update loop
   // since they now belong to an AI-controlled party
-  
+
   if (Array.isArray(gameState.units)) {
     gameState.units.forEach(unit => {
       if (unit.owner === partyId) {
@@ -91,14 +91,14 @@ export function reinitializeAiForParty(partyId) {
           unit.commandQueue = []
         }
         unit.currentCommand = null
-        
+
         // Clear utility queues
         if (unit.utilityQueue) {
           unit.utilityQueue.mode = null
           unit.utilityQueue.targets = []
           unit.utilityQueue.currentTargetId = null
         }
-        
+
         // Reset any pending attack/move targets that were player-issued
         // The AI will reassign these in its next update cycle
         if (!unit.target && !unit.path?.length) {
@@ -107,7 +107,7 @@ export function reinitializeAiForParty(partyId) {
       }
     })
   }
-  
+
   window.logger(`AI reinitialized for party ${partyId}`)
 }
 
@@ -122,7 +122,7 @@ export function initAiPartySync() {
   if (aiReactivationCleanup) {
     aiReactivationCleanup()
   }
-  
+
   aiReactivationCleanup = observeAiReactivation((event) => {
     const partyId = event?.detail?.partyId
     if (partyId) {
@@ -130,7 +130,7 @@ export function initAiPartySync() {
       reinitializeAiForParty(partyId)
     }
   })
-  
+
   return aiReactivationCleanup
 }
 

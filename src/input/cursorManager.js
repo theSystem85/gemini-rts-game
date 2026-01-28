@@ -631,7 +631,7 @@ export class CursorManager {
           this.updateRangeCursorDisplay(rangeCursorPosition, true)
         }
       }
-      const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
+      const _setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
       const setAttackOutOfRangeCursor = () => setOutOfRangeCursor()
       const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')
       const setMoveCursor = () => setCursor('none', 'move-mode')

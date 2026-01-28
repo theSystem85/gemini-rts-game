@@ -9,10 +9,10 @@
  * - Shift+Click initiates retreat mode
  */
 
-import { TILE_SIZE, TANK_FIRE_RANGE, TANK_WAGON_ROT } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { angleDiff } from '../logic.js'
-import { findPath } from '../units.js'
+// import { findPath } from '../units.js' // Unused but kept for future use
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
 
@@ -96,7 +96,7 @@ export function initiateRetreat(selectedUnits, targetX, targetY, mapGrid) {
 /**
  * Calculate retreat direction and movement strategy
  */
-function calculateRetreatMovement(unit, mapGrid) {
+function calculateRetreatMovement(unit, _mapGrid) {
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
   const retreatWorldX = unit.retreatTarget.x * TILE_SIZE + TILE_SIZE / 2
@@ -245,8 +245,8 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
 function updateRetreatMovement(unit, now) {
   if (!unit.retreatTarget) return
 
-  const unitCenterX = unit.x + TILE_SIZE / 2
-  const unitCenterY = unit.y + TILE_SIZE / 2
+  const _unitCenterX = unit.x + TILE_SIZE / 2
+  const _unitCenterY = unit.y + TILE_SIZE / 2
   const retreatWorldX = unit.retreatTarget.x * TILE_SIZE + TILE_SIZE / 2
   const retreatWorldY = unit.retreatTarget.y * TILE_SIZE + TILE_SIZE / 2
 
@@ -330,7 +330,7 @@ function updateRetreatMovement(unit, now) {
 /**
  * Handle combat during retreat
  */
-function updateRetreatCombat(unit, now) {
+function updateRetreatCombat(unit, _now) {
   // Continue firing at target while retreating (if in range)
   if (unit.target && unit.target.health > 0) {
     const targetDistance = getDistanceToTarget(unit, unit.target)

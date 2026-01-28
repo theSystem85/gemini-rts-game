@@ -624,36 +624,36 @@ class TutorialSystem {
         const allVoices = window.speechSynthesis?.getVoices?.() || []
         const englishVoices = allVoices.filter(voice => voice.lang.startsWith('en'))
         voiceSelect.innerHTML = '<option value="">Browser Default</option>'
-        
+
         // Auto-select preferred voice if no voice is stored
         if (this.settings.selectedVoice === null || this.settings.selectedVoice === undefined) {
           // Priority 1: Google US English (en-US)
-          let preferredVoice = allVoices.findIndex(v => 
-            v.name.toLowerCase().includes('google') && 
+          let preferredVoice = allVoices.findIndex(v =>
+            v.name.toLowerCase().includes('google') &&
             v.name.toLowerCase().includes('us') &&
             v.lang.toLowerCase().startsWith('en-us')
           )
-          
+
           // Priority 2: Any Google English voice
           if (preferredVoice === -1) {
-            preferredVoice = allVoices.findIndex(v => 
-              v.name.toLowerCase().includes('google') && 
+            preferredVoice = allVoices.findIndex(v =>
+              v.name.toLowerCase().includes('google') &&
               v.lang.toLowerCase().startsWith('en')
             )
           }
-          
+
           // Priority 3: Any available English voice
           if (preferredVoice === -1 && englishVoices.length > 0) {
             preferredVoice = allVoices.indexOf(englishVoices[0])
           }
-          
+
           // Store the auto-selected voice
           if (preferredVoice !== -1) {
             this.settings.selectedVoice = preferredVoice
             writeToStorage(TUTORIAL_SETTINGS_KEY, this.settings)
           }
         }
-        
+
         englishVoices.forEach((voice) => {
           // Find original index in full voices array for proper selection
           const originalIndex = allVoices.indexOf(voice)
@@ -666,13 +666,13 @@ class TutorialSystem {
           voiceSelect.appendChild(option)
         })
       }
-      
+
       // Voices may load asynchronously
       if (window.speechSynthesis) {
         populateVoices()
         window.speechSynthesis.onvoiceschanged = populateVoices
       }
-      
+
       voiceSelect.addEventListener('change', () => {
         const value = voiceSelect.value
         this.settings.selectedVoice = value === '' ? null : parseInt(value, 10)
@@ -726,13 +726,13 @@ class TutorialSystem {
       this.stop()
       return
     }
-    
+
     // Don't allow starting if completed (unless reset or manual restart)
     if (this.progress.completed && !reset && !manual) {
       this.hideUI()
       return
     }
-    
+
     if (reset) {
       this.progress = { ...DEFAULT_PROGRESS }
       this.stepIndex = 0
@@ -944,7 +944,7 @@ class TutorialSystem {
 
   toggleMinimize() {
     this.minimized = !this.minimized
-    
+
     if (this.minimized) {
       // Minimizing: animate card out, then show dock button
       if (this.card) {
@@ -987,7 +987,7 @@ class TutorialSystem {
         }, { once: true })
       }
     }
-    
+
     this.renderStep(this.steps[this.stepIndex])
   }
 
@@ -1151,7 +1151,7 @@ class TutorialSystem {
     window.speechSynthesis?.cancel?.()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-US'
-    
+
     // Apply selected voice if configured
     if (this.settings.selectedVoice !== null && this.settings.selectedVoice !== undefined) {
       const voices = window.speechSynthesis?.getVoices?.() || []
@@ -1159,7 +1159,7 @@ class TutorialSystem {
         utterance.voice = voices[this.settings.selectedVoice]
       }
     }
-    
+
     this.speaking = true
     utterance.onend = () => {
       this.speaking = false
@@ -1265,7 +1265,7 @@ class TutorialSystem {
         },
         hint: 'You can skip any step or the full tutorial at any time.',
         completion: () => true,
-        demo: async () => {
+        demo: async() => {
           await sleep(300)
         }
       },
@@ -1278,7 +1278,7 @@ class TutorialSystem {
         },
         hint: 'Click the money bar or energy bar to continue.',
         highlightSelector: getIsTouchLayout() ? '#mobileStatusBar' : '#moneyBarContainer',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           const moneyTarget = document.getElementById(getIsTouchLayout() ? 'mobileMoneyDisplay' : 'moneyBarContainer')
           const energyTarget = document.getElementById(getIsTouchLayout() ? 'mobileEnergyBarContainer' : 'energyBarContainer')
           await ctx.moveCursorToElement(moneyTarget)
@@ -1301,7 +1301,7 @@ class TutorialSystem {
         },
         hint: 'Click the Power Plant button to continue.',
         highlightSelector: '.production-button[data-building-type="powerPlant"]',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           await ctx.demoBuildBuilding('powerPlant')
         },
         completion: (ctx) => ctx.lastAction === 'building:powerPlant' || countPlayerBuildings('powerPlant') > ctx.stepState.startPowerPlants
@@ -1315,7 +1315,7 @@ class TutorialSystem {
         },
         hint: 'Click the Ore Refinery button to continue.',
         highlightSelector: '.production-button[data-building-type="oreRefinery"]',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           await ctx.demoBuildBuilding('oreRefinery')
         },
         completion: (ctx) => ctx.lastAction === 'building:oreRefinery' || countPlayerBuildings('oreRefinery') > ctx.stepState.startRefineries
@@ -1329,7 +1329,7 @@ class TutorialSystem {
         },
         hint: 'Click the Vehicle Factory button to continue.',
         highlightSelector: '.production-button[data-building-type="vehicleFactory"]',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           await ctx.demoBuildBuilding('vehicleFactory')
         },
         completion: (ctx) => ctx.lastAction === 'building:vehicleFactory' || countPlayerBuildings('vehicleFactory') > ctx.stepState.startFactories
@@ -1343,7 +1343,7 @@ class TutorialSystem {
         },
         hint: 'Click the Harvester button to continue.',
         highlightSelector: '.production-button[data-unit-type="harvester"]',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           await ctx.demoBuildUnit('harvester')
           const harvester = findPlayerUnit('harvester')
           const unitCommands = getUnitCommandsHandler()
@@ -1366,7 +1366,7 @@ class TutorialSystem {
           mobile: 'Tap a unit to select it. Selection shows its status and enables commands.'
         },
         hint: 'Select any unit to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           ensureTutorialUnits(1)
           const unit = (gameState.units || []).find(u => isHumanOwner(u.owner))
           if (unit) {
@@ -1383,7 +1383,7 @@ class TutorialSystem {
           mobile: 'Drag a selection box to grab multiple units at once. You can also tap units one-by-one to add them.'
         },
         hint: 'Select at least two units to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           ensureTutorialUnits(2)
           const units = (gameState.units || []).filter(u => isHumanOwner(u.owner)).slice(0, 2)
           await ctx.demoSelectGroup(units)
@@ -1398,7 +1398,7 @@ class TutorialSystem {
           mobile: 'Tap on empty ground to clear your selection.'
         },
         hint: 'Clear the selection to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           await ctx.demoDeselect()
         },
         completion: () => selectedUnits.length === 0
@@ -1411,7 +1411,7 @@ class TutorialSystem {
           mobile: 'Select a unit, then tap on the map to move it.'
         },
         hint: 'Move any selected unit to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           ensureTutorialUnits(1)
           const unit = (gameState.units || []).find(u => isHumanOwner(u.owner))
           const unitCommands = getUnitCommandsHandler()
@@ -1443,7 +1443,7 @@ class TutorialSystem {
           mobile: 'Queue a Tank, then tap the Vehicle Factory and tap the map to set a rally point.'
         },
         hint: 'Queue a Tank or set a rally point to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           const factory = findPlayerBuilding('vehicleFactory')
           if (factory) {
             await ctx.clickCanvasTile({ x: factory.x + 1, y: factory.y + 1 })
@@ -1466,7 +1466,7 @@ class TutorialSystem {
           mobile: 'When the tank finishes, tap to move it, or use the on-screen joystick to drive it manually.'
         },
         hint: 'Move a tank and use manual control to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           ensureTutorialUnits(1, 'tank')
           const tank = findPlayerUnit('tank')
           const unitCommands = getUnitCommandsHandler()
@@ -1497,7 +1497,7 @@ class TutorialSystem {
           mobile: 'Select your tank and tap an enemy building to attack. The goal is to destroy all enemy buildings.'
         },
         hint: 'Order any unit to attack to continue.',
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           const tank = findPlayerUnit('tank')
           const target = findEnemyTarget()
           const unitCommands = getUnitCommandsHandler()
@@ -1535,7 +1535,7 @@ class TutorialSystem {
           const crewRestored = ctx.trackCrewRestoration()
           return hospitalBuilt && ambulanceBuilt && crewRestored
         },
-        demo: async (ctx) => {
+        demo: async(ctx) => {
           ensureTutorialUnits(1, 'tank')
           const tank = findPlayerUnit('tank')
           if (tank?.crew) {
@@ -1590,7 +1590,7 @@ class TutorialSystem {
         },
         hint: 'That concludes the tutorial. You can restart it from Settings anytime.',
         completion: () => true,
-        demo: async () => {
+        demo: async() => {
           await sleep(350)
         }
       }

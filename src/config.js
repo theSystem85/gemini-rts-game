@@ -9,7 +9,7 @@ const EXTERNAL_OVERRIDE_PATH = `/${CONFIG_OVERRIDE_FILENAME}`
 let overridesLoaded = false
 let overridesLoadPromise = null
 
-function registerConfigVariable(name) {
+function _registerConfigVariable(name) {
   const defaultValue = eval(name)
   configRegistry.set(name, {
     name,

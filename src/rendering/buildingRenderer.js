@@ -587,7 +587,7 @@ export class BuildingRenderer {
     // Draw a small flag instead of a filled square
     const partyColor = PARTY_COLORS[building.owner] || PARTY_COLORS.player
 
-    const width = building.width * TILE_SIZE
+    const _width = building.width * TILE_SIZE
     const height = building.height * TILE_SIZE
 
     // Position the flag pole at ground level in the top left corner
@@ -638,7 +638,7 @@ export class BuildingRenderer {
     ctx.stroke()
   }
 
-  renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height) {
+  renderAttackTargetIndicator(ctx, building, screenX, screenY, width, _height) {
     // Check if this building is in the attack group targets OR if it's currently being targeted by selected units
     const isInAttackGroupTargets = gameState.attackGroupTargets &&
                                    gameState.attackGroupTargets.some(target => target === building)
@@ -721,7 +721,7 @@ export class BuildingRenderer {
         iconSize
       )
 
-    } catch (error) {
+    } catch {
       // Fallback: draw a simple wrench shape if image fails
       ctx.filter = 'none'
       ctx.fillStyle = `rgba(255, 215, 0, ${alpha})` // Gold color
@@ -742,7 +742,7 @@ export class BuildingRenderer {
     ctx.restore()
   }
 
-  renderPendingRepairCountdown(ctx, building, screenX, screenY, width, height) {
+  renderPendingRepairCountdown(ctx, building, screenX, screenY, width, _height) {
     // Check if this building has a pending repair with countdown
     const pendingRepair = gameState.buildingsAwaitingRepair &&
                          gameState.buildingsAwaitingRepair.find(repair => repair.building === building)
@@ -781,7 +781,7 @@ export class BuildingRenderer {
     ctx.restore()
   }
 
-  renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height) {
+  renderFactoryProductionProgress(ctx, building, screenX, screenY, width, _height) {
     // Check if this is a factory (construction yard or vehicle factory) that's currently building something
     let factory = null
     let isFactory = false
@@ -962,7 +962,7 @@ export class BuildingRenderer {
     })
   }
 
-  renderFactoryBudget(ctx, building, screenX, screenY, width, height) {
+  renderFactoryBudget(ctx, building, screenX, screenY, width, _height) {
     // Show enemy budget only when their construction yard is selected AND showEnemyResources is enabled
     if (
       building.type === 'constructionYard' &&
@@ -989,7 +989,7 @@ export class BuildingRenderer {
     }
   }
 
-  renderFactoryPowerStatus(ctx, building, screenX, screenY, width, height) {
+  renderFactoryPowerStatus(ctx, building, screenX, screenY, width, _height) {
     // Show power status when an enemy construction yard is selected AND showEnemyResources is enabled
     if (
       building.type === 'constructionYard' &&
@@ -1013,53 +1013,53 @@ export class BuildingRenderer {
     }
   }
 
-  renderPlayerAlias(ctx, building, screenX, screenY, width, height) {
+  renderPlayerAlias(ctx, building, screenX, screenY, width, _height) {
     // Only show alias above construction yards in multiplayer mode
     if (building.type !== 'constructionYard') {
       return
     }
-    
+
     // Check if we're in multiplayer mode
-    const isMultiplayer = gameState.multiplayerSession?.isRemote || 
+    const isMultiplayer = gameState.multiplayerSession?.isRemote ||
       (gameState.partyStates && gameState.partyStates.some(p => !p.aiActive))
-    
+
     if (!isMultiplayer) {
       return
     }
-    
+
     // Find the party state for this building's owner
     const partyState = gameState.partyStates?.find(p => p.partyId === building.owner)
     if (!partyState) {
       return
     }
-    
+
     // Get the alias (owner field contains "AI", "You (Host)", or player's alias)
     let alias = partyState.owner || 'Unknown'
-    
+
     // Don't show "AI" - only show human player aliases
     if (alias === 'AI') {
       return
     }
-    
+
     // Shorten "You (Host)" to just "You" for the local player
     if (building.owner === gameState.humanPlayer) {
       alias = 'You'
     }
-    
+
     ctx.save()
     ctx.font = 'bold 11px Arial'
     ctx.textAlign = 'center'
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 2
-    
+
     // Use party color for the text
     const partyColor = partyState.color || '#fff'
     ctx.fillStyle = partyColor
-    
+
     const textX = screenX + width / 2
     // Position above the health bar (which is at screenY - 10)
     const textY = screenY - 18
-    
+
     ctx.strokeText(alias, textX, textY)
     ctx.fillText(alias, textX, textY)
     ctx.restore()
@@ -1100,7 +1100,7 @@ export class BuildingRenderer {
       const screenX = building.x * TILE_SIZE - scrollOffset.x
       const screenY = building.y * TILE_SIZE - scrollOffset.y
       const margin = VIEW_FRUSTUM_MARGIN
-      
+
       if (
         screenX + buildingWidthPx < -margin ||
         screenY + buildingHeightPx < -margin ||

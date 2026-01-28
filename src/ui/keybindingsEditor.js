@@ -21,7 +21,7 @@ function formatContextLabel(context) {
 function findConflictingBinding(device, currentBindingId, newInput, context) {
   const bindings = keybindingManager.getBindingsByDevice(device)
   const normalizedNew = normalizeInputForComparison(newInput)
-  
+
   return bindings.find(binding => {
     if (binding.id === currentBindingId) return false
     // Only check conflicts within the same context or with DEFAULT context
@@ -187,7 +187,7 @@ function beginCapture(device, binding, buttonEl) {
 
   const context = binding.context || KEYBINDING_CONTEXTS.DEFAULT
 
-  const finish = async (input) => {
+  const finish = async(input) => {
     buttonEl.classList.remove('keybinding-row__value--listening')
     if (!input) {
       buttonEl.textContent = binding.input || 'Unassigned'

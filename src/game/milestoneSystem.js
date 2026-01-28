@@ -102,7 +102,7 @@ export class MilestoneSystem {
   /**
    * Unlock basic units when first vehicle factory is built
    */
-  unlockBasicUnits(gameState) {
+  unlockBasicUnits(_gameState) {
     if (!this.productionController) {
       window.logger.warn('ProductionController not set, cannot unlock basic units')
       return

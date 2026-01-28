@@ -154,7 +154,7 @@ export class KeyboardHandler {
         this.showNotification(`Map edit mode ${gameState.mapEditMode ? 'ON' : 'OFF'}`)
         return
       }
-      
+
       // Block all game action commands for spectators
       if (isSpectatorOrDefeated) return
 
@@ -180,7 +180,7 @@ export class KeyboardHandler {
         if (this.unitCommands) {
           this.unitCommands.handleWorkshopRepairHotkey(selectedUnits, mapGrid, queue, false)
         }
-        if (queue) markWaypointsAdded()
+        if (queue && this.markWaypointsAdded) this.markWaypointsAdded()
       }
       // X key for dodge
       else if (keybindingManager.matchesKeyboardAction(e, 'dodge', kbContext)) {
@@ -1146,7 +1146,7 @@ export class KeyboardHandler {
       if (unit.attackGroupTargets) {
         unit.attackGroupTargets = []
       }
-      
+
       // Track units owned by this player for network sync
       if (unit.owner === gameState.humanPlayer) {
         unitsToStop.push(unit)

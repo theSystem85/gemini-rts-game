@@ -7,7 +7,6 @@ import {
   PLAYER_POSITIONS,
   MAP_TILES_X,
   MAP_TILES_Y,
-  MAX_BUILDING_GAP_TILES,
   TILE_SIZE
 } from './config.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
@@ -23,7 +22,7 @@ import { buildingData } from './data/buildingData.js'
 // Re-export validation functions from the validation module to maintain backwards compatibility
 // The actual implementations are in src/validation/buildingPlacement.js
 export { isNearExistingBuilding, isTileValid } from './validation/buildingPlacement.js'
-import { canPlaceBuilding as canPlaceBuildingBase, isNearExistingBuilding } from './validation/buildingPlacement.js'
+import { canPlaceBuilding as canPlaceBuildingBase } from './validation/buildingPlacement.js'
 
 // Wrapper for canPlaceBuilding that passes gameState.mapEditMode for backwards compatibility
 export function canPlaceBuilding(type, tileX, tileY, mapGrid, units, buildings, factories, owner = 'player') {
@@ -305,7 +304,7 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
 // Remove building from the map grid: restore original tiles and clear building flag
 export function clearBuildingFromMapGrid(building, mapGrid, occupancyMap = gameState.occupancyMap) {
   const changedTiles = [] // Track tiles that had type changes for SOT mask update
-  
+
   for (let y = building.y; y < building.y + building.height; y++) {
     for (let x = building.x; x < building.x + building.width; x++) {
       if (mapGrid[y] && mapGrid[y][x]) {
@@ -634,7 +633,7 @@ export function markBuildingForRepairPause(building) {
 }
 
 // Function to pause active repair when a building is attacked
-export function pauseActiveRepair(building) {
+export function pauseActiveRepair(_building) {
   // TEMPORARILY DISABLED - CAUSING INFINITE EXPLOSION BUG
   return false
 }

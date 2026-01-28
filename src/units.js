@@ -1248,7 +1248,7 @@ export function resolveUnitCollisions(units, mapGrid) {
         else if (unit1.x > maxX) unit1.x = maxX
         if (unit1.y < 0) unit1.y = 0
         else if (unit1.y > maxY) unit1.y = maxY
-        
+
         if (unit2.x < 0) unit2.x = 0
         else if (unit2.x > maxX) unit2.x = maxX
         if (unit2.y < 0) unit2.y = 0

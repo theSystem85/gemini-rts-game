@@ -84,28 +84,28 @@ function encodeData(text, version) {
   const info = QR_VERSIONS[version]
   const bytes = new TextEncoder().encode(text)
   const data = []
-  
+
   // Byte mode indicator (0100)
   data.push(0x40 | (bytes.length >> 4))
   data.push(((bytes.length & 0x0f) << 4) | (bytes[0] >> 4))
-  
+
   for (let i = 0; i < bytes.length - 1; i++) {
     data.push(((bytes[i] & 0x0f) << 4) | (bytes[i + 1] >> 4))
   }
   data.push((bytes[bytes.length - 1] & 0x0f) << 4)
-  
+
   // Terminator and padding
   while (data.length < info.dataBytes) {
     data.push(data.length % 2 === info.dataBytes % 2 ? 0xec : 0x11)
   }
-  
+
   return data.slice(0, info.dataBytes)
 }
 
 function createMatrix(version) {
   const size = QR_VERSIONS[version].size
   const matrix = Array.from({ length: size }, () => Array(size).fill(null))
-  
+
   // Add finder patterns
   const addFinderPattern = (row, col) => {
     for (let r = -1; r <= 7; r++) {
@@ -113,7 +113,7 @@ function createMatrix(version) {
         const rr = row + r
         const cc = col + c
         if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue
-        
+
         if (r === -1 || r === 7 || c === -1 || c === 7) {
           matrix[rr][cc] = false // white separator
         } else if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
@@ -124,20 +124,20 @@ function createMatrix(version) {
       }
     }
   }
-  
+
   addFinderPattern(0, 0)
   addFinderPattern(0, size - 7)
   addFinderPattern(size - 7, 0)
-  
+
   // Add timing patterns
   for (let i = 8; i < size - 8; i++) {
     matrix[6][i] = i % 2 === 0
     matrix[i][6] = i % 2 === 0
   }
-  
+
   // Dark module
   matrix[size - 8][8] = true
-  
+
   // Reserve format info areas
   for (let i = 0; i < 9; i++) {
     if (matrix[8][i] === null) matrix[8][i] = false
@@ -147,7 +147,7 @@ function createMatrix(version) {
       if (matrix[size - 1 - i][8] === null) matrix[size - 1 - i][8] = false
     }
   }
-  
+
   // Add alignment pattern for version >= 2
   if (version >= 2) {
     const pos = size - 7
@@ -161,7 +161,7 @@ function createMatrix(version) {
       }
     }
   }
-  
+
   return matrix
 }
 
@@ -169,15 +169,15 @@ function placeData(matrix, data, ecData) {
   const size = matrix.length
   const allData = [...data, ...ecData]
   let bitIdx = 0
-  
+
   // Place data in zigzag pattern
   let up = true
   for (let col = size - 1; col >= 1; col -= 2) {
     if (col === 6) col = 5 // Skip timing pattern column
-    
+
     for (let row = 0; row < size; row++) {
       const r = up ? size - 1 - row : row
-      
+
       for (let c = 0; c < 2; c++) {
         const cc = col - c
         if (matrix[r][cc] === null) {
@@ -213,16 +213,16 @@ function isDataModule(row, col, size) {
   if (row < 9 && col < 9) return false
   if (row < 9 && col >= size - 8) return false
   if (row >= size - 8 && col < 9) return false
-  
+
   // Timing patterns
   if (row === 6 || col === 6) return false
-  
+
   // Alignment pattern (for version >= 2)
   if (size > 21) {
     const pos = size - 7
     if (Math.abs(row - pos) <= 2 && Math.abs(col - pos) <= 2) return false
   }
-  
+
   return true
 }
 
@@ -230,25 +230,25 @@ function addFormatInfo(matrix) {
   const size = matrix.length
   // Format info for EC level L and mask pattern 0
   const formatBits = 0x77c4 // Pre-calculated for L and mask 0
-  
+
   // Place format info around finder patterns
   const bits = []
   for (let i = 0; i < 15; i++) {
     bits.push(((formatBits >> (14 - i)) & 1) === 1)
   }
-  
+
   // Top-left (horizontal)
   for (let i = 0; i <= 5; i++) matrix[8][i] = bits[i]
   matrix[8][7] = bits[6]
   matrix[8][8] = bits[7]
   matrix[7][8] = bits[8]
-  
+
   // Top-left (vertical)
   for (let i = 9; i < 15; i++) matrix[14 - i][8] = bits[i]
-  
+
   // Top-right
   for (let i = 0; i < 8; i++) matrix[8][size - 1 - i] = bits[i]
-  
+
   // Bottom-left
   for (let i = 8; i < 15; i++) matrix[size - 15 + i][8] = bits[i]
 }
@@ -261,15 +261,15 @@ function addFormatInfo(matrix) {
 export function generateQRMatrix(text) {
   const version = getVersion(text.length)
   const info = QR_VERSIONS[version]
-  
+
   const data = encodeData(text, version)
   const ecData = rsEncode(data, info.ecBytes)
-  
+
   const matrix = createMatrix(version)
   placeData(matrix, data, ecData)
   applyMask(matrix)
   addFormatInfo(matrix)
-  
+
   return matrix
 }
 
@@ -290,20 +290,20 @@ export function renderQRCode(canvas, text, options = {}) {
     background = '#ffffff',
     margin = 2
   } = options
-  
+
   const matrix = generateQRMatrix(text)
   const moduleCount = matrix.length + margin * 2
   const moduleSize = size / moduleCount
-  
+
   canvas.width = size
   canvas.height = size
-  
+
   const ctx = canvas.getContext('2d')
-  
+
   // Fill background
   ctx.fillStyle = background
   ctx.fillRect(0, 0, size, size)
-  
+
   // Draw modules
   ctx.fillStyle = foreground
   for (let row = 0; row < matrix.length; row++) {

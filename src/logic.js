@@ -322,7 +322,7 @@ export function findClosestOre(unit, mapGrid, targetedOreTiles = {}) {
     return null
   }
 
-  if (!unit.hasOwnProperty('x') || !unit.hasOwnProperty('y')) {
+  if (!Object.prototype.hasOwnProperty.call(unit, 'x') || !Object.prototype.hasOwnProperty.call(unit, 'y')) {
     console.error('findClosestOre called with unit missing x/y properties:', unit)
     return null
   }

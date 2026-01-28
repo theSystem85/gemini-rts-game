@@ -2,7 +2,7 @@
 // Renders turret buildings using separate base and top image assets
 
 import turretImageConfig from '../turretImageConfig.json'
-import { TILE_SIZE, MUZZLE_FLASH_DURATION } from '../config.js'
+import { MUZZLE_FLASH_DURATION } from '../config.js'
 
 // Cache for loaded turret images
 const turretImageCache = {}

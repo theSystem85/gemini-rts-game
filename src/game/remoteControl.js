@@ -757,11 +757,11 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       if (remoteControlActive) {
         unit.lastRemoteControlTime = now
       }
-      
+
       // Determine aim target: use selected target if available, otherwise use forward direction
       let aimTarget = null
       let targetDir = unit.movement.rotation
-      
+
       if (unit.target && unit.target.health > 0) {
         // Use selected target's current position
         const targetCenterX = unit.target.x + TILE_SIZE / 2
@@ -769,7 +769,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         const centerX = unit.x + TILE_SIZE / 2
         const centerY = unit.y + TILE_SIZE / 2
         targetDir = Math.atan2(targetCenterY - centerY, targetCenterX - centerX)
-        
+
         // Create aim target at the selected unit's position
         aimTarget = {
           x: targetCenterX,
@@ -788,7 +788,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         aimTarget = computeRocketTankRemoteAim(unit, dir)
         targetDir = dir
       }
-      
+
       if (Number.isFinite(aimTarget.x) && Number.isFinite(aimTarget.y)) {
         unit.remoteRocketTarget = aimTarget
         // Show reticle only up to 1s after remote control ends
@@ -798,12 +798,12 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         unit.remoteRocketTarget = null
         unit.remoteReticleVisible = false
       }
-      
+
       // Rotate unit towards remote rocket target - use fast rotation for immediate response
       if (unit.remoteRocketTarget) {
-        const centerX = unit.x + TILE_SIZE / 2
-        const centerY = unit.y + TILE_SIZE / 2
-        
+        const _centerX = unit.x + TILE_SIZE / 2
+        const _centerY = unit.y + TILE_SIZE / 2
+
         // If there's a selected target, rotate immediately and aggressively towards it
         // Otherwise, smoothly rotate in the current direction
         let rotationSpeed = unit.rotationSpeed || 0.1
@@ -811,21 +811,21 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
           // Fast rotation towards selected target (10x normal speed)
           rotationSpeed = Math.max(0.5, rotationSpeed * 10)
         }
-        
+
         unit.movement.rotation = smoothRotateTowardsAngle(
           unit.movement.rotation,
           targetDir,
           rotationSpeed
         )
-        
+
         // Check if unit is facing the target (within 5 degrees)
         const angleDifference = Math.abs(angleDiff(unit.movement.rotation, targetDir))
         const isFacingTarget = angleDifference < (5 * Math.PI / 180)
-        
+
         // Store facing state and fire when ready
         unit.isFacingRemoteTarget = isFacingTarget
       }
-      
+
       // Fire rocket burst when space is pressed OR when unit is reloaded and has a target
       const shouldFire =
         fireIntensity > 0 ||
@@ -833,7 +833,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       if (shouldFire && unit.canFire !== false) {
         const baseRate = getFireRateForUnit(unit)
         const effectiveRate = unit.level >= 3 ? baseRate / (unit.fireRateMultiplier || 1.33) : baseRate
-        
+
         // Check if we need to start a new burst or continue existing one
         if (!unit.burstState) {
           // Start new burst if cooldown has passed
@@ -868,7 +868,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
               fireBullet(unit, target, bullets, now)
               unit.burstState.rocketsToFire--
               unit.burstState.lastRocketTime = now
-              
+
               if (unit.burstState.rocketsToFire <= 0) {
                 unit.burstState = null // Reset burst state
                 unit.lastShotTime = now // Set cooldown for next burst - reload phase begins now
@@ -911,7 +911,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         fireBullet(unit, target, bullets, now)
       }
     }
-    
+
     // Clear reticle for non-rocket tank turret units
     if (!isRocketTank && hasTurret) {
       unit.remoteReticleVisible = false

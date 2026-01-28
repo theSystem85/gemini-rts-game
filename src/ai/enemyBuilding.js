@@ -741,8 +741,8 @@ function completeEnemyBuilding(gameState, mapGrid) {
     // Update power supply
     updatePowerSupply(gameState.buildings, gameState)
 
-  } else {
   }
+  // else: placement failed, no action needed
 
   // Reset production state
   gameState.enemy.currentBuildingProduction = null

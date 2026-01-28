@@ -20,7 +20,6 @@ import {
   setOreSpreadEnabled,
   setMapDimensions
 } from './config.js'
-import { runtimeConfigDialog } from './ui/runtimeConfigDialog.js'
 import { initSettingsModal, openSettingsModal } from './ui/settingsModal.js'
 import { initSidebarMultiplayer } from './ui/sidebarMultiplayer.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
@@ -751,7 +750,7 @@ function restoreProductionArea() {
   }
 }
 
-function moveMinimapToPortraitDock() {
+function _moveMinimapToPortraitDock() {
   const { minimap, portraitMinimapDock } = mobileLayoutState
   if (!minimap || !portraitMinimapDock) {
     return
@@ -780,7 +779,7 @@ function applyPortraitCondensedLayout() {
     productionArea,
     mobileContainer,
     actions,
-    portraitActionsContainer,
+    portraitActionsContainer: _portraitActionsContainer,
     portraitHud
   } = mobileLayoutState
 
@@ -1314,7 +1313,7 @@ class Game {
   constructor() {
     this.canvasManager = new CanvasManager()
     this.productionController = new ProductionController()
-    
+
     // Set production controller reference for multiplayer tech tree sync
     setProductionControllerRef(this.productionController)
 
@@ -1421,10 +1420,10 @@ class Game {
     })
 
     gameState.occupancyMap = initializeOccupancyMap(units, mapGrid, getTextureManager())
-    
+
     // Initialize spatial quadtree for efficient collision detection
     initSpatialQuadtree(MAP_TILES_X * TILE_SIZE, MAP_TILES_Y * TILE_SIZE)
-    
+
     updateDangerZoneMaps(gameState)
     updateDangerZoneMaps(gameState)
     updateShadowOfWar(gameState, units, mapGrid, factories)
@@ -1490,7 +1489,7 @@ class Game {
     initTutorialSystem()
 
     initSidebarMultiplayer()
-    
+
     // T018: Initialize AI party sync observer for disconnect handling
     initAiPartySync()
 
@@ -2066,10 +2065,10 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
   deactivateMapEditMode()
   const { value: clientSeed } = sanitizeSeed(seed)
   const normalizedSeed = clientSeed.toString()
-  
+
   // Update map dimensions in config
   setMapDimensions(widthTiles, heightTiles)
-  
+
   // Store the seed and player count BEFORE map generation
   // Player count is used by generateMap for road generation
   gameState.mapSeed = normalizedSeed
@@ -2081,13 +2080,13 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
 
   // Clear all unit wrecks from previous game when joining multiplayer
   gameState.unitWrecks = []
-  
+
   // Clear and regenerate the map grid
   mapGrid.length = 0
   generateMapFromSetup(normalizedSeed, mapGrid, widthTiles, heightTiles)
 
   // Note: gameState.mapGrid is the same reference as mapGrid (set at module scope)
-  
+
   // Rebuild occupancy map for the new map
   gameState.occupancyMap = []
   for (let y = 0; y < heightTiles; y++) {
@@ -2096,16 +2095,16 @@ export function regenerateMapForClient(seed, widthTiles, heightTiles, playerCoun
       gameState.occupancyMap[y][x] = 0
     }
   }
-  
+
   // Initialize shadow of war for the new map
   initializeShadowOfWar(gameState, mapGrid)
-  
+
   // Invalidate SOT (Smoothening Overlay Texture) mask to force recomputation for new map
   const mapRenderer = getMapRenderer()
   if (mapRenderer) {
     mapRenderer.invalidateAllChunks()
   }
-  
+
   window.logger('[Main] Client map regeneration complete')
 }
 

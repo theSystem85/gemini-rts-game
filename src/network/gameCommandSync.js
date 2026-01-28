@@ -41,7 +41,7 @@ export const COMMAND_TYPES = {
 }
 
 // Last snapshot hash for delta sync (future use)
-let _lastSnapshotHash = null
+const _lastSnapshotHash = null
 
 const GAME_COMMAND_MESSAGE_TYPE = 'game-command'
 
@@ -82,7 +82,7 @@ let lastSnapshotTime = 0
 const INTERPOLATION_DURATION_MS = GAME_STATE_SYNC_INTERVAL_MS // Match the sync interval
 
 // ============ NETWORK STATS ============
-let networkStats = {
+const networkStats = {
   bytesSent: 0,
   bytesReceived: 0,
   lastBytesSent: 0,
@@ -108,18 +108,18 @@ export function getNetworkStats() {
 export function updateNetworkStats(sent = 0, received = 0) {
   networkStats.bytesSent += sent
   networkStats.bytesReceived += received
-  
+
   const now = performance.now()
   const elapsed = now - networkStats.lastRateUpdate
-  
+
   // Update rate every second
   if (elapsed >= 1000) {
     const sentDiff = networkStats.bytesSent - networkStats.lastBytesSent
     const receivedDiff = networkStats.bytesReceived - networkStats.lastBytesReceived
-    
+
     networkStats.sendRate = Math.round((sentDiff / elapsed) * 1000) // bytes per second
     networkStats.receiveRate = Math.round((receivedDiff / elapsed) * 1000)
-    
+
     networkStats.lastBytesSent = networkStats.bytesSent
     networkStats.lastBytesReceived = networkStats.bytesReceived
     networkStats.lastRateUpdate = now
@@ -155,26 +155,26 @@ export function updateUnitInterpolation() {
   if (isHost()) {
     return // Host doesn't need interpolation - it has the authoritative state
   }
-  
+
   const now = performance.now()
   const elapsed = now - lastSnapshotTime
   const t = Math.min(1, elapsed / INTERPOLATION_DURATION_MS) // Clamp to 0-1
-  
+
   // Interpolate each unit's position
   mainUnits.forEach(unit => {
     const state = unitInterpolationState.get(unit.id)
     if (!state) {
       return // No interpolation state for this unit
     }
-    
+
     // Linear interpolation for position
     unit.x = state.prevX + (state.targetX - state.prevX) * t
     unit.y = state.prevY + (state.targetY - state.prevY) * t
-    
+
     // Update tile position based on interpolated position
     unit.tileX = Math.floor(unit.x / 32) // TILE_SIZE = 32
     unit.tileY = Math.floor(unit.y / 32)
-    
+
     // Interpolate direction (handle wraparound for angles)
     if (state.targetDir !== undefined && state.prevDir !== undefined) {
       let diff = state.targetDir - state.prevDir
@@ -183,7 +183,7 @@ export function updateUnitInterpolation() {
       if (diff < -Math.PI) diff += Math.PI * 2
       unit.direction = state.prevDir + diff * t
     }
-    
+
     // Interpolate turret direction if present
     if (state.targetTurretDir !== undefined && state.prevTurretDir !== undefined) {
       let diff = state.targetTurretDir - state.prevTurretDir
@@ -192,14 +192,14 @@ export function updateUnitInterpolation() {
       unit.turretDirection = state.prevTurretDir + diff * t
     }
   })
-  
+
   // Interpolate each bullet's position
   mainBullets.forEach(bullet => {
     const state = bulletInterpolationState.get(bullet.id)
     if (!state) {
       return // No interpolation state for this bullet
     }
-    
+
     // Linear interpolation for position
     bullet.x = state.prevX + (state.targetX - state.prevX) * t
     bullet.y = state.prevY + (state.targetY - state.prevY) * t
@@ -267,7 +267,7 @@ function getActiveConnection() {
   if (remoteConn && remoteConn.connectionState === 'connected') {
     return remoteConn
   }
-  
+
   // For host, check if there's an active session monitor with connected peers
   // We don't return the monitor directly but indicate we should broadcast
   return null
@@ -277,7 +277,7 @@ function getActiveConnection() {
  * Broadcast a game command to all connected peers
  * Host broadcasts to all remote players
  * Remote players send to host for validation and re-broadcast
- * 
+ *
  * @param {string} commandType - Type of command from COMMAND_TYPES
  * @param {Object} payload - Command-specific data
  * @param {string} sourcePartyId - The party that issued the command
@@ -286,7 +286,7 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
   if (!commandType || !payload) {
     return
   }
-  
+
   const command = {
     type: GAME_COMMAND_MESSAGE_TYPE,
     commandType,
@@ -295,12 +295,12 @@ export function broadcastGameCommand(commandType, payload, sourcePartyId) {
     timestamp: Date.now(),
     isHost: isHost()
   }
-  
+
   // Only log non-snapshot commands to reduce console noise
   if (commandType !== COMMAND_TYPES.GAME_STATE_SNAPSHOT) {
     window.logger('[GameCommandSync] Broadcasting command:', commandType, 'from party:', command.sourcePartyId, 'isHost:', command.isHost)
   }
-  
+
   if (isHost()) {
     // Host broadcasts to all connected peers
     broadcastToAllPeers(command)
@@ -329,17 +329,17 @@ function broadcastToAllPeers(message) {
   if (!isHost()) {
     return
   }
-  
+
   // Get all party invite monitors and broadcast to their active sessions
   if (!Array.isArray(gameState.partyStates)) {
     return
   }
-  
+
   gameState.partyStates.forEach(party => {
     if (party.partyId === gameState.humanPlayer) {
       return // Skip self
     }
-    
+
     const monitor = getActiveHostMonitor(party.partyId)
     if (monitor && monitor.activeSession) {
       monitor.activeSession.sendHostStatus(message)
@@ -356,48 +356,48 @@ export function handleReceivedCommand(command, _sourceId) {
   if (!command || command.type !== GAME_COMMAND_MESSAGE_TYPE) {
     return
   }
-  
+
   // Handle lockstep-specific commands first
   if (command.commandType && command.commandType.startsWith('lockstep-')) {
     handleLockstepCommand(command)
     return
   }
-  
+
   // Validate the command comes from an authorized party
   const sourceParty = command.sourcePartyId
   if (!sourceParty) {
     window.logger.warn('Received game command without source party')
     return
   }
-  
+
   if (isHost()) {
     // Host validates and processes/re-broadcasts the command
     // Only accept commands from the party that the remote player controls (aiActive === false)
     const partyState = gameState.partyStates?.find(p => p.partyId === sourceParty)
-    
+
     window.logger('[Host] Received command from party:', sourceParty, 'type:', command.commandType)
     window.logger('[Host] PartyState found:', partyState ? { partyId: partyState.partyId, aiActive: partyState.aiActive, owner: partyState.owner } : 'NOT FOUND')
     window.logger('[Host] All partyStates:', gameState.partyStates?.map(p => ({ partyId: p.partyId, aiActive: p.aiActive })))
-    
+
     if (!partyState) {
       window.logger.warn('Received command from unknown party:', sourceParty)
       return
     }
-    
+
     // Only reject if aiActive is explicitly true (AI controlled)
     // Accept if aiActive is false or undefined (human controlled)
     if (partyState.aiActive === true) {
       window.logger.warn('Received command from AI-controlled party:', sourceParty)
       return
     }
-    
+
     // Queue the command for processing
     pendingRemoteCommands.push({
       ...command,
       receivedAt: Date.now()
     })
     window.logger('[Host] Command queued for processing, queue length:', pendingRemoteCommands.length)
-    
+
     // Re-broadcast to other peers so they stay in sync
     broadcastToAllPeers(command)
   } else {
@@ -407,7 +407,7 @@ export function handleReceivedCommand(command, _sourceId) {
       applyCommand(command)
     }
   }
-  
+
   // Notify listeners
   commandListeners.forEach(listener => {
     try {
@@ -426,24 +426,24 @@ function applyCommand(command) {
   // Commands are applied based on type
   // This is called on remote clients to sync their state with the host
   // The actual implementation depends on how the game processes commands
-  
+
   switch (command.commandType) {
     case COMMAND_TYPES.GAME_PAUSE:
       if (!isHost()) {
         gameState.gamePaused = true
       }
       break
-      
+
     case COMMAND_TYPES.GAME_RESUME:
       if (!isHost()) {
         gameState.gamePaused = false
       }
       break
-      
+
     case COMMAND_TYPES.GAME_STATE_SNAPSHOT:
       applyGameStateSnapshot(command.payload)
       break
-    
+
     case COMMAND_TYPES.BUILDING_SELL:
       // Apply building sell command from remote player
       if (command.payload) {
@@ -456,7 +456,7 @@ function applyCommand(command) {
         }
       }
       break
-      
+
     // Other command types are handled by the existing game logic
     // through the command listeners
     default:
@@ -472,7 +472,7 @@ export function processPendingRemoteCommands() {
   if (!isHost() || pendingRemoteCommands.length === 0) {
     return []
   }
-  
+
   const commands = [...pendingRemoteCommands]
   pendingRemoteCommands.length = 0
   return commands
@@ -487,7 +487,7 @@ export function subscribeToGameCommands(handler) {
   if (typeof handler !== 'function') {
     return () => {}
   }
-  
+
   commandListeners.add(handler)
   return () => commandListeners.delete(handler)
 }
@@ -560,12 +560,12 @@ export function broadcastUnitStop(units) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   const unitIds = units.map(u => u.id).filter(Boolean)
   if (unitIds.length === 0) {
     return
   }
-  
+
   const partyId = units[0]?.owner || gameState.humanPlayer
   broadcastGameCommand(
     COMMAND_TYPES.UNIT_STOP,
@@ -584,12 +584,12 @@ export function broadcastUnitMove(units, targetX, targetY) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   const unitIds = units.map(u => u.id).filter(Boolean)
   if (unitIds.length === 0) {
     return
   }
-  
+
   const partyId = units[0]?.owner || gameState.humanPlayer
   broadcastGameCommand(
     COMMAND_TYPES.UNIT_MOVE,
@@ -607,15 +607,15 @@ export function broadcastUnitAttack(units, target) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   const unitIds = units.map(u => u.id).filter(Boolean)
   if (unitIds.length === 0 || !target?.id) {
     return
   }
-  
+
   const targetType = target.isBuilding ? 'building' : 'unit'
   const partyId = units[0]?.owner || gameState.humanPlayer
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.UNIT_ATTACK,
     createAttackCommand(unitIds, target.id, targetType),
@@ -634,7 +634,7 @@ export function broadcastBuildingPlace(buildingType, x, y, partyId) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.BUILDING_PLACE,
     createBuildingPlaceCommand(buildingType, x, y),
@@ -652,7 +652,7 @@ export function broadcastBuildingDamage(buildingId, damage, newHealth) {
   if (!hasActiveRemoteSession() || isHost()) {
     return // Only clients need to report damage to host
   }
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.BUILDING_DAMAGE,
     { buildingId, damage, newHealth },
@@ -670,7 +670,7 @@ export function broadcastBuildingSell(buildingId, sellValue, sellStartTime) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.BUILDING_SELL,
     { buildingId, sellValue, sellStartTime },
@@ -689,7 +689,7 @@ export function broadcastProductionStart(productionType, itemType, factoryId, pa
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.PRODUCTION_START,
     createProductionCommand(productionType, itemType, factoryId),
@@ -707,7 +707,7 @@ export function broadcastUnitSpawn(unitType, factoryId, rallyPoint) {
   if (!hasActiveRemoteSession()) {
     return
   }
-  
+
   broadcastGameCommand(
     COMMAND_TYPES.UNIT_SPAWN,
     { unitType, factoryId, rallyPoint },
@@ -723,7 +723,7 @@ export function broadcastGamePauseState(paused) {
   if (!isHost() || !hasActiveRemoteSession()) {
     return
   }
-  
+
   broadcastGameCommand(
     paused ? COMMAND_TYPES.GAME_PAUSE : COMMAND_TYPES.GAME_RESUME,
     { paused },
@@ -738,7 +738,7 @@ export function broadcastGamePauseState(paused) {
  */
 function createGameStateSnapshot() {
   const now = performance.now()
-  
+
   // Serialize units with essential properties - use mainUnits from main.js as that's the authoritative array
   const units = (mainUnits || []).map(unit => ({
     id: unit.id,
@@ -783,7 +783,7 @@ function createGameStateSnapshot() {
     remainingMines: unit.remainingMines,
     sweeping: unit.sweeping
   }))
-  
+
   // Serialize buildings with essential properties
   const buildings = (gameState.buildings || []).map(building => {
     const constructionElapsed = typeof building.constructionStartTime === 'number'
@@ -818,7 +818,7 @@ function createGameStateSnapshot() {
       recoilElapsed: building.recoilStartTime ? now - building.recoilStartTime : null
     }
   })
-  
+
   // Serialize bullets/projectiles with full properties - use mainBullets from main.js as that's the authoritative array
   const bullets = (mainBullets || []).map(bullet => ({
     id: bullet.id,
@@ -846,7 +846,7 @@ function createGameStateSnapshot() {
     ballisticDuration: bullet.ballisticDuration,
     arcHeight: bullet.arcHeight
   }))
-  
+
   // Serialize factories (construction yards) with essential properties
   const factories = (gameState.factories || []).map(factory => ({
     id: factory.id,
@@ -862,7 +862,7 @@ function createGameStateSnapshot() {
     rallyPoint: factory.rallyPoint,
     productionCountdown: factory.productionCountdown
   }))
-  
+
   // Serialize explosions
   const explosions = (gameState.explosions || []).map(exp => ({
     x: exp.x,
@@ -871,7 +871,7 @@ function createGameStateSnapshot() {
     duration: exp.duration,
     maxRadius: exp.maxRadius
   }))
-  
+
   // Serialize unit wrecks
   const unitWrecks = (gameState.unitWrecks || []).map(wreck => ({
     id: wreck.id,
@@ -889,7 +889,7 @@ function createGameStateSnapshot() {
     maxHealth: wreck.maxHealth,
     spriteCacheKey: wreck.spriteCacheKey
   }))
-  
+
   return {
     units,
     buildings,
@@ -911,8 +911,8 @@ function createGameStateSnapshot() {
     shadowOfWarEnabled: gameState.shadowOfWarEnabled,
     showEnemyResources: gameState.showEnemyResources,
     // Sync defeated players so clients can detect their own defeat
-    defeatedPlayers: gameState.defeatedPlayers instanceof Set 
-      ? Array.from(gameState.defeatedPlayers) 
+    defeatedPlayers: gameState.defeatedPlayers instanceof Set
+      ? Array.from(gameState.defeatedPlayers)
       : (Array.isArray(gameState.defeatedPlayers) ? gameState.defeatedPlayers : []),
     timestamp: Date.now()
   }
@@ -929,17 +929,17 @@ function syncClientMap(seed, width, height, playerCount) {
   if (!seed || !width || !height) {
     return false
   }
-  
+
   // Only regenerate map once per connection
   if (mapSynced) {
     return true
   }
-  
+
   window.logger('[GameCommandSync] Syncing map from host - seed:', seed, 'dimensions:', width, 'x', height, 'playerCount:', playerCount)
-  
+
   // Update map dimensions in config module
   setMapDimensions(width, height)
-  
+
   // Store the host's map seed and player count BEFORE map generation
   // Player count affects road generation in gameSetup.js
   gameState.mapSeed = seed
@@ -948,7 +948,7 @@ function syncClientMap(seed, width, height, playerCount) {
   if (playerCount) {
     gameState.playerCount = playerCount
   }
-  
+
   // Call main.js function to regenerate map with host's seed, dimensions, and player count
   if (typeof regenerateMapForClient === 'function') {
     regenerateMapForClient(seed, width, height, playerCount)
@@ -964,7 +964,7 @@ function syncClientMap(seed, width, height, playerCount) {
       }
     }
   }
-  
+
   // Initialize occupancyMap
   if (!gameState.occupancyMap || gameState.occupancyMap.length !== height ||
       (gameState.occupancyMap[0] && gameState.occupancyMap[0].length !== width)) {
@@ -977,7 +977,7 @@ function syncClientMap(seed, width, height, playerCount) {
       }
     }
   }
-  
+
   mapSynced = true
   return true
 }
@@ -990,44 +990,44 @@ function applyGameStateSnapshot(snapshot) {
   if (!snapshot || isHost()) {
     return
   }
-  
+
   // On first snapshot, initialize client with their partyId
   if (!clientInitialized && clientPartyId) {
     gameState.humanPlayer = clientPartyId
     window.logger('[GameCommandSync] Client initialized as party:', clientPartyId)
-    
+
     // Mark as initialized so we only do this once
     clientInitialized = true
   }
-  
+
   // Get current time for animation timestamp conversions (used by units and buildings)
   const now = performance.now()
-  
+
   // Note: Money is NOT synced from host to client because each player has their own money!
   // The client manages their own gameState.money based on their actions.
   // If in the future we want to display other players' money, we'd use per-party tracking.
-  
+
   // Sync game pause state
   if (typeof snapshot.gamePaused === 'boolean') {
     gameState.gamePaused = snapshot.gamePaused
   }
-  
+
   // Sync game started state
   if (typeof snapshot.gameStarted === 'boolean') {
     gameState.gameStarted = snapshot.gameStarted
   }
-  
+
   // Sync party states
   if (Array.isArray(snapshot.partyStates)) {
     gameState.partyStates = snapshot.partyStates
   }
-  
+
   // Sync map seed, dimensions, and player count from host, regenerate map if needed
   // This must happen before syncing buildings so placeBuilding can work
   if (snapshot.mapSeed && snapshot.mapTilesX && snapshot.mapTilesY) {
     syncClientMap(snapshot.mapSeed, snapshot.mapTilesX, snapshot.mapTilesY, snapshot.playerCount)
   }
-  
+
   // Sync game settings from host - clients cannot change these
   if (typeof snapshot.oreSpreadEnabled === 'boolean') {
     setOreSpreadEnabled(snapshot.oreSpreadEnabled)
@@ -1045,17 +1045,17 @@ function applyGameStateSnapshot(snapshot) {
       shadowCheckbox.checked = snapshot.shadowOfWarEnabled
     }
   }
-  
+
   // Sync showEnemyResources setting from host
   if (typeof snapshot.showEnemyResources === 'boolean') {
     gameState.showEnemyResources = snapshot.showEnemyResources
   }
-  
+
   // Sync defeated players from host - check if local player is in the defeated list
   if (Array.isArray(snapshot.defeatedPlayers)) {
     // Convert to Set
     gameState.defeatedPlayers = new Set(snapshot.defeatedPlayers)
-    
+
     // Check if the local player (client's humanPlayer) was just defeated
     if (gameState.defeatedPlayers.has(gameState.humanPlayer) && !gameState.localPlayerDefeated && !gameState.isSpectator) {
       gameState.localPlayerDefeated = true
@@ -1072,7 +1072,7 @@ function applyGameStateSnapshot(snapshot) {
       }
     }
   }
-  
+
   // Sync units - update the mainUnits array from main.js (which is what rendering uses)
   // This ensures all units from all parties are visible
   // Use interpolation for smooth movement between snapshots
@@ -1082,24 +1082,24 @@ function applyGameStateSnapshot(snapshot) {
     mainUnits.forEach(u => {
       if (u.id) existingById.set(u.id, u)
     })
-    
+
     // Track which unit IDs are in this snapshot (to clean up removed units from interpolation state)
     const snapshotUnitIds = new Set()
-    
+
     // Build the updated units array, preserving local-only properties (like cached sprites)
     const updatedUnits = snapshot.units.map(snapshotUnit => {
       snapshotUnitIds.add(snapshotUnit.id)
       const existing = existingById.get(snapshotUnit.id)
-      
+
       // Convert elapsed times back to absolute start times for animations
       // This allows animations to work correctly across machines with different performance.now() bases
-      const muzzleFlashStartTime = snapshotUnit.muzzleFlashElapsed != null 
-        ? now - snapshotUnit.muzzleFlashElapsed 
+      const muzzleFlashStartTime = snapshotUnit.muzzleFlashElapsed != null
+        ? now - snapshotUnit.muzzleFlashElapsed
         : null
-      const recoilStartTime = snapshotUnit.recoilElapsed != null 
-        ? now - snapshotUnit.recoilElapsed 
+      const recoilStartTime = snapshotUnit.recoilElapsed != null
+        ? now - snapshotUnit.recoilElapsed
         : null
-      
+
       if (existing) {
         // Set up interpolation: store current position as prev, snapshot as target
         unitInterpolationState.set(snapshotUnit.id, {
@@ -1112,7 +1112,7 @@ function applyGameStateSnapshot(snapshot) {
           prevTurretDir: existing.turretDirection,
           targetTurretDir: snapshotUnit.turretDirection
         })
-        
+
         // Merge all snapshot data EXCEPT position (which we'll interpolate) and elapsed times (already converted)
         const { x, y, tileX, tileY, direction, turretDirection, muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...nonPositionData } = snapshotUnit
         Object.assign(existing, nonPositionData)
@@ -1141,32 +1141,32 @@ function applyGameStateSnapshot(snapshot) {
         })
         // Create new unit with converted animation times
         const { muzzleFlashElapsed: _mfe, recoilElapsed: _re, ...unitData } = snapshotUnit
-        return { 
-          ...unitData, 
+        return {
+          ...unitData,
           muzzleFlashStartTime,
           recoilStartTime
         }
       }
     })
-    
+
     // Clean up interpolation state for units that no longer exist
     for (const unitId of unitInterpolationState.keys()) {
       if (!snapshotUnitIds.has(unitId)) {
         unitInterpolationState.delete(unitId)
       }
     }
-    
+
     // Update snapshot time for interpolation
     lastSnapshotTime = now
-    
+
     // Replace contents of mainUnits array in-place (so GameLoop reference stays valid)
     mainUnits.length = 0
     mainUnits.push(...updatedUnits)
-    
+
     // Also keep gameState.units in sync
     gameState.units = mainUnits
   }
-  
+
   // Sync buildings - replace entire array from host snapshot
   // This ensures all buildings (including new ones) are properly synced
   if (Array.isArray(snapshot.buildings)) {
@@ -1176,23 +1176,23 @@ function applyGameStateSnapshot(snapshot) {
       const key = b.id || `${b.type}_${b.x}_${b.y}`
       existingByIdOrPos.set(key, b)
     })
-    
+
     // Track new buildings for occupancy map update
     const newBuildings = []
-    
+
     // Replace buildings array with snapshot data, preserving any local-only properties
     gameState.buildings = snapshot.buildings.map(snapshotBuilding => {
       const key = snapshotBuilding.id || `${snapshotBuilding.type}_${snapshotBuilding.x}_${snapshotBuilding.y}`
       const existing = existingByIdOrPos.get(key)
-      
+
       // Convert elapsed times back to absolute start times for animations
-      const muzzleFlashStartTime = snapshotBuilding.muzzleFlashElapsed != null 
-        ? now - snapshotBuilding.muzzleFlashElapsed 
+      const muzzleFlashStartTime = snapshotBuilding.muzzleFlashElapsed != null
+        ? now - snapshotBuilding.muzzleFlashElapsed
         : null
-      const recoilStartTime = snapshotBuilding.recoilElapsed != null 
-        ? now - snapshotBuilding.recoilElapsed 
+      const recoilStartTime = snapshotBuilding.recoilElapsed != null
+        ? now - snapshotBuilding.recoilElapsed
         : null
-      
+
       const constructionStartTime = snapshotBuilding.constructionElapsed != null
         ? now - snapshotBuilding.constructionElapsed
         : (snapshotBuilding.constructionStartTime ?? existing?.constructionStartTime ?? now)
@@ -1228,10 +1228,10 @@ function applyGameStateSnapshot(snapshot) {
         return newBuilding
       }
     })
-    
+
     // Place new buildings in the map grid and occupancy map
     // Must check that mapGrid is properly initialized (not just truthy but has rows/columns)
-    const mapGridReady = gameState.mapGrid && gameState.mapGrid.length > 0 && 
+    const mapGridReady = gameState.mapGrid && gameState.mapGrid.length > 0 &&
                          Array.isArray(gameState.mapGrid[0]) && gameState.mapGrid[0].length > 0
     if (newBuildings.length > 0 && mapGridReady) {
       window.logger('[GameCommandSync] Placing', newBuildings.length, 'new buildings in client mapGrid')
@@ -1244,7 +1244,7 @@ function applyGameStateSnapshot(snapshot) {
           window.logger.warn('[GameCommandSync] Building outside map bounds:', building.type, 'at', building.x, building.y)
         }
       })
-      
+
       // Trigger tech tree sync after buildings are added
       if (needsTechTreeSync) {
         needsTechTreeSync = false
@@ -1254,15 +1254,15 @@ function applyGameStateSnapshot(snapshot) {
       window.logger.warn('[GameCommandSync] Cannot place buildings - mapGrid not ready. newBuildings:', newBuildings.length, 'mapGrid length:', gameState.mapGrid?.length)
     }
   }
-  
+
   // Sync factories - update both gameState.factories and mainFactories from main.js
   if (Array.isArray(snapshot.factories)) {
     const existingFactories = gameState.factories || []
     const snapshotFactoryIds = new Set(snapshot.factories.map(f => f.id))
-    
+
     // Remove factories that no longer exist
     gameState.factories = existingFactories.filter(f => snapshotFactoryIds.has(f.id))
-    
+
     // Update or add factories
     snapshot.factories.forEach(snapshotFactory => {
       const existing = gameState.factories.find(f => f.id === snapshotFactory.id)
@@ -1274,12 +1274,12 @@ function applyGameStateSnapshot(snapshot) {
         gameState.factories.push(snapshotFactory)
       }
     })
-    
+
     // Also sync mainFactories array from main.js for compatibility
     mainFactories.length = 0
     mainFactories.push(...gameState.factories)
   }
-  
+
   // Sync bullets - update the mainBullets array from main.js with interpolation
   if (Array.isArray(snapshot.bullets)) {
     // Create a map of existing bullets by ID
@@ -1287,15 +1287,15 @@ function applyGameStateSnapshot(snapshot) {
     mainBullets.forEach(b => {
       if (b.id) existingById.set(b.id, b)
     })
-    
+
     // Track which bullet IDs are in this snapshot
     const snapshotBulletIds = new Set()
-    
+
     // Build the updated bullets array with interpolation
     const updatedBullets = snapshot.bullets.map(snapshotBullet => {
       snapshotBulletIds.add(snapshotBullet.id)
       const existing = existingById.get(snapshotBullet.id)
-      
+
       if (existing) {
         // Set up interpolation for existing bullet
         bulletInterpolationState.set(snapshotBullet.id, {
@@ -1304,7 +1304,7 @@ function applyGameStateSnapshot(snapshot) {
           targetX: snapshotBullet.x,
           targetY: snapshotBullet.y
         })
-        
+
         // Merge non-position data
         const { x, y, ...nonPositionData } = snapshotBullet
         Object.assign(existing, nonPositionData)
@@ -1322,28 +1322,28 @@ function applyGameStateSnapshot(snapshot) {
         return { ...snapshotBullet }
       }
     })
-    
+
     // Clean up interpolation state for bullets that no longer exist
     for (const bulletId of bulletInterpolationState.keys()) {
       if (!snapshotBulletIds.has(bulletId)) {
         bulletInterpolationState.delete(bulletId)
       }
     }
-    
+
     // Replace contents of mainBullets array in-place
     mainBullets.length = 0
     mainBullets.push(...updatedBullets)
-    
+
     // Also keep gameState.bullets in sync
     gameState.bullets = mainBullets
   }
-  
+
   // Sync explosions
   if (Array.isArray(snapshot.explosions)) {
     // Merge explosions - add new ones that don't exist locally
     const existingExplosions = gameState.explosions || []
     const existingKeys = new Set(existingExplosions.map(e => `${e.x}_${e.y}_${e.startTime}`))
-    
+
     snapshot.explosions.forEach(exp => {
       const startTime = exp.startElapsed != null
         ? now - exp.startElapsed
@@ -1361,20 +1361,20 @@ function applyGameStateSnapshot(snapshot) {
     })
     gameState.explosions = existingExplosions
   }
-  
+
   // Sync unit wrecks
   if (Array.isArray(snapshot.unitWrecks)) {
     // Initialize if needed
     if (!gameState.unitWrecks) {
       gameState.unitWrecks = []
     }
-    
+
     // Create a map of existing wrecks by ID
     const existingById = new Map()
     gameState.unitWrecks.forEach(w => {
       if (w.id) existingById.set(w.id, w)
     })
-    
+
     // Sync wrecks from snapshot
     const updatedWrecks = snapshot.unitWrecks.map(snapshotWreck => {
       const existing = existingById.get(snapshotWreck.id)
@@ -1387,7 +1387,7 @@ function applyGameStateSnapshot(snapshot) {
         return { ...snapshotWreck }
       }
     })
-    
+
     // Replace wrecks array
     gameState.unitWrecks = updatedWrecks
   }
@@ -1401,7 +1401,7 @@ function applyGameStateSnapshot(snapshot) {
 function createClientStateUpdate() {
   const now = performance.now()
   const partyId = gameState.humanPlayer
-  
+
   // Only include units owned by this client - use mainUnits as that's authoritative
   const units = mainUnits
     .filter(u => u.owner === partyId)
@@ -1423,7 +1423,7 @@ function createClientStateUpdate() {
       remainingMines: unit.remainingMines,
       sweeping: unit.sweeping
     }))
-  
+
   // Only include buildings owned by this client
   const buildings = (gameState.buildings || [])
     .filter(b => b.owner === partyId)
@@ -1438,7 +1438,7 @@ function createClientStateUpdate() {
       turretDirection: building.turretDirection,
       muzzleFlashStartTime: building.muzzleFlashStartTime
     }))
-  
+
   // Include explosions created by this client's units
   const explosions = (gameState.explosions || []).map(exp => ({
     x: exp.x,
@@ -1447,7 +1447,7 @@ function createClientStateUpdate() {
     duration: exp.duration,
     maxRadius: exp.maxRadius
   }))
-  
+
   return {
     partyId,
     units,
@@ -1465,7 +1465,7 @@ function _sendClientStateUpdate() {
   if (isHost() || !hasActiveRemoteSession()) {
     return
   }
-  
+
   const update = createClientStateUpdate()
   broadcastGameCommand(
     COMMAND_TYPES.CLIENT_STATE_UPDATE,
@@ -1481,7 +1481,7 @@ function broadcastGameStateSnapshot() {
   if (!isHost()) {
     return
   }
-  
+
   const snapshot = createGameStateSnapshot()
   broadcastGameCommand(
     COMMAND_TYPES.GAME_STATE_SNAPSHOT,
@@ -1502,7 +1502,7 @@ export function startGameStateSync() {
   if (isHost()) {
     // Host: broadcast full snapshots
     if (stateSyncHandle) return
-    
+
     stateSyncHandle = setInterval(() => {
       if (hasActiveRemoteSession()) {
         broadcastGameStateSnapshot()
@@ -1574,10 +1574,10 @@ export function initializeLockstepSession() {
     window.logger.warn('[Lockstep] Only host can initialize lockstep session')
     return null
   }
-  
+
   // Generate a random seed for this session (use Math.random for true randomness)
   const sessionSeed = Math.floor(Math.random() * 2147483647) + 1
-  
+
   // Initialize local lockstep state
   gameState.lockstep.enabled = true
   gameState.lockstep.sessionSeed = sessionSeed
@@ -1587,13 +1587,13 @@ export function initializeLockstepSession() {
   gameState.lockstep.pendingResync = false
   gameState.lockstep.tickAccumulator = 0
   gameState.lockstep.lastTickTime = performance.now()
-  
+
   // Initialize the deterministic RNG
   initializeSessionRNG(sessionSeed)
-  
+
   // Initialize the lockstep manager
   lockstepManager.initialize(sessionSeed, true)
-  
+
   // Broadcast init message to all peers
   broadcastGameCommand(
     COMMAND_TYPES.LOCKSTEP_INIT,
@@ -1605,7 +1605,7 @@ export function initializeLockstepSession() {
     },
     gameState.humanPlayer
   )
-  
+
   window.logger('[Lockstep] Session initialized with seed:', sessionSeed)
   return sessionSeed
 }
@@ -1616,9 +1616,9 @@ export function initializeLockstepSession() {
  */
 function handleLockstepInit(payload) {
   if (isHost()) return
-  
+
   const { sessionSeed, tickRate, inputDelay, hashInterval } = payload
-  
+
   // Initialize local lockstep state
   gameState.lockstep.enabled = true
   gameState.lockstep.sessionSeed = sessionSeed
@@ -1629,13 +1629,13 @@ function handleLockstepInit(payload) {
   gameState.lockstep.pendingResync = false
   gameState.lockstep.tickAccumulator = 0
   gameState.lockstep.lastTickTime = performance.now()
-  
+
   // Initialize the deterministic RNG with the shared seed
   initializeSessionRNG(sessionSeed)
-  
+
   // Initialize the lockstep manager
   lockstepManager.initialize(sessionSeed, false)
-  
+
   window.logger('[Lockstep] Client initialized with seed:', sessionSeed, 'tickRate:', tickRate)
 }
 
@@ -1650,23 +1650,23 @@ export function queueLockstepInput(inputType, data) {
     window.logger.warn('[Lockstep] Cannot queue input - lockstep not enabled')
     return null
   }
-  
+
   // Calculate the target tick (current tick + input delay)
   const targetTick = gameState.lockstep.currentTick + gameState.lockstep.inputDelay
-  
+
   // Create the input command
   const input = createLockstepInput(inputType, data, targetTick, gameState.humanPlayer)
-  
+
   // Add to local buffer
   localInputBuffer.addInput(targetTick, input)
-  
+
   // Broadcast to all peers
   broadcastGameCommand(
     COMMAND_TYPES.LOCKSTEP_INPUT,
     input,
     gameState.humanPlayer
   )
-  
+
   return input
 }
 
@@ -1676,13 +1676,13 @@ export function queueLockstepInput(inputType, data) {
  */
 function handleLockstepInput(command) {
   if (!isLockstepEnabled()) return
-  
+
   const input = command.payload
   if (!input || !input.tick) return
-  
+
   // Add to the lockstep manager's input queue
   lockstepManager.receiveInput(input)
-  
+
   // If host, acknowledge receipt
   if (isHost()) {
     broadcastGameCommand(
@@ -1699,7 +1699,7 @@ function handleLockstepInput(command) {
  */
 function handleLockstepInputAck(payload) {
   if (!isLockstepEnabled()) return
-  
+
   const { tick } = payload
   localInputBuffer.confirmTick(tick)
 }
@@ -1710,23 +1710,23 @@ function handleLockstepInputAck(payload) {
  */
 export function broadcastStateHash(tick) {
   if (!isLockstepEnabled()) return
-  
+
   const hash = computeStateHash(gameState, mainUnits)
-  
+
   // Store locally for comparison
   if (!pendingHashes.has(tick)) {
     pendingHashes.set(tick, { localHash: hash, peerHashes: new Map() })
   } else {
     pendingHashes.get(tick).localHash = hash
   }
-  
+
   // Broadcast to peers
   broadcastGameCommand(
     COMMAND_TYPES.LOCKSTEP_HASH,
     { tick, hash },
     gameState.humanPlayer
   )
-  
+
   // Clean up old pending hashes (keep last 10)
   if (pendingHashes.size > 10) {
     const oldestTick = Math.min(...pendingHashes.keys())
@@ -1740,16 +1740,16 @@ export function broadcastStateHash(tick) {
  */
 function handleLockstepHash(command) {
   if (!isLockstepEnabled()) return
-  
+
   const { tick, hash } = command.payload
   const peerId = command.sourcePartyId
-  
+
   // Store peer hash
   if (!pendingHashes.has(tick)) {
     pendingHashes.set(tick, { localHash: null, peerHashes: new Map() })
   }
   pendingHashes.get(tick).peerHashes.set(peerId, hash)
-  
+
   // Check for mismatch if we have our local hash
   const tickData = pendingHashes.get(tick)
   if (tickData.localHash && tickData.peerHashes.size > 0) {
@@ -1764,15 +1764,15 @@ function handleLockstepHash(command) {
  */
 function verifyHashes(tick, tickData) {
   const { localHash, peerHashes } = tickData
-  
+
   for (const [peerId, peerHash] of peerHashes) {
     if (!compareHashes(localHash, peerHash)) {
       window.logger.warn(`[Lockstep] DESYNC DETECTED at tick ${tick}! Local: ${localHash}, Peer ${peerId}: ${peerHash}`)
-      
+
       // Mark desync
       gameState.lockstep.desyncDetected = true
       gameState.lockstep.desyncTick = tick
-      
+
       // If host, initiate resync
       if (isHost()) {
         initiateResync(tick)
@@ -1780,18 +1780,18 @@ function verifyHashes(tick, tickData) {
         // Client waits for resync from host
         gameState.lockstep.pendingResync = true
       }
-      
+
       // Broadcast mismatch notification
       broadcastGameCommand(
         COMMAND_TYPES.LOCKSTEP_HASH_MISMATCH,
         { tick, localHash, peerId, peerHash },
         gameState.humanPlayer
       )
-      
+
       return
     }
   }
-  
+
   window.logger(`[Lockstep] Hashes verified for tick ${tick}`)
 }
 
@@ -1801,12 +1801,12 @@ function verifyHashes(tick, tickData) {
  */
 function initiateResync(desyncTick) {
   if (!isHost()) return
-  
+
   window.logger('[Lockstep] Initiating resync from tick:', desyncTick)
-  
+
   // Create a full state snapshot for resync
   const snapshot = createGameStateSnapshot()
-  
+
   // Broadcast resync message
   broadcastGameCommand(
     COMMAND_TYPES.LOCKSTEP_RESYNC,
@@ -1817,7 +1817,7 @@ function initiateResync(desyncTick) {
     },
     gameState.humanPlayer
   )
-  
+
   // Clear desync state
   gameState.lockstep.desyncDetected = false
   gameState.lockstep.desyncTick = null
@@ -1829,23 +1829,23 @@ function initiateResync(desyncTick) {
  */
 function handleLockstepResync(payload) {
   if (isHost()) return
-  
+
   const { tick, snapshot, desyncTick } = payload
-  
+
   window.logger('[Lockstep] Applying resync from host, tick:', tick, 'desync was at:', desyncTick)
-  
+
   // Apply the snapshot
   applyGameStateSnapshot(snapshot)
-  
+
   // Update lockstep state
   gameState.lockstep.currentTick = tick
   gameState.lockstep.desyncDetected = false
   gameState.lockstep.desyncTick = null
   gameState.lockstep.pendingResync = false
-  
+
   // Re-sync the RNG to the current tick
   deterministicRNG.syncToTick(tick)
-  
+
   window.logger('[Lockstep] Resync complete, now at tick:', tick)
 }
 
@@ -1856,32 +1856,32 @@ function handleLockstepResync(payload) {
  */
 export function processLockstepTick(updateFn) {
   if (!isLockstepEnabled()) return false
-  
+
   const tick = gameState.lockstep.currentTick
-  
+
   // Get all inputs for this tick
   const inputs = lockstepManager.getInputsForTick(tick)
-  
+
   // Sync RNG to this tick for determinism
   syncRNGForTick(tick)
-  
+
   // Apply inputs (these modify gameState before the update)
   applyLockstepInputs(inputs)
-  
+
   // Run the game update
   if (typeof updateFn === 'function') {
     updateFn(MS_PER_TICK)
   }
-  
+
   // Broadcast hash at intervals
   if (tick % gameState.lockstep.hashInterval === 0) {
     broadcastStateHash(tick)
   }
-  
+
   // Advance tick counter
   gameState.lockstep.currentTick++
   lockstepManager.advanceTick()
-  
+
   return true
 }
 
@@ -1891,34 +1891,34 @@ export function processLockstepTick(updateFn) {
  */
 function applyLockstepInputs(inputs) {
   if (!inputs || inputs.length === 0) return
-  
+
   for (const input of inputs) {
     switch (input.type) {
       case LOCKSTEP_INPUT_TYPES.UNIT_MOVE:
         // Apply move command - find units and set their move targets
         applyMoveInput(input)
         break
-        
+
       case LOCKSTEP_INPUT_TYPES.UNIT_ATTACK:
         // Apply attack command
         applyAttackInput(input)
         break
-        
+
       case LOCKSTEP_INPUT_TYPES.UNIT_STOP:
         // Apply stop command
         applyStopInput(input)
         break
-        
+
       case LOCKSTEP_INPUT_TYPES.BUILD_PLACE:
         // Apply building placement
         applyBuildInput(input)
         break
-        
+
       case LOCKSTEP_INPUT_TYPES.PRODUCTION_START:
         // Apply production start
         applyProductionInput(input)
         break
-        
+
       default:
         window.logger.warn('[Lockstep] Unknown input type:', input.type)
     }
@@ -1932,7 +1932,7 @@ function applyLockstepInputs(inputs) {
 function applyMoveInput(input) {
   const { unitIds, targetX, targetY } = input.data
   if (!unitIds || !Array.isArray(unitIds)) return
-  
+
   for (const unitId of unitIds) {
     const unit = mainUnits.find(u => u.id === unitId)
     if (unit) {
@@ -1951,7 +1951,7 @@ function applyMoveInput(input) {
 function applyAttackInput(input) {
   const { unitIds, targetId, targetType } = input.data
   if (!unitIds || !Array.isArray(unitIds)) return
-  
+
   // Find the target
   let target = null
   if (targetType === 'unit') {
@@ -1959,9 +1959,9 @@ function applyAttackInput(input) {
   } else if (targetType === 'building') {
     target = gameState.buildings.find(b => b.id === targetId)
   }
-  
+
   if (!target) return
-  
+
   for (const unitId of unitIds) {
     const unit = mainUnits.find(u => u.id === unitId)
     if (unit) {
@@ -1978,7 +1978,7 @@ function applyAttackInput(input) {
 function applyStopInput(input) {
   const { unitIds } = input.data
   if (!unitIds || !Array.isArray(unitIds)) return
-  
+
   for (const unitId of unitIds) {
     const unit = mainUnits.find(u => u.id === unitId)
     if (unit) {
@@ -1998,7 +1998,7 @@ function applyStopInput(input) {
  */
 function applyBuildInput(input) {
   const { buildingType, x, y, owner } = input.data
-  
+
   // This would call the building placement logic
   // For now, queue it for the regular building system
   window.logger('[Lockstep] Build input:', buildingType, 'at', x, y, 'for', owner)
@@ -2010,7 +2010,7 @@ function applyBuildInput(input) {
  */
 function applyProductionInput(input) {
   const { productionType, itemType, factoryId } = input.data
-  
+
   // This would call the production system
   window.logger('[Lockstep] Production input:', productionType, itemType, 'from', factoryId)
 }
@@ -2020,13 +2020,13 @@ function applyProductionInput(input) {
  */
 export function disableLockstep() {
   if (!gameState.lockstep) return
-  
+
   gameState.lockstep.enabled = false
   deterministicRNG.disable()
   lockstepManager.reset()
   localInputBuffer.clear()
   pendingHashes.clear()
-  
+
   window.logger('[Lockstep] Disabled, returning to snapshot sync')
 }
 
@@ -2041,27 +2041,27 @@ export function handleLockstepCommand(command) {
     case COMMAND_TYPES.LOCKSTEP_INIT:
       handleLockstepInit(command.payload)
       return true
-      
+
     case COMMAND_TYPES.LOCKSTEP_INPUT:
       handleLockstepInput(command)
       return true
-      
+
     case COMMAND_TYPES.LOCKSTEP_INPUT_ACK:
       handleLockstepInputAck(command.payload)
       return true
-      
+
     case COMMAND_TYPES.LOCKSTEP_HASH:
       handleLockstepHash(command)
       return true
-      
+
     case COMMAND_TYPES.LOCKSTEP_HASH_MISMATCH:
       window.logger.warn('[Lockstep] Hash mismatch notification received:', command.payload)
       return true
-      
+
     case COMMAND_TYPES.LOCKSTEP_RESYNC:
       handleLockstepResync(command.payload)
       return true
-      
+
     default:
       return false
   }

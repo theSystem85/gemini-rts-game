@@ -192,8 +192,8 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
     if (unit.oreCarried === 0 && !unit.harvesting && !unit.unloadingAtRefinery &&
         unit.oreField && (!unit.path || unit.path.length === 0)) {
       const tileKey = `${unit.oreField.x},${unit.oreField.y}`
-      const currentTileX = Math.floor(unit.x / TILE_SIZE)
-      const currentTileY = Math.floor(unit.y / TILE_SIZE)
+      const _currentTileX = Math.floor(unit.x / TILE_SIZE)
+      const _currentTileY = Math.floor(unit.y / TILE_SIZE)
 
       // Check if we're near the ore field (more tolerant detection)
       const distanceToOreField = Math.hypot(
@@ -372,7 +372,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
     if (isNearRefinery) {
       // **DISTANCE-BASED PRIORITY SYSTEM** - Check if this harvester is the closest
       const nextInQueue = getNextInQueue(refineryId)
-      const isNextInQueue = nextInQueue === unit.id
+      const _isNextInQueue = nextInQueue === unit.id
       const refineryInUse = gameState.refineryStatus[refineryId]
 
       // Get all harvesters waiting for this refinery and sort by distance
@@ -466,7 +466,7 @@ function handleHarvesterUnloading(unit, factories, mapGrid, gameState, now, occu
 /**
  * Completes the unloading process at a refinery
  */
-function completeUnloading(unit, factories, mapGrid, gameState, now, occupancyMap) {
+function completeUnloading(unit, factories, mapGrid, gameState, now, _occupancyMap) {
   const powerSupply = unit.owner === gameState.humanPlayer ? gameState.playerPowerSupply : gameState.enemyPowerSupply
   const unloadTime = powerSupply < 0 ? HARVESTER_UNLOAD_TIME * 2 : HARVESTER_UNLOAD_TIME
   if (now - unit.unloadStartTime >= unloadTime) {
@@ -1283,7 +1283,7 @@ function findNearbyOreTile(unit, mapGrid, centerTileX, centerTileY) {
 /**
  * Check if harvester is being productive (harvesting, moving, or unloading)
  */
-function checkHarvesterProductivity(unit, mapGrid, occupancyMap, now) {
+function checkHarvesterProductivity(unit, mapGrid, occupancyMap, _now) {
   // Don't interfere with manual commands
   if (unit.manualOreTarget) {
     return

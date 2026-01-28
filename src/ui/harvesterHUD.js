@@ -45,7 +45,7 @@ export class HarvesterHUD {
     )
 
     // Get refinery queues
-    const queues = getRefineryQueues()
+    const _queues = getRefineryQueues()
 
     // Draw assignment lines for each harvester
     harvesters.forEach(harvester => {

@@ -1,5 +1,5 @@
 // enemyStrategies.js - Enhanced enemy AI strategies
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, HOWITZER_FIRE_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
@@ -52,7 +52,7 @@ function getAIPlayers(gameState) {
   return allPlayers.filter(p => p !== human)
 }
 
-function getUnitDps(unit) {
+function _getUnitDps(unit) {
   const type = unit.type === 'tank' ? 'tank_v1' : unit.type
   return UNIT_DPS[type] || UNIT_DPS.tank_v1
 }
@@ -502,7 +502,7 @@ export function handleRetreatToBase(unit, gameState, mapGrid) {
 /**
  * Finds a safe position near a base for retreat
  */
-function findSafePositionNearBase(baseX, baseY, mapGrid, unit) {
+function findSafePositionNearBase(baseX, baseY, mapGrid, _unit) {
   const directions = [
     { x: 0, y: -2 }, { x: 2, y: 0 }, { x: 0, y: 2 }, { x: -2, y: 0 },
     { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
@@ -788,31 +788,31 @@ function coordinateMultiDirectionalAttack(unit, units, gameState) {
   const lastDirection = lastAttackDirections.get(target.id)
 
   // Try all directions to find a valid attack angle
-  for (let [key, dir] of Object.entries(ATTACK_DIRECTIONS)) {
+  for (const [_key, dir] of Object.entries(ATTACK_DIRECTIONS)) {
     // Rotate directions to spread out attacks
-    dir = rotateDirection(dir, attackDirectionRotation)
+    const rotatedDir = rotateDirection(dir, attackDirectionRotation)
 
     // Skip if this direction was just used
-    if (dir.name === lastDirection) {
+    if (rotatedDir.name === lastDirection) {
       continue
     }
 
-    const angle = Math.atan2(dir.y, dir.x)
-    const distance = Math.hypot(dir.x, dir.y)
+    const angle = Math.atan2(rotatedDir.y, rotatedDir.x)
+    const distance = Math.hypot(rotatedDir.x, rotatedDir.y)
 
     // Check for clear path to target in this direction
     const pathClear = checkAttackPath(unit, target, angle, distance, gameState)
 
     if (pathClear) {
       // Mark this direction as last used for this target
-      lastAttackDirections.set(target.id, dir.name)
+      lastAttackDirections.set(target.id, rotatedDir.name)
 
       // Spread out attack timings slightly
       const attackDelay = Math.floor(gameRandom() * 200) // Random delay up to 200ms
       unit.attackTime = Date.now() + attackDelay
 
       // Attack in this direction
-      unit.attackDirection = dir
+      unit.attackDirection = rotatedDir
       unit.isAttacking = true
       return
     }
@@ -1637,7 +1637,7 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
       refineries.forEach(refinery => {
         const refineryX = refinery.x + Math.floor(refinery.width / 2)
         const refineryY = refinery.y + refinery.height + 1
-        
+
         tankers.forEach(tanker => {
           const distance = Math.hypot(tanker.tileX - refineryX, tanker.tileY - refineryY)
           if (distance < closestDistance) {
@@ -1779,7 +1779,7 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
         const refineryX = primaryRefinery.x + Math.floor(primaryRefinery.width / 2)
         const refineryY = primaryRefinery.y + primaryRefinery.height + 1
         const distance = Math.hypot(tanker.tileX - refineryX, tanker.tileY - refineryY)
-        
+
         // If the tanker is far from the refinery, send it there
         if (distance > 5) {
           const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
@@ -1828,7 +1828,6 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
   ]
 
   const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
-  let pathFound = false
   for (const dir of directions) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
@@ -1837,14 +1836,12 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
         tanker.moveTarget = { x: destX, y: destY }
-        pathFound = true
         break
       }
     }
   }
 
-  if (!pathFound) {
-  }
+  // Path not found - no fallback action needed
 
   tanker.guardTarget = null
 }
@@ -1870,14 +1867,14 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
     const lowAmmoUnits = []
     aiUnits.forEach(u => {
       if (u.type === 'ammunitionTruck' || u.health <= 0) return
-      
+
       // Check for units with ammunition system (maxAmmunition or maxRocketAmmo)
       const hasAmmoSystem = typeof u.maxAmmunition === 'number' || typeof u.maxRocketAmmo === 'number'
       if (!hasAmmoSystem) return
 
       const maxAmmo = u.type === 'apache' ? u.maxRocketAmmo : u.maxAmmunition
       const currentAmmo = u.type === 'apache' ? u.rocketAmmo : u.ammunition
-      
+
       if (currentAmmo <= 0) {
         criticalUnits.push(u)
       } else if (currentAmmo / maxAmmo < 0.2) { // 20% threshold for low ammunition
@@ -1936,7 +1933,7 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
       }
 
       // Fourth priority: follow combat groups at safe distance
-      const combatUnits = aiUnits.filter(u => 
+      const combatUnits = aiUnits.filter(u =>
         (u.type === 'tank_v1' || u.type === 'tank-v2' || u.type === 'tank-v3' || u.type === 'rocketTank') &&
         u.health > 0
       )
@@ -1958,7 +1955,7 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
           const angle = Math.atan2(truck.tileY - centerY, truck.tileX - centerX)
           const targetX = Math.floor(centerX + Math.cos(angle) * 5)
           const targetY = Math.floor(centerY + Math.sin(angle) * 5)
-          
+
           if (targetX >= 0 && targetY >= 0 && targetX < mapGrid[0].length && targetY < mapGrid.length) {
             const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
             const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, null, undefined, { unitOwner: truck.owner })
@@ -2000,7 +1997,6 @@ function sendAmmoTruckToUnit(truck, unit, mapGrid, occupancyMap) {
   ]
 
   const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
-  let pathFound = false
   for (const dir of directions) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
@@ -2009,7 +2005,6 @@ function sendAmmoTruckToUnit(truck, unit, mapGrid, occupancyMap) {
       if (path && path.length > 0) {
         truck.path = path.slice(1)
         truck.moveTarget = { x: destX, y: destY }
-        pathFound = true
         break
       }
     }
@@ -2042,7 +2037,7 @@ export function manageAIAmmunitionMonitoring(units, gameState, mapGrid) {
       // FR-033: Retreat logic when ammunition falls below 20%
       if (ammoPercentage < 0.2 && !unit.retreatingForAmmo) {
         unit.retreatingForAmmo = true
-        
+
         // Find nearest resupply point (factory or truck)
         let nearestResupply = null
         let nearestDistance = Infinity

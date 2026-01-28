@@ -41,13 +41,13 @@ export class AABB {
     // Find closest point on AABB to circle center
     let closestX = cx
     let closestY = cy
-    
+
     if (cx < this.x) closestX = this.x
     else if (cx > this.right) closestX = this.right
-    
+
     if (cy < this.y) closestY = this.y
     else if (cy > this.bottom) closestY = this.bottom
-    
+
     const dx = cx - closestX
     const dy = cy - closestY
     return (dx * dx + dy * dy) <= radiusSq
@@ -66,7 +66,7 @@ export class QuadtreeNode {
     this.units = []
     this.unitCount = 0
     this.divided = false
-    
+
     // Child quadrants (lazily initialized)
     this.northeast = null
     this.northwest = null
@@ -82,14 +82,14 @@ export class QuadtreeNode {
     const hw = b.halfWidth
     const hh = b.halfHeight
     const newDepth = this.depth + 1
-    
+
     this.northeast = new QuadtreeNode(new AABB(b.x + hw, b.y, hw, hh), this.capacity, newDepth)
     this.northwest = new QuadtreeNode(new AABB(b.x, b.y, hw, hh), this.capacity, newDepth)
     this.southeast = new QuadtreeNode(new AABB(b.x + hw, b.y + hh, hw, hh), this.capacity, newDepth)
     this.southwest = new QuadtreeNode(new AABB(b.x, b.y + hh, hw, hh), this.capacity, newDepth)
-    
+
     this.divided = true
-    
+
     // Re-insert existing units into children
     for (let i = 0; i < this.unitCount; i++) {
       this._insertIntoChildren(this.units[i])
@@ -105,7 +105,7 @@ export class QuadtreeNode {
     const cx = unit._cx
     const cy = unit._cy
     const b = this.boundary
-    
+
     if (cx >= b.centerX) {
       if (cy < b.centerY) {
         this.northeast.insert(unit)
@@ -128,12 +128,12 @@ export class QuadtreeNode {
     const cx = unit._cx
     const cy = unit._cy
     const b = this.boundary
-    
+
     // Ignore units outside boundary
     if (cx < b.x || cx >= b.right || cy < b.y || cy >= b.bottom) {
       return false
     }
-    
+
     // If we have room and haven't divided, add here
     if (!this.divided) {
       if (this.unitCount < this.capacity || this.depth >= MAX_DEPTH) {
@@ -142,7 +142,7 @@ export class QuadtreeNode {
       }
       this.subdivide()
     }
-    
+
     // Insert into appropriate child
     this._insertIntoChildren(unit)
     return true
@@ -162,20 +162,20 @@ export class QuadtreeNode {
     if (!this.boundary.intersectsCircle(cx, cy, radiusSq)) {
       return
     }
-    
+
     // Check units in this node
     for (let i = 0; i < this.unitCount; i++) {
       const unit = this.units[i]
       if (excludeId && unit.id === excludeId) continue
-      
+
       const dx = unit._cx - cx
       const dy = unit._cy - cy
-      
+
       if (dx * dx + dy * dy <= radiusSq) {
         results.push(unit)
       }
     }
-    
+
     // Query children if subdivided
     if (this.divided) {
       this.northeast.queryCircleInto(cx, cy, radiusSq, excludeId, results)
@@ -191,13 +191,13 @@ export class QuadtreeNode {
   clear() {
     this.units.length = 0
     this.unitCount = 0
-    
+
     if (this.divided) {
       this.northeast.clear()
       this.northwest.clear()
       this.southeast.clear()
       this.southwest.clear()
-      
+
       this.northeast = null
       this.northwest = null
       this.southeast = null
@@ -216,15 +216,15 @@ export class SpatialQuadtree {
     this.mapWidth = mapWidth
     this.mapHeight = mapHeight
     this.capacity = capacity
-    
+
     // Separate trees for ground and air units
     this.groundTree = new QuadtreeNode(new AABB(0, 0, mapWidth, mapHeight), capacity, 0)
     this.airTree = new QuadtreeNode(new AABB(0, 0, mapWidth, mapHeight), capacity, 0)
-    
+
     // Reusable result arrays to avoid allocations
     this._groundResults = []
     this._airResults = []
-    
+
     // Half tile size cached
     this._halfTile = TILE_SIZE * 0.5
   }
@@ -238,20 +238,20 @@ export class SpatialQuadtree {
   rebuild(units) {
     this.groundTree.clear()
     this.airTree.clear()
-    
+
     const halfTile = this._halfTile
-    
+
     for (let i = 0, len = units.length; i < len; i++) {
       const unit = units[i]
       if (!unit || unit.health <= 0) continue
-      
+
       // Pre-compute and cache center coordinates on the unit
       unit._cx = unit.x + halfTile
       unit._cy = unit.y + halfTile
-      
+
       // Categorize by flight state
       const isAirborne = unit.isAirUnit && unit.flightState !== 'grounded'
-      
+
       if (isAirborne) {
         this.airTree.insert(unit)
       } else {
@@ -293,7 +293,7 @@ export class SpatialQuadtree {
 
   /**
    * Query nearby units for a specific unit (same domain - ground or air)
-   * @param {number} x - Center X (pixel coordinates)  
+   * @param {number} x - Center X (pixel coordinates)
    * @param {number} y - Center Y (pixel coordinates)
    * @param {number} radius - Search radius in pixels
    * @param {boolean} isAirborne - Whether querying for airborne units

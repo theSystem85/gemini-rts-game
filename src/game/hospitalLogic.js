@@ -1,5 +1,4 @@
 import { TILE_SIZE } from '../config.js'
-import { playSound } from '../sound.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 export const updateHospitalLogic = logPerformance(function(units, buildings, gameState, delta) {

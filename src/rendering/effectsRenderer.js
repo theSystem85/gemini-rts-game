@@ -439,27 +439,27 @@ export class EffectsRenderer {
     // Draw dust particles from Mine Sweeper
     if (gameState?.dustParticles && gameState?.dustParticles.length > 0) {
       const currentTime = performance.now()
-      
+
       // Clean up expired particles
       gameState.dustParticles = gameState.dustParticles.filter(dust => {
         const age = currentTime - dust.startTime
         return age < dust.lifetime
       })
-      
+
       // Render active particles
       gameState.dustParticles.forEach(dust => {
         if (!dust) return
-        
+
         const age = currentTime - dust.startTime
         const progress = age / dust.lifetime
         const alpha = Math.max(0, 1 - progress)
-        
+
         const screenX = dust.x - scrollOffset.x
         const screenY = dust.y - scrollOffset.y
-        
+
         // Particle expands and fades
         const currentSize = dust.size * (1 + progress * 0.5)
-        
+
         ctx.save()
         ctx.globalAlpha = alpha * 0.4
         ctx.fillStyle = dust.color || '#D2B48C'
@@ -498,7 +498,7 @@ export class EffectsRenderer {
     this.renderDustParticles(ctx, gameState, scrollOffset)
     this.renderExplosions(ctx, gameState, scrollOffset)
     this.renderTeslaLightning(ctx, units, scrollOffset)
-    
+
     // Debug: log smoke particle count periodically
     if (gameState?.smokeParticles?.length > 0 && gameState.frameCount % 100 === 0) {
       // Removed debug logging

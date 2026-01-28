@@ -170,12 +170,12 @@ export function updateUnitPathfinding(units, mapGrid, gameState) {
 
   // Update pathfinding for ALL units with movement targets (not just selected ones)
   // This ensures remote player units also get paths calculated
-  const unitsWithMoveTarget = units.filter(unit => 
-    unit.moveTarget && 
+  const unitsWithMoveTarget = units.filter(unit =>
+    unit.moveTarget &&
     !unit.sweepingOverrideMovement &&
     (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)
   )
-  
+
   unitsWithMoveTarget.forEach(unit => {
     const targetPos = unit.moveTarget
     let adjustedTarget = targetPos

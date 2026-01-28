@@ -14,7 +14,7 @@ export function parsePartyIdFromToken(token) {
   if (!token || typeof token !== 'string') {
     return null
   }
-  
+
   // Split by '-' and find the partyId part
   // Format: gameInstanceId-partyId-timestamp
   // partyId typically looks like 'player1', 'player2', etc.
@@ -22,7 +22,7 @@ export function parsePartyIdFromToken(token) {
   if (parts.length < 3) {
     return null
   }
-  
+
   // The partyId is typically the second-to-last part before the timestamp
   // Timestamp is the last part (numeric)
   // But gameInstanceId might contain hyphens, so we need to find partyId more carefully
@@ -34,7 +34,7 @@ export function parsePartyIdFromToken(token) {
       return part
     }
   }
-  
+
   // Fallback: second-to-last part
   return parts[parts.length - 2] || null
 }

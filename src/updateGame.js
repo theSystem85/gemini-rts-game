@@ -70,7 +70,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     if (gameState.gamePaused) return
     const now = performance.now()
     const occupancyMap = gameState.occupancyMap
-    
+
     // Check if we're a remote client (not the host)
     const isRemoteClient = !isHost() && gameState.multiplayerSession?.isRemote
 
@@ -186,13 +186,13 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           // Client requests host to spawn a unit
           const { unitType, factoryId, rallyPoint } = cmd.payload
           const partyId = cmd.sourcePartyId
-          
+
           // Find the factory for spawning
           let spawnFactory = null
           if (factoryId) {
             spawnFactory = gameState.buildings.find(b => b.id === factoryId && b.owner === partyId)
           }
-          
+
           // Fallback to finding appropriate factory by type
           if (!spawnFactory) {
             const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer', 'mineLayer', 'mineSweeper']
@@ -202,7 +202,7 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
               spawnFactory = gameState.buildings.find(b => b.type === 'helipad' && b.owner === partyId)
             }
           }
-          
+
           if (spawnFactory) {
             const newUnit = spawnUnit(
               spawnFactory,
@@ -352,17 +352,17 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
       // Ensure maxHealth is valid (fix for loaded games with missing maxHealth)
       const maxHealth = unit.maxHealth || unit.health || 100
       const healthRatio = unit.health / maxHealth
-      
+
       // Check if unit type should emit smoke when heavily damaged
       // Uses string.includes('tank') to match tank_v1, tank-v2, tank-v3, rocketTank
-      const isSmokeEmittingType = 
-        unit.type.includes('tank') || 
-        unit.type === 'harvester' || 
-        unit.type === 'howitzer' || 
+      const isSmokeEmittingType =
+        unit.type.includes('tank') ||
+        unit.type === 'harvester' ||
+        unit.type === 'howitzer' ||
         unit.type === 'recoveryTank'
-      
+
       const shouldEmitSmoke = healthRatio < 0.25 && isSmokeEmittingType
-      
+
       if (shouldEmitSmoke) {
         if (gameState.smokeParticles.length >= unitSmokeLimit) {
           return
@@ -399,8 +399,8 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           return // Skip buildings without smoke spots
         }
 
-          if (!building.constructionFinished) {
-            return // Do not emit smoke before construction animation completes
+        if (!building.constructionFinished) {
+          return // Do not emit smoke before construction animation completes
         }
 
         // Initialize smoke emission tracking for each spot if not exists (legacy building support)

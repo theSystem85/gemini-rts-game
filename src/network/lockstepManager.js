@@ -1,6 +1,6 @@
 /**
  * Deterministic Lockstep Manager
- * 
+ *
  * Coordinates the lockstep simulation between peers in a multiplayer session.
  * All peers run identical simulations driven by shared input commands,
  * verified by periodic state hash comparisons.
@@ -16,19 +16,19 @@ export const LOCKSTEP_CONFIG = {
   // Simulation tick rate in Hz (ticks per second)
   // 60 Hz matches typical frame rate for smooth gameplay
   TICK_RATE: 60,
-  
+
   // Maximum ticks that can be simulated in one frame (catch-up limit)
   MAX_TICKS_PER_FRAME: 5,
-  
+
   // How often to exchange state hashes (in ticks)
   HASH_EXCHANGE_INTERVAL: 30,
-  
+
   // Maximum tick difference allowed before triggering resync
   MAX_TICK_DRIFT: 3,
-  
+
   // Number of ticks to keep in history for rollback
   HISTORY_LENGTH: 180,
-  
+
   // Timeout for waiting on remote inputs (ms)
   INPUT_TIMEOUT_MS: 500
 }
@@ -61,44 +61,44 @@ class LockstepManager {
   constructor() {
     // Current simulation tick
     this._currentTick = 0
-    
+
     // Target tick based on elapsed time
     this._targetTick = 0
-    
+
     // Last time we updated ticks
     this._lastTickTime = 0
-    
+
     // Time accumulator for sub-tick timing
     this._accumulator = 0
-    
+
     // Whether lockstep mode is enabled
     this._enabled = false
-    
+
     // Session seed for deterministic RNG
     this._sessionSeed = null
-    
+
     // Local peer ID
     this._localPeerId = null
-    
+
     // Map of peer states
     this._peers = new Map()
-    
+
     // Local input buffer
     this._localInputBuffer = new InputBuffer()
-    
+
     // State history for rollback (circular buffer)
     this._stateHistory = []
     this._historyIndex = 0
-    
+
     // Hash exchange tracking
     this._lastHashExchangeTick = 0
     this._pendingHashComparisons = new Map()
-    
+
     // Callbacks
     this._onInputReceived = null
     this._onDesyncDetected = null
     this._onTickAdvanced = null
-    
+
     // Statistics
     this._stats = {
       totalTicks: 0,
@@ -121,10 +121,10 @@ class LockstepManager {
     this._targetTick = 0
     this._lastTickTime = performance.now()
     this._accumulator = 0
-    
+
     // Initialize deterministic RNG
     initializeSessionRNG(sessionSeed, true)
-    
+
     // Initialize peer states
     this._peers.clear()
     peerIds.forEach(peerId => {
@@ -132,11 +132,11 @@ class LockstepManager {
         this._peers.set(peerId, new PeerLockstepState(peerId))
       }
     })
-    
+
     // Clear history
     this._stateHistory = []
     this._historyIndex = 0
-    
+
     // Reset stats
     this._stats = {
       totalTicks: 0,
@@ -144,7 +144,7 @@ class LockstepManager {
       desyncCount: 0,
       avgTickLatency: 0
     }
-    
+
     window.logger?.('[LockstepManager] Initialized with seed:', sessionSeed, 'peers:', peerIds)
   }
 
@@ -204,7 +204,7 @@ class LockstepManager {
       peerId: this._localPeerId,
       timestamp: performance.now()
     })
-    
+
     // Broadcast to peers
     this._broadcastInput(targetTick, command)
   }
@@ -221,7 +221,7 @@ class LockstepManager {
       window.logger?.warn('[LockstepManager] Received input from unknown peer:', peerId)
       return
     }
-    
+
     peer.inputBuffer.addInput(tick, {
       ...command,
       tick,
@@ -229,7 +229,7 @@ class LockstepManager {
       receivedAt: performance.now()
     })
     peer.lastReceivedTick = Math.max(peer.lastReceivedTick, tick)
-    
+
     if (this._onInputReceived) {
       this._onInputReceived(peerId, tick, command)
     }
@@ -244,10 +244,10 @@ class LockstepManager {
   receiveRemoteHash(peerId, tick, hash) {
     const peer = this._peers.get(peerId)
     if (!peer) return
-    
+
     peer.lastHashTick = tick
     peer.lastHash = hash
-    
+
     // Compare with our hash for this tick
     this._verifyHashForTick(tick, peerId, hash)
   }
@@ -270,56 +270,56 @@ class LockstepManager {
     if (!this._enabled) {
       return []
     }
-    
+
     const now = timestamp || performance.now()
     const elapsed = now - this._lastTickTime
     this._lastTickTime = now
-    
+
     // Accumulate time
     this._accumulator += elapsed
-    
+
     // Calculate how many ticks we should advance
     const ticksToProcess = Math.min(
       Math.floor(this._accumulator / MS_PER_TICK),
       LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME
     )
-    
+
     // Collect all inputs for ticks we're about to process
     const inputsToProcess = []
-    
+
     for (let i = 0; i < ticksToProcess; i++) {
       // Check if we have all required inputs for this tick
       if (!this._canAdvanceTick()) {
         // Wait for inputs from other peers
         break
       }
-      
+
       // Collect inputs for this tick
       const tickInputs = this._collectInputsForTick(this._currentTick)
       inputsToProcess.push(...tickInputs)
-      
+
       // Sync RNG for this tick
       syncRNGForTick(this._currentTick)
-      
+
       // Save state for potential rollback
       this._saveStateSnapshot()
-      
+
       // Advance tick
       this._currentTick++
       this._accumulator -= MS_PER_TICK
       this._stats.totalTicks++
-      
+
       // Check if we need to exchange hashes
       if (this._currentTick - this._lastHashExchangeTick >= LOCKSTEP_CONFIG.HASH_EXCHANGE_INTERVAL) {
         this._exchangeHash()
         this._lastHashExchangeTick = this._currentTick
       }
-      
+
       if (this._onTickAdvanced) {
         this._onTickAdvanced(this._currentTick)
       }
     }
-    
+
     return inputsToProcess
   }
 
@@ -332,13 +332,13 @@ class LockstepManager {
     if (this._peers.size === 0) {
       return true
     }
-    
+
     const requiredTick = this._currentTick
-    
+
     // Check all peers have sent inputs for the required tick
     for (const [, peer] of this._peers) {
       if (!peer.isConnected) continue
-      
+
       // Check if we have input from this peer for the required tick
       // Note: Missing input is OK if peer confirmed they had no input
       if (peer.lastReceivedTick < requiredTick - INPUT_DELAY_TICKS) {
@@ -346,7 +346,7 @@ class LockstepManager {
         return false
       }
     }
-    
+
     return true
   }
 
@@ -357,20 +357,20 @@ class LockstepManager {
    */
   _collectInputsForTick(tick) {
     const inputs = []
-    
+
     // Get local inputs
     const localInputs = this._localInputBuffer.getInputsForTick(tick)
     inputs.push(...localInputs)
-    
+
     // Get remote inputs
     for (const [, peer] of this._peers) {
       const peerInputs = peer.inputBuffer.getInputsForTick(tick)
       inputs.push(...peerInputs)
     }
-    
+
     // Sort by peer ID for deterministic ordering
     inputs.sort((a, b) => (a.peerId || '').localeCompare(b.peerId || ''))
-    
+
     return inputs
   }
 
@@ -392,14 +392,14 @@ class LockstepManager {
    */
   _exchangeHash() {
     const hash = computeStateHash(gameState, this._currentTick)
-    
+
     // Store our hash
     this._pendingHashComparisons.set(this._currentTick, {
       localHash: hash,
       peerHashes: new Map(),
       tick: this._currentTick
     })
-    
+
     // Broadcast to peers
     if (typeof this._onBroadcastHash === 'function') {
       this._onBroadcastHash(this._currentTick, hash)
@@ -418,21 +418,21 @@ class LockstepManager {
       // We don't have a hash for this tick yet - might be behind
       return
     }
-    
+
     comparison.peerHashes.set(peerId, remoteHash)
-    
+
     // Check if hash matches
     if (!compareHashes(comparison.localHash, remoteHash)) {
-      window.logger?.warn('[LockstepManager] Hash mismatch at tick', tick, 
+      window.logger?.warn('[LockstepManager] Hash mismatch at tick', tick,
         'local:', comparison.localHash, 'peer:', peerId, 'remote:', remoteHash)
-      
+
       this._stats.desyncCount++
-      
+
       const peer = this._peers.get(peerId)
       if (peer) {
         peer.isDesynced = true
       }
-      
+
       if (this._onDesyncDetected) {
         this._onDesyncDetected(tick, peerId, comparison.localHash, remoteHash)
       }
@@ -444,7 +444,7 @@ class LockstepManager {
         peer.lastConfirmedTick = tick
       }
     }
-    
+
     // Clean up old comparisons
     for (const [t] of this._pendingHashComparisons) {
       if (t < tick - LOCKSTEP_CONFIG.HISTORY_LENGTH) {
@@ -465,7 +465,7 @@ class LockstepManager {
       // Full rollback would need to serialize entire gameState
       timestamp: performance.now()
     }
-    
+
     // Circular buffer
     this._stateHistory[this._historyIndex] = snapshot
     this._historyIndex = (this._historyIndex + 1) % LOCKSTEP_CONFIG.HISTORY_LENGTH
@@ -483,20 +483,20 @@ class LockstepManager {
       window.logger?.warn('[LockstepManager] Cannot rollback to tick', tick, '- snapshot not found')
       return false
     }
-    
+
     // Restore RNG state
     deterministicRNG.setState(snapshot.rngState)
-    
+
     // Reset tick
     this._currentTick = tick
-    
+
     this._stats.rollbackCount++
-    
+
     window.logger?.('[LockstepManager] Rolled back to tick', tick)
-    
+
     // Note: Full state rollback would need to restore entire gameState
     // This is a placeholder - full implementation would need state serialization
-    
+
     return true
   }
 

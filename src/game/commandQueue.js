@@ -76,7 +76,7 @@ function issueNextSweepMovement(unit, action) {
   unit.originalTarget = null
 }
 
-function isActionComplete(unit, action, units = [], buildings = [], mapGrid, unitCommands) {
+function isActionComplete(unit, action, units = [], buildings = [], _mapGrid, _unitCommands) {
   switch (action.type) {
     case 'move':
       return (!unit.path || unit.path.length === 0) && !unit.moveTarget

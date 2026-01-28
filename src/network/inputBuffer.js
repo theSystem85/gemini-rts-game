@@ -1,6 +1,6 @@
 /**
  * Input Buffer System for Deterministic Lockstep
- * 
+ *
  * Manages input command buffering to accommodate network latency
  * and ensure all peers process inputs at the same simulation tick.
  */
@@ -30,10 +30,10 @@ export class InputBuffer {
   constructor() {
     // Map of tick -> array of inputs
     this._buffer = new Map()
-    
+
     // Oldest tick still in buffer
     this._oldestTick = 0
-    
+
     // Track confirmed ticks (all inputs received)
     this._confirmedTicks = new Set()
   }
@@ -47,16 +47,16 @@ export class InputBuffer {
     if (!this._buffer.has(tick)) {
       this._buffer.set(tick, [])
     }
-    
+
     const tickInputs = this._buffer.get(tick)
-    
+
     // Avoid duplicates (same peerId + type + similar payload)
-    const isDuplicate = tickInputs.some(existing => 
+    const isDuplicate = tickInputs.some(existing =>
       existing.peerId === input.peerId &&
       existing.type === input.type &&
       JSON.stringify(existing.payload) === JSON.stringify(input.payload)
     )
-    
+
     if (!isDuplicate) {
       tickInputs.push(input)
     }
@@ -135,12 +135,12 @@ export class InputBuffer {
   getTickRange() {
     let min = Infinity
     let max = -Infinity
-    
+
     for (const [tick] of this._buffer) {
       min = Math.min(min, tick)
       max = Math.max(max, tick)
     }
-    
+
     return {
       min: min === Infinity ? 0 : min,
       max: max === -Infinity ? 0 : max
@@ -186,29 +186,29 @@ export const LOCKSTEP_INPUT_TYPES = {
   UNIT_STOP: 'ls-unit-stop',
   UNIT_GUARD: 'ls-unit-guard',
   UNIT_PATROL: 'ls-unit-patrol',
-  
+
   // Building commands
   BUILD_START: 'ls-build-start',
   BUILD_CANCEL: 'ls-build-cancel',
   BUILD_PLACE: 'ls-build-place',
   BUILD_SELL: 'ls-build-sell',
   BUILD_REPAIR: 'ls-build-repair',
-  
+
   // Production commands
   PRODUCE_START: 'ls-produce-start',
   PRODUCE_CANCEL: 'ls-produce-cancel',
-  
+
   // Game control
   GAME_PAUSE: 'ls-game-pause',
   GAME_RESUME: 'ls-game-resume',
-  
+
   // Rally points
   SET_RALLY: 'ls-set-rally',
-  
+
   // Mine operations
   MINE_DEPLOY: 'ls-mine-deploy',
   MINE_SWEEP: 'ls-mine-sweep',
-  
+
   // Special
   NO_OP: 'ls-no-op' // Empty input for tick confirmation
 }

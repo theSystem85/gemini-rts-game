@@ -1,11 +1,11 @@
 /**
  * Game Random Utilities
- * 
+ *
  * This module provides random number generation functions for use throughout
  * the game. In single-player mode, it uses standard gameRandom(). In
  * multiplayer lockstep mode, it uses the deterministic PRNG to ensure
  * all peers get identical random sequences.
- * 
+ *
  * IMPORTANT: All game logic that needs randomness should import from this
  * module rather than using gameRandom() directly.
  */

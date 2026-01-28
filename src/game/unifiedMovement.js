@@ -1145,7 +1145,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
   const spatialTree = getSpatialQuadtree()
   const unitCenterX = unit._cx ?? (unit.x + TILE_SIZE / 2)
   const unitCenterY = unit._cy ?? (unit.y + TILE_SIZE / 2)
-  
+
   // Get nearby units from quadtree
   const nearbyUnits = spatialTree
     ? spatialTree.queryNearbyForUnit(unitCenterX, unitCenterY, MOVEMENT_CONFIG.FORCE_FIELD_RADIUS, unitAirborne, unit.id)
@@ -1163,9 +1163,9 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
     const dx = unitCenterX - otherCenterX
     const dy = unitCenterY - otherCenterY
     const distSq = dx * dx + dy * dy
-    
+
     if (distSq < 1) continue
-    
+
     const distance = Math.sqrt(distSq)
 
     // Only report collision if actually overlapping (not just in force-field range)
@@ -1179,7 +1179,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
         // Moving away - don't report collision but apply gentle separation force
         continue
       }
-      
+
       // Compute collision normal (from unit to other)
       const invDist = 1 / distance
       const normalX = -dx * invDist  // Points toward other unit
@@ -1189,7 +1189,7 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
       // Apply force-field separation (no velocity inversion!)
       // Force proportional to overlap - units slow down as they penetrate
       const separationForce = overlap * MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH * 0.1
-      
+
       // Reduce velocity in direction of other unit (slowing effect)
       const velocityTowardOther = -(dx * unitVelX + dy * unitVelY) * invDist
       if (velocityTowardOther > 0) {
@@ -1198,14 +1198,14 @@ function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = []) {
         unit.movement.velocity.x *= dampingFactor
         unit.movement.velocity.y *= dampingFactor
       }
-      
+
       // Apply gentle separation push (both units)
       const separationX = dx * invDist * separationForce
       const separationY = dy * invDist * separationForce
-      
+
       unit.movement.velocity.x += separationX
       unit.movement.velocity.y += separationY
-      
+
       if (otherUnit.movement) {
         otherUnit.movement.velocity.x -= separationX * 0.5
         otherUnit.movement.velocity.y -= separationY * 0.5
@@ -1957,7 +1957,7 @@ export function cancelUnitMovement(unit) {
  */
 export function resetUnitVelocityForNewPath(unit) {
   initializeUnitMovement(unit)
-  
+
   // Reset velocity to zero so unit starts fresh with new path
   unit.movement.velocity.x = 0
   unit.movement.velocity.y = 0
@@ -2543,18 +2543,18 @@ function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
     const dx = unitCenterX - otherCenterX
     const dy = unitCenterY - otherCenterY
     const distSq = dx * dx + dy * dy
-    
+
     if (distSq < 1) continue // Avoid division by zero
-    
+
     const distance = Math.sqrt(distSq)
-    
+
     // Force-field equation: F = strength * (1 - distance/radius)^falloff
     // This creates smooth, exponentially increasing repulsion as units get closer
     if (distance < forceRadius) {
       const normalizedDist = distance / forceRadius
-      const forceMagnitude = MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH * 
+      const forceMagnitude = MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH *
         Math.pow(1 - normalizedDist, MOVEMENT_CONFIG.FORCE_FIELD_FALLOFF)
-      
+
       // Direction away from other unit
       const invDist = 1 / distance
       avoidanceX += dx * invDist * forceMagnitude
@@ -2565,7 +2565,7 @@ function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
   // Look-ahead obstacle avoidance (terrain and buildings)
   const movement = unit.movement
   if (!movement) return { x: avoidanceX, y: avoidanceY }
-  
+
   const velX = movement.targetVelocity?.x ?? movement.velocity?.x ?? 0
   const velY = movement.targetVelocity?.y ?? movement.velocity?.y ?? 0
   const speed = Math.sqrt(velX * velX + velY * velY)
@@ -2604,11 +2604,11 @@ function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) {
         const awayX = unitCenterX - tileCenterX
         const awayY = unitCenterY - tileCenterY
         const awayDist = Math.sqrt(awayX * awayX + awayY * awayY) || 1
-        
+
         // Weight by proximity (closer lookahead = stronger deflection)
         const weight = 1 - step / 2
         const strength = weight * LOCAL_LOOKAHEAD_STRENGTH * MOVEMENT_CONFIG.AVOIDANCE_FORCE
-        
+
         avoidanceX += (awayX / awayDist) * strength
         avoidanceY += (awayY / awayDist) * strength
       }

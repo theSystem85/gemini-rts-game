@@ -227,7 +227,7 @@ export function debugAddExperience(amount = 1000) {
     if (typeof window !== 'undefined' && window.debugGetSelectedUnits) {
       selectedUnits = window.debugGetSelectedUnits()
     }
-  } catch (e) {
+  } catch {
     window.logger('Using fallback method to access selected units')
   }
 
@@ -304,7 +304,7 @@ export function debugForceShowExperienceBars() {
 export function debugSpawnEnemyUnit(unitType = 'tank') {
   if (typeof window !== 'undefined' && window.gameInstance && window.gameInstance.units) {
     const units = window.gameInstance.units
-    const gameState = window.gameState || {}
+    const _gameState = window.gameState || {}
 
     // Create a simple enemy unit near the player's view
     const enemyUnit = {

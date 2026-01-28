@@ -113,7 +113,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
         bullet.startTime = now
         bullet.x = bullet.startX
         bullet.y = bullet.startY - bullet.arcHeight
-        
+
         // Initialize velocity toward target immediately for smooth homing transition
         let targetX, targetY
         if (bullet.target && bullet.target.health > 0) {
@@ -134,7 +134,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           targetX = bullet.targetPosition.x
           targetY = bullet.targetPosition.y
         }
-        
+
         if (targetX !== undefined && targetY !== undefined) {
           const dx = targetX - bullet.x
           const dy = targetY - bullet.y
@@ -257,7 +257,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           // Assume x, y are pixel coordinates. For units, center them; for position objects, use as-is.
             targetCenterX_pixels = bullet.target.x + (typeof bullet.target.width === 'undefined' ? TILE_SIZE / 2 : 0)
             targetCenterY_pixels = bullet.target.y + (typeof bullet.target.height === 'undefined' ? TILE_SIZE / 2 : 0)
-            
+
             // For Apache helicopters, adjust target Y to account for altitude visual offset
             // The Apache visual is rendered at y - (altitude * 0.4), so we need to aim higher
             if (bullet.target.type === 'apache' && bullet.target.altitude) {
@@ -301,7 +301,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
           const dx = bullet.targetPosition.x - bullet.x
           const dy = bullet.targetPosition.y - bullet.y
           const distance = Math.hypot(dx, dy)
-          
+
           if (distance > 10) {
             bullet.vx = (dx / distance) * bullet.effectiveSpeed
             bullet.vy = (dy / distance) * bullet.effectiveSpeed
@@ -511,11 +511,11 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
       if ((bullet.originType === 'rocketTurret' || bullet.originType === 'rocketTank') && bullet.targetPosition) {
         const flightTime = now - (bullet.creationTime || bullet.startTime || now)
         const maxFlightTime = bullet.maxFlightTime || 5000
-        
+
         // For homing rockets, check distance to current target position (target may have moved)
         let targetX = bullet.targetPosition.x
         let targetY = bullet.targetPosition.y
-        
+
         // Update target position for homing rockets following live targets
         if (bullet.homing && bullet.target && bullet.target.health > 0) {
           if (typeof bullet.target.width === 'number' && typeof bullet.target.height === 'number') {
@@ -531,15 +531,15 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             }
           }
         }
-        
+
         const distanceToTarget = Math.hypot(bullet.x - targetX, bullet.y - targetY)
         const proximityThreshold = TILE_SIZE * 0.5 // Explode when within half a tile of target
-        
+
         if (distanceToTarget <= proximityThreshold || flightTime >= maxFlightTime) {
           // Rocket has reached target or timed out - explode at target location
           const explosionX = distanceToTarget <= proximityThreshold ? targetX : bullet.x
           const explosionY = distanceToTarget <= proximityThreshold ? targetY : bullet.y
-          
+
           triggerExplosion(
             explosionX,
             explosionY,
@@ -553,7 +553,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             false,
             rocketExplosionOptions
           )
-          
+
           playPositionalSound('explosion', explosionX, explosionY, 0.7)
           bullets.splice(i, 1)
           continue
@@ -628,7 +628,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
             // Apply damage with some randomization and hit zone multiplier
             let damageMultiplier = 0.8 + gameRandom() * 0.4
-            
+
             // Rocket tank projectiles are balanced against tanks
             const isTankTarget = unit.type && ['tank_v1', 'tank', 'tank-v2', 'tank-v3', 'rocketTank', 'howitzer'].includes(unit.type)
             if (bullet.originType === 'rocketTank' && isTankTarget) {
@@ -637,7 +637,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // We use a fixed multiplier to ensure the exact damage value for front hits.
               damageMultiplier = 0.1
             }
-            
+
             let actualDamage = Math.round(bullet.baseDamage * damageMultiplier * hitZoneResult.multiplier)
 
             // Check for god mode protection

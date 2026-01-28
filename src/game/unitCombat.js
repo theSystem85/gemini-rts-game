@@ -397,7 +397,7 @@ function handleTankFiring(unit, target, bullets, now, fireRate, targetCenterX, t
         startTime: now,
         projectileType
       }
-      
+
       // For rocket tank rockets, explicitly ensure target is set for burst consistency
       if (isRocketTankRocket && target) {
         bullet.target = target
@@ -509,11 +509,11 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
 
     // Use the stored burst target to ensure all rockets in the burst target the same unit
     const burstTarget = unit.burstState.burstTarget && unit.burstState.burstTarget.health > 0 ? unit.burstState.burstTarget : target
-    
+
     // Use current target center position for dynamic tracking (target may have moved)
     let currentTargetCenterX = targetCenterX
     let currentTargetCenterY = targetCenterY
-    
+
     // If target is alive, use its current position for homing
     if (burstTarget && burstTarget.health > 0) {
       if (typeof burstTarget.width === 'number' && typeof burstTarget.height === 'number') {
@@ -530,7 +530,7 @@ function handleRocketBurstFire(unit, target, bullets, now, targetCenterX, target
         }
       }
     }
-    
+
     // Fire the rocket - no overrideTarget, let normal targeting spread apply per-rocket
     // The target unit reference ensures homing works correctly
     const fired = handleTankFiring(unit, burstTarget, bullets, now, 0, currentTargetCenterX, currentTargetCenterY, 'rocket', units, mapGrid, false, null)
@@ -950,17 +950,9 @@ export function cleanupAttackGroupTargets() {
 export const updateUnitCombat = logPerformance(function updateUnitCombat(units, bullets, mapGrid, gameState, now) {
   const occupancyMap = gameState.occupancyMap
 
-  let combatUnitsCount = 0
-  let unitsWithTargets = 0
-
   units.forEach(unit => {
     // Skip if unit has no combat capabilities
     if (unit.type === 'harvester') return
-
-    combatUnitsCount++
-    if (unit.target) {
-      unitsWithTargets++
-    }
 
     // Handle status effects
     handleTeslaEffects(unit, now)
@@ -1184,12 +1176,12 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
     const unitCenterX = unit.x + TILE_SIZE / 2
     const unitCenterY = unit.y + TILE_SIZE / 2
     const angleToTarget = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
-    
+
     // Rotate body towards target using normal rotation speed
     const rotationSpeed = unit.rotationSpeed || 0.1
     const currentDirection = unit.direction !== undefined ? unit.direction : (unit.movement?.rotation || 0)
     const newDirection = smoothRotateTowardsAngle(currentDirection, angleToTarget, rotationSpeed)
-    
+
     // Update all direction properties
     unit.direction = newDirection
     if (unit.movement) {
@@ -1211,7 +1203,7 @@ function updateRocketTankCombat(unit, units, bullets, mapGrid, now, occupancyMap
           const hasAmmo = typeof unit.ammunition !== 'number' || unit.ammunition > 0
           if (hasAmmo && unit.canFire !== false && isTurretAimedAtTarget(unit, unit.target)) {
             // Fire as many rockets as we have ammo for, up to burst count
-            const rocketsToFire = typeof unit.ammunition === 'number' 
+            const rocketsToFire = typeof unit.ammunition === 'number'
               ? Math.min(COMBAT_CONFIG.ROCKET_BURST.COUNT, unit.ammunition)
               : COMBAT_CONFIG.ROCKET_BURST.COUNT
             // Start burst - don't set lastShotTime yet, only after burst completes
@@ -1323,7 +1315,7 @@ function initiateApacheHelipadReturn(unit, helipadInfo) {
   return true
 }
 
-function updateApacheCombat(unit, units, bullets, mapGrid, now, occupancyMap) {
+function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupancyMap) {
   if (!unit.target || unit.target.health <= 0) {
     unit.volleyState = null
     unit.flightPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? null : unit.flightPlan
@@ -1809,7 +1801,7 @@ function fireHowitzerShell(unit, aimTarget, bullets, now) {
  * @param {number} baseDamage - Base damage amount
  * @returns {number} Reduced damage after armor
  */
-function applyArmorReduction(unit, baseDamage) {
+function _applyArmorReduction(unit, baseDamage) {
   if (unit.armor && unit.armor > 1) {
     // Armor reduces damage by a percentage
     // Level 2 gives 50% armor increase

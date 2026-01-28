@@ -467,12 +467,12 @@ export const productionQueue = {
     if (spawnFactory) {
       // Check if we're in multiplayer as a client (not the host)
       const isRemoteClient = !isHost() && gameState.multiplayerSession?.isRemote
-      
+
       if (isRemoteClient) {
         // Client: Send spawn request to host - don't spawn locally
         // The host will spawn the unit and it will appear in the next snapshot
         broadcastUnitSpawn(unitType, spawnFactory.id, rallyPointTarget)
-        
+
         // Play sound locally for feedback
         const readySounds = ['unitReady01', 'unitReady02', 'unitReady03']
         const randomSound = readySounds[Math.floor(gameRandom() * readySounds.length)]
@@ -644,7 +644,7 @@ export const productionQueue = {
     if (!this.currentUnit) return
 
     const button = this.currentUnit.button
-    const type = this.currentUnit.type
+    const _type = this.currentUnit.type
 
     // Play cancel sound before cancelling
     playSound('constructionCancelled', 1.0, 0, true)
@@ -684,7 +684,7 @@ export const productionQueue = {
     if (!this.currentBuilding) return
 
     const button = this.currentBuilding.button
-    const type = this.currentBuilding.type
+    const _type = this.currentBuilding.type
 
     // Play cancel sound before cancelling
     playSound('constructionCancelled', 1.0, 0, true)
@@ -856,7 +856,7 @@ export const productionQueue = {
 
     if (completedBuildingIndex === -1) return
 
-    const completedBuilding = this.completedBuildings[completedBuildingIndex]
+    const _completedBuilding = this.completedBuildings[completedBuildingIndex]
 
     // Play cancel sound
     playSound('constructionCancelled', 1.0, 0, true)

@@ -12,7 +12,7 @@ import { broadcastBuildingSell } from './network/gameCommandSync.js'
  * Returns 70% of the original building cost back to the player
  * Restores original map tiles that were under the building
  */
-export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, factories, moneyEl) {
+export function buildingSellHandler(e, gameState, gameCanvas, mapGrid, units, factories, _moneyEl) {
   // Only process if sell mode is active
   if (!gameState.sellMode) return
 

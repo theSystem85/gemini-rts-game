@@ -1,6 +1,5 @@
 import { GAS_REFILL_TIME, GAS_REFILL_COST, TILE_SIZE } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
-import { playSound } from '../sound.js'
 import { getServiceRadiusPixels } from '../utils/serviceRadius.js'
 
 export const updateGasStationLogic = logPerformance(function(units, buildings, gameState, delta) {

@@ -220,7 +220,7 @@ function playAudioBuffer(audioBuffer, volume = 1.0, onEnded, options = {}) {
 }
 
 // Fallback function for legacy Audio elements (background music)
-function getCachedAudioElement(soundPath) {
+function _getCachedAudioElement(soundPath) {
   let element = soundElementCache.get(soundPath)
   if (!element) {
     element = new Audio(soundPath)

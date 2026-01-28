@@ -276,20 +276,20 @@ export class GameLoop {
       // Lockstep mode: Fixed timestep tick-based simulation
       // Accumulate time and process ticks
       gameState.lockstep.tickAccumulator += delta
-      
+
       // Process up to MAX_TICKS_PER_FRAME ticks to prevent spiral of death
       let ticksProcessed = 0
-      while (gameState.lockstep.tickAccumulator >= MS_PER_TICK && 
+      while (gameState.lockstep.tickAccumulator >= MS_PER_TICK &&
              ticksProcessed < LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME) {
         // Process one tick with the fixed timestep
         processLockstepTick((fixedDelta) => {
           updateGame(fixedDelta, this.mapGrid, this.factories, this.units, this.bullets, gameState)
         })
-        
+
         gameState.lockstep.tickAccumulator -= MS_PER_TICK
         ticksProcessed++
       }
-      
+
       // Cap accumulator to prevent massive catch-up after lag
       if (gameState.lockstep.tickAccumulator > MS_PER_TICK * LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME) {
         gameState.lockstep.tickAccumulator = MS_PER_TICK * LOCKSTEP_CONFIG.MAX_TICKS_PER_FRAME

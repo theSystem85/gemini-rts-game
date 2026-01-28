@@ -431,12 +431,12 @@ export class UnitRenderer {
         hasAmmo = true
       }
       barColor = '#FFA500' // Orange for ammunition
-      
+
       // Calculate reload progress as overlay indicator
       const now = performance.now()
       const fireRate = 12000 // COMBAT_CONFIG.FIRE_RATES.ROCKET
       const timeSinceLastShot = unit.lastShotTime ? now - unit.lastShotTime : fireRate
-      
+
       if (unit.burstState) {
         reloadRatio = 0 // Reloading (0%)
       } else {
@@ -452,7 +452,7 @@ export class UnitRenderer {
           hasAmmo = true
         }
       }
-      
+
       // If not landed or no helipad ammo, show unit ammo
       if (!hasAmmo && typeof unit.maxRocketAmmo === 'number') {
         ratio = Math.max(0, Math.min(1, (unit.rocketAmmo ?? 0) / unit.maxRocketAmmo))
@@ -510,7 +510,7 @@ export class UnitRenderer {
     ctx.strokeRect(barX, barTop, barWidth, barHeight)
   }
 
-  renderQueueNumber(ctx, unit, scrollOffset) {
+  renderQueueNumber(_ctx, _unit, _scrollOffset) {
     // Queue numbers are now handled by the HarvesterHUD overlay
     // This function is kept for compatibility but no longer renders anything
   }
@@ -978,7 +978,7 @@ export class UnitRenderer {
     ctx.save()
     ctx.strokeStyle = '#ff3b30'
     ctx.lineWidth = 2
-    
+
     // For rocket tanks, rotate crosshair with unit direction
     if (unit.type === 'rocketTank') {
       ctx.translate(screenX, screenY)
@@ -986,7 +986,7 @@ export class UnitRenderer {
       ctx.rotate(direction)
       ctx.translate(-screenX, -screenY)
     }
-    
+
     ctx.beginPath()
     ctx.moveTo(screenX - size, screenY)
     ctx.lineTo(screenX + size, screenY)
@@ -1141,7 +1141,7 @@ export class UnitRenderer {
       const screenX = unit.x - scrollOffset.x
       const screenY = unit.y - scrollOffset.y
       const margin = VIEW_FRUSTUM_MARGIN
-      
+
       if (
         screenX + TILE_SIZE < -margin ||
         screenY + TILE_SIZE < -margin ||

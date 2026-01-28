@@ -1163,7 +1163,7 @@ export class UnitCommandsHandler {
       if (path && path.length > 0) {
         // Reset velocity to prevent coasting in wrong direction with new path
         resetUnitVelocityForNewPath(unit)
-        
+
         unit.path = path.length > 1 ? path.slice(1) : path
         // Clear any existing target when issuing a move command - but preserve turret direction
         unit.target = null
@@ -1196,7 +1196,7 @@ export class UnitCommandsHandler {
       const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
       playPositionalSound('movement', avgX, avgY, 0.5)
     }
-    
+
     // Always broadcast movement command to host if we have units to move
     // The host will handle the actual pathfinding for remote clients
     if (unitsToCommand.length > 0) {
@@ -1358,7 +1358,7 @@ export class UnitCommandsHandler {
 
     // Play attacking sound for user-initiated attack commands
     playSound('attacking', 1.0)
-    
+
     // Broadcast attack command to other players
     broadcastUnitAttack(selectedUnits, target)
   }

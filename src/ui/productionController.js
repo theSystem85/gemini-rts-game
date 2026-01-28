@@ -1681,27 +1681,27 @@ export class ProductionController {
     if (!gameCanvas) return
 
     const rect = gameCanvas.getBoundingClientRect()
-    
+
     // Start continuous edge scrolling when drag enters edge zone
     if (!this.edgeScrollAnimationFrame) {
       const edgeScrollLoop = () => {
-      if (!this.mobileDragState || !this.mobileDragState.active) {
-        this.edgeScrollAnimationFrame = null
-        this.lastMobileEdgeScrollTime = null
-        return
-      }
+        if (!this.mobileDragState || !this.mobileDragState.active) {
+          this.edgeScrollAnimationFrame = null
+          this.lastMobileEdgeScrollTime = null
+          return
+        }
 
-      // Use last known pointer position from drag state
-      const syntheticEvent = {
-        clientX: this.mobileDragState.lastClientX || event.clientX,
-        clientY: this.mobileDragState.lastClientY || event.clientY,
-        timeStamp: performance.now()
-      }
+        // Use last known pointer position from drag state
+        const syntheticEvent = {
+          clientX: this.mobileDragState.lastClientX || event.clientX,
+          clientY: this.mobileDragState.lastClientY || event.clientY,
+          timeStamp: performance.now()
+        }
 
-      const currentRect = gameCanvas.getBoundingClientRect()
-      this.applyMobileEdgeScroll(syntheticEvent, gameCanvas, currentRect)
+        const currentRect = gameCanvas.getBoundingClientRect()
+        this.applyMobileEdgeScroll(syntheticEvent, gameCanvas, currentRect)
 
-      this.edgeScrollAnimationFrame = requestAnimationFrame(edgeScrollLoop)
+        this.edgeScrollAnimationFrame = requestAnimationFrame(edgeScrollLoop)
       }
 
       this.edgeScrollAnimationFrame = requestAnimationFrame(edgeScrollLoop)

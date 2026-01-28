@@ -187,7 +187,7 @@ class HostSession {
       // Track bytes received
       const byteLength = typeof event.data === 'string' ? event.data.length : event.data.byteLength || 0
       updateNetworkStats(0, byteLength)
-      
+
       let payload = event.data
       if (typeof payload === 'string') {
         try {
@@ -304,7 +304,7 @@ class HostInviteMonitor {
   }
 
   _schedulePoll() {
-    const tick = async () => {
+    const tick = async() => {
       if (!this.running) {
         return
       }
@@ -377,16 +377,16 @@ class HostInviteMonitor {
         status: SESSION_STATES.CONNECTED,
         connectedAt: Date.now()
       })
-      
+
       // Notify that a new client connected so mapGrid will be sent in snapshots
       notifyClientConnected()
-      
+
       // Initialize lockstep mode if not already enabled (host initializes when first client connects)
       if (!isLockstepEnabled()) {
         initializeLockstepSession()
         window.logger('[WebRTC] Lockstep mode initialized for multiplayer session')
       }
-      
+
       // Start game state synchronization when a player connects
       startGameStateSync()
     } else if (state === SESSION_STATES.DISCONNECTED || state === SESSION_STATES.FAILED) {
@@ -395,21 +395,21 @@ class HostInviteMonitor {
         this.activeSession = null
       }
       releaseRemoteControlSource(session.sourceId)
-      
+
       // T016: AI fallback on disconnect - flip aiActive to true and emit event
       const previousAlias = session.alias || 'Remote client'
       markPartyControlledByAi(this.partyId)
-      
+
       // Emit AI reactivation event so AI controllers can reinitialize immediately
       emitAiReactivation(this.partyId)
-      
+
       // Show re-activation notification per spec requirement
       showHostNotification(`${previousAlias} disconnected from party ${this.partyId} - AI has resumed control`)
-      
+
       updateGlobalSession({ alias: null, isRemote: false, status: SESSION_STATES.DISCONNECTED })
       session.dispose()
       this.sessions.delete(session.peerId)
-      
+
       // Check if any sessions are still active, if not stop the game state sync
       const hasActiveSessions = Array.from(this.sessions.values()).some(
         s => s.connectionState === SESSION_STATES.CONNECTED
@@ -422,7 +422,7 @@ class HostInviteMonitor {
           window.logger('[WebRTC] Lockstep mode disabled - no active sessions')
         }
       }
-      
+
       // The invite token remains valid - new players can rejoin immediately
       // No need to regenerate tokens on disconnect, only on save/load handover
     }
@@ -432,16 +432,16 @@ class HostInviteMonitor {
     if (!payload) {
       return
     }
-    
+
     window.logger('[Host WebRTC] Received control message:', payload.type, payload)
-    
+
     // Handle game command synchronization messages
     if (payload.type === 'game-command') {
       window.logger('[Host WebRTC] Forwarding game-command to handleReceivedCommand')
       handleReceivedCommand(payload, session.sourceId)
       return
     }
-    
+
     // Handle remote control messages
     if (payload.type !== 'remote-control') {
       return
@@ -516,10 +516,10 @@ export async function kickPlayer(partyId) {
   if (!monitor || !monitor.activeSession) {
     return false
   }
-  
+
   const session = monitor.activeSession
   const alias = session.alias || 'Remote player'
-  
+
   // Send kick message to the client before disconnecting
   if (session.dataChannel && session.dataChannel.readyState === 'open') {
     try {
@@ -536,23 +536,23 @@ export async function kickPlayer(partyId) {
       window.logger.warn('Failed to send kick message:', err)
     }
   }
-  
+
   // Dispose the session
   session.dispose()
   monitor.sessions.delete(session.peerId)
   monitor.activeSession = null
-  
+
   // Manually trigger the state change to ensure AI takeover
   releaseRemoteControlSource(session.sourceId)
   markPartyControlledByAi(partyId)
   emitAiReactivation(partyId)
-  
+
   // Invalidate old token and regenerate a new one
   invalidateInviteToken(partyId)
-  
+
   showHostNotification(`${alias} was kicked from party ${partyId} - AI has resumed control`)
   updateGlobalSession({ alias: null, isRemote: false, status: SESSION_STATES.DISCONNECTED })
-  
+
   // Stop game state sync if no active sessions remain
   const hasActiveSessions = Array.from(monitor.sessions.values()).some(
     s => s.connectionState === SESSION_STATES.CONNECTED
@@ -560,7 +560,7 @@ export async function kickPlayer(partyId) {
   if (!hasActiveSessions) {
     stopGameStateSync()
   }
-  
+
   // Generate new invite token after kick
   try {
     await generateInviteForParty(partyId)
@@ -569,7 +569,7 @@ export async function kickPlayer(partyId) {
   } catch (err) {
     window.logger.warn('Failed to generate new invite after kick:', err)
   }
-  
+
   return true
 }
 
