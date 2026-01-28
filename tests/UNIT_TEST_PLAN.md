@@ -90,28 +90,32 @@ More complex systems that require state management.
 - [x] Collision detection with buildings
 - [x] Explosion radius damage
 
-### 3.2 🔲 Resource & Economy System
-**File**: `tests/unit/resourceSystem.test.js`
-- [ ] Money tracking and transactions
-- [ ] Power supply calculation
-- [ ] Power consumption tracking
-- [ ] Harvester ore collection
-- [ ] Resource deposit/withdrawal
+### 3.2 ✅ Resource & Economy System
+**File**: `tests/unit/resourceSystem.test.js` *(COMPLETED)*
+- [x] Money tracking and transactions
+- [x] Power supply calculation
+- [x] Power consumption tracking
+- [x] Build speed modifiers (low power penalty)
+- [x] Low energy mode and radar activation
+- [x] Building repair cost calculation
 
-### 3.3 🔲 Building System
-**File**: `tests/unit/buildingSystem.test.js`
-- [ ] Building construction initiation
-- [ ] Construction progress over time
-- [ ] Power grid integration
-- [ ] Building damage and destruction
-- [ ] Building repair mechanics
+### 3.3 ✅ Building System
+**File**: `tests/unit/buildingSystem.test.js` *(COMPLETED)*
+- [x] Building creation with correct properties
+- [x] Building placement and tile occupation
+- [x] Building removal and tile restoration
+- [x] Power grid integration
+- [x] Building damage tracking
+- [x] Building repair mechanics
 
-### 3.4 🔲 Production Queue
-**File**: `tests/unit/productionQueue.test.js`
-- [ ] Queue unit production
-- [ ] Production timing and cooldowns
-- [ ] Spawn location determination (Vehicle Factory vs Helipad)
-- [ ] Queue cancellation and refunds
+### 3.4 ✅ Production Queue
+**File**: `tests/unit/productionQueue.test.js` *(COMPLETED)*
+- [x] Queue unit and building production
+- [x] Vehicle factory and construction yard multipliers
+- [x] Pause/resume production
+- [x] Cancel production with refunds
+- [x] Completed buildings management
+- [x] Serializable state for save/load
 
 ---
 
@@ -209,7 +213,10 @@ tests/
     ├── baseUtils.test.js
     ├── gameRandom.test.js
     ├── deterministicRandom.test.js
-    └── utils.test.js
+    ├── utils.test.js
+    ├── resourceSystem.test.js
+    ├── buildingSystem.test.js
+    └── productionQueue.test.js
 ```
 
 ### Running Tests
@@ -249,7 +256,9 @@ npm test -- --watch
 | 2.2 | Game Random | 40 | ✅ Done |
 | 2.3 | Utils | 69 | ✅ Done |
 | 3.1 | Bullet System | 55 | ✅ Done |
-| 3.x | Game Systems | ~20 | 🔲 Pending |
+| 3.2 | Resource System | 44 | ✅ Done |
+| 3.3 | Building System | 56 | ✅ Done |
+| 3.4 | Production Queue | 49 | ✅ Done |
 | 4.x | Unit Behaviors | ~25 | 🔲 Pending |
 | 5.x | AI Systems | ~10 | 🔲 Pending |
 | 6.1 | Command Sync | ~8 | 🔲 Pending |
@@ -259,10 +268,10 @@ npm test -- --watch
 
 ## Next Steps
 
-1. **Immediate**: Implement `tests/unit/resourceSystem.test.js` (Priority 3.2) - economy and power systems
-2. **Then**: Implement `tests/unit/productionQueue.test.js` (Priority 3.4) - unit production
+1. **Immediate**: Implement `tests/unit/harvesterLogic.test.js` (Priority 4.1) - harvester behaviors
+2. **Then**: Implement `tests/unit/ambulanceSystem.test.js` (Priority 4.2) - ambulance healing
 3. **Continue**: Work through priorities 4.x (Unit Behaviors) then 5.x (AI Systems)
 
-**Total Tests: 417** (across 9 test files)
+**Total Tests: 566** (across 12 test files)
 
 Last Updated: 2025-01-28
