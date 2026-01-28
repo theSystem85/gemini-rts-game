@@ -307,6 +307,7 @@ class TutorialSystem {
 
     // Hide dock button if tutorial is disabled or completed
     if ((!this.settings.showTutorial || this.progress.completed) && this.dockButton) {
+      this.dockButton.classList.add('tutorial-dock--hidden')
       this.dockButton.hidden = true
     }
 
@@ -350,6 +351,11 @@ class TutorialSystem {
       }
       if (this.dockButton) {
         this.dockButton.addEventListener('click', () => this.toggleMinimize())
+        // Ensure dock button is hidden if tutorial was completed or disabled
+        if (!this.settings.showTutorial || this.progress.completed) {
+          this.dockButton.classList.add('tutorial-dock--hidden')
+          this.dockButton.hidden = true
+        }
       }
       this.setupDragHandlers()
       return
@@ -461,7 +467,9 @@ class TutorialSystem {
     const dockButton = document.createElement('button')
     dockButton.id = 'tutorialDock'
     dockButton.type = 'button'
-    dockButton.className = 'tutorial-dock'
+    // Apply hidden class immediately if tutorial is already completed or disabled
+    const shouldHide = !this.settings.showTutorial || this.progress.completed
+    dockButton.className = shouldHide ? 'tutorial-dock tutorial-dock--hidden' : 'tutorial-dock'
     dockButton.textContent = '?'
     dockButton.hidden = true
 
@@ -727,6 +735,10 @@ class TutorialSystem {
       return
     }
 
+    if (this.dockButton && (reset || manual)) {
+      this.dockButton.classList.remove('tutorial-dock--hidden')
+    }
+
     // Don't allow starting if completed (unless reset or manual restart)
     if (this.progress.completed && !reset && !manual) {
       this.hideUI()
@@ -850,6 +862,11 @@ class TutorialSystem {
     if (this.stepIndex >= this.steps.length) {
       this.progress.completed = true
       writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
+      // Hide dock button immediately on completion
+      if (this.dockButton) {
+        this.dockButton.classList.add('tutorial-dock--hidden')
+        this.dockButton.hidden = true
+      }
       // Speak completion message
       this.speak('Great, you completed the basic tutorial!')
       // Wait for speech to finish, then stop

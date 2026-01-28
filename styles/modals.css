@@ -236,6 +236,10 @@
   transform-origin: center center;
 }
 
+.tutorial-dock--hidden {
+  visibility: hidden;
+}
+
 .tutorial-dock:focus,
 .tutorial-dock:hover {
   background: rgba(44, 123, 229, 1);

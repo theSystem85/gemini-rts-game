@@ -40,6 +40,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Reward completion by animating the Continue button when a step goal is met.
 - Allow attack completion via manual/remote control firing as well as standard target orders.
 - Do not auto-start the tutorial when the show tutorial setting is disabled.
+- Hide the tutorial dock ("?") button after completion (via a visibility-hidden class) and keep it hidden on reload until the tutorial is restarted from settings.
 - Use clear, concise copy with short actionable prompts.
 - Ensure portrait mobile layouts keep the tutorial card within the visible canvas area, with tighter spacing and adjusted typography so actions remain accessible.
 
