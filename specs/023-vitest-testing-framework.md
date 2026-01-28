@@ -84,6 +84,7 @@ Example: `buildingPlacement.test.js`
 Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
+- Enemy AI building placement tests validate defensive placement direction, spacing rules, and input guardrails with mocked dependencies.
 - Enemy AI coverage includes `enemySpawner.test.js` verifying spawn placement, harvester ore targeting, crew/gas initialization, and cheat-system integration.
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
 - Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
