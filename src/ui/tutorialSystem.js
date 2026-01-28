@@ -850,6 +850,10 @@ class TutorialSystem {
     if (this.stepIndex >= this.steps.length) {
       this.progress.completed = true
       writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
+      // Hide dock button immediately on completion
+      if (this.dockButton) {
+        this.dockButton.hidden = true
+      }
       // Speak completion message
       this.speak('Great, you completed the basic tutorial!')
       // Wait for speech to finish, then stop
