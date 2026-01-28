@@ -77,6 +77,7 @@ Implement deterministic lockstep networking to minimize bandwidth and ensure hos
   - Host/Client role indicator
 - ✅ **Unit Test Coverage**
   - Added command sync payload + state hash unit tests (`tests/unit/commandSync.test.js`).
+  - Added lockstep manager unit tests for synchronization flow (`tests/unit/lockstepManager.test.js`).
   - Added input buffer unit coverage for lockstep command buffering (`tests/unit/inputBuffer.test.js`).
 
 ### Outstanding
