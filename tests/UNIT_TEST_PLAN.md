@@ -196,11 +196,11 @@ Enemy AI and behavior systems.
 
 ## Priority 6: Network/Multiplayer (If Applicable)
 
-### 6.1 🔲 Command Synchronization
-**File**: `tests/unit/commandSync.test.js`
-- [ ] Command serialization
-- [ ] Command deserialization
-- [ ] State hash calculation
+### 6.1 ✅ Command Synchronization
+**File**: `tests/unit/commandSync.test.js` *(COMPLETED)*
+- [x] Command serialization
+- [x] Command deserialization
+- [x] State hash calculation
 
 ### 6.2 ✅ Deterministic Random
 **File**: `tests/unit/deterministicRandom.test.js` *(COMPLETED)*
@@ -236,7 +236,8 @@ tests/
     ├── productionQueue.test.js
     ├── harvesterLogic.test.js
     ├── ambulanceSystem.test.js
-    └── recoveryTankSystem.test.js
+    ├── recoveryTankSystem.test.js
+    └── commandSync.test.js
 ```
 
 ### Running Tests
@@ -284,7 +285,7 @@ npm test -- --watch
 | 4.3 | Recovery Tank | 31 | ✅ Done |
 | 4.4-5 | Other Unit Behaviors | ~25 | 🔲 Pending |
 | 5.x | AI Systems | ~10 | 🔲 Pending |
-| 6.1 | Command Sync | ~8 | 🔲 Pending |
+| 6.1 | Command Sync | ~8 | ✅ Done |
 | 6.2 | Deterministic Random | 49 | ✅ Done |
 
 ---
@@ -293,8 +294,8 @@ npm test -- --watch
 
 1. **Immediate**: Implement `tests/unit/enemyAI.test.js` (Priority 5.1) - AI decision making
 2. **Then**: Implement `tests/unit/steeringBehaviors.test.js` (Priority 5.2) - unit movement behaviors
-3. **Continue**: Work through priority 6.1 (Command Synchronization)
+3. **Continue**: Work through priority 5.1 (Enemy AI) and 5.2 (Steering Behaviors)
 
-**Total Tests: 736** (across 17 test files)
+**Total Tests: 747** (across 18 test files)
 
-Last Updated: 2025-01-28
+Last Updated: 2026-01-28
