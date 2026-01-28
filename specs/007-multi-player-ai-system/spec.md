@@ -3,13 +3,17 @@
 **Branch:** `007-multi-player-ai-system`  
 **Status:** Implemented  
 **Created:** 2025-11-05  
-**Last Updated:** 2025-11-12
+**Last Updated:** 2026-01-28
 
 ---
 
 ## Overview
 
 This specification documents the comprehensive multi-player AI system that powers computer-controlled opponents in CodeAndConquer. The system supports up to 4 parties (1 human player + 3 AI players), each with independent resource management, base building, unit production, and strategic decision-making. AI players exhibit distinct behaviors including aggressive expansion, defensive positioning, and adaptive combat tactics.
+
+## Testing Notes
+
+- AI party synchronization should clear queued commands and reset utility targets when a remote party disconnects, ensuring AI reactivation takes immediate control of units owned by that party.
 
 ---
 
