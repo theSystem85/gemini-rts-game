@@ -90,6 +90,7 @@ Located in `tests/unit/`
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
 - Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
 - Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
+- Added `tests/unit/mouseHandler.test.js` covering input selection flows, force/guard commands, hover range calculations, and context menu cancellations with mocked dependencies.
 
 ### Game System Tests
 - `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
