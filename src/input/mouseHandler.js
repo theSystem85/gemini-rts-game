@@ -605,13 +605,16 @@ export class MouseHandler {
           }
 
           hasAttackers = true
-          const center = unit.isBuilding
-            ? {
-              x: (unit.x + unit.width / 2) * TILE_SIZE,
-              y: (unit.y + unit.height / 2) * TILE_SIZE
-            }
-            : getUnitSelectionCenter(unit)
-          const distance = Math.hypot(hoveredEnemyCenter.x - center.x, hoveredEnemyCenter.y - center.y)
+          let centerX, centerY
+          if (unit.isBuilding) {
+            centerX = (unit.x + unit.width / 2) * TILE_SIZE
+            centerY = (unit.y + unit.height / 2) * TILE_SIZE
+          } else {
+            const unitCenter = getUnitSelectionCenter(unit)
+            centerX = unitCenter.centerX
+            centerY = unitCenter.centerY
+          }
+          const distance = Math.hypot(hoveredEnemyCenter.x - centerX, hoveredEnemyCenter.y - centerY)
 
           if (distance < closestDistance) {
             closestDistance = distance
@@ -658,8 +661,9 @@ export class MouseHandler {
 
       cursorManager.setIsOverEnemyInRange(isOverEnemy && enemyInRange)
       cursorManager.setIsOverEnemyOutOfRange(isOverEnemy && enemyOutOfRange)
+      // Show range info whenever hovering over an enemy with combat units selected
       cursorManager.setRangeCursorInfo(
-        isOverEnemy && enemyOutOfRange && closestMaxRange !== null
+        isOverEnemy && hasAttackers && closestMaxRange !== null
           ? { distance: closestDistance, maxRange: closestMaxRange }
           : null
       )

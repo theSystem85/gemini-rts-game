@@ -1,5 +1,5 @@
 // cursorManager.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, CURSOR_METERS_PER_TILE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
@@ -54,29 +54,27 @@ export class CursorManager {
       return null
     }
 
+    // Remove any existing element with old structure to ensure clean state
     const existing = document.querySelector('.range-cursor-info')
     if (existing) {
-      return {
-        container: existing,
-        distance: existing.querySelector('.range-cursor-info__distance'),
-        max: existing.querySelector('.range-cursor-info__max')
+      const rangeText = existing.querySelector('.range-cursor-info__text')
+      if (rangeText) {
+        return { container: existing, rangeText }
       }
+      // Old structure - remove and recreate
+      existing.remove()
     }
 
     const container = document.createElement('div')
     container.className = 'range-cursor-info'
 
-    const distance = document.createElement('div')
-    distance.className = 'range-cursor-info__distance'
+    const rangeText = document.createElement('div')
+    rangeText.className = 'range-cursor-info__text'
 
-    const max = document.createElement('div')
-    max.className = 'range-cursor-info__max'
-
-    container.appendChild(distance)
-    container.appendChild(max)
+    container.appendChild(rangeText)
     document.body.appendChild(container)
 
-    return { container, distance, max }
+    return { container, rangeText }
   }
 
   formatRangeValue(value) {
@@ -93,8 +91,8 @@ export class CursorManager {
       return
     }
 
-    const { container, distance, max } = this.rangeCursorElements
-    if (!container || !distance || !max) {
+    const { container, rangeText } = this.rangeCursorElements
+    if (!container || !rangeText) {
       return
     }
 
@@ -104,11 +102,10 @@ export class CursorManager {
     }
 
     const { distance: distanceValue, maxRange } = this.rangeCursorInfo
-    const distanceTiles = distanceValue / TILE_SIZE
-    const maxRangeTiles = maxRange / TILE_SIZE
+    const distanceMeters = (distanceValue / TILE_SIZE) * CURSOR_METERS_PER_TILE
+    const maxRangeMeters = (maxRange / TILE_SIZE) * CURSOR_METERS_PER_TILE
 
-    distance.textContent = this.formatRangeValue(distanceTiles)
-    max.textContent = this.formatRangeValue(maxRangeTiles)
+    rangeText.textContent = `${Math.round(distanceMeters)}m/${Math.round(maxRangeMeters)}m`
 
     container.style.left = `${position.x}px`
     container.style.top = `${position.y}px`
@@ -627,7 +624,13 @@ export class CursorManager {
       const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
 
       const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
-      const setAttackCursor = () => setCursor('none', 'attack-mode')
+      const setAttackCursor = () => {
+        setCursor('none', 'attack-mode')
+        // Show range info for attack cursor when hovering over enemy
+        if (this.rangeCursorInfo) {
+          this.updateRangeCursorDisplay(rangeCursorPosition, true)
+        }
+      }
       const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
       const setAttackOutOfRangeCursor = () => setOutOfRangeCursor()
       const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')

@@ -265,8 +265,11 @@ export function getMapWidth() {
 export function getMapHeight() {
   return MAP_TILES_Y * TILE_SIZE
 }
-// Approximate real world length of one tile in meters
+// Approximate real world length of one tile in meters (for speed calculations)
 export const TILE_LENGTH_METERS = 1000
+
+// Cursor range display: 10 meters per tile for attack range visualization
+export const CURSOR_METERS_PER_TILE = 10
 export const SAFE_RANGE_ENABLED = false
 export let CREW_KILL_CHANCE = 0.25 // 25% chance to kill a crew member on hit
 
@@ -1313,6 +1316,7 @@ const EXPORTED_CONFIG_VARIABLES = [
   'MAP_TILES_X',
   'MAP_TILES_Y',
   'TILE_LENGTH_METERS',
+  'CURSOR_METERS_PER_TILE',
   'SAFE_RANGE_ENABLED',
   'CREW_KILL_CHANCE',
   'ENABLE_ENEMY_SELECTION',
