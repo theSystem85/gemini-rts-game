@@ -2,7 +2,76 @@
  * Unit tests for network command synchronization helpers and state hashing.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock buildings module to prevent benchmarkScenario.js from failing
+vi.mock('../../src/buildings.js', () => ({
+  buildingData: {
+    constructionYard: { power: 0, cost: 5000 },
+    powerPlant: { power: 100, cost: 300 },
+    vehicleFactory: { power: -30, cost: 1000 }
+  },
+  placeBuilding: vi.fn(),
+  canPlaceBuilding: vi.fn().mockReturnValue(true),
+  createBuilding: vi.fn(),
+  updatePowerSupply: vi.fn()
+}))
+
+// Mock main.js to prevent initialization issues
+vi.mock('../../src/main.js', () => ({
+  factories: [],
+  units: [],
+  bullets: [],
+  mapGrid: [],
+  getCurrentGame: vi.fn(),
+  regenerateMapForClient: vi.fn()
+}))
+
+// Mock gameState
+vi.mock('../../src/gameState.js', () => ({
+  gameState: {
+    humanPlayer: 'player1',
+    buildings: [],
+    units: [],
+    money: 1000
+  }
+}))
+
+// Mock config
+vi.mock('../../src/config.js', () => ({
+  TILE_SIZE: 32,
+  setMapDimensions: vi.fn(),
+  ORE_SPREAD_ENABLED: false,
+  setOreSpreadEnabled: vi.fn()
+}))
+
+// Mock other dependencies
+vi.mock('../../src/network/remoteConnection.js', () => ({
+  getActiveRemoteConnection: vi.fn()
+}))
+
+vi.mock('../../src/network/webrtcSession.js', () => ({
+  getActiveHostMonitor: vi.fn()
+}))
+
+vi.mock('../../src/network/lockstepManager.js', () => ({
+  lockstepManager: {},
+  LOCKSTEP_CONFIG: {},
+  MS_PER_TICK: 16
+}))
+
+vi.mock('../../src/network/deterministicRandom.js', () => ({
+  deterministicRNG: { random: vi.fn().mockReturnValue(0.5) },
+  initializeSessionRNG: vi.fn(),
+  syncRNGForTick: vi.fn()
+}))
+
+vi.mock('../../src/network/inputBuffer.js', () => ({
+  InputBuffer: class {},
+  LOCKSTEP_INPUT_TYPES: {},
+  createLockstepInput: vi.fn()
+}))
+
 import {
   createMoveCommand,
   createAttackCommand,

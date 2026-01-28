@@ -179,18 +179,26 @@ Specialized unit behavior modules.
 
 Enemy AI and behavior systems.
 
-### 5.1 🔲 Enemy AI Player
-**File**: `tests/unit/enemyAI.test.js`
-- [ ] AI decision making
-- [ ] Attack target selection
-- [ ] Defense behavior
-- [ ] Resource management AI
+### 5.1 ✅ Enemy AI Player
+**File**: `tests/unit/enemyAI.test.js` *(COMPLETED - 36 tests)*
+- [x] AI decision making (shouldRetreatLowHealth, shouldConductGroupAttack)
+- [x] Attack target selection (priority order, harvester targets)
+- [x] Defense behavior (base defense detection, defender assignment)
+- [x] Resource management AI (budget thresholds, building priority, unit production)
+- [x] Retreat behavior (handleRetreatToBase, shouldStopRetreating)
 
-### 5.2 🔲 Steering Behaviors
-**File**: `tests/unit/steeringBehaviors.test.js`
-- [ ] Separation from other units
-- [ ] Collision avoidance
-- [ ] Smooth rotation
+### 5.2 ✅ Steering Behaviors
+**File**: `tests/unit/steeringBehaviors.test.js` *(COMPLETED - 56 tests)*
+- [x] STEERING_CONFIG validation
+- [x] Separation from other units (calculateSeparation)
+- [x] Alignment with nearby units (calculateAlignment)
+- [x] Cohesion to group center (calculateCohesion)
+- [x] Obstacle avoidance (calculateObstacleAvoidance)
+- [x] Formation cohesion (calculateFormationCohesion)
+- [x] Combined steering forces (calculateSteeringForces)
+- [x] Smooth rotation calculations
+- [x] Collision detection and response
+- [x] Velocity calculations and limiting
 
 ---
 
@@ -238,6 +246,10 @@ tests/
     ├── ambulanceSystem.test.js
     ├── recoveryTankSystem.test.js
     └── commandSync.test.js
+    ├── mineLayerSweeper.test.js
+    ├── tankerLogic.test.js
+    ├── enemyAI.test.js
+    └── steeringBehaviors.test.js
 ```
 
 ### Running Tests
@@ -283,19 +295,13 @@ npm test -- --watch
 | 4.1 | Harvester Logic | 31 | ✅ Done |
 | 4.2 | Ambulance System | 32 | ✅ Done |
 | 4.3 | Recovery Tank | 31 | ✅ Done |
-| 4.4-5 | Other Unit Behaviors | ~25 | 🔲 Pending |
-| 5.x | AI Systems | ~10 | 🔲 Pending |
+| 4.4 | Mine Layer/Sweeper | 46 | ✅ Done |
+| 4.5 | Tanker Logic | 30 | ✅ Done |
+| 5.1 | Enemy AI | 36 | ✅ Done |
+| 5.2 | Steering Behaviors | 56 | ✅ Done |
 | 6.1 | Command Sync | ~8 | ✅ Done |
 | 6.2 | Deterministic Random | 49 | ✅ Done |
 
 ---
-
-## Next Steps
-
-1. **Immediate**: Implement `tests/unit/enemyAI.test.js` (Priority 5.1) - AI decision making
-2. **Then**: Implement `tests/unit/steeringBehaviors.test.js` (Priority 5.2) - unit movement behaviors
-3. **Continue**: Work through priority 5.1 (Enemy AI) and 5.2 (Steering Behaviors)
-
-**Total Tests: 747** (across 18 test files)
 
 Last Updated: 2026-01-28

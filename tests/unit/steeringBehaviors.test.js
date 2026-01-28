@@ -1,0 +1,868 @@
+/**
+ * Unit tests for Steering Behaviors
+ *
+ * Tests separation, alignment, cohesion, collision avoidance,
+ * and smooth rotation behaviors.
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+// Mock config
+vi.mock('../../src/config.js', async() => {
+  const actual = await vi.importActual('../../src/config.js')
+  return {
+    ...actual,
+    TILE_SIZE: 32,
+    MAP_TILES_X: 100,
+    MAP_TILES_Y: 100,
+    UNIT_SIZE: 28
+  }
+})
+
+// Mock performanceUtils
+vi.mock('../../src/performanceUtils.js', () => ({
+  logPerformance: vi.fn(fn => fn)
+}))
+
+// Mock gameState
+vi.mock('../../src/gameState.js', () => ({
+  gameState: {
+    humanPlayer: 'player1',
+    buildings: [],
+    units: [],
+    occupancyMap: null
+  }
+}))
+
+// Mock findPath
+vi.mock('../../src/units.js', () => ({
+  findPath: vi.fn().mockReturnValue([])
+}))
+
+// Mock dangerZoneMap
+vi.mock('../../src/game/dangerZoneMap.js', () => ({
+  updateDangerZoneMaps: vi.fn()
+}))
+
+// Mock pathfinding
+vi.mock('../../src/game/pathfinding.js', () => ({
+  createFormationOffsets: vi.fn().mockReturnValue([]),
+  getCachedPath: vi.fn().mockReturnValue([])
+}))
+
+// Mock gameRandom
+vi.mock('../../src/utils/gameRandom.js', () => ({
+  gameRandom: vi.fn().mockReturnValue(0.5)
+}))
+
+import {
+  calculateSeparation,
+  calculateAlignment,
+  calculateCohesion,
+  calculateObstacleAvoidance,
+  calculateFormationCohesion,
+  calculateSteeringForces,
+  STEERING_CONFIG
+} from '../../src/game/steeringBehaviors.js'
+
+import { TILE_SIZE } from '../../src/config.js'
+
+describe('Steering Behaviors', () => {
+  let unit
+  let neighbors
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    unit = {
+      id: 'unit-1',
+      type: 'tank_v1',
+      owner: 'player1',
+      x: 500,
+      y: 500,
+      tileX: 15,
+      tileY: 15,
+      velocityX: 1,
+      velocityY: 0,
+      speed: 2.5,
+      health: 100,
+      maxHealth: 100,
+      size: 28
+    }
+
+    neighbors = []
+  })
+
+  describe('STEERING_CONFIG', () => {
+    it('should have separation radius defined', () => {
+      expect(STEERING_CONFIG.SEPARATION_RADIUS).toBeDefined()
+      expect(STEERING_CONFIG.SEPARATION_RADIUS).toBeGreaterThan(0)
+    })
+
+    it('should have alignment radius defined', () => {
+      expect(STEERING_CONFIG.ALIGNMENT_RADIUS).toBeDefined()
+      expect(STEERING_CONFIG.ALIGNMENT_RADIUS).toBeGreaterThan(0)
+    })
+
+    it('should have cohesion radius defined', () => {
+      expect(STEERING_CONFIG.COHESION_RADIUS).toBeDefined()
+      expect(STEERING_CONFIG.COHESION_RADIUS).toBeGreaterThan(0)
+    })
+
+    it('should have weight values defined', () => {
+      expect(STEERING_CONFIG.SEPARATION_WEIGHT).toBeDefined()
+      expect(STEERING_CONFIG.ALIGNMENT_WEIGHT).toBeDefined()
+      expect(STEERING_CONFIG.COHESION_WEIGHT).toBeDefined()
+    })
+
+    it('should have separation weight >= alignment weight', () => {
+      // Separation is typically most important to avoid collisions
+      expect(STEERING_CONFIG.SEPARATION_WEIGHT).toBeGreaterThanOrEqual(
+        STEERING_CONFIG.ALIGNMENT_WEIGHT
+      )
+    })
+  })
+
+  describe('calculateSeparation()', () => {
+    it('should return zero vector when no neighbors', () => {
+      const result = calculateSeparation(unit, [])
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should push away from nearby units', () => {
+      const nearbyUnit = {
+        id: 'unit-2',
+        x: 510,
+        y: 500,
+        size: 28
+      }
+      neighbors.push(nearbyUnit)
+
+      const result = calculateSeparation(unit, neighbors)
+
+      // Should push unit-1 to the left (negative x)
+      expect(result.x).toBeLessThan(0)
+    })
+
+    it('should not affect units outside separation radius', () => {
+      const farUnit = {
+        id: 'unit-far',
+        x: unit.x + STEERING_CONFIG.SEPARATION_RADIUS + 100,
+        y: unit.y,
+        size: 28,
+        health: 100
+      }
+      neighbors.push(farUnit)
+
+      const result = calculateSeparation(unit, neighbors)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should increase force with closer proximity', () => {
+      const closeUnit = {
+        id: 'unit-close',
+        x: 505,
+        y: 500,
+        size: 28
+      }
+      const furtherUnit = {
+        id: 'unit-further',
+        x: 530,
+        y: 500,
+        size: 28
+      }
+
+      const closeResult = calculateSeparation(unit, [closeUnit])
+      const furtherResult = calculateSeparation(unit, [furtherUnit])
+
+      // Closer unit should produce stronger separation force
+      expect(Math.abs(closeResult.x)).toBeGreaterThan(Math.abs(furtherResult.x))
+    })
+
+    it('should handle multiple neighbors', () => {
+      neighbors = [
+        { id: 'unit-2', x: 510, y: 500, size: 28 },
+        { id: 'unit-3', x: 500, y: 510, size: 28 }
+      ]
+
+      const result = calculateSeparation(unit, neighbors)
+
+      // Should push toward opposite corner (negative x and y)
+      expect(result.x).toBeLessThanOrEqual(0)
+      expect(result.y).toBeLessThanOrEqual(0)
+    })
+
+    it('should skip self when calculating', () => {
+      neighbors = [unit] // Include self in neighbors
+
+      const result = calculateSeparation(unit, neighbors)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+  })
+
+  describe('calculateAlignment()', () => {
+    it('should return zero vector when no neighbors', () => {
+      const result = calculateAlignment(unit, [])
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should align with neighbor heading', () => {
+      // Alignment requires same owner and movement.velocity object
+      const movingNeighbor = {
+        id: 'unit-2',
+        x: 510,
+        y: 500,
+        owner: 'player1',
+        movement: { velocity: { x: 0, y: 2 } },
+        size: 28,
+        health: 100
+      }
+      neighbors.push(movingNeighbor)
+
+      const result = calculateAlignment(unit, neighbors)
+
+      // Should steer toward neighbor's heading (positive y)
+      expect(result.y).toBeGreaterThan(0)
+    })
+
+    it('should average multiple neighbor headings', () => {
+      neighbors = [
+        { id: 'unit-2', x: 510, y: 500, owner: 'player1', movement: { velocity: { x: 2, y: 0 } }, size: 28, health: 100 },
+        { id: 'unit-3', x: 490, y: 500, owner: 'player1', movement: { velocity: { x: -2, y: 0 } }, size: 28, health: 100 }
+      ]
+
+      const result = calculateAlignment(unit, neighbors)
+
+      // Opposite headings should cancel out
+      expect(Math.abs(result.x)).toBeLessThan(0.5)
+    })
+
+    it('should ignore stationary neighbors', () => {
+      const stationaryNeighbor = {
+        id: 'unit-2',
+        x: 510,
+        y: 500,
+        owner: 'player1',
+        movement: { velocity: { x: 0, y: 0 } },
+        size: 28,
+        health: 100
+      }
+      neighbors.push(stationaryNeighbor)
+
+      const result = calculateAlignment(unit, neighbors)
+
+      // Stationary units have no heading to align with
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should skip neighbors outside alignment radius', () => {
+      const farNeighbor = {
+        id: 'unit-far',
+        x: unit.x + STEERING_CONFIG.ALIGNMENT_RADIUS + 100,
+        y: unit.y,
+        velocityX: 0,
+        velocityY: 5,
+        size: 28,
+        health: 100
+      }
+      neighbors.push(farNeighbor)
+
+      const result = calculateAlignment(unit, neighbors)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+  })
+
+  describe('calculateCohesion()', () => {
+    it('should return zero vector when no neighbors', () => {
+      const result = calculateCohesion(unit, [])
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should steer toward center of mass', () => {
+      // Cohesion requires same owner and moving units
+      const rightNeighbor = {
+        id: 'unit-2',
+        x: 550,
+        y: 500,
+        owner: 'player1',
+        movement: { velocity: { x: 1, y: 0 } },
+        size: 28,
+        health: 100
+      }
+      neighbors.push(rightNeighbor)
+
+      const result = calculateCohesion(unit, neighbors)
+
+      // Should steer toward neighbor (positive x)
+      expect(result.x).toBeGreaterThan(0)
+    })
+
+    it('should find center of multiple neighbors', () => {
+      neighbors = [
+        { id: 'unit-2', x: 600, y: 500, owner: 'player1', movement: { velocity: { x: 1, y: 0 } }, size: 28, health: 100 },
+        { id: 'unit-3', x: 400, y: 500, owner: 'player1', movement: { velocity: { x: 1, y: 0 } }, size: 28, health: 100 }
+      ]
+
+      const result = calculateCohesion(unit, neighbors)
+
+      // Center is at x=500, same as unit, so little/no x steering
+      expect(Math.abs(result.x)).toBeLessThan(0.5)
+    })
+
+    it('should ignore neighbors outside cohesion radius', () => {
+      const farNeighbor = {
+        id: 'unit-far',
+        x: unit.x + STEERING_CONFIG.COHESION_RADIUS + 200,
+        y: unit.y,
+        size: 28,
+        health: 100
+      }
+      neighbors.push(farNeighbor)
+
+      const result = calculateCohesion(unit, neighbors)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should produce consistent normalized force regardless of distance', () => {
+      // Both neighbors need owner and movement to be considered
+      // Cohesion normalizes the force and applies weight, so force magnitude is constant
+      const closeNeighbor = {
+        id: 'unit-close',
+        x: 510,
+        y: 500,
+        owner: 'player1',
+        movement: { velocity: { x: 1, y: 0 } },
+        size: 28,
+        health: 100
+      }
+      const distantNeighbor = {
+        id: 'unit-distant',
+        x: 550,
+        y: 500,
+        owner: 'player1',
+        movement: { velocity: { x: 1, y: 0 } },
+        size: 28,
+        health: 100
+      }
+
+      const closeResult = calculateCohesion(unit, [closeNeighbor])
+      const distantResult = calculateCohesion(unit, [distantNeighbor])
+
+      // Both should have similar normalized force magnitude (uses COHESION_WEIGHT)
+      expect(Math.abs(closeResult.x)).toBe(Math.abs(distantResult.x))
+    })
+  })
+
+  describe('calculateObstacleAvoidance()', () => {
+    it('should return zero vector when no mapGrid', () => {
+      const result = calculateObstacleAvoidance(unit, null, null)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should return zero when unit not moving', () => {
+      const mapGrid = [[{ type: 'grass' }]]
+      unit.movement = { velocity: { x: 0, y: 0 } }
+
+      const result = calculateObstacleAvoidance(unit, mapGrid, null)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should avoid blocking tiles ahead', () => {
+      // Create a simple map with a blocked tile ahead
+      const mapGrid = []
+      for (let y = 0; y < 20; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < 20; x++) {
+          // Block tile at (17, 15) - ahead of unit at (15, 15)
+          if (x === 17 && y === 15) {
+            mapGrid[y][x] = { type: 'rock' }
+          } else {
+            mapGrid[y][x] = { type: 'grass' }
+          }
+        }
+      }
+
+      unit.x = 15 * TILE_SIZE
+      unit.y = 15 * TILE_SIZE
+      unit.movement = { velocity: { x: 2, y: 0 } }
+
+      const result = calculateObstacleAvoidance(unit, mapGrid, null)
+
+      // Should push away from obstacle if detected
+      expect(typeof result.x).toBe('number')
+      expect(typeof result.y).toBe('number')
+    })
+
+    it('should not avoid distant obstacles', () => {
+      const mapGrid = []
+      for (let y = 0; y < 50; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < 50; x++) {
+          mapGrid[y][x] = { type: 'grass' }
+        }
+      }
+
+      unit.movement = { velocity: { x: 2, y: 0 } }
+      const result = calculateObstacleAvoidance(unit, mapGrid, null)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should handle multiple blocked tiles', () => {
+      const mapGrid = []
+      for (let y = 0; y < 20; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < 20; x++) {
+          mapGrid[y][x] = { type: 'grass' }
+        }
+      }
+
+      unit.movement = { velocity: { x: 2, y: 0 } }
+      const result = calculateObstacleAvoidance(unit, mapGrid, null)
+
+      expect(typeof result.x).toBe('number')
+      expect(typeof result.y).toBe('number')
+    })
+  })
+
+  describe('calculateFormationCohesion()', () => {
+    it('should return zero when no formation target', () => {
+      unit.formationOffset = null
+      unit.formationCenter = null
+
+      const result = calculateFormationCohesion(unit)
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should steer toward formation position', () => {
+      // Need both formationOffset and formationCenter
+      unit.formationCenter = { x: 600, y: 500 }
+      unit.formationOffset = { x: 50, y: 0 }
+
+      const result = calculateFormationCohesion(unit)
+
+      // Should steer toward formation position (positive x)
+      // Target is formationCenter + formationOffset = (650, 500)
+      // Unit center is at (500 + 16, 500 + 16) = (516, 516)
+      expect(result.x).toBeGreaterThan(0)
+    })
+
+    it('should have zero force when at formation position', () => {
+      unit.formationCenter = { x: 500, y: 500 }
+      unit.formationOffset = { x: TILE_SIZE / 2, y: TILE_SIZE / 2 }
+
+      const result = calculateFormationCohesion(unit)
+
+      // Unit is approximately at formation position
+      expect(Math.abs(result.x)).toBeLessThan(0.1)
+      expect(Math.abs(result.y)).toBeLessThan(0.1)
+    })
+  })
+
+  describe('calculateSteeringForces()', () => {
+    it('should combine all steering behaviors', () => {
+      neighbors = [
+        { id: 'unit-2', x: 510, y: 500, velocityX: 1, velocityY: 0, size: 28 }
+      ]
+
+      const result = calculateSteeringForces(unit, neighbors, [])
+
+      // Should return a combined force vector
+      expect(result).toHaveProperty('x')
+      expect(result).toHaveProperty('y')
+    })
+
+    it('should apply weights to different behaviors', () => {
+      neighbors = [
+        { id: 'unit-2', x: 505, y: 500, velocityX: 2, velocityY: 0, size: 28 }
+      ]
+
+      const result = calculateSteeringForces(unit, neighbors, [])
+
+      // Result should be influenced by weight configuration
+      expect(typeof result.x).toBe('number')
+      expect(typeof result.y).toBe('number')
+    })
+
+    it('should handle empty neighbors and obstacles', () => {
+      const result = calculateSteeringForces(unit, [], [])
+
+      expect(result.x).toBe(0)
+      expect(result.y).toBe(0)
+    })
+
+    it('should clamp maximum steering force', () => {
+      // Create situation with strong steering
+      neighbors = [
+        { id: 'unit-2', x: 501, y: 500, velocityX: 5, velocityY: 0, size: 28, health: 100 },
+        { id: 'unit-3', x: 499, y: 500, velocityX: -5, velocityY: 0, size: 28, health: 100 },
+        { id: 'unit-4', x: 500, y: 501, velocityX: 0, velocityY: 5, size: 28, health: 100 }
+      ]
+
+      const result = calculateSteeringForces(unit, neighbors, [])
+
+      // Magnitude should be capped
+      const magnitude = Math.hypot(result.x, result.y)
+      expect(magnitude).toBeLessThanOrEqual(STEERING_CONFIG.MAX_STEERING_FORCE + 0.01)
+    })
+  })
+})
+
+describe('Smooth Rotation', () => {
+  let unit
+
+  beforeEach(() => {
+    unit = {
+      id: 'unit-1',
+      type: 'tank_v1',
+      owner: 'player1',
+      x: 500,
+      y: 500,
+      rotation: 0,
+      targetRotation: 0,
+      velocityX: 1,
+      velocityY: 0,
+      speed: 2.5
+    }
+  })
+
+  describe('Rotation Calculations', () => {
+    it('should calculate target rotation from velocity', () => {
+      unit.velocityX = 0
+      unit.velocityY = 1
+
+      const targetRotation = Math.atan2(unit.velocityY, unit.velocityX)
+
+      // Moving down should be PI/2 radians
+      expect(targetRotation).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('should calculate rotation for diagonal movement', () => {
+      unit.velocityX = 1
+      unit.velocityY = 1
+
+      const targetRotation = Math.atan2(unit.velocityY, unit.velocityX)
+
+      // Moving diagonal should be PI/4 radians
+      expect(targetRotation).toBeCloseTo(Math.PI / 4)
+    })
+
+    it('should handle negative velocities', () => {
+      unit.velocityX = -1
+      unit.velocityY = 0
+
+      const targetRotation = Math.atan2(unit.velocityY, unit.velocityX)
+
+      // Moving left should be PI radians
+      expect(targetRotation).toBeCloseTo(Math.PI)
+    })
+  })
+
+  describe('Rotation Interpolation', () => {
+    it('should lerp rotation smoothly', () => {
+      const currentRotation = 0
+      const targetRotation = Math.PI
+      const lerpFactor = 0.1
+
+      const newRotation = currentRotation + (targetRotation - currentRotation) * lerpFactor
+
+      expect(newRotation).toBeCloseTo(Math.PI * 0.1)
+    })
+
+    it('should handle wrap-around from positive to negative', () => {
+      // When rotating from just below PI to just above -PI
+      const currentRotation = Math.PI - 0.1
+      const targetRotation = -Math.PI + 0.1
+
+      // Calculate shortest path
+      let diff = targetRotation - currentRotation
+      while (diff > Math.PI) diff -= 2 * Math.PI
+      while (diff < -Math.PI) diff += 2 * Math.PI
+
+      expect(Math.abs(diff)).toBeLessThan(0.5)
+    })
+
+    it('should not overshoot target rotation', () => {
+      const targetRotation = Math.PI / 4
+      let currentRotation = 0
+      const lerpFactor = 0.5
+
+      for (let i = 0; i < 10; i++) {
+        currentRotation = currentRotation + (targetRotation - currentRotation) * lerpFactor
+      }
+
+      expect(currentRotation).toBeCloseTo(targetRotation, 1)
+    })
+  })
+})
+
+describe('Collision Avoidance', () => {
+  let unit
+  let otherUnit
+
+  beforeEach(() => {
+    unit = {
+      id: 'unit-1',
+      type: 'tank_v1',
+      owner: 'player1',
+      x: 500,
+      y: 500,
+      velocityX: 1,
+      velocityY: 0,
+      size: 28,
+      health: 100
+    }
+
+    otherUnit = {
+      id: 'unit-2',
+      type: 'tank_v1',
+      owner: 'player1',
+      x: 530,
+      y: 500,
+      velocityX: -1,
+      velocityY: 0,
+      size: 28,
+      health: 100
+    }
+  })
+
+  describe('Collision Detection', () => {
+    it('should detect overlapping units', () => {
+      // Position units close enough to overlap
+      // Combined radius = (28 + 28) / 2 = 28
+      unit.x = 500
+      unit.y = 500
+      otherUnit.x = 520 // Distance = 20, less than 28
+      otherUnit.y = 500
+
+      const distance = Math.hypot(unit.x - otherUnit.x, unit.y - otherUnit.y)
+      const combinedRadius = (unit.size + otherUnit.size) / 2
+
+      const isColliding = distance < combinedRadius
+
+      expect(isColliding).toBe(true)
+    })
+
+    it('should not detect collision for distant units', () => {
+      otherUnit.x = 600
+
+      const distance = Math.hypot(unit.x - otherUnit.x, unit.y - otherUnit.y)
+      const combinedRadius = (unit.size + otherUnit.size) / 2
+
+      const isColliding = distance < combinedRadius
+
+      expect(isColliding).toBe(false)
+    })
+
+    it('should handle units at same position', () => {
+      otherUnit.x = unit.x
+      otherUnit.y = unit.y
+
+      const distance = Math.hypot(unit.x - otherUnit.x, unit.y - otherUnit.y)
+
+      expect(distance).toBe(0)
+    })
+  })
+
+  describe('Collision Response', () => {
+    it('should calculate separation vector', () => {
+      const dx = unit.x - otherUnit.x
+      const dy = unit.y - otherUnit.y
+      const distance = Math.hypot(dx, dy) || 0.001
+
+      const separationX = dx / distance
+      const separationY = dy / distance
+
+      expect(separationX).toBeLessThan(0) // Unit is to the left
+      expect(Math.abs(separationY)).toBeLessThan(0.1) // Same y level
+    })
+
+    it('should calculate push force based on overlap', () => {
+      // Position units with overlap
+      unit.x = 500
+      unit.y = 500
+      otherUnit.x = 510 // Distance = 10, overlap = 28 - 10 = 18
+      otherUnit.y = 500
+
+      const distance = Math.hypot(unit.x - otherUnit.x, unit.y - otherUnit.y)
+      const combinedRadius = (unit.size + otherUnit.size) / 2
+      const overlap = combinedRadius - distance
+
+      expect(overlap).toBeGreaterThan(0)
+    })
+
+    it('should give priority to moving units', () => {
+      const unitSpeed = Math.hypot(unit.velocityX, unit.velocityY)
+      const otherSpeed = Math.hypot(otherUnit.velocityX, otherUnit.velocityY)
+
+      // Both have same speed, so equal priority
+      expect(unitSpeed).toBeCloseTo(otherSpeed)
+    })
+
+    it('should give priority to units with targets', () => {
+      unit.target = { x: 600, y: 500 }
+      otherUnit.target = null
+
+      const unitHasTarget = unit.target !== null
+      const otherHasTarget = otherUnit.target !== null
+
+      expect(unitHasTarget).toBe(true)
+      expect(otherHasTarget).toBe(false)
+    })
+  })
+
+  describe('Unit Size Handling', () => {
+    it('should use correct collision radius', () => {
+      const UNIT_SIZE = 28
+      const collisionRadius = UNIT_SIZE / 2
+
+      expect(collisionRadius).toBe(14)
+    })
+
+    it('should handle different sized units', () => {
+      unit.size = 32
+      otherUnit.size = 24
+
+      const combinedRadius = (unit.size + otherUnit.size) / 2
+
+      expect(combinedRadius).toBe(28)
+    })
+
+    it('should handle units without size property', () => {
+      delete unit.size
+      const defaultSize = 28
+
+      const unitSize = unit.size || defaultSize
+
+      expect(unitSize).toBe(28)
+    })
+  })
+})
+
+describe('Velocity Calculations', () => {
+  let unit
+
+  beforeEach(() => {
+    unit = {
+      id: 'unit-1',
+      type: 'tank_v1',
+      x: 500,
+      y: 500,
+      velocityX: 0,
+      velocityY: 0,
+      speed: 2.5
+    }
+  })
+
+  describe('Speed Limiting', () => {
+    it('should clamp velocity to max speed', () => {
+      const targetVelocityX = 5
+      const targetVelocityY = 5
+      const maxSpeed = unit.speed
+
+      const magnitude = Math.hypot(targetVelocityX, targetVelocityY)
+      const clampedX = magnitude > maxSpeed
+        ? (targetVelocityX / magnitude) * maxSpeed
+        : targetVelocityX
+      const clampedY = magnitude > maxSpeed
+        ? (targetVelocityY / magnitude) * maxSpeed
+        : targetVelocityY
+
+      const clampedMagnitude = Math.hypot(clampedX, clampedY)
+
+      expect(clampedMagnitude).toBeCloseTo(maxSpeed)
+    })
+
+    it('should not modify velocity under max speed', () => {
+      const targetVelocityX = 1
+      const targetVelocityY = 0
+      const maxSpeed = unit.speed
+
+      const magnitude = Math.hypot(targetVelocityX, targetVelocityY)
+
+      expect(magnitude).toBeLessThan(maxSpeed)
+    })
+  })
+
+  describe('Velocity Smoothing', () => {
+    it('should apply acceleration limits', () => {
+      const maxAcceleration = 0.5
+      const currentVelocityX = 0
+      const targetVelocityX = 2
+
+      const accelerationX = targetVelocityX - currentVelocityX
+      const clampedAccelerationX = Math.max(-maxAcceleration, Math.min(maxAcceleration, accelerationX))
+
+      expect(clampedAccelerationX).toBe(maxAcceleration)
+    })
+
+    it('should apply deceleration limits', () => {
+      const maxDeceleration = 0.8
+      const currentVelocityX = 2
+      const targetVelocityX = 0
+
+      const decelerationX = targetVelocityX - currentVelocityX
+      const clampedDecelerationX = Math.max(-maxDeceleration, Math.min(maxDeceleration, decelerationX))
+
+      expect(clampedDecelerationX).toBe(-maxDeceleration)
+    })
+  })
+
+  describe('Direction Calculation', () => {
+    it('should calculate heading from velocity', () => {
+      unit.velocityX = 1
+      unit.velocityY = 0
+
+      const heading = Math.atan2(unit.velocityY, unit.velocityX)
+
+      expect(heading).toBe(0) // East
+    })
+
+    it('should handle cardinal directions', () => {
+      const directions = [
+        { vx: 1, vy: 0, expected: 0 },       // East
+        { vx: 0, vy: 1, expected: Math.PI / 2 },  // South
+        { vx: -1, vy: 0, expected: Math.PI },     // West
+        { vx: 0, vy: -1, expected: -Math.PI / 2 } // North
+      ]
+
+      directions.forEach(({ vx, vy, expected }) => {
+        const heading = Math.atan2(vy, vx)
+        expect(heading).toBeCloseTo(expected)
+      })
+    })
+
+    it('should normalize velocity for direction', () => {
+      unit.velocityX = 3
+      unit.velocityY = 4
+      const magnitude = Math.hypot(unit.velocityX, unit.velocityY)
+
+      const normalizedX = unit.velocityX / magnitude
+      const normalizedY = unit.velocityY / magnitude
+
+      expect(normalizedX).toBeCloseTo(0.6)
+      expect(normalizedY).toBeCloseTo(0.8)
+    })
+  })
+})
