@@ -81,9 +81,12 @@ Example: `buildingPlacement.test.js`
 - Simulates game loop ticks without rendering
 
 ### Unit Tests
-Located in `tests/unit/` (not yet created)
-- Will test individual functions in isolation
+Located in `tests/unit/`
+- Test individual functions in isolation
 - No game state required
+
+#### Game State Manager Coverage
+- Added `tests/unit/gameStateManager.test.js` with focused scenarios for scrolling inertia, ore spread rules, particle cleanup, destruction cleanup, and win/loss conditions.
 
 ## Best Practices
 
