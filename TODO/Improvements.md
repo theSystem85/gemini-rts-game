@@ -3,6 +3,7 @@
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
 - [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests
 - [x] Add additional unit tests for smokeUtils.js (26 tests), debugLogger.js (19 tests), logic.js (42 tests), retreat.js (33 tests) - total 120 new tests bringing test count from 1002 to 1128
+- [x] Add more unit tests for hitZoneCalculator.js (36 tests), soundCooldownManager.js (19 tests), serviceRadius.js (31 tests), version.js (4 tests) - total 90 new tests bringing test count from 1128 to 1218
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
