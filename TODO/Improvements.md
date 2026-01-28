@@ -274,6 +274,7 @@
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Improvements
+- [x] Add unit tests for the game loop (Task 3.3 coverage plan).
 - [x] ✅ **Spec 006** Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.
 - [x] Add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unload only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
