@@ -23,6 +23,7 @@
     - [x] ✅ Negative tests: Building placement too far from CY (beyond MAX_BUILDING_GAP_TILES=3)
     - [x] ✅ Edge case tests: Exactly at MAX_GAP distance and MAX_GAP+1 distance
     - [x] ✅ Game loop integration tests: Running 60-300 ticks with building placement
+  - [x] ✅ Unit tests for multiplayer invite lifecycle, host regeneration, and party ownership changes (Task 5.3).
 - [x] ✅ Add unit tests for selection manager input flows (Task 4.6).
 - [ ] Add cursorManager input system unit tests (Task 4.2) to cover cursor state transitions and range UI behavior.
 - [ ] Add an interactive tutorial system that demonstrates UI/UX actions with a tutorial cursor, speech narration, skip controls, restart control, and persistent settings (show tutorial + voice). Include steps for building the starter economy, unit selection/movement, tank production/rally points, remote control, combat goals, and tech tree explanations for tanker/gas station, ambulance/hospital/crew, ammo factory/ammo truck, and workshop/recovery tank.
