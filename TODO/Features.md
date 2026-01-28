@@ -10,6 +10,7 @@
   - [x] ✅ Install and configure Vitest with jsdom environment for DOM manipulation
   - [x] ✅ Create test setup file with mocks for Audio, Canvas, WebGL, localStorage, and other browser APIs
   - [x] ✅ Create test utilities (TestGameContext class) for running game loop headlessly
+  - [x] ✅ Add focused unit tests for the help system overlay toggling and pause state behavior.
   - [x] ✅ Integration tests for building placement near Construction Yard:
     - [x] ✅ Variation 1: Power plant with 1 tile free space around CY (all 4 directions + diagonal)
     - [x] ✅ Variation 2: Power plant with 2 tiles free space around CY (all 4 directions + diagonal)
