@@ -80,7 +80,7 @@ These files have 0% coverage and need complete test suites created.
 ### Task 2.5 - `src/ai/enemyUnitBehavior.js`
 - **Target**: Create `tests/unit/enemyUnitBehavior.test.js`
 - **Source File**: `src/ai/enemyUnitBehavior.js` (0% coverage, lines 9-1376)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 70-100
 
 ---

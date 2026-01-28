@@ -84,6 +84,7 @@ Example: `buildingPlacement.test.js`
 Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
+- Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
 
 ## Best Practices
 
