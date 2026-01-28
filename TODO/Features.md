@@ -14,6 +14,7 @@
     - [x] ✅ Negative tests: Building placement too far from CY (beyond MAX_BUILDING_GAP_TILES=3)
     - [x] ✅ Edge case tests: Exactly at MAX_GAP distance and MAX_GAP+1 distance
     - [x] ✅ Game loop integration tests: Running 60-300 ticks with building placement
+- [x] ✅ Add unit test coverage for WebRTC session monitoring, AI fallback, and kick flow (Task 5.5).
 - [ ] Add an interactive tutorial system that demonstrates UI/UX actions with a tutorial cursor, speech narration, skip controls, restart control, and persistent settings (show tutorial + voice). Include steps for building the starter economy, unit selection/movement, tank production/rally points, remote control, combat goals, and tech tree explanations for tanker/gas station, ambulance/hospital/crew, ammo factory/ammo truck, and workshop/recovery tank.
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory

@@ -93,6 +93,7 @@ description: "Task list for implementing online multiplayer takeover"
 
 **Purpose**: Documentation, verification, and ensuring multiplayer behavior fits the quickstart guidance.
 
+- [x] T023 [P] Add unit test coverage for WebRTC session monitoring, AI fallback, and kick flow
 - [ ] T019 [P] Document the multiplayer workflow and STUN startup in `specs/001-add-online-multiplayer/quickstart.md` (update steps if implementations shifted)
 - [ ] T020 [P] Add UX verification notes to `Documentation.md` showing how to test host notifications, invite reuse, and host-only controls across browsers
 - [ ] T021 [P] Confirm `specs/001-add-online-multiplayer/checklists/requirements.md` still passes by reviewing updated spec against checklist
