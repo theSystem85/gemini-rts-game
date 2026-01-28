@@ -1,12 +1,19 @@
 ## Features
+- [ ] Add unit tests for the multi-unit input handler utilities (task 4.9 coverage work).
+- [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
 - [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
+- [x] ✅ Add unit coverage for control group handling (KeyboardHandler control group assignment/selection/rebuild tests).
+- [x] ✅ Add keyboard handler unit tests (Task 4.3) to cover hotkey modes, dodge logic, control groups, and stop-attacking flows.
+- [x] ✅ Add unit tests for the cheat system input flows (Task 4.1) to cover parsing, spawning, and state updates.
 - [ ] Add a cheat code `recover [party]` to instantly restore the selected wreck and assign it to the specified party (defaults to the player).
+- [ ] Add unit tests for remote control state handling (Task 4.10 coverage for `src/input/remoteControlState.js`).
 - [x] ✅ Attack cursor and out-of-range cursor now switch correctly based on distance to target and unit firing range. Distance to target and max range are displayed in meters (10m per tile) with black text on white background. See `specs/000-global-specs.md` for measurement system.
 - [x] ✅ **Vitest Integration Testing**: Integrate Vitest for headless unit and integration testing without video, audio, or rendering.
   - [x] ✅ Install and configure Vitest with jsdom environment for DOM manipulation
   - [x] ✅ Create test setup file with mocks for Audio, Canvas, WebGL, localStorage, and other browser APIs
   - [x] ✅ Create test utilities (TestGameContext class) for running game loop headlessly
+  - [x] ✅ Add focused unit tests for the help system overlay toggling and pause state behavior.
   - [x] ✅ Integration tests for building placement near Construction Yard:
     - [x] ✅ Variation 1: Power plant with 1 tile free space around CY (all 4 directions + diagonal)
     - [x] ✅ Variation 2: Power plant with 2 tiles free space around CY (all 4 directions + diagonal)
@@ -14,6 +21,8 @@
     - [x] ✅ Negative tests: Building placement too far from CY (beyond MAX_BUILDING_GAP_TILES=3)
     - [x] ✅ Edge case tests: Exactly at MAX_GAP distance and MAX_GAP+1 distance
     - [x] ✅ Game loop integration tests: Running 60-300 ticks with building placement
+- [x] ✅ Add unit tests for selection manager input flows (Task 4.6).
+- [ ] Add cursorManager input system unit tests (Task 4.2) to cover cursor state transitions and range UI behavior.
 - [ ] Add an interactive tutorial system that demonstrates UI/UX actions with a tutorial cursor, speech narration, skip controls, restart control, and persistent settings (show tutorial + voice). Include steps for building the starter economy, unit selection/movement, tank production/rally points, remote control, combat goals, and tech tree explanations for tanker/gas station, ambulance/hospital/crew, ammo factory/ammo truck, and workshop/recovery tank.
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
