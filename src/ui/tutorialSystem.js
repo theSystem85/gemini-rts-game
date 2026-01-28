@@ -307,6 +307,9 @@ class TutorialSystem {
 
     // Hide dock button if tutorial is disabled or completed
     if ((!this.settings.showTutorial || this.progress.completed) && this.dockButton) {
+      if (this.progress.completed) {
+        this.dockButton.classList.add('tutorial-dock--hidden')
+      }
       this.dockButton.hidden = true
     }
 
