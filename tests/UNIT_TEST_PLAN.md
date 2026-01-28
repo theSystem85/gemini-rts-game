@@ -153,18 +153,25 @@ Specialized unit behavior modules.
 - [x] Alert mode scanning
 - [x] Crew loader requirement
 
-### 4.4 🔲 Mine Layer/Sweeper
-**File**: `tests/unit/mineLayerSweeper.test.js`
-- [ ] Mine deployment from layer
-- [ ] Capacity tracking
-- [ ] Sweeper detection behavior
-- [ ] Sweeper clearing mechanics
+### 4.4 ✅ Mine Layer/Sweeper
+**File**: `tests/unit/mineLayerSweeper.test.js` *(COMPLETED)*
+- [x] Mine deployment from layer (startMineDeployment, updateMineLayerBehavior)
+- [x] Capacity tracking (remainingMines decrement, zero-mine handling)
+- [x] Sweeper detection behavior (activateSweepingMode, deactivateSweepingMode)
+- [x] Sweeper clearing mechanics (calculateZigZagSweepPath, calculateFreeformSweepPath)
+- [x] Speed modulation (deploy speed vs normal speed)
+- [x] Dust particle generation (generateSweepDust)
+- [x] Path orientation handling (horizontal/vertical start directions)
 
-### 4.5 🔲 Tanker/Gas Station
-**File**: `tests/unit/tankerLogic.test.js`
-- [ ] Fuel tracking
-- [ ] Refueling at gas station
-- [ ] Fuel consumption by units
+### 4.5 ✅ Tanker/Gas Station
+**File**: `tests/unit/tankerLogic.test.js` *(COMPLETED)*
+- [x] Fuel tracking (gas/maxGas percentage)
+- [x] Refueling at gas station (updateGasStationLogic)
+- [x] Tanker supply gas refill (supplyGas tracking)
+- [x] Cost calculation and deduction (player money, AI budget)
+- [x] Refueling state management (refueling flag, gasRefillTimer)
+- [x] Service radius handling
+- [x] Moving unit exclusion
 
 ---
 
@@ -284,10 +291,10 @@ npm test -- --watch
 
 ## Next Steps
 
-1. **Immediate**: Implement `tests/unit/mineLayerSweeper.test.js` (Priority 4.4) - mine layer/sweeper behaviors
-2. **Then**: Implement `tests/unit/tankerLogic.test.js` (Priority 4.5) - tanker refueling
-3. **Continue**: Work through priorities 5.x (AI Systems)
+1. **Immediate**: Implement `tests/unit/enemyAI.test.js` (Priority 5.1) - AI decision making
+2. **Then**: Implement `tests/unit/steeringBehaviors.test.js` (Priority 5.2) - unit movement behaviors
+3. **Continue**: Work through priority 6.1 (Command Synchronization)
 
-**Total Tests: 660** (across 15 test files)
+**Total Tests: 736** (across 17 test files)
 
 Last Updated: 2025-01-28
