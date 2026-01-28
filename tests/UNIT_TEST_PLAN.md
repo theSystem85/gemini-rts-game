@@ -36,14 +36,14 @@ These tests cover the most critical game mechanics that affect gameplay correctn
 - [ ] Range checking for different unit types
 - [ ] Line of sight / clear shot detection
 
-### 1.4 🔲 Mine System
-**File**: `tests/unit/mineSystem.test.js`
-- [ ] Mine creation and deployment
-- [ ] Arming delay logic
-- [ ] Detonation triggers (enemy proximity)
-- [ ] Chain reaction mechanics
-- [ ] Mine detection (sweeper behavior)
-- [ ] Owner-based mine avoidance
+### 1.4 ✅ Mine System
+**File**: `tests/unit/mineSystem.test.js` *(COMPLETED)*
+- [x] Mine creation and deployment
+- [x] Arming delay logic
+- [x] Detonation triggers (enemy proximity)
+- [x] Chain reaction mechanics
+- [x] Mine detection (sweeper behavior)
+- [x] Owner-based mine avoidance
 
 ---
 
@@ -58,21 +58,23 @@ Pure functions that are easy to test in isolation.
 - [x] Structure normalization
 - [x] Edge cases (null entries, missing properties, negative coords)
 
-### 2.2 🔲 Game Random Utilities  
-**File**: `tests/unit/gameRandom.test.js`
-- [ ] `gameRandom()` - basic random number generation
-- [ ] `gameRandomInt()` - integer range
-- [ ] `gameRandomFloat()` - float range
-- [ ] `gameRandomElement()` - array selection
-- [ ] `gameShuffle()` - array shuffling
-- [ ] Deterministic mode consistency
+### 2.2 ✅ Game Random Utilities  
+**File**: `tests/unit/gameRandom.test.js` *(COMPLETED)*
+- [x] `gameRandom()` - basic random number generation
+- [x] `gameRandomInt()` - integer range
+- [x] `gameRandomFloat()` - float range
+- [x] `gameRandomElement()` - array selection
+- [x] `gameShuffle()` - array shuffling
+- [x] Deterministic mode consistency
 
-### 2.3 🔲 General Utilities
-**File**: `tests/unit/utils.test.js`
-- [ ] `getUniqueId()` - unique ID generation
-- [ ] Distance calculations
-- [ ] Angle normalization and difference
-- [ ] Coordinate conversions (tile ↔ pixel)
+### 2.3 ✅ General Utilities
+**File**: `tests/unit/utils.test.js` *(COMPLETED)*
+- [x] `getUniqueId()` - unique ID generation
+- [x] `tileToPixel()` - coordinate conversions
+- [x] `getBuildingIdentifier()` - building identification
+- [x] `calculateHealthSpeedModifier()` - health-based speed
+- [x] Unit leveling system functions
+- [x] Experience and level progression
 
 ---
 
@@ -179,11 +181,13 @@ Enemy AI and behavior systems.
 - [ ] Command deserialization
 - [ ] State hash calculation
 
-### 6.2 🔲 Deterministic Random
-**File**: `tests/unit/deterministicRandom.test.js`
-- [ ] Seed initialization
-- [ ] Sequence reproducibility
-- [ ] Cross-client consistency
+### 6.2 ✅ Deterministic Random
+**File**: `tests/unit/deterministicRandom.test.js` *(COMPLETED)*
+- [x] Seed initialization
+- [x] Sequence reproducibility
+- [x] Cross-client consistency
+- [x] State save/restore
+- [x] Per-tick synchronization
 
 ---
 
@@ -238,21 +242,24 @@ npm test -- --watch
 | 1.1 | Building Placement | 25+ | ✅ Done |
 | 1.2 | Pathfinding | ~10 | 🔲 Pending |
 | 1.3 | Unit Combat | ~15 | 🔲 Pending |
-| 1.4 | Mine System | ~10 | 🔲 Pending |
+| 1.4 | Mine System | 48 | ✅ Done |
 | 2.1 | Base Utils | 24 | ✅ Done |
-| 2.2 | Game Random | ~8 | 🔲 Pending |
-| 2.3 | Utils | ~8 | 🔲 Pending |
+| 2.2 | Game Random | 40 | ✅ Done |
+| 2.3 | Utils | 69 | ✅ Done |
 | 3.x | Game Systems | ~30 | 🔲 Pending |
 | 4.x | Unit Behaviors | ~25 | 🔲 Pending |
 | 5.x | AI Systems | ~10 | 🔲 Pending |
-| 6.x | Network | ~8 | 🔲 Pending |
+| 6.1 | Command Sync | ~8 | 🔲 Pending |
+| 6.2 | Deterministic Random | 49 | ✅ Done |
 
 ---
 
 ## Next Steps
 
-1. **Immediate**: Implement `tests/unit/baseUtils.test.js` (Priority 2.1) - pure utility functions are easiest to test
-2. **Then**: Implement `tests/unit/mineSystem.test.js` (Priority 1.4) - critical game mechanic
-3. **Continue**: Work through priorities 1.2, 1.3, etc.
+1. **Immediate**: Implement `tests/unit/pathfinding.test.js` (Priority 1.2) - critical for game mechanics
+2. **Then**: Implement `tests/unit/unitCombat.test.js` (Priority 1.3) - combat system testing
+3. **Continue**: Work through priorities 3.x, 4.x, etc.
+
+**Total Tests: 230** (across 5 test files)
 
 Last Updated: 2025-01-28
