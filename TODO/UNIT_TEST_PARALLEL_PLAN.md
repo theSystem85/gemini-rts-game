@@ -19,28 +19,32 @@
 
 These files have 0% coverage and need complete test suites created.
 
-### Task 1.1 - `src/repairHandler.js`
-- **Target**: Create `tests/unit/repairHandler.test.js`
-- **Source File**: `src/repairHandler.js` (0% coverage, lines 13-211)
-- **Status**: [ ] NOT STARTED
+### Task 1.1 - `src/buildingRepairHandler.js`
+- **Target**: Create `tests/unit/buildingRepairHandler.test.js`
+- **Source File**: `src/buildingRepairHandler.js` (0% coverage, lines 13-211)
+- **Status**: [COMPLETED] (Finished: 2025-01-28 20:10 UTC)
+- **Tests Added**: 17 tests
 - **Estimated Tests**: 20-30
 
-### Task 1.2 - `src/sellHandler.js`
-- **Target**: Create `tests/unit/sellHandler.test.js`
-- **Source File**: `src/sellHandler.js` (0% coverage, lines 17-82)
-- **Status**: [ ] NOT STARTED
+### Task 1.2 - `src/buildingSellHandler.js`
+- **Target**: Create `tests/unit/buildingSellHandler.test.js`
+- **Source File**: `src/buildingSellHandler.js` (0% coverage, lines 17-82)
+- **Status**: [COMPLETED] (Finished: 2025-01-28 20:10 UTC)
+- **Tests Added**: 22 tests
 - **Estimated Tests**: 15-20
 
 ### Task 1.3 - `src/factories.js`
 - **Target**: Create `tests/unit/factories.test.js`
 - **Source File**: `src/factories.js` (0% coverage, lines 8-176)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2025-01-28 20:10 UTC)
+- **Tests Added**: 32 tests
 - **Estimated Tests**: 20-30
 
 ### Task 1.4 - `src/gameSetup.js`
 - **Target**: Create `tests/unit/gameSetup.test.js`
 - **Source File**: `src/gameSetup.js` (0% coverage, lines 8-342)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2025-01-28 20:10 UTC)
+- **Tests Added**: 29 tests
 - **Estimated Tests**: 30-40
 
 ### Task 1.5 - `src/mapEditor.js`
