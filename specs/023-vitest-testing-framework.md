@@ -123,6 +123,7 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added `tests/unit/peerConnection.test.js` to validate remote connection offer publishing, ICE handling, data channel messaging, and polling failure behavior with mocked WebRTC primitives.
 
 ## Example Test
 
