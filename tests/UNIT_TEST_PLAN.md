@@ -123,25 +123,35 @@ More complex systems that require state management.
 
 Specialized unit behavior modules.
 
-### 4.1 🔲 Harvester Logic
-**File**: `tests/unit/harvesterLogic.test.js`
-- [ ] Ore field detection and targeting
-- [ ] Harvesting timer and capacity
-- [ ] Return to refinery behavior
-- [ ] Unloading ore at refinery
-- [ ] Auto-resume harvesting
+### 4.1 ✅ Harvester Logic
+**File**: `tests/unit/harvesterLogic.test.js` *(COMPLETED)*
+- [x] Ore field detection and targeting
+- [x] Harvesting timer and capacity
+- [x] Return to refinery behavior
+- [x] Unloading ore at refinery
+- [x] Auto-resume harvesting
+- [x] Refinery queue management
+- [x] Power-affected unload timing
+- [x] Enemy harvester budget credit
 
-### 4.2 🔲 Ambulance System
-**File**: `tests/unit/ambulanceSystem.test.js`
-- [ ] Wounded unit detection
-- [ ] Healing application
-- [ ] Hospital interaction
+### 4.2 ✅ Ambulance System
+**File**: `tests/unit/ambulanceSystem.test.js` *(COMPLETED)*
+- [x] Wounded unit detection
+- [x] Healing application
+- [x] Hospital interaction
+- [x] Crew requirement checks
+- [x] Alert mode scanning
+- [x] Utility queue integration
 
-### 4.3 🔲 Recovery Tank System
-**File**: `tests/unit/recoveryTankSystem.test.js`
-- [ ] Wreck detection
-- [ ] Towing mechanics
-- [ ] Workshop delivery
+### 4.3 ✅ Recovery Tank System
+**File**: `tests/unit/recoveryTankSystem.test.js` *(COMPLETED)*
+- [x] Wreck detection
+- [x] Towing mechanics
+- [x] Workshop delivery
+- [x] Recycling wrecks for money
+- [x] Auto-repair of nearby damaged units
+- [x] Alert mode scanning
+- [x] Crew loader requirement
 
 ### 4.4 🔲 Mine Layer/Sweeper
 **File**: `tests/unit/mineLayerSweeper.test.js`
@@ -216,7 +226,10 @@ tests/
     ├── utils.test.js
     ├── resourceSystem.test.js
     ├── buildingSystem.test.js
-    └── productionQueue.test.js
+    ├── productionQueue.test.js
+    ├── harvesterLogic.test.js
+    ├── ambulanceSystem.test.js
+    └── recoveryTankSystem.test.js
 ```
 
 ### Running Tests
@@ -259,7 +272,10 @@ npm test -- --watch
 | 3.2 | Resource System | 44 | ✅ Done |
 | 3.3 | Building System | 56 | ✅ Done |
 | 3.4 | Production Queue | 49 | ✅ Done |
-| 4.x | Unit Behaviors | ~25 | 🔲 Pending |
+| 4.1 | Harvester Logic | 31 | ✅ Done |
+| 4.2 | Ambulance System | 32 | ✅ Done |
+| 4.3 | Recovery Tank | 31 | ✅ Done |
+| 4.4-5 | Other Unit Behaviors | ~25 | 🔲 Pending |
 | 5.x | AI Systems | ~10 | 🔲 Pending |
 | 6.1 | Command Sync | ~8 | 🔲 Pending |
 | 6.2 | Deterministic Random | 49 | ✅ Done |
@@ -268,10 +284,10 @@ npm test -- --watch
 
 ## Next Steps
 
-1. **Immediate**: Implement `tests/unit/harvesterLogic.test.js` (Priority 4.1) - harvester behaviors
-2. **Then**: Implement `tests/unit/ambulanceSystem.test.js` (Priority 4.2) - ambulance healing
-3. **Continue**: Work through priorities 4.x (Unit Behaviors) then 5.x (AI Systems)
+1. **Immediate**: Implement `tests/unit/mineLayerSweeper.test.js` (Priority 4.4) - mine layer/sweeper behaviors
+2. **Then**: Implement `tests/unit/tankerLogic.test.js` (Priority 4.5) - tanker refueling
+3. **Continue**: Work through priorities 5.x (AI Systems)
 
-**Total Tests: 566** (across 12 test files)
+**Total Tests: 660** (across 15 test files)
 
 Last Updated: 2025-01-28
