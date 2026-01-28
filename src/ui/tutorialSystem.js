@@ -88,6 +88,12 @@ function getCanvasPointForTile(tileX, tileY) {
   return { x: clientX, y: clientY }
 }
 
+function getPlayerCrewSnapshot() {
+  return new Map((gameState.units || [])
+    .filter(unit => unit.crew && typeof unit.crew === 'object' && isHumanOwner(unit.owner))
+    .map(unit => [unit.id, { ...unit.crew }]))
+}
+
 function focusCameraOnPoint(point) {
   if (!point) return
   const canvas = document.getElementById('gameCanvas')
@@ -1042,6 +1048,36 @@ class TutorialSystem {
     this.stepProgressLabel.textContent = step.progressLabel || 'Progress'
   }
 
+  trackCrewRestoration() {
+    if (this.stepState.crewRestored) return true
+    if (!this.stepState.crewSnapshot) {
+      this.stepState.crewSnapshot = getPlayerCrewSnapshot()
+      return false
+    }
+    const current = getPlayerCrewSnapshot()
+    let restored = false
+    current.forEach((crew, unitId) => {
+      const previous = this.stepState.crewSnapshot.get(unitId)
+      if (!previous) return
+      Object.keys(crew).some(role => {
+        if (previous[role] === false && crew[role] === true) {
+          restored = true
+          return true
+        }
+        return false
+      })
+    })
+    this.stepState.crewSnapshot = current
+    if (restored) {
+      this.stepState.crewRestored = true
+      if (!this.stepState.crewRestoredAnnounced) {
+        this.stepState.crewRestoredAnnounced = true
+        this.speak('Great, you completed all sub tasks of the crew system tutorial!')
+      }
+    }
+    return this.stepState.crewRestored
+  }
+
   async runDemo(step) {
     this.stopSpeech()
     if (step.demo) {
@@ -1487,8 +1523,7 @@ class TutorialSystem {
         progress: (ctx) => {
           const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
           const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
-          const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
-          const crewRestored = tank?.crew && Object.values(tank.crew).some(Boolean)
+          const crewRestored = ctx.trackCrewRestoration()
           if (crewRestored) return 1
           if (ambulanceBuilt) return 2 / 3
           if (hospitalBuilt) return 1 / 3
@@ -1497,8 +1532,7 @@ class TutorialSystem {
         completion: (ctx) => {
           const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
           const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
-          const tank = (gameState.units || []).find(unit => unit.id === ctx.stepState.crewTankId) || findPlayerUnit('tank')
-          const crewRestored = tank?.crew && Object.values(tank.crew).some(Boolean)
+          const crewRestored = ctx.trackCrewRestoration()
           return hospitalBuilt && ambulanceBuilt && crewRestored
         },
         demo: async (ctx) => {
@@ -1527,6 +1561,7 @@ class TutorialSystem {
                 }
               })
             }
+            ctx.stepState.crewSnapshot = getPlayerCrewSnapshot()
             await sleep(600)
           }
 
