@@ -1,5 +1,6 @@
 ## Improvements
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
+- [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
 - [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.
 - [x] Refined portrait condensed build bar: Moved toggle to left, reduced width by 33%, and ensured Buildings/Units label is visible as a vertical column of letters. Optimized CSS hierarchy for reliable production button visibility and scrolling.

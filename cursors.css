@@ -88,6 +88,33 @@
   cursor: url('/cursors/attack_out_of_range.svg') 16 16, auto !important;
 }
 
+.range-cursor-info {
+  position: fixed;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+  z-index: 10002;
+  opacity: 0;
+  transition: opacity 0.05s ease-in-out;
+  margin-top: 20px;
+}
+
+.range-cursor-info.visible {
+  opacity: 1;
+}
+
+.range-cursor-info__text {
+  color: #000000;
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 600;
+  text-shadow:
+    -1px 0 0 #fff,
+     1px 0 0 #fff,
+     0 -1px 0 #fff,
+     0  1px 0 #fff;
+  white-space: nowrap;
+}
+
 #gameCanvas.guard-mode {
   cursor: url('/cursors/guard.svg') 16 16, auto !important;
 }

@@ -1,5 +1,5 @@
 // cursorManager.js
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, CURSOR_METERS_PER_TILE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
@@ -41,6 +41,75 @@ export class CursorManager {
     this.isOutOfArtilleryRange = false
     this.activeCursorStyle = ''
     this.activeCursorClasses = new Set()
+    this.rangeCursorInfo = null
+    this.rangeCursorElements = this.createRangeCursorElements()
+  }
+
+  createRangeCursorElements() {
+    if (typeof document === 'undefined') {
+      return null
+    }
+
+    if (!document.body) {
+      return null
+    }
+
+    // Remove any existing element with old structure to ensure clean state
+    const existing = document.querySelector('.range-cursor-info')
+    if (existing) {
+      const rangeText = existing.querySelector('.range-cursor-info__text')
+      if (rangeText) {
+        return { container: existing, rangeText }
+      }
+      // Old structure - remove and recreate
+      existing.remove()
+    }
+
+    const container = document.createElement('div')
+    container.className = 'range-cursor-info'
+
+    const rangeText = document.createElement('div')
+    rangeText.className = 'range-cursor-info__text'
+
+    container.appendChild(rangeText)
+    document.body.appendChild(container)
+
+    return { container, rangeText }
+  }
+
+  formatRangeValue(value) {
+    const rounded = Math.round(value * 10) / 10
+    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1)
+  }
+
+  updateRangeCursorDisplay(position, show) {
+    if (!this.rangeCursorElements) {
+      this.rangeCursorElements = this.createRangeCursorElements()
+    }
+
+    if (!this.rangeCursorElements) {
+      return
+    }
+
+    const { container, rangeText } = this.rangeCursorElements
+    if (!container || !rangeText) {
+      return
+    }
+
+    if (!show || !this.rangeCursorInfo) {
+      container.classList.remove('visible')
+      return
+    }
+
+    const { distance: distanceValue, maxRange } = this.rangeCursorInfo
+    const distanceMeters = (distanceValue / TILE_SIZE) * CURSOR_METERS_PER_TILE
+    const maxRangeMeters = (maxRange / TILE_SIZE) * CURSOR_METERS_PER_TILE
+
+    rangeText.textContent = `${Math.round(distanceMeters)}m/${Math.round(maxRangeMeters)}m`
+
+    container.style.left = `${position.x}px`
+    container.style.top = `${position.y}px`
+    container.classList.add('visible')
   }
 
   applyCursor(gameCanvas, cursorStyle, classNames = []) {
@@ -125,6 +194,7 @@ export class CursorManager {
     const rect = gameCanvas.getBoundingClientRect()
     const x = e.clientX
     const y = e.clientY
+    const rangeCursorPosition = { x, y }
 
     const setCursor = (style, classes = []) => {
       const resolvedStyle =
@@ -136,6 +206,13 @@ export class CursorManager {
       const classList = Array.isArray(classes) ? classes.filter(Boolean) : [classes].filter(Boolean)
       this.applyCursor(gameCanvas, resolvedStyle, classList)
     }
+
+    const setOutOfRangeCursor = () => {
+      setCursor('none', 'attack-out-of-range-mode')
+      this.updateRangeCursorDisplay(rangeCursorPosition, true)
+    }
+
+    this.updateRangeCursorDisplay(rangeCursorPosition, false)
 
     // Check if cursor is over the game canvas
     this.isOverGameCanvas = (
@@ -547,9 +624,15 @@ export class CursorManager {
       const hasSelectedTankers = selectedUnits.some(unit => unit.type === 'tankerTruck')
 
       const setMoveIntoCursor = () => setCursor('none', 'move-into-mode')
-      const setAttackCursor = () => setCursor('none', 'attack-mode')
+      const setAttackCursor = () => {
+        setCursor('none', 'attack-mode')
+        // Show range info for attack cursor when hovering over enemy
+        if (this.rangeCursorInfo) {
+          this.updateRangeCursorDisplay(rangeCursorPosition, true)
+        }
+      }
       const setAttackBlockedCursor = () => setCursor('none', 'attack-blocked-mode')
-      const setAttackOutOfRangeCursor = () => setCursor('none', 'attack-out-of-range-mode')
+      const setAttackOutOfRangeCursor = () => setOutOfRangeCursor()
       const setMoveBlockedCursor = () => setCursor('none', 'move-blocked-mode')
       const setMoveCursor = () => setCursor('none', 'move-mode')
       const setDefaultCursor = () => setCursor('default')
@@ -633,6 +716,8 @@ export class CursorManager {
 
         if (isSupportTarget) {
           setMoveIntoCursor()
+        } else if (this.isOverEnemyInRange) {
+          setAttackCursor()
         } else if (this.isOverEnemyOutOfRange) {
           setAttackOutOfRangeCursor()
         } else if (this.isOverEnemy) {
@@ -720,6 +805,11 @@ export class CursorManager {
         return
       }
 
+      if (this.isOverEnemyInRange) {
+        setAttackCursor()
+        return
+      }
+
       if (this.isOverEnemyOutOfRange) {
         setAttackOutOfRangeCursor()
         return
@@ -792,5 +882,9 @@ export class CursorManager {
 
   setIsOutOfArtilleryRange(value) {
     this.isOutOfArtilleryRange = value
+  }
+
+  setRangeCursorInfo(value) {
+    this.rangeCursorInfo = value
   }
 }

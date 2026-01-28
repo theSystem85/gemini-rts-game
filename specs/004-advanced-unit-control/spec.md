@@ -157,7 +157,12 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-040**: System MUST allow guard mode to coexist with AGF (guards don't join AGF)
 - **FR-041**: System MUST allow PPF to queue any combination of move/attack/retreat/AGF commands
 - **FR-042**: System MUST maintain feature independence (each can be used without others)
-- **FR-047**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
+- **FR-047**: System MUST show the out-of-range attack cursor only when a combat unit is selected and the hovered enemy is beyond direct firing range.
+- **FR-048**: When out-of-range cursor is shown, the cursor overlay MUST display the current distance to target (above center) and selected unit max range (below center).
+- **FR-049**: The out-of-range cursor overlay text MUST render in red and update immediately on mouse move when entering or exiting direct firing range.
+- **FR-050**: Cursor MUST switch between attack and out-of-range states based on the closest selected combat unit's distance to the hovered enemy.
+- **FR-051**: Hover range checks MUST consider each selected combat unit and mark out-of-range only when none are within firing range.
+- **FR-052**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
