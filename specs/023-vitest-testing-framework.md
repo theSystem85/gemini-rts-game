@@ -90,6 +90,7 @@ Located in `tests/unit/`
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
 - Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
 - Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
+- Added `tests/unit/commandSync.test.js` coverage for game command sync behaviors including host/client routing, lockstep initialization, and broadcast validation.
 - Added `tests/unit/mouseHandler.test.js` covering input selection flows, force/guard commands, hover range calculations, and context menu cancellations with mocked dependencies.
 - Cheat system tests cover input parsing, spawn placement, minefield deployment, and selection-based state updates in `tests/unit/cheatSystem.test.js`.
 

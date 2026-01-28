@@ -2,7 +2,21 @@
  * Unit tests for network command synchronization helpers and state hashing.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+
+const lockstepManagerMocks = {
+  initialize: vi.fn(),
+  receiveInput: vi.fn(),
+  getInputsForTick: vi.fn().mockReturnValue([]),
+  advanceTick: vi.fn(),
+  reset: vi.fn()
+}
+
+const inputBufferMocks = {
+  addInput: vi.fn(),
+  confirmTick: vi.fn(),
+  clear: vi.fn()
+}
 
 // Mock buildings module to prevent benchmarkScenario.js from failing
 vi.mock('../../src/buildings.js', () => ({
@@ -33,7 +47,30 @@ vi.mock('../../src/gameState.js', () => ({
     humanPlayer: 'player1',
     buildings: [],
     units: [],
-    money: 1000
+    bullets: [],
+    factories: [],
+    explosions: [],
+    unitWrecks: [],
+    money: 1000,
+    gamePaused: false,
+    gameStarted: true,
+    partyStates: [],
+    multiplayerSession: {
+      localRole: 'host',
+      isRemote: false
+    },
+    lockstep: {
+      enabled: false,
+      sessionSeed: null,
+      currentTick: 0,
+      inputDelay: 2,
+      hashInterval: 5,
+      desyncDetected: false,
+      desyncTick: null,
+      pendingResync: false,
+      tickAccumulator: 0,
+      lastTickTime: 0
+    }
   }
 }))
 
@@ -55,9 +92,14 @@ vi.mock('../../src/network/webrtcSession.js', () => ({
 }))
 
 vi.mock('../../src/network/lockstepManager.js', () => ({
-  lockstepManager: {},
-  LOCKSTEP_CONFIG: {},
-  MS_PER_TICK: 16
+  lockstepManager: lockstepManagerMocks,
+  LOCKSTEP_CONFIG: {
+    TICK_RATE: 20,
+    INPUT_DELAY_TICKS: 2,
+    HASH_INTERVAL_TICKS: 3
+  },
+  MS_PER_TICK: 16,
+  __mocks: lockstepManagerMocks
 }))
 
 vi.mock('../../src/network/deterministicRandom.js', () => ({
@@ -67,17 +109,43 @@ vi.mock('../../src/network/deterministicRandom.js', () => ({
 }))
 
 vi.mock('../../src/network/inputBuffer.js', () => ({
-  InputBuffer: class {},
-  LOCKSTEP_INPUT_TYPES: {},
-  createLockstepInput: vi.fn()
+  InputBuffer: class {
+    addInput(...args) {
+      return inputBufferMocks.addInput(...args)
+    }
+
+    confirmTick(...args) {
+      return inputBufferMocks.confirmTick(...args)
+    }
+
+    clear(...args) {
+      return inputBufferMocks.clear(...args)
+    }
+  },
+  LOCKSTEP_INPUT_TYPES: {
+    UNIT_MOVE: 'unit-move',
+    UNIT_ATTACK: 'unit-attack',
+    UNIT_STOP: 'unit-stop',
+    BUILD_PLACE: 'build-place',
+    PRODUCTION_START: 'production-start'
+  },
+  createLockstepInput: vi.fn((inputType, data, tick, partyId) => ({
+    id: `input-${tick}`,
+    type: inputType,
+    data,
+    tick,
+    partyId
+  })),
+  __mocks: inputBufferMocks
 }))
 
-import {
-  createMoveCommand,
-  createAttackCommand,
-  createBuildingPlaceCommand,
-  createProductionCommand
-} from '../../src/network/gameCommandSync.js'
+import * as commandSync from '../../src/network/gameCommandSync.js'
+import { gameState } from '../../src/gameState.js'
+import { getActiveRemoteConnection } from '../../src/network/remoteConnection.js'
+import { getActiveHostMonitor } from '../../src/network/webrtcSession.js'
+import { deterministicRNG, initializeSessionRNG } from '../../src/network/deterministicRandom.js'
+import { createLockstepInput, __mocks as inputBufferSpies } from '../../src/network/inputBuffer.js'
+import { __mocks as lockstepManagerSpies } from '../../src/network/lockstepManager.js'
 import {
   compareHashes,
   computeStateHash,
@@ -86,15 +154,63 @@ import {
   hashArrayOrdered
 } from '../../src/network/stateHash.js'
 
+beforeEach(() => {
+  gameState.humanPlayer = 'player1'
+  gameState.buildings = []
+  gameState.units = []
+  gameState.bullets = []
+  gameState.factories = []
+  gameState.explosions = []
+  gameState.unitWrecks = []
+  gameState.money = 1000
+  gameState.gamePaused = false
+  gameState.gameStarted = true
+  gameState.partyStates = []
+  gameState.multiplayerSession = {
+    localRole: 'host',
+    isRemote: false
+  }
+  gameState.lockstep = {
+    enabled: false,
+    sessionSeed: null,
+    currentTick: 0,
+    inputDelay: 2,
+    hashInterval: 5,
+    desyncDetected: false,
+    desyncTick: null,
+    pendingResync: false,
+    tickAccumulator: 0,
+    lastTickTime: 0
+  }
+  inputBufferSpies.addInput.mockClear()
+  inputBufferSpies.confirmTick.mockClear()
+  inputBufferSpies.clear.mockClear()
+  lockstepManagerSpies.initialize.mockClear()
+  lockstepManagerSpies.receiveInput.mockClear()
+  lockstepManagerSpies.getInputsForTick.mockClear()
+  lockstepManagerSpies.advanceTick.mockClear()
+  lockstepManagerSpies.reset.mockClear()
+  vi.mocked(getActiveRemoteConnection).mockReset()
+  vi.mocked(getActiveHostMonitor).mockReset()
+  vi.mocked(initializeSessionRNG).mockClear()
+  vi.mocked(createLockstepInput).mockClear()
+  vi.spyOn(Math, 'random').mockRestore()
+  if (!window.logger) {
+    const logger = vi.fn()
+    logger.warn = vi.fn()
+    window.logger = logger
+  }
+})
+
 describe('command sync helpers', () => {
   it('creates move command payloads with normalized unitIds', () => {
-    expect(createMoveCommand('unit-1', 10, 12)).toEqual({
+    expect(commandSync.createMoveCommand('unit-1', 10, 12)).toEqual({
       unitIds: ['unit-1'],
       targetX: 10,
       targetY: 12
     })
 
-    expect(createMoveCommand(['unit-1', 'unit-2'], 3, 4)).toEqual({
+    expect(commandSync.createMoveCommand(['unit-1', 'unit-2'], 3, 4)).toEqual({
       unitIds: ['unit-1', 'unit-2'],
       targetX: 3,
       targetY: 4
@@ -102,13 +218,13 @@ describe('command sync helpers', () => {
   })
 
   it('creates attack command payloads with normalized unitIds', () => {
-    expect(createAttackCommand('unit-1', 'target-9', 'unit')).toEqual({
+    expect(commandSync.createAttackCommand('unit-1', 'target-9', 'unit')).toEqual({
       unitIds: ['unit-1'],
       targetId: 'target-9',
       targetType: 'unit'
     })
 
-    expect(createAttackCommand(['unit-1', 'unit-2'], 'building-3', 'building')).toEqual({
+    expect(commandSync.createAttackCommand(['unit-1', 'unit-2'], 'building-3', 'building')).toEqual({
       unitIds: ['unit-1', 'unit-2'],
       targetId: 'building-3',
       targetType: 'building'
@@ -116,7 +232,7 @@ describe('command sync helpers', () => {
   })
 
   it('creates building placement payloads', () => {
-    expect(createBuildingPlaceCommand('powerPlant', 8, 9)).toEqual({
+    expect(commandSync.createBuildingPlaceCommand('powerPlant', 8, 9)).toEqual({
       buildingType: 'powerPlant',
       x: 8,
       y: 9
@@ -124,11 +240,298 @@ describe('command sync helpers', () => {
   })
 
   it('creates production payloads', () => {
-    expect(createProductionCommand('unit', 'tank', 'factory-1')).toEqual({
+    expect(commandSync.createProductionCommand('unit', 'tank', 'factory-1')).toEqual({
       productionType: 'unit',
       itemType: 'tank',
       factoryId: 'factory-1'
     })
+  })
+})
+
+describe('game command sync flow', () => {
+  it('updates network stats with rolling rates', () => {
+    const performanceSpy = vi.spyOn(performance, 'now')
+
+    const baseline = commandSync.getNetworkStats()
+    performanceSpy.mockReturnValueOnce(baseline.lastRateUpdate + 500)
+    commandSync.updateNetworkStats(200, 100)
+    expect(commandSync.getNetworkStats().sendRate).toBe(baseline.sendRate)
+
+    performanceSpy.mockReturnValueOnce(baseline.lastRateUpdate + 1500)
+    commandSync.updateNetworkStats(300, 150)
+    const updated = commandSync.getNetworkStats()
+
+    expect(updated.bytesSent).toBe(baseline.bytesSent + 500)
+    expect(updated.bytesReceived).toBe(baseline.bytesReceived + 250)
+    expect(updated.sendRate).toBeGreaterThan(0)
+    expect(updated.receiveRate).toBeGreaterThan(0)
+    performanceSpy.mockRestore()
+  })
+
+  it('tracks client party state and reset behavior', () => {
+    commandSync.setClientPartyId('party-9')
+    expect(commandSync.getClientPartyId()).toBe('party-9')
+
+    commandSync.resetClientState()
+    expect(commandSync.getClientPartyId()).toBeNull()
+  })
+
+  it('broadcasts commands from host to peers', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.partyStates = [{ partyId: 'player1' }, { partyId: 'player2' }]
+
+    const sendHostStatus = vi.fn()
+    vi.mocked(getActiveHostMonitor).mockReturnValue({ activeSession: { sendHostStatus } })
+
+    commandSync.broadcastGameCommand(commandSync.COMMAND_TYPES.UNIT_MOVE, { unitIds: ['u1'] }, 'player1')
+
+    expect(sendHostStatus).toHaveBeenCalledTimes(1)
+    const sent = sendHostStatus.mock.calls[0][0]
+    expect(sent).toMatchObject({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.UNIT_MOVE,
+      sourcePartyId: 'player1',
+      isHost: true
+    })
+  })
+
+  it('broadcasts commands from clients to the host connection', () => {
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    const send = vi.fn()
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    commandSync.broadcastGameCommand(commandSync.COMMAND_TYPES.UNIT_STOP, { unitIds: ['u1'] }, 'player1')
+
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send.mock.calls[0][0]).toMatchObject({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.UNIT_STOP,
+      sourcePartyId: 'player1',
+      isHost: false
+    })
+  })
+
+  it('queues host commands from authorized parties and rebroadcasts', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.partyStates = [{ partyId: 'player1', aiActive: false }, { partyId: 'player2', aiActive: false }]
+
+    const sendHostStatus = vi.fn()
+    vi.mocked(getActiveHostMonitor).mockReturnValue({ activeSession: { sendHostStatus } })
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.UNIT_MOVE,
+      payload: { unitIds: ['u1'], targetX: 5, targetY: 6 },
+      sourcePartyId: 'player2',
+      isHost: false
+    })
+
+    const queued = commandSync.processPendingRemoteCommands()
+    expect(queued).toHaveLength(1)
+    expect(queued[0]).toMatchObject({ sourcePartyId: 'player2' })
+    expect(sendHostStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects commands from unknown or AI-controlled parties', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.partyStates = [{ partyId: 'player1', aiActive: false }, { partyId: 'player2', aiActive: true }]
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.UNIT_MOVE,
+      payload: { unitIds: ['u1'], targetX: 5, targetY: 6 },
+      sourcePartyId: 'player2',
+      isHost: false
+    })
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.UNIT_MOVE,
+      payload: { unitIds: ['u1'], targetX: 5, targetY: 6 },
+      sourcePartyId: 'unknown',
+      isHost: false
+    })
+
+    expect(commandSync.processPendingRemoteCommands()).toHaveLength(0)
+  })
+
+  it('applies authoritative host commands on clients', () => {
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    gameState.buildings = [{ id: 'building-1', isBeingSold: false }]
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.GAME_PAUSE,
+      payload: { paused: true },
+      sourcePartyId: 'player1',
+      isHost: true
+    })
+    expect(gameState.gamePaused).toBe(true)
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.BUILDING_SELL,
+      payload: { buildingId: 'building-1', sellStartTime: 1234 },
+      sourcePartyId: 'player1',
+      isHost: true
+    })
+    expect(gameState.buildings[0]).toMatchObject({
+      isBeingSold: true,
+      sellStartTime: 1234
+    })
+  })
+
+  it('notifies subscribers of incoming commands', () => {
+    const handler = vi.fn()
+    const unsubscribe = commandSync.subscribeToGameCommands(handler)
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.GAME_RESUME,
+      payload: { paused: false },
+      sourcePartyId: 'player1',
+      isHost: true
+    })
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    unsubscribe()
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.GAME_RESUME,
+      payload: { paused: false },
+      sourcePartyId: 'player1',
+      isHost: true
+    })
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('broadcasts unit commands only when sessions exist', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    commandSync.broadcastUnitMove([{ id: 'u1', owner: 'player1' }], 10, 12)
+    commandSync.broadcastUnitAttack([{ id: 'u1', owner: 'player1' }], { id: 'target-1', isBuilding: false })
+    commandSync.broadcastUnitStop([{ id: 'u1', owner: 'player1' }])
+
+    const commandTypes = send.mock.calls.map(call => call[0].commandType)
+    expect(commandTypes).toEqual([
+      commandSync.COMMAND_TYPES.UNIT_MOVE,
+      commandSync.COMMAND_TYPES.UNIT_ATTACK,
+      commandSync.COMMAND_TYPES.UNIT_STOP
+    ])
+
+    send.mockClear()
+    commandSync.broadcastUnitAttack([{ id: 'u1', owner: 'player1' }], null)
+    commandSync.broadcastUnitStop([{ id: null, owner: 'player1' }])
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('routes building and production commands with ownership rules', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    commandSync.broadcastBuildingPlace('powerPlant', 4, 5, 'player1')
+    commandSync.broadcastBuildingDamage('building-1', 10, 90)
+    commandSync.broadcastBuildingSell('building-1', 200, 999)
+    commandSync.broadcastProductionStart('unit', 'tank', 'factory-1', 'player1')
+    commandSync.broadcastUnitSpawn('tank', 'factory-1', { x: 4, y: 5 })
+
+    const commandTypes = send.mock.calls.map(call => call[0].commandType)
+    expect(commandTypes).toEqual([
+      commandSync.COMMAND_TYPES.BUILDING_PLACE,
+      commandSync.COMMAND_TYPES.BUILDING_DAMAGE,
+      commandSync.COMMAND_TYPES.BUILDING_SELL,
+      commandSync.COMMAND_TYPES.PRODUCTION_START,
+      commandSync.COMMAND_TYPES.UNIT_SPAWN
+    ])
+  })
+
+  it('broadcasts pause/resume only from host sessions', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.partyStates = [{ partyId: 'player1' }, { partyId: 'player2' }]
+
+    const sendHostStatus = vi.fn()
+    vi.mocked(getActiveHostMonitor).mockReturnValue({ activeSession: { sendHostStatus } })
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ connectionState: 'connected' })
+
+    commandSync.broadcastGamePauseState(true)
+    commandSync.broadcastGamePauseState(false)
+
+    const commandTypes = sendHostStatus.mock.calls.map(call => call[0].commandType)
+    expect(commandTypes).toEqual([
+      commandSync.COMMAND_TYPES.GAME_PAUSE,
+      commandSync.COMMAND_TYPES.GAME_RESUME
+    ])
+  })
+
+  it('initializes lockstep sessions and queues inputs', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.partyStates = [{ partyId: 'player1' }, { partyId: 'player2' }]
+    gameState.lockstep.enabled = false
+
+    const sendHostStatus = vi.fn()
+    vi.mocked(getActiveHostMonitor).mockReturnValue({ activeSession: { sendHostStatus } })
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.25)
+    const sessionSeed = commandSync.initializeLockstepSession()
+
+    expect(sessionSeed).toBeGreaterThan(0)
+    expect(gameState.lockstep.enabled).toBe(true)
+    expect(lockstepManagerSpies.initialize).toHaveBeenCalledWith(sessionSeed, true)
+    expect(initializeSessionRNG).toHaveBeenCalledWith(sessionSeed)
+    expect(sendHostStatus).toHaveBeenCalled()
+
+    gameState.lockstep.inputDelay = 1
+    gameState.lockstep.enabled = true
+    gameState.lockstep.currentTick = 5
+
+    commandSync.queueLockstepInput('unit-move', { unitIds: ['u1'], targetX: 3, targetY: 4 })
+    expect(createLockstepInput).toHaveBeenCalledWith(
+      'unit-move',
+      { unitIds: ['u1'], targetX: 3, targetY: 4 },
+      6,
+      'player1'
+    )
+    expect(inputBufferSpies.addInput).toHaveBeenCalled()
+  })
+
+  it('handles lockstep inputs and acknowledgements', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.lockstep.enabled = true
+
+    const sendHostStatus = vi.fn()
+    vi.mocked(getActiveHostMonitor).mockReturnValue({ activeSession: { sendHostStatus } })
+
+    commandSync.handleLockstepCommand({
+      commandType: commandSync.COMMAND_TYPES.LOCKSTEP_INPUT,
+      payload: { id: 'input-1', tick: 4 },
+      sourcePartyId: 'player2'
+    })
+
+    expect(lockstepManagerSpies.receiveInput).toHaveBeenCalledWith({ id: 'input-1', tick: 4 })
+    expect(sendHostStatus).toHaveBeenCalled()
+
+    commandSync.handleLockstepCommand({
+      commandType: commandSync.COMMAND_TYPES.LOCKSTEP_INPUT_ACK,
+      payload: { tick: 4 }
+    })
+
+    expect(inputBufferSpies.confirmTick).toHaveBeenCalledWith(4)
+  })
+
+  it('disables lockstep and clears buffers', () => {
+    gameState.lockstep.enabled = true
+    deterministicRNG.disable = vi.fn()
+
+    commandSync.disableLockstep()
+
+    expect(gameState.lockstep.enabled).toBe(false)
+    expect(deterministicRNG.disable).toHaveBeenCalled()
+    expect(lockstepManagerSpies.reset).toHaveBeenCalled()
+    expect(inputBufferSpies.clear).toHaveBeenCalled()
   })
 })
 
