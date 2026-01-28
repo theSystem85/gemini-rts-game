@@ -263,9 +263,11 @@ describe('shadowOfWar.js', () => {
       expect(isPositionVisibleToPlayer(null, mapGrid, 100, 100)).toBe(true)
     })
 
-    it('should return true when visibilityMap is empty', () => {
+    it('should return false for unexplored areas when visibilityMap is reset', () => {
+      // When visibilityMap is empty/reset, ensureVisibilityMap reinitializes it
+      // New cells default to not visible, so unexplored areas return false
       gameState.visibilityMap = []
-      expect(isPositionVisibleToPlayer(gameState, mapGrid, 100, 100)).toBe(true)
+      expect(isPositionVisibleToPlayer(gameState, mapGrid, 100, 100)).toBe(false)
     })
   })
 

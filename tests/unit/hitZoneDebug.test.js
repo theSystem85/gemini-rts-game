@@ -4,7 +4,12 @@ import { testHitZoneCalculations } from '../../src/game/hitZoneDebug.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
-  TILE_SIZE: 32
+  TILE_SIZE: 32,
+  HIT_ZONE_DAMAGE_MULTIPLIERS: {
+    FRONT: 1.0,
+    SIDE: 1.25,
+    REAR: 1.5
+  }
 }))
 
 describe('hitZoneDebug.js', () => {
@@ -13,6 +18,8 @@ describe('hitZoneDebug.js', () => {
     // Mock console for test output
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'table').mockImplementation(() => {})
+    // Spy on window.logger to track calls
+    vi.spyOn(window, 'logger').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -30,7 +37,7 @@ describe('hitZoneDebug.js', () => {
 
     it('should log hit zone information', () => {
       testHitZoneCalculations()
-      expect(console.log).toHaveBeenCalled()
+      expect(window.logger).toHaveBeenCalled()
     })
 
     it('should provide visual debug information', () => {
@@ -233,8 +240,8 @@ describe('hitZoneDebug.js', () => {
   describe('debug output format', () => {
     it('should provide readable output', () => {
       testHitZoneCalculations()
-      // Check that console methods were called with structured data
-      expect(console.log).toHaveBeenCalled()
+      // Check that window.logger was called with structured data
+      expect(window.logger).toHaveBeenCalled()
     })
 
     it('should include all hit zones in output', () => {

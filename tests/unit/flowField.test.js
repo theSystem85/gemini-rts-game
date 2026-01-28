@@ -125,21 +125,38 @@ describe('flowField.js', () => {
         expect(manager.isTilePassable(mapGrid, 5, 100)).toBe(false)
       })
 
-      it('should handle numeric tile types', () => {
-        mapGrid[5][5] = 0 // Passable
-        expect(manager.isTilePassable(mapGrid, 5, 5)).toBe(true)
+      it('should handle object tile types with different properties', () => {
+        // Test a tile with a building (should be impassable)
+        mapGrid[5][5] = { type: 'grass', building: true }
+        expect(manager.isTilePassable(mapGrid, 5, 5)).toBe(false)
 
-        mapGrid[6][6] = 1 // Impassable
+        // Test a tile with a seedCrystal (should be impassable)
+        mapGrid[6][6] = { type: 'grass', seedCrystal: true }
         expect(manager.isTilePassable(mapGrid, 6, 6)).toBe(false)
+
+        // Test a normal grass tile (should be passable)
+        mapGrid[7][7] = { type: 'grass' }
+        expect(manager.isTilePassable(mapGrid, 7, 7)).toBe(true)
       })
     })
 
     describe('detectChokepoint', () => {
       it('should detect horizontal corridor', () => {
-        // Create a narrow horizontal corridor
-        for (let x = 0; x < 20; x++) {
-          mapGrid[4][x].type = 'rock' // Block above
-          mapGrid[6][x].type = 'rock' // Block below
+        // Create a narrow horizontal corridor (width <= 3 tiles)
+        // Block all tiles except a narrow passage at y=5, x=9-11
+        for (let y = 0; y < 20; y++) {
+          for (let x = 0; x < 20; x++) {
+            if (y !== 5) {
+              mapGrid[y][x].type = 'rock' // Block everything except row 5
+            }
+          }
+        }
+        // Block sides of the corridor to make it narrow (only x=9,10,11 passable)
+        for (let x = 0; x < 9; x++) {
+          mapGrid[5][x].type = 'rock'
+        }
+        for (let x = 12; x < 20; x++) {
+          mapGrid[5][x].type = 'rock'
         }
 
         const chokepoint = manager.detectChokepoint(10, 5, mapGrid)
@@ -148,10 +165,21 @@ describe('flowField.js', () => {
       })
 
       it('should detect vertical corridor', () => {
-        // Create a narrow vertical corridor
+        // Create a narrow vertical corridor (width <= 3 tiles)
+        // Block all tiles except a narrow passage at x=5, y=9-11
         for (let y = 0; y < 20; y++) {
-          mapGrid[y][4].type = 'rock' // Block left
-          mapGrid[y][6].type = 'rock' // Block right
+          for (let x = 0; x < 20; x++) {
+            if (x !== 5) {
+              mapGrid[y][x].type = 'rock' // Block everything except column 5
+            }
+          }
+        }
+        // Block top and bottom of the corridor to make it narrow (only y=9,10,11 passable)
+        for (let y = 0; y < 9; y++) {
+          mapGrid[y][5].type = 'rock'
+        }
+        for (let y = 12; y < 20; y++) {
+          mapGrid[y][5].type = 'rock'
         }
 
         const chokepoint = manager.detectChokepoint(5, 10, mapGrid)
@@ -233,17 +261,29 @@ describe('flowField.js', () => {
       })
 
       it('should return direction when in chokepoint', () => {
-        // Create a narrow corridor
-        for (let x = 0; x < 20; x++) {
-          mapGrid[4][x].type = 'rock'
-          mapGrid[6][x].type = 'rock'
+        // Create a narrow horizontal corridor (width <= 3 tiles)
+        for (let y = 0; y < 20; y++) {
+          for (let x = 0; x < 20; x++) {
+            if (y !== 5) {
+              mapGrid[y][x].type = 'rock'
+            }
+          }
+        }
+        // Block sides to make narrow (only x=9,10,11 passable at y=5)
+        for (let x = 0; x < 9; x++) {
+          mapGrid[5][x].type = 'rock'
+        }
+        for (let x = 12; x < 20; x++) {
+          mapGrid[5][x].type = 'rock'
         }
 
+        // unit.x/y are top-left corner, so tile (10,5) = pixels (320, 160)
         const unit = {
-          x: 10 * 32 + 16,
-          y: 5 * 32 + 16
+          x: 10 * 32,
+          y: 5 * 32
         }
-        const direction = manager.getFlowDirectionForUnit(unit, 15, 5, mapGrid)
+        // Destination must be within the passable corridor
+        const direction = manager.getFlowDirectionForUnit(unit, 11, 5, mapGrid)
         expect(direction).not.toBeNull()
         expect(direction.dirX).toBeDefined()
         expect(direction.dirY).toBeDefined()

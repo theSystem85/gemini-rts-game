@@ -1,22 +1,21 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import '../setup.js'
 
-const mockBuildingData = {
-  oreRefinery: { cost: 2000, width: 3, height: 3, power: -30 },
-  powerPlant: { cost: 500, width: 2, height: 2, power: 100 },
-  vehicleFactory: { cost: 1500, width: 3, height: 3, power: -40 },
-  turretGunV1: { cost: 1000, width: 1, height: 1, power: -5 },
-  constructionYard: { cost: 3000, width: 3, height: 3, power: 50 },
-  helipad: { cost: 1200, width: 2, height: 2, power: -15 },
-  hospital: { cost: 800, width: 2, height: 2, power: -10 }
-}
-
 vi.mock('../../src/performanceUtils.js', () => ({
   logPerformance: (fn) => fn
 }))
 
 vi.mock('../../src/buildings.js', () => ({
-  buildingData: mockBuildingData,
+  buildingData: {
+    oreRefinery: { cost: 2000, width: 3, height: 3, power: -30 },
+    powerPlant: { cost: 500, width: 2, height: 2, power: 100 },
+    vehicleFactory: { cost: 1500, width: 3, height: 3, power: -40 },
+    turretGunV1: { cost: 1000, width: 1, height: 1, power: -5 },
+    constructionYard: { cost: 3000, width: 3, height: 3, power: 50 },
+    helipad: { cost: 1200, width: 2, height: 2, power: -15 },
+    hospital: { cost: 800, width: 2, height: 2, power: -10 },
+    gasStation: { cost: 600, width: 2, height: 2, power: -5 }
+  },
   createBuilding: vi.fn((type, x, y) => ({ type, x, y, health: 100 })),
   canPlaceBuilding: vi.fn(),
   placeBuilding: vi.fn(),
