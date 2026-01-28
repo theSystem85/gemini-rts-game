@@ -103,6 +103,9 @@ Located in `tests/unit/` (not yet created)
    - Match actual building dimensions
    - Use valid map coordinates
 
+## Recent Coverage Additions
+- Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+
 ## Example Test
 
 ```javascript
