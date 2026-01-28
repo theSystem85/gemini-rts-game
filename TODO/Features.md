@@ -1,4 +1,5 @@
 ## Features
+- [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
 - [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
 - [ ] Add a cheat code `recover [party]` to instantly restore the selected wreck and assign it to the specified party (defaults to the player).
