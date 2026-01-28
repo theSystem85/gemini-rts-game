@@ -125,6 +125,7 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added `tests/unit/multiUnitInputHandler.test.js` to validate multi-unit command distribution, queue behavior, and eligibility filtering helpers.
 - Added `tests/unit/controlGroupHandler.test.js` to validate control group assignment, selection filtering, and camera centering behavior on double-press.
 - Added `tests/unit/helpSystem.test.js` to validate help overlay creation, DOM toggling, and pause-state interaction in jsdom.
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
