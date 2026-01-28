@@ -81,8 +81,8 @@ Example: `buildingPlacement.test.js`
 - Simulates game loop ticks without rendering
 
 ### Unit Tests
-Located in `tests/unit/` (not yet created)
-- Will test individual functions in isolation
+Located in `tests/unit/`
+- Test individual functions in isolation
 - No game state required
 - Enemy AI building placement tests validate defensive placement direction, spacing rules, and input guardrails with mocked dependencies.
 - Enemy AI coverage includes `enemySpawner.test.js` verifying spawn placement, harvester ore targeting, crew/gas initialization, and cheat-system integration.
@@ -93,6 +93,9 @@ Located in `tests/unit/` (not yet created)
 ### Game System Tests
 - `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
 - These tests mock audio, timing, and rendering dependencies to keep unit tests deterministic while asserting meaningful gameplay state changes.
+
+#### Game State Manager Coverage
+- Added `tests/unit/gameStateManager.test.js` with focused scenarios for scrolling inertia, ore spread rules, particle cleanup, destruction cleanup, and win/loss conditions.
 
 ## Best Practices
 

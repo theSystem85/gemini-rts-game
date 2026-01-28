@@ -127,7 +127,8 @@ These files have 0% coverage and need complete test suites created.
 ### Task 3.4 - `src/game/gameStateManager.js`
 - **Target**: Create `tests/unit/gameStateManager.test.js`
 - **Source File**: `src/game/gameStateManager.js` (0% coverage, lines 30-674)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:07 UTC)
+- **Tests Added**: 24 tests
 - **Estimated Tests**: 40-60
 
 ### Task 3.5 - `src/game/helipadLogic.js`

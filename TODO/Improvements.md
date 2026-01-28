@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.
 - [x] Add unit tests for `src/game/buildingSystem.js` to cover sell/destruction handling, defensive firing, and Tesla coil effects.
 - [x] Add unit tests for enemy AI building placement (Task 2.2) covering defensive placement, spacing, and guardrails.
 - [x] Add unit coverage for enemy AI unit behavior (ambulance, harvester hunter, base defense, and apache retreat logic).
