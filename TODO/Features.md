@@ -2,6 +2,7 @@
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
 - [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
 - [ ] Add a cheat code `recover [party]` to instantly restore the selected wreck and assign it to the specified party (defaults to the player).
+- [ ] Add unit tests for remote control state handling (Task 4.10 coverage for `src/input/remoteControlState.js`).
 - [x] ✅ Attack cursor and out-of-range cursor now switch correctly based on distance to target and unit firing range. Distance to target and max range are displayed in meters (10m per tile) with black text on white background. See `specs/000-global-specs.md` for measurement system.
 - [x] ✅ **Vitest Integration Testing**: Integrate Vitest for headless unit and integration testing without video, audio, or rendering.
   - [x] ✅ Install and configure Vitest with jsdom environment for DOM manipulation
