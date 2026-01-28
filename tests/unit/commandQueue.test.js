@@ -1,0 +1,286 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { processCommandQueues } from '../../src/game/commandQueue.js'
+
+// Mock all dependencies
+vi.mock('../../src/game/mineLayerBehavior.js', () => ({
+  startMineDeployment: vi.fn()
+}))
+
+vi.mock('../../src/game/mineSystem.js', () => ({
+  safeSweeperDetonation: vi.fn(),
+  getMineAtTile: vi.fn(() => null)
+}))
+
+vi.mock('../../src/game/mineSweeperBehavior.js', () => ({
+  activateSweepingMode: vi.fn()
+}))
+
+vi.mock('../../src/config.js', () => ({
+  TILE_SIZE: 32
+}))
+
+vi.mock('../../src/sound.js', () => ({
+  playSound: vi.fn()
+}))
+
+describe('commandQueue', () => {
+  let mockUnitCommands
+  let mapGrid
+
+  beforeEach(() => {
+    mockUnitCommands = {
+      handleMovementCommand: vi.fn(),
+      handleAttackCommand: vi.fn(),
+      handleWorkshopRepairHotkey: vi.fn()
+    }
+
+    mapGrid = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => ({ type: 'grass' }))
+    )
+  })
+
+  describe('processCommandQueues', () => {
+    it('does nothing for units without command queue', () => {
+      const units = [
+        { id: 'unit1', type: 'tank' }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleMovementCommand).not.toHaveBeenCalled()
+      expect(mockUnitCommands.handleAttackCommand).not.toHaveBeenCalled()
+    })
+
+    it('does nothing for units with empty command queue', () => {
+      const units = [
+        { id: 'unit1', type: 'tank', commandQueue: [] }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleMovementCommand).not.toHaveBeenCalled()
+    })
+
+    it('dequeues and executes move command', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [{ type: 'move', x: 100, y: 100 }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).toEqual({ type: 'move', x: 100, y: 100 })
+      expect(units[0].commandQueue).toHaveLength(0)
+      expect(mockUnitCommands.handleMovementCommand).toHaveBeenCalledWith(
+        [units[0]], 100, 100, mapGrid, true
+      )
+    })
+
+    it('dequeues and executes attack command', () => {
+      const target = { id: 'enemy', health: 100 }
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [{ type: 'attack', target }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleAttackCommand).toHaveBeenCalledWith(
+        [units[0]], target, mapGrid, false, true
+      )
+    })
+
+    it('executes agf command with multiple targets', () => {
+      const targets = [
+        { id: 'enemy1', health: 100 },
+        { id: 'enemy2', health: 100 }
+      ]
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [{ type: 'agf', targets }],
+          attackQueue: []
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].attackQueue).toEqual(targets)
+      expect(mockUnitCommands.handleAttackCommand).toHaveBeenCalled()
+    })
+
+    it('executes workshopRepair command', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [{ type: 'workshopRepair' }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleWorkshopRepairHotkey).toHaveBeenCalledWith(
+        [units[0]], mapGrid, false, true
+      )
+    })
+
+    it('completes move command when path is empty', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [],
+          currentCommand: { type: 'move', x: 100, y: 100 },
+          path: [],
+          moveTarget: null
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).toBe(null)
+    })
+
+    it('does not complete move command while path exists', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [],
+          currentCommand: { type: 'move', x: 100, y: 100 },
+          path: [{ x: 3, y: 3 }],
+          moveTarget: { x: 100, y: 100 }
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).not.toBe(null)
+    })
+
+    it('completes attack command when target is dead', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [],
+          currentCommand: { type: 'attack', target: { id: 'enemy', health: 0 } },
+          target: { id: 'enemy', health: 0 },
+          attackQueue: []
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).toBe(null)
+    })
+
+    it('does not complete attack command while target alive', () => {
+      const target = { id: 'enemy', health: 50 }
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [],
+          currentCommand: { type: 'attack', target },
+          target,
+          attackQueue: []
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).not.toBe(null)
+    })
+
+    it('completes workshopRepair command when not at workshop', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [],
+          currentCommand: { type: 'workshopRepair' },
+          targetWorkshop: null,
+          repairingAtWorkshop: false,
+          returningFromWorkshop: false,
+          moveTarget: null,
+          path: []
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).toBe(null)
+    })
+
+    it('handles null action gracefully', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [null]
+        }
+      ]
+
+      expect(() => processCommandQueues(units, mapGrid, mockUnitCommands)).not.toThrow()
+    })
+
+    it('processes multiple units', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [{ type: 'move', x: 100, y: 100 }]
+        },
+        {
+          id: 'unit2',
+          type: 'tank',
+          commandQueue: [{ type: 'move', x: 200, y: 200 }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleMovementCommand).toHaveBeenCalledTimes(2)
+    })
+
+    it('processes queued commands one at a time', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: [
+            { type: 'move', x: 100, y: 100 },
+            { type: 'move', x: 200, y: 200 }
+          ]
+        }
+      ]
+
+      // First call - should start first command
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(units[0].currentCommand).toEqual({ type: 'move', x: 100, y: 100 })
+      expect(units[0].commandQueue).toHaveLength(1)
+    })
+
+    it('defaults buildings to empty array', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'tank',
+          commandQueue: []
+        }
+      ]
+
+      expect(() => processCommandQueues(units, mapGrid, mockUnitCommands)).not.toThrow()
+    })
+  })
+})

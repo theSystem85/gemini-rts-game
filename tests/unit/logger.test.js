@@ -1,0 +1,246 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  logEntries,
+  log,
+  getLogs,
+  enableUnitLogging,
+  disableUnitLogging,
+  toggleUnitLogging,
+  getUnitStatus,
+  logUnitStatus
+} from '../../src/utils/logger.js'
+
+describe('logger', () => {
+  beforeEach(() => {
+    // Clear log entries
+    logEntries.length = 0
+    // Mock window.logger
+    if (typeof window !== 'undefined') {
+      window.logger = vi.fn()
+    }
+  })
+
+  afterEach(() => {
+    logEntries.length = 0
+  })
+
+  describe('log', () => {
+    it('adds entry to logEntries', () => {
+      log('test message')
+
+      expect(logEntries).toHaveLength(1)
+      expect(logEntries[0]).toContain('test message')
+    })
+
+    it('includes timestamp in log entry', () => {
+      log('test message')
+
+      // Should have ISO timestamp format at start
+      expect(logEntries[0]).toMatch(/^\[\d{4}-\d{2}-\d{2}T/)
+    })
+
+    it('accumulates multiple log entries', () => {
+      log('message 1')
+      log('message 2')
+      log('message 3')
+
+      expect(logEntries).toHaveLength(3)
+    })
+  })
+
+  describe('getLogs', () => {
+    it('returns empty string when no logs', () => {
+      expect(getLogs()).toBe('')
+    })
+
+    it('returns single log entry', () => {
+      log('test message')
+
+      const logs = getLogs()
+      expect(logs).toContain('test message')
+    })
+
+    it('joins multiple entries with newlines', () => {
+      log('message 1')
+      log('message 2')
+
+      const logs = getLogs()
+      expect(logs).toContain('message 1')
+      expect(logs).toContain('message 2')
+      expect(logs.split('\n')).toHaveLength(2)
+    })
+  })
+
+  describe('enableUnitLogging', () => {
+    it('sets loggingEnabled to true', () => {
+      const unit = { id: 'unit1', type: 'tank' }
+
+      enableUnitLogging(unit)
+
+      expect(unit.loggingEnabled).toBe(true)
+    })
+
+    it('logs that logging started', () => {
+      const unit = { id: 'unit1', type: 'tank' }
+
+      enableUnitLogging(unit)
+
+      expect(logEntries).toHaveLength(1)
+      expect(logEntries[0]).toContain('Started logging for unit unit1')
+      expect(logEntries[0]).toContain('tank')
+    })
+  })
+
+  describe('disableUnitLogging', () => {
+    it('sets loggingEnabled to false', () => {
+      const unit = { id: 'unit1', type: 'tank', loggingEnabled: true }
+
+      disableUnitLogging(unit)
+
+      expect(unit.loggingEnabled).toBe(false)
+    })
+
+    it('logs that logging stopped', () => {
+      const unit = { id: 'unit1', type: 'harvester' }
+
+      disableUnitLogging(unit)
+
+      expect(logEntries).toHaveLength(1)
+      expect(logEntries[0]).toContain('Stopped logging for unit unit1')
+      expect(logEntries[0]).toContain('harvester')
+    })
+  })
+
+  describe('toggleUnitLogging', () => {
+    it('enables logging when currently disabled', () => {
+      const unit = { id: 'unit1', type: 'tank', loggingEnabled: false }
+
+      toggleUnitLogging(unit)
+
+      expect(unit.loggingEnabled).toBe(true)
+    })
+
+    it('disables logging when currently enabled', () => {
+      const unit = { id: 'unit1', type: 'tank', loggingEnabled: true }
+
+      toggleUnitLogging(unit)
+
+      expect(unit.loggingEnabled).toBe(false)
+    })
+
+    it('enables logging when loggingEnabled is undefined', () => {
+      const unit = { id: 'unit1', type: 'tank' }
+
+      toggleUnitLogging(unit)
+
+      expect(unit.loggingEnabled).toBe(true)
+    })
+  })
+
+  describe('getUnitStatus', () => {
+    it('returns "retreating" when isRetreating is true', () => {
+      const unit = { isRetreating: true }
+      expect(getUnitStatus(unit)).toBe('retreating')
+    })
+
+    it('returns "dodging" when isDodging is true', () => {
+      const unit = { isDodging: true }
+      expect(getUnitStatus(unit)).toBe('dodging')
+    })
+
+    it('returns "harvesting" when harvesting is true', () => {
+      const unit = { harvesting: true }
+      expect(getUnitStatus(unit)).toBe('harvesting')
+    })
+
+    it('returns "unloading" when unloadingAtRefinery is true', () => {
+      const unit = { unloadingAtRefinery: true }
+      expect(getUnitStatus(unit)).toBe('unloading')
+    })
+
+    it('returns "attacking target" when target and isAttacking', () => {
+      const unit = { target: { id: 'enemy' }, isAttacking: true }
+      expect(getUnitStatus(unit)).toBe('attacking target')
+    })
+
+    it('returns "moving to target" when moveTarget exists', () => {
+      const unit = { moveTarget: { x: 100, y: 100 } }
+      expect(getUnitStatus(unit)).toBe('moving to target')
+    })
+
+    it('returns "moving" when movement.isMoving is true', () => {
+      const unit = { movement: { isMoving: true } }
+      expect(getUnitStatus(unit)).toBe('moving')
+    })
+
+    it('returns "idle" when no special state', () => {
+      const unit = {}
+      expect(getUnitStatus(unit)).toBe('idle')
+    })
+
+    it('prioritizes retreating over other states', () => {
+      const unit = {
+        isRetreating: true,
+        isDodging: true,
+        harvesting: true
+      }
+      expect(getUnitStatus(unit)).toBe('retreating')
+    })
+
+    it('prioritizes dodging over harvesting', () => {
+      const unit = {
+        isDodging: true,
+        harvesting: true
+      }
+      expect(getUnitStatus(unit)).toBe('dodging')
+    })
+
+    it('returns "idle" when isAttacking but no target', () => {
+      const unit = { isAttacking: true, target: null }
+      expect(getUnitStatus(unit)).toBe('idle')
+    })
+
+    it('returns "idle" when target exists but not attacking', () => {
+      const unit = { target: { id: 'enemy' }, isAttacking: false }
+      expect(getUnitStatus(unit)).toBe('idle')
+    })
+  })
+
+  describe('logUnitStatus', () => {
+    it('logs status when changed', () => {
+      const unit = { id: 'unit1', type: 'tank', isRetreating: true }
+
+      logUnitStatus(unit)
+
+      expect(logEntries).toHaveLength(1)
+      expect(logEntries[0]).toContain('unit1')
+      expect(logEntries[0]).toContain('tank')
+      expect(logEntries[0]).toContain('retreating')
+    })
+
+    it('updates lastLoggedStatus', () => {
+      const unit = { id: 'unit1', type: 'tank', isRetreating: true }
+
+      logUnitStatus(unit)
+
+      expect(unit.lastLoggedStatus).toBe('retreating')
+    })
+
+    it('does not log when status unchanged', () => {
+      const unit = { id: 'unit1', type: 'tank', isRetreating: true, lastLoggedStatus: 'retreating' }
+
+      logUnitStatus(unit)
+
+      expect(logEntries).toHaveLength(0)
+    })
+
+    it('logs when status changes from previous', () => {
+      const unit = { id: 'unit1', type: 'tank', isRetreating: true, lastLoggedStatus: 'idle' }
+
+      logUnitStatus(unit)
+
+      expect(logEntries).toHaveLength(1)
+      expect(unit.lastLoggedStatus).toBe('retreating')
+    })
+  })
+})
