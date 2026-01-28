@@ -1,6 +1,8 @@
 ## Features
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
 - [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
+- [x] ✅ Add keyboard handler unit tests (Task 4.3) to cover hotkey modes, dodge logic, control groups, and stop-attacking flows.
+- [x] ✅ Add unit tests for the cheat system input flows (Task 4.1) to cover parsing, spawning, and state updates.
 - [ ] Add a cheat code `recover [party]` to instantly restore the selected wreck and assign it to the specified party (defaults to the player).
 - [x] ✅ Attack cursor and out-of-range cursor now switch correctly based on distance to target and unit firing range. Distance to target and max range are displayed in meters (10m per tile) with black text on white background. See `specs/000-global-specs.md` for measurement system.
 - [x] ✅ **Vitest Integration Testing**: Integrate Vitest for headless unit and integration testing without video, audio, or rendering.
@@ -14,6 +16,7 @@
     - [x] ✅ Negative tests: Building placement too far from CY (beyond MAX_BUILDING_GAP_TILES=3)
     - [x] ✅ Edge case tests: Exactly at MAX_GAP distance and MAX_GAP+1 distance
     - [x] ✅ Game loop integration tests: Running 60-300 ticks with building placement
+- [ ] Add cursorManager input system unit tests (Task 4.2) to cover cursor state transitions and range UI behavior.
 - [ ] Add an interactive tutorial system that demonstrates UI/UX actions with a tutorial cursor, speech narration, skip controls, restart control, and persistent settings (show tutorial + voice). Include steps for building the starter economy, unit selection/movement, tank production/rally points, remote control, combat goals, and tech tree explanations for tanker/gas station, ambulance/hospital/crew, ammo factory/ammo truck, and workshop/recovery tank.
 - [ ] **Spec 011** Land mine system planning:
   - [x] ✅ Mine layer truck (1000 cost, 30 health, ammo-truck fuel profile, rotationSpeed 0.04) requires workshop + ammunition factory + vehicle factory
