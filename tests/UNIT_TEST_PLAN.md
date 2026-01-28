@@ -20,21 +20,21 @@ These tests cover the most critical game mechanics that affect gameplay correctn
 - [x] Tile occupation checks
 - [x] Adjacent placement validation
 
-### 1.2 🔲 Pathfinding Core
-**File**: `tests/unit/pathfinding.test.js`
-- [ ] A* algorithm correctness with obstacles
-- [ ] Path caching validity and TTL
-- [ ] Occupancy map integration
-- [ ] Formation movement path calculation
-- [ ] Edge cases: blocked paths, unreachable destinations
+### 1.2 ✅ Pathfinding Core
+**File**: `tests/unit/pathfinding.test.js` *(COMPLETED)*
+- [x] A* algorithm correctness with obstacles
+- [x] Path caching validity and TTL
+- [x] Occupancy map integration
+- [x] Formation movement path calculation
+- [x] Edge cases: blocked paths, unreachable destinations
 
-### 1.3 🔲 Unit Combat System
-**File**: `tests/unit/unitCombat.test.js`
-- [ ] Target acquisition and priority
-- [ ] Turret rotation and aiming thresholds
-- [ ] Damage calculation and application
-- [ ] Range checking for different unit types
-- [ ] Line of sight / clear shot detection
+### 1.3 ✅ Unit Combat System
+**File**: `tests/unit/unitCombat.test.js` *(COMPLETED)*
+- [x] Target acquisition and priority
+- [x] Turret rotation and aiming thresholds
+- [x] Damage calculation and application
+- [x] Range checking for different unit types
+- [x] Line of sight / clear shot detection
 
 ### 1.4 ✅ Mine System
 **File**: `tests/unit/mineSystem.test.js` *(COMPLETED)*
@@ -82,13 +82,13 @@ Pure functions that are easy to test in isolation.
 
 More complex systems that require state management.
 
-### 3.1 🔲 Bullet/Projectile System
-**File**: `tests/unit/bulletSystem.test.js`
-- [ ] Bullet creation with correct properties
-- [ ] Bullet movement and trajectory
-- [ ] Collision detection with units
-- [ ] Collision detection with buildings
-- [ ] Explosion radius damage
+### 3.1 ✅ Bullet/Projectile System
+**File**: `tests/unit/bulletSystem.test.js` *(COMPLETED)*
+- [x] Bullet creation with correct properties
+- [x] Bullet movement and trajectory
+- [x] Collision detection with units
+- [x] Collision detection with buildings
+- [x] Explosion radius damage
 
 ### 3.2 🔲 Resource & Economy System
 **File**: `tests/unit/resourceSystem.test.js`
@@ -204,10 +204,12 @@ tests/
 └── unit/                 # Unit tests
     ├── pathfinding.test.js
     ├── unitCombat.test.js
+    ├── bulletSystem.test.js
     ├── mineSystem.test.js
     ├── baseUtils.test.js
     ├── gameRandom.test.js
-    └── ...
+    ├── deterministicRandom.test.js
+    └── utils.test.js
 ```
 
 ### Running Tests
@@ -240,13 +242,14 @@ npm test -- --watch
 | Priority | Category | Tests | Status |
 |----------|----------|-------|--------|
 | 1.1 | Building Placement | 25+ | ✅ Done |
-| 1.2 | Pathfinding | ~10 | 🔲 Pending |
-| 1.3 | Unit Combat | ~15 | 🔲 Pending |
+| 1.2 | Pathfinding | 47 | ✅ Done |
+| 1.3 | Unit Combat | 54 | ✅ Done |
 | 1.4 | Mine System | 48 | ✅ Done |
 | 2.1 | Base Utils | 24 | ✅ Done |
 | 2.2 | Game Random | 40 | ✅ Done |
 | 2.3 | Utils | 69 | ✅ Done |
-| 3.x | Game Systems | ~30 | 🔲 Pending |
+| 3.1 | Bullet System | 55 | ✅ Done |
+| 3.x | Game Systems | ~20 | 🔲 Pending |
 | 4.x | Unit Behaviors | ~25 | 🔲 Pending |
 | 5.x | AI Systems | ~10 | 🔲 Pending |
 | 6.1 | Command Sync | ~8 | 🔲 Pending |
@@ -256,10 +259,10 @@ npm test -- --watch
 
 ## Next Steps
 
-1. **Immediate**: Implement `tests/unit/pathfinding.test.js` (Priority 1.2) - critical for game mechanics
-2. **Then**: Implement `tests/unit/unitCombat.test.js` (Priority 1.3) - combat system testing
-3. **Continue**: Work through priorities 3.x, 4.x, etc.
+1. **Immediate**: Implement `tests/unit/resourceSystem.test.js` (Priority 3.2) - economy and power systems
+2. **Then**: Implement `tests/unit/productionQueue.test.js` (Priority 3.4) - unit production
+3. **Continue**: Work through priorities 4.x (Unit Behaviors) then 5.x (AI Systems)
 
-**Total Tests: 230** (across 5 test files)
+**Total Tests: 417** (across 9 test files)
 
 Last Updated: 2025-01-28
