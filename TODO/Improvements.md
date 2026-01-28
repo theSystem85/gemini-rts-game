@@ -1,4 +1,5 @@
 ## Improvements
+- [ ] Add shoreline rendering enhancements: sand under water with 80% opacity surface, 6px land-to-water gradients (including SOT corners), optional parallax between sand and water, and settings toggles for the new effects.
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
 - [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.

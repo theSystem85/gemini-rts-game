@@ -360,6 +360,21 @@ export const TILE_SPRITE_MAP = 'images/map/map_sprites.json'
 // Enable/disable texture usage (for performance testing/fallback)
 export const USE_TEXTURES = true
 
+// Water rendering enhancements
+export const WATER_SURFACE_OPACITY = 0.8
+export const WATER_EDGE_GRADIENT_SIZE = 6
+export const WATER_SAND_PARALLAX_FACTOR = 0.92
+export let WATER_EDGE_GRADIENT_ENABLED = true
+export let WATER_PARALLAX_ENABLED = true
+
+export function setWaterEdgeGradientEnabled(value) {
+  WATER_EDGE_GRADIENT_ENABLED = Boolean(value)
+}
+
+export function setWaterParallaxEnabled(value) {
+  WATER_PARALLAX_ENABLED = Boolean(value)
+}
+
 // Enable/disable tank image-based rendering (T key to toggle during gameplay)
 export const USE_TANK_IMAGES = true
 

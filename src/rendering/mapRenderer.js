@@ -1,5 +1,14 @@
 // rendering/mapRenderer.js
-import { TILE_SIZE, TILE_COLORS, USE_TEXTURES } from '../config.js'
+import {
+  TILE_SIZE,
+  TILE_COLORS,
+  USE_TEXTURES,
+  WATER_SURFACE_OPACITY,
+  WATER_EDGE_GRADIENT_SIZE,
+  WATER_EDGE_GRADIENT_ENABLED,
+  WATER_PARALLAX_ENABLED,
+  WATER_SAND_PARALLAX_FACTOR
+} from '../config.js'
 
 const UNDISCOVERED_COLOR = '#111111'
 const FOG_OVERLAY_STYLE = 'rgba(30, 30, 30, 0.6)'
@@ -15,6 +24,8 @@ export class MapRenderer {
     this.cachedMapWidth = 0
     this.cachedMapHeight = 0
     this.canUseOffscreen = typeof document !== 'undefined' && typeof document.createElement === 'function'
+    this.cachedWaterEdgeGradientEnabled = WATER_EDGE_GRADIENT_ENABLED
+    this.cachedWaterParallaxEnabled = WATER_PARALLAX_ENABLED
     // Precomputed SOT (Smoothening Overlay Texture) mask for performance optimization
     // sotMask[y][x] = { orientation: 'top-left'|'top-right'|'bottom-left'|'bottom-right', type: 'street'|'water' } or null
     this.sotMask = null
@@ -175,6 +186,13 @@ export class MapRenderer {
     const mapHeight = mapGrid.length
     const mapWidth = mapGrid[0]?.length || 0
 
+    if (this.cachedWaterEdgeGradientEnabled !== WATER_EDGE_GRADIENT_ENABLED ||
+      this.cachedWaterParallaxEnabled !== WATER_PARALLAX_ENABLED) {
+      this.invalidateAllChunks()
+      this.cachedWaterEdgeGradientEnabled = WATER_EDGE_GRADIENT_ENABLED
+      this.cachedWaterParallaxEnabled = WATER_PARALLAX_ENABLED
+    }
+
     if (mapWidth !== this.cachedMapWidth || mapHeight !== this.cachedMapHeight) {
       this.invalidateAllChunks()
       this.cachedMapWidth = mapWidth
@@ -316,7 +334,9 @@ export class MapRenderer {
       this.computeSOTMask(mapGrid)
     }
 
-    if (!this.canUseOffscreen) {
+    const canUseOffscreen = this.canUseOffscreen && !WATER_PARALLAX_ENABLED
+
+    if (!canUseOffscreen) {
       this.drawBaseLayer(
         ctx,
         mapGrid,
@@ -400,7 +420,10 @@ export class MapRenderer {
         const screenX = Math.floor(x * TILE_SIZE - offsetX)
         const screenY = Math.floor(y * TILE_SIZE - offsetY)
 
-        this.drawTileBase(ctx, x, y, tile.type, screenX, screenY, useTexture, currentWaterFrame)
+        this.drawTileBase(ctx, x, y, tile.type, screenX, screenY, useTexture, currentWaterFrame, scrollOffset)
+        if (tile.type === 'water') {
+          this.drawWaterEdgeGradients(ctx, mapGrid, x, y, screenX, screenY, scrollOffset, useTexture)
+        }
 
         // Use precomputed SOT mask instead of computing neighbors each frame
         // SOT applies to land tiles (street/water corners) and street tiles (water corners)
@@ -418,15 +441,17 @@ export class MapRenderer {
     }
   }
 
-  drawTileBase(ctx, tileX, tileY, type, screenX, screenY, useTexture, currentWaterFrame) {
-    if (type === 'water' && this.textureManager.waterFrames.length) {
-      const frame = currentWaterFrame || this.textureManager.getCurrentWaterFrame()
-      if (frame) {
-        ctx.drawImage(frame, screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
-        return
-      }
+  drawTileBase(ctx, tileX, tileY, type, screenX, screenY, useTexture, currentWaterFrame, scrollOffset) {
+    if (type === 'water') {
+      this.drawWaterSurface(ctx, tileX, tileY, screenX, screenY, scrollOffset, currentWaterFrame)
+      return
     }
 
+    this.drawTileTexture(ctx, tileX, tileY, type, screenX, screenY, useTexture, TILE_SIZE + 1)
+  }
+
+  drawTileTexture(ctx, tileX, tileY, type, screenX, screenY, useTexture, size) {
+    const drawSize = size || TILE_SIZE + 1
     if (useTexture && this.textureManager.tileTextureCache[type]) {
       const cache = this.textureManager.tileTextureCache[type]
       if (cache && cache.length) {
@@ -441,8 +466,8 @@ export class MapRenderer {
             info.height,
             screenX,
             screenY,
-            TILE_SIZE + 1,
-            TILE_SIZE + 1
+            drawSize,
+            drawSize
           )
           return
         }
@@ -450,7 +475,96 @@ export class MapRenderer {
     }
 
     ctx.fillStyle = TILE_COLORS[type]
-    ctx.fillRect(screenX, screenY, TILE_SIZE + 1, TILE_SIZE + 1)
+    ctx.fillRect(screenX, screenY, drawSize, drawSize)
+  }
+
+  drawWaterSurface(ctx, tileX, tileY, screenX, screenY, scrollOffset, currentWaterFrame) {
+    const tilePixelSize = TILE_SIZE + 1
+    const sandTexture = this.textureManager.sandTexture
+
+    if (sandTexture) {
+      const parallaxFactor = WATER_PARALLAX_ENABLED ? WATER_SAND_PARALLAX_FACTOR : 1
+      const sandX = Math.floor(tileX * TILE_SIZE - (scrollOffset?.x || 0) * parallaxFactor)
+      const sandY = Math.floor(tileY * TILE_SIZE - (scrollOffset?.y || 0) * parallaxFactor)
+      ctx.drawImage(sandTexture, sandX, sandY, tilePixelSize, tilePixelSize)
+    }
+
+    ctx.save()
+    ctx.globalAlpha = WATER_SURFACE_OPACITY
+    if (this.textureManager.waterFrames.length) {
+      const frame = currentWaterFrame || this.textureManager.getCurrentWaterFrame()
+      if (frame) {
+        ctx.drawImage(frame, screenX, screenY, tilePixelSize, tilePixelSize)
+        ctx.restore()
+        return
+      }
+    }
+
+    ctx.fillStyle = TILE_COLORS.water
+    ctx.fillRect(screenX, screenY, tilePixelSize, tilePixelSize)
+    ctx.restore()
+  }
+
+  drawWaterEdgeGradients(ctx, mapGrid, tileX, tileY, screenX, screenY, scrollOffset, useTexture) {
+    if (!WATER_EDGE_GRADIENT_ENABLED || WATER_EDGE_GRADIENT_SIZE <= 0) return
+
+    const tilePixelSize = TILE_SIZE + 1
+    const gradientSize = Math.min(WATER_EDGE_GRADIENT_SIZE, Math.floor(tilePixelSize / 2))
+    if (!gradientSize) return
+
+    const mapHeight = mapGrid.length
+    const mapWidth = mapGrid[0]?.length || 0
+
+    const neighbors = [
+      { dx: -1, dy: 0, edge: 'left' },
+      { dx: 1, dy: 0, edge: 'right' },
+      { dx: 0, dy: -1, edge: 'top' },
+      { dx: 0, dy: 1, edge: 'bottom' }
+    ]
+
+    neighbors.forEach(({ dx, dy, edge }) => {
+      const nx = tileX + dx
+      const ny = tileY + dy
+      if (nx < 0 || ny < 0 || nx >= mapWidth || ny >= mapHeight) return
+      const neighbor = mapGrid[ny][nx]
+      if (!neighbor || (neighbor.type !== 'land' && neighbor.type !== 'street')) return
+
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(screenX, screenY, tilePixelSize, tilePixelSize)
+      ctx.clip()
+      this.drawTileTexture(ctx, nx, ny, neighbor.type, screenX, screenY, useTexture, tilePixelSize)
+      ctx.globalCompositeOperation = 'destination-in'
+
+      let gradient = null
+      if (edge === 'left') {
+        gradient = ctx.createLinearGradient(screenX, screenY, screenX + gradientSize, screenY)
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = gradient
+        ctx.fillRect(screenX, screenY, gradientSize, tilePixelSize)
+      } else if (edge === 'right') {
+        gradient = ctx.createLinearGradient(screenX + tilePixelSize, screenY, screenX + tilePixelSize - gradientSize, screenY)
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = gradient
+        ctx.fillRect(screenX + tilePixelSize - gradientSize, screenY, gradientSize, tilePixelSize)
+      } else if (edge === 'top') {
+        gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + gradientSize)
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = gradient
+        ctx.fillRect(screenX, screenY, tilePixelSize, gradientSize)
+      } else if (edge === 'bottom') {
+        gradient = ctx.createLinearGradient(screenX, screenY + tilePixelSize, screenX, screenY + tilePixelSize - gradientSize)
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = gradient
+        ctx.fillRect(screenX, screenY + tilePixelSize - gradientSize, tilePixelSize, gradientSize)
+      }
+
+      ctx.restore()
+    })
   }
 
   drawOreOverlay(ctx, tileX, tileY, screenX, screenY, useTexture) {
@@ -661,6 +775,38 @@ export class MapRenderer {
       ctx.fillStyle = TILE_COLORS[type]
       ctx.fill()
     }
+
+    if (type === 'water' && WATER_EDGE_GRADIENT_ENABLED) {
+      this.applyWaterCornerGradient(ctx, orientation, screenX, screenY, size)
+    }
+    ctx.restore()
+  }
+
+  applyWaterCornerGradient(ctx, orientation, screenX, screenY, size) {
+    const gradientSize = Math.min(WATER_EDGE_GRADIENT_SIZE, Math.floor(size / 2))
+    if (!gradientSize) return
+
+    ctx.save()
+    ctx.globalCompositeOperation = 'destination-in'
+    let gradient = null
+
+    if (orientation === 'top-left') {
+      gradient = ctx.createLinearGradient(screenX, screenY, screenX + gradientSize, screenY + gradientSize)
+    } else if (orientation === 'top-right') {
+      gradient = ctx.createLinearGradient(screenX + size, screenY, screenX + size - gradientSize, screenY + gradientSize)
+    } else if (orientation === 'bottom-left') {
+      gradient = ctx.createLinearGradient(screenX, screenY + size, screenX + gradientSize, screenY + size - gradientSize)
+    } else if (orientation === 'bottom-right') {
+      gradient = ctx.createLinearGradient(screenX + size, screenY + size, screenX + size - gradientSize, screenY + size - gradientSize)
+    }
+
+    if (gradient) {
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 1)')
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      ctx.fillStyle = gradient
+      ctx.fillRect(screenX, screenY, size, size)
+    }
+
     ctx.restore()
   }
 
@@ -728,6 +874,30 @@ export class MapRenderer {
     return overlay
   }
 
+  renderWaterOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY) {
+    const useTexture = USE_TEXTURES && this.textureManager.allTexturesLoaded
+    const currentWaterFrame = this.textureManager.waterFrames.length
+      ? this.textureManager.getCurrentWaterFrame()
+      : null
+
+    ctx.imageSmoothingEnabled = false
+
+    for (let y = startTileY; y < endTileY; y++) {
+      for (let x = startTileX; x < endTileX; x++) {
+        const tile = mapGrid[y][x]
+        if (!tile || tile.type !== 'water') continue
+
+        const screenX = Math.floor(x * TILE_SIZE - scrollOffset.x)
+        const screenY = Math.floor(y * TILE_SIZE - scrollOffset.y)
+
+        this.drawWaterSurface(ctx, x, y, screenX, screenY, scrollOffset, currentWaterFrame)
+        this.drawWaterEdgeGradients(ctx, mapGrid, x, y, screenX, screenY, scrollOffset, useTexture)
+      }
+    }
+
+    ctx.imageSmoothingEnabled = true
+  }
+
   /**
    * Render only the SOT (Smoothening Overlay Texture) overlays without base tiles.
    * Used when GPU rendering handles base tiles but SOT still needs 2D canvas rendering.
@@ -791,6 +961,7 @@ export class MapRenderer {
     if (!skipBaseLayer) {
       this.renderTiles(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY, gameState)
     } else {
+      this.renderWaterOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
       // When GPU renders base tiles, we still need to render SOT overlays with 2D canvas
       this.renderSOTOverlays(ctx, mapGrid, scrollOffset, startTileX, startTileY, endTileX, endTileY)
     }

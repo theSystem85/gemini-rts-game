@@ -31,6 +31,7 @@ export class TextureManager {
     this.waterFrames = []
     this.waterFrameIndex = 0
     this.lastWaterFrameTime = 0
+    this.sandTexture = null
   }
 
   // Helper function to load images once
@@ -135,6 +136,13 @@ export class TextureManager {
       ctx.drawImage(waterImg, sx, sy, 64, 64, 0, 0, TILE_SIZE, TILE_SIZE)
       this.waterFrames.push(canvas)
     }
+
+    await new Promise(resolve => {
+      this.getOrLoadImage('images/map/sand01', ['jpg', 'webp', 'png'], (img) => {
+        this.sandTexture = img
+        resolve()
+      })
+    })
 
     // Discover grass tiles configuration
     let grassTileData = null

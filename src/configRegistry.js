@@ -114,6 +114,10 @@ import {
   , setHowitzerVisionRange
   , HOWITZER_BUILDING_DAMAGE_MULTIPLIER
   , setHowitzerBuildingDamageMultiplier
+  , WATER_EDGE_GRADIENT_ENABLED
+  , setWaterEdgeGradientEnabled
+  , WATER_PARALLAX_ENABLED
+  , setWaterParallaxEnabled
 } from './config.js'
 
 /**
@@ -203,6 +207,24 @@ export const configRegistry = {
     get: () => SAFE_RANGE_ENABLED,
     set: null, // Read-only const
     category: 'Gameplay'
+  },
+
+  waterEdgeGradientEnabled: {
+    name: 'Water Edge Gradient',
+    description: 'Toggle the shoreline gradient that fades land into water tiles',
+    type: 'boolean',
+    get: () => WATER_EDGE_GRADIENT_ENABLED,
+    set: setWaterEdgeGradientEnabled,
+    category: 'Graphics'
+  },
+
+  waterParallaxEnabled: {
+    name: 'Water/Sand Parallax',
+    description: 'Toggle the slight parallax between the sand bed and water surface',
+    type: 'boolean',
+    get: () => WATER_PARALLAX_ENABLED,
+    set: setWaterParallaxEnabled,
+    category: 'Graphics'
   },
 
   // Howitzer Configuration
