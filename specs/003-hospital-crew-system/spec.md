@@ -9,6 +9,10 @@
 
 ## User Scenarios & Testing
 
+### Automated Tests
+
+- Unit tests cover hospital crew healing progression, role order updates, money deductions, and ambulance medic refills/refill timer resets within the hospital service radius.
+
 ### User Story 1 - Tank Crew System (Priority: P1)
 
 As a player, I want my tanks to have individual crew members that can be killed when taking hits, so that combat has more strategic depth with unit capability degradation rather than just health loss.

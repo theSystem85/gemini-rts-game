@@ -122,7 +122,9 @@ These files have 0% coverage and need complete test suites created.
 ### Task 3.6 - `src/game/hospitalLogic.js`
 - **Target**: Create `tests/unit/hospitalLogic.test.js`
 - **Source File**: `src/game/hospitalLogic.js` (0% coverage, lines 4-125)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:06 UTC)
+- **Tests Added**: 8 tests
+- **Coverage After**: N/A
 - **Estimated Tests**: 15-25
 
 ### Task 3.7 - `src/game/milestoneSystem.js`
