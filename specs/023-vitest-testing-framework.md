@@ -90,6 +90,8 @@ Located in `tests/unit/`
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
 - Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
 - Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
+- Added `tests/unit/mouseHandler.test.js` covering input selection flows, force/guard commands, hover range calculations, and context menu cancellations with mocked dependencies.
+- Cheat system tests cover input parsing, spawn placement, minefield deployment, and selection-based state updates in `tests/unit/cheatSystem.test.js`.
 
 ### Game System Tests
 - `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
@@ -123,6 +125,12 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added `tests/unit/multiUnitInputHandler.test.js` to validate multi-unit command distribution, queue behavior, and eligibility filtering helpers.
+- Added `tests/unit/controlGroupHandler.test.js` to validate control group assignment, selection filtering, and camera centering behavior on double-press.
+- Added `tests/unit/helpSystem.test.js` to validate help overlay creation, DOM toggling, and pause-state interaction in jsdom.
+- Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
+- Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
+- Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
 
 ## Example Test
 
