@@ -123,6 +123,7 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added `tests/unit/multiplayerStore.test.js` covering invite token lifecycle, host regeneration, and party ownership events in multiplayer sessions.
 
 ## Example Test
 
