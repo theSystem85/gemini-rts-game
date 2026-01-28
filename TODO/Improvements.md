@@ -1,6 +1,7 @@
 ## Improvements
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
+- [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
