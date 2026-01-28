@@ -7,6 +7,7 @@
 - [x] ✅ Add keyboard handler unit tests (Task 4.3) to cover hotkey modes, dodge logic, control groups, and stop-attacking flows.
 - [x] ✅ Add unit tests for the cheat system input flows (Task 4.1) to cover parsing, spawning, and state updates.
 - [ ] Add a cheat code `recover [party]` to instantly restore the selected wreck and assign it to the specified party (defaults to the player).
+- [ ] Add unit tests for remote control state handling (Task 4.10 coverage for `src/input/remoteControlState.js`).
 - [x] ✅ Attack cursor and out-of-range cursor now switch correctly based on distance to target and unit firing range. Distance to target and max range are displayed in meters (10m per tile) with black text on white background. See `specs/000-global-specs.md` for measurement system.
 - [x] ✅ **Vitest Integration Testing**: Integrate Vitest for headless unit and integration testing without video, audio, or rendering.
   - [x] ✅ Install and configure Vitest with jsdom environment for DOM manipulation
