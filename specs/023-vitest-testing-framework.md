@@ -81,10 +81,22 @@ Example: `buildingPlacement.test.js`
 - Simulates game loop ticks without rendering
 
 ### Unit Tests
-Located in `tests/unit/` (not yet created)
-- Will test individual functions in isolation
+Located in `tests/unit/`
+- Test individual functions in isolation
 - No game state required
 - Helipad logic unit tests validate fuel/ammo replenishment and landing/refuel flows without rendering dependencies.
+- Enemy AI building placement tests validate defensive placement direction, spacing rules, and input guardrails with mocked dependencies.
+- Enemy AI coverage includes `enemySpawner.test.js` verifying spawn placement, harvester ore targeting, crew/gas initialization, and cheat-system integration.
+- Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
+- Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
+- Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
+
+### Game System Tests
+- `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
+- These tests mock audio, timing, and rendering dependencies to keep unit tests deterministic while asserting meaningful gameplay state changes.
+
+#### Game State Manager Coverage
+- Added `tests/unit/gameStateManager.test.js` with focused scenarios for scrolling inertia, ore spread rules, particle cleanup, destruction cleanup, and win/loss conditions.
 
 ## Best Practices
 
@@ -103,6 +115,14 @@ Located in `tests/unit/` (not yet created)
 4. **Use realistic test data**
    - Match actual building dimensions
    - Use valid map coordinates
+
+5. **Mock render/audio dependencies in loop tests**
+   - Unit tests for `GameLoop` should mock rendering, audio, and lockstep helpers.
+   - Assert behavior through game state changes and scheduled frame calls rather than DOM rendering.
+
+
+## Recent Coverage Additions
+- Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
 
 ## Example Test
 

@@ -1,10 +1,18 @@
 ## Improvements
 - [x] Add unit tests for helipadLogic.js covering fuel, ammo, landing, and resupply behavior.
+- [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.
+- [x] Add unit tests for `src/game/buildingSystem.js` to cover sell/destruction handling, defensive firing, and Tesla coil effects.
+- [x] Add unit tests for enemy AI building placement (Task 2.2) covering defensive placement, spacing, and guardrails.
+- [x] Add unit coverage for enemy AI unit behavior (ambulance, harvester hunter, base defense, and apache retreat logic).
+- [x] Add unit tests for enemyStrategies AI behaviors (repairs, retreats, attack coordination, crew recovery, logistics, and ammo monitoring).
+- [x] Add unit tests for `src/ai/enemyAIPlayer.js` to cover AI economy recovery, building completion, and unit production logic.
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
+- [x] Add meaningful unit tests for `src/ai/enemySpawner.js` covering spawn placement, harvester setup, crew/gas initialization, and cheat-system handling.
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
 - [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests
 - [x] Add additional unit tests for smokeUtils.js (26 tests), debugLogger.js (19 tests), logic.js (42 tests), retreat.js (33 tests) - total 120 new tests bringing test count from 1002 to 1128
 - [x] Add more unit tests for hitZoneCalculator.js (36 tests), soundCooldownManager.js (19 tests), serviceRadius.js (31 tests), version.js (4 tests) - total 90 new tests bringing test count from 1128 to 1218
+- [x] Expand bullet system unit tests (Task 3.1) to cover updateBullets and fireBullet behaviors with meaningful scenarios.
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
@@ -275,6 +283,7 @@
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Improvements
+- [x] Add unit tests for the game loop (Task 3.3 coverage plan).
 - [x] ✅ **Spec 006** Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.
 - [x] Add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unload only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.

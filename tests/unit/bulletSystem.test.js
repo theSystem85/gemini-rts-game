@@ -5,7 +5,9 @@
  * with units and buildings, and explosion radius damage.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import '../setup.js'
+import { updateBullets, fireBullet } from '../../src/game/bulletSystem.js'
 import {
   checkUnitCollision,
   checkBuildingCollision,
@@ -13,6 +15,83 @@ import {
   checkWreckCollision
 } from '../../src/game/bulletCollision.js'
 import { TILE_SIZE, BULLET_DAMAGES } from '../../src/config.js'
+
+vi.mock('../../src/logic.js', () => ({
+  triggerExplosion: vi.fn()
+}))
+
+vi.mock('../../src/sound.js', () => ({
+  playSound: vi.fn(),
+  playPositionalSound: vi.fn()
+}))
+
+vi.mock('../../src/utils.js', () => ({
+  awardExperience: vi.fn(),
+  updateUnitSpeedModifier: vi.fn()
+}))
+
+vi.mock('../../src/game/hitZoneCalculator.js', () => ({
+  calculateHitZoneDamageMultiplier: vi.fn(() => ({ multiplier: 1, isRearHit: false }))
+}))
+
+vi.mock('../../src/game/soundCooldownManager.js', () => ({
+  canPlayCriticalDamageSound: vi.fn(() => false),
+  recordCriticalDamageSoundPlayed: vi.fn()
+}))
+
+vi.mock('../../src/buildings.js', () => ({
+  markBuildingForRepairPause: vi.fn()
+}))
+
+vi.mock('../../src/performanceUtils.js', () => ({
+  logPerformance: (fn) => fn
+}))
+
+vi.mock('../../src/units.js', () => ({
+  removeUnitOccupancy: vi.fn()
+}))
+
+vi.mock('../../src/game/attackNotifications.js', () => ({
+  handleAttackNotification: vi.fn()
+}))
+
+vi.mock('../../src/utils/smokeUtils.js', () => ({
+  emitSmokeParticles: vi.fn()
+}))
+
+vi.mock('../../src/rendering/rocketTankImageRenderer.js', () => ({
+  getRocketSpawnPoint: vi.fn(() => ({ x: 10, y: 12 }))
+}))
+
+vi.mock('../../src/rendering/apacheImageRenderer.js', () => ({
+  getApacheRocketSpawnPoints: vi.fn(() => ({ left: { x: 14, y: 18 } }))
+}))
+
+vi.mock('../../src/network/gameCommandSync.js', () => ({
+  broadcastBuildingDamage: vi.fn()
+}))
+
+vi.mock('../../src/game/unitWreckManager.js', () => ({
+  applyDamageToWreck: vi.fn()
+}))
+
+vi.mock('../../src/ai/enemyStrategies.js', () => ({
+  handleAICrewLossEvent: vi.fn()
+}))
+
+vi.mock('../../src/utils/gameRandom.js', () => ({
+  gameRandom: vi.fn(() => 0)
+}))
+
+import { triggerExplosion } from '../../src/logic.js'
+import { playPositionalSound } from '../../src/sound.js'
+import { updateUnitSpeedModifier } from '../../src/utils.js'
+import { emitSmokeParticles } from '../../src/utils/smokeUtils.js'
+import { getRocketSpawnPoint } from '../../src/rendering/rocketTankImageRenderer.js'
+import { getApacheRocketSpawnPoints } from '../../src/rendering/apacheImageRenderer.js'
+import { broadcastBuildingDamage } from '../../src/network/gameCommandSync.js'
+import { applyDamageToWreck } from '../../src/game/unitWreckManager.js'
+import { markBuildingForRepairPause } from '../../src/buildings.js'
 
 // Mock performance.now for consistent timing
 vi.stubGlobal('performance', {
@@ -26,7 +105,7 @@ vi.stubGlobal('performance', {
  */
 function createMockBullet(options = {}) {
   return {
-    id: options.id || Date.now(),
+    id: options.id ?? Date.now(),
     x: options.x ?? 100,
     y: options.y ?? 100,
     vx: options.vx ?? 5,
@@ -34,13 +113,14 @@ function createMockBullet(options = {}) {
     speed: options.speed ?? 12,
     baseDamage: options.baseDamage ?? 25,
     active: options.active ?? true,
-    shooter: options.shooter || { id: 'shooter-1', owner: 'player', type: 'tank_v1' },
+    shooter: options.shooter ?? { id: 'shooter-1', owner: 'player', type: 'tank_v1' },
     homing: options.homing ?? false,
-    target: options.target || null,
-    targetPosition: options.targetPosition || null,
+    target: options.target ?? null,
+    targetPosition: options.targetPosition ?? null,
     projectileType: options.projectileType || 'bullet',
-    startTime: options.startTime || Date.now(),
-    explosionRadius: options.explosionRadius || undefined
+    startTime: options.startTime ?? Date.now(),
+    explosionRadius: options.explosionRadius ?? undefined,
+    ...options
   }
 }
 
@@ -123,6 +203,15 @@ function createMockWreck(options = {}) {
 }
 
 describe('Bullet System', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    globalThis.window.cheatSystem = undefined
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   describe('Bullet Creation', () => {
     it('should create bullet with correct properties', () => {
       const bullet = createMockBullet({
@@ -786,6 +875,270 @@ describe('Bullet System', () => {
       rocket.trail = rocket.trail.filter(p => now - p.time < maxTrailAge)
 
       expect(rocket.trail.length).toBe(2)
+    })
+  })
+
+  describe('updateBullets', () => {
+    const mapGrid = Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 0))
+
+    function createGameState(overrides = {}) {
+      return {
+        speedMultiplier: 1,
+        humanPlayer: 'player',
+        occupancyMap: [],
+        unitWrecks: [],
+        buildings: [],
+        ...overrides
+      }
+    }
+
+    it('removes inactive bullets from the array', () => {
+      const bullets = [createMockBullet({ active: false })]
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+      expect(bullets).toHaveLength(0)
+    })
+
+    it('sets effective speed based on the game speed multiplier', () => {
+      const bullet = createMockBullet({ speed: 10, vx: 0, vy: 0 })
+      const bullets = [bullet]
+      updateBullets(bullets, [], [], createGameState({ speedMultiplier: 2 }), mapGrid)
+      expect(bullet.effectiveSpeed).toBe(20)
+    })
+
+    it('detonates parabolic projectiles when their flight completes', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(200)
+      const bullet = createMockBullet({
+        parabolic: true,
+        startTime: 1,
+        flightDuration: 100,
+        startX: 10,
+        startY: 12,
+        dx: 20,
+        dy: 30,
+        arcHeight: 40,
+        targetPosition: { x: 50, y: 60 }
+      })
+      const bullets = [bullet]
+
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+
+      expect(triggerExplosion).toHaveBeenCalledWith(
+        50,
+        60,
+        bullet.baseDamage,
+        [],
+        [],
+        bullet.shooter,
+        200,
+        mapGrid,
+        bullet.explosionRadius,
+        undefined,
+        undefined
+      )
+      expect(bullets).toHaveLength(0)
+      nowSpy.mockRestore()
+    })
+
+    it('emits smoke and trails during ballistic ascent', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(100)
+      const bullet = createMockBullet({
+        ballistic: true,
+        startTime: 1,
+        ballisticDuration: 400,
+        startX: 80,
+        startY: 120,
+        arcHeight: 60
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+
+      expect(emitSmokeParticles).toHaveBeenCalledWith(expect.any(Object), bullet.x, bullet.y, 100, 1)
+      expect(bullet.trail.length).toBe(1)
+      nowSpy.mockRestore()
+    })
+
+    it('transitions ballistic projectiles into homing mode after ascent', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(200)
+      const target = createMockUnit({ x: 160, y: 200, tileX: 5, tileY: 6 })
+      const bullet = createMockBullet({
+        ballistic: true,
+        startTime: 1,
+        ballisticDuration: 100,
+        startX: 100,
+        startY: 200,
+        arcHeight: 50,
+        speed: 0,
+        target
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [target], [], createGameState(), mapGrid)
+
+      expect(bullet.ballistic).toBe(false)
+      expect(bullet.homing).toBe(true)
+      expect(bullet.x).toBe(100)
+      expect(bullet.y).toBe(150)
+      nowSpy.mockRestore()
+    })
+
+    it('explodes homing missiles that time out in flight', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(6001)
+      const bullet = createMockBullet({
+        homing: true,
+        startTime: 1,
+        originType: 'rocketTank',
+        target: null
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+
+      expect(triggerExplosion).toHaveBeenCalled()
+      expect(bullets).toHaveLength(0)
+      nowSpy.mockRestore()
+    })
+
+    it('explodes non-homing projectiles when they exceed max flight time', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(4001)
+      const bullet = createMockBullet({
+        homing: false,
+        startTime: 1,
+        targetPosition: { x: 210, y: 190 }
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+
+      expect(triggerExplosion).toHaveBeenCalledWith(
+        210,
+        190,
+        bullet.baseDamage,
+        [],
+        [],
+        bullet.shooter,
+        4001,
+        mapGrid,
+        bullet.explosionRadius,
+        undefined,
+        undefined
+      )
+      expect(bullets).toHaveLength(0)
+      nowSpy.mockRestore()
+    })
+
+    it('expires ammunition particles after their lifetime', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(2000)
+      const bullet = createMockBullet({
+        projectileType: 'ammoParticle',
+        expiryTime: 1500
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [], [], createGameState(), mapGrid)
+      expect(bullets).toHaveLength(0)
+      expect(triggerExplosion).not.toHaveBeenCalled()
+      nowSpy.mockRestore()
+    })
+
+    it('applies damage and effects on unit collisions', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(1200)
+      const unit = createMockUnit({ owner: 'enemy', health: 100 })
+      const bullet = createMockBullet({
+        x: unit.x + TILE_SIZE / 2,
+        y: unit.y + TILE_SIZE / 2,
+        baseDamage: 50
+      })
+      const bullets = [bullet]
+      updateBullets(bullets, [unit], [], createGameState(), mapGrid)
+
+      expect(unit.health).toBe(60)
+      expect(updateUnitSpeedModifier).toHaveBeenCalledWith(unit)
+      expect(playPositionalSound).toHaveBeenCalledWith('bulletHit', bullet.x, bullet.y, 0.5)
+      expect(triggerExplosion).toHaveBeenCalled()
+      nowSpy.mockRestore()
+    })
+
+    it('applies building damage and broadcasts repairs on impact', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(1400)
+      const building = createMockBuilding({ owner: 'enemy', health: 200 })
+      const bullet = createMockBullet({
+        x: building.x * TILE_SIZE + TILE_SIZE,
+        y: building.y * TILE_SIZE + TILE_SIZE,
+        baseDamage: 20,
+        projectileType: 'rocket'
+      })
+      const bullets = [bullet]
+      const gameState = createGameState({ buildings: [building] })
+
+      updateBullets(bullets, [], [], gameState, mapGrid)
+
+      expect(building.health).toBe(168)
+      expect(broadcastBuildingDamage).toHaveBeenCalledWith(building.id, 32, 168)
+      expect(markBuildingForRepairPause).toHaveBeenCalledWith(building)
+      nowSpy.mockRestore()
+    })
+
+    it('routes bullet damage into wrecks and removes the projectile', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(1600)
+      const wreck = createMockWreck({ health: 50 })
+      const bullet = createMockBullet({
+        x: wreck.x + TILE_SIZE / 2,
+        y: wreck.y + TILE_SIZE / 2,
+        baseDamage: 20
+      })
+      const bullets = [bullet]
+      const gameState = createGameState({ unitWrecks: [wreck] })
+
+      updateBullets(bullets, [], [], gameState, mapGrid)
+
+      expect(applyDamageToWreck).toHaveBeenCalledWith(wreck, 16, gameState, { x: bullet.x, y: bullet.y })
+      expect(bullets).toHaveLength(0)
+      nowSpy.mockRestore()
+    })
+  })
+
+  describe('fireBullet', () => {
+    it('fires a tank round with the correct stats and velocity', () => {
+      const unit = createMockUnit({ type: 'tank_v1', owner: 'player', x: 0, y: 0 })
+      const target = createMockUnit({ owner: 'enemy', tileX: 4, tileY: 2 })
+      const bullets = []
+      const bullet = fireBullet(unit, target, bullets, 1000)
+
+      expect(bullet.baseDamage).toBe(BULLET_DAMAGES.tank_v1)
+      expect(bullet.homing).toBe(false)
+      expect(bullet.targetPosition).toEqual({
+        x: target.x + TILE_SIZE / 2,
+        y: target.y + TILE_SIZE / 2
+      })
+      expect(Math.hypot(bullet.vx, bullet.vy)).toBeCloseTo(bullet.speed, 2)
+      expect(playPositionalSound).toHaveBeenCalledWith('shoot', bullet.x, bullet.y, 0.5)
+    })
+
+    it('creates rocket tank rounds with ballistic homing settings', () => {
+      const unit = createMockUnit({ type: 'rocketTank', owner: 'player', x: 80, y: 80 })
+      const target = createMockUnit({ owner: 'enemy', tileX: 6, tileY: 6 })
+      const bullets = []
+      const bullet = fireBullet(unit, target, bullets, 2000)
+
+      expect(getRocketSpawnPoint).toHaveBeenCalled()
+      expect(bullet.homing).toBe(true)
+      expect(bullet.ballistic).toBe(true)
+      expect(bullet.skipCollisionChecks).toBe(true)
+      expect(bullet.originType).toBe('rocketTank')
+    })
+
+    it('creates apache rockets with altitude-adjusted targeting', () => {
+      const unit = createMockUnit({ type: 'apache', owner: 'player', x: 100, y: 120 })
+      const target = createMockUnit({
+        owner: 'enemy',
+        tileX: 6,
+        tileY: 7,
+        type: 'apache',
+        altitude: 40
+      })
+      const bullets = []
+      const bullet = fireBullet(unit, target, bullets, 3000)
+
+      expect(getApacheRocketSpawnPoints).toHaveBeenCalled()
+      expect(bullet.originType).toBe('apacheRocket')
+      expect(bullet.skipCollisionChecks).toBe(true)
+      expect(bullet.targetPosition.y).toBeCloseTo(target.y + TILE_SIZE / 2 - target.altitude * 0.4)
     })
   })
 })

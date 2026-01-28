@@ -5,14 +5,59 @@
  * repair mechanics, and power grid integration.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { gameState } from '../../src/gameState.js'
 import { buildingData } from '../../src/data/buildingData.js'
+import { TILE_SIZE, BUILDING_SELL_DURATION } from '../../src/config.js'
 import { createTestMapGrid, resetGameState, createTestFactory, createTestBuilding } from '../testUtils.js'
 
 // Mock modules that cause import issues
 vi.mock('../../src/game/dangerZoneMap.js', () => ({
   updateDangerZoneMaps: vi.fn()
+}))
+
+vi.mock('../../src/sound.js', () => ({
+  playSound: vi.fn(),
+  playPositionalSound: vi.fn()
+}))
+
+vi.mock('../../src/inputHandler.js', () => ({
+  selectedUnits: []
+}))
+
+vi.mock('../../src/logic.js', () => ({
+  triggerExplosion: vi.fn(),
+  smoothRotateTowardsAngle: vi.fn((current, target) => target),
+  angleDiff: vi.fn((a, b) => Math.abs(a - b))
+}))
+
+vi.mock('../../src/ui/distortionEffect.js', () => ({
+  triggerDistortionEffect: vi.fn()
+}))
+
+vi.mock('../../src/game/gameStateManager.js', () => ({
+  checkGameEndConditions: vi.fn()
+}))
+
+vi.mock('../../src/utils.js', async() => {
+  const actual = await vi.importActual('../../src/utils.js')
+  return {
+    ...actual,
+    updateUnitSpeedModifier: vi.fn()
+  }
+})
+
+vi.mock('../../src/rendering/turretImageRenderer.js', () => ({
+  getTurretImageConfig: vi.fn(() => null),
+  turretImagesAvailable: vi.fn(() => false)
+}))
+
+vi.mock('../../src/performanceUtils.js', () => ({
+  logPerformance: fn => fn
+}))
+
+vi.mock('../../src/utils/gameRandom.js', () => ({
+  gameRandom: vi.fn(() => 0.5)
 }))
 
 vi.mock('../../src/rendering.js', () => ({
@@ -27,7 +72,16 @@ vi.mock('../../src/buildingImageMap.js', () => ({
 }))
 
 // Import after mocking
+import * as buildingsModule from '../../src/buildings.js'
 import { createBuilding, placeBuilding, clearBuildingFromMapGrid, calculateRepairCost, repairBuilding } from '../../src/buildings.js'
+import { updateBuildings, updateTeslaCoilEffects } from '../../src/game/buildingSystem.js'
+import { updateDangerZoneMaps } from '../../src/game/dangerZoneMap.js'
+import { checkGameEndConditions } from '../../src/game/gameStateManager.js'
+import { playSound, playPositionalSound } from '../../src/sound.js'
+import { triggerExplosion } from '../../src/logic.js'
+import { updateUnitSpeedModifier } from '../../src/utils.js'
+import { selectedUnits } from '../../src/inputHandler.js'
+import { gameRandom } from '../../src/utils/gameRandom.js'
 
 describe('Building System', () => {
   let mapGrid
@@ -78,6 +132,7 @@ describe('Building System', () => {
     })
 
     it('should generate unique ID for each building', () => {
+      gameRandom.mockReturnValueOnce(0.1).mockReturnValueOnce(0.2)
       const building1 = createBuilding('powerPlant', 10, 10)
       const building2 = createBuilding('powerPlant', 10, 10)
 
@@ -626,6 +681,239 @@ describe('Building System', () => {
 
       // Should not throw when clearing with null occupancy map
       expect(() => clearBuildingFromMapGrid(building, mapGrid, null)).not.toThrow()
+    })
+  })
+
+  describe('game/buildingSystem update logic', () => {
+    let mapGrid
+    let bullets
+    let units
+    let factories
+
+    beforeEach(() => {
+      resetGameState()
+      mapGrid = createTestMapGrid(30, 30)
+      gameState.mapGrid = mapGrid
+      gameState.occupancyMap = Array.from({ length: 30 }, () => Array(30).fill(0))
+      gameState.buildings = []
+      gameState.factories = []
+      gameState.humanPlayer = 'player'
+      gameState.playerPowerSupply = 50
+      gameState.enemyPowerSupply = 50
+      gameState.speedMultiplier = 1
+      gameState.useTurretImages = false
+      gameState.pendingButtonUpdate = false
+      gameState.playerBuildingsDestroyed = 0
+      gameState.enemyBuildingsDestroyed = 0
+      selectedUnits.length = 0
+      bullets = []
+      units = []
+      factories = []
+      vi.clearAllMocks()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    it('removes sold buildings and refreshes power + UI state', () => {
+      const now = 10000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+      const powerSpy = vi.spyOn(buildingsModule, 'updatePowerSupply')
+      const clearSpy = vi.spyOn(buildingsModule, 'clearBuildingFromMapGrid')
+
+      const building = createBuilding('powerPlant', 3, 3)
+      building.owner = 'player'
+      building.isBeingSold = true
+      building.sellStartTime = now - BUILDING_SELL_DURATION
+      building.selected = true
+      placeBuilding(building, mapGrid)
+      gameState.buildings.push(building)
+      selectedUnits.push(building)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(gameState.buildings).toHaveLength(0)
+      expect(selectedUnits).toHaveLength(0)
+      expect(gameState.pendingButtonUpdate).toBe(true)
+      expect(powerSpy).toHaveBeenCalled()
+      expect(clearSpy).toHaveBeenCalled()
+      expect(updateDangerZoneMaps).toHaveBeenCalledWith(gameState)
+      expect(checkGameEndConditions).toHaveBeenCalledWith(factories, gameState)
+    })
+
+    it('removes destroyed enemy buildings and triggers gas station explosion caps', () => {
+      const now = 20000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      const building = createBuilding('gasStation', 4, 4)
+      building.owner = 'enemy'
+      building.health = 0
+      placeBuilding(building, mapGrid)
+      gameState.buildings.push(building)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(gameState.enemyBuildingsDestroyed).toBe(1)
+      expect(playSound).toHaveBeenCalledWith('enemyBuildingDestroyed', 1.0, 0, true)
+      expect(triggerExplosion).toHaveBeenCalled()
+      const explosionArgs = triggerExplosion.mock.calls[0]
+      const options = explosionArgs[10]
+      expect(options).toMatchObject({
+        buildingDamageCaps: {
+          constructionYard: Math.round(buildingData.constructionYard.health * 0.9)
+        }
+      })
+      expect(playPositionalSound).toHaveBeenCalledWith(
+        'explosion',
+        expect.any(Number),
+        expect.any(Number),
+        0.5
+      )
+    })
+
+    it('spawns ammunition factory scatter particles on destruction', () => {
+      const now = 30000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      const building = createBuilding('ammunitionFactory', 6, 6)
+      building.owner = 'player'
+      building.health = 0
+      placeBuilding(building, mapGrid)
+      gameState.buildings.push(building)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(bullets).toHaveLength(40)
+      expect(bullets.every(particle => particle.projectileType === 'ammoParticle')).toBe(true)
+      expect(playPositionalSound).toHaveBeenCalledWith(
+        'explosion',
+        expect.any(Number),
+        expect.any(Number),
+        0.7
+      )
+    })
+
+    it('fires turret projectiles when aligned with a target in range', () => {
+      const now = 40000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      const turret = createBuilding('turretGunV1', 8, 8)
+      turret.owner = 'player'
+      turret.fireCooldown = 0
+      turret.lastShotTime = 0
+      gameState.buildings.push(turret)
+
+      const unit = {
+        x: (turret.x + 2) * TILE_SIZE,
+        y: (turret.y + 1) * TILE_SIZE,
+        owner: 'enemy',
+        health: 100
+      }
+      units.push(unit)
+
+      const centerX = (turret.x + turret.width / 2) * TILE_SIZE
+      const centerY = (turret.y + turret.height / 2) * TILE_SIZE
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      turret.turretDirection = Math.atan2(unitCenterY - centerY, unitCenterX - centerX)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(bullets).toHaveLength(1)
+      expect(bullets[0].shooter).toBe(turret)
+      expect(turret.recoilStartTime).toBe(now)
+      expect(turret.muzzleFlashStartTime).toBe(now)
+    })
+
+    it('blocks rocket turret firing when power is negative', () => {
+      const now = 50000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      gameState.playerPowerSupply = -10
+      const turret = createBuilding('rocketTurret', 10, 10)
+      turret.owner = 'player'
+      turret.fireCooldown = 0
+      gameState.buildings.push(turret)
+
+      units.push({
+        x: (turret.x + 2) * TILE_SIZE,
+        y: (turret.y + 1) * TILE_SIZE,
+        owner: 'enemy',
+        health: 100
+      })
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(bullets).toHaveLength(0)
+    })
+
+    it('runs Tesla coil charge/firing sequence and applies unit effects', () => {
+      const now = 60000
+      vi.useFakeTimers()
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      const tesla = createBuilding('teslaCoil', 12, 12)
+      tesla.owner = 'player'
+      tesla.fireCooldown = 0
+      gameState.buildings.push(tesla)
+
+      const target = {
+        x: (tesla.x + 1) * TILE_SIZE,
+        y: (tesla.y + 1) * TILE_SIZE,
+        owner: 'enemy',
+        health: 100
+      }
+      units.push(target)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(playPositionalSound).toHaveBeenCalledWith(
+        'teslacoil_loading',
+        expect.any(Number),
+        expect.any(Number),
+        1.0
+      )
+      expect(tesla.teslaState).toBe('charging')
+
+      vi.advanceTimersByTime(400)
+      expect(tesla.teslaState).toBe('firing')
+
+      vi.advanceTimersByTime(200)
+      expect(target.health).toBeLessThan(100)
+      expect(target.teslaDisabledUntil).toBe(now + 60000)
+      expect(target.teslaSlowed).toBe(true)
+
+      vi.advanceTimersByTime(400)
+      expect(tesla.teslaState).toBe('idle')
+    })
+
+    it('toggles Tesla coil slow/disable state based on timer expiry', () => {
+      const now = 70000
+      const nowSpy = vi.spyOn(performance, 'now')
+
+      const unit = {
+        teslaDisabledUntil: now + 1000,
+        baseSpeedModifier: 1,
+        canFire: true,
+        teslaSlowed: true
+      }
+
+      nowSpy.mockReturnValueOnce(now)
+      updateTeslaCoilEffects([unit])
+
+      expect(unit.canFire).toBe(false)
+      expect(unit.baseSpeedModifier).toBe(0.2)
+      expect(updateUnitSpeedModifier).toHaveBeenCalledWith(unit)
+
+      nowSpy.mockReturnValueOnce(now + 2000)
+      updateTeslaCoilEffects([unit])
+
+      expect(unit.canFire).toBe(true)
+      expect(unit.baseSpeedModifier).toBe(1.0)
+      expect(unit.teslaDisabledUntil).toBeNull()
+      expect(unit.teslaSlowed).toBe(false)
     })
   })
 })
