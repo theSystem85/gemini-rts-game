@@ -85,6 +85,10 @@ Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
 
+### Game System Tests
+- `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
+- These tests mock audio, timing, and rendering dependencies to keep unit tests deterministic while asserting meaningful gameplay state changes.
+
 ## Best Practices
 
 1. **Use TestGameContext for integration tests**

@@ -97,9 +97,11 @@ These files have 0% coverage and need complete test suites created.
 ### Task 3.2 - `src/game/buildingSystem.js`
 - **Target**: Extend `tests/unit/buildingSystem.test.js`
 - **Source File**: `src/game/buildingSystem.js` (0% coverage, lines 25-651)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:03 UTC)
 - **Note**: File exists but tests different module - create game/buildingSystem tests
 - **Estimated Tests**: 40-60
+- **Tests Added**: 7 tests
+- **Coverage After**: 67.44%
 
 ### Task 3.3 - `src/game/gameLoop.js`
 - **Target**: Create `tests/unit/gameLoop.test.js`
