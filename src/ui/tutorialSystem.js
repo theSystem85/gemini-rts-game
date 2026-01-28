@@ -727,6 +727,10 @@ class TutorialSystem {
       return
     }
 
+    if (this.dockButton && (reset || manual)) {
+      this.dockButton.classList.remove('tutorial-dock--hidden')
+    }
+    
     // Don't allow starting if completed (unless reset or manual restart)
     if (this.progress.completed && !reset && !manual) {
       this.hideUI()
@@ -852,6 +856,7 @@ class TutorialSystem {
       writeToStorage(TUTORIAL_PROGRESS_KEY, this.progress)
       // Hide dock button immediately on completion
       if (this.dockButton) {
+        this.dockButton.classList.add('tutorial-dock--hidden')
         this.dockButton.hidden = true
       }
       // Speak completion message
