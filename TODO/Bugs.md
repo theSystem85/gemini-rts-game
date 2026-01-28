@@ -1,4 +1,5 @@
 ## Bugs
+- [ ] Add unit coverage for lockstep inputBuffer networking helpers (Task 5.1 tests).
 - [ ] Add unit test coverage for mouse handler input flows (Task 4.4) with meaningful assertions.
 - [ ] Fix attack cursor to toggle between in-range and out-of-range states on hover based on distance, and ensure range labels render in red.
 - [ ] Rocket tanks should advance into range and fire through obstacles; attack cursor should show out-of-range targets for all units.
