@@ -3,6 +3,7 @@
 - [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.
 - [x] ✅ Store the position of the tutorial modal in localStorage so it persists across sessions.
+- [x] ✅ Add unit tests for the remote WebRTC peer connection workflow (remoteConnection module).
 - [x] ✅ Add lockstep manager unit tests to validate deterministic lockstep synchronization behavior.
 - [x] ✅ Add unit coverage for control group handling (KeyboardHandler control group assignment/selection/rebuild tests).
 - [x] ✅ Add keyboard handler unit tests (Task 4.3) to cover hotkey modes, dodge logic, control groups, and stop-attacking flows.
