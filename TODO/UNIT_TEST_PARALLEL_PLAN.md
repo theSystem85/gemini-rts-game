@@ -135,7 +135,9 @@ These files have 0% coverage and need complete test suites created.
 ### Task 3.5 - `src/game/helipadLogic.js`
 - **Target**: Create `tests/unit/helipadLogic.test.js`
 - **Source File**: `src/game/helipadLogic.js` (0% coverage, lines 14-222)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:06 UTC)
+- **Tests Added**: 7 tests
+- **Coverage After**: Pending
 - **Estimated Tests**: 25-35
 
 ### Task 3.6 - `src/game/hospitalLogic.js`

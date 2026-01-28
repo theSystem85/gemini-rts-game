@@ -84,6 +84,7 @@ Example: `buildingPlacement.test.js`
 Located in `tests/unit/`
 - Test individual functions in isolation
 - No game state required
+- Helipad logic unit tests validate fuel/ammo replenishment and landing/refuel flows without rendering dependencies.
 - Enemy AI building placement tests validate defensive placement direction, spacing rules, and input guardrails with mocked dependencies.
 - Enemy AI coverage includes `enemySpawner.test.js` verifying spawn placement, harvester ore targeting, crew/gas initialization, and cheat-system integration.
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
