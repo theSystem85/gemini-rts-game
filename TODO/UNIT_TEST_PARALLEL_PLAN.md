@@ -81,7 +81,9 @@ These files have 0% coverage and need complete test suites created.
 ### Task 2.4 - `src/ai/enemyStrategies.js`
 - **Target**: Create `tests/unit/enemyStrategies.test.js`
 - **Source File**: `src/ai/enemyStrategies.js` (6.97% coverage)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:09 UTC)
+- **Tests Added**: 26 tests
+- **Coverage After**: 52.9% statements
 - **Estimated Tests**: 60-80
 
 ### Task 2.5 - `src/ai/enemyUnitBehavior.js`
