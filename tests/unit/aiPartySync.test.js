@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const observeAiReactivation = vi.fn()
-const getPartyState = vi.fn()
+// Use vi.hoisted to ensure mocks are defined before vi.mock factories run
+const observeAiReactivation = vi.hoisted(() => vi.fn())
+const getPartyState = vi.hoisted(() => vi.fn())
 
 vi.mock('../../src/network/webrtcSession.js', () => ({
   observeAiReactivation

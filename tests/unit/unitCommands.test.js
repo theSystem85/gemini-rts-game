@@ -304,11 +304,25 @@ describe('UnitCommandsHandler utility queues', () => {
   })
 
   it('assigns recovery tanks to tow wrecks and records workshop data', () => {
-    const tank = { id: 'rt1', type: 'recoveryTank', owner: 'player', tileX: 0, tileY: 0, health: 10 }
+    // Recovery tank needs crew with loader for canRecoveryTankRepair to pass
+    const tank = {
+      id: 'rt1',
+      type: 'recoveryTank',
+      owner: 'player',
+      tileX: 0,
+      tileY: 0,
+      health: 10,
+      crew: { loader: true }
+    }
     const wreck = { id: 'w1' }
 
+    // Wreck must have valid coordinates for path computation
     getWreckById.mockReturnValue({
       id: 'w1',
+      tileX: 1,
+      tileY: 0,
+      x: 32,
+      y: 0,
       assignedTankId: null,
       isBeingRestored: false,
       isBeingRecycled: false,

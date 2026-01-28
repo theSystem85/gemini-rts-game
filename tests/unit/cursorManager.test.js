@@ -5,6 +5,23 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+
+// Mock main.js to prevent import chain reaching benchmarkScenario.js
+vi.mock('../../src/main.js', () => ({
+  factories: [],
+  units: [],
+  bullets: [],
+  mapGrid: [],
+  getCurrentGame: vi.fn()
+}))
+
+// Mock inputHandler.js to prevent circular import with cursorManager.js
+vi.mock('../../src/inputHandler.js', () => ({
+  selectedUnits: [],
+  getSelectedUnits: vi.fn().mockReturnValue([]),
+  setSelectedUnits: vi.fn()
+}))
+
 import { CursorManager } from '../../src/input/cursorManager.js'
 import { GAME_DEFAULT_CURSOR } from '../../src/input/cursorStyles.js'
 import { TILE_SIZE, CURSOR_METERS_PER_TILE } from '../../src/config.js'
@@ -114,7 +131,8 @@ describe('CursorManager', () => {
       [0, 1],
       [0, 0]
     ]
-    expect(manager.isBlockedTerrain(1, 0, mapGrid)).toBe(true)
+    // occupancyMap returns a truthy value (1) for occupied tiles
+    expect(manager.isBlockedTerrain(1, 0, mapGrid)).toBeTruthy()
   })
 
   it('defaults to the game cursor when outside the canvas', () => {

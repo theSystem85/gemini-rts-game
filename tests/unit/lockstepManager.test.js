@@ -10,16 +10,17 @@ vi.mock('../../src/gameState.js', () => ({
   }
 }))
 
-const mockDeterministicRNG = {
+// Use vi.hoisted to ensure mocks are defined before vi.mock factories run
+const mockDeterministicRNG = vi.hoisted(() => ({
   enable: vi.fn(),
   disable: vi.fn(),
   getState: vi.fn(() => ({ seed: 1, callCount: 0, enabled: true })),
   setState: vi.fn(),
   getCallCount: vi.fn(() => 0)
-}
+}))
 
-const mockInitializeSessionRNG = vi.fn()
-const mockSyncRNGForTick = vi.fn()
+const mockInitializeSessionRNG = vi.hoisted(() => vi.fn())
+const mockSyncRNGForTick = vi.hoisted(() => vi.fn())
 
 vi.mock('../../src/network/deterministicRandom.js', () => ({
   deterministicRNG: mockDeterministicRNG,
@@ -27,8 +28,8 @@ vi.mock('../../src/network/deterministicRandom.js', () => ({
   syncRNGForTick: mockSyncRNGForTick
 }))
 
-const mockComputeStateHash = vi.fn(() => 'hash-0')
-const mockCompareHashes = vi.fn((localHash, remoteHash) => localHash === remoteHash)
+const mockComputeStateHash = vi.hoisted(() => vi.fn(() => 'hash-0'))
+const mockCompareHashes = vi.hoisted(() => vi.fn((localHash, remoteHash) => localHash === remoteHash))
 
 vi.mock('../../src/network/stateHash.js', () => ({
   computeStateHash: mockComputeStateHash,
@@ -147,6 +148,10 @@ describe('lockstepManager', () => {
     lockstepManager._lastHashExchangeTick = 0
     lockstepManager._accumulator = MS_PER_TICK
     lockstepManager._lastTickTime = 0
+
+    // Set peer as having received inputs so tick can advance
+    const peerState = lockstepManager._peers.get('peer-a')
+    peerState.lastReceivedTick = LOCKSTEP_CONFIG.HASH_EXCHANGE_INTERVAL - 1
 
     const inputs = lockstepManager.update(MS_PER_TICK)
 
