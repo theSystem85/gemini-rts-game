@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Add unit tests for enemy AI building placement (Task 2.2) covering defensive placement, spacing, and guardrails.
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
 - [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests

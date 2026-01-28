@@ -84,6 +84,7 @@ Example: `buildingPlacement.test.js`
 Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
+- Enemy AI building placement tests validate defensive placement direction, spacing rules, and input guardrails with mocked dependencies.
 
 ## Best Practices
 

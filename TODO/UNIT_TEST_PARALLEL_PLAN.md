@@ -62,7 +62,9 @@ These files have 0% coverage and need complete test suites created.
 ### Task 2.2 - `src/ai/enemyBuilding.js`
 - **Target**: Create `tests/unit/enemyBuilding.test.js`
 - **Source File**: `src/ai/enemyBuilding.js` (0% coverage, lines 7-798)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-28 19:04 UTC)
+- **Tests Added**: 6 tests
+- **Coverage After**: 38.57% statements (enemyBuilding.js)
 - **Estimated Tests**: 40-60
 
 ### Task 2.3 - `src/ai/enemySpawner.js`
