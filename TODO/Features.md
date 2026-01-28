@@ -25,6 +25,7 @@
     - [x] ✅ Negative tests: Building placement too far from CY (beyond MAX_BUILDING_GAP_TILES=3)
     - [x] ✅ Edge case tests: Exactly at MAX_GAP distance and MAX_GAP+1 distance
     - [x] ✅ Game loop integration tests: Running 60-300 ticks with building placement
+- [x] ✅ Add unit test coverage for WebRTC session monitoring, AI fallback, and kick flow (Task 5.5).
   - [x] ✅ Unit tests for multiplayer invite lifecycle, host regeneration, and party ownership changes (Task 5.3).
 - [x] ✅ Add unit tests for selection manager input flows (Task 4.6).
 - [ ] Add cursorManager input system unit tests (Task 4.2) to cover cursor state transitions and range UI behavior.

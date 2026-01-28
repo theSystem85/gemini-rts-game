@@ -1,0 +1,326 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../../src/gameState.js', () => ({
+  gameState: {
+    multiplayerSession: {
+      status: 'disconnected',
+      isRemote: false,
+      alias: null,
+      inviteToken: null,
+      connectedAt: null
+    },
+    gamePaused: false,
+    gameStarted: true
+  }
+}))
+
+const multiplayerStore = vi.hoisted(() => ({
+  markPartyControlledByHuman: vi.fn(),
+  markPartyControlledByAi: vi.fn(),
+  invalidateInviteToken: vi.fn(),
+  generateInviteForParty: vi.fn().mockResolvedValue(undefined),
+  getPartyState: vi.fn()
+}))
+
+vi.mock('../../src/network/multiplayerStore.js', () => multiplayerStore)
+
+const hostNotifications = vi.hoisted(() => ({
+  showHostNotification: vi.fn()
+}))
+
+vi.mock('../../src/network/hostNotifications.js', () => hostNotifications)
+
+const remoteControlState = vi.hoisted(() => ({
+  applyRemoteControlSnapshot: vi.fn(),
+  releaseRemoteControlSource: vi.fn()
+}))
+
+vi.mock('../../src/input/remoteControlState.js', () => remoteControlState)
+
+const sessionEvents = vi.hoisted(() => ({
+  emitMultiplayerSessionChange: vi.fn()
+}))
+
+vi.mock('../../src/network/multiplayerSessionEvents.js', () => sessionEvents)
+
+const signalling = vi.hoisted(() => ({
+  fetchPendingSessions: vi.fn().mockResolvedValue([]),
+  postAnswer: vi.fn().mockResolvedValue(undefined),
+  postCandidate: vi.fn().mockResolvedValue(undefined)
+}))
+
+vi.mock('../../src/network/signalling.js', () => signalling)
+
+const commandSync = vi.hoisted(() => ({
+  handleReceivedCommand: vi.fn(),
+  startGameStateSync: vi.fn(),
+  stopGameStateSync: vi.fn(),
+  updateNetworkStats: vi.fn(),
+  notifyClientConnected: vi.fn(),
+  initializeLockstepSession: vi.fn(),
+  isLockstepEnabled: vi.fn(),
+  disableLockstep: vi.fn()
+}))
+
+vi.mock('../../src/network/gameCommandSync.js', () => commandSync)
+
+import * as webrtcSession from '../../src/network/webrtcSession.js'
+
+const {
+  AI_REACTIVATION_EVENT,
+  getActiveHostMonitor,
+  kickPlayer,
+  observeAiReactivation,
+  stopHostInvite,
+  watchHostInvite
+} = webrtcSession
+
+let lastPeerConnection = null
+
+class MockPeerConnection {
+  constructor() {
+    this.listeners = new Map()
+    this.connectionState = 'new'
+    this.addIceCandidate = vi.fn().mockResolvedValue(undefined)
+    this.setRemoteDescription = vi.fn().mockResolvedValue(undefined)
+    this.createAnswer = vi.fn().mockResolvedValue({ type: 'answer', sdp: 'mock-answer' })
+    this.setLocalDescription = vi.fn().mockResolvedValue(undefined)
+    this.close = vi.fn()
+  }
+
+  addEventListener(event, handler) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, [])
+    }
+    this.listeners.get(event).push(handler)
+  }
+
+  dispatchEvent(event, payload) {
+    const handlers = this.listeners.get(event)
+    if (!handlers) {
+      return
+    }
+    handlers.forEach((handler) => handler(payload))
+  }
+}
+
+const createDataChannel = () => {
+  const listeners = new Map()
+  return {
+    readyState: 'open',
+    send: vi.fn(),
+    close: vi.fn(),
+    addEventListener(event, handler) {
+      if (!listeners.has(event)) {
+        listeners.set(event, [])
+      }
+      listeners.get(event).push(handler)
+    },
+    dispatchEvent(event, payload) {
+      const handlers = listeners.get(event)
+      if (!handlers) {
+        return
+      }
+      handlers.forEach((handler) => handler(payload))
+    }
+  }
+}
+
+beforeEach(() => {
+  lastPeerConnection = null
+  globalThis.RTCPeerConnection = vi.fn(function() {
+    lastPeerConnection = new MockPeerConnection()
+    return lastPeerConnection
+  })
+  multiplayerStore.getPartyState.mockReturnValue({ inviteToken: 'invite-new' })
+  commandSync.isLockstepEnabled.mockReturnValue(false)
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  stopHostInvite('party-1')
+  stopHostInvite('party-2')
+  vi.clearAllMocks()
+  vi.useRealTimers()
+})
+
+describe('AI reactivation events', () => {
+  it('subscribes and unsubscribes to AI reactivation', () => {
+    const handler = vi.fn()
+    const cleanup = observeAiReactivation(handler)
+    document.dispatchEvent(new CustomEvent(AI_REACTIVATION_EVENT, { detail: { partyId: 'party-1' } }))
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    document.dispatchEvent(new CustomEvent(AI_REACTIVATION_EVENT, { detail: { partyId: 'party-1' } }))
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Host session behavior', () => {
+  it('answers offers and flushes queued ICE candidates', async() => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const entry = {
+      peerId: 'peer-1',
+      alias: 'Remote',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: [{ candidate: { candidate: 'candidate-1' }, origin: 'peer' }]
+    }
+
+    monitor._processEntry(entry)
+
+    const session = monitor.sessions.get('peer-1')
+    expect(session).toBeTruthy()
+
+    await session.answerOffer(entry.offer)
+
+    expect(signalling.postAnswer).toHaveBeenCalledWith({
+      inviteToken: 'token-1',
+      peerId: 'peer-1',
+      answer: JSON.stringify({ type: 'answer', sdp: 'mock-answer' })
+    })
+    expect(lastPeerConnection.addIceCandidate).toHaveBeenCalledWith({ candidate: 'candidate-1' })
+  })
+
+  it('processes and forwards data channel control messages', () => {
+    const onControlMessage = vi.fn()
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    monitor._processEntry({
+      peerId: 'peer-1',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: []
+    })
+
+    const session = getActiveHostMonitor('party-1').sessions.get('peer-1')
+    const dataChannel = createDataChannel()
+
+    session.onControlMessage = onControlMessage
+    session._attachDataChannel(dataChannel)
+
+    dataChannel.dispatchEvent('message', { data: JSON.stringify({ type: 'remote-control', input: 'payload' }) })
+
+    expect(onControlMessage).toHaveBeenCalledWith(session, { type: 'remote-control', input: 'payload' })
+    expect(commandSync.updateNetworkStats).toHaveBeenCalledWith(0, JSON.stringify({ type: 'remote-control', input: 'payload' }).length)
+  })
+
+  it('sends host status updates through the data channel', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    monitor._processEntry({
+      peerId: 'peer-1',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: []
+    })
+
+    const createdSession = monitor.sessions.get('peer-1')
+    createdSession.dataChannel = createDataChannel()
+
+    createdSession.sendHostStatus({ type: 'host-status', running: true })
+
+    const expectedPayload = JSON.stringify({ type: 'host-status', running: true })
+    expect(createdSession.dataChannel.send).toHaveBeenCalledWith(expectedPayload)
+    expect(commandSync.updateNetworkStats).toHaveBeenCalledWith(expectedPayload.length, 0)
+  })
+})
+
+describe('Host invite monitoring', () => {
+  it('handles client connection state changes', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = {
+      alias: 'Remote',
+      sourceId: 'remote-party-1-peer-1',
+      peerId: 'peer-1',
+      dispose: vi.fn()
+    }
+    monitor.sessions.set('peer-1', session)
+
+    monitor._handleSessionState(session, 'connected')
+
+    expect(multiplayerStore.markPartyControlledByHuman).toHaveBeenCalledWith('party-1', 'Remote')
+    expect(hostNotifications.showHostNotification).toHaveBeenCalledWith('Remote connected to party party-1')
+    expect(sessionEvents.emitMultiplayerSessionChange).toHaveBeenCalled()
+    expect(commandSync.notifyClientConnected).toHaveBeenCalled()
+    expect(commandSync.initializeLockstepSession).toHaveBeenCalled()
+    expect(commandSync.startGameStateSync).toHaveBeenCalled()
+  })
+
+  it('restores AI control on disconnect and stops sync', () => {
+    commandSync.isLockstepEnabled.mockReturnValue(true)
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = {
+      alias: 'Remote',
+      sourceId: 'remote-party-1-peer-1',
+      peerId: 'peer-1',
+      connectionState: 'connected',
+      dispose: vi.fn()
+    }
+    monitor.sessions.set('peer-1', session)
+    monitor.activeSession = session
+
+    const eventHandler = vi.fn()
+    document.addEventListener(AI_REACTIVATION_EVENT, eventHandler)
+
+    monitor._handleSessionState(session, 'disconnected')
+
+    expect(remoteControlState.releaseRemoteControlSource).toHaveBeenCalledWith(session.sourceId)
+    expect(multiplayerStore.markPartyControlledByAi).toHaveBeenCalledWith('party-1')
+    expect(eventHandler).toHaveBeenCalledTimes(1)
+    expect(hostNotifications.showHostNotification).toHaveBeenCalledWith('Remote disconnected from party party-1 - AI has resumed control')
+    expect(commandSync.stopGameStateSync).toHaveBeenCalled()
+    expect(commandSync.disableLockstep).toHaveBeenCalled()
+  })
+
+  it('routes control messages to command sync and remote control handlers', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = { sourceId: 'remote-party-1-peer-1' }
+
+    monitor._handleControlMessage(session, { type: 'game-command', command: 'move' })
+    monitor._handleControlMessage(session, { type: 'remote-control', payload: { axis: 'x' } })
+
+    expect(commandSync.handleReceivedCommand).toHaveBeenCalledWith({ type: 'game-command', command: 'move' }, session.sourceId)
+    expect(remoteControlState.applyRemoteControlSnapshot).toHaveBeenCalledWith(session.sourceId, { type: 'remote-control', payload: { axis: 'x' } })
+  })
+
+  it('clears host invite monitor when token is removed', () => {
+    const monitor = watchHostInvite({ partyId: 'party-2', inviteToken: 'token-2' })
+    const stopSpy = vi.spyOn(monitor, 'stop')
+
+    const cleared = watchHostInvite({ partyId: 'party-2', inviteToken: null })
+
+    expect(cleared).toBeNull()
+    expect(stopSpy).toHaveBeenCalledTimes(1)
+    expect(getActiveHostMonitor('party-2')).toBeNull()
+  })
+})
+
+describe('kickPlayer', () => {
+  it('returns false when there is no active session', async() => {
+    const result = await kickPlayer('party-1')
+    expect(result).toBe(false)
+  })
+
+  it('kicks the active player and regenerates the invite token', async() => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const dataChannel = createDataChannel()
+    const session = {
+      alias: 'Remote',
+      sourceId: 'remote-party-1-peer-1',
+      peerId: 'peer-1',
+      dataChannel,
+      dispose: vi.fn(),
+      connectionState: 'connected'
+    }
+    monitor.sessions.set('peer-1', session)
+    monitor.activeSession = session
+
+    const kickPromise = kickPlayer('party-1')
+    vi.advanceTimersByTime(100)
+    const kicked = await kickPromise
+
+    expect(kicked).toBe(true)
+    expect(dataChannel.send).toHaveBeenCalled()
+    expect(multiplayerStore.invalidateInviteToken).toHaveBeenCalledWith('party-1')
+    expect(multiplayerStore.generateInviteForParty).toHaveBeenCalledWith('party-1')
+    expect(hostNotifications.showHostNotification).toHaveBeenCalledWith('New invite ready for party party-1')
+    expect(commandSync.stopGameStateSync).toHaveBeenCalled()
+  })
+})
