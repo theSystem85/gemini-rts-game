@@ -1,5 +1,5 @@
 import { TILE_SIZE, TANK_FIRE_RANGE, BUILDING_PROXIMITY_RANGE, SHADOW_OF_WAR_CONFIG, HOWITZER_VISION_RANGE } from '../config.js'
-import { buildingData } from '../buildings.js'
+import { buildingData } from '../data/buildingData.js'
 
 const {
   defaultNonCombatRange = 2,

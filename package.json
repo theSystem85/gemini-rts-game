@@ -13,11 +13,17 @@
     "lint:fix": "eslint src/ *.js --fix",
     "map:analyse": "node map_analyse.js",
     "make:sprites": "node makeSprites.js",
-    "count:locs": "node countLocs.js"
+    "count:locs": "node countLocs.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "devDependencies": {
     "eslint": "^9.32.0",
-    "vite": "^6.0.3"
+    "jsdom": "^27.4.0",
+    "vite": "^6.0.3",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@netlify/blobs": "^10.4.2",
