@@ -1,5 +1,7 @@
 ## Improvements
 - [x] Add unit coverage for enemy AI unit behavior (ambulance, harvester hunter, base defense, and apache retreat logic).
+- [x] Add unit tests for enemyStrategies AI behaviors (repairs, retreats, attack coordination, crew recovery, logistics, and ammo monitoring).
+- [x] Add unit tests for `src/ai/enemyAIPlayer.js` to cover AI economy recovery, building completion, and unit production logic.
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
 - [x] Add Priority 6 command sync unit tests covering command payload helpers and state hash verification.
 - [x] Add unit tests for 0% coverage files: enemyUtils.js (29 tests), guard.js (12 tests), dangerZoneMap.js (32 tests), seedUtils.js (39 tests), helipadUtils.js (23 tests), inputUtils.js (28 tests) - total 163 new tests bringing coverage from 839 to 1002 tests

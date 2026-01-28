@@ -85,6 +85,8 @@ Located in `tests/unit/` (not yet created)
 - Will test individual functions in isolation
 - No game state required
 - Added enemyUnitBehavior AI tests covering crew recovery, ambulance routing, harvester hunter reactions, base defense, and apache retreat logic.
+- Enemy AI strategy tests cover repair prioritization, retreat decisions, group attack coordination, crew recovery, and logistics resupply workflows.
+- Added AI unit coverage in `tests/unit/enemyAIPlayer.test.js` for economy recovery, building completion, and production spawn selection.
 
 ## Best Practices
 
