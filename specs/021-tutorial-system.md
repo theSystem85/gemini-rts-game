@@ -22,7 +22,8 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 6. **Tank production**: Show building a tank and setting a Vehicle Factory rally point (waypoint).
 7. **Tank control**: Show sending the finished tank to a location and switching to manual/remote control.
 8. **Combat**: Show attacking targets and explain the win condition (destroy all enemy buildings).
-9. **Tech tree**: Explain building unlock chains through the full tech tree, with details on:
+9. **Crew system**: Explain crew roles, the D/C/G/L HUD indicators, how tanks lose functionality when crew are missing, and how Hospitals + Ambulances restore crew. Demo should zero out a tank crew, focus the camera and cursor on the empty tank to show missing indicators, advance the final substep once any crew member is restored (progress bar only shown on this step), and announce completion with a voice line.
+10. **Tech tree**: Explain building unlock chains through the full tech tree, with details on:
    - Tanker Truck + Gas Station (refueling)
    - Ambulance + Hospital + crew system
    - Ammunition Factory + Ammunition Truck + ammunition display
@@ -32,6 +33,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Tutorial overlay is non-invasive and uses the same HUD elements the player will use in gameplay.
 - The tutorial cursor must be clearly visible and animated during demo actions.
 - Step instructions remain on screen during practice phase.
+- Use an inline progress bar for multi-part tutorial steps (e.g., crew/ambulance) to show partial completion.
 - Provide a minimize/expand control so the tutorial can be collapsed without skipping, showing a small dock button for reopening.
 - Include an in-tutorial voice toggle so narration can be switched on/off without opening settings.
 - Allow stepping backward and forward, with Continue locked until the current step is completed.

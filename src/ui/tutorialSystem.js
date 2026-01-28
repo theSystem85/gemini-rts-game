@@ -4,6 +4,8 @@ import { buildingData, canPlaceBuilding } from '../buildings.js'
 import { selectedUnits, getUnitCommandsHandler } from '../inputHandler.js'
 import { unitCosts } from '../units.js'
 import { setRemoteControlAction, clearRemoteControlSource } from '../input/remoteControlState.js'
+import { TILE_SIZE } from '../config.js'
+import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
 
 const TUTORIAL_SETTINGS_KEY = 'rts_tutorial_settings'
 const TUTORIAL_PROGRESS_KEY = 'rts_tutorial_progress'
@@ -84,6 +86,48 @@ function getCanvasPointForTile(tileX, tileY) {
   const clientX = rect.left + (tileX * 32) - gameState.scrollOffset.x + 16
   const clientY = rect.top + (tileY * 32) - gameState.scrollOffset.y + 16
   return { x: clientX, y: clientY }
+}
+
+function getPlayerCrewSnapshot() {
+  return new Map((gameState.units || [])
+    .filter(unit => unit.crew && typeof unit.crew === 'object' && isHumanOwner(unit.owner))
+    .map(unit => [unit.id, { ...unit.crew }]))
+}
+
+function focusCameraOnPoint(point) {
+  if (!point) return
+  const canvas = document.getElementById('gameCanvas')
+  if (!canvas) return
+  const mapGrid = gameState.mapGrid
+  if (!mapGrid || mapGrid.length === 0) return
+  const viewportWidth = getPlayableViewportWidth(canvas)
+  const viewportHeight = getPlayableViewportHeight(canvas)
+  if (!viewportWidth || !viewportHeight) return
+  const mapWidth = mapGrid[0].length * TILE_SIZE
+  const mapHeight = mapGrid.length * TILE_SIZE
+  const maxScrollX = Math.max(0, mapWidth - viewportWidth)
+  const maxScrollY = Math.max(0, mapHeight - viewportHeight)
+  const targetX = Math.max(0, Math.min(point.x - viewportWidth / 2, maxScrollX))
+  const targetY = Math.max(0, Math.min(point.y - viewportHeight / 2, maxScrollY))
+
+  gameState.dragVelocity.x = 0
+  gameState.dragVelocity.y = 0
+
+  if (gameState.smoothScroll) {
+    gameState.smoothScroll.targetX = targetX
+    gameState.smoothScroll.targetY = targetY
+    gameState.smoothScroll.active = true
+  } else {
+    gameState.scrollOffset.x = targetX
+    gameState.scrollOffset.y = targetY
+  }
+}
+
+function focusCameraOnUnit(unit) {
+  if (!unit) return
+  const centerX = unit.x + TILE_SIZE / 2
+  const centerY = unit.y + TILE_SIZE / 2
+  focusCameraOnPoint({ x: centerX, y: centerY })
 }
 
 function dispatchMouseEvent(target, type, point, options = {}) {
@@ -284,6 +328,9 @@ class TutorialSystem {
       this.stepTitle = this.overlay.querySelector('.tutorial-title')
       this.stepText = this.overlay.querySelector('.tutorial-text')
       this.stepHint = this.overlay.querySelector('.tutorial-hint')
+      this.stepProgress = this.overlay.querySelector('.tutorial-progress')
+      this.stepProgressFill = this.overlay.querySelector('.tutorial-progress-fill')
+      this.stepProgressLabel = this.overlay.querySelector('.tutorial-progress-label')
       this.stepCount = this.overlay.querySelector('.tutorial-step-count')
       this.stepPhase = this.overlay.querySelector('.tutorial-phase')
       this.nextButton = this.overlay.querySelector('[data-tutorial-action="next"]')
@@ -352,6 +399,22 @@ class TutorialSystem {
     const hint = document.createElement('p')
     hint.className = 'tutorial-hint'
 
+    const progress = document.createElement('div')
+    progress.className = 'tutorial-progress'
+
+    const progressLabel = document.createElement('span')
+    progressLabel.className = 'tutorial-progress-label'
+
+    const progressTrack = document.createElement('div')
+    progressTrack.className = 'tutorial-progress-track'
+
+    const progressFill = document.createElement('div')
+    progressFill.className = 'tutorial-progress-fill'
+
+    progressTrack.appendChild(progressFill)
+    progress.appendChild(progressLabel)
+    progress.appendChild(progressTrack)
+
     const actions = document.createElement('div')
     actions.className = 'tutorial-actions'
 
@@ -388,6 +451,7 @@ class TutorialSystem {
     card.appendChild(title)
     card.appendChild(text)
     card.appendChild(hint)
+    card.appendChild(progress)
     card.appendChild(actions)
     overlay.appendChild(card)
 
@@ -418,6 +482,9 @@ class TutorialSystem {
     this.stepTitle = title
     this.stepText = text
     this.stepHint = hint
+    this.stepProgress = progress
+    this.stepProgressFill = progressFill
+    this.stepProgressLabel = progressLabel
     this.stepCount = stepCount
     this.stepPhase = stepPhase
     this.nextButton = nextButton
@@ -839,6 +906,7 @@ class TutorialSystem {
     if (this.stepHint) {
       this.stepHint.textContent = step.hint || ''
     }
+    this.updateStepProgress(step)
     if (this.stepCount) {
       this.stepCount.textContent = `Step ${this.stepIndex + 1} of ${this.steps.length}`
     }
@@ -968,6 +1036,48 @@ class TutorialSystem {
     }
   }
 
+  updateStepProgress(step) {
+    if (!this.stepProgress || !this.stepProgressFill || !this.stepProgressLabel) return
+    if (!step?.progress) {
+      this.stepProgress.hidden = true
+      return
+    }
+    const value = Math.max(0, Math.min(1, step.progress(this)))
+    this.stepProgress.hidden = false
+    this.stepProgressFill.style.width = `${Math.round(value * 100)}%`
+    this.stepProgressLabel.textContent = step.progressLabel || 'Progress'
+  }
+
+  trackCrewRestoration() {
+    if (this.stepState.crewRestored) return true
+    if (!this.stepState.crewSnapshot) {
+      this.stepState.crewSnapshot = getPlayerCrewSnapshot()
+      return false
+    }
+    const current = getPlayerCrewSnapshot()
+    let restored = false
+    current.forEach((crew, unitId) => {
+      const previous = this.stepState.crewSnapshot.get(unitId)
+      if (!previous) return
+      Object.keys(crew).some(role => {
+        if (previous[role] === false && crew[role] === true) {
+          restored = true
+          return true
+        }
+        return false
+      })
+    })
+    this.stepState.crewSnapshot = current
+    if (restored) {
+      this.stepState.crewRestored = true
+      if (!this.stepState.crewRestoredAnnounced) {
+        this.stepState.crewRestoredAnnounced = true
+        this.speak('Great, you completed all sub tasks of the crew system tutorial!')
+      }
+    }
+    return this.stepState.crewRestored
+  }
+
   async runDemo(step) {
     this.stopSpeech()
     if (step.demo) {
@@ -991,6 +1101,7 @@ class TutorialSystem {
       if (!this.active) return
       const done = this.stepState.completed || step.completion(this)
       this.updateContinueState(step)
+      this.updateStepProgress(step)
       if (done) {
         this.markStepCompleted()
         return
@@ -1398,6 +1509,77 @@ class TutorialSystem {
         completion: () => selectedUnits.some(unit => unit.target)
           || selectedUnits.some(unit => unit.remoteFireCommandActive)
           || (gameState.remoteControl?.fire || 0) > 0
+      },
+      {
+        id: 'crew-system',
+        title: 'Crew, Hospitals, and Ambulances',
+        text: {
+          desktop: 'Each tank has a four-person crew with HUD markers: D (Driver, blue) moves the tank, C (Commander, green) enables player control, G (Gunner, red) rotates the turret, and L (Loader, orange) lets the tank fire. When all crew are gone, the markers disappear. Build a Hospital from the Buildings tab and an Ambulance from the Units tab. Hospitals restore missing crew when tanks park on the three tiles below the hospital (cost per medic). Ambulances are selected and sent to a unit with missing crew to refill it in the field.',
+          mobile: 'Each tank has a four-person crew with HUD markers: D (Driver, blue) moves the tank, C (Commander, green) enables player control, G (Gunner, red) rotates the turret, and L (Loader, orange) lets the tank fire. When all crew are gone, the markers disappear. Build a Hospital from the Buildings tab and an Ambulance from the Units tab. Hospitals restore missing crew when tanks park on the three tiles below the hospital (cost per medic). Ambulances are selected and sent to a unit with missing crew to refill it in the field.'
+        },
+        hint: 'Restore every crew marker on the empty tank to continue.',
+        highlightSelector: '.production-button[data-building-type="hospital"]',
+        progressLabel: 'Crew recovery progress',
+        progress: (ctx) => {
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
+          const crewRestored = ctx.trackCrewRestoration()
+          if (crewRestored) return 1
+          if (ambulanceBuilt) return 2 / 3
+          if (hospitalBuilt) return 1 / 3
+          return 0
+        },
+        completion: (ctx) => {
+          const hospitalBuilt = countPlayerBuildings('hospital') > 0 || ctx.lastAction === 'building:hospital'
+          const ambulanceBuilt = countPlayerUnits('ambulance') > 0 || ctx.lastAction === 'unit:ambulance'
+          const crewRestored = ctx.trackCrewRestoration()
+          return hospitalBuilt && ambulanceBuilt && crewRestored
+        },
+        demo: async (ctx) => {
+          ensureTutorialUnits(1, 'tank')
+          const tank = findPlayerUnit('tank')
+          if (tank?.crew) {
+            ctx.stepState.crewTankId = tank.id
+            focusCameraOnUnit(tank)
+            const tankTile = getUnitTile(tank)
+            if (tankTile) {
+              const point = getCanvasPointForTile(tankTile.x, tankTile.y)
+              if (point) {
+                ctx.moveCursorToPoint(point)
+                await sleep(200)
+              }
+              await ctx.clickCanvasTile(tankTile)
+            } else {
+              await ctx.demoSelectUnit(tank)
+            }
+            await sleep(350)
+            if (window.cheatSystem?.processCheatCode) {
+              const roles = ['driver', 'commander', 'gunner', 'loader']
+              roles.forEach(role => {
+                if (tank.crew?.[role]) {
+                  window.cheatSystem.processCheatCode(role)
+                }
+              })
+            }
+            ctx.stepState.crewSnapshot = getPlayerCrewSnapshot()
+            await sleep(600)
+          }
+
+          const buildingTab = document.querySelector('.tab-button[data-tab="buildings"]')
+          if (buildingTab) {
+            await ctx.clickElement(buildingTab)
+          }
+          const hospitalButton = document.querySelector('.production-button[data-building-type="hospital"]')
+          await ctx.moveCursorToElement(hospitalButton)
+          await sleep(300)
+
+          const unitTab = document.querySelector('.tab-button[data-tab="units"]')
+          if (unitTab) {
+            await ctx.clickElement(unitTab)
+          }
+          const ambulanceButton = document.querySelector('.production-button[data-unit-type="ambulance"]')
+          await ctx.moveCursorToElement(ambulanceButton)
+        }
       },
       {
         id: 'tech-tree',
