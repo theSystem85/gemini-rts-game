@@ -62,6 +62,10 @@ import {
   calculateObstacleAvoidance,
   calculateFormationCohesion,
   calculateSteeringForces,
+  calculateFlowFieldSteering,
+  applySteeringForces,
+  updateFormationCenter,
+  clearFormation,
   STEERING_CONFIG
 } from '../../src/game/steeringBehaviors.js'
 
@@ -864,5 +868,294 @@ describe('Velocity Calculations', () => {
       expect(normalizedX).toBeCloseTo(0.6)
       expect(normalizedY).toBeCloseTo(0.8)
     })
+  })
+})
+
+describe('applySteeringForces()', () => {
+  let unit
+
+  beforeEach(() => {
+    unit = {
+      id: 'unit-1',
+      type: 'tank_v1',
+      owner: 'player1',
+      x: 500,
+      y: 500,
+      movement: {
+        velocity: { x: 1, y: 0 },
+        targetVelocity: { x: 1, y: 0 }
+      }
+    }
+  })
+
+  it('should not modify unit if unit is null', () => {
+    expect(() => applySteeringForces(null, { x: 1, y: 1 }, 1)).not.toThrow()
+  })
+
+  it('should not modify unit if steeringForce is null', () => {
+    expect(() => applySteeringForces(unit, null, 1)).not.toThrow()
+  })
+
+  it('should not modify unit if movement is missing', () => {
+    delete unit.movement
+    expect(() => applySteeringForces(unit, { x: 1, y: 1 }, 1)).not.toThrow()
+  })
+
+  it('should add steering force to target velocity with default deltaTime', () => {
+    const steeringForce = { x: 0.5, y: 0.3 }
+    const originalTargetX = unit.movement.targetVelocity.x
+    const originalTargetY = unit.movement.targetVelocity.y
+
+    applySteeringForces(unit, steeringForce)
+
+    expect(unit.movement.targetVelocity.x).toBe(originalTargetX + steeringForce.x)
+    expect(unit.movement.targetVelocity.y).toBe(originalTargetY + steeringForce.y)
+  })
+
+  it('should scale steering force by deltaTime', () => {
+    const steeringForce = { x: 1, y: 1 }
+    const deltaTime = 0.5
+    const originalTargetX = unit.movement.targetVelocity.x
+    const originalTargetY = unit.movement.targetVelocity.y
+
+    applySteeringForces(unit, steeringForce, deltaTime)
+
+    expect(unit.movement.targetVelocity.x).toBe(originalTargetX + steeringForce.x * deltaTime)
+    expect(unit.movement.targetVelocity.y).toBe(originalTargetY + steeringForce.y * deltaTime)
+  })
+
+  it('should handle negative steering forces', () => {
+    const steeringForce = { x: -1.5, y: -0.5 }
+    const deltaTime = 1
+    const originalTargetX = unit.movement.targetVelocity.x
+    const originalTargetY = unit.movement.targetVelocity.y
+
+    applySteeringForces(unit, steeringForce, deltaTime)
+
+    expect(unit.movement.targetVelocity.x).toBe(originalTargetX - 1.5)
+    expect(unit.movement.targetVelocity.y).toBe(originalTargetY - 0.5)
+  })
+
+  it('should handle zero deltaTime', () => {
+    const steeringForce = { x: 100, y: 100 }
+    const deltaTime = 0
+    const originalTargetX = unit.movement.targetVelocity.x
+    const originalTargetY = unit.movement.targetVelocity.y
+
+    applySteeringForces(unit, steeringForce, deltaTime)
+
+    // With deltaTime = 0, no force should be applied
+    expect(unit.movement.targetVelocity.x).toBe(originalTargetX)
+    expect(unit.movement.targetVelocity.y).toBe(originalTargetY)
+  })
+
+  it('should not crash if targetVelocity is missing', () => {
+    unit.movement.targetVelocity = undefined
+    expect(() => applySteeringForces(unit, { x: 1, y: 1 }, 1)).not.toThrow()
+  })
+})
+
+describe('updateFormationCenter()', () => {
+  let units
+
+  beforeEach(() => {
+    units = [
+      { id: 'unit-1', x: 100, y: 100, formationCenter: null, formationOffset: null },
+      { id: 'unit-2', x: 150, y: 150, formationCenter: null, formationOffset: null },
+      { id: 'unit-3', x: 200, y: 200, formationCenter: null, formationOffset: null },
+      { id: 'unit-4', x: 250, y: 250, formationCenter: null, formationOffset: null }
+    ]
+  })
+
+  it('should return early if units array is empty', () => {
+    expect(() => updateFormationCenter([], 10, 10)).not.toThrow()
+  })
+
+  it('should return early if units is null', () => {
+    expect(() => updateFormationCenter(null, 10, 10)).not.toThrow()
+  })
+
+  it('should set formationCenter for all units', () => {
+    const targetX = 15
+    const targetY = 20
+
+    updateFormationCenter(units, targetX, targetY)
+
+    units.forEach(unit => {
+      expect(unit.formationCenter).toBeDefined()
+      expect(unit.formationCenter.x).toBeDefined()
+      expect(unit.formationCenter.y).toBeDefined()
+    })
+  })
+
+  it('should set formationOffset for all units', () => {
+    updateFormationCenter(units, 10, 10)
+
+    units.forEach(unit => {
+      expect(unit.formationOffset).toBeDefined()
+      expect(unit.formationOffset.x).toBeDefined()
+      expect(unit.formationOffset.y).toBeDefined()
+    })
+  })
+
+  it('should calculate square formation based on unit count', () => {
+    // With 4 units, should form a 2x2 square
+    updateFormationCenter(units, 10, 10)
+
+    // Check that units are spread out in a grid pattern
+    const offsets = units.map(u => u.formationOffset)
+
+    // Verify all offsets are distinct combinations
+    const uniqueOffsets = new Set(offsets.map(o => `${o.x},${o.y}`))
+    expect(uniqueOffsets.size).toBe(4)
+  })
+
+  it('should create larger formation for more units', () => {
+    // Create 9 units for a 3x3 formation
+    const nineUnits = Array.from({ length: 9 }, (_, i) => ({
+      id: `unit-${i}`,
+      x: 100 + i * 50,
+      y: 100 + i * 50,
+      formationCenter: null,
+      formationOffset: null
+    }))
+
+    updateFormationCenter(nineUnits, 10, 10)
+
+    // All units should have formation data
+    nineUnits.forEach(unit => {
+      expect(unit.formationCenter).toBeDefined()
+      expect(unit.formationOffset).toBeDefined()
+    })
+
+    // First unit and last unit should have different positions
+    expect(nineUnits[0].formationOffset.x).not.toBe(nineUnits[8].formationOffset.x)
+    expect(nineUnits[0].formationOffset.y).not.toBe(nineUnits[8].formationOffset.y)
+  })
+
+  it('should skip null units in array', () => {
+    const unitsWithNull = [
+      { id: 'unit-1', formationCenter: null, formationOffset: null },
+      null,
+      { id: 'unit-3', formationCenter: null, formationOffset: null }
+    ]
+
+    expect(() => updateFormationCenter(unitsWithNull, 10, 10)).not.toThrow()
+
+    // Valid units should have formation set
+    expect(unitsWithNull[0].formationCenter).toBeDefined()
+    expect(unitsWithNull[2].formationCenter).toBeDefined()
+  })
+
+  it('should handle single unit formation', () => {
+    const singleUnit = [{ id: 'unit-1', formationCenter: null, formationOffset: null }]
+
+    updateFormationCenter(singleUnit, 10, 10)
+
+    expect(singleUnit[0].formationCenter).toBeDefined()
+    expect(singleUnit[0].formationOffset).toBeDefined()
+    // Single unit should be at center of formation
+    expect(singleUnit[0].formationOffset.x).toBe(0)
+  })
+})
+
+describe('clearFormation()', () => {
+  let units
+
+  beforeEach(() => {
+    units = [
+      { id: 'unit-1', formationCenter: { x: 100, y: 100 }, formationOffset: { x: 10, y: 0 } },
+      { id: 'unit-2', formationCenter: { x: 100, y: 100 }, formationOffset: { x: -10, y: 0 } },
+      { id: 'unit-3', formationCenter: { x: 100, y: 100 }, formationOffset: { x: 0, y: 10 } }
+    ]
+  })
+
+  it('should return early if units is null', () => {
+    expect(() => clearFormation(null)).not.toThrow()
+  })
+
+  it('should return early if units is undefined', () => {
+    expect(() => clearFormation(undefined)).not.toThrow()
+  })
+
+  it('should clear formationCenter for all units', () => {
+    clearFormation(units)
+
+    units.forEach(unit => {
+      expect(unit.formationCenter).toBeNull()
+    })
+  })
+
+  it('should clear formationOffset for all units', () => {
+    clearFormation(units)
+
+    units.forEach(unit => {
+      expect(unit.formationOffset).toBeNull()
+    })
+  })
+
+  it('should handle units that already have null formation data', () => {
+    const unitsNoFormation = [
+      { id: 'unit-1', formationCenter: null, formationOffset: null },
+      { id: 'unit-2', formationCenter: null, formationOffset: null }
+    ]
+
+    expect(() => clearFormation(unitsNoFormation)).not.toThrow()
+
+    unitsNoFormation.forEach(unit => {
+      expect(unit.formationCenter).toBeNull()
+      expect(unit.formationOffset).toBeNull()
+    })
+  })
+
+  it('should skip null entries in units array', () => {
+    const unitsWithNull = [
+      { id: 'unit-1', formationCenter: { x: 100, y: 100 }, formationOffset: { x: 10, y: 0 } },
+      null,
+      { id: 'unit-3', formationCenter: { x: 100, y: 100 }, formationOffset: { x: 0, y: 10 } }
+    ]
+
+    expect(() => clearFormation(unitsWithNull)).not.toThrow()
+
+    expect(unitsWithNull[0].formationCenter).toBeNull()
+    expect(unitsWithNull[2].formationCenter).toBeNull()
+  })
+
+  it('should work with empty array', () => {
+    expect(() => clearFormation([])).not.toThrow()
+  })
+})
+
+describe('calculateFlowFieldSteering()', () => {
+  it('should return zero vector when unit is null', () => {
+    const result = calculateFlowFieldSteering(null, [], null)
+
+    expect(result.x).toBe(0)
+    expect(result.y).toBe(0)
+  })
+
+  it('should return zero vector when unit has no moveTarget', () => {
+    const unit = { id: 'unit-1', moveTarget: null }
+
+    const result = calculateFlowFieldSteering(unit, [], null)
+
+    expect(result.x).toBe(0)
+    expect(result.y).toBe(0)
+  })
+
+  it('should return a vector when unit has moveTarget', () => {
+    const unit = {
+      id: 'unit-1',
+      x: 100,
+      y: 100,
+      moveTarget: { x: 200, y: 200 }
+    }
+
+    // This will call getFlowFieldManager which may return null
+    const result = calculateFlowFieldSteering(unit, [], null)
+
+    // With no flow field manager, should return zero
+    expect(result.x).toBe(0)
+    expect(result.y).toBe(0)
   })
 })

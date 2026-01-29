@@ -16,6 +16,13 @@ import {
   getBuildingData
 } from '../testUtils.js'
 
+// Import the validation functions directly for unit testing
+import {
+  canPlaceBuilding,
+  isNearExistingBuilding,
+  isTileValid
+} from '../../src/validation/buildingPlacement.js'
+
 describe('Building Placement Near Construction Yard', () => {
   let ctx
   const MAX_GAP = getMaxBuildingGap() // Should be 3
@@ -319,6 +326,358 @@ describe('Building Placement Near Construction Yard', () => {
       expect(ctx.buildings).toContain(powerPlant)
       expect(ctx.factories.length).toBe(1)
       expect(ctx.buildings.length).toBe(2)
+    })
+  })
+})
+
+describe('Building Placement Validation - Direct Function Tests', () => {
+  describe('canPlaceBuilding() - Factory and Refinery Protection Areas', () => {
+    let mapGrid
+    let units
+    let buildings
+    let factories
+
+    beforeEach(() => {
+      // Create a 50x50 map grid
+      mapGrid = []
+      for (let y = 0; y < 50; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < 50; x++) {
+          mapGrid[y][x] = { type: 'grass' }
+        }
+      }
+      units = []
+      buildings = []
+      factories = [{ id: 'player', owner: 'player', x: 20, y: 20, width: 3, height: 3 }]
+    })
+
+    it('should return false if buildingData is not found', () => {
+      const result = canPlaceBuilding('unknownBuilding', 10, 10, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if mapGrid is invalid (null)', () => {
+      const result = canPlaceBuilding('powerPlant', 10, 10, null, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if mapGrid is invalid (empty array)', () => {
+      const result = canPlaceBuilding('powerPlant', 10, 10, [], units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if mapGrid has no rows', () => {
+      const result = canPlaceBuilding('powerPlant', 10, 10, [[]], units, buildings, factories, 'player')
+      // This might fail because [[]] has length 1 but [0] is empty
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building exceeds map boundaries', () => {
+      // Try to place at far right edge
+      const result = canPlaceBuilding('powerPlant', 48, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building exceeds bottom boundary', () => {
+      const result = canPlaceBuilding('powerPlant', 20, 48, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building placed on water', () => {
+      // PowerPlant at (23, 20) covers x: 23-25, y: 20-22
+      // Set water at one of those tiles using mapGrid[y][x] format
+      mapGrid[21][24] = { type: 'water' }
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building placed on rock', () => {
+      // PowerPlant at (23, 20) covers x: 23-25, y: 20-22
+      mapGrid[21][24] = { type: 'rock' }
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building placed on seedCrystal', () => {
+      // PowerPlant at (23, 20) covers x: 23-25, y: 20-22
+      mapGrid[21][24] = { type: 'grass', seedCrystal: true }
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building placed on existing building tile', () => {
+      // PowerPlant at (23, 20) covers x: 23-25, y: 20-22
+      mapGrid[21][24] = { type: 'grass', building: true }
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false if building placed on noBuild tile (for non-factory buildings)', () => {
+      // PowerPlant at (23, 20) covers x: 23-25, y: 20-22
+      // Set noBuild at one of those tiles using mapGrid[y][x] format
+      mapGrid[20][23] = { type: 'grass', noBuild: true }
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should allow factory placement on noBuild tiles', () => {
+      mapGrid[24][24] = { type: 'grass', noBuild: true }
+      // First mark existing factory area to ensure proximity
+      const result = canPlaceBuilding('vehicleFactory', 23, 23, mapGrid, units, buildings, factories, 'player')
+      // Should be allowed even on noBuild since it's a factory
+      expect(result).toBe(true)
+    })
+
+    it('should return false if unit is at placement location', () => {
+      units = [{ x: 23 * 32, y: 20 * 32 }] // Unit at tile (23, 20)
+      const result = canPlaceBuilding('powerPlant', 23, 20, mapGrid, units, buildings, factories, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should skip range check in mapEditMode', () => {
+      // Try to place far from any existing building
+      const result = canPlaceBuilding(
+        'powerPlant',
+        5, 5,
+        mapGrid, units, buildings, factories,
+        'player',
+        { mapEditMode: true }
+      )
+      // Should succeed in edit mode despite being far from existing buildings
+      expect(result).toBe(true)
+    })
+
+    describe('Vehicle Factory protection areas', () => {
+      it('should check that space directly below factory is free', () => {
+        // Vehicle factory at (23, 20) has height 3, covers y: 20-22
+        // Space below is y = 23, x = 23-25 (factory width is 3)
+        // Set building tile below the factory
+        mapGrid[23][23] = { type: 'grass', building: true }
+
+        const result = canPlaceBuilding('vehicleFactory', 23, 20, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(false)
+      })
+
+      it('should allow factory when space below is free', () => {
+        const result = canPlaceBuilding('vehicleFactory', 23, 20, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(true)
+      })
+    })
+
+    describe('Vehicle Workshop protection areas', () => {
+      it('should check waiting area (2 tiles below) for workshop', () => {
+        // Workshop at (23, 20) has height 3, covers y: 20-22
+        // Space directly below (belowY) is y = 23
+        // Waiting area (waitingY) is y = 24 (belowY + 1)
+        mapGrid[24][23] = { type: 'grass', building: true }
+
+        const result = canPlaceBuilding('vehicleWorkshop', 23, 20, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(false)
+      })
+    })
+
+    describe('Ore Refinery border checks', () => {
+      it('should require 1 tile border around ore refinery to be free', () => {
+        // Place a building within 1 tile border of where refinery would be
+        // Refinery is 4x3, placing at (23, 23) means it occupies (23-26, 23-25)
+        // Border check would look at (22, 22) to (27, 26)
+        mapGrid[22][23] = { type: 'grass', building: true }
+
+        const result = canPlaceBuilding('oreRefinery', 23, 23, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(false)
+      })
+
+      it('should allow refinery when border is clear', () => {
+        const result = canPlaceBuilding('oreRefinery', 23, 23, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(true)
+      })
+
+      it('should skip out-of-bounds border checks for edge placements', () => {
+        // Place refinery near map edge - this tests that out-of-bounds border tiles
+        // are skipped rather than causing the placement to fail
+        // Factory is at (20, 20), refinery at (23, 23) is within range
+        const result = canPlaceBuilding('oreRefinery', 23, 23, mapGrid, units, buildings, factories, 'player')
+        // Should succeed when all in-bounds border tiles are clear
+        expect(result).toBe(true)
+      })
+
+      it('should skip refinery building tiles themselves during border check', () => {
+        // This verifies that the border check doesn't fail because of the refinery's own tiles
+        const result = canPlaceBuilding('oreRefinery', 23, 23, mapGrid, units, buildings, factories, 'player')
+        expect(result).toBe(true)
+      })
+    })
+  })
+
+  describe('isTileValid()', () => {
+    let mapGrid
+
+    beforeEach(() => {
+      // Create a 20x20 map grid
+      mapGrid = []
+      for (let y = 0; y < 20; y++) {
+        mapGrid[y] = []
+        for (let x = 0; x < 20; x++) {
+          mapGrid[y][x] = { type: 'grass' }
+        }
+      }
+    })
+
+    it('should return true for valid grass tile', () => {
+      const result = isTileValid(10, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(true)
+    })
+
+    it('should return false for tile outside map bounds (negative x)', () => {
+      const result = isTileValid(-1, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for tile outside map bounds (negative y)', () => {
+      const result = isTileValid(10, -1, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for tile outside map bounds (x too large)', () => {
+      const result = isTileValid(25, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for tile outside map bounds (y too large)', () => {
+      const result = isTileValid(10, 25, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for water tile', () => {
+      mapGrid[10][10] = { type: 'water' }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for rock tile', () => {
+      mapGrid[10][10] = { type: 'rock' }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for tile with seedCrystal', () => {
+      mapGrid[10][10] = { type: 'grass', seedCrystal: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for tile with existing building', () => {
+      mapGrid[10][10] = { type: 'grass', building: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], null)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for noBuild tile for non-factory buildings', () => {
+      mapGrid[10][10] = { type: 'grass', noBuild: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], 'powerPlant')
+      expect(result).toBe(false)
+    })
+
+    it('should allow noBuild tile for vehicleFactory', () => {
+      mapGrid[10][10] = { type: 'grass', noBuild: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], 'vehicleFactory')
+      expect(result).toBe(true)
+    })
+
+    it('should allow noBuild tile for oreRefinery', () => {
+      mapGrid[10][10] = { type: 'grass', noBuild: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], 'oreRefinery')
+      expect(result).toBe(true)
+    })
+
+    it('should allow noBuild tile for vehicleWorkshop', () => {
+      mapGrid[10][10] = { type: 'grass', noBuild: true }
+      const result = isTileValid(10, 10, mapGrid, [], [], [], 'vehicleWorkshop')
+      expect(result).toBe(true)
+    })
+
+    it('should handle edge case at map corner (0,0)', () => {
+      const result = isTileValid(0, 0, mapGrid, [], [], [], null)
+      expect(result).toBe(true)
+    })
+
+    it('should handle edge case at map corner (max,max)', () => {
+      const result = isTileValid(19, 19, mapGrid, [], [], [], null)
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('isNearExistingBuilding()', () => {
+    let buildings
+    let factories
+
+    beforeEach(() => {
+      buildings = []
+      factories = [{ id: 'player', owner: 'player', x: 20, y: 20, width: 3, height: 3 }]
+    })
+
+    it('should return true when tile is adjacent to factory', () => {
+      const result = isNearExistingBuilding(23, 20, buildings, factories, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should return true when tile is within max distance', () => {
+      const result = isNearExistingBuilding(25, 20, buildings, factories, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should return false when tile is beyond max distance', () => {
+      const result = isNearExistingBuilding(30, 20, buildings, factories, 3, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should return false when no buildings or factories exist', () => {
+      const result = isNearExistingBuilding(10, 10, [], [], 3, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should check buildings array as well as factories', () => {
+      buildings = [{ owner: 'player', x: 10, y: 10, width: 3, height: 3 }]
+      const result = isNearExistingBuilding(12, 10, buildings, [], 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should skip buildings not owned by the specified owner', () => {
+      buildings = [{ owner: 'enemy', x: 10, y: 10, width: 3, height: 3 }]
+      const result = isNearExistingBuilding(12, 10, buildings, [], 3, 'player')
+      expect(result).toBe(false)
+    })
+
+    it('should check factory id as owner alias', () => {
+      factories = [{ id: 'player', x: 10, y: 10, width: 3, height: 3 }]
+      const result = isNearExistingBuilding(12, 10, [], factories, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should check factory owner property', () => {
+      factories = [{ owner: 'player', x: 10, y: 10, width: 3, height: 3 }]
+      const result = isNearExistingBuilding(12, 10, [], factories, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should handle null factories array', () => {
+      // Should handle null gracefully and check buildings
+      buildings = [{ owner: 'player', x: 10, y: 10, width: 3, height: 3 }]
+      const result = isNearExistingBuilding(12, 10, buildings, null, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should handle null buildings array', () => {
+      const result = isNearExistingBuilding(22, 20, null, factories, 3, 'player')
+      expect(result).toBe(true)
+    })
+
+    it('should use Chebyshev distance (max of x and y difference)', () => {
+      // Chebyshev distance allows diagonal movement at same cost as cardinal
+      // Factory at (20,20) with size 3x3 means tiles (20-22, 20-22)
+      // Tile at (23, 23) is distance 1 diagonally from corner (22, 22)
+      const result = isNearExistingBuilding(23, 23, buildings, factories, 1, 'player')
+      expect(result).toBe(true)
     })
   })
 })

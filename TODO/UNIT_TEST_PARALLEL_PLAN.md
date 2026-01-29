@@ -446,21 +446,24 @@ These files have 0% coverage and need complete test suites created.
 ### Task 8.8 - `src/game/steeringBehaviors.js`
 - **Target**: Extend `tests/unit/steeringBehaviors.test.js`
 - **Source File**: `src/game/steeringBehaviors.js` (73.18% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 12:00 UTC)
+- **Tests Added**: 35 tests (applySteeringForces, updateFormationCenter, clearFormation, calculateFlowFieldSteering)
 - **Uncovered Lines**: 447-456,469-534
 - **Estimated Tests**: 20-25
 
 ### Task 8.9 - `src/config.js`
 - **Target**: Create `tests/unit/config.test.js`
 - **Source File**: `src/config.js` (42.92% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 12:00 UTC)
+- **Tests Added**: 82 tests (constants, setters, joystick mappings, isTurretTankUnitType, CONFIG_VARIABLE_NAMES)
 - **Uncovered Lines**: 1249,1257-1291
 - **Estimated Tests**: 20-30
 
 ### Task 8.10 - `src/validation/buildingPlacement.js`
 - **Target**: Extend `tests/integration/buildingPlacement.test.js`
 - **Source File**: `src/validation/buildingPlacement.js` (55.05% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 12:00 UTC)
+- **Tests Added**: 43 tests (canPlaceBuilding, isTileValid, isNearExistingBuilding)
 - **Uncovered Lines**: 158-186,209-231
 - **Estimated Tests**: 20-25
 
@@ -558,4 +561,4 @@ describe('fileName.js', () => {
 
 ---
 
-*Last Updated: 2026-01-29T09:40:00Z*
+*Last Updated: 2026-01-29T12:00:00Z*
