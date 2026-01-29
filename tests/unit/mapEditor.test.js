@@ -779,6 +779,35 @@ describe('mapEditor - Tile Painting', () => {
     expect(tile.ore).toBe(false)
   })
 
+  it('notifies tile updates and schedules renders for painted tiles', () => {
+    const notifier = vi.fn()
+    const scheduler = vi.fn()
+    const textureManager = {
+      tileVariationMap: {},
+      tileTextureCache: { land: [1] },
+      grassTileMetadata: { passableCount: 1, decorativeCount: 0, impassableCount: 0 },
+      getTileVariation: vi.fn(() => 0)
+    }
+
+    mapEditor.registerMapEditorRendering(() => textureManager, notifier)
+    mapEditor.setMapEditorRenderScheduler(scheduler)
+    mapEditor.setTileBrushById('grass')
+
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = (cb) => {
+      cb()
+      return 1
+    }
+
+    mapEditor.handlePointerDown(1, 1, { button: 0 })
+
+    expect(notifier).toHaveBeenCalledWith(gameState.mapGrid, 1, 1)
+    expect(scheduler).toHaveBeenCalled()
+    expect(textureManager.tileVariationMap).toHaveProperty('land_1_1')
+
+    globalThis.requestAnimationFrame = originalRaf
+  })
+
   it('should erase with shift + right-click', () => {
     gameState.mapGrid[5][5].type = 'rock'
 

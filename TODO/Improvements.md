@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Extend unit tests for Task 16.1-16.10 coverage targets (config, game setup, map editor, retreat, benchmark runner, ambulance/building systems, game state manager, hospital logic, mine system).
 - [x] Add unit tests for hospitalLogic crew healing and ambulance refill behavior.
 - [x] Add unit tests for helipadLogic.js covering fuel, ammo, landing, and resupply behavior.
 - [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.

@@ -827,6 +827,41 @@ describe('Building System', () => {
       expect(turret.muzzleFlashStartTime).toBe(now)
     })
 
+    it('fires artillery turret projectiles using stored target positions', () => {
+      const now = 45000
+      vi.spyOn(performance, 'now').mockReturnValue(now)
+
+      const turret = createBuilding('artilleryTurret', 10, 10)
+      turret.owner = 'player'
+      turret.fireCooldown = 0
+      turret.lastShotTime = 0
+      turret.currentTargetPosition = {
+        x: (turret.x + 6) * TILE_SIZE,
+        y: (turret.y + 4) * TILE_SIZE
+      }
+      gameState.buildings.push(turret)
+
+      const unit = {
+        x: (turret.x + 5) * TILE_SIZE,
+        y: (turret.y + 3) * TILE_SIZE,
+        owner: 'enemy',
+        health: 100
+      }
+      units.push(unit)
+
+      const centerX = (turret.x + turret.width / 2) * TILE_SIZE
+      const centerY = (turret.y + turret.height / 2) * TILE_SIZE
+      const unitCenterX = unit.x + TILE_SIZE / 2
+      const unitCenterY = unit.y + TILE_SIZE / 2
+      turret.turretDirection = Math.atan2(unitCenterY - centerY, unitCenterX - centerX)
+
+      updateBuildings(gameState, units, bullets, factories, mapGrid, 16)
+
+      expect(bullets).toHaveLength(1)
+      expect(bullets[0].parabolic).toBe(true)
+      expect(bullets[0].targetPosition).toEqual(turret.currentTargetPosition)
+    })
+
     it('blocks rocket turret firing when power is negative', () => {
       const now = 50000
       vi.spyOn(performance, 'now').mockReturnValue(now)

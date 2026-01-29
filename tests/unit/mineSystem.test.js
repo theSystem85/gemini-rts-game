@@ -27,6 +27,7 @@ import {
   isFriendlyMineBlocking,
   rebuildMineLookup
 } from '../../src/game/mineSystem.js'
+import { broadcastBuildingDamage } from '../../src/network/gameCommandSync.js'
 import {
   MINE_HEALTH,
   MINE_EXPLOSION_RADIUS,
@@ -275,12 +276,18 @@ describe('mineSystem', () => {
         width: 1,
         height: 1,
         health: 500,
-        maxHealth: 500
+        maxHealth: 500,
+        id: 'building-1'
       }
 
       detonateMine(mine, [], [building])
 
       expect(building.health).toBeLessThan(500)
+      expect(broadcastBuildingDamage).toHaveBeenCalledWith(
+        'building-1',
+        expect.any(Number),
+        building.health
+      )
     })
 
     it('should not throw for null mine', () => {

@@ -450,5 +450,49 @@ describe('retreat behavior', () => {
 
       expect(unit.isRetreating).toBe(false)
     })
+
+    it('disables firing when retreat target is out of range', () => {
+      const unit = {
+        isRetreating: true,
+        x: 0,
+        y: 0,
+        retreatTarget: { x: 5, y: 5 },
+        direction: 0,
+        canFire: true,
+        target: { x: 20 * TILE_SIZE, y: 20 * TILE_SIZE, health: 100, tileX: 20, tileY: 20 }
+      }
+
+      updateRetreatBehavior(unit, performance.now(), mapGrid, [])
+
+      expect(unit.canFire).toBe(false)
+    })
+
+    it('clears retreat state when stuck for too long', () => {
+      const now = 5000
+      const unit = {
+        id: 'tank-1',
+        isRetreating: true,
+        x: 0,
+        y: 0,
+        retreatTarget: { x: 5, y: 5 },
+        direction: 0,
+        canAccelerate: true,
+        retreatStuckDetection: {
+          lastPosition: { x: 0, y: 0 },
+          stuckTime: 1500,
+          lastCheck: now - 2000
+        },
+        movement: {
+          isMoving: true,
+          targetVelocity: { x: 1, y: 1 }
+        }
+      }
+
+      updateRetreatBehavior(unit, now, mapGrid, [])
+
+      expect(unit.isRetreating).toBe(false)
+      expect(unit.retreatTarget).toBe(null)
+      expect(unit.retreatStuckDetection).toBe(null)
+    })
   })
 })
