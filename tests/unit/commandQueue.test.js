@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { processCommandQueues } from '../../src/game/commandQueue.js'
+import { startMineDeployment } from '../../src/game/mineLayerBehavior.js'
+import { safeSweeperDetonation, getMineAtTile } from '../../src/game/mineSystem.js'
+import { activateSweepingMode } from '../../src/game/mineSweeperBehavior.js'
+import { playSound } from '../../src/sound.js'
 
 // Mock all dependencies
 vi.mock('../../src/game/mineLayerBehavior.js', () => ({
@@ -281,6 +285,118 @@ describe('commandQueue', () => {
       ]
 
       expect(() => processCommandQueues(units, mapGrid, mockUnitCommands)).not.toThrow()
+    })
+
+    it('moves to mine deployment tile when deploying mine', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'mineLayer',
+          deployingMine: false,
+          commandQueue: [{ type: 'deployMine', x: 2, y: 3 }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(mockUnitCommands.handleMovementCommand).toHaveBeenCalledWith(
+        [units[0]],
+        2 * 32 + 16,
+        3 * 32 + 16,
+        mapGrid,
+        true
+      )
+    })
+
+    it('starts mine deployment when at destination', () => {
+      vi.spyOn(performance, 'now').mockReturnValue(1234)
+      const units = [
+        {
+          id: 'unit1',
+          type: 'mineLayer',
+          deployingMine: false,
+          x: 2 * 32,
+          y: 3 * 32,
+          path: [],
+          moveTarget: null,
+          currentCommand: { type: 'deployMine', x: 2, y: 3 },
+          commandQueue: []
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(startMineDeployment).toHaveBeenCalledWith(units[0], 2, 3, 1234)
+    })
+
+    it('clears minefield tracking when deployment completes', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'mineLayer',
+          deploymentCompleted: true,
+          currentCommand: { type: 'deployMine', x: 2, y: 3, areaFieldId: 'field-1' },
+          commandQueue: [],
+          pendingMineFieldDeployments: {
+            'field-1': { remaining: 1, notified: false }
+          }
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(playSound).toHaveBeenCalledWith(
+        'The_mine_field_has_been_deployed_and_armed',
+        1.0,
+        0,
+        true
+      )
+      expect(units[0].pendingMineFieldDeployments['field-1']).toBeUndefined()
+    })
+
+    it('initiates sweep movement and activates sweeping mode', () => {
+      const units = [
+        {
+          id: 'unit1',
+          type: 'mineSweeper',
+          sweeping: false,
+          commandQueue: [{ type: 'sweepArea', path: [{ x: 4, y: 2 }] }]
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands)
+
+      expect(activateSweepingMode).toHaveBeenCalledWith(units[0])
+      expect(units[0].sweepingOverrideMovement).toBe(true)
+      expect(units[0].moveTarget).toEqual({ x: 4, y: 2 })
+      expect(units[0].path).toEqual([{ x: 4, y: 2 }])
+    })
+
+    it('detonates mines and completes sweep action', () => {
+      vi.mocked(getMineAtTile).mockReturnValue({ id: 'mine-1' })
+      const units = [
+        {
+          id: 'unit1',
+          type: 'mineSweeper',
+          x: 2 * 32,
+          y: 2 * 32,
+          path: [],
+          moveTarget: null,
+          commandQueue: [],
+          currentCommand: { type: 'sweepArea', path: [{ x: 2, y: 2 }] }
+        }
+      ]
+
+      processCommandQueues(units, mapGrid, mockUnitCommands, [])
+
+      expect(safeSweeperDetonation).toHaveBeenCalled()
+      expect(units[0].currentCommand).toBe(null)
+      expect(playSound).toHaveBeenCalledWith(
+        'AllMinesOnTheFieldAreDisarmed',
+        1.0,
+        0,
+        true
+      )
     })
   })
 })
