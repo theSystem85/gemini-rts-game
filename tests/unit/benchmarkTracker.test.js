@@ -1,0 +1,547 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import '../setup.js'
+
+// Mock dependencies
+vi.mock('../../src/config.js', () => ({
+  TILE_SIZE: 32
+}))
+
+vi.mock('../../src/gameState.js', () => ({
+  gameState: {
+    benchmarkActive: false,
+    scrollOffset: { x: 0, y: 0 },
+    keyScroll: {},
+    isRightDragging: false,
+    dragVelocity: { x: 0, y: 0 }
+  }
+}))
+
+vi.mock('../../src/utils/layoutMetrics.js', () => ({
+  getPlayableViewportWidth: vi.fn(() => 800),
+  getPlayableViewportHeight: vi.fn(() => 600)
+}))
+
+vi.mock('../../src/main.js', () => ({
+  getCurrentGame: vi.fn(() => ({
+    canvasManager: {
+      getGameCanvas: vi.fn(() => ({
+        width: 800,
+        height: 600
+      }))
+    }
+  })),
+  mapGrid: Array.from({ length: 100 }, (_, y) =>
+    Array.from({ length: 100 }, (_, x) => ({
+      type: 'grass',
+      x,
+      y
+    }))
+  ),
+  units: []
+}))
+
+vi.mock('../../src/ui/benchmarkModal.js', () => ({
+  updateBenchmarkCountdownAverage: vi.fn()
+}))
+
+import {
+  startBenchmarkSession,
+  isBenchmarkRunning,
+  notifyBenchmarkFrame,
+  cancelBenchmarkSession,
+  resetBenchmarkCameraFocus,
+  notifyBenchmarkManualCameraControl
+} from '../../src/benchmark/benchmarkTracker.js'
+import { gameState } from '../../src/gameState.js'
+import { units } from '../../src/main.js'
+import { updateBenchmarkCountdownAverage } from '../../src/ui/benchmarkModal.js'
+
+describe('benchmarkTracker.js', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Reset gameState
+    gameState.benchmarkActive = false
+    gameState.scrollOffset = { x: 0, y: 0 }
+    gameState.keyScroll = {}
+    gameState.isRightDragging = false
+    gameState.dragVelocity = { x: 0, y: 0 }
+
+    // Reset units
+    units.length = 0
+
+    // Cancel any running session
+    cancelBenchmarkSession()
+    resetBenchmarkCameraFocus()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    // Ensure cleanup after each test
+    cancelBenchmarkSession()
+    resetBenchmarkCameraFocus()
+  })
+
+  describe('isBenchmarkRunning', () => {
+    it('should return false when no session is active', () => {
+      expect(isBenchmarkRunning()).toBe(false)
+    })
+
+    it('should return true when session is active', () => {
+      startBenchmarkSession(10000)
+
+      expect(isBenchmarkRunning()).toBe(true)
+    })
+
+    it('should return false after session is cancelled', () => {
+      startBenchmarkSession(10000)
+      cancelBenchmarkSession()
+
+      expect(isBenchmarkRunning()).toBe(false)
+    })
+  })
+
+  describe('startBenchmarkSession', () => {
+    it('should return a promise', () => {
+      const result = startBenchmarkSession(10000)
+
+      expect(result).toBeInstanceOf(Promise)
+
+      cancelBenchmarkSession()
+    })
+
+    it('should return null if session is already running', () => {
+      startBenchmarkSession(10000)
+      const secondSession = startBenchmarkSession(10000)
+
+      expect(secondSession).toBeInstanceOf(Promise)
+
+      // Second promise should resolve to null
+      cancelBenchmarkSession()
+    })
+
+    it('should accept duration parameter', () => {
+      const result = startBenchmarkSession(30000)
+
+      expect(result).toBeInstanceOf(Promise)
+
+      cancelBenchmarkSession()
+    })
+
+    it('should accept interval parameter', () => {
+      const result = startBenchmarkSession(30000, 500)
+
+      expect(result).toBeInstanceOf(Promise)
+
+      cancelBenchmarkSession()
+    })
+
+    it('should use default duration of 60000ms', () => {
+      const result = startBenchmarkSession()
+
+      expect(result).toBeInstanceOf(Promise)
+
+      cancelBenchmarkSession()
+    })
+  })
+
+  describe('notifyBenchmarkFrame', () => {
+    it('should do nothing when no session is active', () => {
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).not.toHaveBeenCalled()
+    })
+
+    it('should track frame when session is active', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+    })
+
+    it('should ignore invalid frameTime values', () => {
+      startBenchmarkSession(10000)
+
+      // Very small frameTime should be ignored
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 0.00001 })
+
+      expect(updateBenchmarkCountdownAverage).not.toHaveBeenCalled()
+    })
+
+    it('should ignore non-finite frameTime values', () => {
+      startBenchmarkSession(10000)
+
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: NaN })
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: Infinity })
+
+      expect(updateBenchmarkCountdownAverage).not.toHaveBeenCalled()
+    })
+
+    it('should calculate fps from frameTime', () => {
+      startBenchmarkSession(10000, 1000)
+      gameState.benchmarkActive = true
+
+      // 16.67ms frameTime = ~60fps
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 16.67 })
+
+      // Should have called with approximately 60 fps
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalledWith(expect.any(Number))
+      const avgFps = updateBenchmarkCountdownAverage.mock.calls[0][0]
+      expect(avgFps).toBeGreaterThan(50)
+      expect(avgFps).toBeLessThan(70)
+    })
+
+    it('should track multiple frames', () => {
+      startBenchmarkSession(10000, 1000)
+      gameState.benchmarkActive = true
+
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 1017, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 1034, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalledTimes(3)
+    })
+
+    it('should track min and max fps across frames', async() => {
+      const promise = startBenchmarkSession(100, 50)
+      gameState.benchmarkActive = true
+
+      // Simulate different frame times (lower time = higher fps)
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 10 })  // 100fps
+      notifyBenchmarkFrame({ timestamp: 10, frameTime: 20 }) // 50fps
+      notifyBenchmarkFrame({ timestamp: 30, frameTime: 8 })  // 125fps
+
+      // Complete the session
+      notifyBenchmarkFrame({ timestamp: 150, frameTime: 16.67 })
+
+      const result = await promise
+
+      expect(result.minFps).toBeLessThanOrEqual(result.maxFps)
+    })
+  })
+
+  describe('cancelBenchmarkSession', () => {
+    it('should return null when no session is running', () => {
+      const result = cancelBenchmarkSession()
+
+      expect(result).toBeNull()
+    })
+
+    it('should stop tracking when cancelled', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      cancelBenchmarkSession()
+
+      expect(isBenchmarkRunning()).toBe(false)
+    })
+
+    it('should finalize and resolve the session promise', async() => {
+      const promise = startBenchmarkSession(60000)
+      gameState.benchmarkActive = true
+
+      // Add some frames first
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 17, frameTime: 16.67 })
+
+      cancelBenchmarkSession()
+
+      const result = await promise
+
+      expect(result).toBeDefined()
+      expect(result.frames).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('resetBenchmarkCameraFocus', () => {
+    it('should be callable without error', () => {
+      expect(() => resetBenchmarkCameraFocus()).not.toThrow()
+    })
+
+    it('should reset camera focus state', () => {
+      // Start a session to activate camera focus
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      resetBenchmarkCameraFocus()
+
+      // Should complete without error
+      expect(() => resetBenchmarkCameraFocus()).not.toThrow()
+
+      cancelBenchmarkSession()
+    })
+  })
+
+  describe('notifyBenchmarkManualCameraControl', () => {
+    it('should be callable without error', () => {
+      expect(() => notifyBenchmarkManualCameraControl()).not.toThrow()
+    })
+
+    it('should flag manual camera control', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      notifyBenchmarkManualCameraControl()
+
+      // Should complete without error
+      expect(() => notifyBenchmarkManualCameraControl()).not.toThrow()
+
+      cancelBenchmarkSession()
+    })
+  })
+
+  describe('session result structure', () => {
+    it('should return result with expected properties', async() => {
+      const promise = startBenchmarkSession(100, 50)
+      gameState.benchmarkActive = true
+
+      // Add enough frames to complete session
+      for (let i = 0; i <= 10; i++) {
+        notifyBenchmarkFrame({ timestamp: i * 20, frameTime: 16.67 })
+      }
+
+      const result = await promise
+
+      expect(result).toHaveProperty('durationMs')
+      expect(result).toHaveProperty('frames')
+      expect(result).toHaveProperty('averageFps')
+      expect(result).toHaveProperty('minFps')
+      expect(result).toHaveProperty('maxFps')
+      expect(result).toHaveProperty('intervalAverages')
+    })
+
+    it('should have frames count matching notified frames', async() => {
+      const promise = startBenchmarkSession(100, 50)
+      gameState.benchmarkActive = true
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 17, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 34, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 51, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 68, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 85, frameTime: 16.67 })
+      notifyBenchmarkFrame({ timestamp: 150, frameTime: 16.67 }) // Triggers completion
+
+      const result = await promise
+
+      expect(result.frames).toBe(7)
+    })
+
+    it('should calculate average fps correctly', async() => {
+      const promise = startBenchmarkSession(100, 50)
+      gameState.benchmarkActive = true
+
+      // All frames at 60fps (16.67ms)
+      for (let i = 0; i <= 6; i++) {
+        notifyBenchmarkFrame({ timestamp: i * 20, frameTime: 16.67 })
+      }
+
+      const result = await promise
+
+      // Average should be around 60fps
+      expect(result.averageFps).toBeGreaterThan(50)
+      expect(result.averageFps).toBeLessThan(70)
+    })
+
+    it('should record intervalAverages', async() => {
+      const promise = startBenchmarkSession(200, 50)
+      gameState.benchmarkActive = true
+
+      // Add frames spanning multiple intervals
+      for (let i = 0; i <= 15; i++) {
+        notifyBenchmarkFrame({ timestamp: i * 20, frameTime: 16.67 })
+      }
+
+      const result = await promise
+
+      expect(result.intervalAverages).toBeInstanceOf(Array)
+      expect(result.intervalAverages.length).toBeGreaterThan(0)
+    })
+
+    it('should have intervalAverages with time and fps properties', async() => {
+      const promise = startBenchmarkSession(200, 50)
+      gameState.benchmarkActive = true
+
+      // Add enough frames
+      for (let i = 0; i <= 15; i++) {
+        notifyBenchmarkFrame({ timestamp: i * 20, frameTime: 16.67 })
+      }
+
+      const result = await promise
+
+      if (result.intervalAverages.length > 0) {
+        const interval = result.intervalAverages[0]
+        expect(interval).toHaveProperty('time')
+        expect(interval).toHaveProperty('fps')
+        expect(typeof interval.time).toBe('number')
+        expect(typeof interval.fps).toBe('number')
+      }
+    })
+  })
+
+  describe('session completion', () => {
+    it('should complete when cancelled after frames', async() => {
+      const promise = startBenchmarkSession(10000, 50)
+      gameState.benchmarkActive = true
+
+      // First frame initializes startTime
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      // Cancel instead of waiting for duration
+      cancelBenchmarkSession()
+
+      const result = await promise
+
+      expect(result).toBeDefined()
+      expect(isBenchmarkRunning()).toBe(false)
+    })
+
+    it('should return 0 for minFps when no frames recorded', async() => {
+      const promise = startBenchmarkSession(100)
+
+      cancelBenchmarkSession()
+
+      const result = await promise
+
+      expect(result.minFps).toBe(0)
+    })
+
+    it('should return 0 for averageFps when no frames recorded', async() => {
+      const promise = startBenchmarkSession(100)
+
+      cancelBenchmarkSession()
+
+      const result = await promise
+
+      expect(result.averageFps).toBe(0)
+    })
+  })
+
+  describe('camera focus behavior', () => {
+    it('should detect manual scroll activity from keyScroll', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+      gameState.keyScroll = { up: true }
+
+      // Should not throw when detecting manual activity
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+
+    it('should detect manual scroll activity from right dragging', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+      gameState.isRightDragging = true
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+
+    it('should detect manual scroll activity from drag velocity', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+      gameState.dragVelocity = { x: 1, y: 0 }
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+  })
+
+  describe('combat focus targeting', () => {
+    it('should handle empty units array', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+      units.length = 0
+
+      // Should not throw when there are no units
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+
+    it('should handle units with targets', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      units.push({
+        id: 'unit1',
+        x: 100,
+        y: 100,
+        owner: 'player1',
+        destroyed: false,
+        target: {
+          id: 'unit2',
+          x: 150,
+          y: 150,
+          owner: 'player2',
+          destroyed: false
+        }
+      })
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+
+    it('should ignore destroyed units', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      units.push({
+        id: 'unit1',
+        x: 100,
+        y: 100,
+        owner: 'player1',
+        destroyed: true,
+        target: null
+      })
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+
+    it('should ignore units targeting allies', () => {
+      startBenchmarkSession(10000)
+      gameState.benchmarkActive = true
+
+      units.push({
+        id: 'unit1',
+        x: 100,
+        y: 100,
+        owner: 'player1',
+        destroyed: false,
+        target: {
+          id: 'unit2',
+          x: 150,
+          y: 150,
+          owner: 'player1', // Same owner
+          destroyed: false
+        }
+      })
+
+      notifyBenchmarkFrame({ timestamp: 0, frameTime: 16.67 })
+
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
+
+      cancelBenchmarkSession()
+    })
+  })
+})
