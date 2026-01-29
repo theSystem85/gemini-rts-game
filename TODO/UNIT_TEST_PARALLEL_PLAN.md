@@ -862,36 +862,40 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.1 - `src/buildingRepairHandler.js`
 - **Target**: Extend `tests/unit/buildingRepairHandler.test.js`
 - **Source File**: `src/buildingRepairHandler.js` (50% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 50% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Current Coverage**: 50% functions → Extended
 - **Estimated Tests**: 15-25
 
 ### Task 15.2 - `src/productionQueue.js`
 - **Target**: Extend `tests/unit/productionQueue.test.js`
 - **Source File**: `src/productionQueue.js` (52.11% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 52.11% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 25+ tests for startNextUnitProduction, startNextBuildingProduction, updateProgress, resumeProductionAfterUnpause, cancelBuildingPlacement, restoreFromSerializableState, setProductionController
+- **Current Coverage**: 52.11% functions → Extended
 - **Estimated Tests**: 30-45
 
 ### Task 15.3 - `src/units.js`
 - **Target**: Extend `tests/unit/units.test.js`
 - **Source File**: `src/units.js` (53.48% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 53.48% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 69 tests covering buildOccupancyMap, updateUnitOccupancy, removeUnitOccupancy, findPath, findPathForOwner, spawnUnit, createUnit, moveBlockingUnits, resolveUnitCollisions, deselectUnits, unitCosts
+- **Current Coverage**: 53.48% functions → Extended
 - **Estimated Tests**: 30-45
 
 ### Task 15.4 - `src/logic.js`
 - **Target**: Extend `tests/unit/logic.test.js`
 - **Source File**: `src/logic.js` (58.82% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 58.82% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 13+ tests for triggerExplosion, showUnloadingFeedback, findPositionWithClearShot
+- **Current Coverage**: 58.82% functions → Extended
 - **Estimated Tests**: 25-35
 
 ### Task 15.5 - `src/ai/enemyBuilding.js`
 - **Target**: Extend `tests/unit/enemyBuilding.test.js`
 - **Source File**: `src/ai/enemyBuilding.js` (50% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 50% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 11+ tests for defensive placement, ore direction, map edge cases, building type handling
+- **Current Coverage**: 50% functions → Extended
 - **Estimated Tests**: 40-60
 
 ### Task 15.6 - `src/game/bulletSystem.js`
