@@ -1,5 +1,8 @@
 ## Improvements
 - [x] Extend unit tests for Task 16.1-16.10 coverage targets (config, game setup, map editor, retreat, benchmark runner, ambulance/building systems, game state manager, hospital logic, mine system).
+- [x] Expand unit tests for tasks 16.11-16.20 (recovery tank, remote control, unit movement, selection manager, lockstep, multiplayer store, remote connection, state hash, enemy AI player, logger).
+- [x] Expand unit test coverage for workshop logic, keyboard input handling, cheat system behaviors, and cursor management (Tasks 15.12-15.15).
+- [x] Add unit tests for command queue sweeps, game loop pause/lockstep behavior, harvester recovery, and unit combat firing edge cases (Tasks 15.7-15.11; minerBehavior blocked due to missing file).
 - [x] Add unit tests for hospitalLogic crew healing and ambulance refill behavior.
 - [x] Add unit tests for helipadLogic.js covering fuel, ammo, landing, and resupply behavior.
 - [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.
@@ -7,6 +10,7 @@
 - [x] Add unit tests for enemy AI building placement (Task 2.2) covering defensive placement, spacing, and guardrails.
 - [x] Add unit coverage for enemy AI unit behavior (ambulance, harvester hunter, base defense, and apache retreat logic).
 - [x] Add unit tests for enemyStrategies AI behaviors (repairs, retreats, attack coordination, crew recovery, logistics, and ammo monitoring).
+- [x] Extend unit tests for `webrtcSession` and `enemyStrategies` (Tasks 15.16-15.17) to cover WebRTC session edges, AI coordination, and logistics behaviors.
 - [x] Add unit tests for `src/ai/enemyAIPlayer.js` to cover AI economy recovery, building completion, and unit production logic.
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
 - [x] Add meaningful unit tests for `src/ai/enemySpawner.js` covering spawn placement, harvester setup, crew/gas initialization, and cheat-system handling.
@@ -285,6 +289,7 @@
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Improvements
+- [x] Extend bullet system unit tests to cover apache rockets, dodge logic, and crew damage (Task 15.6).
 - [x] Add unit tests for the game loop (Task 3.3 coverage plan).
 - [x] ✅ **Spec 006** Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.

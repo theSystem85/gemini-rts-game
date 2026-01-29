@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { updateRecoveryTankLogic } from '../../src/game/recoveryTankSystem.js'
+import { findPath } from '../../src/units.js'
+import { releaseWreckAssignment } from '../../src/game/unitWreckManager.js'
+import { playSound } from '../../src/sound.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -303,6 +306,92 @@ describe('Recovery Tank System', () => {
 
       expect(recoveryTank.recoveryTask).toBeNull()
       expect(recoveryTank.towedWreck).toBeNull()
+    })
+
+    it('should cancel tow task when no path to workshop exists', () => {
+      const recoveryTank = createTestRecoveryTank('rt1', 10, 10)
+      const wreck = createTestWreck('wreck1', 10, 10)
+      const workshop = createTestWorkshop(15, 15)
+
+      gameState.unitWrecks.push(wreck)
+      gameState.buildings.push(workshop)
+
+      vi.mocked(findPath).mockReturnValueOnce([])
+
+      recoveryTank.recoveryTask = {
+        wreckId: wreck.id,
+        mode: 'tow',
+        state: 'movingToWreck',
+        workshopId: workshop.id,
+        workshopEntry: { x: 15, y: 18 }
+      }
+      units.push(recoveryTank)
+
+      updateRecoveryTankLogic(units, gameState, delta)
+
+      expect(releaseWreckAssignment).toHaveBeenCalledWith(wreck)
+      expect(recoveryTank.recoveryTask).toBeNull()
+      expect(recoveryTank.towedWreck).toBeNull()
+      expect(playSound).toHaveBeenCalledWith('repairCancelled', 0.6)
+    })
+
+    it('should cancel towing when workshop is destroyed', () => {
+      const recoveryTank = createTestRecoveryTank('rt1', 15, 18)
+      const wreck = createTestWreck('wreck1', 12, 12)
+      const workshop = createTestWorkshop(15, 15)
+      workshop.health = 0
+
+      gameState.unitWrecks.push(wreck)
+      gameState.buildings.push(workshop)
+
+      recoveryTank.recoveryTask = {
+        wreckId: wreck.id,
+        mode: 'tow',
+        state: 'towingToWorkshop',
+        workshopId: workshop.id,
+        workshopEntry: { x: 15, y: 18 }
+      }
+      recoveryTank.towedWreck = wreck
+      wreck.towedBy = recoveryTank.id
+      units.push(recoveryTank)
+
+      updateRecoveryTankLogic(units, gameState, delta)
+
+      expect(releaseWreckAssignment).toHaveBeenCalledWith(wreck)
+      expect(recoveryTank.recoveryTask).toBeNull()
+      expect(recoveryTank.towedWreck).toBeNull()
+      expect(playSound).toHaveBeenCalledWith('repairCancelled', 0.6)
+    })
+
+    it('should finalize restoration when reaching workshop entry', () => {
+      const recoveryTank = createTestRecoveryTank('rt1', 15, 18)
+      const wreck = createTestWreck('wreck1', 12, 12)
+      const workshop = createTestWorkshop(15, 15)
+
+      gameState.unitWrecks.push(wreck)
+      gameState.buildings.push(workshop)
+
+      recoveryTank.recoveryTask = {
+        wreckId: wreck.id,
+        mode: 'tow',
+        state: 'towingToWorkshop',
+        workshopId: workshop.id,
+        workshopEntry: { x: 15, y: 18 }
+      }
+      recoveryTank.towedWreck = wreck
+      wreck.towedBy = recoveryTank.id
+      units.push(recoveryTank)
+
+      updateRecoveryTankLogic(units, gameState, delta)
+
+      expect(workshop.restorationQueue).toHaveLength(1)
+      expect(workshop.restorationQueue[0]).toMatchObject({
+        wreckId: wreck.id,
+        unitType: wreck.unitType
+      })
+      expect(recoveryTank.recoveryTask).toBeNull()
+      expect(recoveryTank.towedWreck).toBeNull()
+      expect(playSound).toHaveBeenCalledWith('deposit', 0.7)
     })
   })
 

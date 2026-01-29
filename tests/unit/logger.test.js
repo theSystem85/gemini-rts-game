@@ -3,6 +3,7 @@ import {
   logEntries,
   log,
   getLogs,
+  downloadLogs,
   enableUnitLogging,
   disableUnitLogging,
   toggleUnitLogging,
@@ -68,6 +69,29 @@ describe('logger', () => {
       expect(logs).toContain('message 1')
       expect(logs).toContain('message 2')
       expect(logs.split('\n')).toHaveLength(2)
+    })
+  })
+
+  describe('downloadLogs', () => {
+    it('creates a blob URL and triggers a download', () => {
+      log('download me')
+
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+      const createSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock')
+      const clickSpy = vi.fn()
+      const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(() => ({
+        click: clickSpy
+      }))
+
+      downloadLogs('test.log')
+
+      expect(createSpy).toHaveBeenCalled()
+      expect(clickSpy).toHaveBeenCalled()
+      expect(revokeSpy).toHaveBeenCalledWith('blob:mock')
+
+      createElementSpy.mockRestore()
+      revokeSpy.mockRestore()
+      createSpy.mockRestore()
     })
   })
 

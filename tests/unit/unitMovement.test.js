@@ -8,6 +8,7 @@ import {
 import { gameState } from '../../src/gameState.js'
 import { selectedUnits as _selectedUnits, cleanupDestroyedSelectedUnits } from '../../src/inputHandler.js'
 import { findPath, removeUnitOccupancy as _removeUnitOccupancy } from '../../src/units.js'
+import { getCachedPath } from '../../src/game/pathfinding.js'
 import { initializeUnitMovement, updateUnitPosition } from '../../src/game/unifiedMovement.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../../src/behaviours/retreat.js'
 import * as logic from '../../src/logic.js'
@@ -173,6 +174,42 @@ describe('unitMovement.js', () => {
       expect(unit.tileY).toBe(0)
     })
 
+    it('sets an attack move path when target is out of range', () => {
+      const target = { id: 'enemy-1', x: 400, y: 400, tileX: 12, tileY: 12, health: 100 }
+      const unit = {
+        health: 100,
+        x: 32,
+        y: 32,
+        tileX: 1,
+        tileY: 1,
+        type: 'tank_v1',
+        target
+      }
+      vi.mocked(getCachedPath).mockReturnValue([{ x: 1, y: 1 }, { x: 5, y: 5 }])
+
+      updateUnitMovement([unit], mockMapGrid, mockOccupancyMap, mockGameState, performance.now())
+
+      expect(getCachedPath).toHaveBeenCalled()
+      expect(unit.path).toEqual([{ x: 5, y: 5 }])
+      expect(unit.moveTarget).toBeTruthy()
+    })
+
+    it('clears moveTarget when close enough and no path remains', () => {
+      const unit = {
+        health: 100,
+        x: 64,
+        y: 64,
+        tileX: 2,
+        tileY: 2,
+        moveTarget: { x: 2, y: 2 },
+        path: []
+      }
+
+      updateUnitMovement([unit], mockMapGrid, mockOccupancyMap, mockGameState, performance.now())
+
+      expect(unit.moveTarget).toBeNull()
+    })
+
     it('should apply speed modifiers', () => {
       const unit = {
         health: 100,
@@ -306,6 +343,41 @@ describe('unitMovement.js', () => {
       const localGameState = { ...mockGameState, occupancyMap: mockOccupancyMap }
       updateUnitPathfinding([unit], mockMapGrid, localGameState)
       expect(unit.path).toEqual([{ x: 2, y: 2 }, { x: 3, y: 3 }])
+    })
+
+    it('clears moveTarget when already at destination', () => {
+      vi.mocked(findPath).mockReturnValue([{ x: 1, y: 1 }])
+      const unit = {
+        tileX: 1,
+        tileY: 1,
+        moveTarget: { x: 1, y: 1 },
+        lastPathCalcTime: 0,
+        owner: 'player1'
+      }
+      const localGameState = { ...mockGameState, occupancyMap: mockOccupancyMap }
+      updateUnitPathfinding([unit], mockMapGrid, localGameState)
+      expect(unit.moveTarget).toBeNull()
+    })
+
+    it('uses occupancy map for attack mode paths', () => {
+      const unit = {
+        tileX: 1,
+        tileY: 1,
+        moveTarget: { x: 5, y: 5 },
+        lastPathCalcTime: 0,
+        owner: 'player1',
+        target: { health: 100 }
+      }
+      const localGameState = { ...mockGameState, occupancyMap: mockOccupancyMap }
+      updateUnitPathfinding([unit], mockMapGrid, localGameState)
+      expect(findPath).toHaveBeenCalledWith(
+        { x: 1, y: 1, owner: 'player1' },
+        { x: 5, y: 5 },
+        mockMapGrid,
+        mockOccupancyMap,
+        undefined,
+        { unitOwner: 'player1' }
+      )
     })
   })
 

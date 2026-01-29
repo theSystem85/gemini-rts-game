@@ -229,6 +229,17 @@ describe('remoteConnection (peerConnection task)', () => {
     })
   })
 
+  it('skips invalid ICE candidates when synchronizing', async() => {
+    const connection = createConnection()
+    connection.peerId = 'peer-1'
+    connection.pc = new MockRTCPeerConnection()
+    connection.answerApplied = true
+
+    await connection._safeAddRemoteCandidate({})
+
+    expect(connection.pc.addIceCandidate).not.toHaveBeenCalled()
+  })
+
   it('stops polling after repeated synchronization failures', async() => {
     vi.useFakeTimers()
     const connection = createConnection({ pollInterval: 100 })

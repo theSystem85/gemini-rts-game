@@ -356,4 +356,28 @@ describe('multiplayerStore', () => {
     expect(setHostInviteStatus('player2', 'loading')).toBe('loading')
     expect(getHostInviteStatus('player2')).toBe('loading')
   })
+
+  it('returns no-op subscription when handler is invalid or document is missing', async() => {
+    const { observePartyOwnershipChange } = await loadStore()
+    const unsubscribe = observePartyOwnershipChange(null)
+    expect(typeof unsubscribe).toBe('function')
+
+    const originalDocument = globalThis.document
+    globalThis.document = undefined
+    const noop = observePartyOwnershipChange(() => {})
+    expect(typeof noop).toBe('function')
+    globalThis.document = originalDocument
+  })
+
+  it('exposes game instance and host identifiers', async() => {
+    const { getGameInstanceId, getHostId, listPartyStates } = await loadStore()
+
+    const instanceId = getGameInstanceId()
+    const hostId = getHostId()
+    const parties = listPartyStates()
+
+    expect(instanceId).toContain('game-instance')
+    expect(hostId).toContain('host')
+    expect(parties.length).toBeGreaterThan(0)
+  })
 })
