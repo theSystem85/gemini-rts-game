@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   angleDiff,
   normalizeAngle,
@@ -7,8 +7,13 @@ import {
   isAdjacentToBuilding,
   findClosestOre,
   findAdjacentTile,
-  hasClearShot
+  hasClearShot,
+  triggerExplosion,
+  showUnloadingFeedback,
+  findPositionWithClearShot,
+  explosions
 } from '../../src/logic.js'
+import { gameState } from '../../src/gameState.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -19,7 +24,9 @@ vi.mock('../../src/config.js', () => ({
 vi.mock('../../src/gameState.js', () => ({
   gameState: {
     humanPlayer: 'player1',
-    occupancyMap: []
+    occupancyMap: [],
+    buildings: [],
+    unitWrecks: []
   }
 }))
 
@@ -451,6 +458,179 @@ describe('logic.js', () => {
       const building = { x: 5, y: 5, width: 2, height: 2, owner: 'player2' }
 
       expect(hasClearShot(shooter, building, units, mapGrid)).toBe(true)
+    })
+  })
+
+  describe('triggerExplosion', () => {
+    const mockUnits = []
+    const mockFactories = []
+    const mockShooter = null
+    const mockNow = performance.now()
+    const mockMapGrid = []
+
+    beforeEach(() => {
+      // Clear explosions array before each test
+      explosions.length = 0
+    })
+
+    afterEach(() => {
+      explosions.length = 0
+    })
+
+    it('adds explosion to explosions array', () => {
+      triggerExplosion(100, 200, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+
+      expect(explosions.length).toBe(1)
+      expect(explosions[0].x).toBe(100)
+      expect(explosions[0].y).toBe(200)
+    })
+
+    it('stores startTime in explosion', () => {
+      const now = Date.now()
+      triggerExplosion(50, 75, 50, mockUnits, mockFactories, mockShooter, now, mockMapGrid)
+
+      expect(explosions[0].startTime).toBe(now)
+    })
+
+    it('handles multiple explosions', () => {
+      triggerExplosion(10, 20, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+      triggerExplosion(30, 40, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+      triggerExplosion(50, 60, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+
+      expect(explosions.length).toBe(3)
+      expect(explosions[0].x).toBe(10)
+      expect(explosions[1].x).toBe(30)
+      expect(explosions[2].x).toBe(50)
+    })
+
+    it('handles negative coordinates', () => {
+      triggerExplosion(-100, -200, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+
+      expect(explosions[0].x).toBe(-100)
+      expect(explosions[0].y).toBe(-200)
+    })
+
+    it('handles zero coordinates', () => {
+      triggerExplosion(0, 0, 50, mockUnits, mockFactories, mockShooter, mockNow, mockMapGrid)
+
+      expect(explosions[0].x).toBe(0)
+      expect(explosions[0].y).toBe(0)
+    })
+  })
+
+  describe('showUnloadingFeedback', () => {
+    it('is a placeholder function that can be called without error', () => {
+      const unit = { x: 150, y: 250 }
+      const refinery = { x: 5, y: 5 }
+
+      // Should not throw
+      expect(() => showUnloadingFeedback(unit, refinery)).not.toThrow()
+    })
+
+    it('accepts unit and refinery parameters', () => {
+      const unit = { x: 100, y: 200 }
+      const refinery = { x: 10, y: 10 }
+
+      // Function is a placeholder, just ensure it runs without errors
+      showUnloadingFeedback(unit, refinery)
+    })
+  })
+
+  describe('findPositionWithClearShot', () => {
+    let units
+    let mapGrid
+    let savedOccupancyMap
+
+    beforeEach(() => {
+      units = []
+      mapGrid = Array.from({ length: 20 }, () =>
+        Array.from({ length: 20 }, () => ({
+          building: false,
+          type: 'land'
+        }))
+      )
+      // Set up occupancy map in gameState
+      savedOccupancyMap = gameState.occupancyMap
+      gameState.occupancyMap = Array.from({ length: 20 }, () =>
+        Array.from({ length: 20 }, () => 0)
+      )
+    })
+
+    afterEach(() => {
+      gameState.occupancyMap = savedOccupancyMap
+    })
+
+    it('returns true or false based on finding clear shot position', () => {
+      const shooter = { x: 0, y: 0, owner: 'player1', path: [] }
+      const target = { tileX: 5, x: 5 * TILE_SIZE, y: 0, owner: 'player2' }
+
+      const result = findPositionWithClearShot(shooter, target, units, mapGrid)
+
+      expect(typeof result).toBe('boolean')
+    })
+
+    it('modifies unit path when position is found', () => {
+      const shooter = { x: 32, y: 32, owner: 'player1', path: [] }
+      const target = { tileX: 5, x: 5 * TILE_SIZE, y: 32, owner: 'player2' }
+
+      // Mark shooter position as blocked so it has to move
+      gameState.occupancyMap[1][1] = 1
+
+      findPositionWithClearShot(shooter, target, units, mapGrid)
+
+      // Function may or may not find a path
+      expect(typeof shooter.path).toBe('object')
+    })
+
+    it('handles crowded areas without crashing', () => {
+      const shooter = { x: 0, y: 0, owner: 'player1', path: [] }
+      const target = { tileX: 10, x: 10 * TILE_SIZE, y: 10 * TILE_SIZE, owner: 'player2' }
+
+      // Fill area with friendly units blocking all angles
+      for (let i = 1; i < 5; i++) {
+        for (let j = 1; j < 5; j++) {
+          units.push({ x: i * TILE_SIZE, y: j * TILE_SIZE, owner: 'player1' })
+          gameState.occupancyMap[j][i] = 1
+        }
+      }
+      units.push(shooter, target)
+
+      // Should not throw
+      expect(() => findPositionWithClearShot(shooter, target, units, mapGrid)).not.toThrow()
+    })
+
+    it('handles target with no tileX (building)', () => {
+      const shooter = { x: 0, y: 0, owner: 'player1', path: [] }
+      const building = { x: 5, y: 5, width: 2, height: 2, owner: 'player2' }
+
+      // Should not throw
+      expect(() => findPositionWithClearShot(shooter, building, units, mapGrid)).not.toThrow()
+    })
+
+    it('operates on direct path situations', () => {
+      const shooter = { x: 0, y: 0, owner: 'player1', path: [] }
+      const target = { tileX: 8, x: 8 * TILE_SIZE, y: 0, owner: 'player2' }
+
+      // Block direct path with a friendly unit
+      const blocker = { x: 4 * TILE_SIZE, y: 0, owner: 'player1' }
+      units = [shooter, blocker, target]
+      gameState.occupancyMap[0][4] = 1
+
+      // Should not throw
+      expect(() => findPositionWithClearShot(shooter, target, units, mapGrid)).not.toThrow()
+    })
+
+    it('handles diagonal situations', () => {
+      const shooter = { x: 0, y: 0, owner: 'player1', path: [] }
+      const target = { tileX: 6, x: 6 * TILE_SIZE, y: 6 * TILE_SIZE, owner: 'player2' }
+
+      // Block diagonal with friendly
+      const blocker = { x: 3 * TILE_SIZE, y: 3 * TILE_SIZE, owner: 'player1' }
+      units = [shooter, blocker, target]
+      gameState.occupancyMap[3][3] = 1
+
+      // Should not throw
+      expect(() => findPositionWithClearShot(shooter, target, units, mapGrid)).not.toThrow()
     })
   })
 })

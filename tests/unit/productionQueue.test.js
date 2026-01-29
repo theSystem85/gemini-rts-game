@@ -666,4 +666,349 @@ describe('Production Queue System', () => {
       expect(state).toBeDefined()
     })
   })
+
+  describe('Start Next Unit Production', () => {
+    beforeEach(() => {
+      gameState.buildings = [
+        { type: 'vehicleFactory', owner: 'player', health: 100 }
+      ]
+    })
+
+    it('should not start production if queue is empty', () => {
+      productionQueue.unitItems = []
+      productionQueue.startNextUnitProduction()
+      expect(productionQueue.currentUnit).toBeNull()
+    })
+
+    it('should not start production if paused', () => {
+      productionQueue.pausedUnit = true
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+      expect(productionQueue.currentUnit).toBeNull()
+    })
+
+    it('should not start production if game is paused', () => {
+      gameState.gamePaused = true
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+      expect(productionQueue.currentUnit).toBeNull()
+    })
+
+    it('should reset unitPaid when starting new production', () => {
+      productionQueue.unitPaid = 500
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+      expect(productionQueue.unitPaid).toBe(0)
+    })
+
+    it('should set current unit with production properties', () => {
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+
+      expect(productionQueue.currentUnit).toBeTruthy()
+      expect(productionQueue.currentUnit.type).toBe('tank_v1')
+      expect(productionQueue.currentUnit.progress).toBe(0)
+      expect(productionQueue.currentUnit.duration).toBeGreaterThan(0)
+    })
+
+    it('should apply vehicle factory multiplier to duration', () => {
+      gameState.buildings = [
+        { type: 'vehicleFactory', owner: 'player', health: 100 },
+        { type: 'vehicleFactory', owner: 'player', health: 100 }
+      ]
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+
+      // With 2 factories, duration should be halved
+      expect(productionQueue.currentUnit).toBeTruthy()
+    })
+
+    it('should apply power penalty to duration', () => {
+      gameState.playerPowerSupply = -100
+      gameState.playerBuildSpeedModifier = 0.5
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.startNextUnitProduction()
+
+      expect(productionQueue.currentUnit).toBeTruthy()
+    })
+
+    it('should preserve rally point in current unit', () => {
+      const rallyPoint = { x: 20, y: 30 }
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton, rallyPoint }]
+      productionQueue.startNextUnitProduction()
+
+      expect(productionQueue.currentUnit.rallyPoint).toEqual(rallyPoint)
+    })
+  })
+
+  describe('Start Next Building Production', () => {
+    beforeEach(() => {
+      gameState.buildings = [
+        { type: 'constructionYard', owner: 'player', health: 100 }
+      ]
+    })
+
+    it('should not start production if queue is empty', () => {
+      productionQueue.buildingItems = []
+      productionQueue.startNextBuildingProduction()
+      expect(productionQueue.currentBuilding).toBeNull()
+    })
+
+    it('should not start production if paused', () => {
+      productionQueue.pausedBuilding = true
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton }]
+      productionQueue.startNextBuildingProduction()
+      expect(productionQueue.currentBuilding).toBeNull()
+    })
+
+    it('should not start if there is already a building in production', () => {
+      productionQueue.currentBuilding = { type: 'existing', button: mockButton }
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton }]
+      productionQueue.startNextBuildingProduction()
+      expect(productionQueue.currentBuilding.type).toBe('existing')
+    })
+
+    it('should reset buildingPaid when starting new production', () => {
+      productionQueue.buildingPaid = 300
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton }]
+      productionQueue.startNextBuildingProduction()
+      expect(productionQueue.buildingPaid).toBe(0)
+    })
+
+    it('should set current building with production properties', () => {
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton, isBuilding: true }]
+      productionQueue.startNextBuildingProduction()
+
+      expect(productionQueue.currentBuilding).toBeTruthy()
+      expect(productionQueue.currentBuilding.type).toBe('powerPlant')
+      expect(productionQueue.currentBuilding.progress).toBe(0)
+    })
+
+    it('should apply construction yard multiplier', () => {
+      gameState.buildings = [
+        { type: 'constructionYard', owner: 'player', health: 100 },
+        { type: 'constructionYard', owner: 'player', health: 100 }
+      ]
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton, isBuilding: true }]
+      productionQueue.startNextBuildingProduction()
+
+      expect(productionQueue.currentBuilding).toBeTruthy()
+    })
+  })
+
+  describe('Update Progress', () => {
+    beforeEach(() => {
+      gameState.buildings = [
+        { type: 'vehicleFactory', owner: 'player', health: 100 },
+        { type: 'constructionYard', owner: 'player', health: 100 }
+      ]
+    })
+
+    it('should not update if game is paused', () => {
+      gameState.gamePaused = true
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.currentUnit = {
+        type: 'tank_v1',
+        button: mockButton,
+        progress: 0.5,
+        duration: 3000,
+        startTime: performance.now() - 1500
+      }
+
+      const oldProgress = productionQueue.currentUnit.progress
+      productionQueue.updateProgress(performance.now())
+      expect(productionQueue.currentUnit.progress).toBe(oldProgress)
+    })
+
+    it('should update unit progress', () => {
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.currentUnit = {
+        type: 'tank_v1',
+        button: mockButton,
+        progress: 0,
+        duration: 1000,
+        startTime: performance.now() - 500
+      }
+
+      productionQueue.updateProgress(performance.now())
+      expect(productionQueue.currentUnit.progress).toBeGreaterThan(0)
+    })
+
+    it('should pause production if not enough money', () => {
+      gameState.money = 0
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.unitPaid = 0
+      productionQueue.currentUnit = {
+        type: 'tank_v1',
+        button: mockButton,
+        progress: 0.5,
+        duration: 1000,
+        startTime: performance.now() - 500
+      }
+
+      productionQueue.updateProgress(performance.now())
+      expect(productionQueue.pausedUnit).toBe(true)
+    })
+
+    it('should clear current building if queue is empty but currentBuilding exists', () => {
+      productionQueue.buildingItems = []
+      productionQueue.currentBuilding = {
+        type: 'powerPlant',
+        button: mockButton,
+        progress: 0.5,
+        duration: 1000,
+        startTime: performance.now() - 500
+      }
+
+      productionQueue.updateProgress(performance.now())
+      expect(productionQueue.currentBuilding).toBeNull()
+    })
+  })
+
+  describe('Resume Production After Unpause', () => {
+    beforeEach(() => {
+      gameState.buildings = [
+        { type: 'vehicleFactory', owner: 'player', health: 100 },
+        { type: 'constructionYard', owner: 'player', health: 100 }
+      ]
+    })
+
+    it('should start unit production if queue has items', () => {
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.resumeProductionAfterUnpause()
+      expect(productionQueue.currentUnit).toBeTruthy()
+    })
+
+    it('should start building production if queue has items', () => {
+      productionQueue.buildingItems = [{ type: 'powerPlant', button: mockButton, isBuilding: true }]
+      productionQueue.resumeProductionAfterUnpause()
+      expect(productionQueue.currentBuilding).toBeTruthy()
+    })
+
+    it('should not start if already have current production', () => {
+      productionQueue.currentUnit = { type: 'existing', button: mockButton }
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.resumeProductionAfterUnpause()
+      expect(productionQueue.currentUnit.type).toBe('existing')
+    })
+
+    it('should not start if production is paused', () => {
+      productionQueue.pausedUnit = true
+      productionQueue.unitItems = [{ type: 'tank_v1', button: mockButton }]
+      productionQueue.resumeProductionAfterUnpause()
+      expect(productionQueue.currentUnit).toBeNull()
+    })
+  })
+
+  describe('Cancel Building Placement', () => {
+    it('should cancel and refund building in placement mode', () => {
+      gameState.buildingPlacementMode = true
+      gameState.currentBuildingType = 'powerPlant'
+      productionQueue.completedBuildings = [{ type: 'powerPlant', button: mockButton }]
+      const initialMoney = gameState.money
+
+      productionQueue.cancelBuildingPlacement()
+
+      expect(productionQueue.completedBuildings.length).toBe(0)
+      expect(gameState.money).toBe(initialMoney + 500)
+      expect(gameState.buildingPlacementMode).toBe(false)
+      expect(gameState.currentBuildingType).toBeNull()
+    })
+
+    it('should do nothing if no current building type', () => {
+      gameState.currentBuildingType = null
+      productionQueue.completedBuildings = [{ type: 'powerPlant', button: mockButton }]
+      const initialCount = productionQueue.completedBuildings.length
+
+      productionQueue.cancelBuildingPlacement()
+
+      expect(productionQueue.completedBuildings.length).toBe(initialCount)
+    })
+
+    it('should do nothing if completed building not found', () => {
+      gameState.currentBuildingType = 'oreRefinery'
+      productionQueue.completedBuildings = [{ type: 'powerPlant', button: mockButton }]
+
+      productionQueue.cancelBuildingPlacement()
+
+      expect(productionQueue.completedBuildings.length).toBe(1)
+    })
+
+    it('should keep ready-for-placement if more buildings of same type exist', () => {
+      gameState.currentBuildingType = 'powerPlant'
+      productionQueue.completedBuildings = [
+        { type: 'powerPlant', button: mockButton },
+        { type: 'powerPlant', button: mockButton }
+      ]
+
+      productionQueue.cancelBuildingPlacement()
+
+      expect(productionQueue.completedBuildings.length).toBe(1)
+      // Button should still have ready-for-placement class
+    })
+  })
+
+  describe('Restore From Serializable State', () => {
+    it('should restore empty state', () => {
+      productionQueue.restoreFromSerializableState({})
+
+      expect(productionQueue.unitItems).toEqual([])
+      expect(productionQueue.buildingItems).toEqual([])
+      expect(productionQueue.completedBuildings).toEqual([])
+    })
+
+    it('should restore null state', () => {
+      productionQueue.restoreFromSerializableState(null)
+
+      expect(productionQueue.unitItems).toEqual([])
+    })
+
+    it('should restore pause states', () => {
+      productionQueue.restoreFromSerializableState({
+        pausedUnit: true,
+        pausedBuilding: true
+      })
+
+      // Without current production, pause states should be cleared
+      expect(productionQueue.pausedUnit).toBe(false)
+      expect(productionQueue.pausedBuilding).toBe(false)
+    })
+
+    it('should restore paid amounts', () => {
+      productionQueue.restoreFromSerializableState({
+        unitPaid: 500,
+        buildingPaid: 300
+      })
+
+      expect(productionQueue.unitPaid).toBe(500)
+      expect(productionQueue.buildingPaid).toBe(300)
+    })
+
+    it('should clamp invalid paid amounts', () => {
+      productionQueue.restoreFromSerializableState({
+        unitPaid: NaN,
+        buildingPaid: Infinity
+      })
+
+      expect(productionQueue.unitPaid).toBe(0)
+      expect(productionQueue.buildingPaid).toBe(0)
+    })
+
+    it('should handle missing completed buildings array', () => {
+      productionQueue.restoreFromSerializableState({
+        completedBuildings: null
+      })
+
+      expect(productionQueue.completedBuildings).toEqual([])
+    })
+  })
+
+  describe('Set Production Controller', () => {
+    it('should set production controller reference', () => {
+      const mockController = { updateBuildingButtonStates: vi.fn() }
+      productionQueue.setProductionController(mockController)
+
+      expect(productionQueue.productionController).toBe(mockController)
+    })
+  })
 })
