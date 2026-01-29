@@ -22,6 +22,7 @@
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
 - [ ] Ensure tutorial voice narration also reads the hint/subtext guidance for each step.
+- [ ] Distribute Apache landing commands across nearby available helipads so each helicopter gets its own pad when landing in a group.
 - [x] Add a tutorial progress bar for the crew/ambulance step only (hospital built → ambulance built → any crew restored) and announce completion via tutorial voice.
 - [x] Add a tutorial step explaining D/C/G/L crew indicators, focusing on an empty-crew tank, and requiring hospital/ambulance recovery before continuing.
 - [x] Split the monolithic stylesheet into modular CSS files and update HTML/service worker references for the new layout.

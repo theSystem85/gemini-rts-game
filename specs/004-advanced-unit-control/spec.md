@@ -105,6 +105,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - What if marked AGF targets are destroyed by other units? (Marked targets are automatically removed from queue when destroyed by any source)
 - Can units in PPF queue mix move and attack commands? (Yes, any command type can be queued: move, attack, retreat, AGF)
 - What happens to queued commands when unit is damaged and flees? (Retreat behavior overrides queue; queue is cleared when unit enters flee mode)
+- What happens when multiple Apache helicopters are commanded to land on one helipad? (They distribute to nearby available helipads first and only skip units that have no free pad.)
 
 ## Requirements
 
@@ -167,6 +168,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-050**: Cursor MUST switch between attack and out-of-range states based on the closest selected combat unit's distance to the hovered enemy.
 - **FR-051**: Hover range checks MUST consider each selected combat unit and mark out-of-range only when none are within firing range.
 - **FR-052**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
+- **FR-053**: When multiple Apache helicopters are ordered to land on a helipad, the system MUST assign each helicopter to an available helipad (prioritizing those nearest the clicked helipad) so each helicopter receives its own landing pad.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
