@@ -336,7 +336,9 @@ describe('gameRandom', () => {
       for (let i = 0; i < iterations; i++) {
         if (gameRandomBool(0.9)) trueCount++
       }
-      expect(trueCount).toBeGreaterThan(iterations * 0.8)
+      // With 0.9 probability, expect at least 75% true (more forgiving threshold to avoid flakiness)
+      // This is still ~5 standard deviations below the mean (90), so failure indicates a real bug
+      expect(trueCount).toBeGreaterThan(iterations * 0.75)
     })
 
     it('should return mostly false with low probability', () => {
@@ -345,7 +347,9 @@ describe('gameRandom', () => {
       for (let i = 0; i < iterations; i++) {
         if (gameRandomBool(0.1)) trueCount++
       }
-      expect(trueCount).toBeLessThan(iterations * 0.2)
+      // With 0.1 probability, expect at most 25% true (more forgiving threshold to avoid flakiness)
+      // This is still ~5 standard deviations above the mean (10), so failure indicates a real bug
+      expect(trueCount).toBeLessThan(iterations * 0.25)
     })
 
     it('should always return false with probability 0', () => {

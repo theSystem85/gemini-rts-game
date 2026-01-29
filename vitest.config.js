@@ -30,7 +30,14 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.js'],
-      exclude: ['src/rendering/**', 'src/ui/**', 'src/sound.js']
+      exclude: [
+        'src/rendering/**',
+        'src/ui/**',
+        'src/sound.js',
+        // Exclude data-only files that only export objects/constants
+        'src/missions/mission_*.js',
+        'src/data/**'
+      ]
     }
   },
 
