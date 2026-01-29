@@ -127,6 +127,7 @@ Located in `tests/unit/`
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
 - Added `tests/unit/multiplayerStore.test.js` covering invite token lifecycle, host regeneration, and party ownership events in multiplayer sessions.
+- Added `tests/unit/webrtcSession.test.js` coverage for ICE handling edge cases, data channel state updates, and lockstep initialization guardrails.
 - Added `tests/unit/peerConnection.test.js` to validate remote connection offer publishing, ICE handling, data channel messaging, and polling failure behavior with mocked WebRTC primitives.
 - Added `tests/unit/multiUnitInputHandler.test.js` to validate multi-unit command distribution, queue behavior, and eligibility filtering helpers.
 - Added `tests/unit/controlGroupHandler.test.js` to validate control group assignment, selection filtering, and camera centering behavior on double-press.
@@ -134,6 +135,7 @@ Located in `tests/unit/`
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
+- Added `tests/unit/enemyStrategies.test.js` cases for AI attack path recalculation, ambulance queueing, tanker emergencies, and ammo recovery state resets.
 - Expanded `tests/unit/workshopLogic.test.js` to validate repair funding sources, restoration rally selection, and spawn fallback handling.
 - Extended `tests/unit/keyboardHandler.test.js` with occupancy map toggles, control group rebuilds, and building stop-attack flows.
 - Extended `tests/unit/cheatSystem.test.js` with god mode, ammo/helipad load, AI budget, and damage prevention scenarios.
