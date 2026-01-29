@@ -126,6 +126,7 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added bullet system coverage for apache rocket proximity damage, dodge maneuvers, critical damage sounds, and rocket tank homing fallbacks.
 - Added `tests/unit/multiplayerStore.test.js` covering invite token lifecycle, host regeneration, and party ownership events in multiplayer sessions.
 - Added `tests/unit/peerConnection.test.js` to validate remote connection offer publishing, ICE handling, data channel messaging, and polling failure behavior with mocked WebRTC primitives.
 - Added `tests/unit/multiUnitInputHandler.test.js` to validate multi-unit command distribution, queue behavior, and eligibility filtering helpers.
