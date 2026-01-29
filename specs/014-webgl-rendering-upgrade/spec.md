@@ -42,3 +42,29 @@ Upgrade the rendering stack to prioritize GPU-backed pipelines for the main play
 
 - WebGPU adoption is optional but the abstraction should leave room for a future adapter.
 - Texture atlases should remain source-of-truth for both tiles and sprite layers to simplify batching and asset management.
+
+---
+
+## WebGPU Transition Plan (Chrome + Safari Alignment)
+
+1. **Spec & Support Baseline**
+   - Target the current W3C WebGPU specification and verify feature availability for Chrome and Safari (adapter limits, required texture formats, optional features).
+   - Maintain a compatibility matrix in docs that lists required core features vs. optional features and maps them to each browser.
+2. **Abstraction Layer**
+   - Introduce a renderer interface that normalizes WebGL2/WebGPU operations (pipeline creation, buffer/texture uploads, draw calls, and resource lifecycle).
+   - Keep the existing 2D fallback as the last-resort renderer for unsupported devices.
+3. **WebGPU Core Pipeline**
+   - Implement WebGPU device/queue initialization, swap chain configuration, and a render loop aligned with the existing WebGL draw phases (terrain → sprites → overlays).
+   - Establish a shared WGSL shader set for tile/sprite instancing with configurable per-instance data layouts.
+4. **Asset & Buffer Migration**
+   - Move atlas upload to WebGPU textures and use staging buffers for initial load plus incremental updates.
+   - Define a single instance buffer layout for tiles, units, effects, and overlays to reduce per-frame buffer churn.
+5. **Feature Parity & Validation**
+   - Mirror WebGL features: animated water tiles, fog-of-war overlays, shadow-of-war masks, SOT overlays, and minimap rendering.
+   - Implement visual parity checks (screenshot diffing) for WebGL vs. WebGPU across a fixed set of maps/scenarios.
+6. **Fallback & Error Handling**
+   - Use `navigator.gpu` checks, adapter request failures, and `device.lost` handling to fall back to WebGL2 or 2D without breaking gameplay.
+   - Add telemetry/logging for renderer selection and failure modes to drive future optimizations.
+7. **Performance Milestones**
+   - Measure CPU time per frame, draw call count, and GPU timings (when available) for WebGL2 vs. WebGPU.
+   - Track a target reduction in CPU draw overhead and stabilize frame time variance before defaulting to WebGPU.
