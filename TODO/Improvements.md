@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Expand unit tests for tasks 16.11-16.20 (recovery tank, remote control, unit movement, selection manager, lockstep, multiplayer store, remote connection, state hash, enemy AI player, logger).
 - [x] Add unit tests for hospitalLogic crew healing and ambulance refill behavior.
 - [x] Add unit tests for helipadLogic.js covering fuel, ammo, landing, and resupply behavior.
 - [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.

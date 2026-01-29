@@ -230,4 +230,43 @@ describe('lockstepManager', () => {
 
     nowSpy.mockRestore()
   })
+
+  it('adds/removes peers and tracks connection state', () => {
+    lockstepManager.addPeer('peer-b')
+    lockstepManager.addPeer('peer-b')
+
+    let peerStates = lockstepManager.getPeerStates()
+    expect(peerStates.some(peer => peer.peerId === 'peer-b')).toBe(true)
+
+    lockstepManager.peerDisconnected('peer-b')
+    peerStates = lockstepManager.getPeerStates()
+    expect(peerStates.find(peer => peer.peerId === 'peer-b').isConnected).toBe(false)
+
+    lockstepManager.peerReconnected('peer-b')
+    peerStates = lockstepManager.getPeerStates()
+    expect(peerStates.find(peer => peer.peerId === 'peer-b').isConnected).toBe(true)
+
+    lockstepManager.removePeer('peer-b')
+    peerStates = lockstepManager.getPeerStates()
+    expect(peerStates.some(peer => peer.peerId === 'peer-b')).toBe(false)
+  })
+
+  it('ignores remote input from unknown peers', () => {
+    lockstepManager.receiveRemoteInput('unknown-peer', 5, { type: 'noop' })
+    const inputs = lockstepManager.getInputsForTick(5)
+    expect(inputs).toEqual([])
+  })
+
+  it('advances ticks in single-player sessions', () => {
+    lockstepManager._peers.clear()
+    lockstepManager.enable()
+    lockstepManager._currentTick = 0
+    lockstepManager._accumulator = MS_PER_TICK
+    lockstepManager._lastTickTime = 0
+
+    lockstepManager.update(MS_PER_TICK)
+
+    expect(lockstepManager.getCurrentTick()).toBe(1)
+    expect(syncRNGForTick).toHaveBeenCalledWith(0)
+  })
 })

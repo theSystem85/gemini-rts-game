@@ -134,6 +134,7 @@ Located in `tests/unit/`
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
+- Expanded unit tests for recovery tank towing/recycling, remote control aiming/firing, unit movement pathing, selection manager edge cases, lockstep peer handling, multiplayer store state helpers, remote connection candidate validation, deterministic state hashing, enemy AI building fallback placement, and logger downloads.
 
 ## Example Test
 

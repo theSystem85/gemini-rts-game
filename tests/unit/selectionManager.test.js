@@ -81,6 +81,11 @@ describe('selectionManager', () => {
     expect(center).toEqual({ centerX: 26, centerY: 20 + 16 - 2 })
   })
 
+  it('clears wreck selection when requested', () => {
+    manager.clearWreckSelection()
+    expect(gameState.selectedWreckId).toBeNull()
+  })
+
   it('respects enemy selection config when determining selectable units', () => {
     const humanUnit = { owner: 'player', health: 10 }
     const enemyUnit = { owner: 'enemy', health: 10 }
@@ -90,6 +95,13 @@ describe('selectionManager', () => {
 
     configValues.ENABLE_ENEMY_SELECTION = true
     expect(manager.isSelectableUnit(enemyUnit)).toBe(true)
+  })
+
+  it('marks enemy units commandable when enemy control is enabled', () => {
+    const enemyUnit = { owner: 'enemy', health: 10 }
+    configValues.ENABLE_ENEMY_CONTROL = true
+
+    expect(manager.isCommandableUnit(enemyUnit)).toBe(true)
   })
 
   it('handles normal unit clicks by clearing previous selections and attack targets', () => {
@@ -180,6 +192,16 @@ describe('selectionManager', () => {
     expect(gameState.attackGroupTargets).toEqual([])
   })
 
+  it('supports shift-click toggling for factories', () => {
+    const selectedFactory = { id: 'f1', selected: false }
+    const selectedUnits = []
+
+    manager.handleFactorySelection(selectedFactory, { shiftKey: true }, [], selectedUnits)
+
+    expect(selectedFactory.selected).toBe(true)
+    expect(selectedUnits).toEqual([selectedFactory])
+  })
+
   it('handles building selection by clearing units, factories, and other buildings', () => {
     const selectedBuilding = { id: 'b1', selected: false }
     const otherBuilding = { id: 'b2', selected: true }
@@ -196,6 +218,16 @@ describe('selectionManager', () => {
     expect(gameState.factories[0].selected).toBe(false)
     expect(selectedUnits).toEqual([selectedBuilding])
     expect(gameState.attackGroupTargets).toEqual([])
+  })
+
+  it('supports shift-click toggling for buildings', () => {
+    const selectedBuilding = { id: 'b1', selected: false }
+    const selectedUnits = []
+
+    manager.handleBuildingSelection(selectedBuilding, { shiftKey: true }, [], selectedUnits)
+
+    expect(selectedBuilding.selected).toBe(true)
+    expect(selectedUnits).toEqual([selectedBuilding])
   })
 
   it('selects units inside a drag selection box and clears buildings', () => {
@@ -215,6 +247,14 @@ describe('selectionManager', () => {
     expect(gameState.buildings[0].selected).toBe(false)
     expect(gameState.attackGroupTargets).toEqual([])
     expect(playSound).toHaveBeenCalledWith('unitSelection')
+  })
+
+  it('resets selection state on drag selection errors', () => {
+    const selectedUnits = [{ id: 'u1', health: 10 }]
+
+    manager.handleBoundingBoxSelection([], [], selectedUnits, null, null)
+
+    expect(selectedUnits).toEqual([])
   })
 
   it('filters visible units by type, owner, and viewport bounds', () => {
