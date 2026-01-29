@@ -812,7 +812,7 @@ describe('pathfinding.js - Exported Functions', () => {
 
       // First call caches the path
       const path1 = getCachedPath(start1, end, mapGrid, null)
-      
+
       // Second call should reuse cached path from a point on the path
       const path2 = getCachedPath(start2, end, mapGrid, null)
 
@@ -1151,7 +1151,7 @@ describe('pathfinding.js - Exported Functions', () => {
       const occupancyMap = initializeOccupancyMap([], mapGrid)
       mockPerformanceNow = PATH_CALC_INTERVAL + 100
       const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
-      
+
       // Create many units needing paths
       const units = []
       for (let i = 0; i < 50; i++) {
@@ -1184,7 +1184,8 @@ describe('pathfinding.js - Exported Functions', () => {
           moveTarget: { x: 10, y: 10 },
           path: [],
           owner: 'ai',
-          lastTargetChangeTime: 500 // Changed recently
+          lastTargetChangeTime: 500, // Changed recently
+          lastPathCalcTime: 100 // Has had a path calculated before (skips immediate path calc)
         }
       ]
 

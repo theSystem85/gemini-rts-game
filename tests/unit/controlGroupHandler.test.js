@@ -221,4 +221,151 @@ describe('control group handling (keyboardHandler)', () => {
 
     expect(handler.controlGroups).toEqual({})
   })
+
+  it('handles control group assignment with empty selection', () => {
+    const handler = new KeyboardHandler()
+    handler.showNotification = vi.fn()
+
+    handler.handleControlGroupAssignment(1, [])
+
+    expect(handler.controlGroups[1]).toBeUndefined()
+    expect(handler.showNotification).not.toHaveBeenCalled()
+    expect(playSound).not.toHaveBeenCalled()
+  })
+
+  it('does not reassign same units to a group if already assigned', () => {
+    const handler = new KeyboardHandler()
+    handler.showNotification = vi.fn()
+
+    const unit1 = createUnit({ id: 'u1', type: 'tank', groupNumber: 2 })
+    const unit2 = createUnit({ id: 'u2', type: 'tank', groupNumber: 2 })
+
+    handler.controlGroups[2] = [unit1, unit2]
+    handler.handleControlGroupAssignment(2, [unit1, unit2])
+
+    expect(handler.controlGroups[2]).toEqual([unit1, unit2])
+    expect(playSound).toHaveBeenCalledWith('unitSelection')
+  })
+
+  it('overwrites previous control group assignment', () => {
+    const handler = new KeyboardHandler()
+    handler.showNotification = vi.fn()
+
+    const oldUnit = createUnit({ id: 'old', type: 'tank', groupNumber: 5 })
+    const newUnit = createUnit({ id: 'new', type: 'tank' })
+
+    handler.controlGroups[5] = [oldUnit]
+    handler.handleControlGroupAssignment(5, [newUnit])
+
+    expect(handler.controlGroups[5]).toEqual([newUnit])
+    expect(newUnit.groupNumber).toBe(5)
+    expect(oldUnit.groupNumber).toBe(5)
+  })
+
+  it('handles control group selection with no units in group', () => {
+    const handler = new KeyboardHandler()
+    const mapGrid = createTestMapGrid(8, 8)
+    const selectedUnits = []
+
+    handler.handleControlGroupSelection(7, [], selectedUnits, mapGrid)
+
+    expect(selectedUnits).toEqual([])
+    expect(playSound).not.toHaveBeenCalled()
+  })
+
+  it('does not center camera on single-press', () => {
+    const handler = new KeyboardHandler()
+    handler.requestRenderFrame = vi.fn()
+
+    const unit = createUnit({ id: 'u1', x: 100, y: 100 })
+    const units = [unit]
+    const selectedUnits = []
+    const mapGrid = createTestMapGrid(10, 10)
+
+    handler.controlGroups[4] = [unit]
+    handler.lastGroupKeyPressed = 5
+    handler.lastGroupKeyPressTime = 0
+
+    vi.spyOn(performance, 'now').mockReturnValue(2000)
+
+    const initialScrollX = gameState.scrollOffset.x
+    const initialScrollY = gameState.scrollOffset.y
+
+    handler.handleControlGroupSelection(4, units, selectedUnits, mapGrid)
+
+    expect(gameState.scrollOffset.x).toBe(initialScrollX)
+    expect(gameState.scrollOffset.y).toBe(initialScrollY)
+    expect(playSound).not.toHaveBeenCalledWith('confirmed')
+    expect(handler.lastGroupKeyPressed).toBe(4)
+  })
+
+  it('filters buildings from control group assignment', () => {
+    const handler = new KeyboardHandler()
+    handler.showNotification = vi.fn()
+
+    const tank = createUnit({ id: 'u1', type: 'tank' })
+    const building = createUnit({ id: 'b1', type: 'factory' })
+
+    handler.handleControlGroupAssignment(3, [tank, building])
+
+    expect(handler.controlGroups[3]).toEqual([tank])
+    expect(tank.groupNumber).toBe(3)
+    expect(building.groupNumber).toBeUndefined()
+  })
+
+  it('rebuilds control groups from mixed unit types', () => {
+    const handler = new KeyboardHandler()
+
+    const units = [
+      createUnit({ id: 'u1', groupNumber: 1 }),
+      createUnit({ id: 'u2', groupNumber: 1 }),
+      createUnit({ id: 'u3', groupNumber: 3 }),
+      createUnit({ id: 'u4' }),
+      createUnit({ id: 'u5', groupNumber: 3 })
+    ]
+
+    handler.rebuildControlGroupsFromUnits(units)
+
+    expect(handler.controlGroups).toEqual({
+      1: [units[0], units[1]],
+      3: [units[2], units[4]]
+    })
+  })
+
+  it('rebuilds control groups with undefined array', () => {
+    const handler = new KeyboardHandler()
+    handler.controlGroups = { 1: [createUnit()] }
+
+    handler.rebuildControlGroupsFromUnits(undefined)
+
+    expect(handler.controlGroups).toEqual({})
+  })
+
+  it('handles control group selection time threshold for double-press', () => {
+    const handler = new KeyboardHandler()
+    handler.requestRenderFrame = vi.fn()
+
+    // Place unit far enough from origin that centering on it will change scroll offset
+    const unit = createUnit({ id: 'u1', x: 500, y: 400 })
+    const units = [unit]
+    const selectedUnits = []
+    const mapGrid = createTestMapGrid(100, 100) // Larger map to allow scrolling
+
+    handler.controlGroups[2] = [unit]
+    handler.lastGroupKeyPressed = 2
+    handler.lastGroupKeyPressTime = 1000
+
+    // Use time within doublePressThreshold (500ms) to trigger double-press
+    vi.spyOn(performance, 'now').mockReturnValue(1400)
+
+    const initialScrollX = gameState.scrollOffset.x
+    const initialScrollY = gameState.scrollOffset.y
+
+    handler.handleControlGroupSelection(2, units, selectedUnits, mapGrid)
+
+    expect(gameState.scrollOffset.x).not.toBe(initialScrollX)
+    expect(gameState.scrollOffset.y).not.toBe(initialScrollY)
+    expect(playSound).toHaveBeenCalledWith('confirmed')
+    expect(handler.requestRenderFrame).toHaveBeenCalled()
+  })
 })

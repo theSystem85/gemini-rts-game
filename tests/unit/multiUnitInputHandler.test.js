@@ -123,5 +123,145 @@ describe('multiUnitInputHandler', () => {
       expect(units[0].commandQueue).toEqual([{ type: 'move', x: 1 }, { type: 'move', x: 3 }])
       expect(units[1].commandQueue).toEqual([{ type: 'move', x: 2 }, { type: 'move', x: 4 }])
     })
+
+    it('returns empty array when targets is empty', () => {
+      const units = [{ id: 'u1', health: 100, commandQueue: [] }]
+      const result = distributeCommandsToUnits(units, [], () => ({ type: 'move' }))
+
+      expect(result).toEqual([])
+      expect(units[0].commandQueue).toEqual([])
+    })
+
+    it('returns empty array when createCommand is not a function', () => {
+      const units = [{ id: 'u1', health: 100, commandQueue: [] }]
+      const targets = [{ x: 1 }]
+      const result = distributeCommandsToUnits(units, targets, null)
+
+      expect(result).toEqual([])
+    })
+
+    it('handles single unit with multiple targets', () => {
+      const unit = { id: 'u1', health: 100, commandQueue: [] }
+      const targets = [{ x: 1 }, { x: 2 }, { x: 3 }]
+
+      const assignments = distributeCommandsToUnits([unit], targets, (t) => ({ type: 'move', x: t.x }))
+
+      expect(assignments[0].commands).toEqual([
+        { type: 'move', x: 1 },
+        { type: 'move', x: 2 },
+        { type: 'move', x: 3 }
+      ])
+    })
+
+    it('does not modify unit when queueing with no commands assigned', () => {
+      const unit = { id: 'u1', health: 100, commandQueue: [{ type: 'move', x: 0 }] }
+      const secondUnit = { id: 'u2', health: 100, commandQueue: [] }
+      const targets = [{ x: 1 }]
+
+      distributeCommandsToUnits([unit, secondUnit], targets, (t) => ({ type: 'move', x: t.x }), { queue: true })
+
+      expect(unit.commandQueue).toEqual([{ type: 'move', x: 0 }, { type: 'move', x: 1 }])
+      expect(secondUnit.commandQueue).toEqual([])
+    })
+
+    it('creates commandQueue if it does not exist when queueing', () => {
+      const unit = { id: 'u1', health: 100 }
+      const commands = [{ type: 'move', x: 1 }]
+
+      applyCommandsToUnit(unit, commands, { queue: true })
+
+      expect(unit.commandQueue).toEqual(commands)
+    })
+
+    it('handles undefined commands parameter', () => {
+      const unit = { id: 'u1', health: 100, commandQueue: [] }
+
+      applyCommandsToUnit(unit, undefined)
+
+      expect(unit.commandQueue).toEqual([])
+    })
+
+    it('does nothing when unit is null', () => {
+      expect(() => applyCommandsToUnit(null, [{ type: 'move' }])).not.toThrow()
+    })
+
+    it('filters out units with undefined health', () => {
+      const validUnit = { id: 'u1', health: 100 }
+      const invalidUnit = { id: 'u2' }
+
+      const result = filterEligibleUnits([validUnit, invalidUnit])
+
+      expect(result).toEqual([validUnit])
+    })
+
+    it('filters out units with negative health', () => {
+      const validUnit = { id: 'u1', health: 50 }
+      const deadUnit = { id: 'u2', health: -10 }
+
+      const result = filterEligibleUnits([validUnit, deadUnit])
+
+      expect(result).toEqual([validUnit])
+    })
+
+    it('allows buildings when allowBuildings is true', () => {
+      const unit = { id: 'u1', health: 100 }
+      const building = { id: 'b1', health: 200, isBuilding: true }
+
+      const result = filterEligibleUnits([unit, building], { allowBuildings: true })
+
+      expect(result).toEqual([unit, building])
+    })
+
+    it('handles multiple targets per unit in round-robin distribution', () => {
+      const unit1 = { id: 'u1', health: 100, commandQueue: [] }
+      const unit2 = { id: 'u2', health: 100, commandQueue: [] }
+      const targets = [{ x: 1 }, { x: 2 }, { x: 3 }, { x: 4 }, { x: 5 }]
+
+      distributeCommandsToUnits([unit1, unit2], targets, (t) => ({ type: 'move', x: t.x }))
+
+      expect(unit1.commandQueue.length).toBe(3)
+      expect(unit2.commandQueue.length).toBe(2)
+      expect(unit1.commandQueue.map(c => c.x)).toEqual([1, 3, 5])
+      expect(unit2.commandQueue.map(c => c.x)).toEqual([2, 4])
+    })
+
+    it('returns assignment information for each unit', () => {
+      const unit1 = { id: 'u1', health: 100, commandQueue: [] }
+      const unit2 = { id: 'u2', health: 100, commandQueue: [] }
+      const targets = [{ x: 1 }, { x: 2 }]
+
+      const assignments = distributeCommandsToUnits([unit1, unit2], targets, (t) => ({ type: 'move', x: t.x }))
+
+      expect(assignments).toHaveLength(2)
+      expect(assignments[0].unit).toBe(unit1)
+      expect(assignments[0].commands).toEqual([{ type: 'move', x: 1 }])
+      expect(assignments[1].unit).toBe(unit2)
+      expect(assignments[1].commands).toEqual([{ type: 'move', x: 2 }])
+    })
+
+    it('passes target index to createCommand function', () => {
+      const units = [{ id: 'u1', health: 100, commandQueue: [] }]
+      const targets = [{ x: 1 }, { x: 2 }]
+      const createCommand = vi.fn((target, index) => ({ type: 'move', x: target.x, index }))
+
+      distributeCommandsToUnits(units, targets, createCommand)
+
+      expect(createCommand).toHaveBeenCalledWith({ x: 1 }, 0)
+      expect(createCommand).toHaveBeenCalledWith({ x: 2 }, 1)
+    })
+
+    it('handles empty selectedUnits array', () => {
+      const targets = [{ x: 1 }]
+      const result = distributeCommandsToUnits([], targets, (t) => ({ type: 'move', x: t.x }))
+
+      expect(result).toEqual([])
+    })
+
+    it('handles null selectedUnits', () => {
+      const targets = [{ x: 1 }]
+      const result = distributeCommandsToUnits(null, targets, (t) => ({ type: 'move', x: t.x }))
+
+      expect(result).toEqual([])
+    })
   })
 })

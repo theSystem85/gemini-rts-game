@@ -1,9 +1,10 @@
 # Unit Test Parallel Agent Plan
 
 **Created**: 2025-01-28T19:55:00Z  
+**Last Updated**: 2026-01-29T18:05:00Z  
 **Goal**: Achieve 100% test coverage through parallel agent work  
 **Current Coverage**: 46.2% statements, 37.9% branches, 57.59% functions, 46.62% lines  
-**Total Tests**: 2328 tests across 82 test files
+**Total Tests**: 2677 tests across 93 test files
 
 ## Task Assignment Rules
 
@@ -569,7 +570,7 @@ describe('fileName.js', () => {
 
 **Overall Progress**: Significant progress made across all priorities.  
 **Current Test Coverage**: 46.2% statements (up from 14.28%), 37.9% branches (up from 11.64%), 57.59% functions (up from 15.23%)  
-**Total Tests Written**: 2328 tests across 82 test files
+**Total Tests Written**: 2677 tests across 93 test files
 
 | Priority | Tasks | Status | Notes |
 |----------|-------|--------|-------|
@@ -582,14 +583,14 @@ describe('fileName.js', () => {
 | P7 - Utils & Misc | 3 | ✅ All Completed | 137 tests added |
 | P8 - Extend Existing | 10 | ✅ All Completed | 160 tests added |
 | P9 - Zero Coverage Core | 5 | ✅ All Completed | 94+ tests added |
-| P10 - Game Zero Coverage | 7 | 🔲 Not Started | Target: 235-360 tests |
-| P11 - Input Zero Coverage | 4 | 🔲 Not Started | Target: 80-120 tests |
+| P10 - Game Zero Coverage | 7 | 🔶 In Progress | 1/7 completed (spatialQuadtree: 31 tests) |
+| P11 - Input Zero Coverage | 4 | 🔶 In Progress | 3/4 completed (89 tests total) |
 | P12 - Network Low Coverage | 4 | 🔲 Not Started | Target: 60-95 tests |
 | P13 - Missions | 1 | 🔲 Not Started | Target: 5-10 tests |
 | P14 - Low Coverage (<50%) | 7 | 🔲 Not Started | Target: 405-525 tests |
 | P15 - Medium Coverage (50-80%) | 17 | 🔲 Not Started | Target: 485-695 tests |
 | P16 - High Coverage (80-99%) | 20 | 🔲 Not Started | Target: 190-295 tests |
-| **Total** | **123** | **66 Completed, 57 Remaining** | **Est: 3843-4563 tests total** |
+| **Total** | **123** | **70 Completed, 53 Remaining** | **Est: 3843-4563 tests total** |
 
 ---
 
@@ -664,8 +665,9 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 10.2 - `src/game/spatialQuadtree.js`
 - **Target**: Create `tests/unit/spatialQuadtree.test.js`
 - **Source File**: `src/game/spatialQuadtree.js` (0% functions)
-- **Status**: [NOT STARTED]
-- **Estimated Tests**: 30-40
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Tests Added**: 31 tests
+- **Coverage After**: Tests for SpatialQuadtree class, insert, query, remove, subdivide, spatial indexing
 
 ### Task 10.3 - `src/game/supplyTruckLogic.js`
 - **Target**: Extend `tests/unit/supplyTruckLogic.test.js`
@@ -713,20 +715,23 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 11.2 - `src/input/cursorStyles.js`
 - **Target**: Create `tests/unit/cursorStyles.test.js`
 - **Source File**: `src/input/cursorStyles.js` (0% functions)
-- **Status**: [NOT STARTED]
-- **Estimated Tests**: 10-15
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Tests Added**: 11 tests
+- **Coverage After**: 100% statements, 100% branches, 100% functions, 100% lines
 
 ### Task 11.3 - `src/input/keybindings.js`
 - **Target**: Create `tests/unit/keybindings.test.js`
 - **Source File**: `src/input/keybindings.js` (22.22% functions)
-- **Status**: [NOT STARTED]
-- **Estimated Tests**: 20-30
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Tests Added**: 55 tests
+- **Coverage After**: Tests added for keybindingManager, KEYBINDING_CONTEXTS, action matching, key bindings
 
 ### Task 11.4 - `src/input/multiUnitInputHandler.js`
 - **Target**: Extend `tests/unit/multiUnitInputHandler.test.js`
 - **Source File**: `src/input/multiUnitInputHandler.js` (0% functions)
-- **Status**: [NOT STARTED]
-- **Estimated Tests**: 30-45
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Tests Added**: 23 tests
+- **Coverage After**: Tests added for multi-unit selection, command handling, and input processing
 
 ---
 
@@ -1127,4 +1132,36 @@ These files have 0% function coverage and are critical to reach 100%.
 
 ---
 
-*Last Updated: 2026-01-29T18:00:00Z*
+*Last Updated: 2026-01-29T18:05:00Z*
+
+---
+
+## Recent Additions (Not in Original Plan)
+
+The following test files were added but not originally tracked in this plan:
+
+### tankerTruckLogic.test.js
+- **Source File**: `src/game/tankerTruckLogic.js`
+- **Tests Added**: 19 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Coverage**: Tests for tanker refueling logic, utility queue management, and alert mode
+
+### tankerTruckUtils.test.js
+- **Source File**: `src/game/tankerTruckUtils.js`
+- **Tests Added**: 36 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Coverage**: Tests for tanker utility functions, kamikaze mode, and detonation
+
+### unifiedMovement.test.js
+- **Source File**: `src/game/unifiedMovement.js`
+- **Tests Added**: 29 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Coverage**: Tests for hasFriendlyUnitOnTile, initializeUnitMovement, stopUnitMovement, cancelUnitMovement, resetUnitVelocityForNewPath, isUnitMoving, rotateUnitInPlace
+
+### controlGroupHandler.test.js (Extended)
+- **Source File**: `src/input/keyboardHandler.js` (control group handling)
+- **Tests Added**: 14 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
+- **Coverage**: Tests for control group assignment, selection, camera centering on double-press
+
+---
