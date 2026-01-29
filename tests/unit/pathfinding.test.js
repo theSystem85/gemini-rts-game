@@ -37,7 +37,13 @@ import {
   buildOccupancyMap,
   initializeOccupancyMap
 } from '../../src/units.js'
-import { TILE_SIZE, PATHFINDING_LIMIT, STREET_PATH_COST, DIRECTIONS } from '../../src/config.js'
+import {
+  updateGlobalPathfinding,
+  createFormationOffsets,
+  clearFormation,
+  getCachedPath
+} from '../../src/game/pathfinding.js'
+import { TILE_SIZE, PATHFINDING_LIMIT, STREET_PATH_COST, DIRECTIONS, PATH_CALC_INTERVAL, PATH_CACHE_TTL } from '../../src/config.js'
 
 // Mock performance.now for consistent timing
 vi.stubGlobal('performance', {
@@ -775,3 +781,493 @@ describe('DIRECTIONS constant', () => {
     expect(hasSW).toBe(true)
   })
 })
+
+describe('pathfinding.js - Exported Functions', () => {
+  let mockPerformanceNow
+
+  beforeEach(() => {
+    mockPerformanceNow = 0
+    vi.mocked(performance.now).mockImplementation(() => mockPerformanceNow)
+  })
+
+  describe('getCachedPath()', () => {
+    it('should calculate and cache a new path', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start = { x: 0, y: 0 }
+      const end = { x: 5, y: 5 }
+
+      const path = getCachedPath(start, end, mapGrid, null)
+
+      expect(path).toBeDefined()
+      expect(path.length).toBeGreaterThan(0)
+      expect(path[0].x).toBe(start.x)
+      expect(path[0].y).toBe(start.y)
+    })
+
+    it('should return cached path when available', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start1 = { x: 0, y: 0 }
+      const start2 = { x: 1, y: 1 }
+      const end = { x: 5, y: 5 }
+
+      // First call caches the path
+      const path1 = getCachedPath(start1, end, mapGrid, null)
+      
+      // Second call should reuse cached path from a point on the path
+      const path2 = getCachedPath(start2, end, mapGrid, null)
+
+      expect(path1).toBeDefined()
+      expect(path2).toBeDefined()
+    })
+
+    it('should handle occupancy map parameter', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      occupancyMap[3][3] = 1
+      const start = { x: 0, y: 0 }
+      const end = { x: 5, y: 5 }
+
+      const path = getCachedPath(start, end, mapGrid, occupancyMap)
+
+      expect(path).toBeDefined()
+      // Path should avoid occupied tile
+      const hasOccupied = path.some(p => p.x === 3 && p.y === 3)
+      expect(hasOccupied).toBe(false)
+    })
+
+    it('should respect owner options for cache key', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start = { x: 0, y: 0, owner: 'player1' }
+      const end = { x: 5, y: 5 }
+      const options = { unitOwner: 'player1' }
+
+      const path = getCachedPath(start, end, mapGrid, null, options)
+
+      expect(path).toBeDefined()
+      expect(path.length).toBeGreaterThan(0)
+    })
+
+    it('should derive owner from start node properties', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start = { x: 0, y: 0, ownerId: 'player2' }
+      const end = { x: 5, y: 5 }
+
+      const path = getCachedPath(start, end, mapGrid, null)
+
+      expect(path).toBeDefined()
+    })
+
+    it('should handle ignoreFriendlyMines option', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start = { x: 0, y: 0 }
+      const end = { x: 5, y: 5 }
+      const options = { ignoreFriendlyMines: true }
+
+      const path = getCachedPath(start, end, mapGrid, null, options)
+
+      expect(path).toBeDefined()
+    })
+
+    it('should remove stale cache entries beyond TTL', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      const start = { x: 0, y: 0 }
+      const end = { x: 5, y: 5 }
+
+      // Cache a path at time 0
+      mockPerformanceNow = 0
+      getCachedPath(start, end, mapGrid, null)
+
+      // Advance time beyond PATH_CACHE_TTL
+      mockPerformanceNow = PATH_CACHE_TTL + 1000
+
+      // Request path again - should calculate new path since cache is stale
+      const path = getCachedPath(start, end, mapGrid, null)
+
+      expect(path).toBeDefined()
+      expect(path.length).toBeGreaterThan(0)
+    })
+
+    it('should return empty array for impossible path', () => {
+      const mapGrid = createTestMapGrid(10, 10)
+      // Surround end with obstacles
+      for (let y = 4; y <= 6; y++) {
+        for (let x = 4; x <= 6; x++) {
+          mapGrid[y][x].type = 'rock'
+        }
+      }
+      const start = { x: 0, y: 0 }
+      const end = { x: 5, y: 5 }
+
+      const path = getCachedPath(start, end, mapGrid, null)
+
+      expect(Array.isArray(path)).toBe(true)
+    })
+  })
+
+  describe('createFormationOffsets()', () => {
+    it('should assign formation offsets to units', () => {
+      const units = [
+        createMockUnit(5, 5),
+        createMockUnit(6, 5),
+        createMockUnit(5, 6),
+        createMockUnit(6, 6)
+      ]
+
+      createFormationOffsets(units, 1)
+
+      units.forEach(unit => {
+        expect(unit.formationOffset).toBeDefined()
+        expect(typeof unit.formationOffset.x).toBe('number')
+        expect(typeof unit.formationOffset.y).toBe('number')
+        expect(unit.formationActive).toBe(true)
+        expect(unit.groupNumber).toBe(1)
+      })
+    })
+
+    it('should create unique offsets for different units', () => {
+      const units = [
+        createMockUnit(0, 0),
+        createMockUnit(1, 0),
+        createMockUnit(0, 1)
+      ]
+
+      createFormationOffsets(units, 2)
+
+      const offsets = units.map(u => `${u.formationOffset.x},${u.formationOffset.y}`)
+      const uniqueOffsets = new Set(offsets)
+      expect(uniqueOffsets.size).toBeGreaterThan(1)
+    })
+
+    it('should handle single unit formation', () => {
+      const units = [createMockUnit(5, 5)]
+
+      createFormationOffsets(units, 3)
+
+      expect(units[0].formationOffset).toBeDefined()
+      expect(units[0].formationActive).toBe(true)
+      expect(units[0].groupNumber).toBe(3)
+    })
+
+    it('should handle large formation', () => {
+      const units = Array.from({ length: 16 }, (_, i) => createMockUnit(i % 4, Math.floor(i / 4)))
+
+      createFormationOffsets(units, 4)
+
+      units.forEach(unit => {
+        expect(unit.formationOffset).toBeDefined()
+        expect(unit.formationActive).toBe(true)
+        expect(unit.groupNumber).toBe(4)
+      })
+    })
+
+    it('should center formation correctly', () => {
+      const units = [createMockUnit(5, 5), createMockUnit(6, 5)]
+
+      createFormationOffsets(units, 1)
+
+      // For 2 units, one should have negative and one positive offset
+      const offsets = units.map(u => u.formationOffset.x)
+      expect(offsets.some(x => x < 0)).toBe(true)
+      expect(offsets.some(x => x > 0)).toBe(true)
+    })
+
+    it('should handle empty units array gracefully', () => {
+      const units = []
+
+      expect(() => createFormationOffsets(units, 5)).not.toThrow()
+    })
+  })
+
+  describe('clearFormation()', () => {
+    it('should clear formation data from units', () => {
+      const units = [
+        createMockUnit(5, 5),
+        createMockUnit(6, 5)
+      ]
+      createFormationOffsets(units, 1)
+
+      clearFormation(units)
+
+      units.forEach(unit => {
+        expect(unit.formationOffset).toBeNull()
+        expect(unit.formationActive).toBe(false)
+        expect(unit.groupNumber).toBeNull()
+      })
+    })
+
+    it('should handle already cleared units', () => {
+      const units = [createMockUnit(5, 5)]
+      units[0].formationOffset = null
+      units[0].formationActive = false
+      units[0].groupNumber = null
+
+      expect(() => clearFormation(units)).not.toThrow()
+    })
+
+    it('should handle empty array', () => {
+      const units = []
+
+      expect(() => clearFormation(units)).not.toThrow()
+    })
+
+    it('should handle units without formation properties', () => {
+      const units = [{ id: 'test', tileX: 5, tileY: 5 }]
+
+      expect(() => clearFormation(units)).not.toThrow()
+      expect(units[0].formationOffset).toBeNull()
+    })
+  })
+
+  describe('updateGlobalPathfinding()', () => {
+    it('should calculate paths for units with moveTarget but no path', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: null }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          moveTarget: { x: 10, y: 10 },
+          path: [],
+          owner: 'player1'
+        }
+      ]
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      expect(units[0].path).toBeDefined()
+      expect(units[0].path.length).toBeGreaterThan(0)
+      expect(units[0].lastPathCalcTime).toBeDefined()
+    })
+
+    it('should calculate paths on PATH_CALC_INTERVAL', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = 0
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          moveTarget: { x: 10, y: 10 },
+          path: [],
+          owner: 'player1'
+        }
+      ]
+
+      // First call at time 0
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Advance time beyond PATH_CALC_INTERVAL
+      mockPerformanceNow = PATH_CALC_INTERVAL + 100
+
+      // Reset path to trigger recalculation
+      units[0].path = []
+
+      // Second call should recalculate
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      expect(units[0].path.length).toBeGreaterThan(0)
+    })
+
+    it('should skip recalculation when path already exists', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          moveTarget: { x: 10, y: 10 },
+          path: [{ x: 6, y: 6 }, { x: 7, y: 7 }, { x: 8, y: 8 }],
+          owner: 'player1',
+          lastPathCalcTime: 0
+        }
+      ]
+
+      mockPerformanceNow = 100
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Path should remain unchanged since it has sufficient length
+      expect(units[0].path.length).toBe(3)
+    })
+
+    it('should handle units with combat targets', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const targetUnit = createMockUnit(15, 15)
+      targetUnit.health = 100
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          target: targetUnit,
+          path: [],
+          owner: 'player1'
+        }
+      ]
+
+      mockPerformanceNow = 0
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Should convert target to moveTarget and calculate path
+      expect(units[0].moveTarget).toBeDefined()
+      expect(units[0].path.length).toBeGreaterThan(0)
+    })
+
+    it('should handle formation groups', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          moveTarget: { x: 15, y: 15 },
+          path: [],
+          formationActive: true,
+          groupNumber: 1,
+          formationOffset: { x: 0, y: 0 },
+          owner: 'player1'
+        },
+        {
+          ...createMockUnit(6, 5),
+          moveTarget: { x: 15, y: 15 },
+          path: [],
+          formationActive: true,
+          groupNumber: 1,
+          formationOffset: { x: 48, y: 0 },
+          owner: 'player1'
+        }
+      ]
+
+      mockPerformanceNow = 0
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Both units should have paths
+      expect(units[0].path.length).toBeGreaterThan(0)
+      expect(units[1].path.length).toBeGreaterThan(0)
+    })
+
+    it('should prioritize closer units when limiting paths per cycle', () => {
+      const mapGrid = createTestMapGrid(50, 50)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = PATH_CALC_INTERVAL + 100
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      
+      // Create many units needing paths
+      const units = []
+      for (let i = 0; i < 50; i++) {
+        units.push({
+          ...createMockUnit(i, i),
+          moveTarget: { x: 25, y: 25 },
+          path: [],
+          owner: 'player1'
+        })
+      }
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Closer units should have paths calculated
+      // Unit at (24, 24) should be very close and get a path
+      const closeUnit = units.find(u => u.tileX === 24 && u.tileY === 24)
+      if (closeUnit) {
+        expect(closeUnit.path.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('should respect AI target change throttling', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = 1000
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          moveTarget: { x: 10, y: 10 },
+          path: [],
+          owner: 'ai',
+          lastTargetChangeTime: 500 // Changed recently
+        }
+      ]
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Should skip recalculation for AI unit with recent target change
+      expect(units[0].path.length).toBe(0)
+    })
+
+    it('should use attack path throttling for attacking units', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = PATH_CALC_INTERVAL + 100
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const targetUnit = createMockUnit(15, 15)
+      targetUnit.health = 100
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          target: targetUnit,
+          path: [],
+          lastAttackPathCalcTime: 100, // Recently calculated
+          owner: 'player1'
+        }
+      ]
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Should skip because attack path was calculated recently
+      // Unit should keep empty path
+      expect(units[0].path.length).toBe(0)
+    })
+
+    it('should clear moveTarget when destination reached', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = PATH_CALC_INTERVAL + 100
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(10, 10),
+          moveTarget: { x: 10, y: 10 }, // Already at target
+          path: [],
+          tileX: 10,
+          tileY: 10,
+          owner: 'player1'
+        }
+      ]
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // moveTarget should be cleared when reached
+      expect(units[0].moveTarget).toBeNull()
+    })
+
+    it('should handle empty units array', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: null }
+      const units = []
+
+      expect(() => updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)).not.toThrow()
+    })
+
+    it('should handle units with attackQueue', () => {
+      const mapGrid = createTestMapGrid(20, 20)
+      const occupancyMap = initializeOccupancyMap([], mapGrid)
+      mockPerformanceNow = PATH_CALC_INTERVAL + 100
+      const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
+      const units = [
+        {
+          ...createMockUnit(5, 5),
+          attackQueue: [{ x: 15, y: 15 }],
+          path: [],
+          owner: 'player1'
+        }
+      ]
+
+      updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
+
+      // Should recognize unit is in attack mode due to attackQueue
+      expect(Array.isArray(units[0].path)).toBe(true)
+    })
+  })
+})
+
