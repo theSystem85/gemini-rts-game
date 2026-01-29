@@ -491,7 +491,7 @@ export const configRegistry = {
     get: () => HELIPAD_FUEL_CAPACITY,
     set: setHelipadFuelCapacity,
     min: 100,
-    max: 10000,
+    max: 20000,
     step: 100,
     category: 'Resources'
   },
@@ -877,5 +877,5 @@ export function setConfigValue(configId, value) {
  */
 export function isConfigMutable(configId) {
   const entry = configRegistry[configId]
-  return entry && entry.set !== null && entry.set !== undefined
+  return !!(entry && entry.set !== null && entry.set !== undefined)
 }

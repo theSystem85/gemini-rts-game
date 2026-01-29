@@ -362,25 +362,32 @@ These files have 0% coverage and need complete test suites created.
 ### Task 7.1 - `src/utils/layoutMetrics.js`
 - **Target**: Create `tests/unit/layoutMetrics.test.js`
 - **Source File**: `src/utils/layoutMetrics.js` (1.05% coverage, lines 8-188)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 08:34 UTC)
+- **Tests Added**: 31 tests
+- **Coverage After**: Pending npm run test:coverage
 - **Estimated Tests**: 20-30
 
 ### Task 7.2 - `src/utils/oreDiscovery.js`
 - **Target**: Create `tests/unit/oreDiscovery.test.js`
 - **Source File**: `src/utils/oreDiscovery.js` (0% coverage, lines 9-65)
-- **Status**: [ ] NOT STARTED
+- **Status**: [SKIPPED] File does not exist in codebase
+- **Note**: File referenced in plan but not found in src/utils/. May be outdated or misnamed.
 - **Estimated Tests**: 10-15
 
 ### Task 7.3 - `src/configRegistry.js`
 - **Target**: Create `tests/unit/configRegistry.test.js`
 - **Source File**: `src/configRegistry.js` (1.17% coverage, lines 143-880)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 08:34 UTC)
+- **Tests Added**: 59 tests
+- **Coverage After**: Pending npm run test:coverage
 - **Estimated Tests**: 50-70
 
 ### Task 7.4 - `src/buildingImageMap.js`
 - **Target**: Create `tests/unit/buildingImageMap.test.js`
 - **Source File**: `src/buildingImageMap.js` (9.09% coverage, lines 39-114)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED] (Finished: 2026-01-29 08:34 UTC)
+- **Tests Added**: 47 tests
+- **Coverage After**: Pending npm run test:coverage
 - **Estimated Tests**: 15-20
 
 ---

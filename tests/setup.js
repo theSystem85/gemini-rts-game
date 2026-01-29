@@ -212,22 +212,55 @@ document.createElement = function(tagName, options) {
 // Mock Image loading
 class MockImage {
   constructor() {
-    this.src = ''
+    this._src = ''
     this.width = 32
     this.height = 32
-    this.complete = true
+    this.complete = false
     this.naturalWidth = 32
     this.naturalHeight = 32
+    this.onload = null
+    this.onerror = null
+    this._loadListeners = []
+    this._errorListeners = []
+  }
+
+  get src() {
+    return this._src
+  }
+
+  set src(value) {
+    this._src = value
+    // Simulate async image loading
+    setTimeout(() => {
+      this.complete = true
+      // Trigger onload callback if set
+      if (this.onload) {
+        this.onload()
+      }
+      // Trigger all addEventListener listeners
+      this._loadListeners.forEach(callback => callback())
+    }, 0)
   }
 
   addEventListener(event, callback) {
     if (event === 'load') {
-      // Simulate async load
-      setTimeout(callback, 0)
+      this._loadListeners.push(callback)
+      // If already loaded, trigger immediately
+      if (this.complete) {
+        setTimeout(callback, 0)
+      }
+    } else if (event === 'error') {
+      this._errorListeners.push(callback)
     }
   }
 
-  removeEventListener() {}
+  removeEventListener(event, callback) {
+    if (event === 'load') {
+      this._loadListeners = this._loadListeners.filter(cb => cb !== callback)
+    } else if (event === 'error') {
+      this._errorListeners = this._errorListeners.filter(cb => cb !== callback)
+    }
+  }
 }
 
 globalThis.Image = MockImage

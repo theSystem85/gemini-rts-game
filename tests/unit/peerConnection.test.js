@@ -231,14 +231,21 @@ describe('remoteConnection (peerConnection task)', () => {
 
   it('stops polling after repeated synchronization failures', async() => {
     vi.useFakeTimers()
-    const connection = createConnection({ pollInterval: 1 })
+    const connection = createConnection({ pollInterval: 100 })
     connection._synchronizeSession = vi.fn().mockRejectedValue(new Error('fail'))
+    connection.maxSyncFailures = 3 // Ensure it stops after 3 failures
 
     connection._beginPolling()
 
-    await vi.runAllTimersAsync()
+    // Advance timers incrementally to process multiple polling iterations
+    // instead of using runAllTimersAsync which can hang on recursive timers
+    for (let i = 0; i < 5; i++) {
+      await vi.advanceTimersByTimeAsync(200)
+    }
 
     expect(connection.connectionState).toBe(RemoteConnectionStatus.FAILED)
     expect(connection.pollActive).toBe(false)
+
+    vi.useRealTimers()
   })
 })
