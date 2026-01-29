@@ -142,6 +142,7 @@ This specification defines a comprehensive ammunition management system for the 
 3. **Given** a Helipad with insufficient ammunition reserves for a full reload, **When** a helicopter attempts to rearm, **Then** the helicopter receives partial ammunition (up to available reserves) and the Helipad reserves reach 0%
 
 4. **Given** a Helipad requires ammunition resupply, **When** the player selects an Ammunition Supply Truck and hovers over the Helipad, **Then** the cursor changes to "moveInto" cursor, allowing the truck to be commanded to resupply the Helipad
+5. **Given** a Helipad is occupied or reserved for another Apache, **When** the player hovers a selected Apache over that Helipad, **Then** the cursor shows a blocked state and additional Apaches cannot land there until it is free
 
 ---
 

@@ -2,6 +2,7 @@
 import { TILE_SIZE, CURSOR_METERS_PER_TILE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
+import { isHelipadAvailableForUnit } from '../utils/helipadUtils.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 
 const CURSOR_CLASS_NAMES = [
@@ -259,6 +260,7 @@ export class CursorManager {
     // Check if mouse is over a wreck when recovery tanks are selected
     this.isOverWreck = false
     this.isOverFriendlyHelipad = false
+    this.isOverBlockedHelipad = false
     // Check if mouse is over ammo-receivable units/buildings when ammo trucks are selected
     this.isOverAmmoReceivableTarget = false
     this.isOverServiceProvider = false
@@ -275,6 +277,9 @@ export class CursorManager {
       const hasSelectedRecoveryTanks = selectedUnits.some(unit => unit.type === 'recoveryTank')
       const hasSelectedDamagedUnits = selectedUnits.some(unit => unit.health < unit.maxHealth)
       const hasSelectedApaches = selectedUnits.some(unit => unit.type === 'apache')
+      const selectedApacheIds = hasSelectedApaches
+        ? selectedUnits.filter(unit => unit.type === 'apache' && unit.id).map(unit => unit.id)
+        : []
 
       if (hasSelectedHarvesters) {
         for (const building of gameState.buildings) {
@@ -327,6 +332,7 @@ export class CursorManager {
                 tileX >= building.x && tileX < building.x + building.width &&
                 tileY >= building.y && tileY < building.y + building.height) {
             this.isOverFriendlyHelipad = true
+            this.isOverBlockedHelipad = !isHelipadAvailableForUnit(building, units, selectedApacheIds)
             break
           }
         }
@@ -698,6 +704,11 @@ export class CursorManager {
           this.isOverFriendlyHelipad ||
           this.isOverAmmoReceivableTarget ||
           this.isOverServiceProvider
+
+      if (this.isOverBlockedHelipad) {
+        setMoveBlockedCursor()
+        return
+      }
 
       if (hasImmediateMoveIntoTarget) {
         setMoveIntoCursor()
