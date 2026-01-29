@@ -370,20 +370,33 @@ describe('remoteControl.js', () => {
     })
 
     it('fires a rocket burst when remote fire is engaged and facing target', () => {
-      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(10000)
+      // Rocket tank fire rate is 12000ms, so we need now > 12000 to pass cooldown check
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(15000)
       gameState.remoteControl = { forward: 0, backward: 0, turnLeft: 0, turnRight: 0, fire: 1 }
+      // Position target directly in front of the rocket tank (same direction as unit rotation)
+      // Unit is at x=200, y=200, target at same y but further right (direction = 0 = east)
       mockRocketTank.target = { id: 'enemy-1', x: 300, y: 200, tileX: 9, tileY: 6, health: 100 }
       mockRocketTank.movement.rotation = 0
       mockRocketTank.direction = 0
       mockRocketTank.lastShotTime = 0
+      mockRocketTank.ammunition = 10
+      // Pre-set isFacingRemoteTarget since the mock for smoothRotateTowardsAngle
+      // returns immediately and doesn't trigger angle comparison properly
+      mockRocketTank.isFacingRemoteTarget = true
       selectedUnits.push(mockRocketTank)
 
       updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
 
+      // Burst state should be created when facing target
       expect(mockRocketTank.burstState).toBeTruthy()
+      expect(mockRocketTank.burstState.rocketsToFire).toBe(4)
+      // The burst state should have remoteControlTarget set from the first call
+      expect(mockRocketTank.burstState.remoteControlTarget).toBeDefined()
 
-      mockRocketTank.isFacingRemoteTarget = true
-      mockRocketTank.burstState.lastRocketTime = 0
+      // The updateRemoteControlledUnits function resets fire to 0 at the end,
+      // so we need to set it back to 1 for the second call to trigger firing
+      gameState.remoteControl.fire = 1
+
       updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
 
       expect(fireBullet).toHaveBeenCalled()

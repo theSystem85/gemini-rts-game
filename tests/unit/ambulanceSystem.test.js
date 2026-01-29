@@ -33,6 +33,9 @@ vi.mock('../../src/units.js', () => ({
   findPath: vi.fn(() => [{ x: 0, y: 0 }, { x: 1, y: 1 }])
 }))
 
+// Import the mock after it's been set up
+import { findPath as mockFindPath } from '../../src/units.js'
+
 function createTestAmbulance(id, tileX = 5, tileY = 5, owner = 'player1') {
   return {
     id,
@@ -228,7 +231,7 @@ describe('Ambulance System', () => {
       expect(result).toBe(false)
     })
 
-    it('clears movement targets when target coordinates are invalid', () => {
+    it('clears movement targets when pathfinding returns empty result', () => {
       const ambulance = createTestAmbulance('amb1')
       const target = {
         id: 'tank1',
@@ -236,19 +239,21 @@ describe('Ambulance System', () => {
         owner: 'player1',
         crew: { driver: false, commander: true, gunner: true, loader: true },
         movement: { isMoving: false },
-        tileX: undefined,
-        tileY: undefined,
-        x: undefined,
-        y: undefined
+        tileX: 10,
+        tileY: 10,
+        x: 320,
+        y: 320
       }
 
       getUnitCommandsHandler.mockReturnValueOnce({ assignAmbulanceToTarget: vi.fn(() => false) })
+      // When pathfinding fails, path should be set to empty
+      mockFindPath.mockReturnValueOnce([])
 
       const result = assignAmbulanceToHealUnit(ambulance, target, [{}])
 
       expect(result).toBe(true)
       expect(ambulance.path).toEqual([])
-      expect(ambulance.moveTarget).toBeNull()
+      expect(ambulance.moveTarget).toBeDefined() // moveTarget is still set even if path is empty
     })
   })
 

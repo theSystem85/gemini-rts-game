@@ -78,23 +78,30 @@ describe('gameSetup.js', () => {
       expect(callback).toHaveBeenCalled()
     })
 
-    it('should wait to invoke callback until all assets are reported loaded', () => {
-      const callback = vi.fn()
+    it('should wait to invoke callback until all assets are reported loaded', async() => {
+      // Reset module state to get fresh state variables
+      vi.resetModules()
+
+      // Re-setup mocks after module reset with delayed callbacks
       let tileCallback
       let buildingCallback
       let turretCallback
 
-      preloadTileTextures.mockImplementationOnce((cb) => {
-        tileCallback = cb
-      })
-      preloadBuildingImages.mockImplementationOnce((cb) => {
-        buildingCallback = cb
-      })
-      preloadTurretImages.mockImplementationOnce((cb) => {
-        turretCallback = cb
-      })
+      vi.doMock('../../src/rendering.js', () => ({
+        preloadTileTextures: vi.fn((cb) => { tileCallback = cb })
+      }))
+      vi.doMock('../../src/buildingImageMap.js', () => ({
+        preloadBuildingImages: vi.fn((cb) => { buildingCallback = cb })
+      }))
+      vi.doMock('../../src/rendering/turretImageRenderer.js', () => ({
+        preloadTurretImages: vi.fn((cb) => { turretCallback = cb })
+      }))
 
-      initializeGameAssets(callback)
+      // Re-import with fresh state
+      const { initializeGameAssets: freshInit } = await import('../../src/gameSetup.js')
+
+      const callback = vi.fn()
+      freshInit(callback)
 
       expect(callback).not.toHaveBeenCalled()
       tileCallback()

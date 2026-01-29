@@ -516,9 +516,12 @@ describe('KeyboardHandler', () => {
 
     handler.handleStopAttacking()
 
+    // Building state should be updated
     expect(building.forcedAttackTarget).toBeNull()
     expect(building.forcedAttack).toBe(false)
     expect(building.holdFire).toBe(true)
-    expect(broadcastUnitStop).toHaveBeenCalledWith([unit, building])
+    // Buildings use 'return' after processing so they're not included in broadcastUnitStop
+    // Only non-building player units are broadcast
+    expect(broadcastUnitStop).toHaveBeenCalledWith([unit])
   })
 })

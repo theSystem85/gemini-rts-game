@@ -261,11 +261,14 @@ describe('lockstepManager', () => {
     lockstepManager._peers.clear()
     lockstepManager.enable()
     lockstepManager._currentTick = 0
-    lockstepManager._accumulator = MS_PER_TICK
+    lockstepManager._accumulator = 0
+    // Set lastTickTime to current timestamp so elapsed time equals exactly MS_PER_TICK
     lockstepManager._lastTickTime = 0
 
+    // Call update with timestamp that creates exactly MS_PER_TICK elapsed time
     lockstepManager.update(MS_PER_TICK)
 
+    // With 0 accumulator + MS_PER_TICK elapsed = 1 tick advance
     expect(lockstepManager.getCurrentTick()).toBe(1)
     expect(syncRNGForTick).toHaveBeenCalledWith(0)
   })
