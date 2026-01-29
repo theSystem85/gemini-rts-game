@@ -405,3 +405,302 @@ describe('UnitCommandsHandler utility queues', () => {
     expect(handler.getUtilityQueuePosition(unit, { id: 'w1', isWreckTarget: true })).toBe(3)
   })
 })
+
+describe('UnitCommandsHandler attack group and movement', () => {
+  let handler
+  let mapGrid
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    handler = new UnitCommandsHandler()
+    mapGrid = Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ type: 'land' })))
+    units.length = 0
+    gameState.attackGroupTargets = []
+    gameState.occupancyMap = mapGrid
+  })
+
+  it('clears attack group state and attack queues from units', () => {
+    const unitWithQueue = { id: 'u1', attackQueue: [{ target: { id: 't1' } }] }
+    const unitNoQueue = { id: 'u2' }
+    gameState.attackGroupTargets = [{ id: 't1' }]
+
+    handler.clearAttackGroupState([unitWithQueue, unitNoQueue])
+
+    expect(unitWithQueue.attackQueue).toBe(null)
+    expect(gameState.attackGroupTargets).toEqual([])
+  })
+
+  it('validates canAmbulanceProvideCrew returns false for invalid units', () => {
+    expect(handler.canAmbulanceProvideCrew(null)).toBe(false)
+    expect(handler.canAmbulanceProvideCrew({ type: 'tank' })).toBe(false)
+    expect(handler.canAmbulanceProvideCrew({ type: 'ambulance', health: 0 })).toBe(false)
+    expect(handler.canAmbulanceProvideCrew({ type: 'ambulance', health: 10, crew: { loader: false } })).toBe(false)
+    expect(handler.canAmbulanceProvideCrew({ type: 'ambulance', health: 10, medics: 0 })).toBe(false)
+    expect(handler.canAmbulanceProvideCrew({ type: 'ambulance', health: 10, medics: 1 })).toBe(true)
+  })
+
+  it('validates canTankerProvideFuel returns false for invalid units', () => {
+    expect(handler.canTankerProvideFuel(null)).toBe(false)
+    expect(handler.canTankerProvideFuel({ type: 'tank' })).toBe(false)
+    expect(handler.canTankerProvideFuel({ type: 'tankerTruck', health: 0 })).toBe(false)
+    expect(handler.canTankerProvideFuel({ type: 'tankerTruck', health: 10, crew: { loader: false } })).toBe(false)
+    expect(handler.canTankerProvideFuel({ type: 'tankerTruck', health: 10 })).toBe(true)
+  })
+
+  it('validates canRecoveryTankRepair returns false for invalid units', () => {
+    expect(handler.canRecoveryTankRepair(null)).toBe(false)
+    expect(handler.canRecoveryTankRepair({ type: 'tank' })).toBe(false)
+    expect(handler.canRecoveryTankRepair({ type: 'recoveryTank', health: 0 })).toBe(false)
+    expect(handler.canRecoveryTankRepair({ type: 'recoveryTank', health: 10, crew: { loader: false } })).toBe(false)
+    expect(handler.canRecoveryTankRepair({ type: 'recoveryTank', health: 10 })).toBe(true)
+  })
+
+  it('validates canAmmunitionTruckOperate and canAmmunitionTruckProvideAmmo', () => {
+    expect(handler.canAmmunitionTruckOperate(null)).toBe(false)
+    expect(handler.canAmmunitionTruckOperate({ type: 'tank' })).toBe(false)
+    expect(handler.canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 0 })).toBe(false)
+    expect(handler.canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 10, crew: { loader: false } })).toBe(false)
+    expect(handler.canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 10 })).toBe(true)
+
+    expect(handler.canAmmunitionTruckProvideAmmo({ type: 'ammunitionTruck', health: 10, ammoCargo: 0 })).toBe(false)
+    expect(handler.canAmmunitionTruckProvideAmmo({ type: 'ammunitionTruck', health: 10, ammoCargo: 5 })).toBe(true)
+  })
+
+  it('cancels recovery task and releases wreck assignment', () => {
+    const wreckData = { id: 'w1', assignedTankId: 'rt1', towedBy: 'rt1' }
+    getWreckById.mockReturnValue(wreckData)
+
+    const tank = {
+      id: 'rt1',
+      type: 'recoveryTank',
+      recoveryTask: { wreckId: 'w1' },
+      towedWreck: { id: 'w1' },
+      recoveryProgress: 50
+    }
+
+    handler.cancelRecoveryTask(tank)
+
+    expect(tank.recoveryTask).toBe(null)
+    expect(tank.towedWreck).toBe(null)
+    expect(tank.recoveryProgress).toBe(0)
+  })
+
+  it('cancels recovery task does nothing for non-recovery tanks', () => {
+    const tank = { id: 'u1', type: 'tank', recoveryTask: null }
+    handler.cancelRecoveryTask(tank)
+    expect(tank.recoveryTask).toBe(null)
+  })
+
+  it('findUnitById returns null for missing id', () => {
+    expect(handler.findUnitById(null)).toBe(null)
+    expect(handler.findUnitById(undefined)).toBe(null)
+    units.push({ id: 'u1', type: 'tank' })
+    expect(handler.findUnitById('u1')).toEqual({ id: 'u1', type: 'tank' })
+    expect(handler.findUnitById('nonexistent')).toBe(null)
+  })
+
+  it('advanceUtilityQueue clears mode when queue is empty', () => {
+    const unit = {
+      utilityQueue: {
+        mode: 'heal',
+        targets: [],
+        currentTargetId: 'u1',
+        currentTargetType: 'unit',
+        currentTargetAction: null,
+        source: 'user',
+        lockedByUser: true
+      }
+    }
+
+    const result = handler.advanceUtilityQueue(unit, mapGrid, true)
+
+    expect(result).toBe(false)
+    expect(unit.utilityQueue.mode).toBe(null)
+    expect(unit.utilityQueue.currentTargetId).toBe(null)
+    expect(unit.utilityQueue.lockedByUser).toBe(false)
+  })
+
+  it('isEnemyTargetForUnit properly detects enemy targets', () => {
+    expect(handler.isEnemyTargetForUnit(null, { owner: 'player1' })).toBe(false)
+    expect(handler.isEnemyTargetForUnit({ owner: 'player2' }, null)).toBe(false)
+    expect(handler.isEnemyTargetForUnit({ owner: 'player2' }, { owner: 'player1' })).toBe(true)
+    expect(handler.isEnemyTargetForUnit({ owner: 'player1' }, { owner: 'player1' })).toBe(false)
+    expect(handler.isEnemyTargetForUnit({ owner: 'player' }, { owner: 'player1' })).toBe(false)
+  })
+
+  it('calculateSemicircleFormation arranges single unit directly in front', () => {
+    const units = [{ id: 'u1' }]
+    const target = { tileX: 5, tileY: 5, x: 160, y: 160 }
+    const safeDistance = 100
+
+    const positions = handler.calculateSemicircleFormation(units, target, safeDistance)
+
+    expect(positions).toHaveLength(1)
+    expect(positions[0].x).toBeCloseTo(target.x + 32 / 2 - safeDistance, 1)
+  })
+
+  it('calculateSemicircleFormation creates arc for multiple units', () => {
+    const selectedUnits = [{ id: 'u1' }, { id: 'u2' }, { id: 'u3' }]
+    const target = { tileX: 5, tileY: 5, x: 160, y: 160 }
+    const safeDistance = 100
+
+    const positions = handler.calculateSemicircleFormation(selectedUnits, target, safeDistance)
+
+    expect(positions).toHaveLength(3)
+    // Positions should form an arc around the target
+    positions.forEach(pos => {
+      const dx = pos.x - (target.x + 16)
+      const dy = pos.y - (target.y + 16)
+      const dist = Math.hypot(dx, dy)
+      expect(dist).toBeCloseTo(safeDistance, 1)
+    })
+  })
+
+  it('getTargetPoint returns center for units with tileX', () => {
+    const unitTarget = { tileX: 3, tileY: 4, x: 96, y: 128 }
+    const point = handler.getTargetPoint(unitTarget, { x: 0, y: 0 })
+    expect(point.x).toBe(96 + 16)
+    expect(point.y).toBe(128 + 16)
+  })
+
+  it('getTargetPoint returns closest point for buildings', () => {
+    const buildingTarget = { x: 4, y: 5, width: 2, height: 2 }
+    const unitCenter = { x: 64, y: 80 }
+    const point = handler.getTargetPoint(buildingTarget, unitCenter)
+    // Building is at pixel 128,160 to 192,224. Unit center at 64,80 is to the left and above
+    expect(point.x).toBe(128) // Clipped to left edge
+    expect(point.y).toBe(160) // Clipped to top edge
+  })
+
+  it('handleDamagedUnitToRecoveryTankCommand queues repair targets', () => {
+    const recoveryTank = {
+      id: 'rt1',
+      type: 'recoveryTank',
+      owner: 'player',
+      tileX: 0,
+      tileY: 0,
+      health: 100
+    }
+
+    const damagedUnits = [
+      { id: 'u1', type: 'tank', owner: 'player', health: 50, maxHealth: 100 },
+      { id: 'u2', type: 'harvester', owner: 'player', health: 30, maxHealth: 80 }
+    ]
+
+    vi.spyOn(handler, 'setUtilityQueue').mockReturnValue({ addedTargets: damagedUnits, started: true })
+
+    handler.handleDamagedUnitToRecoveryTankCommand(damagedUnits, recoveryTank, mapGrid)
+
+    expect(handler.setUtilityQueue).toHaveBeenCalledWith(
+      recoveryTank,
+      damagedUnits,
+      'repair',
+      mapGrid,
+      { append: true, suppressNotifications: true, priority: true }
+    )
+    expect(playSound).toHaveBeenCalledWith('movement', 0.5)
+  })
+
+  it('handleDamagedUnitToRecoveryTankCommand skips fully healthy units', () => {
+    const recoveryTank = { id: 'rt1', type: 'recoveryTank', owner: 'player' }
+    const healthyUnits = [
+      { id: 'u1', type: 'tank', owner: 'player', health: 100, maxHealth: 100 },
+      { id: 'u2', type: 'recoveryTank', owner: 'player', health: 50, maxHealth: 100 } // Skipped due to type
+    ]
+
+    vi.spyOn(handler, 'setUtilityQueue')
+
+    handler.handleDamagedUnitToRecoveryTankCommand(healthyUnits, recoveryTank, mapGrid)
+
+    expect(handler.setUtilityQueue).not.toHaveBeenCalled()
+  })
+
+  it('issueTankerKamikazeCommand sets kamikaze state and path', async() => {
+    const tanker = {
+      id: 't1',
+      type: 'tankerTruck',
+      owner: 'player',
+      tileX: 0,
+      tileY: 0,
+      refuelTarget: { id: 'u1' },
+      refuelTimer: 5,
+      emergencyTarget: { id: 'u2' },
+      emergencyMode: true
+    }
+    const target = { id: 'enemy1', owner: 'enemy', tileX: 3, tileY: 3, x: 96, y: 96 }
+
+    const { computeTankerKamikazeApproach } = await import('../../src/game/tankerTruckUtils.js')
+    computeTankerKamikazeApproach.mockReturnValue({
+      path: [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }],
+      moveTarget: { x: 2, y: 2 }
+    })
+
+    handler.issueTankerKamikazeCommand(tanker, target, mapGrid)
+
+    expect(tanker.kamikazeMode).toBe(true)
+    expect(tanker.kamikazeTargetId).toBe('enemy1')
+    expect(tanker.kamikazeTargetType).toBe('unit')
+    expect(tanker.forcedAttack).toBe(true)
+    expect(tanker.refuelTarget).toBe(null)
+    expect(tanker.refuelTimer).toBe(0)
+    expect(tanker.emergencyTarget).toBe(null)
+    expect(tanker.emergencyMode).toBe(false)
+  })
+
+  it('handleMovementCommand filters out units without commanders', () => {
+    const commandableUnit = { id: 'u1', type: 'tank', owner: 'player', tileX: 0, tileY: 0 }
+    const noCommanderUnit = {
+      id: 'u2',
+      type: 'tank',
+      owner: 'player',
+      tileX: 0,
+      tileY: 0,
+      crew: { commander: false, driver: true }
+    }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 1, y: 1 }])
+
+    handler.handleMovementCommand([commandableUnit, noCommanderUnit], 32, 32, mapGrid)
+
+    expect(showNotification).not.toHaveBeenCalled() // At least one commandable unit exists
+  })
+
+  it('handleMovementCommand shows notification when all units lack commanders', () => {
+    const noCommanderUnit = {
+      id: 'u1',
+      type: 'tank',
+      owner: 'player',
+      tileX: 0,
+      tileY: 0,
+      crew: { commander: false, driver: true }
+    }
+
+    handler.handleMovementCommand([noCommanderUnit], 32, 32, mapGrid)
+
+    expect(showNotification).toHaveBeenCalledWith('Cannot command units without commanders!', 2000)
+  })
+
+  it('planUtilityAssignments distributes targets among service units', () => {
+    const ambulance1 = { id: 'amb1', type: 'ambulance', owner: 'player', tileX: 0, tileY: 0, x: 0, y: 0, health: 10, medics: 2 }
+    const ambulance2 = { id: 'amb2', type: 'ambulance', owner: 'player', tileX: 5, tileY: 5, x: 160, y: 160, health: 10, medics: 2 }
+
+    const target1 = { id: 't1', type: 'tank', owner: 'player', tileX: 1, tileY: 0, x: 32, y: 0, health: 50, maxHealth: 100, crew: { driver: false } }
+    const target2 = { id: 't2', type: 'tank', owner: 'player', tileX: 4, tileY: 5, x: 128, y: 160, health: 50, maxHealth: 100, crew: { gunner: false } }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 1, y: 0 }])
+
+    const result = handler.planUtilityAssignments(
+      [ambulance1, ambulance2],
+      [target1, target2],
+      'heal',
+      mapGrid
+    )
+
+    expect(result.assignments.length).toBeGreaterThan(0)
+  })
+
+  it('queueUtilityTargets returns false when no capable units', () => {
+    const result = handler.queueUtilityTargets([], [{ id: 't1' }], 'heal', mapGrid)
+    expect(result).toBe(false)
+  })
+})

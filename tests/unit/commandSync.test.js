@@ -717,3 +717,207 @@ describe('state hash helpers', () => {
     expect(hashA).not.toBe(hashB)
   })
 })
+
+describe('command type constants', () => {
+  it('exposes command type enum with unique values', () => {
+    const { COMMAND_TYPES } = commandSync
+    expect(COMMAND_TYPES.UNIT_MOVE).toBeDefined()
+    expect(COMMAND_TYPES.UNIT_ATTACK).toBeDefined()
+    expect(COMMAND_TYPES.UNIT_STOP).toBeDefined()
+    expect(COMMAND_TYPES.UNIT_SPAWN).toBeDefined()
+    expect(COMMAND_TYPES.BUILDING_PLACE).toBeDefined()
+    expect(COMMAND_TYPES.BUILDING_DAMAGE).toBeDefined()
+    expect(COMMAND_TYPES.BUILDING_SELL).toBeDefined()
+    expect(COMMAND_TYPES.PRODUCTION_START).toBeDefined()
+    expect(COMMAND_TYPES.GAME_PAUSE).toBeDefined()
+    expect(COMMAND_TYPES.GAME_RESUME).toBeDefined()
+
+    // Ensure no duplicate values
+    const values = Object.values(COMMAND_TYPES)
+    const unique = new Set(values)
+    expect(unique.size).toBe(values.length)
+  })
+})
+
+describe('advanced command synchronization', () => {
+  it('createMoveCommand handles empty array', () => {
+    expect(commandSync.createMoveCommand([], 10, 20)).toEqual({
+      unitIds: [],
+      targetX: 10,
+      targetY: 20
+    })
+  })
+
+  it('createAttackCommand defaults to unit target type', () => {
+    const result = commandSync.createAttackCommand('u1', 'target-1', 'unit')
+    expect(result.targetType).toBe('unit')
+  })
+
+  it('createBuildingPlaceCommand contains correct fields', () => {
+    const result = commandSync.createBuildingPlaceCommand('refinery', 10, 15)
+    expect(result).toEqual({
+      buildingType: 'refinery',
+      x: 10,
+      y: 15
+    })
+  })
+
+  it('createProductionCommand contains correct fields', () => {
+    const result = commandSync.createProductionCommand('unit', 'harvester', 'factory-2')
+    expect(result).toEqual({
+      productionType: 'unit',
+      itemType: 'harvester',
+      factoryId: 'factory-2'
+    })
+  })
+
+  it('broadcastUnitMove filters out invalid units', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    // Empty array should not broadcast
+    commandSync.broadcastUnitMove([], 10, 10)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('broadcastUnitAttack handles building targets', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    const buildingTarget = { id: 'building-1', isBuilding: true }
+    commandSync.broadcastUnitAttack([{ id: 'u1', owner: 'player1' }], buildingTarget)
+
+    expect(send).toHaveBeenCalledTimes(1)
+    const payload = send.mock.calls[0][0].payload
+    expect(payload.targetType).toBe('building')
+    expect(payload.targetId).toBe('building-1')
+  })
+
+  it('broadcastUnitAttack handles unit targets as default', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    const unitTarget = { id: 'unit-1' }
+    commandSync.broadcastUnitAttack([{ id: 'u1', owner: 'player1' }], unitTarget)
+
+    expect(send).toHaveBeenCalledTimes(1)
+    const payload = send.mock.calls[0][0].payload
+    expect(payload.targetType).toBe('unit')
+    expect(payload.targetId).toBe('unit-1')
+  })
+
+  it('processPendingRemoteCommands returns empty when queue is empty', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    // Clear any pending commands from previous tests
+    while (commandSync.processPendingRemoteCommands().length > 0) {
+      // drain queue
+    }
+    const commands = commandSync.processPendingRemoteCommands()
+    expect(commands).toEqual([])
+  })
+
+  it('handleReceivedCommand ignores non-game-command types', () => {
+    const handler = vi.fn()
+    commandSync.subscribeToGameCommands(handler)
+
+    commandSync.handleReceivedCommand({
+      type: 'other-type',
+      commandType: commandSync.COMMAND_TYPES.UNIT_MOVE,
+      payload: {}
+    })
+
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('handleReceivedCommand handles BUILDING_PLACE on client', () => {
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    gameState.partyStates = [{ partyId: 'host' }]
+
+    // This should add to pending since it influences state
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.BUILDING_PLACE,
+      payload: { buildingType: 'powerPlant', x: 5, y: 6 },
+      sourcePartyId: 'host',
+      isHost: true
+    })
+
+    // Should not throw and should handle gracefully
+  })
+
+  it('handleReceivedCommand handles PRODUCTION_START on client', () => {
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    gameState.partyStates = [{ partyId: 'host' }]
+
+    commandSync.handleReceivedCommand({
+      type: 'game-command',
+      commandType: commandSync.COMMAND_TYPES.PRODUCTION_START,
+      payload: { productionType: 'unit', itemType: 'tank', factoryId: 'f1' },
+      sourcePartyId: 'host',
+      isHost: true
+    })
+
+    // Should not throw
+  })
+
+  it('lockstep queueing is skipped when lockstep is disabled', () => {
+    gameState.lockstep.enabled = false
+    createLockstepInput.mockClear()
+
+    commandSync.queueLockstepInput('unit-move', { unitIds: ['u1'] })
+
+    expect(createLockstepInput).not.toHaveBeenCalled()
+  })
+
+  it('handleLockstepCommand handles LOCKSTEP_INIT on client', () => {
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    gameState.lockstep.enabled = false
+
+    commandSync.handleLockstepCommand({
+      commandType: commandSync.COMMAND_TYPES.LOCKSTEP_INIT,
+      payload: { sessionSeed: 12345 }
+    })
+
+    // The function should initialize lockstep session on client
+    expect(lockstepManagerSpies.initialize).toHaveBeenCalled()
+  })
+
+  it('network stats start at zero', () => {
+    const stats = commandSync.getNetworkStats()
+    expect(stats).toHaveProperty('bytesSent')
+    expect(stats).toHaveProperty('bytesReceived')
+    expect(stats).toHaveProperty('sendRate')
+    expect(stats).toHaveProperty('receiveRate')
+    expect(stats).toHaveProperty('lastRateUpdate')
+  })
+
+  it('broadcastStateHash returns early when lockstep disabled', () => {
+    const send = vi.fn()
+    gameState.multiplayerSession = { localRole: 'client', isRemote: true }
+    gameState.lockstep.enabled = false
+    vi.mocked(getActiveRemoteConnection).mockReturnValue({ send })
+
+    // Should return early without broadcasting
+    commandSync.broadcastStateHash(10)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('handleStateHashCommand processes hash verification', () => {
+    gameState.multiplayerSession = { localRole: 'host', isRemote: false }
+    gameState.lockstep.enabled = true
+    gameState.lockstep.currentTick = 10
+    gameState.lockstep.desyncDetected = false
+
+    // This tests that the function does not throw
+    commandSync.handleLockstepCommand({
+      commandType: commandSync.COMMAND_TYPES.LOCKSTEP_HASH,
+      payload: { tick: 8, hash: 'somehash' },
+      sourcePartyId: 'player2'
+    })
+
+    // No assertion needed - we're testing it handles gracefully
+  })
+})

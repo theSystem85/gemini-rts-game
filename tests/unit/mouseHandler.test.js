@@ -531,6 +531,239 @@ describe('MouseHandler', () => {
     expect(center.y).toBe(15)
   })
 
+  it('getTouchCenter handles empty pointer array', () => {
+    const handler = new MouseHandler()
+    const center = handler.getTouchCenter([], new Map())
+    expect(center).toEqual({ x: 0, y: 0 })
+  })
+
+  it('getTouchCenter handles missing pointer entry', () => {
+    const handler = new MouseHandler()
+    const activePointers = new Map()
+    activePointers.set(1, { startX: 10, startY: 20, lastEvent: null })
+
+    const center = handler.getTouchCenter([1, 999], activePointers)
+    // Only pointer 1 contributes, divided by 2 still
+    expect(center.x).toBe(5)
+    expect(center.y).toBe(10)
+  })
+
+  it('createSyntheticMouseEventFromCoords creates event without modifier keys', () => {
+    const handler = new MouseHandler()
+    const target = document.createElement('canvas')
+
+    const event = handler.createSyntheticMouseEventFromCoords(target, 100, 200, 0)
+
+    expect(event.button).toBe(0)
+    expect(event.buttons).toBe(1)
+    expect(event.clientX).toBe(100)
+    expect(event.clientY).toBe(200)
+    expect(event.ctrlKey).toBe(false)
+    expect(event.metaKey).toBe(false)
+    expect(event.shiftKey).toBe(false)
+    expect(event.altKey).toBe(false)
+    expect(event.target).toBe(target)
+    expect(typeof event.preventDefault).toBe('function')
+    expect(typeof event.stopPropagation).toBe('function')
+  })
+
+  it('createSyntheticMouseEventFromCoords handles right-click button', () => {
+    const handler = new MouseHandler()
+    const target = document.createElement('canvas')
+
+    const event = handler.createSyntheticMouseEventFromCoords(target, 50, 75, 2)
+
+    expect(event.button).toBe(2)
+    expect(event.buttons).toBe(2)
+  })
+
+  it('isOverRecoveryTankAt returns false when no game units', () => {
+    const handler = new MouseHandler()
+    handler.gameUnits = null
+    expect(handler.isOverRecoveryTankAt(100, 100)).toBe(false)
+  })
+
+  it('isOverRecoveryTankAt detects recovery tank at tile position', () => {
+    const handler = new MouseHandler()
+    gameState.humanPlayer = 'player'
+    // Unit at pixel (32, 32) has unitTileX = floor((32 + 16)/32) = 1, unitTileY = 1
+    handler.gameUnits = [
+      { type: 'recoveryTank', owner: 'player', x: TILE_SIZE, y: TILE_SIZE }
+    ]
+    // Mouse at worldX=48=1.5*32 gives tileX = floor(48/32) = 1
+    expect(handler.isOverRecoveryTankAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(true)
+    // Mouse at (0,0) gives tileX = 0, tileY = 0
+    expect(handler.isOverRecoveryTankAt(0, 0)).toBe(false)
+  })
+
+  it('isOverRecoveryTankAt ignores enemy recovery tanks', () => {
+    const handler = new MouseHandler()
+    gameState.humanPlayer = 'player'
+    handler.gameUnits = [
+      { type: 'recoveryTank', owner: 'enemy', x: TILE_SIZE + TILE_SIZE / 2, y: TILE_SIZE + TILE_SIZE / 2 }
+    ]
+
+    expect(handler.isOverRecoveryTankAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(false)
+  })
+
+  it('isOverDamagedUnitAt returns false when no game units', () => {
+    const handler = new MouseHandler()
+    handler.gameUnits = null
+    expect(handler.isOverDamagedUnitAt(100, 100, [])).toBe(false)
+  })
+
+  it('isOverDamagedUnitAt detects damaged unit at tile position', () => {
+    const handler = new MouseHandler()
+    gameState.humanPlayer = 'player'
+    const damagedUnit = {
+      id: 'tank1',
+      type: 'tank',
+      owner: 'player',
+      health: 50,
+      maxHealth: 100,
+      // Unit at pixel (32, 32) has unitTileX = floor((32 + 16)/32) = 1
+      x: TILE_SIZE,
+      y: TILE_SIZE
+    }
+    handler.gameUnits = [damagedUnit]
+
+    // Mouse at worldX=48 gives tileX = floor(48/32) = 1
+    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5, [])).toBe(true)
+    // Returns false if unit is in selectedUnits
+    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5, [damagedUnit])).toBe(false)
+  })
+
+  it('isOverDamagedUnitAt ignores healthy units and recovery tanks', () => {
+    const handler = new MouseHandler()
+    gameState.humanPlayer = 'player'
+    handler.gameUnits = [
+      { type: 'tank', owner: 'player', health: 100, maxHealth: 100, x: TILE_SIZE / 2, y: TILE_SIZE / 2 },
+      { type: 'recoveryTank', owner: 'player', health: 50, maxHealth: 100, x: TILE_SIZE * 1.5, y: TILE_SIZE / 2 }
+    ]
+
+    expect(handler.isOverDamagedUnitAt(TILE_SIZE / 2, TILE_SIZE / 2, [])).toBe(false)
+    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE / 2, [])).toBe(false)
+  })
+
+  it('setRenderScheduler stores the callback', () => {
+    const handler = new MouseHandler()
+    const callback = vi.fn()
+
+    handler.setRenderScheduler(callback)
+
+    expect(handler.requestRenderFrame).toBe(callback)
+  })
+
+  it('updateAGFCapability delegates to attackGroupHandler', () => {
+    const handler = new MouseHandler()
+    handler.attackGroupHandler.updateAGFCapability = vi.fn()
+
+    const selectedUnits = [{ id: 'u1', type: 'tank' }]
+    handler.updateAGFCapability(selectedUnits)
+
+    expect(handler.attackGroupHandler.updateAGFCapability).toHaveBeenCalledWith(selectedUnits)
+  })
+
+  it('selectWreck clears unit selections and sets selectedWreckId', () => {
+    const handler = new MouseHandler()
+    const selectionManager = {
+      clearAttackGroupTargets: vi.fn()
+    }
+
+    const selectedUnits = [
+      { id: 'u1', selected: true },
+      { id: 'u2', selected: true }
+    ]
+    const factories = [{ id: 'f1', selected: true }]
+    gameState.buildings = [{ id: 'b1', selected: true }]
+    gameState.selectedWreckId = null
+    gameState.attackGroupMode = true
+    gameState.disableAGFRendering = true
+
+    const wreck = { id: 'wreck-123' }
+    handler.selectWreck(wreck, selectedUnits, factories, selectionManager)
+
+    expect(selectedUnits.every(u => u.selected === false)).toBe(true)
+    expect(selectedUnits).toHaveLength(0)
+    expect(factories[0].selected).toBe(false)
+    expect(gameState.buildings[0].selected).toBe(false)
+    expect(selectionManager.clearAttackGroupTargets).toHaveBeenCalled()
+    expect(gameState.selectedWreckId).toBe('wreck-123')
+    expect(gameState.attackGroupMode).toBe(false)
+    expect(gameState.disableAGFRendering).toBe(false)
+  })
+
+  it('selectWreck handles null inputs gracefully', () => {
+    const handler = new MouseHandler()
+    // Should not throw
+    handler.selectWreck(null, [], [], null)
+    handler.selectWreck({ id: 'w1' }, [], null, null)
+  })
+
+  it('findEnemyTarget detects enemy buildings', () => {
+    const handler = new MouseHandler()
+    handler.gameFactories = []
+
+    gameState.buildings = [
+      {
+        id: 'enemy-building',
+        owner: 'enemy',
+        x: 2,
+        y: 2,
+        width: 2,
+        height: 2
+      }
+    ]
+
+    const target = handler.findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5)
+    expect(target).toBe(gameState.buildings[0])
+  })
+
+  it('findEnemyTarget detects enemy factories', () => {
+    const handler = new MouseHandler()
+    handler.gameFactories = [
+      {
+        id: 'enemy',
+        x: 5,
+        y: 5,
+        width: 2,
+        height: 2
+      }
+    ]
+
+    gameState.buildings = []
+
+    const target = handler.findEnemyTarget(TILE_SIZE * 5.5, TILE_SIZE * 5.5)
+    expect(target).toBe(handler.gameFactories[0])
+  })
+
+  it('findEnemyTarget ignores player-owned buildings and factories', () => {
+    const handler = new MouseHandler()
+    handler.gameFactories = [
+      {
+        id: 'player',
+        x: 5,
+        y: 5,
+        width: 2,
+        height: 2
+      }
+    ]
+
+    gameState.buildings = [
+      {
+        id: 'player-building',
+        owner: 'player',
+        x: 2,
+        y: 2,
+        width: 2,
+        height: 2
+      }
+    ]
+
+    const target = handler.findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5)
+    expect(target).toBe(null)
+  })
+
   it('cancels repair and sell modes on context menu', () => {
     const handler = new MouseHandler()
     const gameCanvas = document.createElement('canvas')
