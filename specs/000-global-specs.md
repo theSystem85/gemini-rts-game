@@ -48,6 +48,11 @@ The following unit types are considered attack-capable for cursor/range detectio
 - `apache`
 - `artilleryTurret` (building)
 
+## Production Speed Scaling
+
+- Vehicle factory count accelerates unit production time using a multiplier equal to the number of vehicle factories owned by the player (1 factory = 1x, 2 factories = 2x, etc.).
+- The multiplier applies to ground vehicles and Apache helicopters (helicopters still spawn from Helipads, but their build time is reduced by the same vehicle factory multiplier).
+
 ## Related Files
 
 - [src/config.js](../src/config.js) - Constants definition
