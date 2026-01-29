@@ -5,7 +5,7 @@
  * coordinate conversions, and other game utilities.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   tileToPixel,
   getUniqueId,
@@ -19,7 +19,14 @@ import {
   checkLevelUp,
   applyLevelBonuses,
   getExperienceProgress,
-  handleSelfRepair
+  handleSelfRepair,
+  debugAddExperience,
+  debugShowUnitStats,
+  debugForceShowExperienceBars,
+  debugSpawnEnemyUnit,
+  debugTestExperienceAwarding,
+  debugListAllUnits,
+  debugInitializeAllUnits
 } from '../../src/utils.js'
 import { TILE_SIZE } from '../../src/config.js'
 
@@ -460,6 +467,405 @@ describe('utils', () => {
       handleSelfRepair(unit, startTime + 3001)
       // Health should not exceed maxHealth
       expect(unit.health).toBeLessThanOrEqual(100)
+    })
+  })
+
+  describe('debugAddExperience()', () => {
+    beforeEach(() => {
+      // Setup window logger mock
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        debugGetSelectedUnits: vi.fn()
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugAddExperience).toBe('function')
+    })
+
+    it('should not throw when no units selected', () => {
+      window.debugGetSelectedUnits = vi.fn(() => [])
+
+      expect(() => debugAddExperience()).not.toThrow()
+      expect(window.logger).toHaveBeenCalled()
+    })
+
+    it('should log message when no units selected', () => {
+      window.debugGetSelectedUnits = vi.fn(() => [])
+
+      debugAddExperience()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('No units selected'))
+    })
+
+    it('should add experience to selected units', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        level: 1,
+        experience: 0,
+        baseCost: 1000
+      }
+      window.debugGetSelectedUnits = vi.fn(() => [mockUnit])
+
+      debugAddExperience(500)
+
+      expect(mockUnit.experience).toBe(500)
+    })
+
+    it('should skip harvesters', () => {
+      const mockHarvester = {
+        id: 'test-harvester',
+        type: 'harvester',
+        experience: 0
+      }
+      window.debugGetSelectedUnits = vi.fn(() => [mockHarvester])
+
+      debugAddExperience(500)
+
+      expect(mockHarvester.experience).toBe(0)
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('cannot gain experience'))
+    })
+
+    it('should use default amount of 1000', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        level: 1,
+        experience: 0,
+        baseCost: 1000
+      }
+      window.debugGetSelectedUnits = vi.fn(() => [mockUnit])
+
+      debugAddExperience()
+
+      expect(mockUnit.experience).toBe(1000)
+    })
+  })
+
+  describe('debugShowUnitStats()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        selectedUnits: []
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugShowUnitStats).toBe('function')
+    })
+
+    it('should not throw with empty selected units', () => {
+      window.selectedUnits = []
+
+      expect(() => debugShowUnitStats()).not.toThrow()
+    })
+
+    it('should show stats for selected units', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        level: 2,
+        experience: 500,
+        baseCost: 1000
+      }
+      window.selectedUnits = [mockUnit]
+
+      debugShowUnitStats()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('tank'))
+    })
+
+    it('should skip harvesters', () => {
+      const mockHarvester = {
+        id: 'test-harvester',
+        type: 'harvester'
+      }
+      window.selectedUnits = [mockHarvester]
+
+      debugShowUnitStats()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining("don't level up"))
+    })
+  })
+
+  describe('debugForceShowExperienceBars()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        gameInstance: { units: [] }
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugForceShowExperienceBars).toBe('function')
+    })
+
+    it('should not throw with empty units array', () => {
+      window.gameInstance.units = []
+
+      expect(() => debugForceShowExperienceBars()).not.toThrow()
+    })
+
+    it('should add experience to units with 0 experience', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        level: 1,
+        experience: 0,
+        baseCost: 1000
+      }
+      window.gameInstance.units = [mockUnit]
+
+      debugForceShowExperienceBars()
+
+      expect(mockUnit.experience).toBe(100)
+    })
+
+    it('should skip harvesters', () => {
+      const mockHarvester = {
+        id: 'test-harvester',
+        type: 'harvester',
+        experience: 0
+      }
+      window.gameInstance.units = [mockHarvester]
+
+      debugForceShowExperienceBars()
+
+      expect(mockHarvester.experience).toBe(0)
+    })
+
+    it('should log completion message', () => {
+      window.gameInstance.units = []
+
+      debugForceShowExperienceBars()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('Forced experience bars'))
+    })
+  })
+
+  describe('debugSpawnEnemyUnit()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        gameInstance: { units: [] },
+        gameState: { occupancyMap: [] }
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugSpawnEnemyUnit).toBe('function')
+    })
+
+    it('should spawn enemy unit', () => {
+      const result = debugSpawnEnemyUnit('tank')
+
+      expect(result).toBeDefined()
+      expect(result.type).toBe('tank')
+      expect(result.owner).toBe('enemy')
+    })
+
+    it('should add unit to gameInstance.units', () => {
+      debugSpawnEnemyUnit('tank')
+
+      expect(window.gameInstance.units).toHaveLength(1)
+    })
+
+    it('should use default unit type of tank', () => {
+      const result = debugSpawnEnemyUnit()
+
+      expect(result.type).toBe('tank')
+    })
+
+    it('should log spawn message', () => {
+      debugSpawnEnemyUnit('heavyTank')
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('Spawned enemy heavyTank'))
+    })
+  })
+
+  describe('debugTestExperienceAwarding()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        debugGetSelectedUnits: vi.fn(() => [])
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugTestExperienceAwarding).toBe('function')
+    })
+
+    it('should not throw when no units selected', () => {
+      window.debugGetSelectedUnits = vi.fn(() => [])
+
+      expect(() => debugTestExperienceAwarding()).not.toThrow()
+    })
+
+    it('should log error when no units selected', () => {
+      window.debugGetSelectedUnits = vi.fn(() => [])
+
+      debugTestExperienceAwarding()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('No units selected'))
+    })
+
+    it('should award experience to selected units', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        level: 1,
+        experience: 0,
+        baseCost: 1000
+      }
+      window.debugGetSelectedUnits = vi.fn(() => [mockUnit])
+
+      debugTestExperienceAwarding()
+
+      expect(mockUnit.experience).toBeGreaterThan(0)
+    })
+  })
+
+  describe('debugListAllUnits()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        gameInstance: { units: [] }
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugListAllUnits).toBe('function')
+    })
+
+    it('should not throw with empty units', () => {
+      window.gameInstance.units = []
+
+      expect(() => debugListAllUnits()).not.toThrow()
+    })
+
+    it('should return units array', () => {
+      const mockUnits = [
+        { type: 'tank', owner: 'player1' },
+        { type: 'harvester', owner: 'player1' }
+      ]
+      window.gameInstance.units = mockUnits
+
+      const result = debugListAllUnits()
+
+      expect(result).toBe(mockUnits)
+    })
+
+    it('should log total unit count', () => {
+      window.gameInstance.units = [
+        { type: 'tank', owner: 'player1' }
+      ]
+
+      debugListAllUnits()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('Total units'))
+    })
+
+    it('should group units by owner', () => {
+      window.gameInstance.units = [
+        { type: 'tank', owner: 'player1' },
+        { type: 'harvester', owner: 'player1' },
+        { type: 'tank', owner: 'enemy' }
+      ]
+
+      debugListAllUnits()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('player1'))
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('enemy'))
+    })
+  })
+
+  describe('debugInitializeAllUnits()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        ...window,
+        logger: vi.fn(),
+        gameInstance: { units: [] }
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('should be a function', () => {
+      expect(typeof debugInitializeAllUnits).toBe('function')
+    })
+
+    it('should not throw with empty units', () => {
+      window.gameInstance.units = []
+
+      expect(() => debugInitializeAllUnits()).not.toThrow()
+    })
+
+    it('should initialize leveling for units without it', () => {
+      const mockUnit = {
+        id: 'test-unit',
+        type: 'tank',
+        owner: 'player1'
+      }
+      window.gameInstance.units = [mockUnit]
+
+      debugInitializeAllUnits()
+
+      expect(mockUnit.level).toBeDefined()
+      expect(mockUnit.experience).toBeDefined()
+    })
+
+    it('should skip harvesters', () => {
+      const mockHarvester = {
+        id: 'test-harvester',
+        type: 'harvester',
+        owner: 'player1'
+      }
+      window.gameInstance.units = [mockHarvester]
+
+      debugInitializeAllUnits()
+
+      expect(mockHarvester.level).toBeUndefined()
+    })
+
+    it('should log completion summary', () => {
+      window.gameInstance.units = []
+
+      debugInitializeAllUnits()
+
+      expect(window.logger).toHaveBeenCalledWith(expect.stringContaining('Initialized experience system'))
     })
   })
 })

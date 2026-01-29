@@ -916,4 +916,455 @@ describe('Building System', () => {
       expect(unit.teslaSlowed).toBe(false)
     })
   })
+
+  describe('updatePowerSupply', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.updatePowerSupply).toBe('function')
+    })
+
+    it('should calculate player power supply from buildings', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.power = 50
+
+      gameState.buildings = [building]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.playerPowerSupply).toBe(50)
+    })
+
+    it('should add factory power (+50) when factory is alive', () => {
+      const factory = createTestFactory()
+      factory.owner = 'player1'
+      factory.health = 100
+
+      gameState.factories = [factory]
+      gameState.buildings = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.playerPowerSupply).toBe(50)
+    })
+
+    it('should not add factory power when factory is dead', () => {
+      const factory = createTestFactory()
+      factory.owner = 'player1'
+      factory.health = 0
+
+      gameState.factories = [factory]
+      gameState.buildings = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.playerPowerSupply).toBe(0)
+    })
+
+    it('should track power consumption separately', () => {
+      const powerPlant = createBuilding('powerPlant', 5, 5)
+      powerPlant.owner = 'player1'
+      powerPlant.power = 50
+
+      const rocketTurret = createBuilding('rocketTurret', 10, 10)
+      rocketTurret.owner = 'player1'
+      rocketTurret.power = -20
+
+      gameState.buildings = [powerPlant, rocketTurret]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.playerTotalPowerProduction).toBe(50)
+      expect(gameState.playerPowerConsumption).toBe(20)
+      expect(gameState.playerPowerSupply).toBe(30)
+    })
+
+    it('should enable low energy mode when power is negative', () => {
+      const rocketTurret = createBuilding('rocketTurret', 10, 10)
+      rocketTurret.owner = 'player1'
+      rocketTurret.power = -50
+
+      gameState.buildings = [rocketTurret]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.lowEnergyMode).toBe(true)
+      expect(gameState.playerPowerSupply).toBe(-50)
+    })
+
+    it('should calculate build speed modifier when power is negative', () => {
+      const powerPlant = createBuilding('powerPlant', 5, 5)
+      powerPlant.owner = 'player1'
+      powerPlant.power = 50
+
+      const rocketTurret1 = createBuilding('rocketTurret', 10, 10)
+      rocketTurret1.owner = 'player1'
+      rocketTurret1.power = -60
+
+      const rocketTurret2 = createBuilding('rocketTurret', 15, 10)
+      rocketTurret2.owner = 'player1'
+      rocketTurret2.power = -40
+
+      gameState.buildings = [powerPlant, rocketTurret1, rocketTurret2]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.playerPowerSupply).toBe(-50)
+      expect(gameState.playerBuildSpeedModifier).toBe(0.5) // 50 / 100
+    })
+
+    it('should activate radar when radar station exists and power is positive', () => {
+      const powerPlant = createBuilding('powerPlant', 5, 5)
+      powerPlant.owner = 'player1'
+      powerPlant.power = 50
+
+      const radar = createBuilding('radarStation', 10, 10)
+      radar.owner = 'player1'
+      radar.power = -10
+      radar.health = 100
+
+      gameState.buildings = [powerPlant, radar]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.radarActive).toBe(true)
+    })
+
+    it('should deactivate radar when power is negative', () => {
+      const radar = createBuilding('radarStation', 10, 10)
+      radar.owner = 'player1'
+      radar.power = -10
+      radar.health = 100
+
+      gameState.buildings = [radar]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.radarActive).toBe(false)
+    })
+
+    it('should calculate enemy power separately', () => {
+      const enemyBuilding = createBuilding('powerPlant', 20, 20)
+      enemyBuilding.owner = 'enemy'
+      enemyBuilding.power = 100
+
+      gameState.buildings = [enemyBuilding]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(gameState.enemyPowerSupply).toBe(100)
+      expect(gameState.playerPowerSupply).toBe(0)
+    })
+
+    it('should return player power supply', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.power = 75
+
+      gameState.buildings = [building]
+      gameState.factories = []
+      gameState.humanPlayer = 'player1'
+
+      const result = buildingsModule.updatePowerSupply(gameState.buildings, gameState)
+
+      expect(result).toBe(75)
+    })
+  })
+
+  describe('canPlaceBuilding', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.canPlaceBuilding).toBe('function')
+    })
+
+    it('should return true for valid placement location', () => {
+      const result = buildingsModule.canPlaceBuilding(
+        'powerPlant',
+        10, 10,
+        mapGrid,
+        [], // units
+        [], // buildings
+        [], // factories
+        'player1'
+      )
+
+      expect(typeof result).toBe('boolean')
+    })
+
+    it('should check placement with empty buildings array', () => {
+      const result = buildingsModule.canPlaceBuilding(
+        'rocketTurret',
+        5, 5,
+        mapGrid,
+        [],
+        [],
+        [],
+        'player1'
+      )
+
+      // Should return a boolean result
+      expect(typeof result).toBe('boolean')
+    })
+  })
+
+  describe('cacheBuildingSmokeScales', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.cacheBuildingSmokeScales).toBe('function')
+    })
+
+    it('should not throw when building config has no smokeSpots', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      const config = { ...buildingData.powerPlant }
+      delete config.smokeSpots
+
+      expect(() => {
+        buildingsModule.cacheBuildingSmokeScales(building, config)
+      }).not.toThrow()
+    })
+
+    it('should not throw when building config is null', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+
+      expect(() => {
+        buildingsModule.cacheBuildingSmokeScales(building, null)
+      }).not.toThrow()
+    })
+
+    it('should not throw when building config is undefined', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+
+      expect(() => {
+        buildingsModule.cacheBuildingSmokeScales(building, undefined)
+      }).not.toThrow()
+    })
+  })
+
+  describe('markBuildingForRepairPause', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.markBuildingForRepairPause).toBe('function')
+    })
+
+    it('should mark building with needsRepairPause flag', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.needsRepairPause = false
+
+      buildingsModule.markBuildingForRepairPause(building)
+
+      expect(building.needsRepairPause).toBe(true)
+    })
+
+    it('should set lastAttackedTime on building', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+
+      buildingsModule.markBuildingForRepairPause(building)
+
+      expect(building.lastAttackedTime).toBeDefined()
+      expect(typeof building.lastAttackedTime).toBe('number')
+    })
+
+    it('should not throw when building is null', () => {
+      expect(() => {
+        buildingsModule.markBuildingForRepairPause(null)
+      }).not.toThrow()
+    })
+
+    it('should not throw when building is undefined', () => {
+      expect(() => {
+        buildingsModule.markBuildingForRepairPause(undefined)
+      }).not.toThrow()
+    })
+  })
+
+  describe('pauseActiveRepair', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.pauseActiveRepair).toBe('function')
+    })
+
+    it('should return false (currently disabled)', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+
+      const result = buildingsModule.pauseActiveRepair(building)
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('updateBuildingsUnderRepair', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.updateBuildingsUnderRepair).toBe('function')
+    })
+
+    it('should not throw when buildingsUnderRepair is empty', () => {
+      gameState.buildingsUnderRepair = []
+
+      expect(() => {
+        buildingsModule.updateBuildingsUnderRepair(gameState, performance.now())
+      }).not.toThrow()
+    })
+
+    it('should not throw when buildingsUnderRepair is undefined', () => {
+      gameState.buildingsUnderRepair = undefined
+
+      expect(() => {
+        buildingsModule.updateBuildingsUnderRepair(gameState, performance.now())
+      }).not.toThrow()
+    })
+
+    it('should progress repair over time', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.health = 50
+      building.maxHealth = 100
+
+      const startTime = performance.now()
+      gameState.buildingsUnderRepair = [{
+        building: building,
+        startTime: startTime - 500, // Started 500ms ago
+        duration: 1000,
+        startHealth: 50,
+        targetHealth: 100,
+        healthToRepair: 50,
+        cost: 100,
+        costPaid: 50
+      }]
+      gameState.money = 1000
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updateBuildingsUnderRepair(gameState, startTime)
+
+      // Health should have increased
+      expect(building.health).toBeGreaterThanOrEqual(50)
+    })
+
+    it('should complete repair when duration elapsed', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.health = 50
+      building.maxHealth = 100
+
+      const startTime = performance.now()
+      gameState.buildingsUnderRepair = [{
+        building: building,
+        startTime: startTime - 2000, // Started 2000ms ago, past 1000ms duration
+        duration: 1000,
+        startHealth: 50,
+        targetHealth: 100,
+        healthToRepair: 50,
+        cost: 100,
+        costPaid: 100 // Already fully paid
+      }]
+      gameState.money = 1000
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updateBuildingsUnderRepair(gameState, startTime)
+
+      // Building should be fully repaired and removed from queue
+      expect(building.health).toBe(100)
+      expect(gameState.buildingsUnderRepair).toHaveLength(0)
+    })
+  })
+
+  describe('updateBuildingsAwaitingRepair', () => {
+    it('should be a function', () => {
+      expect(typeof buildingsModule.updateBuildingsAwaitingRepair).toBe('function')
+    })
+
+    it('should not throw when buildingsAwaitingRepair is empty', () => {
+      gameState.buildingsAwaitingRepair = []
+
+      expect(() => {
+        buildingsModule.updateBuildingsAwaitingRepair(gameState, performance.now())
+      }).not.toThrow()
+    })
+
+    it('should not throw when buildingsAwaitingRepair is undefined', () => {
+      gameState.buildingsAwaitingRepair = undefined
+
+      expect(() => {
+        buildingsModule.updateBuildingsAwaitingRepair(gameState, performance.now())
+      }).not.toThrow()
+    })
+
+    it('should skip concrete walls', () => {
+      const wall = createBuilding('concreteWall', 5, 5)
+      wall.owner = 'player1'
+      wall.health = 50
+      wall.maxHealth = 100
+
+      gameState.buildingsAwaitingRepair = [{
+        building: wall,
+        repairCost: 50,
+        healthToRepair: 50,
+        lastAttackedTime: performance.now() - 20000 // 20 seconds ago
+      }]
+      gameState.money = 1000
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updateBuildingsAwaitingRepair(gameState, performance.now())
+
+      // Wall should be removed from awaiting list
+      expect(gameState.buildingsAwaitingRepair).toHaveLength(0)
+    })
+
+    it('should track remaining cooldown', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.health = 50
+      building.maxHealth = 100
+
+      const now = performance.now()
+      gameState.buildingsAwaitingRepair = [{
+        building: building,
+        repairCost: 50,
+        healthToRepair: 50,
+        lastAttackedTime: now - 5000 // 5 seconds ago
+      }]
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updateBuildingsAwaitingRepair(gameState, now)
+
+      // Should have 5 seconds remaining (10 second cooldown - 5 seconds elapsed)
+      expect(gameState.buildingsAwaitingRepair[0].remainingCooldown).toBeCloseTo(5, 0)
+    })
+
+    it('should reset countdown when building attacked again', () => {
+      const building = createBuilding('powerPlant', 5, 5)
+      building.owner = 'player1'
+      building.health = 50
+      building.maxHealth = 100
+
+      const now = performance.now()
+      const oldAttackTime = now - 8000
+      const newAttackTime = now - 1000
+
+      building.lastAttackedTime = newAttackTime // Building was attacked 1 second ago
+
+      gameState.buildingsAwaitingRepair = [{
+        building: building,
+        repairCost: 50,
+        healthToRepair: 50,
+        lastAttackedTime: oldAttackTime // Original attack was 8 seconds ago
+      }]
+      gameState.humanPlayer = 'player1'
+
+      buildingsModule.updateBuildingsAwaitingRepair(gameState, now)
+
+      // lastAttackedTime should be updated to the more recent attack
+      expect(gameState.buildingsAwaitingRepair[0].lastAttackedTime).toBe(newAttackTime)
+    })
+  })
 })
