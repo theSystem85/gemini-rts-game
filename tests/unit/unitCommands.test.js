@@ -406,6 +406,122 @@ describe('UnitCommandsHandler utility queues', () => {
   })
 })
 
+describe('UnitCommandsHandler handleAttackCommand', () => {
+  let handler
+  let mapGrid
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    handler = new UnitCommandsHandler()
+    mapGrid = Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => ({ type: 'land' })))
+    units.length = 0
+    gameState.attackGroupTargets = []
+    gameState.occupancyMap = mapGrid
+  })
+
+  it('should assign attack targets to selected units', () => {
+    const selectedUnits = [
+      { id: 'u1', type: 'tank', owner: 'player', tileX: 0, tileY: 0, health: 100 },
+      { id: 'u2', type: 'tank', owner: 'player', tileX: 1, tileY: 0, health: 100 }
+    ]
+    const target = { id: 'enemy1', owner: 'enemy', tileX: 5, tileY: 5, x: 160, y: 160, health: 100 }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }])
+
+    handler.handleAttackCommand(selectedUnits, target, mapGrid, false)
+
+    expect(selectedUnits[0].target).toBe(target)
+    expect(selectedUnits[1].target).toBe(target)
+  })
+
+  it('should set forcedAttack when isForceAttack is true', () => {
+    const selectedUnits = [
+      { id: 'u1', type: 'tank', owner: 'player', tileX: 0, tileY: 0, health: 100 }
+    ]
+    const target = { id: 'enemy1', owner: 'enemy', tileX: 5, tileY: 5, x: 160, y: 160, health: 100 }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 2, y: 2 }])
+
+    handler.handleAttackCommand(selectedUnits, target, mapGrid, true)
+
+    expect(selectedUnits[0].forcedAttack).toBe(true)
+  })
+
+  it('should handle empty selectedUnits array gracefully', () => {
+    const target = { id: 'enemy1', owner: 'enemy', tileX: 5, tileY: 5, x: 160, y: 160, health: 100 }
+
+    expect(() => handler.handleAttackCommand([], target, mapGrid, false)).not.toThrow()
+  })
+})
+
+describe('UnitCommandsHandler handleRefineryUnloadCommand', () => {
+  let handler
+  let mapGrid
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    handler = new UnitCommandsHandler()
+    mapGrid = Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => ({ type: 'land' })))
+    units.length = 0
+    gameState.attackGroupTargets = []
+    gameState.occupancyMap = mapGrid
+  })
+
+  it('should assign refinery to harvesters', () => {
+    const harvesters = [
+      { id: 'h1', type: 'harvester', owner: 'player', tileX: 0, tileY: 0, oreCarried: 100, health: 100 }
+    ]
+    const refinery = { id: 'ref1', type: 'refinery', owner: 'player', x: 5, y: 5, width: 2, height: 2, health: 500 }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 3, y: 5 }])
+
+    handler.handleRefineryUnloadCommand(harvesters, refinery, mapGrid)
+
+    expect(harvesters[0].assignedRefinery).toBe(refinery)
+  })
+
+  it('should handle harvesters with no resources', () => {
+    const harvesters = [
+      { id: 'h1', type: 'harvester', owner: 'player', tileX: 0, tileY: 0, heldResources: 0, health: 100 }
+    ]
+    const refinery = { id: 'ref1', type: 'refinery', owner: 'player', x: 5, y: 5, width: 2, height: 2, health: 500 }
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 3, y: 5 }])
+
+    // Should still process the command
+    expect(() => handler.handleRefineryUnloadCommand(harvesters, refinery, mapGrid)).not.toThrow()
+  })
+})
+
+describe('UnitCommandsHandler handleHarvesterCommand', () => {
+  let handler
+  let mapGrid
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    handler = new UnitCommandsHandler()
+    mapGrid = Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => ({ type: 'land', ore: 0 })))
+    units.length = 0
+    gameState.attackGroupTargets = []
+    gameState.occupancyMap = mapGrid
+  })
+
+  it('should set manualOreTarget when commanding harvesters to ore location', () => {
+    const harvesters = [
+      { id: 'h1', type: 'harvester', owner: 'player', tileX: 0, tileY: 0, health: 100, x: 0, y: 0 }
+    ]
+    const oreTarget = { x: 5, y: 5 }
+    mapGrid[5][5].ore = 100
+
+    findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 5, y: 5 }])
+
+    handler.handleHarvesterCommand(harvesters, oreTarget, mapGrid)
+
+    expect(harvesters[0].manualOreTarget).toEqual(oreTarget)
+    expect(harvesters[0].moveTarget).toEqual(oreTarget)
+  })
+})
+
 describe('UnitCommandsHandler attack group and movement', () => {
   let handler
   let mapGrid
