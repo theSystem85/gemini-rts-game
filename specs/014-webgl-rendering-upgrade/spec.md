@@ -47,24 +47,47 @@ Upgrade the rendering stack to prioritize GPU-backed pipelines for the main play
 
 ## WebGPU Transition Plan (Chrome + Safari Alignment)
 
-1. **Spec & Support Baseline**
-   - Target the current W3C WebGPU specification and verify feature availability for Chrome and Safari (adapter limits, required texture formats, optional features).
-   - Maintain a compatibility matrix in docs that lists required core features vs. optional features and maps them to each browser.
-2. **Abstraction Layer**
-   - Introduce a renderer interface that normalizes WebGL2/WebGPU operations (pipeline creation, buffer/texture uploads, draw calls, and resource lifecycle).
-   - Keep the existing 2D fallback as the last-resort renderer for unsupported devices.
-3. **WebGPU Core Pipeline**
-   - Implement WebGPU device/queue initialization, swap chain configuration, and a render loop aligned with the existing WebGL draw phases (terrain → sprites → overlays).
-   - Establish a shared WGSL shader set for tile/sprite instancing with configurable per-instance data layouts.
-4. **Asset & Buffer Migration**
-   - Move atlas upload to WebGPU textures and use staging buffers for initial load plus incremental updates.
-   - Define a single instance buffer layout for tiles, units, effects, and overlays to reduce per-frame buffer churn.
-5. **Feature Parity & Validation**
-   - Mirror WebGL features: animated water tiles, fog-of-war overlays, shadow-of-war masks, SOT overlays, and minimap rendering.
-   - Implement visual parity checks (screenshot diffing) for WebGL vs. WebGPU across a fixed set of maps/scenarios.
-6. **Fallback & Error Handling**
-   - Use `navigator.gpu` checks, adapter request failures, and `device.lost` handling to fall back to WebGL2 or 2D without breaking gameplay.
-   - Add telemetry/logging for renderer selection and failure modes to drive future optimizations.
-7. **Performance Milestones**
-   - Measure CPU time per frame, draw call count, and GPU timings (when available) for WebGL2 vs. WebGPU.
-   - Track a target reduction in CPU draw overhead and stabilize frame time variance before defaulting to WebGPU.
+### 1) Support Baseline + Compatibility Matrix
+- Target the current W3C WebGPU spec and confirm the minimum feature set for Chrome and Safari (adapter limits, required texture formats, sampler/filtering support, storage buffers, and render pass limits).
+- Maintain a compatibility matrix that lists required core features vs. optional ones (timestamp queries, depth formats, texture compression) and maps them per browser so renderers can feature-gate safely.
+
+### 2) Renderer Abstraction + Selection Strategy
+- Introduce a renderer interface that normalizes WebGL2/WebGPU operations (pipeline creation, buffer/texture uploads, draw calls, and resource lifecycle).
+- Establish an explicit renderer selection pipeline:
+  1. **User preference** (settings flag): `WebGPU (preferred)` / `WebGL2` / `Auto` / `2D fallback`.
+  2. **Auto** chooses WebGPU if `navigator.gpu` is available and device initialization succeeds, else WebGL2 → WebGL → 2D.
+  3. **Hard fallback** triggers on initialization errors or `device.lost` events, with a visible banner/toast that the renderer switched.
+- Persist the selection in localStorage and expose it in the settings menu with a short description of tradeoffs and a “Restart required” note if needed.
+
+### 3) WebGPU Core Pipeline (Phase 0 Parity)
+- Implement WebGPU device/queue initialization, swap chain configuration, and a render loop aligned with existing phases (terrain → sprites → overlays → UI).
+- Establish shared WGSL shaders for tile/sprite instancing with configurable per-instance layouts that mirror WebGL attribute layouts.
+- Define a renderer capability descriptor used by both pipelines to decide supported overlays, batching limits, and shader feature toggles.
+
+### 4) Asset & Buffer Migration
+- Move atlas upload to WebGPU textures and use staging buffers for initial load plus incremental updates.
+- Define a single instance buffer layout for tiles, units, effects, and overlays to reduce per-frame buffer churn and keep parity with WebGL buffer packing.
+- Build a shared atlas manager abstraction so WebGL and WebGPU share the same atlas metadata, UV packing rules, and invalidation flow.
+
+### 5) Feature Parity Checklist + Validation
+- Mirror WebGL features: animated water tiles, fog-of-war overlays, shadow-of-war masks, SOT overlays, and minimap rendering.
+- Implement visual parity checks (screenshot diffing) for WebGL vs. WebGPU across a fixed set of maps/scenarios and record deltas.
+- Add a debug overlay showing current renderer, adapter name, and key buffer stats to speed up parity verification.
+
+### 6) Settings + Fallback UX
+- Add a **Renderer** option in the settings menu:
+  - `Auto (WebGPU if supported)`, `WebGPU (force)`, `WebGL2`, `WebGL`, `2D`.
+- If WebGPU is forced but fails to initialize, display a non-blocking notification and auto-fallback to WebGL2.
+- Provide a runtime toggle only if safe to hot-swap; otherwise prompt the user to restart the game session to apply changes.
+
+### 7) Error Handling + Telemetry
+- Use `navigator.gpu` checks, adapter request failures, and `device.lost` handling to fall back to WebGL2 or 2D without breaking gameplay.
+- Log renderer selection, fallback reasons, and device lost events with an in-game debug panel (and optional console logging) to guide future optimization.
+
+### 8) Performance Milestones + Rollout
+- Measure CPU time per frame, draw call count, and GPU timings (when available) for WebGL2 vs. WebGPU.
+- Track a target reduction in CPU draw overhead and stabilize frame time variance before defaulting to WebGPU.
+- Rollout plan:
+  1. **Phase 0**: WebGPU behind settings toggle (opt-in).
+  2. **Phase 1**: WebGPU in Auto for supported devices, still user-overridable.
+  3. **Phase 2**: WebGPU default with WebGL fallback preserved for compatibility.
