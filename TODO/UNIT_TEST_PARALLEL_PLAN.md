@@ -901,7 +901,7 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.6 - `src/game/bulletSystem.js`
 - **Target**: Extend `tests/unit/bulletSystem.test.js`
 - **Source File**: `src/game/bulletSystem.js` (50% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-30 20:10 UTC)
 - **Current Coverage**: 50% functions → Target 100%
 - **Estimated Tests**: 40-60
 

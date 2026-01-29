@@ -287,6 +287,7 @@
 - [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
 
 ## Improvements
+- [x] Extend bullet system unit tests to cover apache rockets, dodge logic, and crew damage (Task 15.6).
 - [x] Add unit tests for the game loop (Task 3.3 coverage plan).
 - [x] ✅ **Spec 006** Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
 - [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.
