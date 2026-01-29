@@ -6,7 +6,8 @@ import {
   getHarvesterDistribution,
   assignHarvesterToOptimalRefinery,
   forceHarvesterUnloadPriority,
-  clearStuckHarvesterOreField
+  clearStuckHarvesterOreField,
+  handleStuckHarvester
 } from '../../src/game/harvesterLogic.js'
 
 // Mock dependencies
@@ -209,6 +210,25 @@ describe('Harvester Logic', () => {
       updateHarvesterLogic(units, mapGrid, gameState.occupancyMap, gameState, factories, now)
 
       expect(harvester.harvesting).toBe(false)
+    })
+
+    it('clears invalid manual target and assigns new ore', async() => {
+      const harvester = createTestHarvester('harv1', 5, 5)
+      harvester.manualOreTarget = { x: 0, y: 0 }
+      units.push(harvester)
+
+      mapGrid[2][2].ore = true
+
+      const logicModule = await import('../../src/logic.js')
+      vi.mocked(logicModule.findClosestOre).mockReturnValue({ x: 2, y: 2 })
+
+      updateHarvesterLogic(units, mapGrid, gameState.occupancyMap, gameState, factories, now)
+
+      expect(harvester.manualOreTarget).toBeNull()
+      expect(harvester.oreField).toEqual({ x: 2, y: 2 })
+      expect(harvester.moveTarget).toEqual({ x: 2, y: 2 })
+      const targetedTiles = getTargetedOreTiles()
+      expect(targetedTiles['2,2']).toBe(harvester.id)
     })
   })
 
@@ -554,6 +574,70 @@ describe('Harvester Logic', () => {
       expect(harvester.assignedRefinery).toBeNull()
       expect(harvester.targetRefinery).toBeNull()
       expect(harvester.queuePosition).toBe(0)
+    })
+  })
+
+  describe('Stuck Harvester Recovery', () => {
+    it('does not interrupt manually commanded harvesters', () => {
+      const harvester = createTestHarvester('harv1', 5, 5)
+      harvester.manualOreTarget = { x: 8, y: 8 }
+      harvester.oreField = { x: 8, y: 8 }
+
+      handleStuckHarvester(harvester, mapGrid, gameState.occupancyMap, gameState, factories)
+
+      expect(harvester.manualOreTarget).toEqual({ x: 8, y: 8 })
+      expect(harvester.oreField).toEqual({ x: 8, y: 8 })
+    })
+
+    it('starts harvesting when stuck on ore', () => {
+      const harvester = createTestHarvester('harv1', 5, 5)
+      mapGrid[5][5].ore = true
+
+      handleStuckHarvester(harvester, mapGrid, gameState.occupancyMap, gameState, factories)
+
+      expect(harvester.harvesting).toBe(true)
+      expect(harvester.oreField).toEqual({ x: 5, y: 5 })
+    })
+  })
+
+  describe('Stale Reservations', () => {
+    it('clears reservations for missing harvesters', () => {
+      const targetedTiles = getTargetedOreTiles()
+      targetedTiles['4,4'] = 'ghost-harvester'
+
+      updateHarvesterLogic([], mapGrid, gameState.occupancyMap, gameState, factories, now)
+
+      expect(targetedTiles['4,4']).toBeUndefined()
+    })
+  })
+
+  describe('Enemy Repairs After Unload', () => {
+    it('sends damaged enemy harvester to workshop after unloading', () => {
+      const harvester = createTestHarvester('harv1', 11, 13, 'ai_enemy')
+      harvester.oreCarried = 1
+      harvester.unloadingAtRefinery = true
+      harvester.unloadStartTime = now - 5001
+      harvester.unloadRefinery = 'refinery_10_10'
+      harvester.health = 50
+      harvester.maxHealth = 100
+      units.push(harvester)
+
+      const workshop = {
+        type: 'vehicleWorkshop',
+        owner: 'ai_enemy',
+        health: 100,
+        x: 2,
+        y: 2,
+        width: 3,
+        height: 3,
+        repairQueue: []
+      }
+      gameState.buildings.push(workshop)
+
+      updateHarvesterLogic(units, mapGrid, gameState.occupancyMap, gameState, factories, now)
+
+      expect(harvester.targetWorkshop).toBe(workshop)
+      expect(workshop.repairQueue).toContain(harvester)
     })
   })
 })
