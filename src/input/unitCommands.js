@@ -1864,8 +1864,14 @@ export class UnitCommandsHandler {
     helipadOptions.sort((a, b) => a.distance - b.distance)
 
     const blockedUnits = []
+    const assignedHelipadIds = new Set()
     apaches.forEach(unit => {
-      const option = helipadOptions.find(candidate => isHelipadAvailableForUnit(candidate.helipad, this.units, unit.id))
+      const option = helipadOptions.find(candidate => {
+        if (!candidate.helipadId || assignedHelipadIds.has(candidate.helipadId)) {
+          return false
+        }
+        return isHelipadAvailableForUnit(candidate.helipad, this.units, unit.id)
+      })
       if (!option) {
         blockedUnits.push(unit)
         return
@@ -1877,6 +1883,7 @@ export class UnitCommandsHandler {
         helipadId: option.helipadId
       })
       if (handled) {
+        assignedHelipadIds.add(option.helipadId)
         unit.target = null
         unit.originalTarget = null
         unit.forcedAttack = false
