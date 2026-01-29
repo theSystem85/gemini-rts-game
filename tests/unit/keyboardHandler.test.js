@@ -467,4 +467,58 @@ describe('KeyboardHandler', () => {
     expect(broadcastUnitStop).toHaveBeenCalledWith([unit])
     expect(handler.showNotification).toHaveBeenCalledWith('1 unit stopped attacking', 2000)
   })
+
+  it('cycles occupancy map modes and updates visibility', () => {
+    gameState.playerCount = 2
+    gameState.occupancyMapViewIndex = 0
+    gameState.occupancyMapViewMode = 'off'
+    gameState.occupancyVisible = false
+
+    handler.handleOccupancyMapToggle()
+
+    expect(gameState.occupancyMapViewMode).toBe('players')
+    expect(gameState.occupancyVisible).toBe(true)
+    expect(handler.showNotification).toHaveBeenCalledWith('Occupancy map: Players', 2000)
+  })
+
+  it('formats occupancy mode labels for known modes', () => {
+    expect(handler.formatOccupancyModeLabel('off')).toBe('OFF')
+    expect(handler.formatOccupancyModeLabel('players')).toBe('Players')
+    expect(handler.formatOccupancyModeLabel('player4')).toBe('Player 4')
+    expect(handler.formatOccupancyModeLabel('custom')).toBe('custom')
+  })
+
+  it('rebuilds control groups from unit group numbers', () => {
+    const unitA = { id: 'a', groupNumber: '1' }
+    const unitB = { id: 'b', groupNumber: '2' }
+    handler.rebuildControlGroupsFromUnits([unitA, unitB])
+
+    expect(handler.controlGroups['1']).toEqual([unitA])
+    expect(handler.controlGroups['2']).toEqual([unitB])
+  })
+
+  it('clears forced attacks for buildings when stopping', () => {
+    const unit = {
+      id: 'u1',
+      owner: gameState.humanPlayer,
+      target: { id: 'enemy' }
+    }
+    const building = {
+      id: 'b1',
+      isBuilding: true,
+      owner: gameState.humanPlayer,
+      forcedAttackTarget: { id: 'enemy' },
+      forcedAttack: true,
+      holdFire: false
+    }
+
+    handler.selectedUnits = [unit, building]
+
+    handler.handleStopAttacking()
+
+    expect(building.forcedAttackTarget).toBeNull()
+    expect(building.forcedAttack).toBe(false)
+    expect(building.holdFire).toBe(true)
+    expect(broadcastUnitStop).toHaveBeenCalledWith([unit, building])
+  })
 })

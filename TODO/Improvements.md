@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Expand unit test coverage for workshop logic, keyboard input handling, cheat system behaviors, and cursor management (Tasks 15.12-15.15).
 - [x] Add unit tests for hospitalLogic crew healing and ambulance refill behavior.
 - [x] Add unit tests for helipadLogic.js covering fuel, ammo, landing, and resupply behavior.
 - [x] Add unit tests for gameStateManager (task 3.4) covering scrolling, ore spread, cleanup paths, and win/loss logic.

@@ -134,6 +134,10 @@ Located in `tests/unit/`
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
+- Expanded `tests/unit/workshopLogic.test.js` to validate repair funding sources, restoration rally selection, and spawn fallback handling.
+- Extended `tests/unit/keyboardHandler.test.js` with occupancy map toggles, control group rebuilds, and building stop-attack flows.
+- Extended `tests/unit/cheatSystem.test.js` with god mode, ammo/helipad load, AI budget, and damage prevention scenarios.
+- Extended `tests/unit/cursorManager.test.js` to cover guard mode, move-into targets, and cursor refresh behaviors.
 
 ## Example Test
 
