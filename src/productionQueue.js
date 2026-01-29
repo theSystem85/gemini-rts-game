@@ -15,6 +15,8 @@ import { gameRandom } from './utils/gameRandom.js'
 // Ambulance should spawn from the vehicle factory as well
 const vehicleUnitTypes = ['tank', 'tank-v2', 'rocketTank', 'tank_v1', 'tank-v3', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer', 'mineLayer', 'mineSweeper']
 
+const vehicleFactorySpeedUnitTypes = [...vehicleUnitTypes, 'apache']
+
 // Enhanced production queue system
 export const productionQueue = {
   unitItems: [],
@@ -131,18 +133,21 @@ export const productionQueue = {
 
     // Check for vehicle factory requirement and multiplier
     let vehicleMultiplier = 1 // Default multiplier
-    if (vehicleUnitTypes.includes(item.type)) {
+    if (vehicleFactorySpeedUnitTypes.includes(item.type)) {
       vehicleMultiplier = this.getVehicleFactoryMultiplier()
       if (vehicleMultiplier === 0) {
-        // This should ideally be caught by the button disable logic, but acts as a safeguard
-        console.error(`Attempted to start ${item.type} production without a Vehicle Factory.`)
-        showNotification(`Cannot produce ${item.type}: Vehicle Factory required.`)
-        // Cancel this item? Or just wait? Let's remove it and refund.
-        this.unitItems.shift() // Remove the item
-        gameState.money += cost // Refund
-        this.updateBatchCounter(item.button, this.unitItems.filter(i => i.button === item.button).length) // Update counter
-        this.startNextUnitProduction() // Try the next item
-        return
+        if (vehicleUnitTypes.includes(item.type)) {
+          // This should ideally be caught by the button disable logic, but acts as a safeguard
+          console.error(`Attempted to start ${item.type} production without a Vehicle Factory.`)
+          showNotification(`Cannot produce ${item.type}: Vehicle Factory required.`)
+          // Cancel this item? Or just wait? Let's remove it and refund.
+          this.unitItems.shift() // Remove the item
+          gameState.money += cost // Refund
+          this.updateBatchCounter(item.button, this.unitItems.filter(i => i.button === item.button).length) // Update counter
+          this.startNextUnitProduction() // Try the next item
+          return
+        }
+        vehicleMultiplier = 1
       }
     }
 
@@ -182,7 +187,7 @@ export const productionQueue = {
     playSound('constructionStarted', 1.0, 0, true)
 
     // Show notification about production speed if multiple factories exist
-    if (vehicleUnitTypes.includes(item.type) && vehicleMultiplier > 1) {
+    if (vehicleFactorySpeedUnitTypes.includes(item.type) && vehicleMultiplier > 1) {
       showNotification(`${item.type} production speed: ${vehicleMultiplier}x`)
     }
   },
