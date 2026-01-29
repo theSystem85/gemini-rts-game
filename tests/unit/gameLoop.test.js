@@ -192,6 +192,31 @@ describe('GameLoop', () => {
     expect(requestAnimationFrame).toHaveBeenCalled()
   })
 
+  it('does not reschedule when an animation frame is already queued', () => {
+    const loop = createLoop()
+    loop.running = true
+    loop.animationId = 123
+
+    loop.scheduleNextFrame()
+
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
+  it('resumes from pause only when running', () => {
+    const loop = createLoop()
+    loop.running = false
+
+    loop.resumeFromPause()
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+
+    loop.running = true
+    loop.resumeFromPause()
+
+    expect(loop.forceRender).toBe(true)
+    expect(loop.lastFrameTime).toBe(null)
+    expect(requestAnimationFrame).toHaveBeenCalled()
+  })
+
   it('detects active scroll activity', () => {
     const loop = createLoop()
 
@@ -247,6 +272,26 @@ describe('GameLoop', () => {
     expect(updateGameMock).not.toHaveBeenCalled()
   })
 
+  it('pauses and resumes audio when pause state changes', () => {
+    const loop = createLoop()
+    loop.running = true
+    gameState.gameStarted = true
+
+    loop.wasPaused = false
+    gameState.gamePaused = true
+
+    loop.animate(1000)
+
+    expect(pauseAllSoundsMock).toHaveBeenCalled()
+    expect(loop.wasPaused).toBe(true)
+
+    gameState.gamePaused = false
+    loop.animate(1100)
+
+    expect(resumeAllSoundsMock).toHaveBeenCalled()
+    expect(loop.lastFrameTime).toBe(1100)
+  })
+
   it('updates game state, UI, and milestones during active frames', () => {
     const moneyEl = document.createElement('span')
     const gameTimeEl = document.createElement('span')
@@ -287,6 +332,21 @@ describe('GameLoop', () => {
     expect(gameTimeEl.textContent).toBe('2:10')
     expect(renderGameMock).toHaveBeenCalled()
     expect(renderMinimapMock).toHaveBeenCalled()
+  })
+
+  it('caps lockstep tick accumulator after catching up', () => {
+    const loop = createLoop()
+    loop.running = true
+
+    isLockstepEnabledMock.mockReturnValue(true)
+    gameState.gameStarted = true
+    gameState.gamePaused = false
+    gameState.lockstep.tickAccumulator = 100
+
+    loop.lastFrameTime = 900
+    loop.animate(1000)
+
+    expect(gameState.lockstep.tickAccumulator).toBe(32)
   })
 
   it('processes lockstep ticks and schedules delayed frames for large armies', () => {

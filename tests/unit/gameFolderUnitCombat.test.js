@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import '../setup.js'
 import { updateUnitCombat, cleanupAttackGroupTargets } from '../../src/game/unitCombat.js'
+import { showNotification } from '../../src/ui/notifications.js'
+import { playSound } from '../../src/sound.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -229,6 +231,124 @@ describe('unitCombat.js', () => {
       }
       updateUnitCombat([unit], [], mockMapGrid, mockGameState, performance.now())
       expect(unit.attackQueue).not.toContain(target1)
+    })
+
+    it('fires a bullet when a human tank is in range and aimed', () => {
+      const target = {
+        id: 'enemy-1',
+        x: 64,
+        y: 32,
+        tileX: 2,
+        tileY: 1,
+        health: 100
+      }
+      const unitCenterX = 32 + 16
+      const unitCenterY = 32 + 16
+      const targetCenterX = target.x + 16
+      const targetCenterY = target.y + 16
+      const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+
+      const unit = {
+        type: 'tank',
+        health: 100,
+        owner: 'player1',
+        x: 32,
+        y: 32,
+        tileX: 1,
+        tileY: 1,
+        target,
+        ammunition: 5,
+        turretDirection: angle,
+        direction: angle,
+        canFire: true,
+        lastShotTime: 0
+      }
+
+      const bullets = []
+      updateUnitCombat([unit], bullets, mockMapGrid, mockGameState, 10000)
+
+      expect(bullets.length).toBe(1)
+      expect(bullets[0].projectileType).toBe('bullet')
+      expect(bullets[0].shooter).toBe(unit)
+    })
+
+    it('notifies when player unit is out of ammo', () => {
+      const target = {
+        id: 'enemy-1',
+        x: 64,
+        y: 32,
+        tileX: 2,
+        tileY: 1,
+        health: 100
+      }
+      const unitCenterX = 32 + 16
+      const unitCenterY = 32 + 16
+      const targetCenterX = target.x + 16
+      const targetCenterY = target.y + 16
+      const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+
+      const unit = {
+        type: 'tank',
+        health: 100,
+        owner: 'player1',
+        x: 32,
+        y: 32,
+        tileX: 1,
+        tileY: 1,
+        target,
+        ammunition: 0,
+        turretDirection: angle,
+        direction: angle,
+        canFire: true,
+        lastShotTime: 0
+      }
+
+      updateUnitCombat([unit], [], mockMapGrid, mockGameState, 10000)
+
+      expect(showNotification).toHaveBeenCalledWith('No Ammunition - Resupply Required', 3000)
+      expect(playSound).toHaveBeenCalledWith('i_am_out_of_ammo', 1.0, 0, true)
+      expect(unit.noAmmoNotificationShown).toBe(true)
+    })
+
+    it('fires rocket tank burst rockets after the initial burst setup', () => {
+      const target = {
+        id: 'enemy-2',
+        x: 96,
+        y: 32,
+        tileX: 3,
+        tileY: 1,
+        health: 100
+      }
+      const unitCenterX = 32 + 16
+      const unitCenterY = 32 + 16
+      const targetCenterX = target.x + 16
+      const targetCenterY = target.y + 16
+      const angle = Math.atan2(targetCenterY - unitCenterY, targetCenterX - unitCenterX)
+
+      const unit = {
+        type: 'rocketTank',
+        health: 100,
+        owner: 'player1',
+        x: 32,
+        y: 32,
+        tileX: 1,
+        tileY: 1,
+        target,
+        ammunition: 3,
+        turretDirection: angle,
+        direction: angle,
+        canFire: true,
+        lastShotTime: 0,
+        movement: { rotation: angle }
+      }
+      const bullets = []
+
+      updateUnitCombat([unit], bullets, mockMapGrid, mockGameState, 10000)
+      updateUnitCombat([unit], bullets, mockMapGrid, mockGameState, 10400)
+
+      expect(bullets.length).toBeGreaterThan(0)
+      expect(bullets[0].projectileType).toBe('rocket')
+      expect(bullets[0].homing).toBe(true)
     })
   })
 

@@ -126,7 +126,9 @@ Located in `tests/unit/`
 
 ## Recent Coverage Additions
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
+- Added bullet system coverage for apache rocket proximity damage, dodge maneuvers, critical damage sounds, and rocket tank homing fallbacks.
 - Added `tests/unit/multiplayerStore.test.js` covering invite token lifecycle, host regeneration, and party ownership events in multiplayer sessions.
+- Added `tests/unit/webrtcSession.test.js` coverage for ICE handling edge cases, data channel state updates, and lockstep initialization guardrails.
 - Added `tests/unit/peerConnection.test.js` to validate remote connection offer publishing, ICE handling, data channel messaging, and polling failure behavior with mocked WebRTC primitives.
 - Added `tests/unit/multiUnitInputHandler.test.js` to validate multi-unit command distribution, queue behavior, and eligibility filtering helpers.
 - Added `tests/unit/controlGroupHandler.test.js` to validate control group assignment, selection filtering, and camera centering behavior on double-press.
@@ -135,6 +137,15 @@ Located in `tests/unit/`
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
 - Expanded unit tests for recovery tank towing/recycling, remote control aiming/firing, unit movement pathing, selection manager edge cases, lockstep peer handling, multiplayer store state helpers, remote connection candidate validation, deterministic state hashing, enemy AI building fallback placement, and logger downloads.
+- Added `tests/unit/enemyStrategies.test.js` cases for AI attack path recalculation, ambulance queueing, tanker emergencies, and ammo recovery state resets.
+- Expanded `tests/unit/workshopLogic.test.js` to validate repair funding sources, restoration rally selection, and spawn fallback handling.
+- Extended `tests/unit/keyboardHandler.test.js` with occupancy map toggles, control group rebuilds, and building stop-attack flows.
+- Extended `tests/unit/cheatSystem.test.js` with god mode, ammo/helipad load, AI budget, and damage prevention scenarios.
+- Extended `tests/unit/cursorManager.test.js` to cover guard mode, move-into targets, and cursor refresh behaviors.
+- Added `tests/unit/commandQueue.test.js` coverage for mine deployment commands and sweeper detonation flows.
+- Added `tests/unit/gameLoop.test.js` coverage for pause/resume audio handling, lockstep accumulator caps, and scheduling guardrails.
+- Added `tests/unit/harvesterLogic.test.js` coverage for manual target cleanup, stuck recovery, stale reservations, and enemy repair routing.
+- Added `tests/unit/gameFolderUnitCombat.test.js` coverage for ammo warnings and rocket burst firing.
 
 ## Example Test
 

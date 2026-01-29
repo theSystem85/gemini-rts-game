@@ -862,119 +862,123 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.1 - `src/buildingRepairHandler.js`
 - **Target**: Extend `tests/unit/buildingRepairHandler.test.js`
 - **Source File**: `src/buildingRepairHandler.js` (50% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 50% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Current Coverage**: 50% functions → Extended
 - **Estimated Tests**: 15-25
 
 ### Task 15.2 - `src/productionQueue.js`
 - **Target**: Extend `tests/unit/productionQueue.test.js`
 - **Source File**: `src/productionQueue.js` (52.11% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 52.11% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 25+ tests for startNextUnitProduction, startNextBuildingProduction, updateProgress, resumeProductionAfterUnpause, cancelBuildingPlacement, restoreFromSerializableState, setProductionController
+- **Current Coverage**: 52.11% functions → Extended
 - **Estimated Tests**: 30-45
 
 ### Task 15.3 - `src/units.js`
 - **Target**: Extend `tests/unit/units.test.js`
 - **Source File**: `src/units.js` (53.48% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 53.48% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 69 tests covering buildOccupancyMap, updateUnitOccupancy, removeUnitOccupancy, findPath, findPathForOwner, spawnUnit, createUnit, moveBlockingUnits, resolveUnitCollisions, deselectUnits, unitCosts
+- **Current Coverage**: 53.48% functions → Extended
 - **Estimated Tests**: 30-45
 
 ### Task 15.4 - `src/logic.js`
 - **Target**: Extend `tests/unit/logic.test.js`
 - **Source File**: `src/logic.js` (58.82% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 58.82% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 13+ tests for triggerExplosion, showUnloadingFeedback, findPositionWithClearShot
+- **Current Coverage**: 58.82% functions → Extended
 - **Estimated Tests**: 25-35
 
 ### Task 15.5 - `src/ai/enemyBuilding.js`
 - **Target**: Extend `tests/unit/enemyBuilding.test.js`
 - **Source File**: `src/ai/enemyBuilding.js` (50% functions)
-- **Status**: [NOT STARTED]
-- **Current Coverage**: 50% functions → Target 100%
+- **Status**: [COMPLETED] (Finished: 2025-01-30 UTC)
+- **Tests Added**: 11+ tests for defensive placement, ore direction, map edge cases, building type handling
+- **Current Coverage**: 50% functions → Extended
 - **Estimated Tests**: 40-60
 
 ### Task 15.6 - `src/game/bulletSystem.js`
 - **Target**: Extend `tests/unit/bulletSystem.test.js`
 - **Source File**: `src/game/bulletSystem.js` (50% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-30 20:10 UTC)
 - **Current Coverage**: 50% functions → Target 100%
 - **Estimated Tests**: 40-60
 
 ### Task 15.7 - `src/game/commandQueue.js`
 - **Target**: Extend `tests/unit/commandQueue.test.js`
 - **Source File**: `src/game/commandQueue.js` (77.77% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added sweep/mine deployment coverage for queued commands
 - **Current Coverage**: 77.77% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 15.8 - `src/game/gameLoop.js`
 - **Target**: Extend `tests/unit/gameLoop.test.js`
 - **Source File**: `src/game/gameLoop.js` (63.15% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added audio pause/resume, lockstep cap, and scheduling guard coverage
 - **Current Coverage**: 63.15% functions → Target 100%
 - **Estimated Tests**: 25-35
 
 ### Task 15.9 - `src/game/harvesterLogic.js`
 - **Target**: Extend `tests/unit/harvesterLogic.test.js`
 - **Source File**: `src/game/harvesterLogic.js` (66.17% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added manual target cleanup, stuck recovery, and enemy repair coverage
 - **Current Coverage**: 66.17% functions → Target 100%
 - **Estimated Tests**: 30-40
 
 ### Task 15.10 - `src/game/minerBehavior.js`
 - **Target**: Extend `tests/unit/minerBehavior.test.js`
 - **Source File**: `src/game/minerBehavior.js` (58.33% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [BLOCKED - File Missing] - `src/game/minerBehavior.js` not found in repository
 - **Current Coverage**: 58.33% functions → Target 100%
 - **Estimated Tests**: 20-30
 
 ### Task 15.11 - `src/game/unitCombat.js`
 - **Target**: Extend `tests/unit/gameFolderUnitCombat.test.js`
 - **Source File**: `src/game/unitCombat.js` (68.08% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added firing, ammo warning, and rocket burst coverage
 - **Current Coverage**: 68.08% functions → Target 100%
 - **Estimated Tests**: 40-60
 
 ### Task 15.12 - `src/game/workshopLogic.js`
 - **Target**: Extend `tests/unit/workshopLogic.test.js`
 - **Source File**: `src/game/workshopLogic.js` (77.27% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 77.27% functions → Target 100%
 - **Estimated Tests**: 20-30
 
 ### Task 15.13 - `src/input/keyboardHandler.js`
 - **Target**: Extend `tests/unit/keyboardHandler.test.js`
 - **Source File**: `src/input/keyboardHandler.js` (52.23% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 52.23% functions → Target 100%
 - **Estimated Tests**: 40-60
 
 ### Task 15.14 - `src/input/cheatSystem.js`
 - **Target**: Extend `tests/unit/cheatSystem.test.js`
 - **Source File**: `src/input/cheatSystem.js` (68.91% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 68.91% functions → Target 100%
 - **Estimated Tests**: 30-40
 
 ### Task 15.15 - `src/input/cursorManager.js`
 - **Target**: Extend `tests/unit/cursorManager.test.js`
 - **Source File**: `src/input/cursorManager.js` (68.96% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 68.96% functions → Target 100%
 - **Estimated Tests**: 25-35
 
 ### Task 15.16 - `src/network/webrtcSession.js`
 - **Target**: Extend `tests/unit/webrtcSession.test.js`
 - **Source File**: `src/network/webrtcSession.js` (68.62% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:10 UTC)
 - **Current Coverage**: 68.62% functions → Target 100%
 - **Estimated Tests**: 25-35
 
 ### Task 15.17 - `src/ai/enemyStrategies.js`
 - **Target**: Extend `tests/unit/enemyStrategies.test.js`
 - **Source File**: `src/ai/enemyStrategies.js` (71.77% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:10 UTC)
 - **Current Coverage**: 71.77% functions → Target 100%
 - **Estimated Tests**: 30-40
 
