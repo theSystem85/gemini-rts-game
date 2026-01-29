@@ -1059,70 +1059,70 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 16.11 - `src/game/recoveryTankSystem.js`
 - **Target**: Extend `tests/unit/recoveryTankSystem.test.js`
 - **Source File**: `src/game/recoveryTankSystem.js` (84.21% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 84.21% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.12 - `src/game/remoteControl.js`
 - **Target**: Extend `tests/unit/remoteControl.test.js`
 - **Source File**: `src/game/remoteControl.js` (84.61% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 84.61% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 16.13 - `src/game/unitMovement.js`
 - **Target**: Extend `tests/unit/unitMovement.test.js`
 - **Source File**: `src/game/unitMovement.js` (80% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 80% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 16.14 - `src/input/selectionManager.js`
 - **Target**: Extend `tests/unit/selectionManager.test.js`
 - **Source File**: `src/input/selectionManager.js` (97.14% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 97.14% functions → Target 100%
 - **Estimated Tests**: 5-10
 
 ### Task 16.15 - `src/network/lockstepManager.js`
 - **Target**: Extend `tests/unit/lockstepManager.test.js`
 - **Source File**: `src/network/lockstepManager.js` (82.85% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 82.85% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 16.16 - `src/network/multiplayerStore.js`
 - **Target**: Extend `tests/unit/multiplayerStore.test.js`
 - **Source File**: `src/network/multiplayerStore.js` (84.37% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 84.37% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.17 - `src/network/peerConnection.js`
 - **Target**: Extend `tests/unit/peerConnection.test.js`
 - **Source File**: `src/network/peerConnection.js` (83.87% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 83.87% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 16.18 - `src/network/stateHash.js`
 - **Target**: Extend `tests/unit/stateHash.test.js`
 - **Source File**: `src/network/stateHash.js` (92.85% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 92.85% functions → Target 100%
 - **Estimated Tests**: 5-10
 
 ### Task 16.19 - `src/ai/enemyAIPlayer.js`
 - **Target**: Extend `tests/unit/enemyAIPlayer.test.js`
 - **Source File**: `src/ai/enemyAIPlayer.js` (88.13% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 88.13% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 16.20 - `src/utils/logger.js`
 - **Target**: Extend `tests/unit/logger.test.js`
 - **Source File**: `src/utils/logger.js` (87.5% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 87.5% functions → Target 100%
 - **Estimated Tests**: 5-10
 

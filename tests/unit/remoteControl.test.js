@@ -5,7 +5,8 @@ import {
   suspendRemoteControlAutoFocus
 } from '../../src/game/remoteControl.js'
 import { gameState } from '../../src/gameState.js'
-import { selectedUnits } from '../../src/inputHandler.js'
+import { selectedUnits, getKeyboardHandler } from '../../src/inputHandler.js'
+import { fireBullet } from '../../src/game/bulletSystem.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -260,6 +261,24 @@ describe('remoteControl.js', () => {
       suspendRemoteControlAutoFocus()
       // Should not throw
     })
+
+    it('clears camera follow when auto focus was set by remote control', () => {
+      const toggleAutoFocus = vi.fn((units) => {
+        gameState.cameraFollowUnitId = units[0].id
+      })
+      vi.mocked(getKeyboardHandler).mockReturnValue({ toggleAutoFocus })
+
+      gameState.remoteControl = { forward: 1, backward: 0, turnLeft: 0, turnRight: 0, fire: 0 }
+      selectedUnits.push(mockApache)
+
+      updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
+
+      expect(toggleAutoFocus).toHaveBeenCalled()
+      expect(gameState.cameraFollowUnitId).toBe(mockApache.id)
+
+      suspendRemoteControlAutoFocus()
+      expect(gameState.cameraFollowUnitId).toBeNull()
+    })
   })
 
   describe('enemy unit handling', () => {
@@ -335,6 +354,41 @@ describe('remoteControl.js', () => {
 
       // Should not throw
       expect(() => updateRemoteControlledUnits([unitWithoutMovement], mockBullets, mockMapGrid, mockOccupancyMap)).not.toThrow()
+    })
+  })
+
+  describe('turret aiming and firing behavior', () => {
+    it('aims turret at selected target when manual override is not active', () => {
+      gameState.remoteControl = { forward: 0, backward: 0, turnLeft: 0, turnRight: 0, fire: 0 }
+      mockRocketTank.target = { id: 'enemy-1', x: 300, y: 200, tileX: 9, tileY: 6, health: 100 }
+      selectedUnits.push(mockRocketTank)
+
+      updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
+
+      expect(mockRocketTank.turretShouldFollowMovement).toBe(false)
+      expect(mockRocketTank.turretDirection).toBeDefined()
+    })
+
+    it('fires a rocket burst when remote fire is engaged and facing target', () => {
+      const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(10000)
+      gameState.remoteControl = { forward: 0, backward: 0, turnLeft: 0, turnRight: 0, fire: 1 }
+      mockRocketTank.target = { id: 'enemy-1', x: 300, y: 200, tileX: 9, tileY: 6, health: 100 }
+      mockRocketTank.movement.rotation = 0
+      mockRocketTank.direction = 0
+      mockRocketTank.lastShotTime = 0
+      selectedUnits.push(mockRocketTank)
+
+      updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
+
+      expect(mockRocketTank.burstState).toBeTruthy()
+
+      mockRocketTank.isFacingRemoteTarget = true
+      mockRocketTank.burstState.lastRocketTime = 0
+      updateRemoteControlledUnits(mockUnits, mockBullets, mockMapGrid, mockOccupancyMap)
+
+      expect(fireBullet).toHaveBeenCalled()
+
+      nowSpy.mockRestore()
     })
   })
 })

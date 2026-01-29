@@ -84,6 +84,7 @@ import { updateAIUnit } from '../../src/ai/enemyUnitBehavior.js'
 import { updateDangerZoneMaps } from '../../src/game/dangerZoneMap.js'
 import { getUnitCost } from '../../src/utils.js'
 import { gameRandom } from '../../src/utils/gameRandom.js'
+import { findBuildingPosition } from '../../src/ai/enemyBuilding.js'
 
 const createMapGrid = (width, height) =>
   Array.from({ length: height }, () =>
@@ -294,5 +295,102 @@ describe('enemyAIPlayer updateAIPlayer', () => {
     expect(manageAIRecoveryTanks).toHaveBeenCalled()
     expect(manageAIAmmunitionTrucks).toHaveBeenCalled()
     expect(manageAIAmmunitionMonitoring).toHaveBeenCalled()
+  })
+
+  it('falls back to simple placement when advanced placement fails', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 2000,
+      x: 5,
+      y: 5,
+      width: 3,
+      height: 3
+    }
+    const playerFactory = {
+      id: 'player1',
+      owner: 'player1',
+      health: 100,
+      x: 1,
+      y: 1,
+      width: 3,
+      height: 3
+    }
+    const mapGrid = createMapGrid(20, 20)
+    const gameState = {
+      buildings: [],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+
+    findBuildingPosition.mockReturnValue(null)
+
+    updateAIPlayer(
+      aiPlayerId,
+      [],
+      [aiFactory, playerFactory],
+      [],
+      mapGrid,
+      gameState,
+      null,
+      7000,
+      []
+    )
+
+    expect(findBuildingPosition).toHaveBeenCalled()
+    expect(aiFactory.currentlyBuilding).toBe('powerPlant')
+    expect(aiFactory.buildingPosition).toBeTruthy()
+  })
+
+  it('avoids selling the last vehicle factory when recovering economy', () => {
+    const aiPlayerId = 'ai1'
+    const aiFactory = {
+      id: aiPlayerId,
+      owner: aiPlayerId,
+      health: 100,
+      budget: 0
+    }
+    const vehicleFactory = {
+      type: 'vehicleFactory',
+      owner: aiPlayerId,
+      health: 100,
+      isBeingSold: false
+    }
+    const powerPlantA = {
+      type: 'powerPlant',
+      owner: aiPlayerId,
+      health: 100,
+      isBeingSold: false
+    }
+    const powerPlantB = {
+      type: 'powerPlant',
+      owner: aiPlayerId,
+      health: 100,
+      isBeingSold: false
+    }
+    const gameState = {
+      buildings: [vehicleFactory, powerPlantA, powerPlantB],
+      enemyPowerSupply: 0,
+      enemyBuildSpeedModifier: 1,
+      speedMultiplier: 1
+    }
+
+    updateAIPlayer(
+      aiPlayerId,
+      [],
+      [aiFactory],
+      [],
+      createMapGrid(8, 8),
+      gameState,
+      null,
+      0,
+      []
+    )
+
+    expect(vehicleFactory.isBeingSold).toBe(false)
+    expect(powerPlantA.isBeingSold || powerPlantB.isBeingSold).toBe(true)
   })
 })
