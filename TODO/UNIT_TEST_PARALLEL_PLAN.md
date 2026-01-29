@@ -151,73 +151,73 @@ These files have 0% coverage and need complete test suites created.
 ### Task 3.7 - `src/game/milestoneSystem.js`
 - **Target**: Create `tests/unit/milestoneSystem.test.js`
 - **Source File**: `src/game/milestoneSystem.js` (0% coverage, lines 11-393)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-40
 
 ### Task 3.8 - `src/game/shadowOfWar.js`
 - **Target**: Create `tests/unit/shadowOfWar.test.js`
 - **Source File**: `src/game/shadowOfWar.js` (0% coverage, lines 11-357)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 25-40
 
 ### Task 3.9 - `src/game/supplyTruckLogic.js`
 - **Target**: Create `tests/unit/supplyTruckLogic.test.js`
 - **Source File**: `src/game/supplyTruckLogic.js` (0% coverage, lines 12-521)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 35-50
 
 ### Task 3.10 - `src/game/unitMovement.js`
 - **Target**: Create `tests/unit/unitMovement.test.js`
 - **Source File**: `src/game/unitMovement.js` (0% coverage, lines 24-391)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 3.11 - `src/game/unitCombat.js` (game folder version)
 - **Target**: Create `tests/unit/gameFolderUnitCombat.test.js`
 - **Source File**: `src/game/unitCombat.js` (0% coverage, lines 26-1811)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 80-120
 
 ### Task 3.12 - `src/game/workshopLogic.js`
 - **Target**: Create `tests/unit/workshopLogic.test.js`
 - **Source File**: `src/game/workshopLogic.js` (0% coverage, lines 12-602)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 40-60
 
 ### Task 3.13 - `src/game/flowField.js`
 - **Target**: Create `tests/unit/flowField.test.js`
 - **Source File**: `src/game/flowField.js` (3.24% coverage, lines 18-376)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 3.14 - `src/game/actionSystem.js`
 - **Target**: Create `tests/unit/actionSystem.test.js`
 - **Source File**: `src/game/actionSystem.js` (0% coverage, lines 8-208)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 25-35
 
 ### Task 3.15 - `src/game/ammoBuildingTruckLogic.js`
 - **Target**: Create `tests/unit/ammoBuildingTruckLogic.test.js`
 - **Source File**: `src/game/ammoBuildingTruckLogic.js` (0% coverage, lines 17-250)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 20-30
 
 ### Task 3.16 - `src/game/remoteControl.js`
 - **Target**: Create `tests/unit/remoteControl.test.js`
 - **Source File**: `src/game/remoteControl.js` (0.81% coverage, lines 19-922)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 50-70
 
 ### Task 3.17 - `src/game/coordBasedMovement.js`
 - **Target**: Create `tests/unit/coordBasedMovement.test.js`
 - **Source File**: `src/game/coordBasedMovement.js` (1.21% coverage, lines 58-2618)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 100-150
 
 ### Task 3.18 - `src/game/hitZoneDebug.js`
 - **Target**: Create `tests/unit/hitZoneDebug.test.js`
 - **Source File**: `src/game/hitZoneDebug.js` (0% coverage, lines 11-48)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 8-12
 
 ---
@@ -227,61 +227,61 @@ These files have 0% coverage and need complete test suites created.
 ### Task 4.1 - `src/input/cheatSystem.js`
 - **Target**: Create `tests/unit/cheatSystem.test.js`
 - **Source File**: `src/input/cheatSystem.js` (1.64% coverage, lines 176-1329)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 60-80
 
 ### Task 4.2 - `src/input/cursorManager.js`
 - **Target**: Create `tests/unit/cursorManager.test.js`
 - **Source File**: `src/input/cursorManager.js` (7.44% coverage, lines 60-888)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 50-70
 
 ### Task 4.3 - `src/input/keyboardHandler.js`
 - **Target**: Create `tests/unit/keyboardHandler.test.js`
 - **Source File**: `src/input/keyboardHandler.js` (1.67% coverage, lines 48-1185)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 60-80
 
 ### Task 4.4 - `src/input/mouseHandler.js`
 - **Target**: Create `tests/unit/mouseHandler.test.js`
 - **Source File**: `src/input/mouseHandler.js` (1.48% coverage, lines 68-2135)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 100-140
 
 ### Task 4.5 - `src/input/unitCommands.js`
 - **Target**: Create `tests/unit/unitCommands.test.js`
 - **Source File**: `src/input/unitCommands.js` (0.24% coverage, lines 54-2119)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 100-130
 
 ### Task 4.6 - `src/input/selectionManager.js`
 - **Target**: Create `tests/unit/selectionManager.test.js`
 - **Source File**: `src/input/selectionManager.js` (1.69% coverage, lines 31-352)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 4.7 - `src/input/helpSystem.js`
 - **Target**: Create `tests/unit/helpSystem.test.js`
 - **Source File**: `src/input/helpSystem.js` (0% coverage, lines 6-70)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 10-15
 
 ### Task 4.8 - `src/input/controlGroupHandler.js`
 - **Target**: Create `tests/unit/controlGroupHandler.test.js`
 - **Source File**: `src/input/controlGroupHandler.js` (7.4% coverage, lines 17-155)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 15-25
 
 ### Task 4.9 - `src/input/multiUnitInputHandler.js`
 - **Target**: Create `tests/unit/multiUnitInputHandler.test.js`
 - **Source File**: `src/input/multiUnitInputHandler.js` (0% coverage, lines 7-353)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 4.10 - `src/input/remoteControlState.js`
 - **Target**: Create `tests/unit/remoteControlState.test.js`
 - **Source File**: `src/input/remoteControlState.js` (2.36% coverage, lines 28-274)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 25-35
 
 ---
@@ -291,43 +291,43 @@ These files have 0% coverage and need complete test suites created.
 ### Task 5.1 - `src/network/inputBuffer.js`
 - **Target**: Create `tests/unit/inputBuffer.test.js`
 - **Source File**: `src/network/inputBuffer.js` (0% coverage, lines 9-375)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 5.2 - `src/network/lockstepManager.js`
 - **Target**: Create `tests/unit/lockstepManager.test.js`
 - **Source File**: `src/network/lockstepManager.js` (0% coverage, lines 15-616)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 40-60
 
 ### Task 5.3 - `src/network/multiplayerStore.js`
 - **Target**: Create `tests/unit/multiplayerStore.test.js`
 - **Source File**: `src/network/multiplayerStore.js` (1.69% coverage, lines 25-317)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 25-40
 
 ### Task 5.4 - `src/network/peerConnection.js`
 - **Target**: Create `tests/unit/peerConnection.test.js`
 - **Source File**: `src/network/peerConnection.js` (2.29% coverage, lines 25-348)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 30-45
 
 ### Task 5.5 - `src/network/webrtcSession.js`
 - **Target**: Create `tests/unit/webrtcSession.test.js`
 - **Source File**: `src/network/webrtcSession.js` (0% coverage, lines 9-577)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 40-60
 
 ### Task 5.6 - `src/network/aiPartySync.js`
 - **Target**: Create `tests/unit/aiPartySync.test.js`
 - **Source File**: `src/network/aiPartySync.js` (0% coverage, lines 16-143)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 15-25
 
 ### Task 5.7 - `src/network/gameCommandSync.js`
 - **Target**: Extend `tests/unit/commandSync.test.js`
 - **Source File**: `src/network/gameCommandSync.js` (3.55% coverage)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Estimated Tests**: 80-120
 
 ---
@@ -397,49 +397,49 @@ These files have 0% coverage and need complete test suites created.
 ### Task 8.1 - `src/buildings.js`
 - **Target**: Extend coverage in `tests/unit/buildingSystem.test.js`
 - **Source File**: `src/buildings.js` (53.54% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 643-769,778-869
 - **Estimated Tests**: 30-40
 
 ### Task 8.2 - `src/logic.js`
 - **Target**: Extend `tests/unit/logic.test.js`
 - **Source File**: `src/logic.js` (45.27% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 339,473,496-562
 - **Estimated Tests**: 25-35
 
 ### Task 8.3 - `src/inputHandler.js`
 - **Target**: Create/extend `tests/unit/inputHandler.test.js`
 - **Source File**: `src/inputHandler.js` (23.18% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 23-36,50-145
 - **Estimated Tests**: 25-35
 
 ### Task 8.4 - `src/behaviours/retreat.js`
 - **Target**: Extend `tests/unit/retreat.test.js`
 - **Source File**: `src/behaviours/retreat.js` (70.86% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 467,478-481,485
 - **Estimated Tests**: 10-15
 
 ### Task 8.5 - `src/game/harvesterLogic.js`
 - **Target**: Extend `tests/unit/harvesterLogic.test.js`
 - **Source File**: `src/game/harvesterLogic.js` (57.82% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 972-1239,1289
 - **Estimated Tests**: 40-50
 
 ### Task 8.6 - `src/game/ambulanceSystem.js`
 - **Target**: Extend `tests/unit/ambulanceSystem.test.js`
 - **Source File**: `src/game/ambulanceSystem.js` (80.38% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 283,296-330,357
 - **Estimated Tests**: 15-20
 
 ### Task 8.7 - `src/game/recoveryTankSystem.js`
 - **Target**: Extend `tests/unit/recoveryTankSystem.test.js`
 - **Source File**: `src/game/recoveryTankSystem.js` (69.63% → target 100%)
-- **Status**: [ ] NOT STARTED
+- **Status**: [COMPLETED]
 - **Uncovered Lines**: 535-547,557-563
 - **Estimated Tests**: 15-20
 
