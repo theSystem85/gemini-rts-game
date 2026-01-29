@@ -155,6 +155,16 @@ describe('AI reactivation events', () => {
     document.dispatchEvent(new CustomEvent(AI_REACTIVATION_EVENT, { detail: { partyId: 'party-1' } }))
     expect(handler).toHaveBeenCalledTimes(1)
   })
+
+  it('returns a no-op cleanup when handler is invalid', () => {
+    const addListenerSpy = vi.spyOn(document, 'addEventListener')
+
+    const cleanup = observeAiReactivation('not-a-function')
+
+    expect(typeof cleanup).toBe('function')
+    expect(addListenerSpy).not.toHaveBeenCalled()
+    addListenerSpy.mockRestore()
+  })
 })
 
 describe('Host session behavior', () => {
@@ -203,6 +213,27 @@ describe('Host session behavior', () => {
     expect(commandSync.updateNetworkStats).toHaveBeenCalledWith(0, JSON.stringify({ type: 'remote-control', input: 'payload' }).length)
   })
 
+  it('ignores non-peer or malformed ICE candidates', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    monitor._processEntry({
+      peerId: 'peer-1',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: []
+    })
+
+    const session = monitor.sessions.get('peer-1')
+    session.answerSent = true
+
+    session.processCandidateEntries([
+      { candidate: { candidate: 'host-candidate' }, origin: 'host' },
+      'not-json',
+      JSON.stringify({ candidate: 'peer-candidate' })
+    ])
+
+    expect(lastPeerConnection.addIceCandidate).toHaveBeenCalledTimes(1)
+    expect(lastPeerConnection.addIceCandidate).toHaveBeenCalledWith({ candidate: 'peer-candidate' })
+  })
+
   it('sends host status updates through the data channel', () => {
     const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
     monitor._processEntry({
@@ -219,6 +250,43 @@ describe('Host session behavior', () => {
     const expectedPayload = JSON.stringify({ type: 'host-status', running: true })
     expect(createdSession.dataChannel.send).toHaveBeenCalledWith(expectedPayload)
     expect(commandSync.updateNetworkStats).toHaveBeenCalledWith(expectedPayload.length, 0)
+  })
+
+  it('skips host status updates when data channel is not open', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    monitor._processEntry({
+      peerId: 'peer-1',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: []
+    })
+
+    const createdSession = monitor.sessions.get('peer-1')
+    createdSession.dataChannel = { readyState: 'closed', send: vi.fn(), close: vi.fn() }
+    commandSync.updateNetworkStats.mockClear()
+
+    createdSession.sendHostStatus({ type: 'host-status', running: false })
+
+    expect(createdSession.dataChannel.send).not.toHaveBeenCalled()
+    expect(commandSync.updateNetworkStats).not.toHaveBeenCalled()
+  })
+
+  it('notifies session state on data channel close', () => {
+    const onStateChange = vi.fn()
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    monitor._processEntry({
+      peerId: 'peer-1',
+      offer: { type: 'offer', sdp: 'mock-offer' },
+      candidates: []
+    })
+
+    const session = monitor.sessions.get('peer-1')
+    session.onStateChange = onStateChange
+    const dataChannel = createDataChannel()
+
+    session._attachDataChannel(dataChannel)
+    dataChannel.dispatchEvent('close')
+
+    expect(onStateChange).toHaveBeenCalledWith(session, 'disconnected')
   })
 })
 
@@ -241,6 +309,22 @@ describe('Host invite monitoring', () => {
     expect(commandSync.notifyClientConnected).toHaveBeenCalled()
     expect(commandSync.initializeLockstepSession).toHaveBeenCalled()
     expect(commandSync.startGameStateSync).toHaveBeenCalled()
+  })
+
+  it('does not reinitialize lockstep when already enabled', () => {
+    commandSync.isLockstepEnabled.mockReturnValue(true)
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = {
+      alias: 'Remote',
+      sourceId: 'remote-party-1-peer-1',
+      peerId: 'peer-1',
+      dispose: vi.fn()
+    }
+    monitor.sessions.set('peer-1', session)
+
+    monitor._handleSessionState(session, 'connected')
+
+    expect(commandSync.initializeLockstepSession).not.toHaveBeenCalled()
   })
 
   it('restores AI control on disconnect and stops sync', () => {
@@ -278,6 +362,16 @@ describe('Host invite monitoring', () => {
 
     expect(commandSync.handleReceivedCommand).toHaveBeenCalledWith({ type: 'game-command', command: 'move' }, session.sourceId)
     expect(remoteControlState.applyRemoteControlSnapshot).toHaveBeenCalledWith(session.sourceId, { type: 'remote-control', payload: { axis: 'x' } })
+  })
+
+  it('ignores unsupported control message types', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = { sourceId: 'remote-party-1-peer-1' }
+
+    monitor._handleControlMessage(session, { type: 'unknown', payload: { test: true } })
+
+    expect(commandSync.handleReceivedCommand).not.toHaveBeenCalled()
+    expect(remoteControlState.applyRemoteControlSnapshot).not.toHaveBeenCalled()
   })
 
   it('clears host invite monitor when token is removed', () => {

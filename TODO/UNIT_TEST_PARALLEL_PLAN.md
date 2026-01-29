@@ -967,14 +967,14 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.16 - `src/network/webrtcSession.js`
 - **Target**: Extend `tests/unit/webrtcSession.test.js`
 - **Source File**: `src/network/webrtcSession.js` (68.62% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:10 UTC)
 - **Current Coverage**: 68.62% functions → Target 100%
 - **Estimated Tests**: 25-35
 
 ### Task 15.17 - `src/ai/enemyStrategies.js`
 - **Target**: Extend `tests/unit/enemyStrategies.test.js`
 - **Source File**: `src/ai/enemyStrategies.js` (71.77% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:10 UTC)
 - **Current Coverage**: 71.77% functions → Target 100%
 - **Estimated Tests**: 30-40
 

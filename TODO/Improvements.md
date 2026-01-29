@@ -6,6 +6,7 @@
 - [x] Add unit tests for enemy AI building placement (Task 2.2) covering defensive placement, spacing, and guardrails.
 - [x] Add unit coverage for enemy AI unit behavior (ambulance, harvester hunter, base defense, and apache retreat logic).
 - [x] Add unit tests for enemyStrategies AI behaviors (repairs, retreats, attack coordination, crew recovery, logistics, and ammo monitoring).
+- [x] Extend unit tests for `webrtcSession` and `enemyStrategies` (Tasks 15.16-15.17) to cover WebRTC session edges, AI coordination, and logistics behaviors.
 - [x] Add unit tests for `src/ai/enemyAIPlayer.js` to cover AI economy recovery, building completion, and unit production logic.
 - [x] Add comprehensive unit test plan and implement first unit tests for `baseUtils.js` (24 tests covering `getBaseStructures()` and `isWithinBaseRange()` utilities)
 - [x] Add meaningful unit tests for `src/ai/enemySpawner.js` covering spawn placement, harvester setup, crew/gas initialization, and cheat-system handling.
