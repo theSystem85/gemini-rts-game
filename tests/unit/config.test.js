@@ -4,7 +4,7 @@
  * Tests configuration constants, setter functions, and joystick mappings
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Import config functions and constants
 import {
@@ -171,6 +171,12 @@ import {
   setMobileApacheJoystickMapping,
   isTurretTankUnitType,
   CONFIG_VARIABLE_NAMES,
+  listConfigVariables,
+  getConfigValue,
+  updateConfigValue,
+  isConfigValueOverridden,
+  getConfigOverrides,
+  ensureConfigOverridesLoaded,
   UNIT_GAS_PROPERTIES,
   UNIT_AMMO_CAPACITY
 } from '../../src/config.js'
@@ -1036,6 +1042,33 @@ describe('config.js', () => {
       expect(CONFIG_VARIABLE_NAMES).toContain('TANK_FIRE_RANGE')
       expect(CONFIG_VARIABLE_NAMES).toContain('BULLET_DAMAGES')
       expect(CONFIG_VARIABLE_NAMES).toContain('HIT_ZONE_DAMAGE_MULTIPLIERS')
+    })
+  })
+
+  describe('Config Override Helpers', () => {
+    it('returns an array of config variables', () => {
+      const variables = listConfigVariables()
+      expect(Array.isArray(variables)).toBe(true)
+    })
+
+    it('throws for unknown config value accessors', () => {
+      expect(() => getConfigValue('NOT_A_CONFIG_VALUE')).toThrow()
+      expect(() => updateConfigValue('NOT_A_CONFIG_VALUE', 5)).toThrow()
+      expect(() => isConfigValueOverridden('NOT_A_CONFIG_VALUE')).toThrow()
+    })
+
+    it('returns an empty overrides object when no overrides are active', () => {
+      expect(getConfigOverrides()).toEqual({})
+    })
+
+    it('loads overrides from external sources without throwing', async() => {
+      const fetchSpy = vi.fn(async() => ({ ok: false }))
+      vi.stubGlobal('fetch', fetchSpy)
+      window.localStorage.setItem('rts-config-overrides', JSON.stringify({ unknown: 5 }))
+
+      await expect(ensureConfigOverridesLoaded()).resolves.toBeUndefined()
+      expect(fetchSpy).toHaveBeenCalled()
+      vi.unstubAllGlobals()
     })
   })
 })

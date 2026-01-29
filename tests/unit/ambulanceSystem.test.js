@@ -4,6 +4,7 @@ import {
   canAmbulanceHealUnit,
   assignAmbulanceToHealUnit
 } from '../../src/game/ambulanceSystem.js'
+import { getUnitCommandsHandler } from '../../src/inputHandler.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -172,6 +173,28 @@ describe('Ambulance System', () => {
       expect(result).toBe(true)
     })
 
+    it('delegates to unit commands handler when available', () => {
+      const ambulance = createTestAmbulance('amb1')
+      const target = createTestUnit('tank1')
+      target.crew.driver = false
+
+      const unitCommands = {
+        assignAmbulanceToTarget: vi.fn(() => true)
+      }
+      getUnitCommandsHandler.mockReturnValueOnce(unitCommands)
+
+      const result = assignAmbulanceToHealUnit(ambulance, target, [])
+
+      expect(result).toBe(true)
+      expect(unitCommands.assignAmbulanceToTarget).toHaveBeenCalledWith(
+        ambulance,
+        target,
+        [],
+        { suppressNotifications: true }
+      )
+      expect(ambulance.healingTarget).toBeNull()
+    })
+
     it('should return false when ambulance cannot heal unit', () => {
       const ambulance = createTestAmbulance('amb1')
       ambulance.medics = 0
@@ -203,6 +226,29 @@ describe('Ambulance System', () => {
       const result = assignAmbulanceToHealUnit(ambulance, target, [])
 
       expect(result).toBe(false)
+    })
+
+    it('clears movement targets when target coordinates are invalid', () => {
+      const ambulance = createTestAmbulance('amb1')
+      const target = {
+        id: 'tank1',
+        type: 'tank_v1',
+        owner: 'player1',
+        crew: { driver: false, commander: true, gunner: true, loader: true },
+        movement: { isMoving: false },
+        tileX: undefined,
+        tileY: undefined,
+        x: undefined,
+        y: undefined
+      }
+
+      getUnitCommandsHandler.mockReturnValueOnce({ assignAmbulanceToTarget: vi.fn(() => false) })
+
+      const result = assignAmbulanceToHealUnit(ambulance, target, [{}])
+
+      expect(result).toBe(true)
+      expect(ambulance.path).toEqual([])
+      expect(ambulance.moveTarget).toBeNull()
     })
   })
 

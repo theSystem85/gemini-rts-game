@@ -77,6 +77,33 @@ describe('gameSetup.js', () => {
       // All mocked preload functions call their callbacks immediately
       expect(callback).toHaveBeenCalled()
     })
+
+    it('should wait to invoke callback until all assets are reported loaded', () => {
+      const callback = vi.fn()
+      let tileCallback
+      let buildingCallback
+      let turretCallback
+
+      preloadTileTextures.mockImplementationOnce((cb) => {
+        tileCallback = cb
+      })
+      preloadBuildingImages.mockImplementationOnce((cb) => {
+        buildingCallback = cb
+      })
+      preloadTurretImages.mockImplementationOnce((cb) => {
+        turretCallback = cb
+      })
+
+      initializeGameAssets(callback)
+
+      expect(callback).not.toHaveBeenCalled()
+      tileCallback()
+      expect(callback).not.toHaveBeenCalled()
+      buildingCallback()
+      expect(callback).not.toHaveBeenCalled()
+      turretCallback()
+      expect(callback).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('generateMap', () => {

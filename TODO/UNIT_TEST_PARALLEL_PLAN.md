@@ -989,70 +989,70 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 16.1 - `src/config.js`
 - **Target**: Extend `tests/unit/config.test.js`
 - **Source File**: `src/config.js` (80.55% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 80.55% functions → Target 100%
 - **Estimated Tests**: 15-25
 
 ### Task 16.2 - `src/gameSetup.js`
 - **Target**: Extend `tests/unit/gameSetup.test.js`
 - **Source File**: `src/gameSetup.js` (96.29% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 96.29% functions → Target 100%
 - **Estimated Tests**: 5-10
 
 ### Task 16.3 - `src/mapEditor.js`
 - **Target**: Extend `tests/unit/mapEditor.test.js`
 - **Source File**: `src/mapEditor.js` (93.61% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 93.61% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.4 - `src/behaviours/retreat.js`
 - **Target**: Extend `tests/unit/retreat.test.js`
 - **Source File**: `src/behaviours/retreat.js` (86.66% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 86.66% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.5 - `src/benchmark/benchmarkRunner.js`
 - **Target**: Extend `tests/unit/benchmarkRunner.test.js`
 - **Source File**: `src/benchmark/benchmarkRunner.js` (80% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 80% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.6 - `src/game/ambulanceSystem.js`
 - **Target**: Extend `tests/unit/ambulanceSystem.test.js`
 - **Source File**: `src/game/ambulanceSystem.js` (95% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 95% functions → Target 100%
 - **Estimated Tests**: 5-10
 
 ### Task 16.7 - `src/game/buildingSystem.js`
 - **Target**: Extend `tests/unit/buildingSystem.test.js`
 - **Source File**: `src/game/buildingSystem.js` (92.3% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 92.3% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.8 - `src/game/gameStateManager.js`
 - **Target**: Extend `tests/unit/gameStateManager.test.js`
 - **Source File**: `src/game/gameStateManager.js` (87.5% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 87.5% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.9 - `src/game/hospitalLogic.js`
 - **Target**: Extend `tests/unit/hospitalLogic.test.js`
 - **Source File**: `src/game/hospitalLogic.js` (80% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 80% functions → Target 100%
 - **Estimated Tests**: 10-15
 
 ### Task 16.10 - `src/game/mineSystem.js`
 - **Target**: Extend `tests/unit/mineSystem.test.js`
 - **Source File**: `src/game/mineSystem.js` (96.15% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED]
 - **Current Coverage**: 96.15% functions → Target 100%
 - **Estimated Tests**: 5-10
 

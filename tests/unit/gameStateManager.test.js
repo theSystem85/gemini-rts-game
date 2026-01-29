@@ -108,6 +108,20 @@ describe('gameStateManager', () => {
   })
 
   describe('updateMapScrolling', () => {
+    it('returns early when map grid is empty', () => {
+      const gameState = {
+        scrollOffset: { x: 10, y: 10 },
+        dragVelocity: { x: 0, y: 0 },
+        keyScroll: { left: false, right: false, up: false, down: false },
+        smoothScroll: null,
+        isRightDragging: false
+      }
+
+      updateMapScrolling(gameState, [])
+
+      expect(gameState.scrollOffset).toEqual({ x: 10, y: 10 })
+    })
+
     it('applies keyboard scroll velocity and clamps to map bounds', () => {
       const gameState = {
         scrollOffset: { x: 200, y: 150 },

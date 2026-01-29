@@ -168,4 +168,20 @@ describe('hospitalLogic', () => {
 
     expect(ambulance.medicRefillTimer).toBe(0)
   })
+
+  it('advances healing entries without deducting money for AI units', () => {
+    const hospital = createHospital({
+      healingUnits: [{ unitId: 'unit1', progress: 9000, totalProgress: 10000, currentRole: 'driver' }]
+    })
+    const unit = createCrewUnit({
+      owner: 'ai',
+      crew: { driver: false, commander: false, loader: true, gunner: true }
+    })
+
+    updateHospitalLogic([unit], [hospital], gameState, 2000)
+
+    expect(unit.crew.driver).toBe(true)
+    expect(gameState.money).toBe(100)
+    expect(hospital.healingUnits[0].currentRole).toBe('commander')
+  })
 })

@@ -136,6 +136,7 @@ Located in `tests/unit/`
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
+- Expanded high-coverage suites (Task 16.1-16.10) to cover config override helpers, asset preload gating, map editor render scheduling, retreat stuck/target range handling, benchmark error paths, ambulance command delegation, artillery turret firing, map scroll guardrails, hospital AI healing progression, and mine damage broadcasts.
 - Expanded unit tests for recovery tank towing/recycling, remote control aiming/firing, unit movement pathing, selection manager edge cases, lockstep peer handling, multiplayer store state helpers, remote connection candidate validation, deterministic state hashing, enemy AI building fallback placement, and logger downloads.
 - Added `tests/unit/enemyStrategies.test.js` cases for AI attack path recalculation, ambulance queueing, tanker emergencies, and ammo recovery state resets.
 - Expanded `tests/unit/workshopLogic.test.js` to validate repair funding sources, restoration rally selection, and spawn fallback handling.

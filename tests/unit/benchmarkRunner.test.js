@@ -194,6 +194,27 @@ describe('benchmarkRunner.js', () => {
       expect(showBenchmarkCountdownMessage).toHaveBeenCalledWith('Benchmark: preparing scenario…')
     })
 
+    it('handles failures when benchmark session cannot start', async() => {
+      const { runBenchmark: run, attachBenchmarkButton: attach } = await import('../../src/benchmark/benchmarkRunner.js')
+      startBenchmarkSession.mockReturnValueOnce(null)
+
+      const originalRaf = globalThis.requestAnimationFrame
+      globalThis.requestAnimationFrame = (cb) => {
+        cb()
+        return 1
+      }
+
+      attach()
+      const result = await run()
+
+      expect(result).toBeUndefined()
+      expect(showBenchmarkStatus).toHaveBeenCalledWith('Benchmark failed. Check console for details.')
+      expect(openBenchmarkModal).toHaveBeenCalled()
+      expect(teardownBenchmarkScenario).toHaveBeenCalled()
+
+      globalThis.requestAnimationFrame = originalRaf
+    })
+
     it('should call setupBenchmarkScenario', async() => {
       const { runBenchmark: run } = await import('../../src/benchmark/benchmarkRunner.js')
 
