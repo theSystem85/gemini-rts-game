@@ -1836,26 +1836,54 @@ export class UnitCommandsHandler {
       return
     }
 
-    const helipadId = getBuildingIdentifier(helipad)
-    const center = getHelipadLandingCenter(helipad)
-    const destTile = getHelipadLandingTile(helipad)
-    if (!center || !destTile) {
+    const targetCenter = getHelipadLandingCenter(helipad)
+    if (!targetCenter) {
       return
     }
 
+    const helipads = Array.isArray(gameState.buildings)
+      ? gameState.buildings.filter(building => building.type === 'helipad' && building.health > 0 && building.owner === helipad.owner)
+      : []
+
+    const helipadOptions = helipads.map(building => {
+      const center = getHelipadLandingCenter(building)
+      const tile = center ? getHelipadLandingTile(building) : null
+      if (!center || !tile) {
+        return null
+      }
+      const distance = Math.hypot(center.x - targetCenter.x, center.y - targetCenter.y)
+      return {
+        helipad: building,
+        center,
+        tile,
+        distance,
+        helipadId: getBuildingIdentifier(building)
+      }
+    }).filter(Boolean)
+
+    helipadOptions.sort((a, b) => a.distance - b.distance)
+
     const blockedUnits = []
+    const assignedHelipadIds = new Set()
     apaches.forEach(unit => {
-      if (!isHelipadAvailableForUnit(helipad, this.units, unit.id)) {
+      const option = helipadOptions.find(candidate => {
+        if (!candidate.helipadId || assignedHelipadIds.has(candidate.helipadId)) {
+          return false
+        }
+        return isHelipadAvailableForUnit(candidate.helipad, this.units, unit.id)
+      })
+      if (!option) {
         blockedUnits.push(unit)
         return
       }
 
-      const handled = this.assignApacheFlight(unit, destTile, center, {
+      const handled = this.assignApacheFlight(unit, option.tile, option.center, {
         mode: 'helipad',
         stopRadius: TILE_SIZE * 0.2,
-        helipadId
+        helipadId: option.helipadId
       })
       if (handled) {
+        assignedHelipadIds.add(option.helipadId)
         unit.target = null
         unit.originalTarget = null
         unit.forcedAttack = false
@@ -1863,12 +1891,12 @@ export class UnitCommandsHandler {
     })
 
     if (blockedUnits.length === apaches.length) {
-      showNotification('Helipad is currently occupied!', 2000)
+      showNotification('No available helipads for landing!', 2000)
       return
     }
 
     if (blockedUnits.length > 0) {
-      showNotification('Helipad is occupied; only one Apache can land.', 2000)
+      showNotification('Some helipads are occupied; only available pads assigned.', 2000)
     }
 
     const avgX = apaches.reduce((sum, u) => sum + u.x, 0) / apaches.length
