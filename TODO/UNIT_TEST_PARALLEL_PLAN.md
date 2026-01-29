@@ -943,28 +943,28 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.12 - `src/game/workshopLogic.js`
 - **Target**: Extend `tests/unit/workshopLogic.test.js`
 - **Source File**: `src/game/workshopLogic.js` (77.27% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 77.27% functions → Target 100%
 - **Estimated Tests**: 20-30
 
 ### Task 15.13 - `src/input/keyboardHandler.js`
 - **Target**: Extend `tests/unit/keyboardHandler.test.js`
 - **Source File**: `src/input/keyboardHandler.js` (52.23% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 52.23% functions → Target 100%
 - **Estimated Tests**: 40-60
 
 ### Task 15.14 - `src/input/cheatSystem.js`
 - **Target**: Extend `tests/unit/cheatSystem.test.js`
 - **Source File**: `src/input/cheatSystem.js` (68.91% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 68.91% functions → Target 100%
 - **Estimated Tests**: 30-40
 
 ### Task 15.15 - `src/input/cursorManager.js`
 - **Target**: Extend `tests/unit/cursorManager.test.js`
 - **Source File**: `src/input/cursorManager.js` (68.96% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 19:11 UTC)
 - **Current Coverage**: 68.96% functions → Target 100%
 - **Estimated Tests**: 25-35
 

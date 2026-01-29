@@ -4,6 +4,7 @@ import { updateWorkshopLogic } from '../../src/game/workshopLogic.js'
 import { gameState } from '../../src/gameState.js'
 import { findPath, createUnit } from '../../src/units.js'
 import { getWreckById, removeWreckById } from '../../src/game/unitWreckManager.js'
+import { getBaseStructures, isWithinBaseRange } from '../../src/utils/baseUtils.js'
 
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
@@ -307,6 +308,36 @@ describe('workshopLogic.js', () => {
       expect(gameState.money).toBeLessThanOrEqual(10000)
     })
 
+    it('charges repair costs from AI factory budgets', () => {
+      const aiFactory = { id: 'ai1', owner: 'ai1', budget: 60 }
+      gameState.factories = [aiFactory]
+
+      const unit = {
+        type: 'tank',
+        owner: 'ai1',
+        health: 40,
+        maxHealth: 100,
+        x: 4 * 32,
+        y: 5 * 32,
+        tileX: 4,
+        tileY: 5,
+        repairingAtWorkshop: true,
+        path: [],
+        moveTarget: null,
+        workshopRepairCost: 120,
+        workshopRepairPaid: 0,
+        workshopStartHealth: 40
+      }
+
+      workshop.repairSlots = [{ x: 4, y: 5, unit }]
+      workshop.repairQueue = []
+      unit.repairSlot = workshop.repairSlots[0]
+
+      updateWorkshopLogic([unit], mockBuildings, mockMapGrid, 1000)
+
+      expect(aiFactory.budget).toBeLessThan(60)
+    })
+
     it('should handle dead units in repair slots', () => {
       const deadUnit = {
         id: 1,
@@ -405,6 +436,7 @@ describe('workshopLogic.js', () => {
 
       updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 16)
       expect(workshop.currentRestoration).toBeNull()
+      expect(workshop.restorationProgress).toBe(0)
     })
 
     it('should complete restoration and create unit', () => {
@@ -433,6 +465,48 @@ describe('workshopLogic.js', () => {
       // Check completion
       expect(createUnit).toHaveBeenCalled()
       expect(removeWreckById).toHaveBeenCalledWith(expect.anything(), 'wreck1')
+    })
+
+    it('restores units at fallback spawn origin when no tiles are passable', () => {
+      const mockWreck = {
+        id: 'wreck2',
+        type: 'tank',
+        x: 50,
+        y: 50,
+        tileX: 1,
+        tileY: 1
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+
+      const blockedMap = Array(3).fill(null).map(() =>
+        Array(3).fill(null).map(() => ({ type: 'water' }))
+      )
+      gameState.occupancyMap = Array(3).fill(null).map(() => Array(3).fill(0))
+
+      workshop.x = 0
+      workshop.y = 0
+      workshop.width = 2
+      workshop.height = 2
+
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck2',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 9990
+      }
+
+      updateWorkshopLogic(mockUnits, [workshop], blockedMap, 100)
+
+      expect(createUnit).toHaveBeenCalledWith(
+        { owner: workshop.owner },
+        'tank',
+        1,
+        2,
+        expect.any(Object)
+      )
     })
   })
 
@@ -535,6 +609,36 @@ describe('workshopLogic.js', () => {
       updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 100)
 
       expect(createUnit).toHaveBeenCalled()
+    })
+
+    it('selects rally point from base structures when current point is invalid', () => {
+      const mockWreck = {
+        id: 'wreck3',
+        type: 'tank',
+        x: 100,
+        y: 100,
+        tileX: 3,
+        tileY: 3
+      }
+      vi.mocked(getWreckById).mockReturnValue(mockWreck)
+      vi.mocked(findPath).mockReturnValue([{ x: 1, y: 1 }])
+      vi.mocked(getBaseStructures).mockReturnValue([{ x: 4, y: 4, width: 2, height: 2 }])
+      vi.mocked(isWithinBaseRange).mockReturnValue(true)
+
+      workshop.rallyPoint = { x: 99, y: 99 }
+      workshop.repairSlots = []
+      workshop.repairQueue = []
+      workshop.restorationQueue = []
+      workshop.currentRestoration = {
+        wreckId: 'wreck3',
+        unitType: 'tank',
+        buildDuration: 10000,
+        elapsed: 9990
+      }
+
+      updateWorkshopLogic(mockUnits, mockBuildings, mockMapGrid, 100)
+
+      expect(workshop.rallyPoint).toEqual({ x: 5, y: 6 })
     })
   })
 })

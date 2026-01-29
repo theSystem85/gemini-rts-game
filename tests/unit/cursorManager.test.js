@@ -22,10 +22,15 @@ vi.mock('../../src/inputHandler.js', () => ({
   setSelectedUnits: vi.fn()
 }))
 
+vi.mock('../../src/game/unitWreckManager.js', () => ({
+  findWreckAtTile: vi.fn()
+}))
+
 import { CursorManager } from '../../src/input/cursorManager.js'
 import { GAME_DEFAULT_CURSOR } from '../../src/input/cursorStyles.js'
 import { TILE_SIZE, CURSOR_METERS_PER_TILE } from '../../src/config.js'
 import { gameState } from '../../src/gameState.js'
+import { findWreckAtTile } from '../../src/game/unitWreckManager.js'
 import { createTestMapGrid, resetGameState } from '../testUtils.js'
 
 const createCanvas = (rect = { left: 0, top: 0, right: 200, bottom: 200 }) => {
@@ -105,6 +110,20 @@ describe('CursorManager', () => {
     expect(container.classList.contains('visible')).toBe(true)
   })
 
+  it('hides range cursor display when not showing', () => {
+    const manager = new CursorManager()
+    manager.setRangeCursorInfo({
+      distance: TILE_SIZE * 2,
+      maxRange: TILE_SIZE * 4
+    })
+
+    manager.updateRangeCursorDisplay({ x: 12, y: 34 }, true)
+    manager.updateRangeCursorDisplay({ x: 12, y: 34 }, false)
+
+    const { container } = manager.rangeCursorElements
+    expect(container.classList.contains('visible')).toBe(false)
+  })
+
   it('applies cursor styles and filters allowed cursor classes', () => {
     const canvas = createCanvas()
     const manager = new CursorManager()
@@ -114,6 +133,16 @@ describe('CursorManager', () => {
     expect(canvas.style.cursor).toBe('crosshair')
     expect(canvas.classList.contains('move-mode')).toBe(true)
     expect(canvas.classList.contains('unknown-mode')).toBe(false)
+  })
+
+  it('removes obsolete cursor classes when applying new styles', () => {
+    const canvas = createCanvas()
+    canvas.classList.add('move-mode')
+    const manager = new CursorManager()
+
+    manager.applyCursor(canvas, 'default', [])
+
+    expect(canvas.classList.contains('move-mode')).toBe(false)
   })
 
   it('detects blocked terrain based on map bounds and occupancy', () => {
@@ -238,6 +267,53 @@ describe('CursorManager', () => {
     manager.updateCustomCursor(event, mapGrid, [], selectedUnits, [])
 
     expect(canvas.classList.contains('attack-out-of-range-mode')).toBe(true)
+  })
+
+  it('shows guard cursor when guard mode is active', () => {
+    const manager = new CursorManager()
+    const canvas = createCanvas()
+    const mapGrid = createTestMapGrid(5, 5)
+    const selectedUnits = [{ owner: 'player1', type: 'tank' }]
+
+    manager.updateGuardMode(true)
+
+    const event = createMouseEvent(TILE_SIZE + 1, TILE_SIZE + 1)
+    manager.updateCustomCursor(event, mapGrid, [], selectedUnits, [])
+
+    expect(canvas.classList.contains('guard-mode')).toBe(true)
+  })
+
+  it('uses move-into cursor when hovering a recoverable wreck', () => {
+    const manager = new CursorManager()
+    const canvas = createCanvas()
+    const mapGrid = createTestMapGrid(5, 5)
+    const selectedUnits = [{ owner: 'player1', type: 'recoveryTank' }]
+
+    vi.mocked(findWreckAtTile).mockReturnValue({
+      assignedTankId: null,
+      isBeingRestored: false,
+      towedBy: null,
+      isBeingRecycled: false
+    })
+
+    const event = createMouseEvent(TILE_SIZE + 1, TILE_SIZE + 1)
+    manager.updateCustomCursor(event, mapGrid, [], selectedUnits, [])
+
+    expect(canvas.classList.contains('move-into-mode')).toBe(true)
+  })
+
+  it('refreshes cursor with the last known mouse event', () => {
+    const manager = new CursorManager()
+    const mapGrid = createTestMapGrid(2, 2)
+    createCanvas()
+    const event = createMouseEvent(10, 10)
+
+    manager.updateCustomCursor(event, mapGrid, [], [], [])
+
+    const spy = vi.spyOn(manager, 'updateCustomCursor')
+    manager.refreshCursor(mapGrid, [], [], [])
+
+    expect(spy).toHaveBeenCalledWith(event, mapGrid, [], [], [])
   })
 
   it('logs when guard mode toggles', () => {

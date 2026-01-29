@@ -267,6 +267,72 @@ describe('CheatSystem', () => {
     expect(playSound).toHaveBeenCalledWith('confirmed', 0.5)
   })
 
+  it('enables and disables god mode for player units', () => {
+    units.push({ id: 'u1', owner: 'player1', health: 25, maxHealth: 100 })
+    const system = new CheatSystem()
+
+    system.enableGodMode()
+    expect(system.isGodModeActive()).toBe(true)
+    expect(units[0].isInvincible).toBe(true)
+    expect(units[0].health).toBe(100)
+
+    system.disableGodMode()
+    expect(system.isGodModeActive()).toBe(false)
+    expect(units[0].isInvincible).toBe(false)
+  })
+
+  it('adds money to a specific AI factory budget', () => {
+    const system = new CheatSystem()
+    gameState.factories = [{ id: 'player2', owner: 'player2', budget: 50 }]
+
+    const result = system.addMoney(75, 'player2')
+
+    expect(result).toBe(true)
+    expect(gameState.factories[0].budget).toBe(125)
+    expect(showNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Added $75'),
+      3000
+    )
+  })
+
+  it('sets ammo values for apache units', () => {
+    const system = new CheatSystem()
+    const apache = { type: 'apache', maxRocketAmmo: 10, rocketAmmo: 0, apacheAmmoEmpty: true, canFire: false }
+    system.setSelectedUnitsRef([apache])
+
+    system.setSelectedUnitsAmmo({ value: 0.5, isPercent: true, display: '50%' })
+
+    expect(apache.rocketAmmo).toBe(5)
+    expect(apache.apacheAmmoEmpty).toBe(false)
+    expect(apache.canFire).toBe(true)
+  })
+
+  it('sets ammo truck load for helipads', () => {
+    const system = new CheatSystem()
+    const helipad = { type: 'helipad', ammo: 0 }
+    system.setSelectedUnitsRef([helipad])
+
+    system.setAmmoTruckLoad({ value: 0.25, isPercent: true, display: '25%' })
+
+    expect(helipad.maxAmmo).toBe(200)
+    expect(helipad.ammo).toBe(50)
+    expect(showNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Ammo load set'),
+      3000
+    )
+  })
+
+  it('prevents damage to player units when god mode is enabled', () => {
+    const system = new CheatSystem()
+    const unit = { id: 'u1', owner: 'player1', health: 50, maxHealth: 100 }
+    units.push(unit)
+
+    system.enableGodMode()
+
+    expect(system.preventDamage(unit, 25)).toBe(0)
+    expect(system.preventDamage({ owner: 'player2' }, 25)).toBe(25)
+  })
+
   it('parses minefield commands with owner aliases', () => {
     const system = new CheatSystem()
 
