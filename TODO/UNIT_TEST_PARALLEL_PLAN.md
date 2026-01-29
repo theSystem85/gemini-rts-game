@@ -600,7 +600,16 @@ describe('fileName.js', () => {
 | P6 - Benchmark | 3 | ✅ All Completed | 96 tests added |
 | P7 - Utils & Misc | 4 | ✅ 3 Completed, 1 Skipped | 137 tests added (Task 7.2 skipped - file not found) |
 | P8 - Extend Existing | 10 | ✅ All Completed | 160 tests added |
-| **Total** | **62** | **61 Completed** | **2328 total tests** |
+| P9 - Zero Coverage Core | 7 | 🔲 Not Started | Target: 155-235 tests |
+| P10 - Game Zero Coverage | 11 | 🔲 Not Started | Target: 345-505 tests |
+| P11 - Input Zero Coverage | 4 | 🔲 Not Started | Target: 80-120 tests |
+| P12 - Network Low Coverage | 4 | 🔲 Not Started | Target: 60-95 tests |
+| P13 - Missions | 1 | 🔲 Not Started | Target: 5-10 tests |
+| P14 - Utils Zero Coverage | 1 | 🔲 Not Started | Target: 10-15 tests |
+| P15 - Low Coverage (<50%) | 7 | 🔲 Not Started | Target: 405-525 tests |
+| P16 - Medium Coverage (50-80%) | 17 | 🔲 Not Started | Target: 485-695 tests |
+| P17 - High Coverage (80-99%) | 20 | 🔲 Not Started | Target: 190-295 tests |
+| **Total** | **134** | **61 Completed, 72 Remaining** | **Est: 4063-4823 tests total** |
 
 ---
 
@@ -614,4 +623,560 @@ describe('fileName.js', () => {
 
 ---
 
-*Last Updated: 2026-01-29T12:30:00Z*
+## PRIORITY 9: Zero Function Coverage Files (Critical - 0% Functions)
+
+These files have 0% function coverage and are critical to reach 100%.
+
+### Task 9.1 - `src/rendering.js`
+- **Target**: Create `tests/unit/rendering.test.js`
+- **Source File**: `src/rendering.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 40-60
+
+### Task 9.2 - `src/saveGame.js`
+- **Target**: Create `tests/unit/saveGame.test.js`
+- **Source File**: `src/saveGame.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 25-35
+
+### Task 9.3 - `src/updateGame.js`
+- **Target**: Create `tests/unit/updateGame.test.js`
+- **Source File**: `src/updateGame.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 30-45
+
+### Task 9.4 - `src/main.js`
+- **Target**: Create `tests/unit/main.test.js`
+- **Source File**: `src/main.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Entry point file, may need special mocking
+- **Estimated Tests**: 15-25
+
+### Task 9.5 - `src/index.js`
+- **Target**: Create `tests/unit/index.test.js`
+- **Source File**: `src/index.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 10-15
+
+### Task 9.6 - `src/worldPatterns.js`
+- **Target**: Create `tests/unit/worldPatterns.test.js`
+- **Source File**: `src/worldPatterns.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 20-30
+
+### Task 9.7 - `src/unitConfigUtil.js`
+- **Target**: Create `tests/unit/unitConfigUtil.test.js`
+- **Source File**: `src/unitConfigUtil.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 15-25
+
+---
+
+## PRIORITY 10: Game Folder Zero Function Coverage
+
+### Task 10.1 - `src/game/actionSystem.js`
+- **Target**: Extend `tests/unit/actionSystem.test.js`
+- **Source File**: `src/game/actionSystem.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Test file may exist but needs function tests
+- **Estimated Tests**: 25-35
+
+### Task 10.2 - `src/game/ammoBuildingTruckLogic.js`
+- **Target**: Extend `tests/unit/ammoBuildingTruckLogic.test.js`
+- **Source File**: `src/game/ammoBuildingTruckLogic.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Test file may exist but needs function tests
+- **Estimated Tests**: 20-30
+
+### Task 10.3 - `src/game/buildingNotifications.js`
+- **Target**: Create `tests/unit/buildingNotifications.test.js`
+- **Source File**: `src/game/buildingNotifications.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 15-20
+
+### Task 10.4 - `src/game/joystickController.js`
+- **Target**: Create `tests/unit/joystickController.test.js`
+- **Source File**: `src/game/joystickController.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 20-30
+
+### Task 10.5 - `src/game/pathfinding.js`
+- **Target**: Extend `tests/unit/pathfinding.test.js`
+- **Source File**: `src/game/pathfinding.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Test file exists but needs actual function testing
+- **Estimated Tests**: 40-60
+
+### Task 10.6 - `src/game/spatialQuadtree.js`
+- **Target**: Create `tests/unit/spatialQuadtree.test.js`
+- **Source File**: `src/game/spatialQuadtree.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 30-40
+
+### Task 10.7 - `src/game/supplyTruckLogic.js`
+- **Target**: Extend `tests/unit/supplyTruckLogic.test.js`
+- **Source File**: `src/game/supplyTruckLogic.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Test file may exist but needs function tests
+- **Estimated Tests**: 35-50
+
+### Task 10.8 - `src/game/supplyTruckUtils.js`
+- **Target**: Create `tests/unit/supplyTruckUtils.test.js`
+- **Source File**: `src/game/supplyTruckUtils.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 20-30
+
+### Task 10.9 - `src/game/coordBasedMovement.js`
+- **Target**: Extend `tests/unit/coordBasedMovement.test.js`
+- **Source File**: `src/game/coordBasedMovement.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Large file, may need incremental approach
+- **Estimated Tests**: 100-150
+
+### Task 10.10 - `src/game/wreckManager.js`
+- **Target**: Create `tests/unit/wreckManager.test.js`
+- **Source File**: `src/game/wreckManager.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 25-35
+
+### Task 10.11 - `src/game/waypointSounds.js`
+- **Target**: Create `tests/unit/waypointSounds.test.js`
+- **Source File**: `src/game/waypointSounds.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 10-15
+
+---
+
+## PRIORITY 11: Input Folder Zero Function Coverage
+
+### Task 11.1 - `src/input/controlGroupHandler.js`
+- **Target**: Extend `tests/unit/controlGroupHandler.test.js`
+- **Source File**: `src/input/controlGroupHandler.js` (5.88% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Almost no coverage, needs major extension
+- **Estimated Tests**: 20-30
+
+### Task 11.2 - `src/input/cursorStyles.js`
+- **Target**: Create `tests/unit/cursorStyles.test.js`
+- **Source File**: `src/input/cursorStyles.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 10-15
+
+### Task 11.3 - `src/input/keybindings.js`
+- **Target**: Create `tests/unit/keybindings.test.js`
+- **Source File**: `src/input/keybindings.js` (22.22% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 20-30
+
+### Task 11.4 - `src/input/multiUnitInputHandler.js`
+- **Target**: Extend `tests/unit/multiUnitInputHandler.test.js`
+- **Source File**: `src/input/multiUnitInputHandler.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 30-45
+
+---
+
+## PRIORITY 12: Network Folder Low Function Coverage
+
+### Task 12.1 - `src/network/gameNotifications.js`
+- **Target**: Create `tests/unit/gameNotifications.test.js`
+- **Source File**: `src/network/gameNotifications.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 10-15
+
+### Task 12.2 - `src/network/invites.js`
+- **Target**: Create `tests/unit/invites.test.js`
+- **Source File**: `src/network/invites.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 15-25
+
+### Task 12.3 - `src/network/missionEvents.js`
+- **Target**: Extend `tests/unit/missionEvents.test.js`
+- **Source File**: `src/network/missionEvents.js` (25% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 10-15
+
+### Task 12.4 - `src/network/signalling.js`
+- **Target**: Extend `tests/unit/signalling.test.js`
+- **Source File**: `src/network/signalling.js` (8.33% functions)
+- **Status**: [NOT STARTED]
+- **Note**: WebSocket/server interactions may need special mocking
+- **Estimated Tests**: 25-40
+
+---
+
+## PRIORITY 13: Missions Folder (Zero Coverage)
+
+### Task 13.1 - `src/missions/index.js`
+- **Target**: Create `tests/unit/missions/index.test.js`
+- **Source File**: `src/missions/index.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Estimated Tests**: 5-10
+
+---
+
+## PRIORITY 14: Utils & Misc Zero Function Coverage
+
+### Task 14.1 - `src/utils/oreDiscovery.js`
+- **Target**: Create `tests/unit/oreDiscovery.test.js`
+- **Source File**: `src/utils/oreDiscovery.js` (0% functions)
+- **Status**: [NOT STARTED]
+- **Note**: Was previously skipped (file not found) - verify existence
+- **Estimated Tests**: 10-15
+
+---
+
+## PRIORITY 15: Improve Low Function Coverage (<50%)
+
+### Task 15.1 - `src/inputHandler.js`
+- **Target**: Extend `tests/unit/inputHandler.test.js`
+- **Source File**: `src/inputHandler.js` (7.69% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 7.69% functions → Target 100%
+- **Estimated Tests**: 30-45
+
+### Task 15.2 - `src/buildings.js`
+- **Target**: Extend `tests/unit/buildingSystem.test.js`
+- **Source File**: `src/buildings.js` (40.54% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 40.54% functions → Target 100%
+- **Estimated Tests**: 40-60
+
+### Task 15.3 - `src/utils.js`
+- **Target**: Extend/create `tests/unit/utils.test.js`
+- **Source File**: `src/utils.js` (46.42% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 46.42% functions → Target 100%
+- **Estimated Tests**: 25-35
+
+### Task 15.4 - `src/ai/enemyUnitBehavior.js`
+- **Target**: Extend `tests/unit/enemyUnitBehavior.test.js`
+- **Source File**: `src/ai/enemyUnitBehavior.js` (45.45% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 45.45% functions → Target 100%
+- **Estimated Tests**: 60-80
+
+### Task 15.5 - `src/input/unitCommands.js`
+- **Target**: Extend `tests/unit/unitCommands.test.js`
+- **Source File**: `src/input/unitCommands.js` (18.84% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 18.84% functions → Target 100%
+- **Estimated Tests**: 80-100
+
+### Task 15.6 - `src/input/mouseHandler.js`
+- **Target**: Extend `tests/unit/mouseHandler.test.js`
+- **Source File**: `src/input/mouseHandler.js` (29.72% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 29.72% functions → Target 100%
+- **Estimated Tests**: 70-90
+
+### Task 15.7 - `src/network/gameCommandSync.js`
+- **Target**: Extend `tests/unit/commandSync.test.js`
+- **Source File**: `src/network/gameCommandSync.js` (40.56% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 40.56% functions → Target 100%
+- **Estimated Tests**: 60-80
+
+---
+
+## PRIORITY 16: Improve Medium Function Coverage (50-80%)
+
+### Task 16.1 - `src/buildingRepairHandler.js`
+- **Target**: Extend `tests/unit/buildingRepairHandler.test.js`
+- **Source File**: `src/buildingRepairHandler.js` (50% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 50% functions → Target 100%
+- **Estimated Tests**: 15-25
+
+### Task 16.2 - `src/productionQueue.js`
+- **Target**: Extend `tests/unit/productionQueue.test.js`
+- **Source File**: `src/productionQueue.js` (52.11% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 52.11% functions → Target 100%
+- **Estimated Tests**: 30-45
+
+### Task 16.3 - `src/units.js`
+- **Target**: Extend `tests/unit/units.test.js`
+- **Source File**: `src/units.js` (53.48% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 53.48% functions → Target 100%
+- **Estimated Tests**: 30-45
+
+### Task 16.4 - `src/logic.js`
+- **Target**: Extend `tests/unit/logic.test.js`
+- **Source File**: `src/logic.js` (58.82% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 58.82% functions → Target 100%
+- **Estimated Tests**: 25-35
+
+### Task 16.5 - `src/ai/enemyBuilding.js`
+- **Target**: Extend `tests/unit/enemyBuilding.test.js`
+- **Source File**: `src/ai/enemyBuilding.js` (50% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 50% functions → Target 100%
+- **Estimated Tests**: 40-60
+
+### Task 16.6 - `src/game/bulletSystem.js`
+- **Target**: Extend `tests/unit/bulletSystem.test.js`
+- **Source File**: `src/game/bulletSystem.js` (50% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 50% functions → Target 100%
+- **Estimated Tests**: 40-60
+
+### Task 16.7 - `src/game/commandQueue.js`
+- **Target**: Extend `tests/unit/commandQueue.test.js`
+- **Source File**: `src/game/commandQueue.js` (77.77% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 77.77% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 16.8 - `src/game/gameLoop.js`
+- **Target**: Extend `tests/unit/gameLoop.test.js`
+- **Source File**: `src/game/gameLoop.js` (63.15% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 63.15% functions → Target 100%
+- **Estimated Tests**: 25-35
+
+### Task 16.9 - `src/game/harvesterLogic.js`
+- **Target**: Extend `tests/unit/harvesterLogic.test.js`
+- **Source File**: `src/game/harvesterLogic.js` (66.17% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 66.17% functions → Target 100%
+- **Estimated Tests**: 30-40
+
+### Task 16.10 - `src/game/minerBehavior.js`
+- **Target**: Extend `tests/unit/minerBehavior.test.js`
+- **Source File**: `src/game/minerBehavior.js` (58.33% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 58.33% functions → Target 100%
+- **Estimated Tests**: 20-30
+
+### Task 16.11 - `src/game/unitCombat.js`
+- **Target**: Extend `tests/unit/gameFolderUnitCombat.test.js`
+- **Source File**: `src/game/unitCombat.js` (68.08% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 68.08% functions → Target 100%
+- **Estimated Tests**: 40-60
+
+### Task 16.12 - `src/game/workshopLogic.js`
+- **Target**: Extend `tests/unit/workshopLogic.test.js`
+- **Source File**: `src/game/workshopLogic.js` (77.27% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 77.27% functions → Target 100%
+- **Estimated Tests**: 20-30
+
+### Task 16.13 - `src/input/keyboardHandler.js`
+- **Target**: Extend `tests/unit/keyboardHandler.test.js`
+- **Source File**: `src/input/keyboardHandler.js` (52.23% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 52.23% functions → Target 100%
+- **Estimated Tests**: 40-60
+
+### Task 16.14 - `src/input/cheatSystem.js`
+- **Target**: Extend `tests/unit/cheatSystem.test.js`
+- **Source File**: `src/input/cheatSystem.js` (68.91% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 68.91% functions → Target 100%
+- **Estimated Tests**: 30-40
+
+### Task 16.15 - `src/input/cursorManager.js`
+- **Target**: Extend `tests/unit/cursorManager.test.js`
+- **Source File**: `src/input/cursorManager.js` (68.96% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 68.96% functions → Target 100%
+- **Estimated Tests**: 25-35
+
+### Task 16.16 - `src/network/webrtcSession.js`
+- **Target**: Extend `tests/unit/webrtcSession.test.js`
+- **Source File**: `src/network/webrtcSession.js` (68.62% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 68.62% functions → Target 100%
+- **Estimated Tests**: 25-35
+
+### Task 16.17 - `src/ai/enemyStrategies.js`
+- **Target**: Extend `tests/unit/enemyStrategies.test.js`
+- **Source File**: `src/ai/enemyStrategies.js` (71.77% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 71.77% functions → Target 100%
+- **Estimated Tests**: 30-40
+
+---
+
+## PRIORITY 17: Improve High Function Coverage (80-99%)
+
+### Task 17.1 - `src/config.js`
+- **Target**: Extend `tests/unit/config.test.js`
+- **Source File**: `src/config.js` (80.55% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 80.55% functions → Target 100%
+- **Estimated Tests**: 15-25
+
+### Task 17.2 - `src/gameSetup.js`
+- **Target**: Extend `tests/unit/gameSetup.test.js`
+- **Source File**: `src/gameSetup.js` (96.29% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 96.29% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+### Task 17.3 - `src/mapEditor.js`
+- **Target**: Extend `tests/unit/mapEditor.test.js`
+- **Source File**: `src/mapEditor.js` (93.61% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 93.61% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.4 - `src/behaviours/retreat.js`
+- **Target**: Extend `tests/unit/retreat.test.js`
+- **Source File**: `src/behaviours/retreat.js` (86.66% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 86.66% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.5 - `src/benchmark/benchmarkRunner.js`
+- **Target**: Extend `tests/unit/benchmarkRunner.test.js`
+- **Source File**: `src/benchmark/benchmarkRunner.js` (80% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 80% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.6 - `src/game/ambulanceSystem.js`
+- **Target**: Extend `tests/unit/ambulanceSystem.test.js`
+- **Source File**: `src/game/ambulanceSystem.js` (95% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 95% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+### Task 17.7 - `src/game/buildingSystem.js`
+- **Target**: Extend `tests/unit/buildingSystem.test.js`
+- **Source File**: `src/game/buildingSystem.js` (92.3% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 92.3% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.8 - `src/game/gameStateManager.js`
+- **Target**: Extend `tests/unit/gameStateManager.test.js`
+- **Source File**: `src/game/gameStateManager.js` (87.5% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 87.5% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.9 - `src/game/hospitalLogic.js`
+- **Target**: Extend `tests/unit/hospitalLogic.test.js`
+- **Source File**: `src/game/hospitalLogic.js` (80% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 80% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.10 - `src/game/mineSystem.js`
+- **Target**: Extend `tests/unit/mineSystem.test.js`
+- **Source File**: `src/game/mineSystem.js` (96.15% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 96.15% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+### Task 17.11 - `src/game/recoveryTankSystem.js`
+- **Target**: Extend `tests/unit/recoveryTankSystem.test.js`
+- **Source File**: `src/game/recoveryTankSystem.js` (84.21% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 84.21% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.12 - `src/game/remoteControl.js`
+- **Target**: Extend `tests/unit/remoteControl.test.js`
+- **Source File**: `src/game/remoteControl.js` (84.61% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 84.61% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 17.13 - `src/game/unitMovement.js`
+- **Target**: Extend `tests/unit/unitMovement.test.js`
+- **Source File**: `src/game/unitMovement.js` (80% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 80% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 17.14 - `src/input/selectionManager.js`
+- **Target**: Extend `tests/unit/selectionManager.test.js`
+- **Source File**: `src/input/selectionManager.js` (97.14% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 97.14% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+### Task 17.15 - `src/network/lockstepManager.js`
+- **Target**: Extend `tests/unit/lockstepManager.test.js`
+- **Source File**: `src/network/lockstepManager.js` (82.85% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 82.85% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 17.16 - `src/network/multiplayerStore.js`
+- **Target**: Extend `tests/unit/multiplayerStore.test.js`
+- **Source File**: `src/network/multiplayerStore.js` (84.37% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 84.37% functions → Target 100%
+- **Estimated Tests**: 10-15
+
+### Task 17.17 - `src/network/peerConnection.js`
+- **Target**: Extend `tests/unit/peerConnection.test.js`
+- **Source File**: `src/network/peerConnection.js` (83.87% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 83.87% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 17.18 - `src/network/stateHash.js`
+- **Target**: Extend `tests/unit/stateHash.test.js`
+- **Source File**: `src/network/stateHash.js` (92.85% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 92.85% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+### Task 17.19 - `src/ai/enemyAIPlayer.js`
+- **Target**: Extend `tests/unit/enemyAIPlayer.test.js`
+- **Source File**: `src/ai/enemyAIPlayer.js` (88.13% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 88.13% functions → Target 100%
+- **Estimated Tests**: 15-20
+
+### Task 17.20 - `src/utils/logger.js`
+- **Target**: Extend `tests/unit/logger.test.js`
+- **Source File**: `src/utils/logger.js` (87.5% functions)
+- **Status**: [NOT STARTED]
+- **Current Coverage**: 87.5% functions → Target 100%
+- **Estimated Tests**: 5-10
+
+---
+
+## 100% Function Coverage Plan Summary
+
+| Priority | Focus Area | Tasks | Estimated Tests |
+|----------|------------|-------|-----------------|
+| P9 | Zero Coverage Core Files | 7 | 155-235 |
+| P10 | Game Folder Zero Coverage | 11 | 345-505 |
+| P11 | Input Folder Zero Coverage | 4 | 80-120 |
+| P12 | Network Folder Low Coverage | 4 | 60-95 |
+| P13 | Missions Folder | 1 | 5-10 |
+| P14 | Utils Zero Coverage | 1 | 10-15 |
+| P15 | Low Coverage (<50%) | 7 | 405-525 |
+| P16 | Medium Coverage (50-80%) | 17 | 485-695 |
+| P17 | High Coverage (80-99%) | 20 | 190-295 |
+| **Total** | | **72** | **1735-2495** |
+
+### Recommended Execution Order
+
+1. **Quick Wins (P17)**: Start with files at 80-99% - small effort for completion
+2. **Small Files (P9, P13, P14)**: Cover zero-coverage but smaller files first
+3. **Critical Systems (P10)**: Game folder is the largest gap
+4. **Input System (P11, P15.5, P15.6)**: Input handling is crucial
+5. **Network (P12)**: Multiplayer functionality tests
+6. **Large Files (P15, P16)**: Tackle remaining medium coverage files
+
+### Success Criteria
+
+- **Phase 1**: All files reach at least 50% function coverage
+- **Phase 2**: All files reach at least 80% function coverage  
+- **Phase 3**: All files reach 100% function coverage
+- **Final Goal**: 100% function coverage across all source files
+
+---
+
+*Last Updated: 2026-01-29T18:00:00Z*
