@@ -630,44 +630,56 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 9.1 - `src/rendering.js`
 - **Target**: Create `tests/unit/rendering.test.js`
 - **Source File**: `src/rendering.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2025-01-31 UTC)
+- **Tests Added**: 21 tests
+- **Coverage After**: Testing wrapper functions around Renderer class
 - **Estimated Tests**: 40-60
 
 ### Task 9.2 - `src/saveGame.js`
 - **Target**: Create `tests/unit/saveGame.test.js`
 - **Source File**: `src/saveGame.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2025-01-31 UTC)
+- **Tests Added**: 30 tests
+- **Coverage After**: Tests for getSaveGames, saveGame, loadGame, deleteGame, updateSaveGamesList, initSaveGameSystem, maybeResumeLastPausedGame
 - **Estimated Tests**: 25-35
 
 ### Task 9.3 - `src/updateGame.js`
 - **Target**: Create `tests/unit/updateGame.test.js`
 - **Source File**: `src/updateGame.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2025-01-31 UTC)
+- **Tests Added**: 20 tests
+- **Coverage After**: Tests for updateGame function behavior with paused game, host/client logic, smoke emission, mines, etc.
 - **Estimated Tests**: 30-45
 
 ### Task 9.4 - `src/main.js`
 - **Target**: Create `tests/unit/main.test.js`
 - **Source File**: `src/main.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2025-01-31 UTC)
+- **Tests Added**: 26 tests
 - **Note**: Entry point file, may need special mocking
+- **Coverage After**: Tests for exported arrays, getCurrentGame, regenerateMapForClient, buildingCosts
 - **Estimated Tests**: 15-25
 
 ### Task 9.5 - `src/index.js`
 - **Target**: Create `tests/unit/index.test.js`
 - **Source File**: `src/index.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2025-01-31 UTC)
+- **Tests Added**: 18 tests
+- **Coverage After**: Tests for getGameState function, global state initialization, state mutations, targetedOreTiles registry
 - **Estimated Tests**: 10-15
 
 ### Task 9.6 - `src/worldPatterns.js`
 - **Target**: Create `tests/unit/worldPatterns.test.js`
 - **Source File**: `src/worldPatterns.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [SKIPPED] - File does not exist in codebase
+- **Note**: This file appears to have been removed or never existed
 - **Estimated Tests**: 20-30
 
 ### Task 9.7 - `src/unitConfigUtil.js`
 - **Target**: Create `tests/unit/unitConfigUtil.test.js`
 - **Source File**: `src/unitConfigUtil.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [SKIPPED] - File does not exist in codebase
+- **Note**: This file appears to have been removed or never existed
 - **Estimated Tests**: 15-25
 
 ---
