@@ -6,7 +6,7 @@ import { findPath } from '../units.js'
 import { stopUnitMovement } from './unifiedMovement.js'
 import { gameState } from '../gameState.js'
 import { updateUnitSpeedModifier, getBuildingIdentifier } from '../utils.js'
-import { getHelipadLandingCenter, getHelipadLandingTile } from '../utils/helipadUtils.js'
+import { getHelipadLandingCenter, getHelipadLandingTile, isHelipadAvailableForUnit } from '../utils/helipadUtils.js'
 import { getRocketSpawnPoint } from '../rendering/rocketTankImageRenderer.js'
 import { getApacheRocketSpawnPoints } from '../rendering/apacheImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
@@ -1253,6 +1253,9 @@ function findNearestHelipadForApache(unit, units) {
     }
 
     const helipadId = getBuildingIdentifier(helipad)
+    if (!isHelipadAvailableForUnit(helipad, units, unit.id)) {
+      return
+    }
     if (helipad.landedUnitId && helipad.landedUnitId !== unit.id) {
       const occupant = Array.isArray(units) ? units.find(u => u && u.id === helipad.landedUnitId) : null
       const occupantGrounded = occupant && occupant.type === 'apache' && occupant.health > 0 && occupant.flightState === 'grounded'
