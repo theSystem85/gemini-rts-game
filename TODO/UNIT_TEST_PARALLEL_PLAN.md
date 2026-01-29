@@ -585,12 +585,12 @@ describe('fileName.js', () => {
 | P9 - Zero Coverage Core | 5 | ✅ All Completed | 94+ tests added |
 | P10 - Game Zero Coverage | 7 | ✅ All Completed | 6/7 completed (1 skipped - file doesn't exist), 187 tests total |
 | P11 - Input Zero Coverage | 4 | 🔶 In Progress | 3/4 completed (89 tests total) |
-| P12 - Network Low Coverage | 4 | 🔲 Not Started | Target: 60-95 tests |
+| P12 - Network Low Coverage | 4 | ✅ All Completed | 93 tests added (invites: 29, signalling: 28, hostNotifications: 16, multiplayerSessionEvents: 20) |
 | P13 - Missions | 1 | 🔲 Not Started | Target: 5-10 tests |
 | P14 - Low Coverage (<50%) | 7 | 🔲 Not Started | Target: 405-525 tests |
 | P15 - Medium Coverage (50-80%) | 17 | 🔲 Not Started | Target: 485-695 tests |
 | P16 - High Coverage (80-99%) | 20 | 🔲 Not Started | Target: 190-295 tests |
-| **Total** | **123** | **76 Completed, 47 Remaining** | **Est: 3843-4563 tests total** |
+| **Total** | **123** | **80 Completed, 43 Remaining** | **Est: 3843-4563 tests total** |
 
 ---
 
@@ -742,29 +742,38 @@ These files have 0% function coverage and are critical to reach 100%.
 
 ## PRIORITY 12: Network Folder Low Function Coverage
 
-### Task 12.1 - `src/network/gameNotifications.js`
-- **Target**: Create `tests/unit/gameNotifications.test.js`
-- **Source File**: `src/network/gameNotifications.js` (0% functions)
-- **Status**: [NOT STARTED]
+### Task 12.1 - `src/network/hostNotifications.js`
+- **Target**: Create `tests/unit/hostNotifications.test.js`
+- **Source File**: `src/network/hostNotifications.js` (0% functions)
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:50 UTC)
+- **Tests Added**: 16 tests
+- **Coverage After**: Tests for showHostNotification, subscribeToHostNotifications pub/sub pattern
+- **Note**: Original plan referenced non-existent `gameNotifications.js`; actual file is `hostNotifications.js`
 - **Estimated Tests**: 10-15
 
 ### Task 12.2 - `src/network/invites.js`
 - **Target**: Create `tests/unit/invites.test.js`
 - **Source File**: `src/network/invites.js` (0% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:50 UTC)
+- **Tests Added**: 29 tests
+- **Coverage After**: Tests for composeInviteToken, parsePartyIdFromToken, buildInviteUrl, humanReadablePartyLabel
 - **Estimated Tests**: 15-25
 
-### Task 12.3 - `src/network/missionEvents.js`
-- **Target**: Extend `tests/unit/missionEvents.test.js`
-- **Source File**: `src/network/missionEvents.js` (25% functions)
-- **Status**: [NOT STARTED]
+### Task 12.3 - `src/network/multiplayerSessionEvents.js`
+- **Target**: Create `tests/unit/multiplayerSessionEvents.test.js`
+- **Source File**: `src/network/multiplayerSessionEvents.js` (0% functions)
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:50 UTC)
+- **Tests Added**: 20 tests
+- **Coverage After**: Tests for MULTIPLAYER_SESSION_EVENT, emitMultiplayerSessionChange, observeMultiplayerSession
+- **Note**: Original plan referenced non-existent `missionEvents.js`; actual file is `multiplayerSessionEvents.js`
 - **Estimated Tests**: 10-15
 
 ### Task 12.4 - `src/network/signalling.js`
-- **Target**: Extend `tests/unit/signalling.test.js`
-- **Source File**: `src/network/signalling.js` (8.33% functions)
-- **Status**: [NOT STARTED]
-- **Note**: WebSocket/server interactions may need special mocking
+- **Target**: Create `tests/unit/signalling.test.js`
+- **Source File**: `src/network/signalling.js` (0% functions)
+- **Status**: [COMPLETED] (Finished: 2026-01-29 18:50 UTC)
+- **Tests Added**: 28 tests  
+- **Coverage After**: Tests for STUN_HOST, postOffer, postAnswer, postCandidate, fetchPendingSessions, fetchSessionStatus, generateSessionKey
 - **Estimated Tests**: 25-40
 
 ---
