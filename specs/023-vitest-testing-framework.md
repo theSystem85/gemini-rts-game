@@ -134,6 +134,10 @@ Located in `tests/unit/`
 - Added `tests/unit/selectionManager.test.js` to cover selection toggles, double-click behavior, drag selection, and cleanup of destroyed units.
 - Added `tests/unit/keyboardHandler.test.js` to cover escape handling, alert/sell/repair mode toggles, dodge pathing, control groups, and stop-attacking behavior.
 - Added `tests/unit/cursorManager.test.js` covering cursor class selection, range display UI, and blocked-terrain handling for input feedback.
+- Added `tests/unit/commandQueue.test.js` coverage for mine deployment commands and sweeper detonation flows.
+- Added `tests/unit/gameLoop.test.js` coverage for pause/resume audio handling, lockstep accumulator caps, and scheduling guardrails.
+- Added `tests/unit/harvesterLogic.test.js` coverage for manual target cleanup, stuck recovery, stale reservations, and enemy repair routing.
+- Added `tests/unit/gameFolderUnitCombat.test.js` coverage for ammo warnings and rocket burst firing.
 
 ## Example Test
 

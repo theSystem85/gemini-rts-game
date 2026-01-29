@@ -904,35 +904,35 @@ These files have 0% function coverage and are critical to reach 100%.
 ### Task 15.7 - `src/game/commandQueue.js`
 - **Target**: Extend `tests/unit/commandQueue.test.js`
 - **Source File**: `src/game/commandQueue.js` (77.77% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added sweep/mine deployment coverage for queued commands
 - **Current Coverage**: 77.77% functions → Target 100%
 - **Estimated Tests**: 15-20
 
 ### Task 15.8 - `src/game/gameLoop.js`
 - **Target**: Extend `tests/unit/gameLoop.test.js`
 - **Source File**: `src/game/gameLoop.js` (63.15% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added audio pause/resume, lockstep cap, and scheduling guard coverage
 - **Current Coverage**: 63.15% functions → Target 100%
 - **Estimated Tests**: 25-35
 
 ### Task 15.9 - `src/game/harvesterLogic.js`
 - **Target**: Extend `tests/unit/harvesterLogic.test.js`
 - **Source File**: `src/game/harvesterLogic.js` (66.17% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added manual target cleanup, stuck recovery, and enemy repair coverage
 - **Current Coverage**: 66.17% functions → Target 100%
 - **Estimated Tests**: 30-40
 
 ### Task 15.10 - `src/game/minerBehavior.js`
 - **Target**: Extend `tests/unit/minerBehavior.test.js`
 - **Source File**: `src/game/minerBehavior.js` (58.33% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [BLOCKED - File Missing] - `src/game/minerBehavior.js` not found in repository
 - **Current Coverage**: 58.33% functions → Target 100%
 - **Estimated Tests**: 20-30
 
 ### Task 15.11 - `src/game/unitCombat.js`
 - **Target**: Extend `tests/unit/gameFolderUnitCombat.test.js`
 - **Source File**: `src/game/unitCombat.js` (68.08% functions)
-- **Status**: [NOT STARTED]
+- **Status**: [COMPLETED] - Added firing, ammo warning, and rocket burst coverage
 - **Current Coverage**: 68.08% functions → Target 100%
 - **Estimated Tests**: 40-60
 
