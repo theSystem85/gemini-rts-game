@@ -171,6 +171,7 @@
 - [x] Ensure enemy AI sells non-essential buildings when broke and lacking refineries or harvesters so it can afford the missing structure and restart harvesting income.
 - [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
 - [x] **Refactor:** move all constants into config.
+- [x] **Refactor:** split unifiedMovement.js into modular files under 1k LOC each while preserving existing unit test behavior.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 

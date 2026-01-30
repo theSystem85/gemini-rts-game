@@ -1,0 +1,288 @@
+import { TILE_SIZE, TILE_LENGTH_METERS } from '../config.js'
+import { removeUnitOccupancy } from '../units.js'
+import { playPositionalSound, audioContext, getMasterVolume } from '../sound.js'
+import { calculatePositionalAudio, consumeUnitGas } from './movementHelpers.js'
+import { BASE_FRAME_SECONDS, MOVEMENT_CONFIG } from './movementConstants.js'
+
+const ROTOR_AIRBORNE_SPEED = 0.35
+const ROTOR_GROUNDED_SPEED = 0
+const ROTOR_SPINUP_RESPONSE = 4
+const ROTOR_SPINDOWN_RESPONSE = 1.5
+const ROTOR_STOP_EPSILON = 0.002
+const APACHE_ROTOR_LOOP_VOLUME = 0.25
+const APACHE_ROTOR_ALTITUDE_GAIN_MIN = 0.6
+const APACHE_ROTOR_ALTITUDE_GAIN_MAX = 1.0
+
+function addUnitOccupancyDirect(unit, occupancyMap) {
+  if (!occupancyMap) return
+  const tileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+  const tileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  if (
+    tileX >= 0 &&
+    tileY >= 0 &&
+    tileY < occupancyMap.length &&
+    tileX < occupancyMap[0].length
+  ) {
+    occupancyMap[tileY][tileX] = (occupancyMap[tileY][tileX] || 0) + 1
+  }
+}
+
+export function updateApacheFlightState(unit, movement, occupancyMap, now) {
+  const rotor = unit.rotor || { angle: 0, speed: 0, targetSpeed: 0 }
+  unit.rotor = rotor
+  const shadow = unit.shadow || { offset: 0, scale: 1 }
+  unit.shadow = shadow
+
+  const deltaMs = Math.max(16, now - (unit.lastFlightUpdate || now))
+  unit.lastFlightUpdate = now
+  const deltaSeconds = deltaMs / 1000
+
+  let manualState = unit.manualFlightState || 'auto'
+  let landingBlocked = false
+
+  if (manualState === 'land' && occupancyMap) {
+    const centerTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
+    const centerTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+
+    const row =
+      centerTileY >= 0 && centerTileY < occupancyMap.length
+        ? occupancyMap[centerTileY]
+        : null
+
+    if (row && centerTileX >= 0 && centerTileX < row.length) {
+      const occupancy = row[centerTileX] || 0
+      const helipadLandingActive = Boolean(unit.helipadLandingRequested || unit.landedHelipadId)
+
+      landingBlocked = occupancy > 0 && !helipadLandingActive
+      if (landingBlocked) {
+        manualState = 'hover'
+        unit.manualFlightState = 'hover'
+        unit.autoHoldAltitude = true
+      }
+    }
+  }
+
+  if (!landingBlocked && unit.blockedFromLanding) {
+    unit.blockedFromLanding = false
+  } else if (landingBlocked) {
+    unit.blockedFromLanding = true
+  }
+  const holdAltitude = Boolean(unit.autoHoldAltitude) || Boolean(unit.flightPlan) || Boolean(unit.remoteControlActive)
+  const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
+
+  let desiredAltitude = 0
+  if (manualState === 'takeoff') {
+    desiredAltitude = unit.maxAltitude
+  } else if (manualState === 'land') {
+    desiredAltitude = 0
+  } else if (manualState === 'hover') {
+    desiredAltitude = unit.maxAltitude * 0.75
+  } else {
+    desiredAltitude = (holdAltitude || isInMotion) ? unit.maxAltitude : 0
+  }
+
+  if (landingBlocked) {
+    const safeHoverAltitude = Math.max(unit.altitude, unit.maxAltitude * 0.35)
+    desiredAltitude = safeHoverAltitude
+  }
+
+  unit.targetAltitude = desiredAltitude
+
+  const altitudeDiff = desiredAltitude - unit.altitude
+  const climbRate = unit.maxAltitude * (manualState === 'land' ? 2.5 : 3)
+  const maxStep = climbRate * deltaSeconds
+  const altitudeStep = Math.max(-maxStep, Math.min(maxStep, altitudeDiff))
+  unit.altitude = Math.max(0, unit.altitude + altitudeStep)
+
+  let newFlightState = unit.flightState
+  if (unit.altitude > 2 && altitudeDiff > 0.5) {
+    newFlightState = 'takeoff'
+  } else if (unit.altitude > 2 && Math.abs(altitudeDiff) <= 1) {
+    newFlightState = 'airborne'
+  } else if (unit.altitude <= 2 && altitudeDiff < -0.5) {
+    newFlightState = 'landing'
+  } else if (unit.altitude <= 2) {
+    newFlightState = 'grounded'
+  }
+
+  const previouslyGrounded = unit.flightState === 'grounded' || unit.flightState === undefined
+  const hadGroundOccupancy =
+    unit.groundedOccupancyApplied !== undefined
+      ? Boolean(unit.groundedOccupancyApplied)
+      : !unit.occupancyRemoved
+  unit.flightState = newFlightState
+
+  const isGroundedNow = unit.flightState === 'grounded'
+  const onHelipadNow = isGroundedNow && Boolean(unit.landedHelipadId)
+
+  if (!isGroundedNow) {
+    if (previouslyGrounded && hadGroundOccupancy) {
+      removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
+    }
+    unit.groundedOccupancyApplied = false
+    unit.occupancyRemoved = true
+    unit.lastGroundedOnHelipad = false
+  } else {
+    if (onHelipadNow) {
+      if (hadGroundOccupancy) {
+        removeUnitOccupancy(unit, occupancyMap, { ignoreFlightState: true })
+      }
+      unit.groundedOccupancyApplied = false
+      unit.occupancyRemoved = true
+    } else if (!hadGroundOccupancy) {
+      addUnitOccupancyDirect(unit, occupancyMap)
+      unit.groundedOccupancyApplied = true
+      unit.occupancyRemoved = false
+    }
+    if (!onHelipadNow && hadGroundOccupancy) {
+      unit.occupancyRemoved = false
+    }
+    unit.lastGroundedOnHelipad = onHelipadNow
+  }
+
+  const rotorTargetSpeed = unit.flightState === 'grounded'
+    ? ROTOR_GROUNDED_SPEED
+    : ROTOR_AIRBORNE_SPEED
+  const rotorResponse = unit.flightState === 'grounded'
+    ? ROTOR_SPINDOWN_RESPONSE
+    : ROTOR_SPINUP_RESPONSE
+  rotor.speed += (rotorTargetSpeed - rotor.speed) * Math.min(1, deltaSeconds * rotorResponse)
+  if (unit.flightState === 'grounded' && Math.abs(rotor.speed - ROTOR_GROUNDED_SPEED) < ROTOR_STOP_EPSILON) {
+    rotor.speed = ROTOR_GROUNDED_SPEED
+  }
+  rotor.angle = (rotor.angle + rotor.speed * deltaMs) % (Math.PI * 2)
+  rotor.targetSpeed = rotorTargetSpeed
+
+  const altitudeRatio = Math.min(1, unit.maxAltitude > 0 ? unit.altitude / unit.maxAltitude : 0)
+  shadow.offset = altitudeRatio * TILE_SIZE * 1.8
+  shadow.scale = 1 + altitudeRatio * 0.5
+
+  if (manualState === 'takeoff' && unit.altitude >= unit.maxAltitude * 0.95) {
+    unit.manualFlightState = 'auto'
+  } else if (manualState === 'land' && unit.altitude <= 1) {
+    unit.manualFlightState = 'auto'
+  }
+
+  if (unit.dodgeVelocity) {
+    if (now < unit.dodgeVelocity.endTime) {
+      unit.x += unit.dodgeVelocity.vx * deltaSeconds
+      unit.y += unit.dodgeVelocity.vy * deltaSeconds
+    } else {
+      unit.dodgeVelocity = null
+    }
+  }
+
+  const isHovering = unit.flightState === 'airborne' && (!movement || movement.currentSpeed < 0.1)
+  unit.hovering = isHovering
+
+  if (typeof unit.gas === 'number' && unit.gas > 0) {
+    const shouldConsumeHoverFuel = isHovering && !unit.helipadLandingRequested && manualState !== 'land'
+    if (shouldConsumeHoverFuel) {
+      const frameScale = Math.max(0, Math.min(deltaSeconds / BASE_FRAME_SECONDS, 6))
+      const airSpeed = unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED
+      const hoverEquivalentPixels = airSpeed * frameScale
+      const metersPerPixel = TILE_LENGTH_METERS / TILE_SIZE
+      const hoverMeters = hoverEquivalentPixels * metersPerPixel
+      const hoverUsage = (unit.gasConsumption || 0) * hoverMeters / 100000 * (unit.hoverFuelMultiplier || 0.2)
+      consumeUnitGas(unit, hoverUsage)
+    }
+  }
+
+  const shouldPlayRotorSound =
+    unit.health > 0 &&
+    !unit.destroyed &&
+    unit.flightState &&
+    unit.flightState !== 'grounded'
+
+  if (shouldPlayRotorSound) {
+    const altitudeRatioNow = unit.maxAltitude > 0 ? Math.min(1, unit.altitude / unit.maxAltitude) : 0
+    const altitudeGain =
+      APACHE_ROTOR_ALTITUDE_GAIN_MIN +
+      altitudeRatioNow * (APACHE_ROTOR_ALTITUDE_GAIN_MAX - APACHE_ROTOR_ALTITUDE_GAIN_MIN)
+
+    if (!unit.rotorSound && !unit.rotorSoundLoading) {
+      unit.rotorSoundLoading = true
+      playPositionalSound('apache_fly', unit.x, unit.y, APACHE_ROTOR_LOOP_VOLUME, 0, false, { playLoop: true })
+        .then(handle => {
+          unit.rotorSoundLoading = false
+          if (!handle) {
+            return
+          }
+
+          const stillAirborne =
+            unit.health > 0 &&
+            !unit.destroyed &&
+            unit.flightState &&
+            unit.flightState !== 'grounded'
+
+          if (!stillAirborne) {
+            try {
+              handle.source.stop()
+            } catch (e) {
+              console.error('Failed to stop apache rotor sound after landing:', e)
+            }
+            return
+          }
+
+          const altitudeRatioAfter = unit.maxAltitude > 0 ? Math.min(1, unit.altitude / unit.maxAltitude) : 0
+          const altitudeGainAfter =
+            APACHE_ROTOR_ALTITUDE_GAIN_MIN +
+            altitudeRatioAfter * (APACHE_ROTOR_ALTITUDE_GAIN_MAX - APACHE_ROTOR_ALTITUDE_GAIN_MIN)
+
+          const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+          const targetGain =
+            APACHE_ROTOR_LOOP_VOLUME *
+            volumeFactor *
+            altitudeGainAfter *
+            getMasterVolume()
+
+          if (handle.gainNode) {
+            handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+            handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.4)
+          }
+          if (handle.panner) {
+            handle.panner.pan.value = pan
+          }
+
+          handle.baseVolume = APACHE_ROTOR_LOOP_VOLUME
+          unit.rotorSound = handle
+        })
+        .catch(error => {
+          unit.rotorSoundLoading = false
+          console.error('Error playing apache rotor loop:', error)
+        })
+    } else if (unit.rotorSound) {
+      const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+      const targetGain =
+        (unit.rotorSound.baseVolume || APACHE_ROTOR_LOOP_VOLUME) *
+        volumeFactor *
+        altitudeGain *
+        getMasterVolume()
+
+      if (unit.rotorSound.panner) {
+        unit.rotorSound.panner.pan.value = pan
+      }
+      if (unit.rotorSound.gainNode) {
+        unit.rotorSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
+      }
+    }
+  } else {
+    if (unit.rotorSound) {
+      const { source, gainNode } = unit.rotorSound
+      if (gainNode) {
+        gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+        gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3)
+      }
+      if (source) {
+        try {
+          source.stop(audioContext.currentTime + 0.3)
+        } catch (e) {
+          console.error('Failed to schedule apache rotor sound stop:', e)
+        }
+      }
+      unit.rotorSound = null
+    }
+    unit.rotorSoundLoading = false
+  }
+}

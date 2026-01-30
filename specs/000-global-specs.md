@@ -59,3 +59,12 @@ The following unit types are considered attack-capable for cursor/range detectio
 - [src/input/cursorManager.js](../src/input/cursorManager.js) - Cursor state management
 - [src/input/mouseHandler.js](../src/input/mouseHandler.js) - Range detection logic
 - [cursors.css](../cursors.css) - Cursor styles
+
+## Movement System Modules
+
+Ground and air movement logic is split across modular files to keep each under 1k LOC and reduce coupling:
+- Core orchestration: [src/game/movementCore.js](../src/game/movementCore.js)
+- Collision and avoidance: [src/game/movementCollision.js](../src/game/movementCollision.js)
+- Apache flight state: [src/game/movementApache.js](../src/game/movementApache.js)
+- Stuck recovery/dodge helpers: [src/game/movementStuck.js](../src/game/movementStuck.js)
+- Shared helpers/constants: [src/game/movementConstants.js](../src/game/movementConstants.js), [src/game/movementHelpers.js](../src/game/movementHelpers.js)

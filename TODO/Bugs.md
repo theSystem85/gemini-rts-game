@@ -73,7 +73,8 @@
 - [x] ✅ Rocket tank stops attacking when target is destroyed
 - [x] ✅ Rocket tank rotation speed normalized to 0.1 radians/frame in all modes
 - [x] ✅ Rocket tank reload phase begins only after entire 4-rocket burst completes
-
+## Bug Fixes (2026-01-30)
+- [x] ✅ Fixed SyntaxError in movementCore.js: imported 'smoothRotate' from logic.js but function was renamed to 'smoothRotateTowardsAngle' during refactor; updated import and usage to match.
 ## Bugs
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
