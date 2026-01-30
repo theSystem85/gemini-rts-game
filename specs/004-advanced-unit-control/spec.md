@@ -159,6 +159,9 @@ As a player, I want to select multiple enemy units at once for my combat units t
 
 **Integration:**
 - **FR-039**: System MUST disable remote control when guard mode is manually active
+
+## Implementation Notes (2026-01-30)
+- `src/input/unitCommands.js` is now a thin delegator bundling domain modules (`movementCommands.js`, `attackCommands.js`, `supportCommands.js`, `airCommands.js`, `utilityHelpers.js`, `utilityQueue.js`) under 1k LOC each to keep advanced control logic maintainable without changing behavior or tests.
 - **FR-040**: System MUST allow guard mode to coexist with AGF (guards don't join AGF)
 - **FR-041**: System MUST allow PPF to queue any combination of move/attack/retreat/AGF commands
 - **FR-042**: System MUST maintain feature independence (each can be used without others)

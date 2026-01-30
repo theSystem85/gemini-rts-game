@@ -49,7 +49,8 @@
 ## Bug Fixes (2025-11-27)
 - [x] ✅ Defeat modal subtitle overlapping statistics — now subtitle lines are wrapped and stats start below the subtitle (fix: `src/rendering/uiRenderer.js`)
 
-## Bug Fixes (2025-01-26)
+## Bug Fixes (2025-01-29)
+- [x] ✅ Fixed failing test "starts the next utility task for queued wreck targets" in unitCommands.test.js - after splitting unitCommands.js into modules, functions were calling imported functions instead of handler methods, breaking test mocks. Updated utilityQueue.js functions to accept handler as first argument and call handler methods, and updated proto assignments in unitCommands.js to pass 'this'.
 - [x] ✅ Fixed rocket tank rockets not homing toward moving targets - simplified burst fire to dynamically track target position each rocket
 - [x] ✅ Fixed rockets targeting Apache helicopters aiming at center between Apache image and shadow - added altitude visual offset compensation (altitude * 0.4) in multiple locations: handleTankMovement, handleRocketBurstFire, fireBullet, homing logic, and collision detection
 
