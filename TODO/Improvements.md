@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Add meaningful unit tests to boost coverage in main.js, inputHandler.js, updateGame.js, and saveGame.js (focus on least-covered functions and branches).
 - [x] Extend unit tests for Task 16.1-16.10 coverage targets (config, game setup, map editor, retreat, benchmark runner, ambulance/building systems, game state manager, hospital logic, mine system).
 - [x] Expand unit tests for tasks 16.11-16.20 (recovery tank, remote control, unit movement, selection manager, lockstep, multiplayer store, remote connection, state hash, enemy AI player, logger).
 - [x] Expand unit test coverage for workshop logic, keyboard input handling, cheat system behaviors, and cursor management (Tasks 15.12-15.15).

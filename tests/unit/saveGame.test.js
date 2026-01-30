@@ -669,6 +669,32 @@ describe('saveGame.js', () => {
       const result = saveGameModule.maybeResumeLastPausedGame()
       expect(result).toBe(false)
     })
+
+    it('should resume last game when flag and save exist', async() => {
+      const { showNotification } = await import('../../src/ui/notifications.js')
+
+      const saveData = {
+        gameState: { money: 5000, gameStarted: true, gameOver: false },
+        units: [],
+        buildings: [],
+        orePositions: [],
+        mapGridTypes: []
+      }
+      const lastGame = {
+        label: 'lastGame',
+        time: Date.now(),
+        state: JSON.stringify(saveData)
+      }
+      localStorage.setItem('rts_save_lastGame', JSON.stringify(lastGame))
+      localStorage.setItem('rts_lastGame_resume_pending', 'true')
+
+      // Note: Cannot spy on internal loadGame calls - verify side effects instead
+      const result = saveGameModule.maybeResumeLastPausedGame()
+
+      expect(result).toBe(true)
+      expect(showNotification).toHaveBeenCalled()
+      expect(localStorage.getItem('rts_lastGame_resume_pending')).toBeNull()
+    })
   })
 
   describe('initLastGameRecovery', () => {
@@ -676,6 +702,36 @@ describe('saveGame.js', () => {
       expect(() => {
         saveGameModule.initLastGameRecovery()
       }).not.toThrow()
+    })
+
+    it('should auto-save on interval and when pausing', async() => {
+      const { gameState } = await import('../../src/gameState.js')
+
+      vi.useFakeTimers()
+
+      saveGameModule.initLastGameRecovery()
+
+      // Advance time to trigger auto-save interval
+      vi.advanceTimersByTime(60_000)
+
+      // Verify save was created in localStorage (can't spy on internal saveGame calls)
+      const savedData = localStorage.getItem('rts_save_lastGame')
+      expect(savedData).not.toBeNull()
+      expect(JSON.parse(savedData).label).toBe('lastGame')
+
+      // Clear the save to test pause trigger
+      localStorage.removeItem('rts_save_lastGame')
+
+      gameState.gamePaused = true
+      vi.advanceTimersByTime(1_000)
+
+      // Verify save was created again and resume flag was set
+      const pauseSavedData = localStorage.getItem('rts_save_lastGame')
+      expect(pauseSavedData).not.toBeNull()
+      expect(localStorage.getItem('rts_lastGame_resume_pending')).toBe('true')
+
+      vi.clearAllTimers()
+      vi.useRealTimers()
     })
   })
 

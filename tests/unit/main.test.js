@@ -417,6 +417,16 @@ describe('main.js', () => {
         mainModule.updateVehicleButtonStates()
       }).not.toThrow()
     })
+
+    it('should warn when called', () => {
+      const warnSpy = vi.spyOn(window.logger, 'warn')
+
+      mainModule.updateVehicleButtonStates()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'updateVehicleButtonStates called from main.js - should use ProductionController instead'
+      )
+    })
   })
 
   describe('updateBuildingButtonStates', () => {
@@ -428,6 +438,16 @@ describe('main.js', () => {
       expect(() => {
         mainModule.updateBuildingButtonStates()
       }).not.toThrow()
+    })
+
+    it('should warn when called', () => {
+      const warnSpy = vi.spyOn(window.logger, 'warn')
+
+      mainModule.updateBuildingButtonStates()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'updateBuildingButtonStates called from main.js - should use ProductionController instead'
+      )
     })
   })
 

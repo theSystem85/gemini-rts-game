@@ -403,6 +403,213 @@ describe('updateGame.js', () => {
       expect(processPendingRemoteCommands).toHaveBeenCalled()
     })
 
+    it('should apply BUILDING_PLACE commands from clients', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { createBuilding, placeBuilding, updatePowerSupply } = await import('../../src/buildings.js')
+      const { updateDangerZoneMaps } = await import('../../src/game/dangerZoneMap.js')
+
+      isHost.mockReturnValue(true)
+      const newBuilding = { id: 'b-1', type: 'constructionYard', x: 2, y: 3 }
+      createBuilding.mockReturnValue(newBuilding)
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.BUILDING_PLACE,
+          payload: { buildingType: 'constructionYard', x: 2, y: 3 },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(createBuilding).toHaveBeenCalledWith('constructionYard', 2, 3)
+      expect(newBuilding.owner).toBe('player2')
+      expect(gameState.buildings).toContain(newBuilding)
+      expect(updateDangerZoneMaps).toHaveBeenCalledWith(gameState)
+      expect(placeBuilding).toHaveBeenCalledWith(newBuilding, [])
+      expect(updatePowerSupply).toHaveBeenCalledWith(gameState.buildings, gameState)
+    })
+
+    it('should apply UNIT_MOVE commands with tile targets', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { units: mainUnits } = await import('../../src/main.js')
+
+      isHost.mockReturnValue(true)
+      mainUnits.length = 0
+      mainUnits.push({ id: 'unit-1', owner: 'player2', moveTarget: null, attackTarget: {}, guardPosition: {} })
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.UNIT_MOVE,
+          payload: { unitIds: ['unit-1'], targetX: 64, targetY: 96 },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(mainUnits[0].moveTarget).toEqual({ x: 2, y: 3 })
+      expect(mainUnits[0].attackTarget).toBeNull()
+      expect(mainUnits[0].guardPosition).toBeNull()
+    })
+
+    it('should apply UNIT_ATTACK commands with target entity', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { units: mainUnits } = await import('../../src/main.js')
+
+      isHost.mockReturnValue(true)
+      mainUnits.length = 0
+      mainUnits.push({ id: 'unit-1', owner: 'player2', moveTarget: { x: 1, y: 1 }, guardPosition: { x: 1, y: 1 }, path: [1] })
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.UNIT_ATTACK,
+          payload: { unitIds: ['unit-1'], targetId: 'building-1' },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [{ id: 'building-1', type: 'constructionYard' }],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(mainUnits[0].target).toBe(gameState.buildings[0])
+      expect(mainUnits[0].moveTarget).toBeNull()
+      expect(mainUnits[0].guardPosition).toBeNull()
+      expect(mainUnits[0].path).toBeNull()
+    })
+
+    it('should apply UNIT_STOP commands to clear attack state', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { units: mainUnits } = await import('../../src/main.js')
+
+      isHost.mockReturnValue(true)
+      mainUnits.length = 0
+      mainUnits.push({
+        id: 'unit-1',
+        owner: 'player2',
+        path: [1],
+        moveTarget: { x: 1, y: 1 },
+        attackTarget: { id: 't' },
+        guardPosition: { x: 2, y: 2 },
+        target: { id: 't' },
+        forcedAttack: true,
+        attackQueue: [1],
+        attackGroupTargets: [1]
+      })
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.UNIT_STOP,
+          payload: { unitIds: ['unit-1'] },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(mainUnits[0].path).toBeNull()
+      expect(mainUnits[0].moveTarget).toBeNull()
+      expect(mainUnits[0].attackTarget).toBeNull()
+      expect(mainUnits[0].guardPosition).toBeNull()
+      expect(mainUnits[0].target).toBeNull()
+      expect(mainUnits[0].forcedAttack).toBe(false)
+      expect(mainUnits[0].attackQueue).toEqual([])
+      expect(mainUnits[0].attackGroupTargets).toEqual([])
+    })
+
+    it('should apply UNIT_GUARD commands', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { units: mainUnits } = await import('../../src/main.js')
+
+      isHost.mockReturnValue(true)
+      mainUnits.length = 0
+      mainUnits.push({ id: 'unit-1', owner: 'player2', guardPosition: null, attackTarget: { id: 't' } })
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.UNIT_GUARD,
+          payload: { unitIds: ['unit-1'], guardX: 5, guardY: 6 },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(mainUnits[0].guardPosition).toEqual({ x: 5, y: 6 })
+      expect(mainUnits[0].attackTarget).toBeNull()
+    })
+
+    it('should spawn units on UNIT_SPAWN commands', async() => {
+      const { processPendingRemoteCommands, isHost, COMMAND_TYPES } = await import('../../src/network/gameCommandSync.js')
+      const { spawnUnit } = await import('../../src/units.js')
+      const { units: mainUnits } = await import('../../src/main.js')
+
+      isHost.mockReturnValue(true)
+      mainUnits.length = 0
+      spawnUnit.mockReturnValue({ id: 'spawned-1', type: 'tank', owner: 'player2' })
+      processPendingRemoteCommands.mockReturnValue([
+        {
+          commandType: COMMAND_TYPES.UNIT_SPAWN,
+          payload: { unitType: 'tank', factoryId: 'vf-1', rallyPoint: { x: 4, y: 4 } },
+          sourcePartyId: 'player2'
+        }
+      ])
+
+      const gameState = {
+        gamePaused: false,
+        occupancyMap: [],
+        smokeParticles: [],
+        buildings: [{ id: 'vf-1', type: 'vehicleFactory', owner: 'player2' }],
+        multiplayerSession: null
+      }
+
+      updateGameModule.updateGame(16, [], [], [], [], gameState)
+
+      expect(spawnUnit).toHaveBeenCalledWith(
+        gameState.buildings[0],
+        'tank',
+        mainUnits,
+        [],
+        { x: 4, y: 4 },
+        gameState.occupancyMap
+      )
+      expect(mainUnits).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'spawned-1' })]))
+    })
+
     it('should skip game logic for remote clients', async() => {
       const { isHost, updateUnitInterpolation } = await import('../../src/network/gameCommandSync.js')
 

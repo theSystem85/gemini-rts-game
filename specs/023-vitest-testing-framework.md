@@ -125,6 +125,7 @@ Located in `tests/unit/`
 
 
 ## Recent Coverage Additions
+- Added unit tests targeting low-coverage core modules (main.js, inputHandler.js, updateGame.js, saveGame.js) with meaningful command handling, input guardrails, and autosave flows.
 - Expanded `tests/unit/bulletSystem.test.js` to exercise `updateBullets()` and `fireBullet()` with mocked side effects and real collision geometry inputs.
 - Added bullet system coverage for apache rocket proximity damage, dodge maneuvers, critical damage sounds, and rocket tank homing fallbacks.
 - Added `tests/unit/multiplayerStore.test.js` covering invite token lifecycle, host regeneration, and party ownership events in multiplayer sessions.

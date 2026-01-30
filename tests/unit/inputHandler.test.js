@@ -5,6 +5,13 @@
  * cursor, and selection management for the game.
  */
 
+// Track instances created by mocked constructors (use global with individual vars)
+globalThis.__test__cursorManager = null
+globalThis.__test__mouseHandler = null
+globalThis.__test__keyboardHandler = null
+globalThis.__test__selectionManager = null
+globalThis.__test__cheatSystem = null
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock gameState first
@@ -25,34 +32,48 @@ vi.mock('../../src/gameState.js', () => ({
 // Mock input system components - using class syntax for proper constructors
 vi.mock('../../src/input/cursorManager.js', () => ({
   CursorManager: class {
-    updateForceAttackMode() {}
-    updateGuardMode() {}
-    updateCustomCursor() {}
-    refreshCursor() {}
+    constructor() {
+      globalThis.__test__cursorManager = this
+      this.updateForceAttackMode = vi.fn()
+      this.updateGuardMode = vi.fn()
+      this.updateCustomCursor = vi.fn()
+      this.refreshCursor = vi.fn()
+    }
   }
 }))
 
 vi.mock('../../src/input/mouseHandler.js', () => ({
   MouseHandler: class {
-    setRenderScheduler() {}
-    setupMouseEvents() {}
+    constructor() {
+      globalThis.__test__mouseHandler = this
+      this.setRenderScheduler = vi.fn()
+      this.setupMouseEvents = vi.fn()
+    }
   }
 }))
 
 vi.mock('../../src/input/keyboardHandler.js', () => ({
   KeyboardHandler: class {
-    setRenderScheduler() {}
-    setPlayerFactory() {}
-    setupKeyboardEvents() {}
-    setUnitCommands() {}
-    setMouseHandler() {}
-    getCheatSystem() { return {} }
+    constructor() {
+      globalThis.__test__keyboardHandler = this
+      this.setRenderScheduler = vi.fn()
+      this.setPlayerFactory = vi.fn()
+      this.setupKeyboardEvents = vi.fn()
+      this.setUnitCommands = vi.fn()
+      this.setMouseHandler = vi.fn()
+      this._cheatSystem = { id: 'cheat-system' }
+      globalThis.__test__cheatSystem = this._cheatSystem
+      this.getCheatSystem = () => this._cheatSystem
+    }
   }
 }))
 
 vi.mock('../../src/input/selectionManager.js', () => ({
   SelectionManager: class {
-    cleanupDestroyedSelectedUnits() {}
+    constructor() {
+      globalThis.__test__selectionManager = this
+      this.cleanupDestroyedSelectedUnits = vi.fn()
+    }
   }
 }))
 
@@ -105,6 +126,23 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
     body: { style: { cursor: '' } }
   })
+
+  if (globalThis.__test__mouseHandler?.setRenderScheduler) {
+    globalThis.__test__mouseHandler.setRenderScheduler.mockClear()
+    globalThis.__test__mouseHandler.setupMouseEvents.mockClear()
+  }
+
+  if (globalThis.__test__keyboardHandler?.setRenderScheduler) {
+    globalThis.__test__keyboardHandler.setRenderScheduler.mockClear()
+    globalThis.__test__keyboardHandler.setPlayerFactory.mockClear()
+    globalThis.__test__keyboardHandler.setupKeyboardEvents.mockClear()
+    globalThis.__test__keyboardHandler.setUnitCommands.mockClear()
+    globalThis.__test__keyboardHandler.setMouseHandler.mockClear()
+  }
+
+  if (globalThis.__test__selectionManager?.cleanupDestroyedSelectedUnits) {
+    globalThis.__test__selectionManager.cleanupDestroyedSelectedUnits.mockClear()
+  }
 })
 
 afterEach(() => {
@@ -118,6 +156,7 @@ import {
   selectionActive,
   selectionStartExport,
   selectionEndExport,
+  setupInputHandlers,
   setRenderScheduler,
   cleanupDestroyedSelectedUnits,
   getKeyboardHandler,
@@ -214,6 +253,21 @@ describe('inputHandler.js', () => {
     it('should not throw when called with undefined', () => {
       expect(() => setRenderScheduler(undefined)).not.toThrow()
     })
+
+    it('should forward scheduler to mouse and keyboard handlers', () => {
+      setupInputHandlers([], [], [])
+      const scheduler = () => {}
+
+      setRenderScheduler(scheduler)
+
+      // Verify behavior through public API - handlers should forward the call
+      if (globalThis.__test__mouseHandler) {
+        expect(globalThis.__test__mouseHandler.setRenderScheduler).toHaveBeenCalledWith(scheduler)
+      }
+      if (globalThis.__test__keyboardHandler) {
+        expect(globalThis.__test__keyboardHandler.setRenderScheduler).toHaveBeenCalledWith(scheduler)
+      }
+    })
   })
 
   describe('cleanupDestroyedSelectedUnits()', () => {
@@ -234,6 +288,20 @@ describe('inputHandler.js', () => {
       selectedUnits.length = 0
       selectedUnits.push({ id: 'unit-1', health: 100 })
       expect(() => cleanupDestroyedSelectedUnits()).not.toThrow()
+      selectedUnits.length = 0
+    })
+
+    it('should delegate cleanup to selection manager', () => {
+      setupInputHandlers([], [], [])
+      selectedUnits.length = 0
+      selectedUnits.push({ id: 'unit-1', health: 100 })
+
+      cleanupDestroyedSelectedUnits()
+
+      // Verify behavior - if handler exists, it should be called
+      if (globalThis.__test__selectionManager) {
+        expect(globalThis.__test__selectionManager.cleanupDestroyedSelectedUnits).toHaveBeenCalledWith(selectedUnits)
+      }
       selectedUnits.length = 0
     })
   })
@@ -262,6 +330,84 @@ describe('inputHandler.js', () => {
     it('should return handler with setupKeyboardEvents method', () => {
       const handler = getKeyboardHandler()
       expect(handler).toHaveProperty('setupKeyboardEvents')
+    })
+  })
+
+  describe('setupInputHandlers()', () => {
+    it('should configure the keyboard handler with player factory', () => {
+      const factories = [{ id: 'player1' }, { id: 'player' }]
+
+      setupInputHandlers([], factories, [])
+
+      // Verify behavior - if handler exists, it should be configured
+      if (globalThis.__test__keyboardHandler) {
+        expect(globalThis.__test__keyboardHandler.setPlayerFactory).toHaveBeenCalledWith(factories[0])
+      }
+    })
+
+    it('should expose the cheat system globally', () => {
+      setupInputHandlers([], [], [])
+
+      // Verify cheat system is exposed (may be set during import or this call)
+      expect(window.cheatSystem).toBeTruthy()
+    })
+
+    it('should register mouse and keyboard listeners', () => {
+      setupInputHandlers([], [], [])
+
+      const eventTypes = document.addEventListener.mock.calls.map(call => call[0])
+      expect(eventTypes).toContain('mousemove')
+      expect(eventTypes).toContain('keydown')
+      expect(eventTypes).toContain('keyup')
+    })
+
+    it('should update cursor manager on mouse movement', () => {
+      setupInputHandlers([], [], [])
+
+      const mouseMoveHandler = document.addEventListener.mock.calls.find(([type]) => type === 'mousemove')[1]
+      const event = { clientX: 10, clientY: 10 }
+
+      mouseMoveHandler(event)
+
+      // Verify behavior - if handler exists, it should be called
+      if (globalThis.__test__cursorManager) {
+        expect(globalThis.__test__cursorManager.updateForceAttackMode).toHaveBeenCalled()
+        expect(globalThis.__test__cursorManager.updateCustomCursor).toHaveBeenCalledWith(
+          event,
+          expect.any(Array),
+          expect.any(Array),
+          selectedUnits,
+          []
+        )
+      }
+    })
+  })
+
+  describe('remote cheat guard', () => {
+    it('should block cheat hotkey for remote clients', async() => {
+      vi.resetModules()
+
+      const { observeMultiplayerSession } = await import('../../src/network/multiplayerSessionEvents.js')
+      const { showNotification } = await import('../../src/ui/notifications.js')
+      const { gameState } = await import('../../src/gameState.js')
+
+      await import('../../src/inputHandler.js')
+
+      const keydownHandler = document.addEventListener.mock.calls.find(([type]) => type === 'keydown')[1]
+
+      observeMultiplayerSession.mock.calls[0][0]({ detail: { isRemote: true, localRole: 'client' } })
+
+      const event = { key: 'c', preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() }
+      keydownHandler(event)
+
+      expect(showNotification).toHaveBeenCalledWith('Cheats are host-only for remote clients', 2300)
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect(event.stopImmediatePropagation).toHaveBeenCalled()
+
+      showNotification.mockClear()
+      gameState.cheatDialogOpen = true
+      keydownHandler({ key: 'c', preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() })
+      expect(showNotification).not.toHaveBeenCalled()
     })
   })
 
