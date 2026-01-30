@@ -1,7 +1,7 @@
 # Unit Test Parallel Agent Plan
 
 **Created**: 2025-01-28T19:55:00Z  
-**Last Updated**: 2026-01-29T18:05:00Z  
+**Last Updated**: 2026-01-29T22:15:00Z  
 **Goal**: Achieve 100% test coverage through parallel agent work  
 **Current Coverage**: 46.2% statements, 37.9% branches, 57.59% functions, 46.62% lines  
 **Total Tests**: 2677 tests across 93 test files
@@ -706,6 +706,21 @@ These files have 0% function coverage and are critical to reach 100%.
 - **Tests Added**: 18 tests
 - **Coverage After**: Tests for markWaypointsAdded, handleAltKeyRelease, resetWaypointTracking, integration scenarios
 
+### Task 10.8 - `src/game/ammunitionSystem.js`
+- **Target**: Create `tests/unit/ammunitionSystem.test.js`
+- **Source File**: `src/game/ammunitionSystem.js` (0% functions)
+- **Status**: [COMPLETED] (Finished: 2026-01-29 22:15 UTC)
+- **Tests Added**: 9 tests
+- **Coverage After**: Tests for updateAmmunitionSystem, processAmmunitionResupply, processAmmunitionTruckResupply, reloadAmmunitionTruck
+
+### Task 10.9 - `src/game/attackNotifications.js`
+- **Target**: Create `tests/unit/attackNotifications.test.js`
+- **Source File**: `src/game/attackNotifications.js` (0% functions)
+- **Status**: [COMPLETED] (Finished: 2026-01-29 21:10 UTC)
+- **Tests Added**: 11 tests
+- **Coverage After**: Tests for handleAttackNotification, resetAttackNotifications, notification cooldowns, player ownership checks
+
+
 ---
 
 ## PRIORITY 11: Input Folder Zero Function Coverage
@@ -1191,5 +1206,17 @@ The following test files were added but not originally tracked in this plan:
 - **Tests Added**: 14 tests
 - **Status**: [COMPLETED] (Finished: 2026-01-29 18:05 UTC)
 - **Coverage**: Tests for control group assignment, selection, camera centering on double-press
+
+### howitzerGunController.test.js
+- **Source File**: `src/game/howitzerGunController.js`
+- **Tests Added**: 10 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 22:11 UTC)
+- **Coverage**: Tests for initializeHowitzerGun, updateHowitzerGunState, ready checks, and launch angle calculation.
+
+### grassTileDiscovery.test.js
+- **Source File**: `src/utils/grassTileDiscovery.js`
+- **Tests Added**: 4 tests
+- **Status**: [COMPLETED] (Finished: 2026-01-29 22:15 UTC)
+- **Coverage**: Tests for discoverGrassTiles including successful fetch, error handling, validation, and warnings.
 
 ---
