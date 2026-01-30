@@ -10,7 +10,7 @@ vi.mock('../../src/config.js', async() => {
     STUCK_CHECK_INTERVAL: 3000,
     STUCK_THRESHOLD: 2,
     STUCK_HANDLING_COOLDOWN: 5000,
-    MINE_TRIGGER_RADIUS: 1.5
+    MINE_TRIGGER_RADIUS: 14.4  // TILE_SIZE * 0.45
   }
 })
 
@@ -72,7 +72,14 @@ import {
   cancelUnitMovement,
   resetUnitVelocityForNewPath,
   isUnitMoving,
-  rotateUnitInPlace
+  rotateUnitInPlace,
+  checkMineDetonation,
+  isUnitCenterInsideMineCircle,
+  normalizeAngle,
+  isAirborneUnit,
+  isGroundUnit,
+  ownersAreEnemies,
+  isValidDodgePosition
 } from '../../src/game/unifiedMovement.js'
 
 describe('unifiedMovement.js', () => {
@@ -498,6 +505,283 @@ describe('unifiedMovement.js', () => {
       expect(() => {
         rotateUnitInPlace(unit, Math.PI / 2)
       }).not.toThrow()
+    })
+  })
+
+  describe('checkMineDetonation', () => {
+    it('should not detonate if no mine at tile', async() => {
+      const mineSystem = await import('../../src/game/mineSystem.js')
+      mineSystem.getMineAtTile.mockReturnValue(null)
+
+      const unit = { type: 'tank' }
+      const units = []
+      const buildings = []
+
+      checkMineDetonation(unit, 5, 5, units, buildings)
+
+      expect(mineSystem.detonateMine).not.toHaveBeenCalled()
+    })
+
+    it('should not detonate inactive mine', async() => {
+      const mineSystem = await import('../../src/game/mineSystem.js')
+      mineSystem.getMineAtTile.mockReturnValue({ active: false })
+
+      const unit = { type: 'tank' }
+      const units = []
+      const buildings = []
+
+      checkMineDetonation(unit, 5, 5, units, buildings)
+
+      expect(mineSystem.detonateMine).not.toHaveBeenCalled()
+    })
+
+    it('should detonate active mine when unit center is inside trigger radius', async() => {
+      const mineSystem = await import('../../src/game/mineSystem.js')
+      mineSystem.getMineAtTile.mockReturnValue({ active: true })
+      mineSystem.detonateMine.mockReturnValue(true)
+
+      const unit = { type: 'tank', x: 160, y: 160 } // Center at (176, 176)
+      const units = []
+      const buildings = []
+
+      checkMineDetonation(unit, 5, 5, units, buildings)
+
+      expect(mineSystem.detonateMine).toHaveBeenCalledWith({ active: true }, units, buildings)
+    })
+
+    it('should handle mine sweeper sweeping mines', async() => {
+      const mineSystem = await import('../../src/game/mineSystem.js')
+      mineSystem.getMineAtTile.mockReturnValue({ active: true })
+      mineSystem.detonateMine.mockReturnValue(true)
+
+      const unit = { type: 'mineSweeper', x: 160, y: 160, sweeping: true }
+      const units = []
+      const buildings = []
+
+      checkMineDetonation(unit, 5, 5, units, buildings)
+
+      expect(mineSystem.detonateMine).toHaveBeenCalledWith({ active: true }, units, buildings)
+    })
+
+    it('should handle null unit', async() => {
+      const mineSystem = await import('../../src/game/mineSystem.js')
+      mineSystem.getMineAtTile.mockReturnValue({ active: true })
+      mineSystem.detonateMine.mockClear()
+
+      checkMineDetonation(null, 5, 5, [], [])
+
+      expect(mineSystem.detonateMine).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('isUnitCenterInsideMineCircle', () => {
+    it('should return false for null unit', () => {
+      const result = isUnitCenterInsideMineCircle(null, 5, 5)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for invalid coordinates', () => {
+      const unit = { x: 160, y: 160 }
+      expect(isUnitCenterInsideMineCircle(unit, null, 5)).toBe(false)
+      expect(isUnitCenterInsideMineCircle(unit, 5, null)).toBe(false)
+      expect(isUnitCenterInsideMineCircle(unit, NaN, 5)).toBe(false)
+      expect(isUnitCenterInsideMineCircle(unit, 5, NaN)).toBe(false)
+    })
+
+    it('should return true when unit center is inside mine trigger radius', () => {
+      const unit = { x: 160, y: 160 } // Center at (176, 176)
+      // Mine at tile (5,5) center at (176, 176) - exactly at center
+      const result = isUnitCenterInsideMineCircle(unit, 5, 5)
+      expect(result).toBe(true)
+    })
+
+    it('should return false when unit center is outside mine trigger radius', () => {
+      const unit = { x: 160 + 50, y: 160 } // Center at (226, 176)
+      // Mine at tile (5,5) center at (176, 176) - 50 pixels away
+      const result = isUnitCenterInsideMineCircle(unit, 5, 5)
+      expect(result).toBe(false)
+    })
+
+    it('should handle edge case at exact trigger radius', () => {
+      // MINE_TRIGGER_RADIUS = TILE_SIZE * 0.45 = 32 * 0.45 = 14.4
+      // Unit at x: 160 + 14 = 174, center at 174 + 16 = 190
+      // Mine center at 176, dx = 14, which is within 14.4
+      const unit = { x: 160 + 14, y: 160 } // Center at (190, 176)
+      const result = isUnitCenterInsideMineCircle(unit, 5, 5)
+      expect(result).toBe(true) // Should be within radius
+    })
+  })
+
+  describe('normalizeAngle', () => {
+    it('should return angle unchanged if within -π to π', () => {
+      expect(normalizeAngle(0)).toBe(0)
+      expect(normalizeAngle(Math.PI / 2)).toBe(Math.PI / 2)
+      expect(normalizeAngle(-Math.PI / 2)).toBe(-Math.PI / 2)
+      expect(normalizeAngle(Math.PI)).toBe(Math.PI)
+      expect(normalizeAngle(-Math.PI)).toBe(-Math.PI)
+    })
+
+    it('should normalize angle greater than π', () => {
+      expect(normalizeAngle(Math.PI + 0.1)).toBeCloseTo(-Math.PI + 0.1, 10)
+      expect(normalizeAngle(2 * Math.PI)).toBeCloseTo(0, 10)
+      expect(normalizeAngle(3 * Math.PI)).toBeCloseTo(Math.PI, 10)
+    })
+
+    it('should normalize angle less than -π', () => {
+      expect(normalizeAngle(-Math.PI - 0.1)).toBeCloseTo(Math.PI - 0.1, 10)
+      expect(normalizeAngle(-2 * Math.PI)).toBeCloseTo(0, 10)
+      expect(normalizeAngle(-3 * Math.PI)).toBeCloseTo(-Math.PI, 10)
+    })
+
+    it('should handle large positive angles', () => {
+      expect(normalizeAngle(10 * Math.PI)).toBeCloseTo(0, 10)
+      expect(normalizeAngle(5 * Math.PI + Math.PI / 2)).toBeCloseTo(-Math.PI / 2, 10)
+    })
+
+    it('should handle large negative angles', () => {
+      expect(normalizeAngle(-10 * Math.PI)).toBeCloseTo(0, 10)
+      expect(normalizeAngle(-5 * Math.PI - Math.PI / 2)).toBeCloseTo(Math.PI / 2, 10)
+    })
+  })
+
+  describe('isAirborneUnit', () => {
+    it('should return false for null unit', () => {
+      expect(isAirborneUnit(null)).toBe(false)
+    })
+
+    it('should return false for ground units', () => {
+      expect(isAirborneUnit({ type: 'tank' })).toBe(false)
+      expect(isAirborneUnit({ type: 'harvester' })).toBe(false)
+      expect(isAirborneUnit({ type: 'ambulance' })).toBe(false)
+    })
+
+    it('should return true for Apache helicopters', () => {
+      expect(isAirborneUnit({ type: 'apache' })).toBe(true)
+    })
+
+    it('should return true for air units not grounded', () => {
+      expect(isAirborneUnit({ isAirUnit: true, flightState: 'airborne' })).toBe(true)
+      expect(isAirborneUnit({ isAirUnit: true, flightState: 'takeoff' })).toBe(true)
+      expect(isAirborneUnit({ isAirUnit: true, flightState: 'landing' })).toBe(true)
+    })
+
+    it('should return false for air units that are grounded', () => {
+      expect(isAirborneUnit({ isAirUnit: true, flightState: 'grounded' })).toBe(false)
+    })
+
+    it('should return false for Apache helicopters that are grounded', () => {
+      expect(isAirborneUnit({ type: 'apache', flightState: 'grounded' })).toBe(false)
+    })
+  })
+
+  describe('isGroundUnit', () => {
+    it('should return false for null unit', () => {
+      expect(isGroundUnit(null)).toBe(false)
+    })
+
+    it('should return true for ground units', () => {
+      expect(isGroundUnit({ type: 'tank' })).toBe(true)
+      expect(isGroundUnit({ type: 'harvester' })).toBe(true)
+      expect(isGroundUnit({ type: 'ambulance' })).toBe(true)
+    })
+
+    it('should return false for Apache helicopters', () => {
+      expect(isGroundUnit({ type: 'apache' })).toBe(false)
+    })
+
+    it('should return false for air units not grounded', () => {
+      expect(isGroundUnit({ isAirUnit: true, flightState: 'airborne' })).toBe(false)
+      expect(isGroundUnit({ isAirUnit: true, flightState: 'takeoff' })).toBe(false)
+    })
+
+    it('should return true for air units that are grounded', () => {
+      expect(isGroundUnit({ isAirUnit: true, flightState: 'grounded' })).toBe(true)
+    })
+
+    it('should return true for Apache helicopters that are grounded', () => {
+      expect(isGroundUnit({ type: 'apache', flightState: 'grounded' })).toBe(true)
+    })
+  })
+
+  describe('ownersAreEnemies', () => {
+    it('should return false for null owners', () => {
+      expect(ownersAreEnemies(null, 'player')).toBe(false)
+      expect(ownersAreEnemies('player', null)).toBe(false)
+      expect(ownersAreEnemies(null, null)).toBe(false)
+    })
+
+    it('should return false for same owner', () => {
+      expect(ownersAreEnemies('player', 'player')).toBe(false)
+      expect(ownersAreEnemies('player1', 'player1')).toBe(false)
+      expect(ownersAreEnemies('enemy', 'enemy')).toBe(false)
+    })
+
+    it('should return true for different owners', () => {
+      expect(ownersAreEnemies('player', 'enemy')).toBe(true)
+      expect(ownersAreEnemies('player1', 'player2')).toBe(true)
+      expect(ownersAreEnemies('enemy', 'player')).toBe(true)
+    })
+
+    it('should normalize player to player1', () => {
+      expect(ownersAreEnemies('player', 'player1')).toBe(false)
+      expect(ownersAreEnemies('player', 'enemy')).toBe(true)
+    })
+  })
+
+  describe('isValidDodgePosition', () => {
+    it('should return false for positions blocked by terrain', () => {
+      const mapGrid = [
+        [{ type: 'rock' }]
+      ]
+      const units = []
+
+      const result = isValidDodgePosition(0, 0, mapGrid, units)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for positions blocked by buildings', () => {
+      const mapGrid = [
+        [{ building: { id: 'b1' } }]
+      ]
+      const units = []
+
+      const result = isValidDodgePosition(0, 0, mapGrid, units)
+      expect(result).toBe(false)
+    })
+
+    it('should return false for positions blocked by other units', () => {
+      const mapGrid = [
+        [{}]
+      ]
+      const units = [{ x: 0, y: 0, health: 100 }] // Unit at tile corner (0, 0)
+
+      const result = isValidDodgePosition(0, 0, mapGrid, units)
+      expect(result).toBe(false)
+    })
+
+    it('should return true for valid positions', () => {
+      const mapGrid = [
+        [{}]
+      ]
+      const units = []
+
+      const result = isValidDodgePosition(0, 0, mapGrid, units)
+      expect(result).toBe(true)
+    })
+
+    it('should handle out of bounds positions', () => {
+      const mapGrid = [
+        [{}]
+      ]
+      const units = []
+
+      expect(isValidDodgePosition(-1, -1, mapGrid, units)).toBe(false)
+      expect(isValidDodgePosition(1, 1, mapGrid, units)).toBe(false)
+    })
+
+    it('should handle null mapGrid', () => {
+      const result = isValidDodgePosition(0, 0, null, [])
+      expect(result).toBe(false)
     })
   })
 })

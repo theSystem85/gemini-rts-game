@@ -69,6 +69,19 @@ vi.mock('../../src/game/unifiedMovement.js', () => ({
 }))
 
 import { UnitCommandsHandler } from '../../src/input/unitCommands.js'
+import {
+  getUnitTilePosition,
+  computeUtilityApproachPath,
+  clearAttackGroupState,
+  canAmbulanceProvideCrew,
+  canTankerProvideFuel,
+  canRecoveryTankRepair,
+  canAmmunitionTruckOperate,
+  canAmmunitionTruckProvideAmmo,
+  isEnemyTargetForUnit,
+  getTargetPoint,
+  findUnitById
+} from '../../src/input/unitCommands.js'
 import { findPathForOwner } from '../../src/units.js'
 import { playSound } from '../../src/sound.js'
 import { showNotification } from '../../src/ui/notifications.js'
@@ -818,5 +831,212 @@ describe('UnitCommandsHandler attack group and movement', () => {
   it('queueUtilityTargets returns false when no capable units', () => {
     const result = handler.queueUtilityTargets([], [{ id: 't1' }], 'heal', mapGrid)
     expect(result).toBe(false)
+  })
+})
+
+describe('Exported utility functions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    units.length = 0
+    gameState.attackGroupTargets = []
+  })
+
+  describe('getUnitTilePosition', () => {
+    it('returns null for null/undefined unit', () => {
+      expect(getUnitTilePosition(null)).toBe(null)
+      expect(getUnitTilePosition(undefined)).toBe(null)
+    })
+
+    it('returns tile coordinates when unit has tileX/tileY', () => {
+      const unit = { tileX: 5, tileY: 3 }
+      expect(getUnitTilePosition(unit)).toEqual({ x: 5, y: 3 })
+    })
+
+    it('converts pixel coordinates to tile coordinates', () => {
+      const unit = { x: 160, y: 96 } // TILE_SIZE = 32, so 160/32 = 5, 96/32 = 3
+      expect(getUnitTilePosition(unit)).toEqual({ x: 5, y: 3 })
+    })
+
+    it('handles pixel coordinates with offset correctly', () => {
+      const unit = { x: 175, y: 111 } // 175 + 16 = 191, floor(191/32) = 5; 111 + 16 = 127, floor(127/32) = 3
+      expect(getUnitTilePosition(unit)).toEqual({ x: 5, y: 3 })
+    })
+  })
+
+  describe('computeUtilityApproachPath', () => {
+    let mapGrid
+
+    beforeEach(() => {
+      mapGrid = createMapGrid(6, 6)
+    })
+
+    it('returns null for invalid inputs', () => {
+      expect(computeUtilityApproachPath(null, {}, 'heal', mapGrid)).toBe(null)
+      expect(computeUtilityApproachPath({}, null, 'heal', mapGrid)).toBe(null)
+      expect(computeUtilityApproachPath({}, {}, 'heal', null)).toBe(null)
+      expect(computeUtilityApproachPath({}, {}, 'heal', [])).toBe(null)
+    })
+
+    it('returns null when start tile cannot be determined', () => {
+      const serviceUnit = { owner: 'player' }
+      const target = { tileX: 1, tileY: 1 }
+      expect(computeUtilityApproachPath(serviceUnit, target, 'heal', mapGrid)).toBe(null)
+    })
+
+    it('computes heal approach path using ambulance offsets', () => {
+      const serviceUnit = { tileX: 0, tileY: 0, owner: 'player' }
+      const target = { tileX: 2, tileY: 2 }
+
+      findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }])
+
+      const result = computeUtilityApproachPath(serviceUnit, target, 'heal', mapGrid)
+
+      expect(result).toBeTruthy()
+      expect(result.path).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }])
+      expect(result.destinationTile).toEqual({ x: 2, y: 2 })
+      expect(findPathForOwner).toHaveBeenCalled()
+    })
+
+    it('computes repair approach path for wreck targets', () => {
+      const serviceUnit = { tileX: 0, tileY: 0, owner: 'player' }
+      const target = { tileX: 2, tileY: 2, isWreckTarget: true }
+
+      findPathForOwner.mockReturnValue([{ x: 0, y: 0 }, { x: 1, y: 1 }])
+
+      const result = computeUtilityApproachPath(serviceUnit, target, 'repair', mapGrid)
+
+      expect(result).toBeTruthy()
+      expect(findPathForOwner).toHaveBeenCalledWith(
+        { x: 0, y: 0 },
+        expect.any(Object),
+        mapGrid,
+        gameState.occupancyMap,
+        'player'
+      )
+    })
+  })
+
+  describe('clearAttackGroupState', () => {
+    it('clears attack queues from units', () => {
+      const unitWithQueue = { id: 'u1', attackQueue: [{ target: { id: 't1' } }] }
+      const unitNoQueue = { id: 'u2' }
+      gameState.attackGroupTargets = [{ id: 't1' }]
+
+      clearAttackGroupState([unitWithQueue, unitNoQueue])
+
+      expect(unitWithQueue.attackQueue).toBe(null)
+      expect(gameState.attackGroupTargets).toEqual([])
+    })
+  })
+
+  describe('canAmbulanceProvideCrew', () => {
+    it('returns false for invalid ambulances', () => {
+      expect(canAmbulanceProvideCrew(null)).toBe(false)
+      expect(canAmbulanceProvideCrew({ type: 'tank' })).toBe(false)
+      expect(canAmbulanceProvideCrew({ type: 'ambulance', health: 0 })).toBe(false)
+      expect(canAmbulanceProvideCrew({ type: 'ambulance', health: 10, crew: { loader: false } })).toBe(false)
+      expect(canAmbulanceProvideCrew({ type: 'ambulance', health: 10, medics: 0 })).toBe(false)
+    })
+
+    it('returns true for valid ambulances', () => {
+      expect(canAmbulanceProvideCrew({ type: 'ambulance', health: 10, medics: 1 })).toBe(true)
+    })
+  })
+
+  describe('canTankerProvideFuel', () => {
+    it('returns false for invalid tankers', () => {
+      expect(canTankerProvideFuel(null)).toBe(false)
+      expect(canTankerProvideFuel({ type: 'tank' })).toBe(false)
+      expect(canTankerProvideFuel({ type: 'tankerTruck', health: 0 })).toBe(false)
+      expect(canTankerProvideFuel({ type: 'tankerTruck', health: 10, crew: { loader: false } })).toBe(false)
+    })
+
+    it('returns true for valid tankers', () => {
+      expect(canTankerProvideFuel({ type: 'tankerTruck', health: 10 })).toBe(true)
+    })
+  })
+
+  describe('canRecoveryTankRepair', () => {
+    it('returns false for invalid recovery tanks', () => {
+      expect(canRecoveryTankRepair(null)).toBe(false)
+      expect(canRecoveryTankRepair({ type: 'tank' })).toBe(false)
+      expect(canRecoveryTankRepair({ type: 'recoveryTank', health: 0 })).toBe(false)
+      expect(canRecoveryTankRepair({ type: 'recoveryTank', health: 10, crew: { loader: false } })).toBe(false)
+    })
+
+    it('returns true for valid recovery tanks', () => {
+      expect(canRecoveryTankRepair({ type: 'recoveryTank', health: 10 })).toBe(true)
+    })
+  })
+
+  describe('canAmmunitionTruckOperate', () => {
+    it('returns false for invalid ammo trucks', () => {
+      expect(canAmmunitionTruckOperate(null)).toBe(false)
+      expect(canAmmunitionTruckOperate({ type: 'tank' })).toBe(false)
+      expect(canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 0 })).toBe(false)
+      expect(canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 10, crew: { loader: false } })).toBe(false)
+    })
+
+    it('returns true for operational ammo trucks', () => {
+      expect(canAmmunitionTruckOperate({ type: 'ammunitionTruck', health: 10 })).toBe(true)
+    })
+  })
+
+  describe('canAmmunitionTruckProvideAmmo', () => {
+    it('returns false when truck cannot operate', () => {
+      expect(canAmmunitionTruckProvideAmmo({ type: 'ammunitionTruck', health: 0 })).toBe(false)
+    })
+
+    it('returns false when truck has no ammo', () => {
+      expect(canAmmunitionTruckProvideAmmo({ type: 'ammunitionTruck', health: 10, ammoCargo: 0 })).toBe(false)
+    })
+
+    it('returns true when truck has ammo', () => {
+      expect(canAmmunitionTruckProvideAmmo({ type: 'ammunitionTruck', health: 10, ammoCargo: 5 })).toBe(true)
+    })
+  })
+
+  describe('isEnemyTargetForUnit', () => {
+    it('returns false for invalid inputs', () => {
+      expect(isEnemyTargetForUnit(null, { owner: 'player1' })).toBe(false)
+      expect(isEnemyTargetForUnit({ owner: 'player2' }, null)).toBe(false)
+    })
+
+    it('detects enemy targets correctly', () => {
+      expect(isEnemyTargetForUnit({ owner: 'player2' }, { owner: 'player1' })).toBe(true)
+      expect(isEnemyTargetForUnit({ owner: 'player1' }, { owner: 'player1' })).toBe(false)
+      expect(isEnemyTargetForUnit({ owner: 'player' }, { owner: 'player1' })).toBe(false)
+    })
+  })
+
+  describe('getTargetPoint', () => {
+    it('returns center point for units with tileX', () => {
+      const unitTarget = { tileX: 3, tileY: 4, x: 96, y: 128 }
+      const point = getTargetPoint(unitTarget, { x: 0, y: 0 })
+      expect(point.x).toBe(96 + 16)
+      expect(point.y).toBe(128 + 16)
+    })
+
+    it('returns closest point on building rectangle', () => {
+      const buildingTarget = { x: 4, y: 5, width: 2, height: 2 }
+      const unitCenter = { x: 64, y: 80 }
+      const point = getTargetPoint(buildingTarget, unitCenter)
+      // Building is at pixel 128,160 to 192,224. Unit center at 64,80 is to the left and above
+      expect(point.x).toBe(128) // Clipped to left edge
+      expect(point.y).toBe(160) // Clipped to top edge
+    })
+  })
+
+  describe('findUnitById', () => {
+    it('returns null for invalid id', () => {
+      expect(findUnitById(null)).toBe(null)
+      expect(findUnitById(undefined)).toBe(null)
+    })
+
+    it('finds unit by id', () => {
+      units.push({ id: 'u1', type: 'tank' })
+      expect(findUnitById('u1')).toEqual({ id: 'u1', type: 'tank' })
+      expect(findUnitById('nonexistent')).toBe(null)
+    })
   })
 })

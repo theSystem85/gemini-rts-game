@@ -50,7 +50,7 @@ const RECOVERY_APPROACH_OFFSETS = [
   { x: 1, y: 1 }
 ]
 
-function getUnitTilePosition(unit) {
+export function getUnitTilePosition(unit) {
   if (!unit) return null
   if (typeof unit.tileX === 'number' && typeof unit.tileY === 'number') {
     return { x: unit.tileX, y: unit.tileY }
@@ -64,7 +64,7 @@ function getUnitTilePosition(unit) {
   return null
 }
 
-function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTileOverride = null) {
+export function computeUtilityApproachPath(serviceUnit, target, mode, mapGrid, startTileOverride = null) {
   if (!serviceUnit || !target || !mapGrid || mapGrid.length === 0) {
     return null
   }
@@ -2156,4 +2156,50 @@ export class UnitCommandsHandler {
       }
     }
   }
+}
+
+// Export utility functions from the class as standalone functions for testing
+export function clearAttackGroupState(units) {
+  const handler = new UnitCommandsHandler()
+  return handler.clearAttackGroupState(units)
+}
+
+export function canAmbulanceProvideCrew(ambulance) {
+  const handler = new UnitCommandsHandler()
+  return handler.canAmbulanceProvideCrew(ambulance)
+}
+
+export function canTankerProvideFuel(tanker) {
+  const handler = new UnitCommandsHandler()
+  return handler.canTankerProvideFuel(tanker)
+}
+
+export function canRecoveryTankRepair(tank) {
+  const handler = new UnitCommandsHandler()
+  return handler.canRecoveryTankRepair(tank)
+}
+
+export function canAmmunitionTruckOperate(ammoTruck) {
+  const handler = new UnitCommandsHandler()
+  return handler.canAmmunitionTruckOperate(ammoTruck)
+}
+
+export function canAmmunitionTruckProvideAmmo(ammoTruck) {
+  const handler = new UnitCommandsHandler()
+  return handler.canAmmunitionTruckProvideAmmo(ammoTruck)
+}
+
+export function isEnemyTargetForUnit(target, unit) {
+  const handler = new UnitCommandsHandler()
+  return handler.isEnemyTargetForUnit(target, unit)
+}
+
+export function getTargetPoint(target, unitCenter) {
+  const handler = new UnitCommandsHandler()
+  return handler.getTargetPoint(target, unitCenter)
+}
+
+export function findUnitById(id) {
+  const handler = new UnitCommandsHandler()
+  return handler.findUnitById(id)
 }

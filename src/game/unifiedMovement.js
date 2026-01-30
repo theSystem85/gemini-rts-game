@@ -70,13 +70,8 @@ function calculatePositionalAudio(x, y) {
   return { pan, volumeFactor }
 }
 
-/**
- * Check if a unit entering a tile triggers mine detonation
- * @param {object} unit - The unit entering the tile
- * @param {number} tileX - Tile X coordinate
- * @param {number} tileY - Tile Y coordinate
- */
-function checkMineDetonation(unit, tileX, tileY, units, buildings) {
+export function checkMineDetonation(unit, tileX, tileY, units, buildings) {
+  if (!unit) return
   const mine = getMineAtTile(tileX, tileY)
   if (!mine || !mine.active || !isUnitCenterInsideMineCircle(unit, tileX, tileY)) {
     return
@@ -89,7 +84,7 @@ function checkMineDetonation(unit, tileX, tileY, units, buildings) {
   detonateMine(mine, units, buildings)
 }
 
-function isUnitCenterInsideMineCircle(unit, tileX, tileY) {
+export function isUnitCenterInsideMineCircle(unit, tileX, tileY) {
   if (!unit || typeof tileX !== 'number' || typeof tileY !== 'number') return false
   const offset = TILE_SIZE / 2
   const unitCenterX = unit.x + offset
@@ -1092,7 +1087,7 @@ function updateUnitRotation(unit) {
 /**
  * Normalize angle to [-π, π] range
  */
-function normalizeAngle(angle) {
+export function normalizeAngle(angle) {
   while (angle > Math.PI) angle -= 2 * Math.PI
   while (angle < -Math.PI) angle += 2 * Math.PI
   return angle
@@ -1486,7 +1481,7 @@ function applyStaticObstacleCollisionResponse(
   movement.lastStaticCollisionNormal = { x: normalX, y: normalY }
 }
 
-function isAirborneUnit(unit) {
+export function isAirborneUnit(unit) {
   if (!unit) return false
   if (unit.isAirUnit && unit.flightState !== 'grounded') {
     return true
@@ -1494,7 +1489,7 @@ function isAirborneUnit(unit) {
   return unit.type === 'apache' && unit.flightState !== 'grounded'
 }
 
-function isGroundUnit(unit) {
+export function isGroundUnit(unit) {
   if (!unit) return false
   return !isAirborneUnit(unit)
 }
@@ -1872,7 +1867,7 @@ function applyBuildingCollisionResponse(unit, movement, collisionResult, units =
   return false
 }
 
-function ownersAreEnemies(ownerA, ownerB) {
+export function ownersAreEnemies(ownerA, ownerB) {
   if (!ownerA || !ownerB) {
     return false
   }
@@ -2379,9 +2374,9 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
 /**
  * Check if a position is valid for dodge movement
  */
-function isValidDodgePosition(x, y, mapGrid, units) {
+export function isValidDodgePosition(x, y, mapGrid, units) {
   // Check bounds
-  if (x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) {
+  if (!mapGrid || x < 0 || y < 0 || x >= mapGrid[0].length || y >= mapGrid.length) {
     return false
   }
 

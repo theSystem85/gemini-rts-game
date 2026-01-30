@@ -274,8 +274,11 @@ describe('main.js', () => {
     ]
     mockElements.forEach(id => {
       if (!document.getElementById(id)) {
-        const el = document.createElement('div')
+        const el = document.createElement(['mapSeed', 'mapWidthTiles', 'mapHeightTiles', 'playerCount', 'speedMultiplier'].includes(id) ? 'input' : 'div')
         el.id = id
+        if (el.tagName === 'INPUT') {
+          el.value = id === 'playerCount' ? '2' : ''
+        }
         document.body.appendChild(el)
       }
     })
@@ -474,6 +477,110 @@ describe('main.js', () => {
     it('should initialize mobile viewport lock', async() => {
       const { initializeMobileViewportLock } = await import('../../src/ui/mobileViewportLock.js')
       expect(initializeMobileViewportLock).toHaveBeenCalled()
+    })
+  })
+
+  describe('updateTouchClass', () => {
+    it('should not throw when called', () => {
+      expect(() => {
+        mainModule.updateTouchClass()
+      }).not.toThrow()
+    })
+  })
+
+  describe('updateStandaloneClass', () => {
+    it('should not throw when called', () => {
+      expect(() => {
+        mainModule.updateStandaloneClass()
+      }).not.toThrow()
+    })
+  })
+
+  describe('sanitizeMapDimension', () => {
+    it('should return parsed integer when valid', () => {
+      expect(mainModule.sanitizeMapDimension('100', 50)).toBe(100)
+    })
+
+    it('should return minimum value when below minimum', () => {
+      expect(mainModule.sanitizeMapDimension('10', 50)).toBe(50) // MIN_MAP_TILES
+    })
+
+    it('should return fallback when value is invalid', () => {
+      expect(mainModule.sanitizeMapDimension('invalid', 75)).toBe(75)
+    })
+
+    it('should handle float values by flooring', () => {
+      expect(mainModule.sanitizeMapDimension('100.7', 50)).toBe(100)
+    })
+  })
+
+  describe('resolveMapSeed', () => {
+    it('should return sanitized seed as string', () => {
+      const result = mainModule.resolveMapSeed('test-seed')
+      expect(typeof result).toBe('string')
+      expect(result).toBe('test-seed') // Mocked sanitizeSeed returns the input
+    })
+
+    it('should handle random keyword', () => {
+      const result = mainModule.resolveMapSeed('random')
+      expect(typeof result).toBe('string')
+    })
+  })
+
+  describe('loadPersistedSettings', () => {
+    afterEach(() => {
+      localStorage.clear()
+      // Clean up DOM
+      document.body.innerHTML = ''
+    })
+
+    it('should load map seed from localStorage', () => {
+      localStorage.setItem('rts-map-seed', 'test-seed')
+
+      mainModule.loadPersistedSettings()
+
+      const seedInput = document.getElementById('mapSeed')
+      expect(seedInput.value).toBe('test-seed')
+    })
+
+    it('should load and validate map dimensions', () => {
+      mainModule.loadPersistedSettings()
+
+      const widthInput = document.getElementById('mapWidthTiles')
+      const heightInput = document.getElementById('mapHeightTiles')
+      expect(widthInput.value).toBe('100') // default value
+      expect(heightInput.value).toBe('100') // default value
+    })
+
+    it('should load player count and validate range', async() => {
+      localStorage.setItem('rts-player-count', '3')
+
+      const { gameState } = await import('../../src/gameState.js')
+
+      mainModule.loadPersistedSettings()
+
+      const playerInput = document.getElementById('playerCount')
+      expect(playerInput.value).toBe('3')
+      expect(gameState.playerCount).toBe(3)
+    })
+
+    it('should handle invalid player count', () => {
+      localStorage.setItem('rts-player-count', '10')
+
+      mainModule.loadPersistedSettings()
+
+      const playerInput = document.getElementById('playerCount')
+      expect(playerInput.value).toBe('2') // should remain default
+    })
+
+    it('should load shadow of war setting', async() => {
+      localStorage.setItem('rts-shadow-of-war-enabled', 'true')
+
+      const { gameState } = await import('../../src/gameState.js')
+
+      mainModule.loadPersistedSettings()
+
+      expect(gameState.shadowOfWarEnabled).toBe(true)
     })
   })
 })

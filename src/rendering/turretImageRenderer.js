@@ -1,7 +1,7 @@
 // turretImageRenderer.js
 // Renders turret buildings using separate base and top image assets
 
-import turretImageConfig from '../turretImageConfig.json'
+import turretImageConfig from '../turretImageConfig.json' with { type: 'json' }
 import { MUZZLE_FLASH_DURATION } from '../config.js'
 
 // Cache for loaded turret images

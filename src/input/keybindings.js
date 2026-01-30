@@ -1,7 +1,7 @@
 // keybindings.js
 // Centralized keybinding definitions, persistence, and matching helpers
 
-import versionInfo from '../version.json'
+import versionInfo from '../version.json' with { type: 'json' }
 
 const STORAGE_KEY = 'rts-custom-keybindings'
 

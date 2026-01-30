@@ -35,7 +35,7 @@ import { getTextureManager, preloadTileTextures, getMapRenderer, notifyTileMutat
 import { milestoneSystem } from './game/milestoneSystem.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { APP_VERSION } from './version.js'
-import versionInfo from './version.json'
+import versionInfo from './version.json' with { type: 'json' }
 import { initializeShadowOfWar, updateShadowOfWar } from './game/shadowOfWar.js'
 import { initSpatialQuadtree } from './game/spatialQuadtree.js'
 import { registerMapEditorRendering, deactivateMapEditMode, setMapEditorRenderScheduler, setMapEditorProductionController } from './mapEditor.js'
@@ -2120,6 +2120,9 @@ buildingCosts['factory'] = 5000
 // Export for backward compatibility
 export { unitCosts }
 export { showNotification }
+
+// Export utility functions for testing
+export { sanitizeMapDimension, resolveMapSeed, updateTouchClass, updateStandaloneClass, loadPersistedSettings }
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', async() => {

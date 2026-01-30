@@ -1,7 +1,7 @@
 // rendering/tankImageRenderer.js
 // Image-based tank rendering system using 3 separate image assets
 import { TILE_SIZE, RECOIL_DISTANCE, RECOIL_DURATION, MUZZLE_FLASH_DURATION, MUZZLE_FLASH_SIZE } from '../config.js'
-import tankImageConfigData from '../tankImageConfig.json'
+import tankImageConfigData from '../tankImageConfig.json' with { type: 'json' }
 
 // Tank image asset cache - organized by tank variant
 const tankImageCache = {

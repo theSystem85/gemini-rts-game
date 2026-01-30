@@ -89,6 +89,20 @@ vi.mock('../../src/main.js', () => ({
 }))
 
 import { MouseHandler } from '../../src/input/mouseHandler.js'
+import {
+  isRallyPointTileBlocked,
+  isUtilityUnit,
+  shouldStartUtilityQueueMode,
+  createSyntheticMouseEvent,
+  createSyntheticMouseEventFromCoords,
+  getTouchCenter,
+  handleContextMenu,
+  updateAGFCapability,
+  isOverRecoveryTankAt,
+  isOverDamagedUnitAt,
+  findEnemyTarget,
+  selectWreck
+} from '../../src/input/mouseHandler.js'
 import { gameState } from '../../src/gameState.js'
 import { TILE_SIZE, TANK_FIRE_RANGE } from '../../src/config.js'
 import { GAME_DEFAULT_CURSOR } from '../../src/input/cursorStyles.js'
@@ -148,28 +162,28 @@ describe('MouseHandler', () => {
   })
 
   it('detects blocked rally point tiles based on occupancy bounds', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
 
-    expect(handler.isRallyPointTileBlocked(1, 1)).toBe(false)
+    expect(isRallyPointTileBlocked(1, 1)).toBe(false)
 
     gameState.occupancyMap = [[0, 0], [0, 1]]
 
-    expect(handler.isRallyPointTileBlocked(5, 0)).toBe(true)
-    expect(handler.isRallyPointTileBlocked(0, 5)).toBe(true)
-    expect(handler.isRallyPointTileBlocked(1, 1)).toBe(true)
-    expect(handler.isRallyPointTileBlocked(0, 0)).toBe(false)
+    expect(isRallyPointTileBlocked(5, 0)).toBe(true)
+    expect(isRallyPointTileBlocked(0, 5)).toBe(true)
+    expect(isRallyPointTileBlocked(1, 1)).toBe(true)
+    expect(isRallyPointTileBlocked(0, 0)).toBe(false)
   })
 
   it('identifies utility units and queue eligibility', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
 
-    expect(handler.isUtilityUnit(null)).toBe(false)
-    expect(handler.isUtilityUnit({ isUtilityUnit: true })).toBe(true)
-    expect(handler.isUtilityUnit({ type: 'ambulance' })).toBe(true)
-    expect(handler.isUtilityUnit({ type: 'tank' })).toBe(false)
+    expect(isUtilityUnit(null)).toBe(false)
+    expect(isUtilityUnit({ isUtilityUnit: true })).toBe(true)
+    expect(isUtilityUnit({ type: 'ambulance' })).toBe(true)
+    expect(isUtilityUnit({ type: 'tank' })).toBe(false)
 
-    expect(handler.shouldStartUtilityQueueMode([{ type: 'tank' }])).toBe(false)
-    expect(handler.shouldStartUtilityQueueMode([{ type: 'tankerTruck' }])).toBe(true)
+    expect(shouldStartUtilityQueueMode([{ type: 'tank' }])).toBe(false)
+    expect(shouldStartUtilityQueueMode([{ type: 'tankerTruck' }])).toBe(true)
   })
 
   it('queues utility targets within a drag selection', () => {
@@ -261,7 +275,7 @@ describe('MouseHandler', () => {
   })
 
   it('updates hover state with ranged combat info', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const cursorManager = createCursorManager()
     const friendlyTank = {
       id: 'tank-1',
@@ -281,7 +295,7 @@ describe('MouseHandler', () => {
     const worldX = enemyUnit.x + TILE_SIZE / 2
     const worldY = enemyUnit.y + TILE_SIZE / 2
 
-    handler.updateEnemyHover(worldX, worldY, [enemyUnit], [], [friendlyTank], cursorManager)
+    _handler.updateEnemyHover(worldX, worldY, [enemyUnit], [], [friendlyTank], cursorManager)
 
     expect(cursorManager.setIsOverEnemy).toHaveBeenCalledWith(true)
     expect(cursorManager.setIsOverFriendlyUnit).toHaveBeenCalledWith(false)
@@ -297,10 +311,10 @@ describe('MouseHandler', () => {
   })
 
   it('clears hover state when no units are selected', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const cursorManager = createCursorManager()
 
-    handler.updateEnemyHover(0, 0, [], [], [], cursorManager)
+    _handler.updateEnemyHover(0, 0, [], [], [], cursorManager)
 
     expect(cursorManager.setIsOverEnemy).toHaveBeenCalledWith(false)
     expect(cursorManager.setIsOverFriendlyUnit).toHaveBeenCalledWith(false)
@@ -310,7 +324,7 @@ describe('MouseHandler', () => {
   })
 
   it('issues force attack for building defenders and ground targets', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const selectionManager = {
       isCommandableUnit: () => true,
       isHumanPlayerBuilding: () => true,
@@ -342,7 +356,7 @@ describe('MouseHandler', () => {
       }
     ]
 
-    const handledBuilding = handler.handleForceAttackCommand(
+    const handledBuilding = _handler.handleForceAttackCommand(
       TILE_SIZE / 2,
       TILE_SIZE / 2,
       [],
@@ -368,7 +382,7 @@ describe('MouseHandler', () => {
       isBuilding: false
     }
 
-    const handledGround = handler.handleForceAttackCommand(
+    const handledGround = _handler.handleForceAttackCommand(
       TILE_SIZE * 2,
       TILE_SIZE * 3,
       [],
@@ -393,7 +407,7 @@ describe('MouseHandler', () => {
   })
 
   it('assigns guard mode to friendly targets', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const selectionManager = {
       isCommandableUnit: () => true,
       isHumanPlayerUnit: unit => unit.owner === 'player'
@@ -416,7 +430,7 @@ describe('MouseHandler', () => {
     const worldX = ally.x + TILE_SIZE / 2
     const worldY = ally.y + TILE_SIZE / 2
 
-    const handled = handler.handleGuardCommand(
+    const handled = _handler.handleGuardCommand(
       worldX,
       worldY,
       [ally],
@@ -433,11 +447,11 @@ describe('MouseHandler', () => {
   })
 
   it('prioritizes refinery unload and ore harvesting commands', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const selectionManager = {
       isCommandableUnit: () => true
     }
-    handler.selectionManager = selectionManager
+    _handler.selectionManager = selectionManager
 
     const harvester = {
       id: 'harvester-1',
@@ -464,7 +478,7 @@ describe('MouseHandler', () => {
       }
     ]
 
-    handler.handleStandardCommands(
+    _handler.handleStandardCommands(
       TILE_SIZE * 1.5,
       TILE_SIZE * 1.5,
       [harvester],
@@ -478,7 +492,7 @@ describe('MouseHandler', () => {
     gameState.buildings = []
     mapGrid[2][2].ore = 1
 
-    handler.handleStandardCommands(
+    _handler.handleStandardCommands(
       TILE_SIZE * 2,
       TILE_SIZE * 2,
       [harvester],
@@ -494,7 +508,7 @@ describe('MouseHandler', () => {
   })
 
   it('creates synthetic mouse events from pointer data', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const target = document.createElement('div')
     const event = {
       clientX: 10,
@@ -507,7 +521,7 @@ describe('MouseHandler', () => {
       stopPropagation: vi.fn()
     }
 
-    const synthetic = handler.createSyntheticMouseEvent(event, target, 2)
+    const synthetic = createSyntheticMouseEvent(event, target, 2)
 
     expect(synthetic.button).toBe(2)
     expect(synthetic.buttons).toBe(2)
@@ -519,40 +533,40 @@ describe('MouseHandler', () => {
   })
 
   it('averages touch points for two-finger pan center', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const activePointers = new Map()
 
     activePointers.set(1, { startX: 0, startY: 0, lastEvent: { clientX: 10, clientY: 10 } })
     activePointers.set(2, { startX: 20, startY: 20, lastEvent: null })
 
-    const center = handler.getTouchCenter([1, 2], activePointers)
+    const center = getTouchCenter([1, 2], activePointers)
 
     expect(center.x).toBe(15)
     expect(center.y).toBe(15)
   })
 
   it('getTouchCenter handles empty pointer array', () => {
-    const handler = new MouseHandler()
-    const center = handler.getTouchCenter([], new Map())
+    const _handler = new MouseHandler()
+    const center = getTouchCenter([], new Map())
     expect(center).toEqual({ x: 0, y: 0 })
   })
 
   it('getTouchCenter handles missing pointer entry', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const activePointers = new Map()
     activePointers.set(1, { startX: 10, startY: 20, lastEvent: null })
 
-    const center = handler.getTouchCenter([1, 999], activePointers)
+    const center = getTouchCenter([1, 999], activePointers)
     // Only pointer 1 contributes, divided by 2 still
     expect(center.x).toBe(5)
     expect(center.y).toBe(10)
   })
 
   it('createSyntheticMouseEventFromCoords creates event without modifier keys', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const target = document.createElement('canvas')
 
-    const event = handler.createSyntheticMouseEventFromCoords(target, 100, 200, 0)
+    const event = createSyntheticMouseEventFromCoords(target, 100, 200, 0)
 
     expect(event.button).toBe(0)
     expect(event.buttons).toBe(1)
@@ -568,52 +582,52 @@ describe('MouseHandler', () => {
   })
 
   it('createSyntheticMouseEventFromCoords handles right-click button', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const target = document.createElement('canvas')
 
-    const event = handler.createSyntheticMouseEventFromCoords(target, 50, 75, 2)
+    const event = createSyntheticMouseEventFromCoords(target, 50, 75, 2)
 
     expect(event.button).toBe(2)
     expect(event.buttons).toBe(2)
   })
 
   it('isOverRecoveryTankAt returns false when no game units', () => {
-    const handler = new MouseHandler()
-    handler.gameUnits = null
-    expect(handler.isOverRecoveryTankAt(100, 100)).toBe(false)
+    const _handler = new MouseHandler()
+    _handler.gameUnits = null
+    expect(isOverRecoveryTankAt(_handler, 100, 100)).toBe(false)
   })
 
   it('isOverRecoveryTankAt detects recovery tank at tile position', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     gameState.humanPlayer = 'player'
     // Unit at pixel (32, 32) has unitTileX = floor((32 + 16)/32) = 1, unitTileY = 1
-    handler.gameUnits = [
+    _handler.gameUnits = [
       { type: 'recoveryTank', owner: 'player', x: TILE_SIZE, y: TILE_SIZE }
     ]
     // Mouse at worldX=48=1.5*32 gives tileX = floor(48/32) = 1
-    expect(handler.isOverRecoveryTankAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(true)
+    expect(isOverRecoveryTankAt(_handler, TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(true)
     // Mouse at (0,0) gives tileX = 0, tileY = 0
-    expect(handler.isOverRecoveryTankAt(0, 0)).toBe(false)
+    expect(isOverRecoveryTankAt(_handler, 0, 0)).toBe(false)
   })
 
   it('isOverRecoveryTankAt ignores enemy recovery tanks', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     gameState.humanPlayer = 'player'
-    handler.gameUnits = [
+    _handler.gameUnits = [
       { type: 'recoveryTank', owner: 'enemy', x: TILE_SIZE + TILE_SIZE / 2, y: TILE_SIZE + TILE_SIZE / 2 }
     ]
 
-    expect(handler.isOverRecoveryTankAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(false)
+    expect(isOverRecoveryTankAt(_handler, TILE_SIZE * 1.5, TILE_SIZE * 1.5)).toBe(false)
   })
 
   it('isOverDamagedUnitAt returns false when no game units', () => {
-    const handler = new MouseHandler()
-    handler.gameUnits = null
-    expect(handler.isOverDamagedUnitAt(100, 100, [])).toBe(false)
+    const _handler = new MouseHandler()
+    _handler.gameUnits = null
+    expect(isOverDamagedUnitAt(_handler, 100, 100, [])).toBe(false)
   })
 
   it('isOverDamagedUnitAt detects damaged unit at tile position', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     gameState.humanPlayer = 'player'
     const damagedUnit = {
       id: 'tank1',
@@ -625,47 +639,47 @@ describe('MouseHandler', () => {
       x: TILE_SIZE,
       y: TILE_SIZE
     }
-    handler.gameUnits = [damagedUnit]
+    _handler.gameUnits = [damagedUnit]
 
     // Mouse at worldX=48 gives tileX = floor(48/32) = 1
-    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5, [])).toBe(true)
+    expect(isOverDamagedUnitAt(_handler, TILE_SIZE * 1.5, TILE_SIZE * 1.5, [])).toBe(true)
     // Returns false if unit is in selectedUnits
-    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE * 1.5, [damagedUnit])).toBe(false)
+    expect(isOverDamagedUnitAt(_handler, TILE_SIZE * 1.5, TILE_SIZE * 1.5, [damagedUnit])).toBe(false)
   })
 
   it('isOverDamagedUnitAt ignores healthy units and recovery tanks', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     gameState.humanPlayer = 'player'
-    handler.gameUnits = [
+    _handler.gameUnits = [
       { type: 'tank', owner: 'player', health: 100, maxHealth: 100, x: TILE_SIZE / 2, y: TILE_SIZE / 2 },
       { type: 'recoveryTank', owner: 'player', health: 50, maxHealth: 100, x: TILE_SIZE * 1.5, y: TILE_SIZE / 2 }
     ]
 
-    expect(handler.isOverDamagedUnitAt(TILE_SIZE / 2, TILE_SIZE / 2, [])).toBe(false)
-    expect(handler.isOverDamagedUnitAt(TILE_SIZE * 1.5, TILE_SIZE / 2, [])).toBe(false)
+    expect(isOverDamagedUnitAt(_handler, TILE_SIZE / 2, TILE_SIZE / 2, [])).toBe(false)
+    expect(isOverDamagedUnitAt(_handler, TILE_SIZE * 1.5, TILE_SIZE / 2, [])).toBe(false)
   })
 
   it('setRenderScheduler stores the callback', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const callback = vi.fn()
 
-    handler.setRenderScheduler(callback)
+    _handler.setRenderScheduler(callback)
 
-    expect(handler.requestRenderFrame).toBe(callback)
+    expect(_handler.requestRenderFrame).toBe(callback)
   })
 
   it('updateAGFCapability delegates to attackGroupHandler', () => {
-    const handler = new MouseHandler()
-    handler.attackGroupHandler.updateAGFCapability = vi.fn()
+    const _handler = new MouseHandler()
+    _handler.attackGroupHandler.updateAGFCapability = vi.fn()
 
     const selectedUnits = [{ id: 'u1', type: 'tank' }]
-    handler.updateAGFCapability(selectedUnits)
+    updateAGFCapability(_handler, selectedUnits)
 
-    expect(handler.attackGroupHandler.updateAGFCapability).toHaveBeenCalledWith(selectedUnits)
+    expect(_handler.attackGroupHandler.updateAGFCapability).toHaveBeenCalledWith(selectedUnits)
   })
 
   it('selectWreck clears unit selections and sets selectedWreckId', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const selectionManager = {
       clearAttackGroupTargets: vi.fn()
     }
@@ -681,7 +695,7 @@ describe('MouseHandler', () => {
     gameState.disableAGFRendering = true
 
     const wreck = { id: 'wreck-123' }
-    handler.selectWreck(wreck, selectedUnits, factories, selectionManager)
+    selectWreck(wreck, selectedUnits, factories, selectionManager)
 
     expect(selectedUnits.every(u => u.selected === false)).toBe(true)
     expect(selectedUnits).toHaveLength(0)
@@ -694,15 +708,15 @@ describe('MouseHandler', () => {
   })
 
   it('selectWreck handles null inputs gracefully', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     // Should not throw
-    handler.selectWreck(null, [], [], null)
-    handler.selectWreck({ id: 'w1' }, [], null, null)
+    selectWreck(null, [], [], null)
+    selectWreck({ id: 'w1' }, [], null, null)
   })
 
   it('findEnemyTarget detects enemy buildings', () => {
-    const handler = new MouseHandler()
-    handler.gameFactories = []
+    const _handler = new MouseHandler()
+    _handler.gameFactories = []
 
     gameState.buildings = [
       {
@@ -715,13 +729,13 @@ describe('MouseHandler', () => {
       }
     ]
 
-    const target = handler.findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5)
+    const target = findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5, [], [])
     expect(target).toBe(gameState.buildings[0])
   })
 
   it('findEnemyTarget detects enemy factories', () => {
-    const handler = new MouseHandler()
-    handler.gameFactories = [
+    const _handler = new MouseHandler()
+    _handler.gameFactories = [
       {
         id: 'enemy',
         x: 5,
@@ -733,13 +747,13 @@ describe('MouseHandler', () => {
 
     gameState.buildings = []
 
-    const target = handler.findEnemyTarget(TILE_SIZE * 5.5, TILE_SIZE * 5.5)
-    expect(target).toBe(handler.gameFactories[0])
+    const target = findEnemyTarget(TILE_SIZE * 5.5, TILE_SIZE * 5.5, _handler.gameFactories, [])
+    expect(target).toBe(_handler.gameFactories[0])
   })
 
   it('findEnemyTarget ignores player-owned buildings and factories', () => {
-    const handler = new MouseHandler()
-    handler.gameFactories = [
+    const _handler = new MouseHandler()
+    _handler.gameFactories = [
       {
         id: 'player',
         x: 5,
@@ -760,12 +774,12 @@ describe('MouseHandler', () => {
       }
     ]
 
-    const target = handler.findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5)
+    const target = findEnemyTarget(TILE_SIZE * 2.5, TILE_SIZE * 2.5, _handler.gameFactories, [])
     expect(target).toBe(null)
   })
 
   it('cancels repair and sell modes on context menu', () => {
-    const handler = new MouseHandler()
+    const _handler = new MouseHandler()
     const gameCanvas = document.createElement('canvas')
     gameCanvas.classList.add('repair-mode', 'sell-mode')
 
@@ -782,7 +796,7 @@ describe('MouseHandler', () => {
     gameState.repairMode = true
     gameState.sellMode = true
 
-    handler.handleContextMenu({ preventDefault: vi.fn() }, gameCanvas)
+    handleContextMenu({ preventDefault: vi.fn() }, gameCanvas)
 
     expect(gameState.repairMode).toBe(false)
     expect(gameState.sellMode).toBe(false)

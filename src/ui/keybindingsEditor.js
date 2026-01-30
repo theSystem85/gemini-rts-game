@@ -2,7 +2,7 @@
 // Renders the keybindings editor tab and wires capture/export/import controls
 
 import { keybindingManager, KEYBINDING_CONTEXTS } from '../input/keybindings.js'
-import versionInfo from '../version.json'
+import versionInfo from '../version.json' with { type: 'json' }
 
 const CONTEXT_LABELS = {
   [KEYBINDING_CONTEXTS.DEFAULT]: 'In-Game',
