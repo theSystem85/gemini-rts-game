@@ -7,6 +7,10 @@
 
 **Note**: This is a retrospective specification documenting an already-implemented feature for the CodeAndConquer RTS game.
 
+## Maintenance Updates
+
+- 2026-02-01: Split `src/game/unitCombat.js` into focused submodules under `src/game/unitCombat/` to keep each file under 1k LOC while preserving existing combat behavior.
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Hit Zone Damage System (Priority: P1)
