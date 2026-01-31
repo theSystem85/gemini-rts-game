@@ -736,7 +736,7 @@ export function broadcastGamePauseState(paused) {
  * Only includes essential data that needs to be synced
  * @returns {Object}
  */
-function createGameStateSnapshot() {
+export function createGameStateSnapshot() {
   const now = performance.now()
 
   // Serialize units with essential properties - use mainUnits from main.js as that's the authoritative array
@@ -986,7 +986,7 @@ function syncClientMap(seed, width, height, playerCount) {
  * Apply a game state snapshot received from the host
  * @param {Object} snapshot - The game state snapshot
  */
-function applyGameStateSnapshot(snapshot) {
+export function applyGameStateSnapshot(snapshot) {
   if (!snapshot || isHost()) {
     return
   }
