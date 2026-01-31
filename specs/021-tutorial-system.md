@@ -54,6 +54,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 
 ## Implementation Notes
 - Provide a `TutorialSystem` module in `src/ui` with a steps array and demo + completion callbacks.
+- Keep tutorial code split into helper, UI, and step modules so each file stays under 1k LOC.
 - Initialize the tutorial in the main UI setup flow after settings are available.
 - Ensure demo actions call the same production, selection, and command systems used by players.
 - Resume Web Audio only after a user gesture to avoid browser AudioContext warnings.
