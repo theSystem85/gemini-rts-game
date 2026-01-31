@@ -1,12 +1,25 @@
 # State Synchronization Module (stateSync.js)
 
 ## Context
-- Date: 2026-01-31
+- Date: 2026-01-31 (Updated: 2026-02-01)
 - Prompt Source: Refactoring request to extract state sync functionality
 - LLM: GitHub Copilot
 
 ## Overview
 The `stateSync.js` module is responsible for synchronizing game state between host and clients in multiplayer sessions. It was extracted from `gameCommandSync.js` to improve code organization and maintainability.
+
+**Refactoring Update (2026-02-01)**: The original monolithic `gameCommandSync.js` (2068 lines) has been refactored into a thin coordinator module (302 lines) that imports and re-exports functionality from five specialized modules:
+- `commandTypes.js`: Command type definitions and payload creators
+- `networkStats.js`: Network usage tracking
+- `commandBroadcast.js`: Broadcasting commands to peers
+- `stateSync.js`: Game state synchronization (this module)
+- `lockstepSync.js`: Deterministic lockstep synchronization
+
+The refactored `gameCommandSync.js` now serves only as a coordinator that:
+1. Imports all necessary functions from specialized modules
+2. Re-exports everything for backward compatibility
+3. Maintains core state (pending commands, listeners)
+4. Coordinates command handling between modules
 
 ## Module Responsibilities
 
@@ -129,6 +142,7 @@ The `stateSync.js` module is responsible for synchronizing game state between ho
 - `setClientPartyId(partyId)`
 - `getClientPartyId()`
 - `resetClientState()`
+- `createGameStateSnapshot()` *(exported after refactoring)*
 - `applyGameStateSnapshot(snapshot)`
 - `startGameStateSync()`
 - `stopGameStateSync()`
@@ -158,10 +172,14 @@ The `stateSync.js` module is responsible for synchronizing game state between ho
 - Implement entity culling based on distance/relevance
 
 ## Related Modules
-- `gameCommandSync.js`: Main command synchronization and networking
+- `gameCommandSync.js`: Thin coordinator module that imports/re-exports from all specialized modules (refactored from 2068 to 302 lines)
+- `commandTypes.js`: Command type definitions and payload creators (extracted)
+- `networkStats.js`: Network statistics tracking (extracted)
+- `commandBroadcast.js`: Command broadcasting to peers (extracted)
+- `lockstepSync.js`: Deterministic lockstep synchronization (extracted)
 - `webrtcSession.js`: Host WebRTC connection management
 - `remoteConnection.js`: Client WebRTC connection management
-- `lockstepManager.js`: Deterministic lockstep synchronization (alternative approach)
+- `lockstepManager.js`: Lockstep tick management
 - `inputBuffer.js`: Input buffering for lockstep mode
 - `stateHash.js`: State hashing for desync detection
 
