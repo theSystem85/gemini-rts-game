@@ -1,6 +1,5 @@
 // attackCoordination.js - AI attack coordination and multi-directional attack strategies
 import { TILE_SIZE, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE } from '../config.js'
-import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
 import { gameRandom } from '../utils/gameRandom.js'
@@ -212,7 +211,7 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
   return true
 }
 
-function coordinateMultiDirectionalAttack(unit, units, gameState) {
+function _coordinateMultiDirectionalAttack(unit, units, gameState) {
   const target = unit.target
   if (!target) return
 
