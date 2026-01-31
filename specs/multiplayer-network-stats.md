@@ -26,5 +26,5 @@
 
 ## Open Tasks
 - Wire stats tracking to every `send`/`message` handler on host/client data channels.
-- Surface computed rates/totals via `networkStats` object exported from `gameCommandSync.js`.
+- Surface computed rates/totals via `networkStats` object exported from `gameCommandSync.js` (note: state sync functionality now in `stateSync.js` module).
 - Invoke `updateBulletInterpolation()` with the same cadence as unit interpolation to keep projectile visuals smooth for clients.
