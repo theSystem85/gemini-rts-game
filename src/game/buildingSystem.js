@@ -2,13 +2,12 @@
 import { TILE_SIZE, TANK_TURRET_ROT, BUILDING_SELL_DURATION } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
-import { triggerExplosion } from '../logic.js'
+import { angleDiff, hasLineOfSightToTarget, smoothRotateTowardsAngle, triggerExplosion } from '../logic.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { updatePowerSupply, clearBuildingFromMapGrid, buildingData } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { updateDangerZoneMaps } from './dangerZoneMap.js'
-import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
@@ -361,6 +360,11 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
         }
       }      // Regular turret logic
       else {
+        const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
+        const hasClearLineOfSight = target => (
+          mapGrid.length === 0 || hasLineOfSightToTarget({ x: centerX, y: centerY }, target, mapGrid)
+        )
+
         // Check power level for rocket turrets - they don't work when power is below 0
         if (building.type === 'rocketTurret') {
           const currentPowerSupply = building.owner === gameState.humanPlayer ? gameState.playerPowerSupply : gameState.enemyPowerSupply
@@ -375,7 +379,9 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           // Continue burst fire sequence
           if (now - building.lastBurstTime >= building.burstDelay) {
             if (building.currentTargetPosition && closestEnemy) {
-              fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
+              if (hasClearLineOfSight(closestEnemy)) {
+                fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
+              }
               building.currentBurst--
               building.lastBurstTime = now
 
@@ -393,6 +399,9 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
 
             const firingTarget = closestEnemy || building.forcedAttackTarget
             if (firingTarget) {
+              if (!hasClearLineOfSight(firingTarget)) {
+                return
+              }
               // For gun turrets, target angle is already calculated in continuous tracking above
               const targetX = firingTarget.x + (firingTarget.width ? firingTarget.width * TILE_SIZE / 2 : TILE_SIZE / 2)
               const targetY = firingTarget.y + (firingTarget.height ? firingTarget.height * TILE_SIZE / 2 : TILE_SIZE / 2)
