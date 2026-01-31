@@ -8,6 +8,7 @@ import { gameState } from '../gameState.js'
 import { placeBuilding } from '../buildings.js'
 import { units as mainUnits, bullets as mainBullets, factories as mainFactories, regenerateMapForClient } from '../main.js'
 import { setMapDimensions, ORE_SPREAD_ENABLED, setOreSpreadEnabled } from '../config.js'
+import { broadcastGameCommand } from './commandBroadcast.js'
 
 // Re-export COMMAND_TYPES for convenience (will need to import from gameCommandSync or define here)
 // For now, we'll assume it's imported where needed
@@ -988,13 +989,3 @@ export function isRemoteClient() {
 
 // Import dependencies needed for broadcasting
 import { getActiveHostMonitor } from './webrtcSession.js'
-
-/**
- * Broadcast a game command (helper function needed by stateSync)
- * This is a simplified version - full implementation in gameCommandSync.js
- */
-function broadcastGameCommand(commandType, _data, _sender) {
-  // This will need to be properly implemented or imported from commandBroadcast module
-  // For now, this is a placeholder
-  window.logger.warn('[StateSync] broadcastGameCommand needs proper implementation:', commandType)
-}
