@@ -20,6 +20,7 @@
 - [x] Add additional unit tests for smokeUtils.js (26 tests), debugLogger.js (19 tests), logic.js (42 tests), retreat.js (33 tests) - total 120 new tests bringing test count from 1002 to 1128
 - [x] Add more unit tests for hitZoneCalculator.js (36 tests), soundCooldownManager.js (19 tests), serviceRadius.js (31 tests), version.js (4 tests) - total 90 new tests bringing test count from 1128 to 1218
 - [x] Expand bullet system unit tests (Task 3.1) to cover updateBullets and fireBullet behaviors with meaningful scenarios.
+- [x] Split `src/ui/productionController.js` into smaller UI modules (<1k LOC each) while preserving production behavior.
 - [ ] Refactor main.js via code-splitting (<1k LOC per file) into orchestrator, device lifecycle, and mobile layout modules while keeping tests passing.
 - [ ] Speed up Apache helicopter production based on vehicle factory count using the same multiplier as ground vehicles.
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
