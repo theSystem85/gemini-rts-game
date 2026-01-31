@@ -72,6 +72,8 @@
 - [x] ✅ Add image preview for buildings/units under cursor in edit mode, disable range-to-base restrictions in edit mode.
 - [x] ✅ Fix image preview rendering: add onload handlers to trigger re-render when images load.
 - [x] ✅ Enforce edit mode unit placement rules: units replace existing buildings/units at placement location, prevent placement on water/rock tiles.
+- [x] ✅ Match cheat console modal styling with the settings menu UI.
+- [x] ✅ Hide cheat console scrollbars while keeping vertical scroll and preventing horizontal scroll.
 - [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
 - [x] ✅ ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
 - [x] ✅ when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands. Also: cancel button added to connecting modal, beautified modal UI.
