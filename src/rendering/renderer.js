@@ -155,7 +155,7 @@ export class Renderer {
   }
 
   renderGame(gameCtx, gameCanvas, mapGrid, factories, units, bullets, buildings, scrollOffset, selectionActive, selectionStart, selectionEnd, gameState, gpuContext = null, gpuCanvas = null) {
-    if (!gameState) {
+    if (!gameState || !gameCtx) {
       return
     }
 
@@ -245,6 +245,9 @@ export class Renderer {
   }
 
   renderMinimap(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState) {
+    if (!minimapCtx) {
+      return
+    }
     this.minimapRenderer.render(minimapCtx, minimapCanvas, mapGrid, scrollOffset, gameCanvas, units, buildings, gameState)
   }
 

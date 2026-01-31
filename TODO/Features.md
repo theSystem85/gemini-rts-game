@@ -1,4 +1,5 @@
 ## Features
+- [ ] Add a headless browser smoke test that fails on console errors and wire it into CI/Netlify pipelines for merge gating.
 - [ ] Add unit tests for the multi-unit input handler utilities (task 4.9 coverage work).
 - [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
 - [x] ✅ Make the tutorial window draggable on both mobile and desktop by clicking and dragging the card header.

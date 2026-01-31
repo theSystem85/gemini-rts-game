@@ -68,6 +68,7 @@ Extract pure data and validation functions into separate modules:
 - `npm test` - Run all tests once
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run with coverage report
+- `npm run test:smoke` - Load the game in a headless jsdom browser and fail on console errors
 
 ## Test Structure
 
@@ -79,6 +80,12 @@ Example: `buildingPlacement.test.js`
 - Covers 0, 1, 2, 3 tile gaps (MAX_BUILDING_GAP_TILES = 3)
 - Includes negative tests for invalid placements
 - Simulates game loop ticks without rendering
+
+Example: `browserConsoleSmoke.test.js`
+- Loads `index.html` into a jsdom document
+- Imports `src/main.js` to boot the game entrypoint
+- Stubs `fetch` to avoid asset download errors during smoke runs
+- Fails the test if any `console.error` output occurs during startup
 
 ### Unit Tests
 Located in `tests/unit/`

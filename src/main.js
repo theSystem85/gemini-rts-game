@@ -2,7 +2,6 @@
 // Entry point orchestrating high-level wiring after code-splitting
 
 import './utils/debugLogger.js'
-
 import { registerMapEditorRendering } from './mapEditor.js'
 import { getTextureManager, notifyTileMutation } from './rendering.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'

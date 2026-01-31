@@ -4,11 +4,11 @@
 export class CanvasManager {
   constructor() {
     this.gameCanvas = document.getElementById('gameCanvas')
-    this.gameCtx = this.gameCanvas.getContext('2d')
+    this.gameCtx = this.gameCanvas ? this.gameCanvas.getContext('2d') : null
     this.gameGlCanvas = document.getElementById('gameCanvasGL')
     this.gameGl = this.initializeGlContext()
     this.minimapCanvas = document.getElementById('minimap')
-    this.minimapCtx = this.minimapCanvas.getContext('2d')
+    this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null
     this.pixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
 
     this.setupEventListeners()
@@ -173,12 +173,14 @@ export class CanvasManager {
     this.gameCanvas.height = targetHeight
 
     // Scale the drawing context to counter the device pixel ratio
-    this.gameCtx.setTransform(1, 0, 0, 1, 0, 0)
-    this.gameCtx.scale(pixelRatio, pixelRatio)
+    if (this.gameCtx) {
+      this.gameCtx.setTransform(1, 0, 0, 1, 0, 0)
+      this.gameCtx.scale(pixelRatio, pixelRatio)
 
-    // Maintain high-quality rendering
-    this.gameCtx.imageSmoothingEnabled = true
-    this.gameCtx.imageSmoothingQuality = 'high'
+      // Maintain high-quality rendering
+      this.gameCtx.imageSmoothingEnabled = true
+      this.gameCtx.imageSmoothingQuality = 'high'
+    }
 
     // Set minimap size - make it fit entirely in the sidebar
     const minimapWidth = Math.max(140, Math.round(rawSidebarWidth - 20))
@@ -189,10 +191,12 @@ export class CanvasManager {
     this.minimapCanvas.height = Math.max(1, Math.round(minimapHeight * pixelRatio))
 
     // Scale minimap context
-    this.minimapCtx.setTransform(1, 0, 0, 1, 0, 0)
-    this.minimapCtx.scale(pixelRatio, pixelRatio)
-    this.minimapCtx.imageSmoothingEnabled = true
-    this.minimapCtx.imageSmoothingQuality = 'high'
+    if (this.minimapCtx) {
+      this.minimapCtx.setTransform(1, 0, 0, 1, 0, 0)
+      this.minimapCtx.scale(pixelRatio, pixelRatio)
+      this.minimapCtx.imageSmoothingEnabled = true
+      this.minimapCtx.imageSmoothingQuality = 'high'
+    }
 
     if (typeof document !== 'undefined') {
       document.dispatchEvent(new CustomEvent('canvas-resized', {
