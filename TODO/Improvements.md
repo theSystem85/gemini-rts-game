@@ -1,4 +1,7 @@
 ## Improvements
+- [x] Extracted state synchronization logic from gameCommandSync.js into dedicated stateSync.js module for better code organization and modularity.
+- [x] Extracted lockstep synchronization logic from gameCommandSync.js into dedicated lockstepSync.js module with all lockstep-related functions and state management.
+- [x] Refactored gameCommandSync.js (2068→302 lines) into a thin coordinator that imports/re-exports from commandTypes.js, networkStats.js, commandBroadcast.js, stateSync.js, and lockstepSync.js while maintaining full backward compatibility.
 - [x] Add meaningful unit tests to boost coverage in main.js, inputHandler.js, updateGame.js, and saveGame.js (focus on least-covered functions and branches).
 - [x] Extend unit tests for Task 16.1-16.10 coverage targets (config, game setup, map editor, retreat, benchmark runner, ambulance/building systems, game state manager, hospital logic, mine system).
 - [x] Expand unit tests for tasks 16.11-16.20 (recovery tank, remote control, unit movement, selection manager, lockstep, multiplayer store, remote connection, state hash, enemy AI player, logger).
@@ -20,7 +23,9 @@
 - [x] Add additional unit tests for smokeUtils.js (26 tests), debugLogger.js (19 tests), logic.js (42 tests), retreat.js (33 tests) - total 120 new tests bringing test count from 1002 to 1128
 - [x] Add more unit tests for hitZoneCalculator.js (36 tests), soundCooldownManager.js (19 tests), serviceRadius.js (31 tests), version.js (4 tests) - total 90 new tests bringing test count from 1128 to 1218
 - [x] Expand bullet system unit tests (Task 3.1) to cover updateBullets and fireBullet behaviors with meaningful scenarios.
+- [x] Split `src/ui/productionController.js` into smaller UI modules (<1k LOC each) while preserving production behavior.
 - [ ] Refactor main.js via code-splitting (<1k LOC per file) into orchestrator, device lifecycle, and mobile layout modules while keeping tests passing.
+- [x] Refactor tutorialSystem.js into modular files (<1k LOC each) while keeping tutorial behavior intact.
 - [ ] Speed up Apache helicopter production based on vehicle factory count using the same multiplier as ground vehicles.
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
@@ -175,6 +180,7 @@
 - [x] **Refactor:** split unifiedMovement.js into modular files under 1k LOC each while preserving existing unit test behavior.
 - [x] **Refactor:** split mouseHandler.js into submodules (<1k LOC each) to reduce complexity while keeping unit tests green.
 - [x] **Refactor:** split unitCommands.js into submodules (<1k LOC each) while keeping existing unit tests passing.
+- [x] **Refactor:** split unitCombat.js into submodules (<1k LOC each) while keeping existing unit tests passing.
 - [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
 - [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
 

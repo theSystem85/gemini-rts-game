@@ -51,6 +51,13 @@ Implement deterministic lockstep networking to minimize bandwidth and ensure hos
   - LOCKSTEP_INIT, LOCKSTEP_INPUT, LOCKSTEP_INPUT_ACK
   - LOCKSTEP_HASH, LOCKSTEP_HASH_MISMATCH, LOCKSTEP_RESYNC
 
+- ✅ **Lockstep Synchronization Module** (`src/network/lockstepSync.js`)
+  - Dedicated module for all lockstep synchronization logic
+  - Handles input queueing, state hash verification, and desync recovery
+  - Manages local input buffer and pending hash state
+  - Exports: isLockstepEnabled, initializeLockstepSession, queueLockstepInput, broadcastStateHash, processLockstepTick, disableLockstep, handleLockstepCommand
+  - Input application functions for move, attack, stop, build, and production commands
+
 - ✅ **Game Loop Integration** (`src/game/gameLoop.js`)
   - Fixed timestep tick processing when lockstep enabled
   - Time accumulator with max ticks per frame limit

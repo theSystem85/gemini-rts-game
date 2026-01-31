@@ -58,6 +58,7 @@ describe('howitzerGunController', () => {
   describe('updateHowitzerGunState', () => {
     beforeEach(() => {
       initializeHowitzerGun(unit)
+      unit.lastBarrelUpdateTime = NOW // Override to use test time
     })
 
     it('resets gun when there is no target', () => {
@@ -66,7 +67,7 @@ describe('howitzerGunController', () => {
       unit.targetBarrelElevation = 0.5
 
       // Update with no target
-      updateHowitzerGunState(unit, NOW)
+      updateHowitzerGunState(unit, NOW + 16)
 
       expect(unit.targetBarrelElevation).toBe(0) // Should aim for 0 elevation
       // It won't be 0 immediately due to smooth movement
