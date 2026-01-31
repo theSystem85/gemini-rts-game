@@ -36,136 +36,41 @@ export class CheatSystem {
       style.id = 'cheat-dialog-styles'
       style.textContent = `
         .cheat-dialog-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 10000;
-          backdrop-filter: blur(2px);
+          z-index: 1600;
         }
 
-        .cheat-dialog {
-          background: linear-gradient(135deg, #2c3e50, #34495e);
-          border: 2px solid #3498db;
-          border-radius: 8px;
-          padding: 20px;
-          width: min(90vw, 500px);
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-          font-family: 'Arial', sans-serif;
-          box-sizing: border-box;
+        .cheat-dialog__body {
+          gap: 16px;
         }
 
-        .cheat-dialog h2 {
-          color: #ecf0f1;
-          margin: 0 0 15px 0;
-          text-align: center;
-          font-size: 18px;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .cheat-input-container {
-          margin-bottom: 15px;
-        }
-
-        .cheat-input {
-          width: 100%;
-          padding: 10px;
-          font-size: 14px;
-          border: 1px solid #5d6d7e;
-          border-radius: 4px;
-          background: #34495e;
-          color: #ecf0f1;
-          box-sizing: border-box;
-          outline: none;
-          transition: border-color 0.3s ease;
-        }
-
-        .cheat-input:focus {
-          border-color: #3498db;
-          box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-        }
-
-        .cheat-input::placeholder {
-          color: #95a5a6;
-        }
-
-        .cheat-buttons {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-        }
-
-        .cheat-button {
-          padding: 8px 16px;
-          font-size: 14px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-weight: bold;
-          text-transform: uppercase;
-        }
-
-        .cheat-button.submit {
-          background: #27ae60;
-          color: white;
-          flex: 1;
-        }
-
-        .cheat-button.submit:hover {
-          background: #2ecc71;
-          transform: translateY(-1px);
-        }
-
-        .cheat-button.close {
-          background: #e74c3c;
-          color: white;
-          flex: 1;
-        }
-
-        .cheat-button.close:hover {
-          background: #c0392b;
-          transform: translateY(-1px);
-        }
-
-        .cheat-help {
-          margin-top: 15px;
-          padding: 10px;
-          background: rgba(52, 73, 94, 0.5);
-          border-radius: 4px;
-          font-size: 12px;
-          color: #bdc3c7;
-          line-height: 1.4;
-        }
-
-        .cheat-help h3 {
-          margin: 0 0 8px 0;
-          color: #3498db;
-          font-size: 13px;
-        }
-
-        .cheat-help ul {
+        .cheat-dialog__title {
           margin: 0;
-          padding-left: 16px;
+          font-size: 18px;
+          font-weight: 600;
+          letter-spacing: 0.4px;
         }
 
-        .cheat-help li {
-          margin-bottom: 4px;
+        .cheat-dialog__subtitle {
+          margin: 0;
+          font-size: 13px;
+          color: #9fb3c8;
         }
 
-        .cheat-help code {
-          background: rgba(0, 0, 0, 0.3);
-          padding: 2px 4px;
-          border-radius: 2px;
-          font-family: 'Courier New', monospace;
-          color: #f39c12;
+        .cheat-dialog__help ul {
+          margin: 0;
+          padding-left: 18px;
+          color: #9fb3c8;
+        }
+
+        .cheat-dialog__help li {
+          margin-bottom: 6px;
+        }
+
+        .cheat-dialog__help code {
+          background: rgba(255, 255, 255, 0.08);
+          padding: 1px 4px;
+          border-radius: 3px;
+          font-family: 'Courier New', Courier, monospace;
         }
       `
       document.head.appendChild(style)
@@ -179,56 +84,69 @@ export class CheatSystem {
 
     // Create dialog overlay
     const overlay = document.createElement('div')
-    overlay.className = 'cheat-dialog-overlay'
+    overlay.className = 'config-modal config-modal--open cheat-dialog-overlay'
     overlay.id = 'cheat-dialog-overlay'
+    overlay.setAttribute('aria-hidden', 'false')
 
     // Create dialog
     const dialog = document.createElement('div')
-    dialog.className = 'cheat-dialog'
+    dialog.className = 'config-modal__dialog cheat-dialog'
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
 
     dialog.innerHTML = `
-      <h2>🎮 Cheat Console</h2>
-      <div class="cheat-input-container">
-        <input
-          type="text"
-          class="cheat-input"
-          id="cheat-input"
-          placeholder="Enter cheat code..."
-          autocomplete="off"
-          spellcheck="false"
-        >
+      <div class="config-modal__header">
+        <div class="config-modal__title-group">
+          <h2 class="cheat-dialog__title">🎮 Cheat Console</h2>
+          <p class="cheat-dialog__subtitle">Enter a command and press execute to apply it.</p>
+        </div>
+        <button class="config-modal__close" id="cheat-close" aria-label="Close cheat console">×</button>
       </div>
-      <div class="cheat-buttons">
-        <button class="cheat-button submit" id="cheat-submit">Execute</button>
-        <button class="cheat-button close" id="cheat-close">Close</button>
-      </div>
-      <div class="cheat-help">
-        <h3>Available Cheat Codes:</h3>
-        <ul>
-          <li><code>godmode on</code> / <code>godmode off</code> - Toggle invincibility for all units</li>
-          <li><code>give [amount]</code> or <code>give [party] [amount]</code> - Add money (e.g., <code>give 10000</code>, <code>give red 5000</code>)</li>
-          <li><code>money [amount]</code> - Set money to specific amount</li>
-          <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
-          <li><code>status</code> - Show current cheat status</li>
-          <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
-          <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
-          <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
-          <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
-          <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
-          <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
-          <li><code>kill</code> - Destroy all selected units or buildings</li>
-          <li><code>recover [party]</code> - Recover the selected wreck for a party (defaults to player)</li>
-          <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
-          <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
-          <li title="Supported unit types: harvester, tank_v1, tank-v2, tank-v3, rocketTank, recoveryTank, ambulance, tankerTruck, ammunitionTruck, apache, howitzer, mineLayer, mineSweeper"><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
-          <li><code>mine [party]</code> - Deploy a mine at the cursor for the specified party (defaults to player)</li>
-          <li><code>mines [WxH][gG] [party]</code> or <code>WxHgG</code> - Drop a minefield pattern (e.g., <code>mines 2x3g1</code>, <code>3x1</code> for a continuous row) with optional gaps</li>
-        </ul>
+      <div class="config-modal__body cheat-dialog__body">
+        <div class="config-modal__field">
+          <label for="cheat-input">Cheat code</label>
+          <input
+            type="text"
+            class="cheat-input"
+            id="cheat-input"
+            placeholder="Enter cheat code..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <div class="config-modal__actions cheat-dialog__actions">
+          <button class="config-modal__button config-modal__button--primary" id="cheat-submit" type="button">Execute</button>
+          <button class="config-modal__button" id="cheat-close-secondary" type="button">Close</button>
+        </div>
+        <div class="config-modal__section cheat-dialog__help">
+          <h3 class="config-modal__section-title">Available Cheat Codes</h3>
+          <ul>
+            <li><code>godmode on</code> / <code>godmode off</code> - Toggle invincibility for all units</li>
+            <li><code>give [amount]</code> or <code>give [party] [amount]</code> - Add money (e.g., <code>give 10000</code>, <code>give red 5000</code>)</li>
+            <li><code>money [amount]</code> - Set money to specific amount</li>
+            <li><code>hp [amount]</code> or <code>hp [amount]%</code> - Set HP of selected unit(s)</li>
+            <li><code>status</code> - Show current cheat status</li>
+            <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
+            <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
+            <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
+            <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
+            <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
+            <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
+            <li><code>kill</code> - Destroy all selected units or buildings</li>
+            <li><code>recover [party]</code> - Recover the selected wreck for a party (defaults to player)</li>
+            <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
+            <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
+            <li title="Supported unit types: harvester, tank_v1, tank-v2, tank-v3, rocketTank, recoveryTank, ambulance, tankerTruck, ammunitionTruck, apache, howitzer, mineLayer, mineSweeper"><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
+            <li><code>mine [party]</code> - Deploy a mine at the cursor for the specified party (defaults to player)</li>
+            <li><code>mines [WxH][gG] [party]</code> or <code>WxHgG</code> - Drop a minefield pattern (e.g., <code>mines 2x3g1</code>, <code>3x1</code> for a continuous row) with optional gaps</li>
+          </ul>
+        </div>
       </div>
     `
 
     overlay.appendChild(dialog)
     document.body.appendChild(overlay)
+    document.body.classList.add('config-modal-open')
 
     // Focus input field
     const input = document.getElementById('cheat-input')
@@ -243,7 +161,10 @@ export class CheatSystem {
 
   setupDialogEventListeners(overlay, input) {
     const submitBtn = document.getElementById('cheat-submit')
-    const closeBtn = document.getElementById('cheat-close')
+    const closeButtons = [
+      document.getElementById('cheat-close'),
+      document.getElementById('cheat-close-secondary')
+    ].filter(Boolean)
 
     // Submit cheat code
     const submitCheat = () => {
@@ -261,7 +182,9 @@ export class CheatSystem {
 
     // Event listeners
     submitBtn.addEventListener('click', submitCheat)
-    closeBtn.addEventListener('click', closeDialog)
+    closeButtons.forEach(button => {
+      button.addEventListener('click', closeDialog)
+    })
 
     // Enter key to submit
     input.addEventListener('keydown', (e) => {
@@ -291,6 +214,7 @@ export class CheatSystem {
     }
 
     this.isDialogOpen = false
+    document.body.classList.remove('config-modal-open')
     this.pauseGameInput(false)
   }
 
