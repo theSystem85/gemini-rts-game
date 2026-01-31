@@ -41,6 +41,14 @@ export class CheatSystem {
 
         .cheat-dialog__body {
           gap: 16px;
+          overflow-x: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .cheat-dialog__body::-webkit-scrollbar {
+          width: 0;
+          height: 0;
         }
 
         .cheat-dialog__title {
@@ -60,6 +68,17 @@ export class CheatSystem {
           margin: 0;
           padding-left: 18px;
           color: #9fb3c8;
+        }
+
+        .cheat-dialog__help {
+          overflow-x: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .cheat-dialog__help::-webkit-scrollbar {
+          width: 0;
+          height: 0;
         }
 
         .cheat-dialog__help li {
