@@ -1,4 +1,4 @@
 {
-  "commit": "9850546",
-  "message": "TEST: extend coverage for tasks 16.1-16.10"
+  "commit": "160a658",
+  "message": "Refactor gameCommandSync.js into thin coordinator module (2068→302 lines, 85% reduction)"
 }
