@@ -2,13 +2,12 @@
 import { TILE_SIZE, TANK_TURRET_ROT, BUILDING_SELL_DURATION } from '../config.js'
 import { playSound, playPositionalSound } from '../sound.js'
 import { selectedUnits } from '../inputHandler.js'
-import { triggerExplosion } from '../logic.js'
+import { triggerExplosion, smoothRotateTowardsAngle, angleDiff, hasClearLineOfSight } from '../logic.js'
 import { triggerDistortionEffect } from '../ui/distortionEffect.js'
 import { updatePowerSupply, clearBuildingFromMapGrid, buildingData } from '../buildings.js'
 import { checkGameEndConditions } from './gameStateManager.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { updateDangerZoneMaps } from './dangerZoneMap.js'
-import { smoothRotateTowardsAngle, angleDiff } from '../logic.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
@@ -187,6 +186,7 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
  */
 const updateDefensiveBuildings = logPerformance(function updateDefensiveBuildings(buildings, units, bullets, delta, gameState) {
   const now = performance.now()
+  const mapGrid = gameState.mapGrid
 
   // Debug: Count Tesla coils
   const _teslaCoils = buildings.filter(b => b.type === 'teslaCoil' && b.health > 0)
@@ -375,7 +375,11 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           // Continue burst fire sequence
           if (now - building.lastBurstTime >= building.burstDelay) {
             if (building.currentTargetPosition && closestEnemy) {
-              fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
+              const hasLineOfSight = !building.type.startsWith('turretGun') ||
+                hasClearLineOfSight({ x: centerX, y: centerY }, closestEnemy, mapGrid)
+              if (hasLineOfSight) {
+                fireTurretProjectile(building, closestEnemy, centerX, centerY, now, bullets, gameState)
+              }
               building.currentBurst--
               building.lastBurstTime = now
 
@@ -418,6 +422,11 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
               const aimingTolerance = 0.1 // ~5.7 degrees tolerance
 
               if (angleError <= aimingTolerance) {
+                const hasLineOfSight = !building.type.startsWith('turretGun') ||
+                  hasClearLineOfSight({ x: centerX, y: centerY }, firingTarget, mapGrid)
+                if (!hasLineOfSight) {
+                  return
+                }
                 // Store current target position for projectile calculation
                 building.currentTargetPosition = { x: targetX, y: targetY }
                 if (building.type === 'artilleryTurret') {

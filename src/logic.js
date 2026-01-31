@@ -435,8 +435,14 @@ function isLineObstructedByBuilding(shooterCenter, target, mapGrid) {
 
   while (true) {
     if (!(x0 === startTileX && y0 === startTileY) && !(x0 === x1 && y0 === y1)) {
-      if (mapGrid[y0] && mapGrid[y0][x0] && mapGrid[y0][x0].building && !isTargetBuildingTile(target, x0, y0)) {
-        return true
+      const tile = mapGrid[y0]?.[x0]
+      if (tile) {
+        if (tile.type === 'rock') {
+          return true
+        }
+        if (tile.building && !isTargetBuildingTile(target, x0, y0)) {
+          return true
+        }
       }
     }
 
@@ -489,6 +495,10 @@ export function hasClearShot(shooter, target, units, mapGrid) {
     }
   }
   return true
+}
+
+export function hasClearLineOfSight(shooterCenter, target, mapGrid) {
+  return !isLineObstructedByBuilding(shooterCenter, target, mapGrid)
 }
 
 // Add this new function to find a position with a clear line of sight
