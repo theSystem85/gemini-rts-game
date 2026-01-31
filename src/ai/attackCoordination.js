@@ -1,6 +1,5 @@
 // attackCoordination.js - AI attack coordination and multi-directional attack strategies
 import { TILE_SIZE, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE } from '../config.js'
-import { gameState } from '../gameState.js'
 import { findPath } from '../units.js'
 import { createFormationOffsets } from '../game/pathfinding.js'
 import { gameRandom } from '../utils/gameRandom.js'
@@ -210,95 +209,6 @@ export function shouldConductGroupAttack(unit, units, gameState, target) {
   }
 
   return true
-}
-
-function coordinateMultiDirectionalAttack(unit, units, gameState) {
-  const target = unit.target
-  if (!target) return
-
-  // Get last attack direction to avoid repetition
-  const lastDirection = lastAttackDirections.get(target.id)
-
-  // Try all directions to find a valid attack angle
-  for (const [_key, dir] of Object.entries(ATTACK_DIRECTIONS)) {
-    // Rotate directions to spread out attacks
-    const rotatedDir = rotateDirection(dir, attackDirectionRotation)
-
-    // Skip if this direction was just used
-    if (rotatedDir.name === lastDirection) {
-      continue
-    }
-
-    const angle = Math.atan2(rotatedDir.y, rotatedDir.x)
-    const distance = Math.hypot(rotatedDir.x, rotatedDir.y)
-
-    // Check for clear path to target in this direction
-    const pathClear = checkAttackPath(unit, target, angle, distance, gameState)
-
-    if (pathClear) {
-      // Mark this direction as last used for this target
-      lastAttackDirections.set(target.id, rotatedDir.name)
-
-      // Spread out attack timings slightly
-      const attackDelay = Math.floor(gameRandom() * 200) // Random delay up to 200ms
-      unit.attackTime = Date.now() + attackDelay
-
-      // Attack in this direction
-      unit.attackDirection = rotatedDir
-      unit.isAttacking = true
-      return
-    }
-  }
-
-  // If no clear direction, fallback to direct attack
-  unit.attackDirection = { x: 1, y: 0 }
-  unit.isAttacking = true
-}
-
-/**
- * Rotates a direction vector for spreading out attacks
- */
-function rotateDirection(dir, rotation) {
-  const cos = Math.cos(rotation)
-  const sin = Math.sin(rotation)
-
-  return {
-    x: dir.x * cos - dir.y * sin,
-    y: dir.x * sin + dir.y * cos
-  }
-}
-
-/**
- * Checks if the attack path is clear in the given direction
- */
-function checkAttackPath(unit, target, angle, distance, gameState) {
-  const stepSize = 10 // Check every 10 pixels
-  for (let d = 0; d < distance; d += stepSize) {
-    const checkX = unit.x + Math.cos(angle) * d
-    const checkY = unit.y + Math.sin(angle) * d
-
-    // Check for obstacles in the path
-    const tile = getTileAtPosition(checkX, checkY, gameState.mapGrid || [])
-    if (tile && (tile.type === 'rock' || tile.type === 'water' || tile.seedCrystal)) {
-      return false
-    }
-  }
-
-  return true
-}
-
-/**
- * Gets the tile at the given screen position
- */
-function getTileAtPosition(x, y, mapGrid) {
-  const tileX = Math.floor(x / TILE_SIZE)
-  const tileY = Math.floor(y / TILE_SIZE)
-
-  if (tileY >= 0 && tileY < mapGrid.length) {
-    return mapGrid[tileY][tileX]
-  }
-
-  return null
 }
 
 /**

@@ -67,6 +67,16 @@ globalThis.AudioContext = class MockAudioContext {
     this.state = 'running'
     this.destination = {}
   }
+  createBufferSource() {
+    return {
+      buffer: null,
+      loop: false,
+      connect: () => {},
+      start: () => {},
+      stop: () => {},
+      addEventListener: () => {}
+    }
+  }
   createGain() {
     return {
       connect: () => {},
@@ -80,6 +90,15 @@ globalThis.AudioContext = class MockAudioContext {
       stop: () => {},
       frequency: { value: 440 }
     }
+  }
+  createStereoPanner() {
+    return {
+      connect: () => {},
+      pan: { value: 0 }
+    }
+  }
+  decodeAudioData() {
+    return Promise.resolve({})
   }
   resume() { return Promise.resolve() }
   suspend() { return Promise.resolve() }
