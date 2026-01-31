@@ -25,6 +25,7 @@
 - [x] Expand bullet system unit tests (Task 3.1) to cover updateBullets and fireBullet behaviors with meaningful scenarios.
 - [x] Split `src/ui/productionController.js` into smaller UI modules (<1k LOC each) while preserving production behavior.
 - [ ] Refactor main.js via code-splitting (<1k LOC per file) into orchestrator, device lifecycle, and mobile layout modules while keeping tests passing.
+- [x] Refactor tutorialSystem.js into modular files (<1k LOC each) while keeping tutorial behavior intact.
 - [ ] Speed up Apache helicopter production based on vehicle factory count using the same multiplier as ground vehicles.
 - [ ] Show numbered movement waypoints for active unit paths using the PPF marker style, with a W-key toggle to show/hide them.
 - [ ] Show out-of-range attack cursor only for combat units, switch to in-range attack cursor appropriately, and include distance/max-range labels on the out-of-range cursor.
