@@ -13,9 +13,8 @@ export function updateTankCombat(unit, units, bullets, mapGrid, now, occupancyMa
     const CHASE_THRESHOLD = TANK_FIRE_RANGE * TILE_SIZE * COMBAT_CONFIG.CHASE_MULTIPLIER.STANDARD
 
     // Handle movement using common logic
-    const rocketRange = getEffectiveFireRange(unit) * COMBAT_CONFIG.RANGE_MULTIPLIER.ROCKET
     const { distance, targetCenterX, targetCenterY } = handleTankMovement(
-      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid, rocketRange
+      unit, unit.target, now, occupancyMap, CHASE_THRESHOLD, mapGrid
     )
 
     // Fire if in range and allowed to attack

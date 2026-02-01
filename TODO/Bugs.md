@@ -81,6 +81,9 @@
 
 ## Bug Fixes (2026-02-01)
 - [x] ✅ Fixed online multiplayer game state not syncing from host to client. The `hasActiveRemoteSession()` function in `stateSync.js` was calling `getActiveHostMonitor()` without a partyId argument, causing it to always return `false` for the host. Initial fix used non-existent `monitor.getConnectedPeerCount()` method; corrected to use `monitor.activeSession` check instead. This prevented all game state snapshots (including initial map sync) from being sent to clients.
+- [x] ✅ Fixed tanks (and other units) slowing down significantly when approaching each other. The bug was caused by two compounding velocity reduction mechanisms in `movementCollision.js`: proactive avoidance forces (FORCE_FIELD_RADIUS: 36px) and reactive velocity damping (MIN_UNIT_DISTANCE: 24px with up to 70% velocity reduction per frame). Removed the aggressive multiplicative damping in `checkUnitCollision()` since the separation forces are sufficient to push units apart.
+- [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
+- [x] ✅ Paused attack pathfinding while a tank is remote controlled and delayed auto-movement for 1s after remote control stops.
 ## Bugs
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.

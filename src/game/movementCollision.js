@@ -335,12 +335,9 @@ export function checkUnitCollision(unit, mapGrid, occupancyMap, units, wrecks = 
 
       const separationForce = overlap * MOVEMENT_CONFIG.FORCE_FIELD_STRENGTH * 0.1
 
-      const velocityTowardOther = -(dx * unitVelX + dy * unitVelY) * invDist
-      if (velocityTowardOther > 0) {
-        const dampingFactor = Math.max(0.3, 1 - overlap / MOVEMENT_CONFIG.MIN_UNIT_DISTANCE)
-        unit.movement.velocity.x *= dampingFactor
-        unit.movement.velocity.y *= dampingFactor
-      }
+      // Note: Removed aggressive velocity damping that was causing exponential slowdown
+      // when units approached each other. The separation forces below are sufficient
+      // to push units apart without reducing their overall movement speed.
 
       const separationX = dx * invDist * separationForce
       const separationY = dy * invDist * separationForce
@@ -883,6 +880,8 @@ export function calculateCollisionAvoidance(unit, units, mapGrid, occupancyMap) 
   for (let i = 0, len = nearbyUnits.length; i < len; i++) {
     const otherUnit = nearbyUnits[i]
     if (otherUnit.health <= 0) continue
+    // Skip avoidance if this unit is our attack target
+    if (unit.target && unit.target === otherUnit) continue
 
     const otherCenterX = otherUnit._cx ?? (otherUnit.x + TILE_SIZE / 2)
     const otherCenterY = otherUnit._cy ?? (otherUnit.y + TILE_SIZE / 2)

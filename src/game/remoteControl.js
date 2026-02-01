@@ -514,6 +514,10 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       if (apacheHasMovementInput) {
         unit.path = []
         unit.moveTarget = null
+        unit.remoteControlActive = true
+        unit.lastRemoteControlTime = now
+      } else {
+        unit.remoteControlActive = false
       }
 
       handleApacheRemoteControl(unit, {
@@ -590,6 +594,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
     // Track whether this unit is actively being moved via remote control
     unit.remoteControlActive = !!hasMovementInput
+    if (unit.remoteControlActive) {
+      unit.lastRemoteControlTime = now
+    }
 
     if (unit.remoteControlActive && !unit.hasUsedRemoteControl) {
       unit.hasUsedRemoteControl = true
