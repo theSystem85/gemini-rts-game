@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { updateAIUnit } from '../../src/ai/enemyUnitBehavior.js'
 import { AI_DECISION_INTERVAL, TILE_SIZE } from '../../src/config.js'
-import { findPath } from '../../src/units.js'
 import { getCachedPath } from '../../src/game/pathfinding.js'
 import { applyEnemyStrategies } from '../../src/ai/enemyStrategies.js'
 

@@ -1,4 +1,5 @@
 ## Features
+- [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.
 - [ ] Add a headless browser smoke test that fails on console errors and wire it into CI/Netlify pipelines for merge gating.
 - [ ] Add unit tests for the multi-unit input handler utilities (task 4.9 coverage work).
 - [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
