@@ -20,9 +20,14 @@
     "test:smoke": "vitest run tests/integration/browserConsoleSmoke.test.js",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.32.0",
     "jsdom": "^27.4.0",

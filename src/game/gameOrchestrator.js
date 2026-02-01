@@ -163,6 +163,10 @@ class Game {
     setProductionControllerRef(this.productionController)
 
     gameInstance = this
+
+    // Expose gameState to window for E2E testing
+    window.gameState = gameState
+
     this.initializeGame()
   }
 
@@ -196,8 +200,18 @@ class Game {
   setupGameWorld() {
     deactivateMapEditMode()
     gameState.gameStarted = true
+
+    // Check for seed in URL params first, then fall back to input field
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlSeed = urlParams.get('seed')
     const seedInput = document.getElementById('mapSeed')
-    const seed = resolveMapSeed(seedInput ? seedInput.value : '1')
+    const seed = resolveMapSeed(urlSeed || (seedInput ? seedInput.value : '1'))
+
+    // Update input field to reflect the seed being used
+    if (seedInput && urlSeed) {
+      seedInput.value = seed
+    }
+
     gameState.mapSeed = seed
     generateMapFromSetup(seed, mapGrid, MAP_TILES_X, MAP_TILES_Y)
 

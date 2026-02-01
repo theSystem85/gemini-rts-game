@@ -18,6 +18,10 @@ coverage
 *.local
 TODO-Temporary.md
 
+# Test logs
+playwright-report
+test-results
+
 # Editor directories and files
 .idea
 .DS_Store

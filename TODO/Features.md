@@ -1,5 +1,12 @@
 ## Features
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.
+- [x] ✅ **Playwright E2E Testing**: Setup Playwright for end-to-end browser testing with real user interactions.
+  - [x] ✅ Install and configure Playwright with Chromium
+  - [x] ✅ Create basic game flow test (seed 11): build power plant, refinery, vehicle factory, harvester, tank, command tank to ore
+  - [x] ✅ Verify console error capture and no-error assertions
+  - [x] ✅ Add npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:headed`, `test:e2e:debug`
+  - [ ] Integrate E2E tests into CI/Netlify pipelines for merge gating
+  - [ ] Add more E2E scenarios (combat, multiplayer, save/load)
 - [ ] Add a headless browser smoke test that fails on console errors and wire it into CI/Netlify pipelines for merge gating.
 - [ ] Add unit tests for the multi-unit input handler utilities (task 4.9 coverage work).
 - [ ] Add unit tests for `src/input/unitCommands.js` (utility queues, resupply assignments, recovery tank handling) to improve input-system coverage.
