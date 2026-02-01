@@ -491,6 +491,10 @@ export function hasClearShot(shooter, target, units, mapGrid) {
   return true
 }
 
+export function hasLineOfSightToTarget(shooterCenter, target, mapGrid) {
+  return !isLineObstructedByBuilding(shooterCenter, target, mapGrid)
+}
+
 // Add this new function to find a position with a clear line of sight
 export function findPositionWithClearShot(unit, target, units, mapGrid) {
   const unitTileX = Math.floor(unit.x / TILE_SIZE)

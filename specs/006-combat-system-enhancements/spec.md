@@ -10,6 +10,7 @@
 ## Maintenance Updates
 
 - 2026-02-01: Split `src/game/unitCombat.js` into focused submodules under `src/game/unitCombat/` to keep each file under 1k LOC while preserving existing combat behavior.
+- 2026-01-31: Defensive turrets now require clear line-of-sight to targets before firing, matching player and AI behavior.
 
 ## User Scenarios & Testing
 
@@ -229,6 +230,7 @@ As a player, I want to see visual indicators showing where my units are moving a
 **Line-of-Sight & Obstructions:**
 - **FR-057**: Tank projectiles MUST respect building collision for all parties; shots cannot pass through allied or enemy structures.
 - **FR-058**: Tank combat AI MUST seek alternate positions when buildings block line-of-sight and resume firing only after a clear lane is available.
+- **FR-059**: Defensive turret guns MUST not fire when a building blocks the line-of-sight to their target.
 
 ### Key Entities
 
