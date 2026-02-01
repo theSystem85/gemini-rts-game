@@ -166,8 +166,21 @@ function hasActiveRemoteSession() {
   const isRemote = Boolean(gameState.multiplayerSession?.isRemote)
 
   if (isHost()) {
-    const hostMonitor = getActiveHostMonitor()
-    return hostMonitor ? hostMonitor.getConnectedPeerCount() > 0 : false
+    // Check if any party has connected peers
+    if (!Array.isArray(gameState.partyStates)) {
+      return false
+    }
+    for (const party of gameState.partyStates) {
+      if (party.partyId === gameState.humanPlayer) {
+        continue // Skip self
+      }
+      const monitor = getActiveHostMonitor(party.partyId)
+      // Check if monitor has an active session (connected client)
+      if (monitor && monitor.activeSession) {
+        return true
+      }
+    }
+    return false
   }
 
   return isRemote
