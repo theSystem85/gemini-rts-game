@@ -619,6 +619,17 @@ export function setAttackPathCalcInterval(value) {
   ATTACK_PATH_CALC_INTERVAL = value
 }
 
+// Moving target path check interval - how often to check if path needs recalculation for moving targets (ms)
+// Only recalculate if distance to target is increasing (unit going wrong direction)
+export let MOVING_TARGET_CHECK_INTERVAL = 5000
+
+export function setMovingTargetCheckInterval(value) {
+  MOVING_TARGET_CHECK_INTERVAL = value
+}
+
+// Target movement threshold - minimum distance target must move to trigger path recalculation (in tiles)
+export const TARGET_MOVEMENT_THRESHOLD = 2
+
 // General AI decision interval for heavy logic like target selection (in milliseconds)
 export let AI_DECISION_INTERVAL = 5000  // Reduced from 200ms to 5s to prevent wiggling
 

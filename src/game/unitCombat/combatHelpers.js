@@ -2,7 +2,6 @@ import {
   TILE_SIZE,
   TANK_FIRE_RANGE,
   TURRET_AIMING_THRESHOLD,
-  ATTACK_PATH_CALC_INTERVAL,
   HOWITZER_FIRE_RANGE,
   HOWITZER_MIN_RANGE,
   HOWITZER_FIREPOWER,
@@ -10,7 +9,6 @@ import {
   APACHE_RANGE_REDUCTION
 } from '../../config.js'
 import { hasClearShot, angleDiff, findPositionWithClearShot } from '../../logic.js'
-import { findPath } from '../../units.js'
 import { stopUnitMovement } from '../unifiedMovement.js'
 import { gameState } from '../../gameState.js'
 import { isPositionVisibleToPlayer } from '../shadowOfWar.js'
@@ -133,8 +131,11 @@ export function applyTargetingSpread(shooterX, shooterY, targetX, targetY, proje
 }
 
 /**
- * Common combat logic helper - handles movement and pathfinding
+ * Common combat logic helper - handles stopping when in range
+ * NOTE: Path calculation is handled by updateUnitMovement() in unitMovement.js
+ * This function only handles the "stop when in range" logic
  */
+
 export function handleTankMovement(unit, target, now, occupancyMap, chaseThreshold, mapGrid, rangeOverride = null) {
   // Skip movement handling if unit is retreating (retreat behavior handles movement)
   if (unit.isRetreating) {
@@ -165,7 +166,7 @@ export function handleTankMovement(unit, target, now, occupancyMap, chaseThresho
   const unitCenterX = unit.x + TILE_SIZE / 2
   const unitCenterY = unit.y + TILE_SIZE / 2
 
-  let targetCenterX, targetCenterY, targetTileX, targetTileY
+  let targetCenterX, targetCenterY
 
   if (target.tileX !== undefined) {
     // Target is a unit
@@ -175,14 +176,10 @@ export function handleTankMovement(unit, target, now, occupancyMap, chaseThresho
     if (target.type === 'apache' && target.altitude) {
       targetCenterY -= target.altitude * 0.4
     }
-    targetTileX = target.tileX
-    targetTileY = target.tileY
   } else {
     // Target is a building
     targetCenterX = target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2
     targetCenterY = target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2
-    targetTileX = target.x + Math.floor(target.width / 2)
-    targetTileY = target.y + Math.floor(target.height / 2)
   }
 
   const distance = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
@@ -198,25 +195,9 @@ export function handleTankMovement(unit, target, now, occupancyMap, chaseThresho
     }
     // Force stop using unified movement system
     stopUnitMovement(unit)
-
-  } else if (distance > effectiveRange && !unit.isRetreating) {
-    // Only create new path if attack path cooldown has passed (3 seconds)
-    if (!unit.lastAttackPathCalcTime || now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL) {
-      if (!unit.path || unit.path.length === 0 || distance > chaseThreshold) {
-        const path = findPath(
-          { x: unit.tileX, y: unit.tileY },
-          { x: targetTileX, y: targetTileY },
-          mapGrid,
-          occupancyMap
-        )
-        if (path.length > 1) {
-          unit.path = path.slice(1)
-          unit.moveTarget = { x: targetTileX, y: targetTileY } // Set movement target for green indicator
-          unit.lastAttackPathCalcTime = now
-        }
-      }
-    }
   }
+  // NOTE: Path calculation when out of range is handled by updateUnitMovement() in unitMovement.js
+  // This function should NOT recalculate paths - that causes duplicate path calculations and erratic movement
 
   return { distance, targetCenterX, targetCenterY }
 }

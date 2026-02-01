@@ -1090,7 +1090,7 @@ describe('pathfinding.js - Exported Functions', () => {
       expect(units[0].path.length).toBe(3)
     })
 
-    it('should handle units with combat targets', () => {
+    it('should skip units with combat targets (handled by updateUnitMovement instead)', () => {
       const mapGrid = createTestMapGrid(20, 20)
       const occupancyMap = initializeOccupancyMap([], mapGrid)
       const gameState = { humanPlayer: 'player1', lastGlobalPathCalc: 0 }
@@ -1108,9 +1108,9 @@ describe('pathfinding.js - Exported Functions', () => {
       mockPerformanceNow = 0
       updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState)
 
-      // Should convert target to moveTarget and calculate path
-      expect(units[0].moveTarget).toBeDefined()
-      expect(units[0].path.length).toBeGreaterThan(0)
+      // Units with attack targets should be skipped - they are handled by updateUnitMovement()
+      expect(units[0].moveTarget).toBeUndefined()
+      expect(units[0].path.length).toBe(0)
     })
 
     it('should handle formation groups', () => {

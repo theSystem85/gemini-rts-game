@@ -6,7 +6,9 @@ import {
   ATTACK_PATH_CALC_INTERVAL,
   MOVE_TARGET_REACHED_THRESHOLD,
   MAP_TILES_X,
-  MAP_TILES_Y
+  MAP_TILES_Y,
+  MOVING_TARGET_CHECK_INTERVAL,
+  TARGET_MOVEMENT_THRESHOLD
 } from '../config.js'
 import { gameState } from '../gameState.js'
 import { findPath, removeUnitOccupancy } from '../units.js'
@@ -17,6 +19,7 @@ import { updateUnitPosition, initializeUnitMovement } from './unifiedMovement.js
 import { updateHowitzerGunState } from './howitzerGunController.js'
 import { updateRetreatBehavior, shouldExitRetreat, cancelRetreat } from '../behaviours/retreat.js'
 import { logPerformance } from '../performanceUtils.js'
+import { getEffectiveFireRange } from './unitCombat/combatHelpers.js'
 
 /**
  * Updates unit movement, pathfinding, and formation handling
@@ -77,6 +80,9 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     // Clear targets that are destroyed
     if (unit.target && unit.target.health !== undefined && unit.target.health <= 0) {
       unit.target = null
+      // Clear tracking data when target is lost
+      unit.lastKnownTargetPos = null
+      unit.lastDistanceToTarget = null
     }
 
     // --- ATTACK-MOVE FIX: If not retreating, and has a target, and is out of range, set moveTarget/path to target ---
@@ -93,20 +99,51 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
       const unitCenterX = unit.x + TILE_SIZE / 2
       const unitCenterY = unit.y + TILE_SIZE / 2
       const distToTarget = Math.hypot(targetCenterX - unitCenterX, targetCenterY - unitCenterY)
-      // Use tank range if tank, otherwise default to 6 tiles
-      const ATTACK_RANGE = (unit.type && unit.type.startsWith('tank')) ? 9 * TILE_SIZE : 6 * TILE_SIZE
+      // Use the same effective fire range calculation as combat system to avoid range mismatch
+      // This includes level bonuses and unit-specific range modifiers
+      const ATTACK_RANGE = getEffectiveFireRange(unit)
       if (distToTarget > ATTACK_RANGE) {
-        // Only update if not already moving to target and throttle attack pathfinding to 3 seconds
+        // Calculate target tile position
         const targetTileX = unit.target.tileX !== undefined ? Math.floor(unit.target.x / TILE_SIZE) : unit.target.x
         const targetTileY = unit.target.tileY !== undefined ? Math.floor(unit.target.y / TILE_SIZE) : unit.target.y
-        const shouldRecalculatePath = !unit.moveTarget ||
-          Math.abs(unit.moveTarget.x - targetCenterX) > TILE_SIZE ||
-          Math.abs(unit.moveTarget.y - targetCenterY) > TILE_SIZE
+
+        // Check if target has moved significantly from last known position
+        const lastTargetPos = unit.lastKnownTargetPos
+        const targetHasMoved = !lastTargetPos ||
+          Math.abs(targetTileX - lastTargetPos.x) > TARGET_MOVEMENT_THRESHOLD ||
+          Math.abs(targetTileY - lastTargetPos.y) > TARGET_MOVEMENT_THRESHOLD
+
+        // Check if we should recalculate path based on distance trend (for moving targets)
+        let shouldRecalcForDistance = false
+        const lastDistance = unit.lastDistanceToTarget
+        const checkIntervalPassed = !unit.lastDistanceCheckTime || (now - unit.lastDistanceCheckTime > MOVING_TARGET_CHECK_INTERVAL)
+
+        if (checkIntervalPassed) {
+          unit.lastDistanceCheckTime = now
+          // Only recalculate if distance is increasing (unit going wrong direction)
+          // or if this is the first check (no last distance recorded)
+          if (lastDistance === null || lastDistance === undefined || distToTarget > lastDistance) {
+            shouldRecalcForDistance = unit.path && unit.path.length > 0 // Only if we had a path before
+          }
+          unit.lastDistanceToTarget = distToTarget
+        }
+
+        // Determine if recalculation is needed
+        const needsInitialPath = !unit.moveTarget || !unit.path || unit.path.length === 0
         const pathRecalcNeeded = !unit.lastAttackPathCalcTime || (now - unit.lastAttackPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
 
-        if (shouldRecalculatePath && pathRecalcNeeded) {
+        // Only recalculate if:
+        // 1. We need an initial path
+        // 2. Target has moved significantly
+        // 3. We're getting farther from target (and interval passed)
+        const shouldRecalculatePath = needsInitialPath || (pathRecalcNeeded && (targetHasMoved || shouldRecalcForDistance))
+
+        if (shouldRecalculatePath) {
           unit.moveTarget = { x: targetCenterX, y: targetCenterY }
           unit.lastAttackPathCalcTime = now
+          unit.lastPathCalcTime = now // Also set regular path calc time to prevent global pathfinding from overriding
+          // Store target position for movement tracking
+          unit.lastKnownTargetPos = { x: targetTileX, y: targetTileY }
           // Use proper pathfinding with occupancy map for attack movement
           const path = getCachedPath(
             { x: unit.tileX, y: unit.tileY, owner: unit.owner },
@@ -120,11 +157,19 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
           } else {
             unit.path = [{ x: targetTileX, y: targetTileY }]
           }
+        } else {
+          // Update distance tracking even if we don't recalculate path
+          // This ensures we keep tracking progress along current path
+          if (!unit.lastDistanceToTarget || distToTarget < unit.lastDistanceToTarget) {
+            unit.lastDistanceToTarget = distToTarget
+          }
         }
       } else {
         // In range, stop moving
         unit.moveTarget = null
         unit.path = []
+        // Reset tracking when in range
+        unit.lastDistanceToTarget = distToTarget
       }
     }
 
@@ -163,16 +208,18 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
 
 /**
  * Updates unit pathfinding based on movement targets
+ * NOTE: This function is primarily used in tests. The main game uses updateGlobalPathfinding().
  */
 export function updateUnitPathfinding(units, mapGrid, gameState) {
   const now = performance.now()
   const occupancyMap = gameState.occupancyMap
 
-  // Update pathfinding for ALL units with movement targets (not just selected ones)
-  // This ensures remote player units also get paths calculated
+  // Update pathfinding for units with movement targets
+  // Skip units with attack targets - they are handled by updateUnitMovement()
   const unitsWithMoveTarget = units.filter(unit =>
     unit.moveTarget &&
     !unit.sweepingOverrideMovement &&
+    !(unit.target && unit.target.health > 0) && // Skip attack mode units
     (!unit.lastPathCalcTime || now - unit.lastPathCalcTime > PATH_CALC_INTERVAL)
   )
 

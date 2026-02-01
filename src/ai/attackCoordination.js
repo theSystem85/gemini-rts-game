@@ -1,7 +1,6 @@
 // attackCoordination.js - AI attack coordination and multi-directional attack strategies
 import { TILE_SIZE, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE } from '../config.js'
-import { findPath } from '../units.js'
-import { createFormationOffsets } from '../game/pathfinding.js'
+import { createFormationOffsets, getCachedPath } from '../game/pathfinding.js'
 import { gameRandom } from '../utils/gameRandom.js'
 import { isUnitInPlayerBase } from './retreatLogic.js'
 
@@ -373,12 +372,11 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
 
     if (pathRecalcNeeded) {
       const occupancyMap = gameState.occupancyMap
-      const path = findPath(
+      const path = getCachedPath(
         { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         unit.approachPosition,
         mapGrid,
         occupancyMap,
-        undefined,
         { unitOwner: unit.owner }
       )
 
@@ -411,12 +409,11 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     unit.approachDirection = 'global'
     unit.lastDirectionAssignment = now
     const occupancyMap = gameState.occupancyMap
-    const path = findPath(
+    const path = getCachedPath(
       { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       globalPoint,
       mapGrid,
       occupancyMap,
-      undefined,
       { unitOwner: unit.owner }
     )
     if (path.length > 1) {
@@ -453,12 +450,11 @@ export function handleMultiDirectionalAttack(unit, units, gameState, mapGrid, no
     // Set path to approach position
     // Always respect the occupancy map for attack movement
     const occupancyMap = gameState.occupancyMap
-    const path = findPath(
+    const path = getCachedPath(
       { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       approachPos,
       mapGrid,
       occupancyMap,
-      undefined,
       { unitOwner: unit.owner }
     )
 

@@ -64,6 +64,20 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
 
   const movement = ensureMovement(unit)
 
+  // For human-controlled units following a player-issued move target, skip stuck
+  // handling ONLY within the first 2 seconds after a path was calculated.
+  // This prevents immediate re-path jitter while still allowing stuck recovery
+  // when the unit is genuinely blocked.
+  const now = performance.now()
+  const isPlayerUnit = gameState && (unit.owner === gameState.humanPlayer ||
+    (gameState.humanPlayer === 'player1' && unit.owner === 'player'))
+  const hasRecentPath = unit.lastPathCalcTime && (now - unit.lastPathCalcTime < 2000)
+  const hasActivePlayerMove = isPlayerUnit && unit.moveTarget && unit.path && unit.path.length > 0 &&
+    !unit.isRetreating && !unit.sweepingOverrideMovement && !unit.isDodging
+  if (hasActivePlayerMove && hasRecentPath) {
+    return
+  }
+
   if (!unit.movement.stuckDetection) {
     const randomOffset = gameRandom() * STUCK_CHECK_INTERVAL
     unit.movement.stuckDetection = {
@@ -79,7 +93,6 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
     }
   }
 
-  const now = performance.now()
   const stuck = unit.movement.stuckDetection
 
   const stuckThreshold = STUCK_THRESHOLD

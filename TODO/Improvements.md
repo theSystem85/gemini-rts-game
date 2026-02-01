@@ -136,6 +136,21 @@
   - [x] Added `MAX_PATHS_PER_CYCLE` limit (5 paths max per update) to prevent CPU spikes
   - [x] Units sorted by distance to target - closer units get pathfinding priority
   - [x] Spreads pathfinding work across multiple frames instead of calculating all at once
+- [x] **Performance:** Smart path recalculation to prevent unnecessary path updates
+  - [x] Added `MOVING_TARGET_CHECK_INTERVAL` (5000ms) for distance trend monitoring
+  - [x] Added `TARGET_MOVEMENT_THRESHOLD` (2 tiles) for target movement detection
+  - [x] Paths only recalculated when target has moved beyond threshold distance
+  - [x] For moving targets, paths only recalculated if distance to target is increasing (unit going wrong direction)
+  - [x] Tracks `lastKnownTargetPos` and `lastDistanceToTarget` per unit for smart decisions
+  - [x] **Architecture fix:** Clear separation of path calculation responsibilities:
+    - [x] Attack mode units (with `unit.target`) handled ONLY by `updateUnitMovement()`
+    - [x] Regular movement (moveTarget without attack) handled by `updateGlobalPathfinding()`
+    - [x] Skip recently calculated paths (within 100ms) to prevent same-frame conflicts
+    - [x] Removed problematic `path.length < 3` trigger that caused constant recalculation
+    - [x] Removed duplicate path calculation from `handleTankMovement()` in combatHelpers.js
+    - [x] Fixed range mismatch: `updateUnitMovement()` now uses `getEffectiveFireRange()` instead of hardcoded range
+    - [x] Suppress stuck/dodge detours for human-issued move paths so a single player path stays intact
+    - [x] Standardize enemy AI pathfinding on `getCachedPath()` to match player pathfinding algorithm
 - [x] **Performance:** Throttle AI updates with frame skipping
   - [x] Added `AI_UPDATE_FRAME_SKIP` config (default: 3) - AI runs every 3rd frame (~20 FPS AI at 60 FPS game)
   - [x] Frame counter in enemy.js skips AI processing on non-AI frames

@@ -33,7 +33,8 @@ vi.mock('../../src/units.js', () => ({
 }))
 
 vi.mock('../../src/game/pathfinding.js', () => ({
-  createFormationOffsets: (...args) => createFormationOffsetsMock(...args)
+  createFormationOffsets: (...args) => createFormationOffsetsMock(...args),
+  getCachedPath: (...args) => findPathMock(...args)
 }))
 
 vi.mock('../../src/inputHandler.js', () => ({

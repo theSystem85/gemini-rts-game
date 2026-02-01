@@ -142,7 +142,7 @@ describe('enemyUnitBehavior updateAIUnit', () => {
     updateAIUnit(unit, [unit], gameState, mapGrid, now, 'ai', [], [])
 
     expect(unit.refillingTarget).toBe(hospital)
-    expect(findPath).toHaveBeenCalled()
+    expect(getCachedPath).toHaveBeenCalled()
     expect(unit.moveTarget).toEqual({
       x: (hospital.x + Math.floor(hospital.width / 2)) * TILE_SIZE,
       y: (hospital.y + hospital.height + 1) * TILE_SIZE
@@ -258,7 +258,7 @@ describe('enemyUnitBehavior updateAIUnit', () => {
 
     expect(unit.airDefenseRetreating).toBe(true)
     expect(unit.target).toBeNull()
-    expect(findPath).toHaveBeenCalled()
+    expect(getCachedPath).toHaveBeenCalled()
     expect(unit.moveTarget).toBeTruthy()
   })
 

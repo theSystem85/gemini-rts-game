@@ -1,7 +1,7 @@
 // retreatLogic.js - AI retreat and defensive positioning
 import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
-import { findPath } from '../units.js'
+import { getCachedPath } from '../game/pathfinding.js'
 
 // Configuration constants for AI behavior
 const AI_CONFIG = {
@@ -68,12 +68,11 @@ export function handleRetreatToBase(unit, gameState, mapGrid) {
   const retreatTarget = findSafePositionNearBase(baseX, baseY, mapGrid, unit)
 
   if (retreatTarget) {
-    const path = findPath(
+    const path = getCachedPath(
       { x: unit.tileX, y: unit.tileY, owner: unit.owner },
       retreatTarget,
       mapGrid,
       null,
-      undefined,
       { unitOwner: unit.owner }
     )
 
@@ -144,12 +143,11 @@ export function handleHarvesterRetreat(harvester, gameState, mapGrid) {
   const retreatTarget = findDefensivePosition(nearestBase, gameState, mapGrid)
 
   if (retreatTarget) {
-    const path = findPath(
+    const path = getCachedPath(
       { x: harvester.tileX, y: harvester.tileY, owner: harvester.owner },
       retreatTarget,
       mapGrid,
       null,
-      undefined,
       { unitOwner: harvester.owner }
     )
 
@@ -232,12 +230,11 @@ export function sendUnitToWorkshop(unit, gameState, mapGrid) {
   const waitingY = nearest.y + nearest.height + 1
   const waitingX = nearest.x + (nearest.repairQueue.indexOf(unit) % nearest.width)
   const targetTile = { x: waitingX, y: waitingY }
-  const path = findPath(
+  const path = getCachedPath(
     { x: unit.tileX, y: unit.tileY, owner: unit.owner },
     targetTile,
     mapGrid,
     gameState.occupancyMap,
-    undefined,
     { unitOwner: unit.owner }
   )
   if (path && path.length > 0) {

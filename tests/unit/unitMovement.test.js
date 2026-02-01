@@ -359,7 +359,7 @@ describe('unitMovement.js', () => {
       expect(unit.moveTarget).toBeNull()
     })
 
-    it('uses occupancy map for attack mode paths', () => {
+    it('skips attack mode units (handled by updateUnitMovement main loop instead)', () => {
       const unit = {
         tileX: 1,
         tileY: 1,
@@ -370,14 +370,8 @@ describe('unitMovement.js', () => {
       }
       const localGameState = { ...mockGameState, occupancyMap: mockOccupancyMap }
       updateUnitPathfinding([unit], mockMapGrid, localGameState)
-      expect(findPath).toHaveBeenCalledWith(
-        { x: 1, y: 1, owner: 'player1' },
-        { x: 5, y: 5 },
-        mockMapGrid,
-        mockOccupancyMap,
-        undefined,
-        { unitOwner: 'player1' }
-      )
+      // Attack mode units are skipped - they are handled by updateUnitMovement main loop
+      expect(findPath).not.toHaveBeenCalled()
     })
   })
 

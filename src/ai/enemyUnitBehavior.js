@@ -1,6 +1,5 @@
-import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, AI_DECISION_INTERVAL } from '../config.js'
+import { TILE_SIZE, TANK_FIRE_RANGE, ATTACK_PATH_CALC_INTERVAL, AI_DECISION_INTERVAL, MOVING_TARGET_CHECK_INTERVAL, TARGET_MOVEMENT_THRESHOLD } from '../config.js'
 import { getCachedPath } from '../game/pathfinding.js'
-import { findPath } from '../units.js'
 import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth, shouldAIStartAttacking } from './enemyStrategies.js'
 import { isEnemyTo } from './enemyUtils.js'
 import { buildingData } from '../buildings.js'
@@ -523,41 +522,78 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
         }
       }
 
-      // Path recalculation throttled to every 3 seconds for attack/chase movement
-      // But avoid recalculating if unit is moving along a good path and target hasn't moved much
-      const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
-      const hasValidPath = unit.path && unit.path.length >= 3
-      const targetHasMoved = unit.target && unit.lastTargetPosition && (
-        Math.abs(unit.target.x - unit.lastTargetPosition.x) > 2 * TILE_SIZE ||
-        Math.abs(unit.target.y - unit.lastTargetPosition.y) > 2 * TILE_SIZE
-      )
-
-      if (pathRecalcNeeded && !unit.isDodging && unit.target && (!hasValidPath || targetHasMoved)) {
+      // Smart path recalculation: only recalculate if target moved or distance is increasing
+      if (!unit.isDodging && unit.target) {
         let targetPos = null
+        let targetTileX, targetTileY
         if (unit.target.tileX !== undefined) {
-          targetPos = { x: unit.target.tileX, y: unit.target.tileY }
+          targetTileX = unit.target.tileX
+          targetTileY = unit.target.tileY
+          targetPos = { x: targetTileX, y: targetTileY }
         } else {
-          targetPos = { x: unit.target.x, y: unit.target.y }
+          targetTileX = unit.target.x
+          targetTileY = unit.target.y
+          targetPos = { x: targetTileX, y: targetTileY }
         }
 
-        // Store target position for movement tracking
-        unit.lastTargetPosition = {
-          x: unit.target.x + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0),
-          y: unit.target.y + (unit.target.tileX !== undefined ? TILE_SIZE / 2 : 0)
+        // Calculate current distance to target
+        const distToTarget = Math.hypot(targetTileX - unit.tileX, targetTileY - unit.tileY)
+        const hasValidPath = unit.path && unit.path.length >= 1
+        const needsInitialPath = !hasValidPath
+
+        // Check if target has moved significantly from last known position
+        const lastTargetPos = unit.lastKnownTargetPos
+        const targetHasMoved = !lastTargetPos ||
+          Math.abs(targetTileX - lastTargetPos.x) > TARGET_MOVEMENT_THRESHOLD ||
+          Math.abs(targetTileY - lastTargetPos.y) > TARGET_MOVEMENT_THRESHOLD
+
+        // Check if we should recalculate based on distance trend (for moving targets)
+        let shouldRecalcForDistance = false
+        const checkIntervalPassed = !unit.lastDistanceCheckTime || (now - unit.lastDistanceCheckTime > MOVING_TARGET_CHECK_INTERVAL)
+
+        if (checkIntervalPassed) {
+          unit.lastDistanceCheckTime = now
+          const lastDistance = unit.lastDistanceToTarget
+          // Only recalculate if distance is increasing (unit going wrong direction)
+          if (lastDistance !== null && lastDistance !== undefined && distToTarget > lastDistance && hasValidPath) {
+            shouldRecalcForDistance = true
+          }
+          unit.lastDistanceToTarget = distToTarget
         }
 
-        // Use occupancy map in attack mode to prevent moving through occupied tiles
-        const occupancyMap = gameState.occupancyMap
-        const path = getCachedPath(
-          { x: unit.tileX, y: unit.tileY, owner: unit.owner },
-          targetPos,
-          mapGrid,
-          occupancyMap,
-          { unitOwner: unit.owner }
-        )
-        if (path.length > 1) {
-          unit.path = path.slice(1)
-          unit.lastPathCalcTime = now
+        // Throttle path recalculation
+        const pathRecalcNeeded = !unit.lastPathCalcTime || (now - unit.lastPathCalcTime > ATTACK_PATH_CALC_INTERVAL)
+
+        // Only recalculate if:
+        // 1. We need an initial path
+        // 2. Target has moved significantly AND throttle interval passed
+        // 3. We're getting farther from target AND interval passed
+        const shouldRecalculatePath = needsInitialPath || (pathRecalcNeeded && (targetHasMoved || shouldRecalcForDistance))
+
+        if (shouldRecalculatePath) {
+          // Store target position for movement tracking
+          unit.lastKnownTargetPos = { x: targetTileX, y: targetTileY }
+          unit.lastDistanceToTarget = distToTarget
+
+          // Use occupancy map in attack mode to prevent moving through occupied tiles
+          const occupancyMap = gameState.occupancyMap
+          const path = getCachedPath(
+            { x: unit.tileX, y: unit.tileY, owner: unit.owner },
+            targetPos,
+            mapGrid,
+            occupancyMap,
+            { unitOwner: unit.owner }
+          )
+          if (path.length > 1) {
+            unit.path = path.slice(1)
+            unit.lastPathCalcTime = now
+          }
+        } else if (hasValidPath) {
+          // Update distance tracking even if we don't recalculate
+          // This ensures we keep tracking progress along current path
+          if (!unit.lastDistanceToTarget || distToTarget < unit.lastDistanceToTarget) {
+            unit.lastDistanceToTarget = distToTarget
+          }
         }
       }
 
@@ -813,7 +849,7 @@ function updateAmbulanceAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
 
       const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
       const targetTile = { x: hospitalCenterX, y: refillY }
-      const path = findPath(startNode, targetTile, mapGrid, gameState.occupancyMap, undefined, { unitOwner: unit.owner })
+      const path = getCachedPath(startNode, targetTile, mapGrid, gameState.occupancyMap, { unitOwner: unit.owner })
       if (path && path.length > 0) {
         unit.path = path
         unit.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }
@@ -1254,7 +1290,7 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     unit.target = null
 
     if (safeTile) {
-      const retreatPath = findPath({ x: unit.tileX, y: unit.tileY }, safeTile, mapGrid, gameState.occupancyMap)
+      const retreatPath = getCachedPath({ x: unit.tileX, y: unit.tileY }, safeTile, mapGrid, gameState.occupancyMap)
       unit.path = retreatPath && retreatPath.length > 1 ? retreatPath.slice(1) : []
       unit.moveTarget = {
         x: (safeTile.x + 0.5) * TILE_SIZE,
@@ -1301,7 +1337,7 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
 
   unit.moveTarget = targetPixel
 
-  const path = findPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
+  const path = getCachedPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
   unit.path = path && path.length > 1 ? path.slice(1) : []
 }
 

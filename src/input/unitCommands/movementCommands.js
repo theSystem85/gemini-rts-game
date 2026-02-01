@@ -156,6 +156,8 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
         unit.turretShouldFollowMovement = true
       }
       unit.originalPath = null
+      unit.isDodging = false
+      unit.dodgeEndTime = null
       unit.forcedAttack = false
       anyMoved = true
     } else if (gasDepleted) {

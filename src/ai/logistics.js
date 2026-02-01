@@ -1,5 +1,5 @@
 // logistics.js - AI logistics management (tankers and ammunition)
-import { findPath } from '../units.js'
+import { getCachedPath } from '../game/pathfinding.js'
 import { getUnitCommandsHandler } from '../inputHandler.js'
 
 const AUTO_REFUEL_SCAN_INTERVAL = 10000
@@ -223,7 +223,7 @@ export function manageAITankerTrucks(units, gameState, mapGrid) {
         // If the tanker is far from the refinery, send it there
         if (distance > 5) {
           const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
-          const path = findPath(startNode, { x: refineryX, y: refineryY }, mapGrid, null, undefined, { unitOwner: tanker.owner })
+          const path = getCachedPath(startNode, { x: refineryX, y: refineryY }, mapGrid, null, { unitOwner: tanker.owner })
           if (path && path.length > 1) {
             tanker.path = path.slice(1)
             tanker.moveTarget = { x: refineryX, y: refineryY }
@@ -245,7 +245,7 @@ function sendTankerToGasStation(tanker, station, mapGrid) {
   const cx = station.x + Math.floor(station.width / 2)
   const cy = station.y + station.height + 1
   const startNode = { x: tanker.tileX, y: tanker.tileY, owner: tanker.owner }
-  const path = findPath(startNode, { x: cx, y: cy }, mapGrid, null, undefined, { unitOwner: tanker.owner })
+  const path = getCachedPath(startNode, { x: cx, y: cy }, mapGrid, null, { unitOwner: tanker.owner })
   if (path && path.length > 1) {
     tanker.path = path.slice(1)
     tanker.moveTarget = { x: cx, y: cy }
@@ -271,7 +271,7 @@ function sendTankerToUnit(tanker, unit, mapGrid, occupancyMap) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
     if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
-      const path = findPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, undefined, { unitOwner: tanker.owner })
+      const path = getCachedPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, { unitOwner: tanker.owner })
       if (path && path.length > 0) {
         tanker.path = path.slice(1)
         tanker.moveTarget = { x: destX, y: destY }
@@ -397,7 +397,7 @@ export function manageAIAmmunitionTrucks(units, gameState, mapGrid) {
 
           if (targetX >= 0 && targetY >= 0 && targetX < mapGrid[0].length && targetY < mapGrid.length) {
             const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
-            const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, null, undefined, { unitOwner: truck.owner })
+            const path = getCachedPath(startNode, { x: targetX, y: targetY }, mapGrid, null, { unitOwner: truck.owner })
             if (path && path.length > 1) {
               truck.path = path.slice(1)
               truck.moveTarget = { x: targetX, y: targetY }
@@ -413,7 +413,7 @@ function sendAmmoTruckToFactory(truck, factory, mapGrid) {
   const cx = factory.x + Math.floor(factory.width / 2)
   const cy = factory.y + factory.height + 1
   const startNode = { x: truck.tileX, y: truck.tileY, owner: truck.owner }
-  const path = findPath(startNode, { x: cx, y: cy }, mapGrid, null, undefined, { unitOwner: truck.owner })
+  const path = getCachedPath(startNode, { x: cx, y: cy }, mapGrid, null, { unitOwner: truck.owner })
   if (path && path.length > 1) {
     truck.path = path.slice(1)
     truck.moveTarget = { x: cx, y: cy }
@@ -440,7 +440,7 @@ function sendAmmoTruckToUnit(truck, unit, mapGrid, occupancyMap) {
     const destX = targetTileX + dir.x
     const destY = targetTileY + dir.y
     if (destX >= 0 && destY >= 0 && destX < mapGrid[0].length && destY < mapGrid.length) {
-      const path = findPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, undefined, { unitOwner: truck.owner })
+      const path = getCachedPath(startNode, { x: destX, y: destY }, mapGrid, occupancyMap, { unitOwner: truck.owner })
       if (path && path.length > 0) {
         truck.path = path.slice(1)
         truck.moveTarget = { x: destX, y: destY }
@@ -516,7 +516,7 @@ export function manageAIAmmunitionMonitoring(units, gameState, mapGrid) {
           }
 
           const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
-          const path = findPath(startNode, { x: targetX, y: targetY }, mapGrid, gameState.occupancyMap, undefined, { unitOwner: unit.owner })
+          const path = getCachedPath(startNode, { x: targetX, y: targetY }, mapGrid, gameState.occupancyMap, { unitOwner: unit.owner })
           if (path && path.length > 1) {
             // Cancel current attack/move commands
             unit.target = null

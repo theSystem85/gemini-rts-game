@@ -1,5 +1,5 @@
 import { TILE_SIZE, UNIT_PROPERTIES, UNIT_GAS_PROPERTIES, TANKER_SUPPLY_CAPACITY } from '../config.js'
-import { findPath } from '../units.js'
+import { getCachedPath } from '../game/pathfinding.js'
 import { getUniqueId } from '../utils.js'
 import { findClosestOre } from '../logic.js'
 import { assignHarvesterToOptimalRefinery } from '../game/harvesterLogic.js'
@@ -170,12 +170,11 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
       if (gameState?.targetedOreTiles) {
         gameState.targetedOreTiles[tileKey] = unit.id
       }
-      const newPath = findPath(
+      const newPath = getCachedPath(
         { x: unit.tileX, y: unit.tileY, owner: unit.owner },
         orePos,
         mapGrid,
         null,
-        undefined,
         { unitOwner: unit.owner }
       )
       if (newPath.length > 1) {

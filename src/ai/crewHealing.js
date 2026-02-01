@@ -1,6 +1,6 @@
 // crewHealing.js - AI crew healing and medical support
 import { TILE_SIZE } from '../config.js'
-import { findPath } from '../units.js'
+import { getCachedPath } from '../game/pathfinding.js'
 import { assignAmbulanceToHealUnit } from '../game/ambulanceSystem.js'
 
 const crewScanCooldowns = new Map()
@@ -227,7 +227,7 @@ function sendUnitToHospital(unit, hospital, mapGrid, now) {
   const startNode = { x: unit.tileX, y: unit.tileY, owner: unit.owner }
   for (const pos of refillPositions) {
     if (pos.x >= 0 && pos.y >= 0 && pos.x < mapGrid[0].length && pos.y < mapGrid.length) {
-      const path = findPath(startNode, pos, mapGrid, null, undefined, { unitOwner: unit.owner })
+      const path = getCachedPath(startNode, pos, mapGrid, null, { unitOwner: unit.owner })
       if (path && path.length > 0) {
         unit.path = path
         unit.moveTarget = { x: pos.x * TILE_SIZE, y: pos.y * TILE_SIZE }
@@ -248,7 +248,7 @@ function sendAmbulanceToHospital(ambulance, hospital, mapGrid) {
   const refillY = hospital.y + hospital.height + 1
 
   const startNode = { x: ambulance.tileX, y: ambulance.tileY, owner: ambulance.owner }
-  const path = findPath(startNode, { x: hospitalCenterX, y: refillY }, mapGrid, null, undefined, { unitOwner: ambulance.owner })
+  const path = getCachedPath(startNode, { x: hospitalCenterX, y: refillY }, mapGrid, null, { unitOwner: ambulance.owner })
   if (path && path.length > 0) {
     ambulance.path = path
     ambulance.moveTarget = { x: hospitalCenterX * TILE_SIZE, y: refillY * TILE_SIZE }

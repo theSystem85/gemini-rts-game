@@ -77,6 +77,7 @@
 - [x] ✅ Rocket tank reload phase begins only after entire 4-rocket burst completes
 ## Bug Fixes (2026-01-31)
 - [x] ✅ Fixed smoke test failing with "Cannot read properties of null (reading 'setTransform')" and "Cannot read properties of null (reading 'clearRect')" by adding null checks for canvas contexts in CanvasManager and Renderer to handle headless browser environments where getContext() returns null.
+- [x] ✅ Fixed player units becoming uncontrollable and moving in one direction until hitting obstacles after issuing move commands. The previous fix for path recalculation prevention was too aggressive - it skipped ALL stuck detection for player units with active paths, preventing recovery when units genuinely got stuck. Now stuck handling is only skipped for 2 seconds after a path is calculated, allowing stuck recovery to work after that grace period. Also added proper isDodging state cleanup when new move commands are issued.
 ## Bugs
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
