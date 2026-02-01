@@ -28,7 +28,8 @@ vi.mock('../../src/inputHandler.js', () => ({
 vi.mock('../../src/logic.js', () => ({
   triggerExplosion: vi.fn(),
   smoothRotateTowardsAngle: vi.fn((current, target) => target),
-  angleDiff: vi.fn((a, b) => Math.abs(a - b))
+  angleDiff: vi.fn((a, b) => Math.abs(a - b)),
+  hasLineOfSightToTarget: vi.fn(() => true)
 }))
 
 vi.mock('../../src/ui/distortionEffect.js', () => ({

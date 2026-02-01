@@ -104,6 +104,7 @@ Located in `tests/unit/`
 ### Game System Tests
 - `tests/unit/buildingSystem.test.js` now includes coverage for `src/game/buildingSystem.js`, focusing on sell/destruction flows, defensive turret firing, and Tesla coil timing effects.
 - These tests mock audio, timing, and rendering dependencies to keep unit tests deterministic while asserting meaningful gameplay state changes.
+- Building system unit tests should mock `hasLineOfSightToTarget` from `src/logic.js` to keep turret line-of-sight behavior deterministic.
 
 #### Game State Manager Coverage
 - Added `tests/unit/gameStateManager.test.js` with focused scenarios for scrolling inertia, ore spread rules, particle cleanup, destruction cleanup, and win/loss conditions.
