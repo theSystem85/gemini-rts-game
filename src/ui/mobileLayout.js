@@ -2,6 +2,10 @@
 import { gameState } from '../gameState.js'
 import { updateEnergyBar } from './energyBar.js'
 
+const PORTRAIT_SIDEBAR_STATE_KEY = 'mobilePortraitSidebarState'
+const PORTRAIT_SIDEBAR_DEFAULT_STATE = 'condensed'
+const PORTRAIT_SIDEBAR_STATES = new Set(['collapsed', 'condensed', 'expanded'])
+
 const mobileLayoutState = {
   productionArea: null,
   originalParent: null,
@@ -53,13 +57,83 @@ const mobileLayoutState = {
   sidebarSwipeHandlersAttached: false,
   sidebarSwipeState: null,
   sidebarSwipeHandlers: null,
-  isSidebarCollapsed: null
+  isSidebarCollapsed: null,
+  portraitSidebarState: null
 }
 
 let getGameInstance = () => null
 
 export function setMobileLayoutGameAccessor(fn) {
   getGameInstance = typeof fn === 'function' ? fn : () => null
+}
+
+function getStoredPortraitSidebarState() {
+  if (typeof localStorage === 'undefined') {
+    return null
+  }
+  try {
+    const stored = localStorage.getItem(PORTRAIT_SIDEBAR_STATE_KEY)
+    return PORTRAIT_SIDEBAR_STATES.has(stored) ? stored : null
+  } catch (error) {
+    window?.logger?.warn('Failed to read portrait sidebar state from localStorage:', error)
+    return null
+  }
+}
+
+function persistPortraitSidebarState(state) {
+  if (typeof localStorage === 'undefined' || !PORTRAIT_SIDEBAR_STATES.has(state)) {
+    return
+  }
+  try {
+    localStorage.setItem(PORTRAIT_SIDEBAR_STATE_KEY, state)
+  } catch (error) {
+    window?.logger?.warn('Failed to save portrait sidebar state to localStorage:', error)
+  }
+}
+
+function getPortraitSidebarStateFromBody() {
+  if (!document.body) {
+    return PORTRAIT_SIDEBAR_DEFAULT_STATE
+  }
+  if (document.body.classList.contains('sidebar-collapsed')) {
+    return 'collapsed'
+  }
+  if (document.body.classList.contains('sidebar-condensed')) {
+    return 'condensed'
+  }
+  return 'expanded'
+}
+
+function applyPortraitSidebarState(state) {
+  if (!document.body) {
+    return
+  }
+  if (state === 'collapsed') {
+    document.body.classList.add('sidebar-collapsed')
+    document.body.classList.remove('sidebar-condensed')
+  } else if (state === 'condensed') {
+    document.body.classList.add('sidebar-condensed')
+    document.body.classList.remove('sidebar-collapsed')
+  } else {
+    document.body.classList.remove('sidebar-collapsed')
+    document.body.classList.remove('sidebar-condensed')
+  }
+
+  mobileLayoutState.isSidebarCollapsed = state === 'collapsed'
+  mobileLayoutState.isSidebarCondensed = state === 'condensed'
+  mobileLayoutState.portraitSidebarState = state
+}
+
+function syncPortraitSidebarState() {
+  if (!document.body) {
+    return
+  }
+  const storedState = getStoredPortraitSidebarState()
+  const desiredState = storedState || mobileLayoutState.portraitSidebarState || PORTRAIT_SIDEBAR_DEFAULT_STATE
+  applyPortraitSidebarState(desiredState)
+  if (!storedState) {
+    persistPortraitSidebarState(desiredState)
+  }
 }
 
 function ensureMobileLayoutElements() {
@@ -378,6 +452,9 @@ export function setSidebarCollapsed(collapsed, options = {}) {
   if (!options.preservePreference) {
     mobileLayoutState.isSidebarCollapsed = collapsed
   }
+  if (!options.preservePreference && document.body.classList.contains('mobile-portrait')) {
+    persistPortraitSidebarState(getPortraitSidebarStateFromBody())
+  }
 
   const toggleButton = mobileLayoutState.sidebarToggle
   if (toggleButton) {
@@ -403,7 +480,7 @@ export function setSidebarCollapsed(collapsed, options = {}) {
   }
 }
 
-export function setSidebarCondensed(condensed) {
+export function setSidebarCondensed(condensed, options = {}) {
   if (!document.body) {
     return
   }
@@ -424,6 +501,9 @@ export function setSidebarCondensed(condensed) {
     document.dispatchEvent(new CustomEvent('sidebar-condensed-changed', {
       detail: { condensed, isPortrait: true }
     }))
+    if (!options.preservePreference) {
+      persistPortraitSidebarState(getPortraitSidebarStateFromBody())
+    }
   }
 
   if (
@@ -854,6 +934,10 @@ export function applyMobileSidebarLayout(mode) {
   const isPortrait = mode === 'portrait'
   const isMobile = isLandscape || isPortrait
 
+  if (isPortrait) {
+    syncPortraitSidebarState()
+  }
+
   const isCondensed = isPortrait && document.body.classList.contains('sidebar-condensed')
 
   if (isLandscape) {
@@ -933,8 +1017,8 @@ export function applyMobileSidebarLayout(mode) {
       sidebarMenuButton.setAttribute('aria-hidden', 'true')
       sidebarMenuButton.setAttribute('tabindex', '-1')
     }
-    const shouldCollapse = isPortrait && typeof mobileLayoutState.isSidebarCollapsed === 'boolean'
-      ? mobileLayoutState.isSidebarCollapsed
+    const shouldCollapse = isPortrait
+      ? document.body.classList.contains('sidebar-collapsed')
       : false
     setSidebarCollapsed(shouldCollapse, { preservePreference: !isPortrait })
     if (mobileLayoutState.mobileStatusBar) {
