@@ -68,3 +68,12 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Condensed Build Bar Visibility**: The portrait condensed build bar must render only unlocked production buttons; the row should lay out left-to-right and scroll horizontally with no visible scrollbar.
 - **Right-Aligned Toggle**: The build category toggle stays docked on the right edge of the build bar while buttons occupy the remaining horizontal space.
 - **PWA Bottom Edge**: In standalone/PWA mode, the condensed build bar background should extend to the bottom edge of the screen without leaving a visual gap.
+
+## Update 2026-01-22
+
+- **Portrait Sidebar Persistence**: Persist the portrait sidebar state (expanded, collapsed, condensed) in localStorage and restore it on load/rotation.
+- **Default Condensed**: If no preference is stored, default the portrait sidebar to the condensed state.
+
+## Bug Fix 2026-02-02
+
+- **Swipe Functionality Fix**: Fixed issue where `syncPortraitSidebarState()` was being called on every `applyMobileSidebarLayout('portrait')` invocation, overwriting user swipe actions. Now only syncs stored state once on initial portrait mode entry using `hasPortraitStateBeenSynced` flag.
