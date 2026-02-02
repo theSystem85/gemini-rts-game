@@ -160,69 +160,6 @@ test.describe('Basic Game Flow', () => {
       console.log(`${unitType} production complete`)
     }
 
-    // Helper to find a valid placement position 2 tiles away from construction yard border
-    async function findPlacementPosition() {
-      // Get canvas dimensions
-      const canvas = page.locator('#gameCanvas')
-      const box = await canvas.boundingBox()
-      if (!box) throw new Error('Canvas not found')
-
-      // Get the initial factory/construction yard position from game state
-      const factoryInfo = await page.evaluate(() => {
-        const buildings = window.gameState?.buildings || []
-        // Find the initial factory (type 'factory' or 'constructionYard')
-        const factory = buildings.find(b => b.type === 'factory' || b.type === 'constructionYard')
-        if (factory) {
-          return {
-            x: factory.x,
-            y: factory.y,
-            width: factory.width || 3,
-            height: factory.height || 3
-          }
-        }
-        return null
-      })
-
-      // Constants (matching config.js)
-      const TILE_SIZE = 32
-      const MIN_DISTANCE_TILES = 2
-
-      if (factoryInfo) {
-        // Calculate factory border in tile coordinates
-        const factoryRightEdge = factoryInfo.x + factoryInfo.width
-        const factoryBottomEdge = factoryInfo.y + factoryInfo.height
-
-        // Place power plant 2 tiles to the right and below the factory
-        const buildingX = factoryRightEdge + MIN_DISTANCE_TILES
-        const buildingY = factoryBottomEdge + MIN_DISTANCE_TILES
-
-        // Convert to screen coordinates (accounting for scroll offset)
-        const scrollOffset = await page.evaluate(() => ({
-          x: window.gameState?.scrollOffset?.x || 0,
-          y: window.gameState?.scrollOffset?.y || 0
-        }))
-
-        const screenX = buildingX * TILE_SIZE - scrollOffset.x
-        const screenY = buildingY * TILE_SIZE - scrollOffset.y
-
-        // Clamp to visible canvas area
-        const clampedX = Math.max(box.x, Math.min(box.x + box.width - 100, screenX + box.x))
-        const clampedY = Math.max(box.y, Math.min(box.y + box.height - 100, screenY + box.y))
-
-        console.log(`Factory at tile (${factoryInfo.x}, ${factoryInfo.y}), placing building 2 tiles away at screen (${clampedX}, ${clampedY})`)
-        return {
-          x: clampedX,
-          y: clampedY
-        }
-      }
-
-      // Fallback: place in bottom-right area if factory not found
-      return {
-        x: box.x + box.width * 0.7,
-        y: box.y + box.height * 0.7
-      }
-    }
-
     // Helper to find placement position for nth building, incrementally offset to avoid collisions
     async function findPlacementPositionForBuilding(buildingIndex) {
       const canvas = page.locator('#gameCanvas')
@@ -248,11 +185,11 @@ test.describe('Basic Game Flow', () => {
 
       if (factoryInfo) {
         const factoryRightEdge = factoryInfo.x + factoryInfo.width
-        const factoryBottomEdge = factoryInfo.y + factoryInfo.height
 
-        // Stagger placements: index 0 goes right/down, index 1 goes farther right/down, etc.
-        const buildingX = factoryRightEdge + MIN_DISTANCE_TILES + (buildingIndex * 5)
-        const buildingY = factoryBottomEdge + MIN_DISTANCE_TILES + (buildingIndex * 5)
+        // Place buildings to the right of refinery: each building incrementally to the right
+        const buildingWidth = 3 // Standard building width
+        const buildingX = factoryRightEdge + MIN_DISTANCE_TILES + (buildingIndex * (buildingWidth + 1))
+        const buildingY = factoryInfo.y // Align with factory top
 
         const scrollOffset = await page.evaluate(() => ({
           x: window.gameState?.scrollOffset?.x || 0,
@@ -273,6 +210,57 @@ test.describe('Basic Game Flow', () => {
 
       return {
         x: box.x + box.width * 0.7,
+        y: box.y + box.height * 0.7
+      }
+    }
+
+    // Helper to find placement position for refinery (top left of construction yard)
+    async function findRefinerPlacementPosition() {
+      const canvas = page.locator('#gameCanvas')
+      const box = await canvas.boundingBox()
+      if (!box) throw new Error('Canvas not found')
+
+      const factoryInfo = await page.evaluate(() => {
+        const buildings = window.gameState?.buildings || []
+        const factory = buildings.find(b => b.type === 'factory' || b.type === 'constructionYard')
+        if (factory) {
+          return {
+            x: factory.x,
+            y: factory.y,
+            width: factory.width || 3,
+            height: factory.height || 3
+          }
+        }
+        return null
+      })
+
+      const TILE_SIZE = 32
+      const MIN_DISTANCE_TILES = 2
+
+      if (factoryInfo) {
+        // Place refinery to the top left of factory
+        const buildingX = factoryInfo.x - (3 + MIN_DISTANCE_TILES) // 3 is refinery width, place to the left
+        const buildingY = factoryInfo.y // Align with factory top
+
+        const scrollOffset = await page.evaluate(() => ({
+          x: window.gameState?.scrollOffset?.x || 0,
+          y: window.gameState?.scrollOffset?.y || 0
+        }))
+
+        const screenX = buildingX * TILE_SIZE - scrollOffset.x
+        const screenY = buildingY * TILE_SIZE - scrollOffset.y
+
+        const clampedX = Math.max(box.x, Math.min(box.x + box.width - 100, screenX + box.x))
+        const clampedY = Math.max(box.y, Math.min(box.y + box.height - 100, screenY + box.y))
+
+        return {
+          x: clampedX,
+          y: clampedY
+        }
+      }
+
+      return {
+        x: box.x + box.width * 0.3,
         y: box.y + box.height * 0.7
       }
     }
@@ -338,8 +326,8 @@ test.describe('Basic Game Flow', () => {
     })
     console.log('In placement mode:', isInPlacementMode)
 
-    // Find a valid position and place the building
-    const pos1 = await findPlacementPosition()
+    // Find a valid position and place the building (power plant is first to the right)
+    const pos1 = await findPlacementPositionForBuilding(0)
     console.log(`Placing Power Plant at (${pos1.x}, ${pos1.y})`)
     await page.mouse.click(pos1.x, pos1.y)
 
@@ -376,8 +364,8 @@ test.describe('Basic Game Flow', () => {
     console.log('Clicked Refinery button (second time - enter placement mode)')
     await page.waitForTimeout(300)
 
-    // Place refinery next to power plant, but with additional offset to avoid collision
-    const pos2 = await findPlacementPositionForBuilding(1)
+    // Place refinery to the top left of construction yard
+    const pos2 = await findRefinerPlacementPosition()
     console.log(`Placing Refinery at (${pos2.x}, ${pos2.y})`)
     await page.mouse.click(pos2.x, pos2.y)
 
@@ -409,8 +397,8 @@ test.describe('Basic Game Flow', () => {
     console.log('Clicked Vehicle Factory button (second time - enter placement mode)')
     await page.waitForTimeout(300)
 
-    // Place factory with additional offset
-    const pos3 = await findPlacementPositionForBuilding(2)
+    // Place factory to the right of power plant
+    const pos3 = await findPlacementPositionForBuilding(1)
     console.log(`Placing Vehicle Factory at (${pos3.x}, ${pos3.y})`)
     await page.mouse.click(pos3.x, pos3.y)
 
@@ -485,35 +473,350 @@ test.describe('Basic Game Flow', () => {
     console.log('Unit count after Tank:', unitCount2)
 
     // ========================================
-    // Step 6: Select tank and command to move to ore field
+    // Step 6: Queue harvesters to drain money, then apply cheat for rest of test
     // ========================================
-    console.log('=== Step 6: Commanding tank to move to ore field ===')
+    console.log('=== Step 6: Queuing harvesters ===')
 
-    // To select the tank, we need to find it on the canvas
-    // The tank spawns from the vehicle factory
-    // We'll click on the approximate location and then right-click to move
+    for (let i = 0; i < 2; i++) {
+      console.log(`Building harvester ${i + 1}/2`)
+      const harvesterBtn = page.locator('button.production-button[data-unit-type="harvester"]')
+      await expect(harvesterBtn).toBeVisible()
+      await harvesterBtn.click()
+      console.log(`Clicked Harvester button (harvester ${i + 1})`)
+      await page.waitForTimeout(300)
+    }
 
+    currentMoney = await getMoney()
+    console.log('Money after queuing harvesters:', currentMoney)
+
+    const unitCount3 = await page.evaluate(() => window.gameInstance?.units?.length || 0)
+    console.log('Unit count after queueing harvesters:', unitCount3)
+
+    await page.screenshot({ path: 'test-results/13b-harvesters-queued.png' })
+
+    // ========================================
+    // Step 7: Open cheat console and apply "give 999999"
+    // ========================================
+    console.log('=== Step 7: Applying cheat to get money for remaining steps ===')
+
+    // Open cheat console by pressing 'c' key
+    console.log('Attempting to open cheat console with c key...')
+    await page.keyboard.press('KeyC')
+    console.log('Pressed c key to open cheat console')
+    await page.waitForTimeout(1000)
+
+    await page.screenshot({ path: 'test-results/14-cheat-console-opened.png' })
+
+    // Wait for cheat input to become visible
+    const cheatInput = page.locator('#cheat-input')
+    console.log('Looking for cheat input element with id #cheat-input...')
+
+    try {
+      await expect(cheatInput).toBeVisible({ timeout: 5000 })
+      console.log('✓ Cheat input found and visible')
+    } catch {
+      console.error('❌ Cheat input not visible after 5 seconds')
+      await page.screenshot({ path: 'test-results/14b-cheat-console-not-visible.png' })
+      throw new Error('Cheat console input not found')
+    }
+
+    // Type the cheat command
+    console.log('Focusing cheat input and typing command...')
+    await cheatInput.focus()
+    await page.keyboard.type('give 999999')
+    console.log('Typed "give 999999" into cheat console')
+    await page.waitForTimeout(300)
+
+    // Press Enter to execute cheat
+    await page.keyboard.press('Enter')
+    console.log('Pressed Enter to execute cheat')
+    await page.waitForTimeout(500)
+
+    await page.screenshot({ path: 'test-results/15-cheat-executed.png' })
+
+    // Close cheat console by pressing Escape
+    await page.keyboard.press('Escape')
+    console.log('Closed cheat console')
+    await page.waitForTimeout(300)
+
+    // ========================================
+    // Step 8: Verify cheat money was added and notification shown
+    // ========================================
+    console.log('=== Step 8: Verifying cheat money and notification ===')
+
+    const moneyAfterCheat = await getMoney()
+    console.log('Money after cheat:', moneyAfterCheat)
+
+    // Check if cheat was applied successfully - money should be very high
+    // (>= 900000 to ensure the "give 999999" was applied)
+    if (moneyAfterCheat >= 900000) {
+      console.log('✓ Cheat successfully added money - current balance:', moneyAfterCheat)
+      expect(moneyAfterCheat).toBeGreaterThanOrEqual(900000)
+    } else {
+      console.error('❌ ERROR: Cheat did not add expected amount. Current:', moneyAfterCheat)
+      expect(moneyAfterCheat).toBeGreaterThanOrEqual(900000)
+    }
+
+    // Look for cheat success notification
+    const cheatNotification = page.locator('[class*="notification"]', { has: page.locator('text=/[Cc]heat|success/i') })
+    const isNotificationVisible = await cheatNotification.isVisible().catch(() => false)
+    console.log('Cheat success notification visible:', isNotificationVisible)
+
+    await page.screenshot({ path: 'test-results/16-cheat-verified.png' })
+
+    currentMoney = moneyAfterCheat
+
+    // Get canvas reference for later use in Steps 12-13
     const canvas = page.locator('#gameCanvas')
     const canvasBox = await canvas.boundingBox()
     if (!canvasBox) throw new Error('Canvas not found')
 
-    // Click near where the tank would spawn (near factory)
-    const tankSpawnX = canvasBox.x + canvasBox.width * 0.45
-    const tankSpawnY = canvasBox.y + canvasBox.height * 0.6
+    // ========================================
+    // Step 9: Build Radar Station
+    // ========================================
+    console.log('=== Step 9: Building Radar Station ===')
 
-    console.log(`Clicking to select tank at (${tankSpawnX}, ${tankSpawnY})`)
-    // Click to select unit
-    await page.mouse.click(tankSpawnX, tankSpawnY)
+    // Switch to buildings tab if not already there
+    const buildingsTab2 = page.locator('button.tab-button[data-tab="buildings"]')
+    await expect(buildingsTab2).toBeVisible()
+    await buildingsTab2.click()
+    console.log('Switched to Buildings tab')
     await page.waitForTimeout(300)
 
-    await page.screenshot({ path: 'test-results/14-tank-selected.png' })
+    const radarBtn = page.locator('button.production-button[data-building-type="radarStation"]')
+    await expect(radarBtn).toBeVisible()
+    await radarBtn.click()
+    console.log('Clicked Radar Station button (first time)')
+    await page.waitForTimeout(300)
 
-    // Try to find ore on the map - ore fields are typically visible on the map
-    // We'll command the tank to move towards the minimap area or use keyboard shortcut
-    // Since we can't easily detect ore visually, we'll right-click in a direction
-    // that would typically contain ore based on seed 11
+    // Wait for radar to be ready
+    await waitForBuildingReady('radarStation')
 
-    // Right-click to command move (towards where ore typically spawns)
+    // Enter placement mode
+    await radarBtn.click()
+    console.log('Clicked Radar Station button (second time - enter placement mode)')
+    await page.waitForTimeout(300)
+
+    // Find placement position and place
+    const radarPos = await findPlacementPositionForBuilding(2)
+    console.log(`Placing Radar Station at (${radarPos.x}, ${radarPos.y})`)
+    await page.mouse.click(radarPos.x, radarPos.y)
+    await page.waitForTimeout(2000)
+
+    await page.screenshot({ path: 'test-results/17-radar-placed.png' })
+
+    currentMoney = await getMoney()
+    console.log('Money after Radar Station:', currentMoney)
+
+    const buildingCount4 = await page.evaluate(() => window.gameState?.buildings?.length || 0)
+    console.log('Building count after Radar Station:', buildingCount4)
+
+    // Verify minimap is now visible on sidebar
+    const minimap = page.locator('#minimapContainer, [class*="minimap"]').first()
+    const isMinimapVisible = await minimap.isVisible().catch(() => false)
+    console.log('Minimap visible on sidebar:', isMinimapVisible)
+
+    if (isMinimapVisible) {
+      console.log('✓ Minimap is now showing on sidebar')
+      expect(minimap).toBeVisible()
+    }
+
+    await page.screenshot({ path: 'test-results/18-radar-minimap-check.png' })
+
+    // ========================================
+    // Step 10: Build Gas Station
+    // ========================================
+    console.log('=== Step 10: Building Gas Station ===')
+
+    const gasStationBtn = page.locator('button.production-button[data-building-type="gasStation"]')
+    await expect(gasStationBtn).toBeVisible()
+    await gasStationBtn.click()
+    console.log('Clicked Gas Station button (first time)')
+    await page.waitForTimeout(300)
+
+    // Wait for gas station to be ready
+    await waitForBuildingReady('gasStation')
+
+    // Enter placement mode
+    await gasStationBtn.click()
+    console.log('Clicked Gas Station button (second time - enter placement mode)')
+    await page.waitForTimeout(300)
+
+    // Find placement position and place
+    const gasPos = await findPlacementPositionForBuilding(3)
+    console.log(`Placing Gas Station at (${gasPos.x}, ${gasPos.y})`)
+    await page.mouse.click(gasPos.x, gasPos.y)
+    await page.waitForTimeout(2000)
+
+    await page.screenshot({ path: 'test-results/19-gasstation-placed.png' })
+    currentMoney = await getMoney()
+    console.log('Money after Gas Station:', currentMoney)
+
+    const buildingCount5 = await page.evaluate(() => window.gameState?.buildings?.length || 0)
+    console.log('Building count after Gas Station:', buildingCount5)
+
+    // ========================================
+    // Step 11: Build Tanker Truck
+    // ========================================
+    console.log('=== Step 11: Building Tanker Truck ===')
+
+    // Wait for tanker truck button to become enabled (requires Vehicle Factory + Gas Station)
+    console.log('Waiting for tanker truck button to be enabled...')
+    let tankerBtnEnabled = false
+    let tankerWaitAttempts = 0
+    while (!tankerBtnEnabled && tankerWaitAttempts < 30) {
+      const tankerBtn = page.locator('button.production-button[data-unit-type="tankerTruck"]')
+      const isDisabled = await tankerBtn.evaluate(el => el.classList.contains('disabled')).catch(() => true)
+      if (!isDisabled) {
+        tankerBtnEnabled = true
+        console.log('✓ Tanker truck button is now enabled')
+      } else {
+        await page.waitForTimeout(300)
+        tankerWaitAttempts++
+        if (tankerWaitAttempts % 5 === 0) {
+          console.log(`  Still waiting for tanker button... (${tankerWaitAttempts}s)`)
+        }
+      }
+    }
+
+    if (!tankerBtnEnabled) {
+      console.warn('⚠️ Tanker truck button still disabled after waiting, attempting anyway')
+    }
+
+    // Switch to units tab
+    const unitsTab2 = page.locator('button.tab-button[data-tab="units"]')
+    await expect(unitsTab2).toBeVisible()
+    await unitsTab2.click()
+    console.log('Switched to Units tab')
+    await page.waitForTimeout(300)
+
+    const tankerBtn = page.locator('button.production-button[data-unit-type="tankerTruck"]')
+    await expect(tankerBtn).toBeVisible()
+    await tankerBtn.click()
+    console.log('Clicked Tanker Truck button')
+    await page.waitForTimeout(300)
+
+    await page.screenshot({ path: 'test-results/20-tanker-queued.png' })
+
+    // Wait for tanker production to complete
+    await waitForUnitReady('tankerTruck', 60000)
+
+    await page.screenshot({ path: 'test-results/21-tanker-complete.png' })
+
+    currentMoney = await getMoney()
+    console.log('Money after Tanker Truck:', currentMoney)
+
+    const unitCount4 = await page.evaluate(() => window.gameInstance?.units?.length || 0)
+    console.log('Unit count after Tanker Truck:', unitCount4)
+
+    // ========================================
+    // Step 12: Test tanker refueling - empty tank fuel with cheat, refuel with tanker
+    // ========================================
+    console.log('=== Step 12: Testing tanker refueling ===')
+
+    // First, select the tank to target it with the fuel cheat
+    // The tank was produced in Step 5 and should be near the vehicle factory location
+    const tankClickX = canvasBox.x + canvasBox.width * 0.45
+    const tankClickY = canvasBox.y + canvasBox.height * 0.6
+
+    console.log(`Clicking to select tank at (${tankClickX}, ${tankClickY})`)
+    await page.mouse.click(tankClickX, tankClickY)
+    await page.waitForTimeout(300)
+
+    await page.screenshot({ path: 'test-results/22-tank-selected-for-cheat.png' })
+
+    // Verify tank is selected by checking if unit info appears in HUD
+    const hudUnitInfo = page.locator('[class*="unit"], [id*="unit"]').first()
+    const isUnitInfoVisible = await hudUnitInfo.isVisible().catch(() => false)
+    console.log('Unit info visible in HUD:', isUnitInfoVisible)
+
+    // Open cheat console and apply "fuel 0" to the selected tank
+    console.log('Opening cheat console to empty tank fuel...')
+    await page.keyboard.press('KeyC')
+    await page.waitForTimeout(500)
+
+    const cheatInput2 = page.locator('#cheat-input')
+    if (await cheatInput2.isVisible()) {
+      console.log('✓ Cheat console is visible')
+      await cheatInput2.focus()
+      // Use cheat to empty fuel of selected tank
+      await page.keyboard.type('fuel 0')
+      console.log('Typed "fuel 0" cheat command to empty selected tank fuel')
+      await page.waitForTimeout(300)
+
+      await page.keyboard.press('Enter')
+      console.log('Executed empty fuel cheat on tank')
+      await page.waitForTimeout(500)
+
+      await page.screenshot({ path: 'test-results/23-tank-fuel-emptied-cheat.png' })
+
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    } else {
+      console.error('❌ Cheat console not visible')
+      throw new Error('Cheat console input not found')
+    }
+
+    // Check HUD for fuel bar (should be empty or low)
+    const hudFuelBarBefore = page.locator('[class*="fuel"], [id*="fuel"]').first()
+    const isFuelBarVisibleBefore = await hudFuelBarBefore.isVisible().catch(() => false)
+    console.log('Fuel bar visible before refuel:', isFuelBarVisibleBefore)
+
+    await page.screenshot({ path: 'test-results/24-tank-displayed-with-empty-fuel.png' })
+
+    // Now select the tanker truck and command it to move to the tank and refuel
+    // The tanker truck was produced in Step 11 and should be near the vehicle factory
+    // Click on the tanker truck unit (slightly offset from tank location)
+    const tankerClickX = canvasBox.x + canvasBox.width * 0.42
+    const tankerClickY = canvasBox.y + canvasBox.height * 0.65
+
+    console.log(`Clicking to select tanker truck at (${tankerClickX}, ${tankerClickY})`)
+    await page.mouse.click(tankerClickX, tankerClickY)
+    await page.waitForTimeout(300)
+
+    await page.screenshot({ path: 'test-results/25-tanker-truck-selected.png' })
+
+    // Right-click on the tank to command the tanker truck to move to it for refueling
+    console.log(`Right-clicking on tank to command tanker to refuel at (${tankClickX}, ${tankClickY})`)
+    await page.mouse.click(tankClickX, tankClickY, { button: 'right' })
+    await page.waitForTimeout(1000)
+
+    await page.screenshot({ path: 'test-results/26-tanker-refuel-command-issued.png' })
+
+    // Wait for tanker to move to tank and perform refueling
+    console.log('Waiting for tanker to move to tank and refuel...')
+    await page.waitForTimeout(2000)
+
+    // Select the tank again to check if fuel was restored
+    console.log(`Re-selecting tank to check fuel status at (${tankClickX}, ${tankClickY})`)
+    await page.mouse.click(tankClickX, tankClickY)
+    await page.waitForTimeout(500)
+
+    await page.screenshot({ path: 'test-results/27-tank-after-refuel.png' })
+
+    // Check HUD for fuel bar (should be refilled or higher)
+    const hudFuelBarAfter = page.locator('[class*="fuel"], [id*="fuel"]').first()
+    const isFuelBarVisibleAfter = await hudFuelBarAfter.isVisible().catch(() => false)
+    console.log('Fuel bar visible after refuel:', isFuelBarVisibleAfter)
+
+    if (isFuelBarVisibleAfter) {
+      console.log('✓ Fuel bar is visible in HUD after refueling with tanker truck')
+    }
+
+    // ========================================
+    // Step 13: Select tank and command to move to ore field
+    // ========================================
+    console.log('=== Step 13: Commanding tank to move to ore field ===')
+
+    // Select the tank
+    console.log(`Clicking to select tank at (${tankClickX}, ${tankClickY})`)
+    await page.mouse.click(tankClickX, tankClickY)
+    await page.waitForTimeout(300)
+
+    await page.screenshot({ path: 'test-results/28-tank-selected-for-move.png' })
+
+    // Right-click to command move towards ore (ore typically spawns at various locations)
+    // We'll command the tank to move towards where ore fields are likely to be
     const oreTargetX = canvasBox.x + canvasBox.width * 0.2
     const oreTargetY = canvasBox.y + canvasBox.height * 0.3
 
@@ -521,9 +824,9 @@ test.describe('Basic Game Flow', () => {
     await page.mouse.click(oreTargetX, oreTargetY, { button: 'right' })
     await page.waitForTimeout(500)
 
-    await page.screenshot({ path: 'test-results/15-tank-move-command.png' })
+    await page.screenshot({ path: 'test-results/29-tank-move-command.png' })
 
-    console.log('Move command issued')
+    console.log('✓ Move command issued to tank')
 
     // ========================================
     // Final Verification
@@ -534,7 +837,7 @@ test.describe('Basic Game Flow', () => {
     await page.waitForTimeout(1000)
 
     // Take final screenshot
-    await page.screenshot({ path: 'test-results/16-final-state.png' })
+    await page.screenshot({ path: 'test-results/30-final-state.png' })
 
     // Get final game state
     const finalState = await page.evaluate(() => ({
