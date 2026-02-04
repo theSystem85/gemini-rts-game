@@ -36,7 +36,22 @@ class TutorialSystem {
   constructor() {
     this.settings = readFromStorage(TUTORIAL_SETTINGS_KEY, DEFAULT_SETTINGS)
     this.progress = readFromStorage(TUTORIAL_PROGRESS_KEY, DEFAULT_PROGRESS)
-    this.position = readFromStorage(TUTORIAL_POSITION_KEY, { left: 'calc(var(--sidebar-width) + 20px)', top: 'auto', bottom: '20px', right: 'auto' })
+    const isPortraitCondensed = document?.body?.classList?.contains('mobile-portrait')
+      && document.body.classList.contains('sidebar-condensed')
+    const defaultPosition = isPortraitCondensed
+      ? {
+        left: '12px',
+        top: 'calc(var(--safe-area-top) + 12px)',
+        bottom: 'auto',
+        right: 'auto'
+      }
+      : {
+        left: 'calc(var(--sidebar-width) + 20px)',
+        top: 'auto',
+        bottom: '20px',
+        right: 'auto'
+      }
+    this.position = readFromStorage(TUTORIAL_POSITION_KEY, defaultPosition)
     this.active = false
     this.phase = 'demo'
     this.stepIndex = this.progress.stepIndex || 0
