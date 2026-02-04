@@ -283,9 +283,10 @@
 }
 
 body.mobile-portrait .tutorial-card {
-  left: calc(var(--sidebar-width) + 12px);
+  top: var(--safe-area-top);
+  left: var(--safe-area-left);
   right: 12px;
-  bottom: calc(var(--safe-area-bottom) + 12px);
+  bottom: auto;
   width: auto;
   max-width: none;
   max-height: calc(100vh - 140px);
@@ -294,7 +295,7 @@ body.mobile-portrait .tutorial-card {
 }
 
 body.mobile-portrait.sidebar-collapsed .tutorial-card {
-  left: 12px;
+  left: var(--safe-area-left);
   right: 12px;
 }
 
@@ -1280,13 +1281,13 @@ body.mobile-sidebar-modal-open #sidebarScroll {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1000;
+  z-index: 12000;
 }
 
 .tutorial-card {
   position: absolute;
   bottom: 20px;
-  left: calc(var(--sidebar-width) + 20px);
+  left: calc(var(--safe-area-left) + 20px);
   width: 400px;
   max-width: calc(100vw - 40px);
   background: rgba(32, 32, 32, 0.95);
