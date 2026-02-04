@@ -1,4 +1,5 @@
 ## Bugs
+- [ ] Prevent iOS long-press text selection from appearing on production build buttons so tooltips stay visible.
 - [x] Fix building system unit tests failing due to missing `hasLineOfSightToTarget` mock export.
 - [ ] Defense turrets should not fire through buildings; block shots when line of sight is obstructed for player and AI turrets.
 - [ ] Prevent multiple Apaches from landing on the same helipad; show blocked cursor when hovering over occupied helipads.

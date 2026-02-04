@@ -1,11 +1,10 @@
 import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
-import { TILE_SIZE } from '../config.js'
+import { TILE_SIZE, LONG_PRESS_MS } from '../config.js'
 import { focusCameraOnPoint } from './tutorialSystem/helpers.js'
 import { buildingData } from '../buildings.js'
 import { getUnitCost } from '../utils.js'
 
-const LONG_PRESS_MS = 1000
 let tooltipOpen = false
 let tooltipListenersAttached = false
 let activeAnchor = null
@@ -59,7 +58,7 @@ function ensureProductionTooltip() {
   tooltip.innerHTML = `
     <div class="money-tooltip__panel">
       <div class="money-tooltip__header">
-        <span>Production Intel</span>
+        <span class="production-tooltip__header-title"></span>
         <button class="money-tooltip__close" type="button" aria-label="Close">×</button>
       </div>
       <div class="money-tooltip__content"></div>
@@ -168,11 +167,16 @@ function getCrewDisplay(unit) {
 function renderUnitTooltipContent(unitType) {
   const tooltip = ensureProductionTooltip()
   const content = tooltip.querySelector('.money-tooltip__content')
-  if (!content) return
+  const headerTitle = tooltip.querySelector('.production-tooltip__header-title')
+  if (!content || !headerTitle) return
+
+  // Map 'tank' to 'tank_v1' since units are stored with the actual type
+  const actualUnitType = unitType === 'tank' ? 'tank_v1' : unitType
+  headerTitle.textContent = getUnitLabel(unitType)
 
   const humanPlayer = gameState.humanPlayer
   const units = (gameState.units || []).filter(
-    unit => unit.owner === humanPlayer && unit.type === unitType && unit.health > 0
+    unit => unit.owner === humanPlayer && unit.type === actualUnitType && unit.health > 0
   )
   const restoredUnits = units.filter(unit => unit.isRestoredFromWreck)
   const totalCost = units
@@ -180,7 +184,7 @@ function renderUnitTooltipContent(unitType) {
     .reduce((sum, unit) => sum + (unit.baseCost || getUnitCost(unitType) || 0), 0)
   const totalRepairPaid = units.reduce((sum, unit) => sum + (unit.totalRepairPaid || 0), 0)
   const wrecks = (gameState.unitWrecks || []).filter(
-    wreck => wreck.owner === humanPlayer && wreck.unitType === unitType
+    wreck => wreck.owner === humanPlayer && wreck.unitType === actualUnitType
   )
 
   const unitRows = units.length
@@ -244,13 +248,15 @@ function renderUnitTooltipContent(unitType) {
 function renderBuildingTooltipContent(buildingType) {
   const tooltip = ensureProductionTooltip()
   const content = tooltip.querySelector('.money-tooltip__content')
-  if (!content) return
+  const headerTitle = tooltip.querySelector('.production-tooltip__header-title')
+  if (!content || !headerTitle) return
 
   const humanPlayer = gameState.humanPlayer
   const buildings = (gameState.buildings || []).filter(
     building => building.owner === humanPlayer && building.type === buildingType && building.health > 0
   )
   const data = buildingData[buildingType] || {}
+  headerTitle.textContent = data.displayName || buildingType
   const totalCost = buildings.length * (data.cost || 0)
   const totalPower = buildings.reduce((sum, building) => sum + (building.power || 0), 0)
   const description = buildingDescriptions[buildingType] || 'Operational support structure.'
@@ -277,7 +283,6 @@ function renderBuildingTooltipContent(buildingType) {
 
   content.innerHTML = `
     <div class="money-tooltip__section">
-      <div class="production-tooltip__headline">${data.displayName || buildingType}</div>
       <div class="production-tooltip__description">${description}</div>
       <div class="production-tooltip__summary">
         <span class="money-tooltip__chip">💰 ${formatMoney(data.cost || 0)}</span>

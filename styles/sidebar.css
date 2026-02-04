@@ -512,6 +512,11 @@ body.is-touch .money-tooltip__meta {
   aspect-ratio: 1/1; /* Make buttons square */
   padding: 0; /* Remove padding to allow image to fill */
   overflow: hidden; /* Ensure image doesn't overflow */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .production-button img {

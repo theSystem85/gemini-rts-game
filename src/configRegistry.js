@@ -75,6 +75,8 @@ import {
   setStreetSpeedMultiplier,
   KEYBOARD_SCROLL_SPEED,
   setKeyboardScrollSpeed,
+  LONG_PRESS_MS,
+  setLongPressMs,
   INERTIA_STOP_THRESHOLD,
   setInertiaStopThreshold,
   GAS_REFILL_TIME,
@@ -664,6 +666,18 @@ export const configRegistry = {
     min: 1,
     max: 32,
     step: 1,
+    category: 'Controls'
+  },
+
+  longPressMs: {
+    name: 'Long-Press Tooltip Delay',
+    description: 'Time to hold button before production tooltip shows (ms)',
+    type: 'number',
+    get: () => LONG_PRESS_MS,
+    set: setLongPressMs,
+    min: 250,
+    max: 2000,
+    step: 50,
     category: 'Controls'
   },
 

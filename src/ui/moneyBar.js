@@ -20,7 +20,7 @@ function ensureMoneyTooltip() {
   tooltip.innerHTML = `
     <div class="money-tooltip__panel">
       <div class="money-tooltip__header">
-        <span>Resource Overview</span>
+        <span>Resources</span>
         <button class="money-tooltip__close" type="button" aria-label="Close">×</button>
       </div>
       <div class="money-tooltip__content"></div>
