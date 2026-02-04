@@ -15,7 +15,13 @@ Refactor the production controller UI logic into focused modules so that no sing
 - **productionControllerQueue**: queue count/remove helpers.
 - **productionControllerTabs**: production tab and mobile toggle behavior.
 - **productionControllerInteractions**: drag/edge scroll interactions for mobile.
+- **productionTooltip**: long-press build-button tooltip rendering and selection focus behavior.
+
+## Production Tooltips
+- Long-press (>= 1s) on unit/building production buttons opens a detailed tooltip aligned with the money bar style.
+- Unit tooltip shows build spend, restored counts, repair costs, per-unit status, and damage-value stats.
+- Building tooltip shows description, cost, power, per-building health, and defense damage value.
 
 ## Non-Goals
 - No behavior changes to production rules or queue logic.
-- No UI layout or styling changes.
+- No UI layout or styling changes beyond the new long-press tooltip overlay.

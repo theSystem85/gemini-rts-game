@@ -23,6 +23,7 @@ import { broadcastBuildingDamage } from '../network/gameCommandSync.js'
 import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { recordDamageValue } from '../utils/combatStats.js'
 
 const APACHE_REMOTE_DAMAGE = 10
 const APACHE_TANK_DAMAGE_MULTIPLIER = 1.67
@@ -647,12 +648,14 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
             // Only apply damage if actualDamage > 0 (god mode protection) and not an Apache rocket
             if (actualDamage > 0 && bullet.originType !== 'apacheRocket') {
-            // Apply damage reduction from armor if the unit has armor
+              const previousHealth = unit.health
+              // Apply damage reduction from armor if the unit has armor
               if (unit.armor) {
                 unit.health -= Math.max(1, Math.round(actualDamage / unit.armor))
               } else {
                 unit.health -= actualDamage
               }
+              recordDamageValue(bullet.shooter, unit, previousHealth - unit.health)
 
               // window.logger(`💥 Unit hit: ${unit.type} took ${actualDamage} damage, health: ${unit.health}/${unit.maxHealth}`)
 
@@ -812,10 +815,12 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
             // Only apply damage if actualDamage > 0 (god mode protection) and not an Apache rocket
             if (actualDamage > 0 && bullet.originType !== 'apacheRocket') {
+              const previousHealth = building.health
               building.health -= actualDamage
 
               // Ensure health doesn't go below 0
               building.health = Math.max(0, building.health)
+              recordDamageValue(bullet.shooter, building, previousHealth - building.health)
 
               // Broadcast building damage to host in multiplayer
               if (building.id) {
@@ -897,10 +902,12 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
             // Only apply damage if actualDamage > 0 (god mode protection) and not an Apache rocket
             if (actualDamage > 0 && bullet.originType !== 'apacheRocket') {
+              const previousHealth = factory.health
               factory.health -= actualDamage
 
               // Ensure health doesn't go below 0
               factory.health = Math.max(0, factory.health)
+              recordDamageValue(bullet.shooter, factory, previousHealth - factory.health)
 
               // Mark factory for repair pause (deferred processing)
               markBuildingForRepairPause(factory)

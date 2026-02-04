@@ -319,8 +319,70 @@ body.mobile-landscape .money-bar-value {
   padding: 6px 4px;
 }
 
+.production-tooltip {
+  width: min(560px, 94vw);
+}
+
+.production-tooltip__headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd089;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.production-tooltip__description {
+  font-size: 12px;
+  color: #cfcfcf;
+  line-height: 1.4;
+}
+
+.production-tooltip__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.production-tooltip__list {
+  gap: 8px;
+}
+
+.production-tooltip__row {
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.production-tooltip__title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+}
+
+.production-tooltip__status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffd089;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.production-tooltip__stats {
+  justify-content: flex-start;
+  margin-left: 0;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
 body.is-touch .money-tooltip {
   width: min(420px, 94vw);
+}
+
+body.is-touch .production-tooltip {
+  width: min(560px, 96vw);
 }
 
 body.is-touch .money-tooltip__panel {

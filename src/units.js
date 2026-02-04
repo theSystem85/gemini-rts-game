@@ -892,6 +892,9 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     lastLoggedStatus: null,
     guardMode: false,
     guardTarget: null,
+    damageValue: 0,
+    totalRepairPaid: 0,
+    isRestoredFromWreck: false,
     // Command queue for path planning feature
     commandQueue: [],
     currentCommand: null,

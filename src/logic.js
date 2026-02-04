@@ -12,6 +12,7 @@ import { markBuildingForRepairPause } from './buildings.js'
 import { applyDamageToWreck } from './game/unitWreckManager.js'
 import { broadcastBuildingDamage } from './network/gameCommandSync.js'
 import { gameRandom } from './utils/gameRandom.js'
+import { recordDamageValue } from './utils/combatStats.js'
 
 export const explosions = [] // Global explosion effects for rocket impacts
 
@@ -97,7 +98,9 @@ export function triggerExplosion(
         actualDamage = window.cheatSystem.preventDamage(unit, damage)
       }
 
+      const previousHealth = unit.health
       unit.health -= actualDamage
+      recordDamageValue(shooter, unit, previousHealth - unit.health)
 
       // Award experience if unit dies from explosion
       if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
@@ -180,10 +183,12 @@ export function triggerExplosion(
         if (factoryDamageMultiplier !== 1) {
           damage = Math.round(damage * factoryDamageMultiplier)
         }
+        const previousHealth = factory.health
         factory.health -= damage
 
         // Ensure health doesn't go below 0
         factory.health = Math.max(0, factory.health)
+        recordDamageValue(shooter, factory, previousHealth - factory.health)
 
         // Mark factory for repair pause (deferred processing)
         markBuildingForRepairPause(factory)
@@ -244,10 +249,12 @@ export function triggerExplosion(
 
         // Only apply damage if damage > 0 (god mode protection)
         if (damage > 0) {
+          const previousHealth = building.health
           building.health -= damage
 
           // Ensure health doesn't go below 0
           building.health = Math.max(0, building.health)
+          recordDamageValue(shooter, building, previousHealth - building.health)
 
           // Broadcast building damage to host in multiplayer
           if (building.id) {

@@ -1,4 +1,5 @@
 ## Features
+- [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.
 - [x] ✅ **Playwright E2E Testing**: Setup Playwright for end-to-end browser testing with real user interactions.
   - [x] ✅ Install and configure Playwright with Chromium

@@ -1156,6 +1156,7 @@ export class CheatSystem {
         buildDuration: wreck.buildDuration
       }
     )
+    restored.isRestoredFromWreck = true
 
     restored.health = restored.maxHealth
     restored.direction = wreck.direction || restored.direction

@@ -104,6 +104,7 @@ export function createBuilding(type, x, y) {
     power: data.power,
     isBuilding: true,
     owner: 'neutral', // Default owner, should be set explicitly when added to gameState
+    damageValue: 0,
     // Timestamp for construction animation
     constructionStartTime: performance.now(),
     constructionFinished: false
