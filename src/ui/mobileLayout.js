@@ -780,6 +780,8 @@ function applyPortraitCondensedLayout() {
   mobileContainer.setAttribute('aria-hidden', 'false')
   mobileContainer.setAttribute('data-orientation', 'portrait-condensed')
 
+  ensureMobileStatusBar(mobileContainer, 'portrait-condensed')
+
   const { portraitActionsLeft } = mobileLayoutState
   if (actions && portraitActionsLeft && actions.parentNode !== portraitActionsLeft) {
     portraitActionsLeft.appendChild(actions)

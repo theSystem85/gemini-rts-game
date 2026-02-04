@@ -41,6 +41,7 @@
 - [x] Fix portrait condensed mode issues: squared build buttons (64px) fitting in bar height, landscape-proportioned minimap (200x120), action buttons stacking vertically in column layout.
 - [x] Fix portrait condensed mode follow-up: action buttons matching landscape style with background/borders, moved 10px right, toggle button stretching full height with no border-radius, build buttons visibility ensured.
 - [x] Fixed portrait sidebar swipe functionality: prevent syncPortraitSidebarState() from overwriting user swipe actions by only syncing stored state once on initial portrait mode entry.
+- [ ] Show the money/energy status bar in portrait condensed mode within the safe-area gap beneath the build buttons without shifting the build bar upward.
 - [ ] Persist mobile portrait sidebar expanded/collapsed/condensed preference across reloads and default to condensed on first load.
 - [x] Portrait condensed mode UX refinement: action buttons horizontal left-aligned with no background/borders (icon-only), hide menu/restart/music buttons, swipe up on build bar to expand sidebar.
 - [x] Portrait condensed mode minimap: add toggle button on left of action bar, show minimap only when button held (matching landscape behavior), use overlay approach instead of static dock.
