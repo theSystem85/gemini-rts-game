@@ -28,6 +28,7 @@ const mobileLayoutState = {
   mobileJoystickContainer: null,
   mobileStatusBar: null,
   mobileMoneyValue: null,
+  mobileMoneyBar: null,
   mobileEnergyBar: null,
   mobileEnergyValue: null,
   sidebarUtilityContainer: null,
@@ -374,12 +375,20 @@ function ensureMobileStatusBar(container, orientation) {
     moneyRow.id = 'mobileMoneyDisplay'
     moneyRow.className = 'mobile-resource-row'
 
+    const moneyTrack = document.createElement('div')
+    moneyTrack.id = 'mobileMoneyTrack'
+
+    const moneyBar = document.createElement('div')
+    moneyBar.id = 'mobileMoneyBar'
+
     const moneyValue = document.createElement('span')
     moneyValue.id = 'mobileMoneyValue'
     moneyValue.className = 'mobile-resource-value'
     moneyValue.textContent = '$0'
 
-    moneyRow.appendChild(moneyValue)
+    moneyTrack.appendChild(moneyBar)
+    moneyTrack.appendChild(moneyValue)
+    moneyRow.appendChild(moneyTrack)
 
     const energyContainer = document.createElement('div')
     energyContainer.id = 'mobileEnergyBarContainer'
@@ -405,10 +414,12 @@ function ensureMobileStatusBar(container, orientation) {
 
     mobileLayoutState.mobileStatusBar = statusBar
     mobileLayoutState.mobileMoneyValue = moneyValue
+    mobileLayoutState.mobileMoneyBar = moneyBar
     mobileLayoutState.mobileEnergyBar = energyBar
     mobileLayoutState.mobileEnergyValue = energyValue
   } else {
     mobileLayoutState.mobileMoneyValue = document.getElementById('mobileMoneyValue')
+    mobileLayoutState.mobileMoneyBar = document.getElementById('mobileMoneyBar')
     mobileLayoutState.mobileEnergyBar = document.getElementById('mobileEnergyBar')
     mobileLayoutState.mobileEnergyValue = document.getElementById('mobileEnergyValue')
     statusBar = mobileLayoutState.mobileStatusBar

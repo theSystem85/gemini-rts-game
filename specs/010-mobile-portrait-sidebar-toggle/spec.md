@@ -81,3 +81,4 @@ Touch users holding the device in portrait orientation need the ability to recla
 ## Update 2026-02-04
 
 - **Condensed Status Bar Placement**: In portrait condensed mode, the mobile money/energy status bar should render in the safe-area gap below the build buttons, using the existing protective area space without shifting the condensed build bar upward.
+- **Non-PWA Right Dock**: When not running in standalone/PWA mode, the portrait condensed money/energy bars must dock to the right of the build bar after the units/buildings toggle, fill vertically from bottom to top within the existing bar height, and display centered 90°-rotated labels without increasing the sidebar height.

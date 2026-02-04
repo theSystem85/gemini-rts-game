@@ -336,6 +336,31 @@ export class GameLoop {
       this.moneyDisplays.forEach((display) => {
         display.textContent = `$${currentMoney}`
       })
+      const mobileMoneyDisplay = document.getElementById('mobileMoneyDisplay')
+      const mobileMoneyBar = document.getElementById('mobileMoneyBar')
+      if (mobileMoneyBar) {
+        const maxMoney = 100000
+        const moneyPercentage = Math.min(100, (currentMoney / maxMoney) * 100)
+        const isPortraitCondensed = document?.body?.classList.contains('mobile-portrait')
+          && document.body.classList.contains('sidebar-condensed')
+        const isPwaStandalone = document?.body?.classList.contains('pwa-standalone')
+
+        if (isPortraitCondensed && !isPwaStandalone) {
+          // Vertical bar - fill from bottom to top
+          mobileMoneyBar.style.height = `${moneyPercentage}%`
+          mobileMoneyBar.style.width = '100%'
+        } else {
+          // Horizontal bar - fill from left to right
+          mobileMoneyBar.style.width = `${moneyPercentage}%`
+          mobileMoneyBar.style.height = '100%'
+        }
+      }
+      // Fallback for old CSS-based approach
+      if (mobileMoneyDisplay && !mobileMoneyBar) {
+        const maxMoney = 100000
+        const moneyPercentage = Math.min(100, (currentMoney / maxMoney) * 100)
+        mobileMoneyDisplay.style.setProperty('--mobile-money-fill', `${moneyPercentage}%`)
+      }
       this.lastMoneyDisplayed = currentMoney
       this.lastMoneyUpdate = now
     }

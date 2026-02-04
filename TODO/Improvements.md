@@ -1,6 +1,7 @@
 ## Improvements
 - [ ] Add a money bar tooltip that breaks down refinery revenue and harvester cycle stats with click-to-focus shortcuts for each entity.
 - [x] Add desktop edge auto-scroll after a short hover delay with configurable speed and a settings toggle to disable it.
+- [x] Adjusted mobile portrait condensed sidebar money and power bars: removed rounded borders, added vertical text display (bottom-to-top) matching Buildings/Units tab direction, ensured PWA mode bars display with labels and matching colors.
 - [x] Extracted state synchronization logic from gameCommandSync.js into dedicated stateSync.js module for better code organization and modularity.
 - [x] Extracted lockstep synchronization logic from gameCommandSync.js into dedicated lockstepSync.js module with all lockstep-related functions and state management.
 - [x] Refactored gameCommandSync.js (2068→302 lines) into a thin coordinator that imports/re-exports from commandTypes.js, networkStats.js, commandBroadcast.js, stateSync.js, and lockstepSync.js while maintaining full backward compatibility.
@@ -42,6 +43,7 @@
 - [x] Fix portrait condensed mode follow-up: action buttons matching landscape style with background/borders, moved 10px right, toggle button stretching full height with no border-radius, build buttons visibility ensured.
 - [x] Fixed portrait sidebar swipe functionality: prevent syncPortraitSidebarState() from overwriting user swipe actions by only syncing stored state once on initial portrait mode entry.
 - [ ] Show the money/energy status bar in portrait condensed mode within the safe-area gap beneath the build buttons without shifting the build bar upward.
+- [ ] In non-PWA portrait condensed mode, dock the money/energy bars to the right of the build bar after the toggle, with vertical fill and rotated labels that do not increase sidebar height.
 - [ ] Persist mobile portrait sidebar expanded/collapsed/condensed preference across reloads and default to condensed on first load.
 - [x] Portrait condensed mode UX refinement: action buttons horizontal left-aligned with no background/borders (icon-only), hide menu/restart/music buttons, swipe up on build bar to expand sidebar.
 - [x] Portrait condensed mode minimap: add toggle button on left of action bar, show minimap only when button held (matching landscape behavior), use overlay approach instead of static dock.

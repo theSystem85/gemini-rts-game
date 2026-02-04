@@ -113,7 +113,20 @@ export function updateEnergyBar() {
   // Update bar width
   energyBar.style.width = `${energyPercentage}%`
   if (mobileEnergyBar) {
-    mobileEnergyBar.style.width = `${energyPercentage}%`
+    const isPortraitCondensed = document?.body?.classList.contains('mobile-portrait')
+      && document.body.classList.contains('sidebar-condensed')
+    const isPwaStandalone = document?.body?.classList.contains('pwa-standalone')
+    if (isPortraitCondensed && !isPwaStandalone) {
+      mobileEnergyBar.style.height = `${energyPercentage}%`
+      mobileEnergyBar.style.width = '100%'
+      mobileEnergyBar.style.top = 'auto'
+      mobileEnergyBar.style.bottom = '0'
+    } else {
+      mobileEnergyBar.style.width = `${energyPercentage}%`
+      mobileEnergyBar.style.height = '100%'
+      mobileEnergyBar.style.top = '0'
+      mobileEnergyBar.style.bottom = '0'
+    }
   }
 
   // Update bar color based on percentage thresholds

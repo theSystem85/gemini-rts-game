@@ -1171,6 +1171,7 @@ body.mobile-portrait #sidebar {
 body.mobile-portrait {
   --sidebar-width: clamp(220px, 74vw, 320px);
   --portrait-condensed-bar-height: 96px;
+  --portrait-condensed-toggle-width: calc(var(--mobile-action-size) * 0.44);
 }
 
 body.mobile-portrait #sidebar {
@@ -1493,7 +1494,7 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer {
   overflow: visible;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBar {
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileBuildMenuContainer #mobileStatusBar {
   position: absolute;
   left: 0;
   right: 0;
@@ -1509,7 +1510,34 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBa
   pointer-events: auto;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileMoneyDisplay {
+  position: relative;
+  flex: 1;
+  height: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileMoneyTrack {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: rgba(8, 8, 8, 0.8);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileMoneyBar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #FFA500;
+  transition: width 0.3s ease;
+  border-radius: 0;
+  z-index: 1;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1518,7 +1546,7 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBa
   padding: 0;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
   font-family: sans-serif;
   font-size: 10px;
   font-weight: 500;
@@ -1526,30 +1554,25 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #mobileStatusBa
   color: #f2f2f2;
   width: 100%;
   text-align: center;
+  text-shadow: 0 0 3px #000;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileEnergyBarContainer {
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileEnergyBarContainer {
+  position: relative;
+  flex: 1;
+  height: 100%;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileEnergyTrack {
   position: relative;
   width: 100%;
   height: 12px;
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-start;
-  margin: 0;
-  padding: 0;
-}
-
-body.mobile-portrait.sidebar-condensed #mobileEnergyTrack {
-  position: relative;
-  width: 100%;
-  height: 100%;
   background: rgba(8, 8, 8, 0.8);
   border-radius: 0;
   overflow: hidden;
-  flex: 1;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileEnergyBar {
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileEnergyBar {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1559,6 +1582,193 @@ body.mobile-portrait.sidebar-condensed #mobileEnergyBar {
   transition: width 0.3s ease, background-color 0.3s ease;
   border-radius: 0;
   z-index: 1;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileEnergyValue {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #f2f2f2;
+  text-shadow: 0 0 3px #000;
+  pointer-events: none;
+}
+
+body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileMoneyValue {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #f2f2f2;
+  text-shadow: 0 0 3px #000;
+  pointer-events: none;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuContainer {
+  overflow: hidden;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuContainer #productionArea {
+  padding-right: var(--portrait-condensed-toggle-width);
+  box-sizing: border-box;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuContainer #mobileStatusBar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  width: var(--portrait-condensed-toggle-width);
+  padding: 0;
+  margin: 0;
+  background: rgba(18, 18, 18, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -8px 0 18px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileMoneyDisplay {
+  position: relative;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileMoneyTrack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileMoneyBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, rgba(255, 183, 77, 0.95) 0%, rgba(255, 136, 0, 0.95) 100%);
+  transition: height 0.3s ease;
+  border-radius: 0;
+  z-index: 0;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileMoneyDisplay::before {
+  display: none;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  font-family: sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f8f8f8;
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(90deg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileEnergyBarContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+  flex: 1;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileEnergyTrack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 8, 8, 0.65);
+  border-radius: 0;
+  overflow: visible;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileEnergyBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background-color: #4CAF50;
+  transition: height 0.3s ease, background-color 0.3s ease;
+  border-radius: 0;
+  z-index: 1;
+}
+
+body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileEnergyValue {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  font-family: sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f8f8f8;
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(90deg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
 }
 
 body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer #productionArea {
@@ -1594,8 +1804,8 @@ body.mobile-portrait.sidebar-condensed #mobileCategoryToggle {
   justify-content: center;
   padding: 4px 0;
   margin: 0;
-  min-width: calc(var(--mobile-action-size) * 0.44);
-  width: calc(var(--mobile-action-size) * 0.44);
+  min-width: var(--portrait-condensed-toggle-width);
+  width: var(--portrait-condensed-toggle-width);
   height: 100%;
   border-radius: 0;
   background-color: rgba(36, 36, 36, 0.95);
