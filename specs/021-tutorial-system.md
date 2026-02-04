@@ -44,7 +44,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Use clear, concise copy with short actionable prompts.
 - Ensure portrait mobile layouts keep the tutorial card within the visible canvas area, with tighter spacing and adjusted typography so actions remain accessible.
 - Allow the tutorial card to overlap the sidebar instead of being offset to the right.
-- In mobile portrait mode, default the tutorial card to the top-left corner (including over the sidebar) to avoid overlapping condensed HUD elements.
+- In mobile portrait mode, default the tutorial card to the top-left corner (including over the sidebar) and let it span the full screen width when the sidebar is expanded.
 
 ## Data & Storage
 - `rts_tutorial_settings` (localStorage):

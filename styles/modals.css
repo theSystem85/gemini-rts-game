@@ -283,20 +283,20 @@
 }
 
 body.mobile-portrait .tutorial-card {
-  top: var(--safe-area-top);
-  left: var(--safe-area-left);
-  right: 12px;
+  top: 0;
+  left: 0;
+  right: 0;
   bottom: auto;
-  width: auto;
-  max-width: none;
+  width: 100%;
+  max-width: 100%;
   max-height: calc(100vh - 140px);
-  border-radius: 14px;
+  border-radius: 0 0 14px 14px;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55);
 }
 
 body.mobile-portrait.sidebar-collapsed .tutorial-card {
-  left: var(--safe-area-left);
-  right: 12px;
+  left: 0;
+  right: 0;
 }
 
 body.mobile-portrait .tutorial-header {
