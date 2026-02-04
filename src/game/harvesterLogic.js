@@ -60,6 +60,9 @@ export const updateHarvesterLogic = logPerformance(function updateHarvesterLogic
   if (!gameState.refineryStatus) {
     gameState.refineryStatus = {}
   }
+  if (!gameState.refineryRevenue) {
+    gameState.refineryRevenue = {}
+  }
 
   // Clean up invalid queue entries and reassign harvesters from destroyed refineries
   cleanupQueues(units)
@@ -480,6 +483,18 @@ function completeUnloading(unit, factories, mapGrid, gameState, now, _occupancyM
       if (typeof gameState.totalMoneyEarned === 'number') {
         gameState.totalMoneyEarned += moneyEarned
       }
+      if (unit.unloadRefinery) {
+        gameState.refineryRevenue[unit.unloadRefinery] =
+          (gameState.refineryRevenue[unit.unloadRefinery] || 0) + moneyEarned
+      }
+      if (typeof unit.totalMoneyEarned !== 'number') {
+        unit.totalMoneyEarned = 0
+      }
+      unit.totalMoneyEarned += moneyEarned
+      if (typeof unit.lastHarvestCycleComplete === 'number') {
+        unit.harvestCycleSeconds = (now - unit.lastHarvestCycleComplete) / 1000
+      }
+      unit.lastHarvestCycleComplete = now
       if (typeof productionQueue !== 'undefined' && productionQueue?.tryResumeProduction) {
         productionQueue.tryResumeProduction()
       }

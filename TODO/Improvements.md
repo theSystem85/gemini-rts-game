@@ -1,4 +1,5 @@
 ## Improvements
+- [ ] Add a money bar tooltip that breaks down refinery revenue and harvester cycle stats with click-to-focus shortcuts for each entity.
 - [x] Extracted state synchronization logic from gameCommandSync.js into dedicated stateSync.js module for better code organization and modularity.
 - [x] Extracted lockstep synchronization logic from gameCommandSync.js into dedicated lockstepSync.js module with all lockstep-related functions and state management.
 - [x] Refactored gameCommandSync.js (2068→302 lines) into a thin coordinator that imports/re-exports from commandTypes.js, networkStats.js, commandBroadcast.js, stateSync.js, and lockstepSync.js while maintaining full backward compatibility.

@@ -1039,6 +1039,9 @@ export function createUnit(factory, unitType, x, y, options = {}) {
     unit.oreCarried = 0
     unit.harvesting = false
     unit.armor = unitProps.armor
+    unit.totalMoneyEarned = 0
+    unit.lastHarvestCycleComplete = null
+    unit.harvestCycleSeconds = null
   }
 
   // Initialize unified movement system for the new unit
