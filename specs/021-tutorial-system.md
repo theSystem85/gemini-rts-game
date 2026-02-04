@@ -43,6 +43,7 @@ Introduce an interactive onboarding tutorial that teaches new players the UI/UX 
 - Hide the tutorial dock ("?") button after completion (via a visibility-hidden class) and keep it hidden on reload until the tutorial is restarted from settings.
 - Use clear, concise copy with short actionable prompts.
 - Ensure portrait mobile layouts keep the tutorial card within the visible canvas area, with tighter spacing and adjusted typography so actions remain accessible.
+- In mobile portrait condensed mode, default the tutorial card to the top-left corner to avoid overlapping condensed HUD elements.
 
 ## Data & Storage
 - `rts_tutorial_settings` (localStorage):
