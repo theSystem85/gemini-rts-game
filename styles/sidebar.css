@@ -175,6 +175,166 @@ body.mobile-landscape .money-bar-value {
   text-shadow: 0 0 3px #000; /* Black shadow like energy bar */
 }
 
+/* Money tooltip styling */
+.money-tooltip {
+  position: fixed;
+  z-index: 2500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateX(-50%) translateY(-4px);
+  width: min(360px, 92vw);
+  font-family: inherit;
+}
+
+.money-tooltip--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.money-tooltip__panel {
+  background: linear-gradient(180deg, rgba(34, 34, 34, 0.98), rgba(18, 18, 18, 0.98));
+  border: 1px solid rgba(255, 165, 0, 0.35);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+  padding: 12px;
+  color: #f4f4f4;
+}
+
+.money-tooltip__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+  color: #ffd089;
+  text-transform: uppercase;
+}
+
+.money-tooltip__close {
+  background: transparent;
+  border: none;
+  color: #ffd089;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.money-tooltip__section + .money-tooltip__section {
+  margin-top: 12px;
+}
+
+.money-tooltip__section-header {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #cfcfcf;
+  margin-bottom: 6px;
+}
+
+.money-tooltip__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.money-tooltip__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border 0.15s ease, background 0.15s ease;
+}
+
+.money-tooltip__item:hover,
+.money-tooltip__item:focus-visible {
+  border-color: rgba(255, 165, 0, 0.55);
+  background: rgba(255, 165, 0, 0.12);
+}
+
+.money-tooltip__item-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.money-tooltip__item-value {
+  font-weight: 600;
+  color: #ffa500;
+  font-size: 13px;
+}
+
+.money-tooltip__item--harvester {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.money-tooltip__meta {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-left: auto;
+  overflow-x: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+  scrollbar-width: thin;
+}
+
+.money-tooltip__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+  color: #f3f3f3;
+  white-space: nowrap;
+}
+
+.money-tooltip__crew {
+  color: #9be7ff;
+}
+
+.money-tooltip__empty {
+  font-size: 12px;
+  color: #9a9a9a;
+  padding: 6px 4px;
+}
+
+body.is-touch .money-tooltip {
+  width: min(420px, 94vw);
+}
+
+body.is-touch .money-tooltip__panel {
+  padding: 10px;
+}
+
+body.is-touch .money-tooltip__item {
+  padding: 8px;
+}
+
+body.is-touch .money-tooltip__meta {
+  gap: 4px;
+}
+
 /* Keep power indicator padding-free */
 #powerIndicator {
   margin-top: 0;

@@ -182,6 +182,7 @@ export const gameState = {
 
   // Refinery state tracking
   refineryStatus: {}, // Tracks which refineries are being used and by which harvester
+  refineryRevenue: {}, // Tracks total revenue per refinery (by refinery id)
 
   // Attack Group Feature (AGF) state
   attackGroupMode: false,

@@ -53,6 +53,13 @@ The following unit types are considered attack-capable for cursor/range detectio
 - Vehicle factory count accelerates unit production time using a multiplier equal to the number of vehicle factories owned by the player (1 factory = 1x, 2 factories = 2x, etc.).
 - The multiplier applies to ground vehicles and Apache helicopters (helicopters still spawn from Helipads, but their build time is reduced by the same vehicle factory multiplier).
 
+## Sidebar Money Tooltip
+
+- Clicking or tapping the sidebar money bar (or the mobile money display) opens a tooltip showing:
+  - Each player-owned ore refinery and its total revenue generated.
+  - Each player-owned harvester with total money earned, harvest cycle time in seconds, fuel percentage, and crew status.
+- Each refinery/harvester row is a link that selects the entity and centers the camera on it.
+
 ## Related Files
 
 - [src/config.js](../src/config.js) - Constants definition
