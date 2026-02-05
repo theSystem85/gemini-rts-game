@@ -4,6 +4,8 @@ import {
   INERTIA_STOP_THRESHOLD,
   TILE_SIZE,
   KEYBOARD_SCROLL_SPEED,
+  DESKTOP_EDGE_AUTOSCROLL_SPEED,
+  DESKTOP_EDGE_AUTOSCROLL_ENABLED,
   ORE_SPREAD_INTERVAL,
   ORE_SPREAD_PROBABILITY,
   ORE_SPREAD_ENABLED,
@@ -29,6 +31,97 @@ import { gameRandom } from '../utils/gameRandom.js'
 
 const MINIMAP_SCROLL_SMOOTHING = 0.2
 const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
+const DESKTOP_EDGE_AUTOSCROLL_DELAY_MS = 250
+const DESKTOP_EDGE_AUTOSCROLL_THRESHOLD_RATIO = 0.05
+const DESKTOP_EDGE_AUTOSCROLL_DEFAULT_FRAME_MS = 16
+const DESKTOP_EDGE_AUTOSCROLL_MAX_FRAME_MS = 64
+
+function applyDesktopEdgeAutoScroll(gameState, gameCanvas, maxScrollX, maxScrollY) {
+  if (!DESKTOP_EDGE_AUTOSCROLL_ENABLED) {
+    return
+  }
+
+  if (typeof document !== 'undefined' && document.body?.classList.contains('is-touch')) {
+    return
+  }
+
+  if (!gameCanvas || typeof gameCanvas.getBoundingClientRect !== 'function') {
+    return
+  }
+
+  const edgeState = gameState.desktopEdgeScroll
+  if (!edgeState || !edgeState.overCanvas) {
+    if (edgeState) {
+      edgeState.edgeHoverStart = null
+      edgeState.lastAutoScrollTime = null
+    }
+    return
+  }
+
+  const rect = gameCanvas.getBoundingClientRect()
+  if (!rect || rect.width <= 0 || rect.height <= 0) {
+    return
+  }
+
+  const localX = edgeState.clientX - rect.left
+  const localY = edgeState.clientY - rect.top
+  if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) {
+    edgeState.edgeHoverStart = null
+    edgeState.lastAutoScrollTime = null
+    return
+  }
+
+  const thresholdX = rect.width * DESKTOP_EDGE_AUTOSCROLL_THRESHOLD_RATIO
+  const thresholdY = rect.height * DESKTOP_EDGE_AUTOSCROLL_THRESHOLD_RATIO
+  if (thresholdX <= 0 || thresholdY <= 0) {
+    return
+  }
+
+  const distLeft = localX
+  const distRight = rect.width - localX
+  const distTop = localY
+  const distBottom = rect.height - localY
+  const leftIntensity = distLeft <= thresholdX ? (thresholdX - distLeft) / thresholdX : 0
+  const rightIntensity = distRight <= thresholdX ? (thresholdX - distRight) / thresholdX : 0
+  const topIntensity = distTop <= thresholdY ? (thresholdY - distTop) / thresholdY : 0
+  const bottomIntensity = distBottom <= thresholdY ? (thresholdY - distBottom) / thresholdY : 0
+
+  const intensityX = rightIntensity > 0 ? rightIntensity : leftIntensity > 0 ? -leftIntensity : 0
+  const intensityY = bottomIntensity > 0 ? bottomIntensity : topIntensity > 0 ? -topIntensity : 0
+  const edgeActive = intensityX !== 0 || intensityY !== 0
+  const now = performance.now()
+
+  if (!edgeActive) {
+    edgeState.edgeHoverStart = null
+    edgeState.lastAutoScrollTime = null
+    return
+  }
+
+  if (!edgeState.edgeHoverStart) {
+    edgeState.edgeHoverStart = now
+  }
+
+  if (now - edgeState.edgeHoverStart < DESKTOP_EDGE_AUTOSCROLL_DELAY_MS) {
+    return
+  }
+
+  let deltaMs = DESKTOP_EDGE_AUTOSCROLL_DEFAULT_FRAME_MS
+  if (typeof edgeState.lastAutoScrollTime === 'number') {
+    const elapsed = now - edgeState.lastAutoScrollTime
+    if (Number.isFinite(elapsed) && elapsed > 0) {
+      deltaMs = Math.min(DESKTOP_EDGE_AUTOSCROLL_MAX_FRAME_MS, elapsed)
+    }
+  }
+  edgeState.lastAutoScrollTime = now
+
+  const scrollDeltaX = intensityX * DESKTOP_EDGE_AUTOSCROLL_SPEED * deltaMs
+  const scrollDeltaY = intensityY * DESKTOP_EDGE_AUTOSCROLL_SPEED * deltaMs
+
+  if (scrollDeltaX !== 0 || scrollDeltaY !== 0) {
+    gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x + scrollDeltaX, maxScrollX))
+    gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y + scrollDeltaY, maxScrollY))
+  }
+}
 
 /**
  * Updates map scrolling with inertia
@@ -86,6 +179,9 @@ export function updateMapScrolling(gameState, mapGrid) {
 
       gameState.scrollOffset.x = Math.max(0, Math.min(gameState.scrollOffset.x - gameState.dragVelocity.x, maxScrollX))
       gameState.scrollOffset.y = Math.max(0, Math.min(gameState.scrollOffset.y - gameState.dragVelocity.y, maxScrollY))
+      if (!keyScrollActive) {
+        applyDesktopEdgeAutoScroll(gameState, gameCanvas, maxScrollX, maxScrollY)
+      }
     } else {
       gameState.dragVelocity.x *= INERTIA_DECAY
       if (Math.abs(gameState.dragVelocity.x) < INERTIA_STOP_THRESHOLD) {

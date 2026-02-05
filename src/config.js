@@ -443,6 +443,20 @@ export function setKeyboardScrollSpeed(value) {
   KEYBOARD_SCROLL_SPEED = value
 }
 
+// Desktop edge auto-scroll speed (pixels per millisecond)
+export let DESKTOP_EDGE_AUTOSCROLL_SPEED = 0.3
+
+export function setDesktopEdgeAutoscrollSpeed(value) {
+  DESKTOP_EDGE_AUTOSCROLL_SPEED = value
+}
+
+// Desktop edge auto-scroll enabled toggle
+export let DESKTOP_EDGE_AUTOSCROLL_ENABLED = true
+
+export function setDesktopEdgeAutoscrollEnabled(value) {
+  DESKTOP_EDGE_AUTOSCROLL_ENABLED = Boolean(value)
+}
+
 // Long-press duration to show production tooltips (in milliseconds)
 export let LONG_PRESS_MS = 250
 
