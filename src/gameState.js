@@ -72,6 +72,14 @@ export const gameState = {
   mapEditRandomMode: true,
   cursorX: 0,
   cursorY: 0,
+  desktopEdgeScroll: {
+    clientX: 0,
+    clientY: 0,
+    overCanvas: false,
+    lastMoveTime: 0,
+    edgeHoverStart: null,
+    lastAutoScrollTime: null
+  },
   draggedBuildingType: null,
   draggedBuildingButton: null,
   // Drag and drop rally point for units

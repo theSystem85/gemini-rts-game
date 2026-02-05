@@ -75,6 +75,10 @@ import {
   setStreetSpeedMultiplier,
   KEYBOARD_SCROLL_SPEED,
   setKeyboardScrollSpeed,
+  DESKTOP_EDGE_AUTOSCROLL_SPEED,
+  setDesktopEdgeAutoscrollSpeed,
+  DESKTOP_EDGE_AUTOSCROLL_ENABLED,
+  setDesktopEdgeAutoscrollEnabled,
   LONG_PRESS_MS,
   setLongPressMs,
   INERTIA_STOP_THRESHOLD,
@@ -666,6 +670,27 @@ export const configRegistry = {
     min: 1,
     max: 32,
     step: 1,
+    category: 'Controls'
+  },
+
+  desktopEdgeAutoscrollEnabled: {
+    name: 'Desktop Edge Auto-Scroll',
+    description: 'Enable or disable edge-triggered camera scrolling on desktop',
+    type: 'boolean',
+    get: () => DESKTOP_EDGE_AUTOSCROLL_ENABLED,
+    set: setDesktopEdgeAutoscrollEnabled,
+    category: 'Controls'
+  },
+
+  desktopEdgeAutoscrollSpeed: {
+    name: 'Desktop Edge Auto-Scroll Speed',
+    description: 'Base camera scroll speed when hovering near desktop edges (pixels/ms)',
+    type: 'number',
+    get: () => DESKTOP_EDGE_AUTOSCROLL_SPEED,
+    set: setDesktopEdgeAutoscrollSpeed,
+    min: 0,
+    max: 2,
+    step: 0.05,
     category: 'Controls'
   },
 

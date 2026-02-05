@@ -13,6 +13,8 @@ import {
   DEFAULT_MAP_TILES_Y,
   ORE_SPREAD_ENABLED,
   setOreSpreadEnabled,
+  DESKTOP_EDGE_AUTOSCROLL_ENABLED,
+  setDesktopEdgeAutoscrollEnabled,
   setMapDimensions
 } from '../config.js'
 import { initSettingsModal, openSettingsModal } from '../ui/settingsModal.js'
@@ -51,6 +53,7 @@ const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
 export const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
 export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
+const DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY = 'rts-desktop-edge-autoscroll-enabled'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -140,6 +143,15 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     window.logger.warn('Failed to load shadow of war setting from localStorage:', e)
+  }
+
+  try {
+    const storedEdgeScrollSetting = localStorage.getItem(DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY)
+    if (storedEdgeScrollSetting !== null) {
+      setDesktopEdgeAutoscrollEnabled(storedEdgeScrollSetting === 'true')
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load desktop edge auto-scroll setting from localStorage:', e)
   }
 }
 
@@ -452,6 +464,7 @@ class Game {
     const mapSettingsToggleIcon = document.getElementById('mapSettingsToggleIcon')
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
+    const edgeAutoscrollCheckbox = document.getElementById('desktopEdgeAutoscrollToggle')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
@@ -505,6 +518,10 @@ class Game {
       shadowCheckbox.checked = !!gameState.shadowOfWarEnabled
     }
 
+    if (edgeAutoscrollCheckbox) {
+      edgeAutoscrollCheckbox.checked = DESKTOP_EDGE_AUTOSCROLL_ENABLED
+    }
+
     const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
     if (showEnemyResourcesCheckbox) {
       showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
@@ -533,6 +550,18 @@ class Game {
           window.logger.warn('Failed to save shadow of war setting to localStorage:', err)
         }
         updateShadowOfWar(gameState, units, gameState.mapGrid, gameState.factories)
+      })
+    }
+
+    if (edgeAutoscrollCheckbox) {
+      edgeAutoscrollCheckbox.addEventListener('change', (e) => {
+        const enabled = e.target.checked
+        setDesktopEdgeAutoscrollEnabled(enabled)
+        try {
+          localStorage.setItem(DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY, enabled.toString())
+        } catch (err) {
+          window.logger.warn('Failed to save desktop edge auto-scroll setting to localStorage:', err)
+        }
       })
     }
 

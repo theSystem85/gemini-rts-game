@@ -223,6 +223,18 @@ export class CursorManager {
       y <= rect.bottom
     )
 
+    const edgeScrollState = gameState.desktopEdgeScroll
+    if (edgeScrollState) {
+      edgeScrollState.clientX = x
+      edgeScrollState.clientY = y
+      edgeScrollState.overCanvas = this.isOverGameCanvas
+      edgeScrollState.lastMoveTime = performance.now()
+      if (!this.isOverGameCanvas) {
+        edgeScrollState.edgeHoverStart = null
+        edgeScrollState.lastAutoScrollTime = null
+      }
+    }
+
     // Calculate mouse position in world coordinates
     const worldX = x - rect.left + gameState.scrollOffset.x
     const worldY = y - rect.top + gameState.scrollOffset.y
