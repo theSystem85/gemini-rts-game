@@ -3,6 +3,7 @@
 - [x] Fix building system unit tests failing due to missing `hasLineOfSightToTarget` mock export.
 - [ ] Defense turrets should not fire through buildings; block shots when line of sight is obstructed for player and AI turrets.
 - [ ] Prevent multiple Apaches from landing on the same helipad; show blocked cursor when hovering over occupied helipads.
+- [x] Ensure Apache helicopters can land on helipads even while still selected.
 - [ ] Add unit coverage for lockstep inputBuffer networking helpers (Task 5.1 tests).
 - [ ] Add unit test coverage for mouse handler input flows (Task 4.4) with meaningful assertions.
 - [ ] Fix attack cursor to toggle between in-range and out-of-range states on hover based on distance, and ensure range labels render in red.
