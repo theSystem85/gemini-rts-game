@@ -1,4 +1,5 @@
 ## Features
+- [x] Add a mobile control group panel with assign toggle and long-press assignment for groups 1-9.
 - [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.
 - [x] ✅ **Playwright E2E Testing**: Setup Playwright for end-to-end browser testing with real user interactions.

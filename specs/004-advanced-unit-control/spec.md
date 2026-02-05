@@ -159,6 +159,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 
 **Integration:**
 - **FR-039**: System MUST disable remote control when guard mode is manually active
+- **FR-054**: Mobile layouts MUST provide a control group UI that allows tapping group numbers to select groups and long-press (or assign mode toggle) to assign selected units to groups 1-9.
 
 ## Implementation Notes (2026-01-30)
 - `src/input/unitCommands.js` is now a thin delegator bundling domain modules (`movementCommands.js`, `attackCommands.js`, `supportCommands.js`, `airCommands.js`, `utilityHelpers.js`, `utilityQueue.js`) under 1k LOC each to keep advanced control logic maintainable without changing behavior or tests.
@@ -182,6 +183,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 ### Key Entities
 
 - **Remote Control State**: Real-time keyboard input processing for direct unit manipulation (arrow keys + space)
+- **Mobile Control Group Panel**: Touch-friendly UI for assigning and selecting control groups without a hardware keyboard.
   
 - **Guard Assignment**: Relationship between guarding unit and guarded target with following and defensive behavior
   
