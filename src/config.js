@@ -443,6 +443,13 @@ export function setKeyboardScrollSpeed(value) {
   KEYBOARD_SCROLL_SPEED = value
 }
 
+// Long-press duration to show production tooltips (in milliseconds)
+export let LONG_PRESS_MS = 250
+
+export function setLongPressMs(value) {
+  LONG_PRESS_MS = value
+}
+
 // Increase tank range by 50% (for example, from 6 to 9 tiles)
 export let TANK_FIRE_RANGE = 9
 
@@ -1379,6 +1386,7 @@ const EXPORTED_CONFIG_VARIABLES = [
   'WRECK_COLLISION_RECOIL_FACTOR_UNIT',
   'WRECK_COLLISION_RECOIL_MAX_UNIT',
   'KEYBOARD_SCROLL_SPEED',
+  'LONG_PRESS_MS',
   'TANK_FIRE_RANGE',
   'SERVICE_DISCOVERY_RANGE',
   'SERVICE_SERVING_RANGE',

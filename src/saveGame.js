@@ -309,7 +309,10 @@ export function saveGame(label) {
       rangeMultiplier: u.rangeMultiplier,
       fireRateMultiplier: u.fireRateMultiplier,
       armor: u.armor,
-      selfRepair: u.selfRepair
+      selfRepair: u.selfRepair,
+      damageValue: u.damageValue,
+      totalRepairPaid: u.totalRepairPaid,
+      isRestoredFromWreck: u.isRestoredFromWreck
       // Note: lastAttacker is excluded to prevent circular references
       // Add more fields if needed
     }
@@ -380,7 +383,8 @@ export function saveGame(label) {
     maxAmmo: typeof b.maxAmmo === 'number' ? b.maxAmmo : undefined,
     ammoReloadTime: typeof b.ammoReloadTime === 'number' ? b.ammoReloadTime : undefined,
     needsAmmo: typeof b.needsAmmo === 'boolean' ? b.needsAmmo : undefined,
-    landedUnitId: b.landedUnitId
+    landedUnitId: b.landedUnitId,
+    damageValue: b.damageValue
     // Add more fields if needed
   }))
 

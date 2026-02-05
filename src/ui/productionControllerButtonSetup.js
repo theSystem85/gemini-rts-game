@@ -4,6 +4,7 @@ import { productionQueue } from '../productionQueue.js'
 import { showNotification } from './notifications.js'
 import { buildingData } from '../buildings.js'
 import { applyProductionBrush } from './mapEditorControls.js'
+import { attachProductionTooltipHandlers } from './productionTooltip.js'
 
 export function setupAllProductionButtons(controller) {
   // Only setup once to prevent duplicate event listeners
@@ -310,6 +311,7 @@ export function setupUnitButtons(controller) {
     })
 
     controller.attachMobileDragHandlers(button, { kind: 'unit', type: unitType })
+    attachProductionTooltipHandlers(button, { kind: 'unit', type: unitType }, controller)
   })
 }
 
@@ -385,6 +387,7 @@ export function setupBuildingButtons(controller) {
     })
 
     controller.attachMobileDragHandlers(button, { kind: 'building', type: buildingType })
+    attachProductionTooltipHandlers(button, { kind: 'building', type: buildingType }, controller)
 
     button.addEventListener('click', (event) => {
       if (controller.suppressNextClick) {

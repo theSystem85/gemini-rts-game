@@ -18,7 +18,10 @@ import { gameState } from '../../src/gameState.js'
 // Mock dependencies
 vi.mock('../../src/config.js', () => ({
   TILE_SIZE: 32,
-  HOWITZER_BUILDING_DAMAGE_MULTIPLIER: 1.5
+  HOWITZER_BUILDING_DAMAGE_MULTIPLIER: 1.5,
+  HELIPAD_FUEL_CAPACITY: 15600,
+  HELIPAD_RELOAD_TIME: 8000,
+  HELIPAD_AMMO_RESERVE: 250
 }))
 
 vi.mock('../../src/gameState.js', () => ({

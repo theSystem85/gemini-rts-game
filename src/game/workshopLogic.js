@@ -277,6 +277,7 @@ function processWorkshopRestoration(workshop, units, mapGrid, delta) {
         spawnTile.y,
         { buildDuration: restoration.buildDuration }
       )
+      restored.isRestoredFromWreck = true
 
       // Remove crew and fuel for freshly restored units
       if (restored.crew) {
@@ -544,6 +545,7 @@ export const updateWorkshopLogic = logPerformance(function updateWorkshopLogic(u
               const paid = withdrawRepairFunds(unit, costThisFrame)
               if (paid > 0) {
                 unit.workshopRepairPaid = (unit.workshopRepairPaid || 0) + paid
+                unit.totalRepairPaid = (unit.totalRepairPaid || 0) + paid
               }
             }
           }

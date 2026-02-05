@@ -27,7 +27,8 @@ vi.mock('../../src/sound.js', () => ({
 
 vi.mock('../../src/utils.js', () => ({
   awardExperience: vi.fn(),
-  updateUnitSpeedModifier: vi.fn()
+  updateUnitSpeedModifier: vi.fn(),
+  getUnitCost: vi.fn(() => 0)
 }))
 
 vi.mock('../../src/game/hitZoneCalculator.js', () => ({
