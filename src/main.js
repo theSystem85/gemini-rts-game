@@ -6,6 +6,7 @@ import { registerMapEditorRendering } from './mapEditor.js'
 import { getTextureManager, notifyTileMutation } from './rendering.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
 import './ui/mobileJoysticks.js'
+import './ui/mobileControlGroups.js'
 import {
   initDeviceLifecycle,
   updateTouchClass,
