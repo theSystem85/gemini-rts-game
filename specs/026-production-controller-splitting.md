@@ -21,6 +21,7 @@ Refactor the production controller UI logic into focused modules so that no sing
 - Long-press (>= 1s) on unit/building production buttons opens a detailed tooltip aligned with the money bar style.
 - Unit tooltip shows build spend, restored counts, repair costs, per-unit status, and damage-value stats.
 - Building tooltip shows description, cost, power, per-building health, and defense damage value.
+- Tooltip panels become vertically scrollable (with hidden scrollbars) when the content exceeds 90% of the viewport height.
 - Production buttons suppress iOS text selection/callout during long-press so the tooltip remains visible.
 
 ## Non-Goals
