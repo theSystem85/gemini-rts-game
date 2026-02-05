@@ -251,9 +251,11 @@ body.is-touch {
   border-radius: 12px;
   padding: 0;
   max-width: 320px;
+  max-height: 80vh;
   width: 90%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  overflow-y: auto;
 }
 
 .multiplayer-qr-modal__header {
@@ -392,9 +394,11 @@ body.is-touch {
   border-radius: 12px;
   padding: 0;
   max-width: 340px;
+  max-height: 80vh;
   width: 90%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  overflow-y: auto;
 }
 
 .qr-scanner-modal__header {

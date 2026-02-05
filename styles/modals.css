@@ -653,7 +653,9 @@ body.kicked-modal-open {
   box-shadow: 0 16px 48px rgba(255, 80, 80, 0.3), 0 0 40px rgba(255, 80, 80, 0.1);
   color: #e5e5e5;
   width: min(440px, 100%);
+  max-height: 80vh;
   overflow: hidden;
+  overflow-y: auto;
   animation: kickedModalAppear 0.3s ease-out;
 }
 
@@ -773,7 +775,7 @@ body.benchmark-modal-open {
   border-radius: 8px;
   width: min(680px, 92vw);
   max-width: 820px;
-  max-height: 85vh;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
@@ -940,7 +942,7 @@ body.mobile-landscape .mobile-sidebar-modal[aria-hidden="false"] {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   padding: 20px;
   width: min(90vw, 420px);
-  max-height: 90vh;
+  max-height: 80vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
