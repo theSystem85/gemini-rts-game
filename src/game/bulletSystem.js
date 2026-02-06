@@ -497,7 +497,13 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
             mapGrid,
             TILE_SIZE * 2,
             false,
-            rocketExplosionOptions
+            {
+              ...rocketExplosionOptions,
+              unitDamageMultipliers: {
+                tankerTruck: 3,
+                ammunitionTruck: 3
+              }
+            }
           )
 
           // Play explosion sound
