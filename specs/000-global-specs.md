@@ -60,6 +60,12 @@ The following unit types are considered attack-capable for cursor/range detectio
   - Each player-owned harvester with total money earned, harvest cycle time in seconds, fuel percentage, and crew status.
 - Each refinery/harvester row is a link that selects the entity and centers the camera on it.
 
+## Modal Layout Constraints
+
+- All modal dialogs must be capped at 80% of the viewport height (`80vh`) to avoid exceeding the visible screen space on smaller devices.
+- Modal bodies should remain scrollable when content exceeds the height cap.
+- Mobile overrides (such as settings/keybindings and cheat dialogs) must keep the 80vh cap as well.
+
 ## Related Files
 
 - [src/config.js](../src/config.js) - Constants definition

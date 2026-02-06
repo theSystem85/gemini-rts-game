@@ -126,7 +126,7 @@ body.config-modal-open {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   color: #e5e5e5;
   width: min(560px, calc(100% - 24px));
-  max-height: min(90vh, 700px);
+  max-height: min(80vh, 700px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
