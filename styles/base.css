@@ -939,6 +939,13 @@ body.mobile-landscape #actions .action-button.active {
   opacity: 1;
 }
 
+body.mobile-landscape #actions #repairBtn.active,
+body.mobile-landscape #actions #sellBtn.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(8, 24, 40, 0.35));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+}
+
 body.mobile-landscape #actions .action-button .button-icon,
 body.mobile-landscape #actions .action-button img {
   opacity: 1;
@@ -1554,6 +1561,15 @@ body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:hov
 body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:focus {
   transform: none;
   background-color: transparent;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #repairBtn.active,
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #sellBtn.active,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #repairBtn.active,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #sellBtn.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(8, 24, 40, 0.35));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
 }
 
 body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions,

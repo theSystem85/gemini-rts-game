@@ -487,6 +487,7 @@ body.is-touch .money-tooltip__meta {
 }
 
 .play-pause-icon, .restart-icon, .music-icon, .settings-icon {
+  color: #fff;
   font-weight: bold;
   font-size: 20px;
 }
