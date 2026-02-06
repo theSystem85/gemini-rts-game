@@ -1,4 +1,4 @@
 {
-  "commit": "160a658",
-  "message": "Refactor gameCommandSync.js into thin coordinator module (2068→302 lines, 85% reduction)"
+  "commit": "e8ae563",
+  "message": "IMPROVE: Cap modal dialogs at 80vh"
 }
