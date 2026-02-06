@@ -173,6 +173,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-052**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
 - **FR-053**: When multiple Apache helicopters are ordered to land on a helipad, the system MUST assign each helicopter to a distinct available helipad (prioritizing those nearest the clicked helipad) so no two helis are assigned to the same pad during a group landing command.
 - **FR-054**: System MUST allow Apache helicopters to receive helipad landing commands while they remain selected (standard command input should not require deselection).
+- **FR-055**: On touch layouts, Apache helipad landing commands MUST not be blocked by idle remote-control input, and initiating remote control while grounded MUST trigger an automatic takeoff before movement.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
