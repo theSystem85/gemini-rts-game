@@ -240,7 +240,7 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
       }
       const normX = offsetX / offsetMag
       const normY = offsetY / offsetMag
-      desiredDistance = Math.max(TILE_SIZE, Math.min(effectiveRange * 0.9, offsetMag))
+      desiredDistance = Math.max(TILE_SIZE, Math.min(effectiveRange, offsetMag))
       standOffX = targetCenter.x + normX * desiredDistance
       standOffY = targetCenter.y + normY * desiredDistance
     }

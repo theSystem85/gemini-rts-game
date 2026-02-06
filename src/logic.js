@@ -37,7 +37,8 @@ export function triggerExplosion(
     buildingDamageMultiplier = 1,
     factoryDamageMultiplier = 1,
     buildingDamageCaps = {},
-    allowAirborneDamage = false
+    allowAirborneDamage = false,
+    unitDamageMultipliers = {}
   } = options || {}
 
   // Add explosion visual effect
@@ -90,6 +91,11 @@ export function triggerExplosion(
           playSound('criticalDamage', 0.7)
           recordCriticalDamageSoundPlayed(unit, now)
         }
+      }
+
+      const unitMultiplier = unitDamageMultipliers[unit.type] || 1
+      if (unitMultiplier !== 1) {
+        damage = Math.round(damage * unitMultiplier)
       }
 
       // Check for god mode protection

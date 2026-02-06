@@ -503,7 +503,9 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
     if (isApache) {
       const landingInProgress = Boolean(unit.helipadLandingRequested || unit.flightPlan?.mode === 'helipad' || unit.landedHelipadId)
       const landingOverrideThreshold = landingInProgress && isTouchLayout ? 0.2 : 0
-      const apacheAbsoluteActive = rawWagonDirection !== null && rawWagonSpeed > landingOverrideThreshold
+      const effectiveWagonSpeed = rawWagonSpeed > landingOverrideThreshold ? rawWagonSpeed : 0
+      const effectiveWagonDirection = effectiveWagonSpeed > 0 ? rawWagonDirection : null
+      const apacheAbsoluteActive = effectiveWagonDirection !== null && effectiveWagonSpeed > 0
       const apacheHasMovementInput =
         apacheAbsoluteActive ||
         forwardIntensity > landingOverrideThreshold ||
@@ -533,8 +535,8 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         descendIntensity,
         strafeLeftIntensity,
         strafeRightIntensity,
-        rawWagonDirection,
-        rawWagonSpeed,
+        rawWagonDirection: effectiveWagonDirection,
+        rawWagonSpeed: effectiveWagonSpeed,
         fireIntensity
       })
 

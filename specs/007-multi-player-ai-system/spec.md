@@ -101,6 +101,7 @@ This specification documents the comprehensive multi-player AI system that power
 - [x] AI harvesters return to base when damaged or threatened
 - [x] AI rebuilds critical structures when destroyed
 - [x] AI adapts strategy based on current game state (winning/losing)
+- [x] AI Apache helicopters immediately target enemy helicopters within firing range and resume their prior objectives after the threat is destroyed or disengaged
 
 ---
 

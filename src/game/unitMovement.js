@@ -90,7 +90,7 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
       (unit.lastRemoteControlTime && now - unit.lastRemoteControlTime < 1000)
 
     // --- ATTACK-MOVE FIX: If not retreating, and has a target, and is out of range, set moveTarget/path to target ---
-    if (!unit.isRetreating && unit.target && unit.target.health > 0 && !remoteControlCooldownActive) {
+    if (!unit.isRetreating && unit.target && unit.target.health > 0 && !remoteControlCooldownActive && unit.type !== 'apache') {
       // Calculate distance to target center
       let targetCenterX, targetCenterY
       if (unit.target.tileX !== undefined) {
