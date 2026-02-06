@@ -64,6 +64,7 @@ The following unit types are considered attack-capable for cursor/range detectio
 
 - All modal dialogs must be capped at 80% of the viewport height (`80vh`) to avoid exceeding the visible screen space on smaller devices.
 - Modal bodies should remain scrollable when content exceeds the height cap.
+- Mobile overrides (such as settings/keybindings and cheat dialogs) must keep the 80vh cap as well.
 
 ## Related Files
 
