@@ -1,6 +1,7 @@
 ## Improvements
 - [x] Reduce key bindings and cheat modal height caps on small screens to avoid cropping.
 - [x] Cap all modal dialogs at 80% of the viewport height to prevent oversizing on small screens.
+- [ ] Add an invisible scrollable overflow for unit/building production tooltips when their content exceeds 90% of the viewport height.
 - [ ] Add a money bar tooltip that breaks down refinery revenue and harvester cycle stats with click-to-focus shortcuts for each entity.
 - [x] Add desktop edge auto-scroll after a short hover delay with configurable speed and a settings toggle to disable it.
 - [x] Adjusted mobile portrait condensed sidebar money and power bars: removed rounded borders, added vertical text display (bottom-to-top) matching Buildings/Units tab direction, ensured PWA mode bars display with labels and matching colors.

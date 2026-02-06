@@ -354,6 +354,7 @@ function handleApacheRemoteControl(unit, params) {
   if (remoteActive) {
     unit.flightPlan = null
     unit.helipadLandingRequested = false
+    unit.helipadTargetId = null
     unit.autoHoldAltitude = !descendActive
   }
 
@@ -366,7 +367,7 @@ function handleApacheRemoteControl(unit, params) {
     unit.manualFlightHoverRequested = true
   }
 
-  if (ascendActive) {
+  if (ascendActive || (remoteActive && unit.flightState === 'grounded' && !descendActive)) {
     unit.manualFlightHoverRequested = true
     unit.manualFlightState = 'takeoff'
     unit.autoHoldAltitude = true
@@ -480,6 +481,7 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
 
     const hasTurret = isTurretTankUnitType(unit.type)
     const isApache = unit.type === 'apache'
+    const isTouchLayout = typeof document !== 'undefined' && document.body?.classList.contains('is-touch')
 
     // Only allow remote control for player units unless enemy control is enabled
     const humanPlayer = gameState.humanPlayer || 'player1'
@@ -499,17 +501,21 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
       turnRightIntensity > 0
 
     if (isApache) {
-      const apacheAbsoluteActive = rawWagonDirection !== null && rawWagonSpeed > 0
+      const landingInProgress = Boolean(unit.helipadLandingRequested || unit.flightPlan?.mode === 'helipad' || unit.landedHelipadId)
+      const landingOverrideThreshold = landingInProgress && isTouchLayout ? 0.2 : 0
+      const effectiveWagonSpeed = rawWagonSpeed > landingOverrideThreshold ? rawWagonSpeed : 0
+      const effectiveWagonDirection = effectiveWagonSpeed > 0 ? rawWagonDirection : null
+      const apacheAbsoluteActive = effectiveWagonDirection !== null && effectiveWagonSpeed > 0
       const apacheHasMovementInput =
         apacheAbsoluteActive ||
-        forwardIntensity > 0 ||
-        backwardIntensity > 0 ||
-        turnLeftIntensity > 0 ||
-        turnRightIntensity > 0 ||
-        strafeLeftIntensity > 0 ||
-        strafeRightIntensity > 0 ||
-        ascendIntensity > 0 ||
-        descendIntensity > 0
+        forwardIntensity > landingOverrideThreshold ||
+        backwardIntensity > landingOverrideThreshold ||
+        turnLeftIntensity > landingOverrideThreshold ||
+        turnRightIntensity > landingOverrideThreshold ||
+        strafeLeftIntensity > landingOverrideThreshold ||
+        strafeRightIntensity > landingOverrideThreshold ||
+        ascendIntensity > landingOverrideThreshold ||
+        descendIntensity > landingOverrideThreshold
 
       if (apacheHasMovementInput) {
         unit.path = []
@@ -529,8 +535,8 @@ export function updateRemoteControlledUnits(units, bullets, mapGrid, occupancyMa
         descendIntensity,
         strafeLeftIntensity,
         strafeRightIntensity,
-        rawWagonDirection,
-        rawWagonSpeed,
+        rawWagonDirection: effectiveWagonDirection,
+        rawWagonSpeed: effectiveWagonSpeed,
         fireIntensity
       })
 

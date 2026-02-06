@@ -159,6 +159,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 
 **Integration:**
 - **FR-039**: System MUST disable remote control when guard mode is manually active
+- **FR-054**: Mobile layouts MUST provide a control group UI that allows tapping group numbers to select groups and long-press (or assign mode toggle) to assign selected units to groups 1-9.
 
 ## Implementation Notes (2026-01-30)
 - `src/input/unitCommands.js` is now a thin delegator bundling domain modules (`movementCommands.js`, `attackCommands.js`, `supportCommands.js`, `airCommands.js`, `utilityHelpers.js`, `utilityQueue.js`) under 1k LOC each to keep advanced control logic maintainable without changing behavior or tests.
@@ -172,6 +173,8 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-051**: Hover range checks MUST consider each selected combat unit and mark out-of-range only when none are within firing range.
 - **FR-052**: System MUST display numbered PPF-style waypoint markers for the active movement path and allow toggling that visualization on/off via the W key
 - **FR-053**: When multiple Apache helicopters are ordered to land on a helipad, the system MUST assign each helicopter to a distinct available helipad (prioritizing those nearest the clicked helipad) so no two helis are assigned to the same pad during a group landing command.
+- **FR-054**: System MUST allow Apache helicopters to receive helipad landing commands while they remain selected (standard command input should not require deselection).
+- **FR-055**: On touch layouts, Apache helipad landing commands MUST not be blocked by idle remote-control input, and initiating remote control while grounded MUST trigger an automatic takeoff before movement.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
@@ -182,6 +185,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 ### Key Entities
 
 - **Remote Control State**: Real-time keyboard input processing for direct unit manipulation (arrow keys + space)
+- **Mobile Control Group Panel**: Touch-friendly UI for assigning and selecting control groups without a hardware keyboard.
   
 - **Guard Assignment**: Relationship between guarding unit and guarded target with following and defensive behavior
   

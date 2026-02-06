@@ -127,6 +127,10 @@
       <button id="sellBtn" class="action-button icon-button" title="Sell for 70% of the build price">
         <span class="button-icon">$</span>
       </button>
+      <button id="controlGroupsBtn" class="action-button icon-button" title="Control groups" type="button"
+        aria-expanded="false" aria-controls="mobileControlGroupsPanel" aria-haspopup="dialog">
+        <span class="button-icon group-icon">1·2·3</span>
+      </button>
       <button id="pauseBtn" class="action-button icon-button" title="Start/Pause Game">
         <span class="button-icon play-pause-icon">▶</span>
       </button>
@@ -594,6 +598,27 @@
         aria-label="Expand sidebar" title="Expand sidebar">
         <span class="button-icon">☰</span>
       </button>
+    </div>
+  </div>
+
+  <div id="mobileControlGroupsPanel" class="mobile-control-groups" aria-hidden="true" role="dialog"
+    aria-label="Control groups">
+    <div class="mobile-control-groups__header">
+      <span>Unit Groups</span>
+      <button id="mobileControlGroupsAssignToggle" class="mobile-control-groups__assign" type="button"
+        aria-pressed="false">Assign</button>
+    </div>
+    <p class="mobile-control-groups__hint">Tap a number to select. Hold to assign.</p>
+    <div class="mobile-control-groups__grid" role="group" aria-label="Control group buttons">
+      <button class="mobile-control-groups__button" type="button" data-group="1">1</button>
+      <button class="mobile-control-groups__button" type="button" data-group="2">2</button>
+      <button class="mobile-control-groups__button" type="button" data-group="3">3</button>
+      <button class="mobile-control-groups__button" type="button" data-group="4">4</button>
+      <button class="mobile-control-groups__button" type="button" data-group="5">5</button>
+      <button class="mobile-control-groups__button" type="button" data-group="6">6</button>
+      <button class="mobile-control-groups__button" type="button" data-group="7">7</button>
+      <button class="mobile-control-groups__button" type="button" data-group="8">8</button>
+      <button class="mobile-control-groups__button" type="button" data-group="9">9</button>
     </div>
   </div>
 

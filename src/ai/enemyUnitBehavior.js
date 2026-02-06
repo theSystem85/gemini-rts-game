@@ -4,6 +4,7 @@ import { applyEnemyStrategies, shouldConductGroupAttack, shouldRetreatLowHealth,
 import { isEnemyTo } from './enemyUtils.js'
 import { buildingData } from '../buildings.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { getEffectiveFireRange } from '../game/unitCombat/combatHelpers.js'
 
 const ENABLE_DODGING = false
 const lastPositionCheckTimeDelay = 3000
@@ -1283,6 +1284,27 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
   const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
   const unitCenter = getUnitCenter(unit)
   const nearDefense = isAirDefenseNearby(unitCenter, units, gameState)
+  const airTarget = findEnemyApacheInRange(unit, units, gameState)
+
+  if (airTarget) {
+    if (unit.target !== airTarget) {
+      if (unit.target && unit.target.type !== 'apache') {
+        unit.apacheResumeTarget = unit.target
+      }
+      unit.target = airTarget
+      unit.allowedToAttack = true
+      unit.lastTargetChangeTime = now
+    }
+    unit.path = []
+    unit.moveTarget = null
+    unit.lastDecisionTime = now
+    return
+  }
+
+  if (unit.target && unit.target.type === 'apache' && unit.apacheResumeTarget) {
+    unit.target = unit.apacheResumeTarget
+    unit.apacheResumeTarget = null
+  }
 
   if (nearDefense || unit.airDefenseRetreating) {
     const safeTile = findNearestAIBuildingTile(unit, gameState, aiPlayerId)
@@ -1290,15 +1312,23 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     unit.target = null
 
     if (safeTile) {
-      const retreatPath = getCachedPath({ x: unit.tileX, y: unit.tileY }, safeTile, mapGrid, gameState.occupancyMap)
-      unit.path = retreatPath && retreatPath.length > 1 ? retreatPath.slice(1) : []
-      unit.moveTarget = {
+      unit.path = []
+      unit.moveTarget = null
+      const retreatTarget = {
         x: (safeTile.x + 0.5) * TILE_SIZE,
         y: (safeTile.y + 0.5) * TILE_SIZE
       }
+      unit.flightPlan = {
+        x: retreatTarget.x,
+        y: retreatTarget.y,
+        stopRadius: TILE_SIZE * 0.6,
+        mode: 'retreat',
+        followTargetId: null,
+        destinationTile: { ...safeTile }
+      }
       unit.lastDecisionTime = now
 
-      const distanceToBase = Math.hypot(unit.moveTarget.x - unitCenter.x, unit.moveTarget.y - unitCenter.y)
+      const distanceToBase = Math.hypot(retreatTarget.x - unitCenter.x, retreatTarget.y - unitCenter.y)
       if (!nearDefense && distanceToBase < TILE_SIZE * 2) {
         unit.airDefenseRetreating = false
       }
@@ -1331,14 +1361,45 @@ function updateApacheAI(unit, units, gameState, mapGrid, now, aiPlayerId) {
     ? { x: target.tileX, y: target.tileY }
     : { x: target.x, y: target.y }
 
-  const targetPixel = target.tileX !== undefined
-    ? { x: (target.tileX + 0.5) * TILE_SIZE, y: (target.tileY + 0.5) * TILE_SIZE }
-    : { x: (target.x + (target.width || 1) / 2) * TILE_SIZE, y: (target.y + (target.height || 1) / 2) * TILE_SIZE }
+  unit.moveTarget = null
+  unit.path = []
+  unit.flightPlan = {
+    x: (targetTile.x + 0.5) * TILE_SIZE,
+    y: (targetTile.y + 0.5) * TILE_SIZE,
+    stopRadius: TILE_SIZE * 0.6,
+    mode: 'attack',
+    followTargetId: target.id || null,
+    destinationTile: { ...targetTile }
+  }
+}
 
-  unit.moveTarget = targetPixel
+function findEnemyApacheInRange(unit, units, gameState) {
+  if (!unit || !Array.isArray(units)) {
+    return null
+  }
 
-  const path = getCachedPath({ x: unit.tileX, y: unit.tileY }, targetTile, mapGrid, gameState.occupancyMap)
-  unit.path = path && path.length > 1 ? path.slice(1) : []
+  const effectiveRange = getEffectiveFireRange(unit)
+  const unitCenter = getUnitCenter(unit)
+  const enemyApaches = units.filter(candidate =>
+    candidate &&
+    candidate.type === 'apache' &&
+    candidate.health > 0 &&
+    candidate.owner !== unit.owner &&
+    candidate.owner === gameState.humanPlayer
+  )
+
+  let bestTarget = null
+  let bestDistance = Infinity
+  enemyApaches.forEach(candidate => {
+    const candidateCenter = getUnitCenter(candidate)
+    const distance = Math.hypot(candidateCenter.x - unitCenter.x, candidateCenter.y - unitCenter.y)
+    if (distance <= effectiveRange && distance < bestDistance) {
+      bestTarget = candidate
+      bestDistance = distance
+    }
+  })
+
+  return bestTarget
 }
 
 function getUnitCenter(unit) {
