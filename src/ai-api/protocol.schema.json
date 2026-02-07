@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/rts/llm-control-api.schema.json",
+  "title": "RTS LLM Control API",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/GameTickInput" },
+    { "$ref": "#/$defs/GameTickOutput" }
+  ],
+  "$defs": {
+    "ProtocolVersion": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "Verbosity": {
+      "type": "string",
+      "enum": ["minimal", "normal", "full"]
+    },
+    "CoordinateSpace": {
+      "type": "string",
+      "enum": ["tile", "world"]
+    },
+    "Position": {
+      "type": "object",
+      "required": ["x", "y", "space"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "space": { "$ref": "#/$defs/CoordinateSpace" }
+      },
+      "additionalProperties": false
+    },
+    "PowerSnapshot": {
+      "type": "object",
+      "required": ["supply", "production", "consumption"],
+      "properties": {
+        "supply": { "type": "number" },
+        "production": { "type": "number" },
+        "consumption": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "ResourceSnapshot": {
+      "type": "object",
+      "required": ["money", "power"],
+      "properties": {
+        "money": { "type": "number" },
+        "power": { "$ref": "#/$defs/PowerSnapshot" }
+      },
+      "additionalProperties": false
+    },
+    "UnitSnapshot": {
+      "type": "object",
+      "required": ["id", "type", "owner", "health", "maxHealth", "position", "tilePosition"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "owner": { "type": "string" },
+        "health": { "type": "number" },
+        "maxHealth": { "type": "number" },
+        "position": { "$ref": "#/$defs/Position" },
+        "tilePosition": { "$ref": "#/$defs/Position" },
+        "status": {
+          "type": "object",
+          "properties": {
+            "ammo": { "type": "number" },
+            "fuel": { "type": "number" },
+            "crew": { "type": "object", "additionalProperties": { "type": "boolean" } },
+            "isAirUnit": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "orders": {
+          "type": "object",
+          "properties": {
+            "moveTarget": { "$ref": "#/$defs/Position" },
+            "targetId": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "BuildingSnapshot": {
+      "type": "object",
+      "required": ["id", "type", "owner", "health", "maxHealth", "tilePosition", "size", "constructionFinished"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "owner": { "type": "string" },
+        "health": { "type": "number" },
+        "maxHealth": { "type": "number" },
+        "tilePosition": { "$ref": "#/$defs/Position" },
+        "size": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "constructionFinished": { "type": "boolean" },
+        "rallyPoint": { "$ref": "#/$defs/Position" }
+      },
+      "additionalProperties": false
+    },
+    "MapMeta": {
+      "type": "object",
+      "required": ["tilesX", "tilesY", "tileSize", "coordinateSystem", "fogOfWarEnabled", "catalogVersion"],
+      "properties": {
+        "tilesX": { "type": "number" },
+        "tilesY": { "type": "number" },
+        "tileSize": { "type": "number" },
+        "coordinateSystem": {
+          "type": "object",
+          "required": ["tileOrigin", "worldOrigin", "worldUnits"],
+          "properties": {
+            "tileOrigin": { "type": "string", "const": "top-left" },
+            "worldOrigin": { "type": "string", "const": "top-left" },
+            "worldUnits": { "type": "string", "const": "pixels" }
+          },
+          "additionalProperties": false
+        },
+        "fogOfWarEnabled": { "type": "boolean" },
+        "catalogVersion": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "TransitionEventBase": {
+      "type": "object",
+      "required": ["id", "tick", "timeSeconds", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "tick": { "type": "number" },
+        "timeSeconds": { "type": "number" },
+        "type": { "type": "string" }
+      }
+    },
+    "TransitionEvent": {
+      "oneOf": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/TransitionEventBase" },
+            {
+              "type": "object",
+              "required": ["type", "unitId", "unitType", "owner", "position"],
+              "properties": {
+                "type": { "const": "unit_created" },
+                "unitId": { "type": "string" },
+                "unitType": { "type": "string" },
+                "owner": { "type": "string" },
+                "position": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/TransitionEventBase" },
+            {
+              "type": "object",
+              "required": ["type", "buildingId", "buildingType", "owner", "tilePosition"],
+              "properties": {
+                "type": { "const": "building_started" },
+                "buildingId": { "type": "string" },
+                "buildingType": { "type": "string" },
+                "owner": { "type": "string" },
+                "tilePosition": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/TransitionEventBase" },
+            {
+              "type": "object",
+              "required": ["type", "buildingId", "buildingType", "owner", "tilePosition"],
+              "properties": {
+                "type": { "const": "building_completed" },
+                "buildingId": { "type": "string" },
+                "buildingType": { "type": "string" },
+                "owner": { "type": "string" },
+                "tilePosition": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/TransitionEventBase" },
+            {
+              "type": "object",
+              "required": ["type", "targetId", "targetKind", "amount", "position"],
+              "properties": {
+                "type": { "const": "damage" },
+                "attackerId": { "type": "string" },
+                "targetId": { "type": "string" },
+                "targetKind": { "type": "string", "enum": ["unit", "building", "factory"] },
+                "amount": { "type": "number" },
+                "weapon": { "type": "string" },
+                "position": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/TransitionEventBase" },
+            {
+              "type": "object",
+              "required": ["type", "victimId", "victimKind", "position"],
+              "properties": {
+                "type": { "const": "destroyed" },
+                "killerId": { "type": "string" },
+                "victimId": { "type": "string" },
+                "victimKind": { "type": "string", "enum": ["unit", "building", "factory"] },
+                "cause": { "type": "string" },
+                "position": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      ]
+    },
+    "TransitionSummary": {
+      "type": "object",
+      "required": ["totalDamage", "unitsDestroyed", "buildingsDestroyed"],
+      "properties": {
+        "totalDamage": { "type": "number" },
+        "unitsDestroyed": { "type": "number" },
+        "buildingsDestroyed": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "TransitionLog": {
+      "type": "object",
+      "required": ["events", "summary"],
+      "properties": {
+        "events": { "type": "array", "items": { "$ref": "#/$defs/TransitionEvent" } },
+        "summary": { "$ref": "#/$defs/TransitionSummary" }
+      },
+      "additionalProperties": false
+    },
+    "BuildQueueSnapshot": {
+      "type": "object",
+      "required": ["unitItems", "buildingItems", "currentUnit", "currentBuilding", "pausedUnit", "pausedBuilding"],
+      "properties": {
+        "unitItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string" },
+              "rallyPoint": { "$ref": "#/$defs/Position" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "buildingItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string" },
+              "blueprint": {
+                "type": ["object", "null"],
+                "properties": {
+                  "type": { "type": "string" },
+                  "x": { "type": "number" },
+                  "y": { "type": "number" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "currentUnit": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "progress", "duration"],
+              "properties": {
+                "type": { "type": "string" },
+                "progress": { "type": "number" },
+                "duration": { "type": "number" },
+                "rallyPoint": { "$ref": "#/$defs/Position" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "currentBuilding": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "progress", "duration"],
+              "properties": {
+                "type": { "type": "string" },
+                "progress": { "type": "number" },
+                "duration": { "type": "number" },
+                "blueprint": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "type": { "type": "string" },
+                    "x": { "type": "number" },
+                    "y": { "type": "number" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "pausedUnit": { "type": "boolean" },
+        "pausedBuilding": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "GameSnapshot": {
+      "type": "object",
+      "required": ["resources", "units", "buildings", "buildQueues"],
+      "properties": {
+        "resources": { "$ref": "#/$defs/ResourceSnapshot" },
+        "units": { "type": "array", "items": { "$ref": "#/$defs/UnitSnapshot" } },
+        "buildings": { "type": "array", "items": { "$ref": "#/$defs/BuildingSnapshot" } },
+        "buildQueues": { "$ref": "#/$defs/BuildQueueSnapshot" },
+        "map": {
+          "type": "object",
+          "properties": {
+            "oreTiles": { "type": "array", "items": { "type": "object", "required": ["x", "y"], "properties": { "x": { "type": "number" }, "y": { "type": "number" } }, "additionalProperties": false } },
+            "obstacles": { "type": "array", "items": { "type": "object", "required": ["x", "y", "type"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "type": { "type": "string" } }, "additionalProperties": false } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "GameTickInput": {
+      "type": "object",
+      "required": ["protocolVersion", "matchId", "playerId", "tick", "sinceTick", "verbosity", "meta", "snapshot", "transitions", "constraints"],
+      "properties": {
+        "protocolVersion": { "$ref": "#/$defs/ProtocolVersion" },
+        "matchId": { "type": "string" },
+        "playerId": { "type": "string" },
+        "tick": { "type": "number" },
+        "sinceTick": { "type": "number" },
+        "verbosity": { "$ref": "#/$defs/Verbosity" },
+        "meta": { "$ref": "#/$defs/MapMeta" },
+        "snapshot": { "$ref": "#/$defs/GameSnapshot" },
+        "transitions": { "$ref": "#/$defs/TransitionLog" },
+        "constraints": {
+          "type": "object",
+          "required": ["maxActionsPerTick", "allowQueuedCommands", "maxQueuedCommands"],
+          "properties": {
+            "maxActionsPerTick": { "type": "number" },
+            "allowQueuedCommands": { "type": "boolean" },
+            "maxQueuedCommands": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "BuildPlaceAction": {
+      "type": "object",
+      "required": ["actionId", "type", "buildingType", "tilePosition"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "build_place" },
+        "buildingType": { "type": "string" },
+        "tilePosition": { "$ref": "#/$defs/Position" },
+        "rallyPoint": { "$ref": "#/$defs/Position" }
+      },
+      "additionalProperties": false
+    },
+    "BuildQueueAction": {
+      "type": "object",
+      "required": ["actionId", "type", "unitType", "count"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "build_queue" },
+        "factoryId": { "type": ["string", "null"] },
+        "unitType": { "type": "string" },
+        "count": { "type": "number" },
+        "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+        "rallyPoint": { "$ref": "#/$defs/Position" }
+      },
+      "additionalProperties": false
+    },
+    "UnitCommandAction": {
+      "type": "object",
+      "required": ["actionId", "type", "unitIds", "command"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "unit_command" },
+        "unitIds": { "type": "array", "items": { "type": "string" } },
+        "command": { "type": "string", "enum": ["move", "attack", "stop", "hold", "guard", "patrol"] },
+        "targetId": { "type": "string" },
+        "targetPos": { "$ref": "#/$defs/Position" },
+        "queueMode": { "type": "string", "enum": ["replace", "append"] }
+      },
+      "additionalProperties": false
+    },
+    "SetRallyAction": {
+      "type": "object",
+      "required": ["actionId", "type", "buildingId", "rallyPoint"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "set_rally" },
+        "buildingId": { "type": "string" },
+        "rallyPoint": { "$ref": "#/$defs/Position" }
+      },
+      "additionalProperties": false
+    },
+    "CancelAction": {
+      "type": "object",
+      "required": ["actionId", "type"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "cancel" },
+        "queueId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "AbilityAction": {
+      "type": "object",
+      "required": ["actionId", "type", "unitId", "abilityId"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "type": { "const": "ability" },
+        "unitId": { "type": "string" },
+        "abilityId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetPos": { "$ref": "#/$defs/Position" }
+      },
+      "additionalProperties": false
+    },
+    "GameAction": {
+      "oneOf": [
+        { "$ref": "#/$defs/BuildPlaceAction" },
+        { "$ref": "#/$defs/BuildQueueAction" },
+        { "$ref": "#/$defs/UnitCommandAction" },
+        { "$ref": "#/$defs/SetRallyAction" },
+        { "$ref": "#/$defs/CancelAction" },
+        { "$ref": "#/$defs/AbilityAction" }
+      ]
+    },
+    "GameTickOutput": {
+      "type": "object",
+      "required": ["protocolVersion", "tick", "actions"],
+      "properties": {
+        "protocolVersion": { "$ref": "#/$defs/ProtocolVersion" },
+        "tick": { "type": "number" },
+        "intent": { "type": "string" },
+        "confidence": { "type": "number" },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/GameAction" } },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -20,6 +20,7 @@ import { gameState } from './gameState.js'
 import { getHelipadLandingCenter, getHelipadLandingTile, getHelipadLandingTopLeft } from './utils/helipadUtils.js'
 import { isFriendlyMineBlocking } from './game/mineSystem.js'
 import { getSpatialQuadtree } from './game/spatialQuadtree.js'
+import { recordUnitCreated } from './ai-api/transitionCollector.js'
 
 // Add a global variable to track if we've already shown the pathfinding warning
 let pathfindingWarningShown = false
@@ -830,6 +831,14 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   //   const randomSound = readySounds[Math.floor(gameRandom() * readySounds.length)];
   //   playSound(randomSound, 1.0);
   // }
+
+  if (gameState.gameStarted && !gameState.mapEditMode) {
+    recordUnitCreated({
+      unit: newUnit,
+      tick: gameState.frameCount,
+      timeSeconds: gameState.gameTime
+    })
+  }
 
   return newUnit
 }

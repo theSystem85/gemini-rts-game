@@ -257,8 +257,8 @@ describe('enemyUnitBehavior updateAIUnit', () => {
 
     expect(unit.airDefenseRetreating).toBe(true)
     expect(unit.target).toBeNull()
-    expect(getCachedPath).toHaveBeenCalled()
-    expect(unit.moveTarget).toBeTruthy()
+    expect(unit.flightPlan).toBeTruthy()
+    expect(unit.flightPlan.mode).toBe('retreat')
   })
 
   it('honors decision intervals before re-evaluating apache targets', () => {

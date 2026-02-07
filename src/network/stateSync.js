@@ -693,7 +693,7 @@ export function applyGameStateSnapshot(snapshot) {
         // Verify building position is within map bounds before placing
         if (building.y >= 0 && building.y + (building.height || 1) <= gameState.mapGrid.length &&
             building.x >= 0 && building.x + (building.width || 1) <= (gameState.mapGrid[0]?.length || 0)) {
-          placeBuilding(building, gameState.mapGrid, gameState.occupancyMap)
+          placeBuilding(building, gameState.mapGrid, gameState.occupancyMap, { recordTransition: false })
         } else {
           window.logger.warn('[GameCommandSync] Building outside map bounds:', building.type, 'at', building.x, building.y)
         }

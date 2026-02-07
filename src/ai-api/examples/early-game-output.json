@@ -1,0 +1,38 @@
+{
+  "protocolVersion": "1.0",
+  "tick": 1200,
+  "intent": "Expand power and queue a second harvester",
+  "confidence": 0.74,
+  "actions": [
+    {
+      "actionId": "act_build_pp_01",
+      "type": "build_place",
+      "buildingType": "powerPlant",
+      "tilePosition": { "x": 14, "y": 18, "space": "tile" }
+    },
+    {
+      "actionId": "act_rally_vf_01",
+      "type": "set_rally",
+      "buildingId": "building_vf_01",
+      "rallyPoint": { "x": 24, "y": 24, "space": "tile" }
+    },
+    {
+      "actionId": "act_queue_harv_01",
+      "type": "build_queue",
+      "factoryId": "building_vf_01",
+      "unitType": "harvester",
+      "count": 1,
+      "priority": "high",
+      "rallyPoint": { "x": 24, "y": 24, "space": "tile" }
+    },
+    {
+      "actionId": "act_move_scout_01",
+      "type": "unit_command",
+      "unitIds": ["unit_harvester_01"],
+      "command": "move",
+      "targetPos": { "x": 26, "y": 26, "space": "tile" },
+      "queueMode": "replace"
+    }
+  ],
+  "notes": "Focus on power then ore income."
+}
