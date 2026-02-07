@@ -1,0 +1,20 @@
+exports[`LLM Control API validation accepts the example payloads 1`] = `
+{
+  "combatInput": {
+    "errors": [],
+    "ok": true,
+  },
+  "combatOutput": {
+    "errors": [],
+    "ok": true,
+  },
+  "earlyInput": {
+    "errors": [],
+    "ok": true,
+  },
+  "earlyOutput": {
+    "errors": [],
+    "ok": true,
+  },
+}
+`;

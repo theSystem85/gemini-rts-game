@@ -2,6 +2,7 @@
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
 import { gameState } from './gameState.js'
+import { recordBuildingStarted } from './ai-api/transitionCollector.js'
 import { logPerformance } from './performanceUtils.js'
 import {
   PLAYER_POSITIONS,
@@ -234,7 +235,7 @@ function calculateInitialTurretDirection(buildingX, buildingY, owner) {
 }
 
 // Place building in the map grid
-export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupancyMap) {
+export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupancyMap, options = {}) {
   // Create an array to store original tile types
   building.originalTiles = []
 
@@ -299,6 +300,14 @@ export function placeBuilding(building, mapGrid, occupancyMap = gameState.occupa
         }
       }
     }
+  }
+
+  if (options.recordTransition !== false && gameState.gameStarted && !gameState.mapEditMode) {
+    recordBuildingStarted({
+      building,
+      tick: gameState.frameCount,
+      timeSeconds: gameState.gameTime
+    })
   }
 }
 

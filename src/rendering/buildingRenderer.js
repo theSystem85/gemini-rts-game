@@ -5,6 +5,7 @@ import { gameState } from '../gameState.js'
 import { selectedUnits } from '../inputHandler.js'
 import { renderTurretWithImages, turretImagesAvailable } from './turretImageRenderer.js'
 import { getServiceRadiusPixels, isServiceBuilding } from '../utils/serviceRadius.js'
+import { recordBuildingCompleted } from '../ai-api/transitionCollector.js'
 
 export class BuildingRenderer {
   constructor() {
@@ -77,6 +78,14 @@ export class BuildingRenderer {
         // Mark as finished after animation completes
         if (elapsed >= 5000) {
           building.constructionFinished = true
+          if (!building.aiApiCompletionRecorded && gameState.gameStarted && !gameState.mapEditMode) {
+            recordBuildingCompleted({
+              building,
+              tick: gameState.frameCount,
+              timeSeconds: gameState.gameTime
+            })
+            building.aiApiCompletionRecorded = true
+          }
         }
 
         this.drawBuildingUnderConstruction(

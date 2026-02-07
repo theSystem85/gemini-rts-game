@@ -16,6 +16,7 @@ import { updateDangerZoneMaps } from '../game/dangerZoneMap.js'
 import { logPerformance } from '../performanceUtils.js'
 import { RECOVERY_TANK_RATIO, UNIT_COSTS } from '../config.js'
 import { gameState } from '../gameState.js'
+import { getLlmSettings } from './llmSettings.js'
 
 const AI_SELL_PRIORITY = [
   'turretGunV1',
@@ -305,17 +306,20 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   const aiHarvesters = units.filter(
     u => u.owner === aiPlayerId && u.type === 'harvester' && u.health > 0
   )
+  const llmStrategicActive = getLlmSettings().strategic.enabled
+  const allowStrategicDecisions = !llmStrategicActive
 
   // Ensure AI can recover from economic collapse by selling buildings if needed
   // This must run BEFORE the budget check so it can execute when budget is low/zero
-  ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
+  if (allowStrategicDecisions) {
+    ensureAIEconomyRecovery(aiPlayerId, aiFactory, aiBuildings, aiHarvesters)
+  }
 
   // Debug logging (enable temporarily to debug building issues)
   // Enhanced build order: Core buildings -> Defense -> Advanced structures
   // Building construction runs independently from unit production
-  if (now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory.budget > 1000 &&
-      !aiFactory.currentlyBuilding)
-  {
+  if (allowStrategicDecisions && now - (gameState[lastBuildingTimeKey] || 0) >= 6000 && aiFactory.budget > 1000 &&
+      !aiFactory.currentlyBuilding) {
     const powerPlants = aiBuildings.filter(b => b.type === 'powerPlant')
     const vehicleFactories = aiBuildings.filter(b => b.type === 'vehicleFactory')
     const oreRefineries = aiBuildings.filter(b => b.type === 'oreRefinery')
@@ -711,7 +715,8 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
 
   // --- AI Unit Production ---
   // Only allow unit production after all required buildings are present
-  if (gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'powerPlant').length > 0 &&
+  if (allowStrategicDecisions &&
+      gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'powerPlant').length > 0 &&
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'vehicleFactory').length > 0 &&
       gameState.buildings.filter(b => b.owner === aiPlayerId && b.type === 'oreRefinery').length > 0) {
 

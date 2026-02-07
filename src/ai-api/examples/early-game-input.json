@@ -1,0 +1,125 @@
+{
+  "protocolVersion": "1.0",
+  "matchId": "local-match-001",
+  "playerId": "player1",
+  "tick": 1200,
+  "sinceTick": 1100,
+  "verbosity": "normal",
+  "meta": {
+    "tilesX": 100,
+    "tilesY": 100,
+    "tileSize": 32,
+    "coordinateSystem": {
+      "tileOrigin": "top-left",
+      "worldOrigin": "top-left",
+      "worldUnits": "pixels"
+    },
+    "fogOfWarEnabled": true,
+    "catalogVersion": "default"
+  },
+  "snapshot": {
+    "resources": {
+      "money": 6200,
+      "power": {
+        "supply": 150,
+        "production": 200,
+        "consumption": 50
+      }
+    },
+    "units": [
+      {
+        "id": "unit_harvester_01",
+        "type": "harvester",
+        "owner": "player1",
+        "health": 120,
+        "maxHealth": 120,
+        "position": { "x": 640, "y": 704, "space": "world" },
+        "tilePosition": { "x": 20, "y": 22, "space": "tile" },
+        "status": {
+          "fuel": 1800,
+          "isAirUnit": false
+        },
+        "orders": {
+          "moveTarget": { "x": 24, "y": 24, "space": "tile" },
+          "targetId": null
+        }
+      }
+    ],
+    "buildings": [
+      {
+        "id": "building_cy_01",
+        "type": "constructionYard",
+        "owner": "player1",
+        "health": 350,
+        "maxHealth": 350,
+        "tilePosition": { "x": 12, "y": 18, "space": "tile" },
+        "size": { "width": 3, "height": 3 },
+        "constructionFinished": true,
+        "rallyPoint": null
+      },
+      {
+        "id": "building_vf_01",
+        "type": "vehicleFactory",
+        "owner": "player1",
+        "health": 300,
+        "maxHealth": 300,
+        "tilePosition": { "x": 16, "y": 18, "space": "tile" },
+        "size": { "width": 3, "height": 3 },
+        "constructionFinished": true,
+        "rallyPoint": { "x": 608, "y": 704, "space": "world" }
+      }
+    ],
+    "buildQueues": {
+      "unitItems": [
+        {
+          "type": "harvester",
+          "rallyPoint": { "x": 24, "y": 24, "space": "tile" }
+        }
+      ],
+      "buildingItems": [
+        {
+          "type": "powerPlant",
+          "blueprint": { "type": "powerPlant", "x": 14, "y": 18 }
+        }
+      ],
+      "currentUnit": null,
+      "currentBuilding": null,
+      "pausedUnit": false,
+      "pausedBuilding": false
+    }
+  },
+  "transitions": {
+    "events": [
+      {
+        "id": "ev_101",
+        "type": "building_started",
+        "tick": 1142,
+        "timeSeconds": 190.2,
+        "buildingId": "building_pp_01",
+        "buildingType": "powerPlant",
+        "owner": "player1",
+        "tilePosition": { "x": 14, "y": 18, "space": "tile" }
+      },
+      {
+        "id": "ev_102",
+        "type": "unit_created",
+        "tick": 1165,
+        "timeSeconds": 194.1,
+        "unitId": "unit_harvester_01",
+        "unitType": "harvester",
+        "owner": "player1",
+        "position": { "x": 640, "y": 704, "space": "world" }
+      }
+    ],
+    "summary": {
+      "totalDamage": 0,
+      "unitsDestroyed": 0,
+      "buildingsDestroyed": 0
+    }
+  },
+  "constraints": {
+    "maxActionsPerTick": 50,
+    "allowQueuedCommands": true,
+    "maxQueuedCommands": 20
+  }
+}
