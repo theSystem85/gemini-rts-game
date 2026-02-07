@@ -9,6 +9,7 @@ import {
   MINE_ARM_DELAY
 } from '../config.js'
 import { broadcastBuildingDamage } from '../network/gameCommandSync.js'
+import { recordDamage } from '../ai-api/transitionCollector.js'
 
 const mineLookup = new Map()
 
@@ -173,7 +174,21 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
     const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
 
     if (unitTileX === tileX && unitTileY === tileY) {
+      const previousHealth = unit.health
       unit.health = Math.max(0, unit.health - damage)
+      const damageAmount = Math.max(0, previousHealth - unit.health)
+      if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+        recordDamage({
+          attackerId: null,
+          targetId: unit.id,
+          targetKind: 'unit',
+          amount: damageAmount,
+          weapon: 'mine',
+          position: { x: unit.x, y: unit.y, space: 'world' },
+          tick: gameState.frameCount,
+          timeSeconds: gameState.gameTime
+        })
+      }
     }
   })
 
@@ -182,7 +197,25 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
     for (let by = building.y; by < building.y + building.height; by++) {
       for (let bx = building.x; bx < building.x + building.width; bx++) {
         if (bx === tileX && by === tileY) {
+          const previousHealth = building.health
           building.health = Math.max(0, building.health - damage)
+          const damageAmount = Math.max(0, previousHealth - building.health)
+          if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+            recordDamage({
+              attackerId: null,
+              targetId: building.id,
+              targetKind: 'building',
+              amount: damageAmount,
+              weapon: 'mine',
+              position: {
+                x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
+                y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
+                space: 'world'
+              },
+              tick: gameState.frameCount,
+              timeSeconds: gameState.gameTime
+            })
+          }
           // Broadcast building damage to host in multiplayer
           if (building.id) {
             broadcastBuildingDamage(building.id, damage, building.health)
@@ -319,7 +352,21 @@ function applyMineDamageWithSweeperImmunity(tileX, tileY, damage, units, buildin
       if (unit.type === 'mineSweeper' && unit.sweeping) {
         return // Skip damage for sweeping Mine Sweepers
       }
+      const previousHealth = unit.health
       unit.health = Math.max(0, unit.health - damage)
+      const damageAmount = Math.max(0, previousHealth - unit.health)
+      if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+        recordDamage({
+          attackerId: null,
+          targetId: unit.id,
+          targetKind: 'unit',
+          amount: damageAmount,
+          weapon: 'mine',
+          position: { x: unit.x, y: unit.y, space: 'world' },
+          tick: gameState.frameCount,
+          timeSeconds: gameState.gameTime
+        })
+      }
     }
   })
 
@@ -328,7 +375,25 @@ function applyMineDamageWithSweeperImmunity(tileX, tileY, damage, units, buildin
     for (let by = building.y; by < building.y + building.height; by++) {
       for (let bx = building.x; bx < building.x + building.width; bx++) {
         if (bx === tileX && by === tileY) {
+          const previousHealth = building.health
           building.health = Math.max(0, building.health - damage)
+          const damageAmount = Math.max(0, previousHealth - building.health)
+          if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+            recordDamage({
+              attackerId: null,
+              targetId: building.id,
+              targetKind: 'building',
+              amount: damageAmount,
+              weapon: 'mine',
+              position: {
+                x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
+                y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
+                space: 'world'
+              },
+              tick: gameState.frameCount,
+              timeSeconds: gameState.gameTime
+            })
+          }
           // Broadcast building damage to host in multiplayer
           if (building.id) {
             broadcastBuildingDamage(building.id, damage, building.health)

@@ -28,6 +28,7 @@ import { detonateTankerTruck } from './tankerTruckUtils.js'
 import { detonateAmmunitionTruck } from './ammunitionTruckLogic.js'
 import { distributeMineLayerPayload } from './mineSystem.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { recordDestroyed } from '../ai-api/transitionCollector.js'
 
 const MINIMAP_SCROLL_SMOOTHING = 0.2
 const MINIMAP_SCROLL_STOP_DISTANCE = 0.75
@@ -420,6 +421,18 @@ export function cleanupDestroyedUnits(units, gameState) {
   for (let i = units.length - 1; i >= 0; i--) {
     if (units[i].health <= 0) {
       const unit = units[i]
+      if (!unit.aiApiDestroyedRecorded && gameState.gameStarted && !gameState.mapEditMode) {
+        recordDestroyed({
+          killerId: unit.lastAttacker?.id,
+          victimId: unit.id,
+          victimKind: 'unit',
+          cause: unit.destroyedCause,
+          position: { x: unit.x, y: unit.y, space: 'world' },
+          tick: gameState.frameCount,
+          timeSeconds: gameState.gameTime
+        })
+        unit.aiApiDestroyedRecorded = true
+      }
 
       // Release any wreck assignments if a recovery tank is destroyed
       if (unit.type === 'recoveryTank' && Array.isArray(gameState.unitWrecks)) {
@@ -492,6 +505,22 @@ export function cleanupDestroyedFactories(factories, mapGrid, gameState) {
     const factory = factories[i]
 
     if (factory.destroyed || factory.health <= 0) {
+      if (!factory.aiApiDestroyedRecorded && gameState.gameStarted && !gameState.mapEditMode) {
+        recordDestroyed({
+          killerId: factory.lastAttacker?.id,
+          victimId: factory.id,
+          victimKind: 'factory',
+          cause: factory.destroyedCause,
+          position: {
+            x: factory.x * TILE_SIZE + (factory.width * TILE_SIZE) / 2,
+            y: factory.y * TILE_SIZE + (factory.height * TILE_SIZE) / 2,
+            space: 'world'
+          },
+          tick: gameState.frameCount,
+          timeSeconds: gameState.gameTime
+        })
+        factory.aiApiDestroyedRecorded = true
+      }
       // Clear the factory from the map grid to unblock tiles for pathfinding
       clearFactoryFromMapGrid(factory, mapGrid)
 

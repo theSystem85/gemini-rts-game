@@ -13,6 +13,7 @@ import { applyDamageToWreck } from './game/unitWreckManager.js'
 import { broadcastBuildingDamage } from './network/gameCommandSync.js'
 import { gameRandom } from './utils/gameRandom.js'
 import { recordDamageValue } from './utils/combatStats.js'
+import { recordDamage } from './ai-api/transitionCollector.js'
 
 export const explosions = [] // Global explosion effects for rocket impacts
 
@@ -107,6 +108,19 @@ export function triggerExplosion(
       const previousHealth = unit.health
       unit.health -= actualDamage
       recordDamageValue(shooter, unit, previousHealth - unit.health)
+      const damageAmount = Math.max(0, previousHealth - unit.health)
+      if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+        recordDamage({
+          attackerId: shooter?.id,
+          targetId: unit.id,
+          targetKind: 'unit',
+          amount: damageAmount,
+          weapon: 'explosion',
+          position: { x: unit.x, y: unit.y, space: 'world' },
+          tick: gameState.frameCount,
+          timeSeconds: gameState.gameTime
+        })
+      }
 
       // Award experience if unit dies from explosion
       if (unit.health <= 0 && shooter && shooter.owner !== unit.owner && unit.type !== 'harvester') {
@@ -195,6 +209,23 @@ export function triggerExplosion(
         // Ensure health doesn't go below 0
         factory.health = Math.max(0, factory.health)
         recordDamageValue(shooter, factory, previousHealth - factory.health)
+        const damageAmount = Math.max(0, previousHealth - factory.health)
+        if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+          recordDamage({
+            attackerId: shooter?.id,
+            targetId: factory.id,
+            targetKind: 'factory',
+            amount: damageAmount,
+            weapon: 'explosion',
+            position: {
+              x: factory.x * TILE_SIZE + (factory.width * TILE_SIZE) / 2,
+              y: factory.y * TILE_SIZE + (factory.height * TILE_SIZE) / 2,
+              space: 'world'
+            },
+            tick: gameState.frameCount,
+            timeSeconds: gameState.gameTime
+          })
+        }
 
         // Mark factory for repair pause (deferred processing)
         markBuildingForRepairPause(factory)
@@ -203,6 +234,7 @@ export function triggerExplosion(
         // Set lastAttackedTime for ANY attack, including self-attacks
         if (shooter) {
           factory.lastAttackedTime = now
+          factory.lastAttacker = shooter
         }
       }
     }
@@ -261,6 +293,23 @@ export function triggerExplosion(
           // Ensure health doesn't go below 0
           building.health = Math.max(0, building.health)
           recordDamageValue(shooter, building, previousHealth - building.health)
+          const damageAmount = Math.max(0, previousHealth - building.health)
+          if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+            recordDamage({
+              attackerId: shooter?.id,
+              targetId: building.id,
+              targetKind: 'building',
+              amount: damageAmount,
+              weapon: 'explosion',
+              position: {
+                x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
+                y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
+                space: 'world'
+              },
+              tick: gameState.frameCount,
+              timeSeconds: gameState.gameTime
+            })
+          }
 
           // Broadcast building damage to host in multiplayer
           if (building.id) {
@@ -274,6 +323,7 @@ export function triggerExplosion(
           // Set lastAttackedTime for ANY attack, including self-attacks
           if (shooter) {
             building.lastAttackedTime = now
+            building.lastAttacker = shooter
           }
         }
       }

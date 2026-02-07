@@ -4,6 +4,7 @@ import { computeLeastDangerAttackPoint } from './ai/enemyStrategies.js'
 import { logPerformance } from './performanceUtils.js'
 import { isHost } from './network/gameCommandSync.js'
 import { AI_UPDATE_FRAME_SKIP } from './config.js'
+import { updateLlmStrategicAI } from './ai/llmStrategicController.js'
 export { spawnEnemyUnit } from './ai/enemySpawner.js'
 
 // Frame counter for AI update throttling
@@ -53,6 +54,8 @@ export const updateEnemyAI = logPerformance(function updateEnemyAI(units, factor
   // Filter to only players that are both non-human AND AI-controlled (not taken over via multiplayer)
   const aiPlayers = allPlayers.filter(p => p !== humanPlayer && isPartyAiControlled(p, gameState))
   const targetedOreTiles = gameState.targetedOreTiles || {}
+
+  updateLlmStrategicAI(units, factories, bullets, mapGrid, gameState, now)
 
   if (!gameState.lastGlobalAttackDecision || now - gameState.lastGlobalAttackDecision > 8000) {
     const point = computeLeastDangerAttackPoint(gameState)

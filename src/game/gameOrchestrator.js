@@ -47,6 +47,7 @@ import { setupMinimapHandlers } from '../ui/minimap.js'
 import { addPowerIndicator } from '../ui/energyBar.js'
 import { addMoneyIndicator } from '../ui/moneyBar.js'
 import { closeMobileSidebarModal, isMobileSidebarModalVisible } from '../ui/mobileLayout.js'
+import { resetLlmUsage } from '../ai/llmUsage.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -673,6 +674,9 @@ class Game {
     gameState.playerBuildingsDestroyed = 0
     gameState.enemyBuildingsDestroyed = 0
     gameState.totalMoneyEarned = 0
+    resetLlmUsage()
+    gameState.llmStrategic = null
+    gameState.llmCommentary = null
 
     gameState.buildings = []
     gameState.powerSupply = 0

@@ -93,6 +93,28 @@
   cursor: pointer;
 }
 
+.perf-llm-summary {
+  margin-bottom: 8px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.perf-llm-summary__title {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #84d6ff;
+}
+
+.perf-llm-summary__row {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
 /* Map Settings Menu */
 #mapSettingsMenu {
   background-color: #333;
@@ -423,7 +445,8 @@ body.config-modal-open {
 }
 
 .config-modal__field select,
-.config-modal__field input {
+.config-modal__field input,
+.config-modal__field textarea {
   background: #11161e;
   border: 1px solid #2d3640;
   border-radius: 4px;
@@ -435,7 +458,8 @@ body.config-modal-open {
 }
 
 .config-modal__field select:focus,
-.config-modal__field input:focus {
+.config-modal__field input:focus,
+.config-modal__field textarea:focus {
   border-color: #4da3ff;
   box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.2);
 }
@@ -449,6 +473,14 @@ body.config-modal-open {
   font-size: 13px;
   color: #ffcc66;
   min-height: 18px;
+}
+
+.config-modal__subsection {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .config-modal__message {

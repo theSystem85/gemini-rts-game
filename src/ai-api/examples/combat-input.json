@@ -1,0 +1,126 @@
+{
+  "protocolVersion": "1.0",
+  "matchId": "local-match-001",
+  "playerId": "player1",
+  "tick": 2200,
+  "sinceTick": 2100,
+  "verbosity": "normal",
+  "meta": {
+    "tilesX": 100,
+    "tilesY": 100,
+    "tileSize": 32,
+    "coordinateSystem": {
+      "tileOrigin": "top-left",
+      "worldOrigin": "top-left",
+      "worldUnits": "pixels"
+    },
+    "fogOfWarEnabled": true,
+    "catalogVersion": "default"
+  },
+  "snapshot": {
+    "resources": {
+      "money": 4100,
+      "power": {
+        "supply": 200,
+        "production": 250,
+        "consumption": 190
+      }
+    },
+    "units": [
+      {
+        "id": "unit_tank_01",
+        "type": "tank_v1",
+        "owner": "player1",
+        "health": 72,
+        "maxHealth": 100,
+        "position": { "x": 960, "y": 800, "space": "world" },
+        "tilePosition": { "x": 30, "y": 25, "space": "tile" },
+        "status": {
+          "ammo": 30,
+          "fuel": 1200,
+          "isAirUnit": false
+        },
+        "orders": {
+          "moveTarget": null,
+          "targetId": "unit_enemy_tank_02"
+        }
+      },
+      {
+        "id": "unit_tank_02",
+        "type": "tank_v1",
+        "owner": "player1",
+        "health": 100,
+        "maxHealth": 100,
+        "position": { "x": 928, "y": 832, "space": "world" },
+        "tilePosition": { "x": 29, "y": 26, "space": "tile" },
+        "status": {
+          "ammo": 34,
+          "fuel": 1300,
+          "isAirUnit": false
+        },
+        "orders": {
+          "moveTarget": null,
+          "targetId": "unit_enemy_tank_02"
+        }
+      }
+    ],
+    "buildings": [
+      {
+        "id": "building_cy_01",
+        "type": "constructionYard",
+        "owner": "player1",
+        "health": 350,
+        "maxHealth": 350,
+        "tilePosition": { "x": 12, "y": 18, "space": "tile" },
+        "size": { "width": 3, "height": 3 },
+        "constructionFinished": true,
+        "rallyPoint": null
+      }
+    ],
+    "buildQueues": {
+      "unitItems": [],
+      "buildingItems": [],
+      "currentUnit": null,
+      "currentBuilding": null,
+      "pausedUnit": false,
+      "pausedBuilding": false
+    }
+  },
+  "transitions": {
+    "events": [
+      {
+        "id": "ev_301",
+        "type": "damage",
+        "tick": 2144,
+        "timeSeconds": 312.6,
+        "attackerId": "unit_enemy_tank_02",
+        "targetId": "unit_tank_01",
+        "targetKind": "unit",
+        "amount": 18,
+        "weapon": "tank_v1_cannon",
+        "position": { "x": 960, "y": 800, "space": "world" }
+      },
+      {
+        "id": "ev_302",
+        "type": "destroyed",
+        "tick": 2152,
+        "timeSeconds": 313.9,
+        "killerId": "unit_tank_02",
+        "victimId": "unit_enemy_tank_01",
+        "victimKind": "unit",
+        "cause": "cannon",
+        "position": { "x": 992, "y": 800, "space": "world" }
+      }
+    ],
+    "summary": {
+      "totalDamage": 18,
+      "unitsDestroyed": 1,
+      "buildingsDestroyed": 0
+    }
+  },
+  "constraints": {
+    "maxActionsPerTick": 50,
+    "allowQueuedCommands": true,
+    "maxQueuedCommands": 20
+  }
+}

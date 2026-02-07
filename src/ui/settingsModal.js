@@ -3,6 +3,7 @@
 
 import { runtimeConfigDialog } from './runtimeConfigDialog.js'
 import { renderKeybindingsEditor } from './keybindingsEditor.js'
+import { initLlmSettingsPanel } from './llmSettingsPanel.js'
 
 function setActiveTab(modal, tabId) {
   const tabs = modal.querySelectorAll('[data-config-tab]')
@@ -65,6 +66,7 @@ export function initSettingsModal() {
   if (!modal) return
 
   bindTabs(modal)
+  initLlmSettingsPanel()
 
   if (closeBtn) {
     closeBtn.addEventListener('click', () => closeModal(modal))
@@ -82,4 +84,3 @@ export function initSettingsModal() {
     })
   }
 }
-

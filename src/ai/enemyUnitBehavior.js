@@ -46,6 +46,10 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     return
   }
 
+  if (unit.llmOrderLockUntil && now < unit.llmOrderLockUntil) {
+    return
+  }
+
   // Apply new AI strategies first - but only when allowed to make decisions to prevent wiggling
   const allowDecision = !unit.lastDecisionTime || (now - unit.lastDecisionTime >= AI_DECISION_INTERVAL)
   const justGotAttacked = unit.isBeingAttacked && unit.lastDamageTime && (now - unit.lastDamageTime < 1000)

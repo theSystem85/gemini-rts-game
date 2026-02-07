@@ -331,6 +331,19 @@ body.mobile-landscape .money-bar-value {
   padding: 6px 4px;
 }
 
+.llm-queue-tooltip .money-tooltip__panel {
+  border-color: rgba(132, 214, 255, 0.45);
+  box-shadow: 0 16px 34px rgba(0, 80, 120, 0.35);
+}
+
+.llm-queue-tooltip .money-tooltip__header {
+  color: #84d6ff;
+}
+
+.llm-queue-tooltip .money-tooltip__item-value {
+  color: #84d6ff;
+}
+
 .production-tooltip {
   width: min(560px, 94vw);
 }
