@@ -909,6 +909,10 @@ body.mobile-portrait #actions .mobile-sidebar-menu-button {
   display: none;
 }
 
+body.mobile-portrait:not(.sidebar-condensed) #actions #controlGroupsBtn {
+  display: none;
+}
+
 body.mobile-landscape #actions .action-button {
   width: 100%;
   height: var(--mobile-action-size);
@@ -937,6 +941,21 @@ body.mobile-landscape #actions .action-button:active {
 body.mobile-landscape #actions .action-button.active {
   background-color: transparent;
   opacity: 1;
+}
+
+body.mobile-landscape #actions #repairBtn.active,
+body.mobile-landscape #actions #sellBtn.active {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+body.mobile-landscape #actions #repairBtn.active img {
+  filter: brightness(0) saturate(100%) invert(70%) sepia(21%) saturate(1283%) hue-rotate(73deg)
+    brightness(97%) contrast(93%);
+}
+
+body.mobile-landscape #actions #sellBtn.active .button-icon {
+  color: #7be88a;
 }
 
 body.mobile-landscape #actions .action-button .button-icon,
@@ -1554,6 +1573,25 @@ body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:hov
 body.mobile-portrait.sidebar-collapsed #mobilePortraitActions .action-button:focus {
   transform: none;
   background-color: transparent;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #repairBtn.active,
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #sellBtn.active,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #repairBtn.active,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #sellBtn.active {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #repairBtn.active img,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #repairBtn.active img {
+  filter: brightness(0) saturate(100%) invert(70%) sepia(21%) saturate(1283%) hue-rotate(73deg)
+    brightness(97%) contrast(93%);
+}
+
+body.mobile-portrait.sidebar-condensed #mobilePortraitActions #sellBtn.active .button-icon,
+body.mobile-portrait.sidebar-collapsed #mobilePortraitActions #sellBtn.active .button-icon {
+  color: #7be88a;
 }
 
 body.mobile-portrait.sidebar-condensed #mobilePortraitActions #actions,

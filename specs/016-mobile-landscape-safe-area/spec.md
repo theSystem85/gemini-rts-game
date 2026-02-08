@@ -19,3 +19,7 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
 4. **Device Scope**
    - Changes must specifically target landscape touch layouts and respect existing portrait sidebar logic.
    - Safe-area CSS variables continue to derive from `body.is-touch` so the solution works for other notch devices.
+
+## Update 2026-02-06
+
+- **Mobile Action Bar Feedback**: Repair and sell buttons in the mobile landscape action bar must switch to green icon accents when active (no extra borders), while the play/pause icon remains a clean white glyph.
