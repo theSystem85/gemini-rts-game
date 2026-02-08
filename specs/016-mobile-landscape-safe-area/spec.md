@@ -22,4 +22,4 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
 
 ## Update 2026-02-06
 
-- **Mobile Action Bar Feedback**: Repair and sell buttons in the mobile landscape action bar must show a clear active-state treatment that matches the HUD styling, while the play/pause icon remains a clean white glyph.
+- **Mobile Action Bar Feedback**: Repair and sell buttons in the mobile landscape action bar must switch to green icon accents when active (no extra borders), while the play/pause icon remains a clean white glyph.
