@@ -1,5 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Mock benchmark modules early to prevent import chain issues
+vi.mock('../../src/benchmark/benchmarkRunner.js', () => ({
+  attachBenchmarkButton: vi.fn()
+}))
+
+vi.mock('../../src/benchmark/benchmarkScenario.js', () => ({
+  setupBenchmarkScenario: vi.fn(),
+  teardownBenchmarkScenario: vi.fn()
+}))
+
+// Mock building data to prevent undefined errors in modules that import it at module load time
+vi.mock('../../src/data/buildingData.js', () => ({
+  buildingData: {
+    constructionYard: { width: 3, height: 3, cost: 5000, health: 300 },
+    rocketTurret: { fireRange: 16, width: 2, height: 2, cost: 1500, health: 150 }
+  }
+}))
+
+vi.mock('../../src/buildings.js', () => ({
+  buildingData: {
+    constructionYard: { width: 3, height: 3, cost: 5000, health: 300 },
+    rocketTurret: { fireRange: 16, width: 2, height: 2, cost: 1500, health: 150 }
+  }
+}))
+
 // We need to mock the dependencies before importing
 vi.mock('../../src/ai/enemyAIPlayer.js', () => ({
   updateAIPlayer: vi.fn()
@@ -17,9 +42,15 @@ vi.mock('../../src/network/gameCommandSync.js', () => ({
   isHost: vi.fn(() => true)
 }))
 
-vi.mock('../../src/config.js', () => ({
-  AI_UPDATE_FRAME_SKIP: 1
-}))
+vi.mock('../../src/config.js', async(importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    AI_UPDATE_FRAME_SKIP: 1,
+    DEFAULT_MAP_TILES_X: 100,
+    DEFAULT_MAP_TILES_Y: 100
+  }
+})
 
 vi.mock('../../src/ai/enemySpawner.js', () => ({
   spawnEnemyUnit: vi.fn()

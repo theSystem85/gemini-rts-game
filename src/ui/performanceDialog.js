@@ -64,12 +64,20 @@ class PerformanceDialog {
     if (!this.contentEl) return
     const stats = window.performanceStatistics || {}
     const entries = Object.entries(stats)
+    const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
     if (this.sortMode === 'duration') {
       entries.sort((a, b) => b[1].durationAvg - a[1].durationAvg)
     } else {
       entries.sort((a, b) => a[0].localeCompare(b[0]))
     }
-    this.contentEl.innerHTML = '<h3>avg (ms) / max (ms) / calls</h3>'
+    this.contentEl.innerHTML = `
+      <div class="perf-llm-summary">
+        <div class="perf-llm-summary__title">LLM Usage (Session)</div>
+        <div class="perf-llm-summary__row">Tokens: ${Math.round(llmUsage.totalTokens || 0)}</div>
+        <div class="perf-llm-summary__row">Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}</div>
+      </div>
+      <h3>avg (ms) / max (ms) / calls</h3>
+    `
     entries.forEach(([name, data]) => {
       const div1 = document.createElement('div')
       div1.textContent = name

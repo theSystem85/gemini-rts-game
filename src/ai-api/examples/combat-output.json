@@ -1,0 +1,25 @@
+{
+  "protocolVersion": "1.0",
+  "tick": 2200,
+  "intent": "Focus fire enemy tank and pull back the damaged unit",
+  "confidence": 0.68,
+  "actions": [
+    {
+      "actionId": "act_focus_fire_01",
+      "type": "unit_command",
+      "unitIds": ["unit_tank_01", "unit_tank_02"],
+      "command": "attack",
+      "targetId": "unit_enemy_tank_02",
+      "queueMode": "replace"
+    },
+    {
+      "actionId": "act_retreat_01",
+      "type": "unit_command",
+      "unitIds": ["unit_tank_01"],
+      "command": "move",
+      "targetPos": { "x": 26, "y": 28, "space": "tile" },
+      "queueMode": "replace"
+    }
+  ],
+  "notes": "Retreat the damaged lead tank while the healthy tank continues pressure."
+}

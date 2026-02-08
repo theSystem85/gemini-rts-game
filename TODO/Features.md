@@ -1,4 +1,11 @@
 ## Features
+- [x] Add the LLM Control API module with versioned protocol types/schema/validators, export/apply adapters, transition collection hooks, examples, and tests.
+- [ ] Add LLM strategic AI settings + provider model pickers, commentary toggle/TTS, cost tracking, and in-game usage overlays.
+  - [x] ✅ Add quota exceeded error handling that stops LLM polling, shows user-friendly error messages, and falls back to local AI only.
+  - [x] ✅ Add authentication (401) and API parameter (400) error handling with appropriate user notifications.
+  - [x] ✅ Only show error messages when API key is configured (silent logging otherwise).
+  - [x] ✅ Use `max_completion_tokens` parameter for OpenAI API compatibility with newer models.
+  - [x] ✅ Handle unsupported parameter values (e.g., temperature constraints) across all providers.
 - [x] Add a mobile control group panel with assign toggle and long-press assignment for groups 1-9.
 - [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.

@@ -155,6 +155,15 @@ export const gameState = {
   // Performance dialog visibility toggle
   performanceVisible: false,
 
+  // LLM usage tracking (per session)
+  llmUsage: {
+    totalTokens: 0,
+    totalCostUsd: 0,
+    byModel: {}
+  },
+  llmStrategic: null,
+  llmCommentary: null,
+
   // Benchmark state
   benchmarkActive: false,
 
