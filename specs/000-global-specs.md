@@ -60,6 +60,11 @@ The following unit types are considered attack-capable for cursor/range detectio
   - Each player-owned harvester with total money earned, harvest cycle time in seconds, fuel percentage, and crew status.
 - Each refinery/harvester row is a link that selects the entity and centers the camera on it.
 
+## Enemy Resource Display
+
+- When `showEnemyResources` is enabled and an enemy construction yard is selected, display the enemy budget and power supply values using the current aggregated enemy power state.
+- Power display must always render a numeric value, defaulting to 0 when any building power values are missing or invalid.
+
 ## Modal Layout Constraints
 
 - All modal dialogs must be capped at 80% of the viewport height (`80vh`) to avoid exceeding the visible screen space on smaller devices.
