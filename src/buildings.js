@@ -421,14 +421,16 @@ export function updatePowerSupply(buildings, gameState) {
     // Skip buildings with no owner
     if (!building.owner) return
 
+    const buildingPower = Number.isFinite(building.power) ? building.power : 0
+
     if (building.owner === gameState.humanPlayer) {
-      playerTotalPower += building.power
+      playerTotalPower += buildingPower
 
       // Track production and consumption separately
-      if (building.power > 0) {
-        playerTotalProduction += building.power
-      } else if (building.power < 0) {
-        playerTotalConsumption += Math.abs(building.power)
+      if (buildingPower > 0) {
+        playerTotalProduction += buildingPower
+      } else if (buildingPower < 0) {
+        playerTotalConsumption += Math.abs(buildingPower)
       }
 
       // Check if player has a radar station
@@ -437,13 +439,13 @@ export function updatePowerSupply(buildings, gameState) {
       }
     } else if (building.owner !== gameState.humanPlayer) {
       // For now, aggregate all non-human players as "enemy" for power tracking
-      enemyTotalPower += building.power
+      enemyTotalPower += buildingPower
 
       // Track production and consumption separately
-      if (building.power > 0) {
-        enemyTotalProduction += building.power
-      } else if (building.power < 0) {
-        enemyTotalConsumption += Math.abs(building.power)
+      if (buildingPower > 0) {
+        enemyTotalProduction += buildingPower
+      } else if (buildingPower < 0) {
+        enemyTotalConsumption += Math.abs(buildingPower)
       }
     }
   })
