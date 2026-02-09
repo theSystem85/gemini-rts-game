@@ -1,6 +1,8 @@
 // notifications.js
 // Handle notification display system
 
+import { pushNotification } from './notificationHistory.js'
+
 export function showNotification(message, duration = 3000) {
   // Remove any existing notifications immediately
   document.querySelectorAll('.notification').forEach((el) => el.remove())
@@ -19,6 +21,9 @@ export function showNotification(message, duration = 3000) {
   notification.style.zIndex = '1000'
 
   document.body.appendChild(notification)
+
+  // Push to persistent notification history
+  pushNotification(message)
 
   // Fade out and remove
   setTimeout(() => {

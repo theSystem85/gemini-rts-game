@@ -128,6 +128,19 @@ function bindStrategicSettings(settings) {
     enabledToggle.checked = Boolean(settings.strategic.enabled)
     enabledToggle.addEventListener('change', () => {
       updateLlmSettings({ strategic: { enabled: enabledToggle.checked } })
+      // If the user enabled LLM strategic planning, trigger an immediate tick
+      if (enabledToggle.checked) {
+        try {
+          // Dynamic import to avoid circular evaluation ordering issues
+          import('../ai/llmStrategicController.js').then(mod => {
+            if (typeof mod.triggerStrategicNow === 'function') mod.triggerStrategicNow()
+          }).catch(err => {
+            window.logger.warn('[LLM] Failed to trigger immediate strategic tick:', err)
+          })
+        } catch (err) {
+          window.logger.warn('[LLM] Failed to trigger immediate strategic tick:', err)
+        }
+      }
     })
   }
 

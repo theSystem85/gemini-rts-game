@@ -46,8 +46,40 @@ function updateAIUnit(unit, units, gameState, mapGrid, now, aiPlayerId, _targete
     return
   }
 
-  if (unit.llmOrderLockUntil && now < unit.llmOrderLockUntil) {
-    return
+  // LLM-locked units: still allow retaliation and auto-attack in range,
+  // but skip all strategic AI decisions (movement, grouping, base defense, etc.)
+  const isLlmLocked = unit.llmOrderLockUntil && now < unit.llmOrderLockUntil
+  if (isLlmLocked) {
+    // Retaliate against attacker when being attacked
+    if (unit.isBeingAttacked && unit.lastAttacker && unit.lastAttacker.health > 0) {
+      const attacker = unit.lastAttacker
+      const dx = attacker.x - unit.x
+      const dy = attacker.y - unit.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const fireRange = getEffectiveFireRange(unit) * TILE_SIZE
+      if (dist <= fireRange * 1.2) {
+        unit.target = attacker
+        unit.targetId = attacker.id
+        unit.targetType = 'unit'
+      }
+    }
+    // Also auto-target any enemy in fire range if not already engaged
+    if (!unit.target || (unit.target && unit.target.health <= 0)) {
+      const fireRange = getEffectiveFireRange(unit) * TILE_SIZE
+      const nearestEnemy = units.find(enemy => {
+        if (enemy.owner === unit.owner || enemy.health <= 0) return false
+        if (!isEnemyTo(unit, enemy, gameState)) return false
+        const edx = enemy.x - unit.x
+        const edy = enemy.y - unit.y
+        return (edx * edx + edy * edy) <= fireRange * fireRange
+      })
+      if (nearestEnemy) {
+        unit.target = nearestEnemy
+        unit.targetId = nearestEnemy.id
+        unit.targetType = 'unit'
+      }
+    }
+    return // Skip all other AI decisions
   }
 
   // Apply new AI strategies first - but only when allowed to make decisions to prevent wiggling

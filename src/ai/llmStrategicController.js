@@ -6,16 +6,222 @@ import { recordLlmUsage } from './llmUsage.js'
 import { showNotification } from '../ui/notifications.js'
 import { isHost } from '../network/gameCommandSync.js'
 import { gameState } from '../gameState.js'
+import { TILE_SIZE, UNIT_COSTS, UNIT_PROPERTIES, BULLET_DAMAGES, UNIT_AMMO_CAPACITY, UNIT_GAS_PROPERTIES, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN } from '../config.js'
+import { buildingData } from '../data/buildingData.js'
+import protocolSchema from '../ai-api/protocol.schema.json'
 
-const DEFAULT_STRATEGIC_PROMPT = `You are the enemy strategic AI in a real-time strategy game.
-Return ONLY valid JSON matching the GameTickOutput schema.
-Your actions must be explicit, deterministic, and executable by the engine.
-Include a brief taunting comment for the player in "notes".
-Do not include markdown or extra commentary outside JSON.`
+function buildUnitCatalog() {
+  const catalog = []
+  const allTypes = ['tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'harvester', 'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank', 'howitzer', 'apache', 'mineLayer', 'mineSweeper']
+  for (const type of allTypes) {
+    const props = UNIT_PROPERTIES[type] || {}
+    const cost = UNIT_COSTS[type] || 0
+    const ammo = UNIT_AMMO_CAPACITY[type] || null
+    const gas = UNIT_GAS_PROPERTIES[type] || {}
+    const dmg = BULLET_DAMAGES[type.replace('-', '_').replace('tank_v1', 'tank_v1').replace('tank-v2', 'tank_v2').replace('tank-v3', 'tank_v3')] || null
+    const entry = {
+      type,
+      cost,
+      hp: props.health || props.maxHealth || 0,
+      speed: props.speed || 0,
+      armor: props.armor || 0
+    }
+    if (ammo) entry.ammo = ammo
+    if (dmg) entry.damage = dmg
+    if (gas.tankSize) entry.fuelCapacity = gas.tankSize
+    // Weapon / range info
+    if (type === 'howitzer') {
+      entry.weapon = 'artillery'
+      entry.fireRange = HOWITZER_FIRE_RANGE
+      entry.minRange = HOWITZER_MIN_RANGE
+      entry.firepower = HOWITZER_FIREPOWER
+      entry.fireCooldownMs = HOWITZER_FIRE_COOLDOWN
+    } else if (type === 'rocketTank') {
+      entry.weapon = 'rocket'
+      entry.fireRange = TANK_FIRE_RANGE
+    } else if (type === 'apache') {
+      entry.weapon = 'machinegun'
+      entry.fireRange = TANK_FIRE_RANGE
+      entry.spawnsFrom = 'helipad'
+    } else if (['tank_v1', 'tank-v2', 'tank-v3'].includes(type)) {
+      entry.weapon = 'cannon'
+      entry.fireRange = TANK_FIRE_RANGE
+    }
+    // Spawn location
+    if (type !== 'apache') entry.spawnsFrom = 'vehicleFactory'
+    // Special roles
+    if (type === 'harvester') entry.role = 'economic: harvests ore and delivers to refinery'
+    if (type === 'ambulance') entry.role = 'support: heals nearby friendly units'
+    if (type === 'tankerTruck') entry.role = 'support: refuels nearby units'
+    if (type === 'ammunitionTruck') entry.role = 'support: resupplies ammo to nearby units'
+    if (type === 'recoveryTank') entry.role = 'support: tows damaged units to workshop for repair'
+    if (type === 'mineLayer') entry.role = 'utility: deploys anti-vehicle mines'
+    if (type === 'mineSweeper') entry.role = 'utility: clears enemy mines'
+    catalog.push(entry)
+  }
+  return catalog
+}
 
-const DEFAULT_COMMENTARY_PROMPT = `You are a mean RTS opponent.
-Taunt the player, announce future plans (sometimes bluff), and comment on their battlefield actions.
-Keep it under 30 words.`
+function buildBuildingCatalog() {
+  const catalog = []
+  for (const [type, data] of Object.entries(buildingData)) {
+    if (type.startsWith('concreteWall')) continue // skip wall variants
+    const entry = {
+      type,
+      displayName: data.displayName || type,
+      cost: data.cost || 0,
+      power: data.power || 0,
+      hp: data.health || 0,
+      size: `${data.width}x${data.height}`
+    }
+    if (data.armor) entry.armor = data.armor
+    if (data.fireRange) {
+      entry.weapon = data.projectileType || 'bullet'
+      entry.fireRange = data.fireRange
+      entry.damage = data.damage || 0
+      entry.fireCooldownMs = data.fireCooldown || 0
+      if (data.burstCount) entry.burst = `${data.burstCount} shots/${data.burstDelay}ms`
+      if (data.minFireRange) entry.minRange = data.minFireRange
+    }
+    if (data.requiresRadar) entry.requires = 'radarStation'
+    if (data.requiresVehicleFactory) entry.requires = 'vehicleFactory'
+    catalog.push(entry)
+  }
+  // Add concrete wall once
+  const wall = buildingData.concreteWall
+  if (wall) {
+    catalog.push({ type: 'concreteWall', displayName: 'Concrete Wall', cost: wall.cost, power: 0, hp: wall.health, size: '1x1' })
+  }
+  return catalog
+}
+
+const UNIT_CATALOG_TEXT = JSON.stringify(buildUnitCatalog(), null, 0)
+const BUILDING_CATALOG_TEXT = JSON.stringify(buildBuildingCatalog(), null, 0)
+
+const STRATEGIC_BOOTSTRAP_PROMPT = `You are the strategic commander for the enemy AI in a real-time strategy game.
+Your job: plan economy, production, expansion, and attacks to defeat the human player. Keep actions practical, achievable, and within budget.
+
+GAME OVERVIEW
+- Tile-based RTS with base building, unit production, and combat.
+- You control one enemy player. The human player is the opponent.
+- Buildings unlock tech and produce units. Units can move, attack, and guard.
+- You can place buildings on valid tiles, queue units at the right factory, and issue unit commands.
+- The engine executes only explicit actions you output.
+- Each unit and building has an "owner" field identifying which player controls it.
+- Your units will still auto-attack enemies within their fire range even between your ticks, but you should issue explicit commands for strategic movements and coordinated attacks.
+- Consider retreating damaged units to regroup before launching full-scale attacks. A well-coordinated strike with sufficient firepower is better than trickling units into enemy defenses.
+- You only see the battlefield where your own units and buildings provide vision. Data in the snapshot is limited to what is visible to you (fog of war).
+
+UNIT CATALOG (all producible units with stats):
+${UNIT_CATALOG_TEXT}
+
+BUILDING CATALOG (all constructable buildings with stats):
+${BUILDING_CATALOG_TEXT}
+
+IMPORTANT OWNERSHIP: Every unit and building in the snapshot has an "owner" field. YOUR units/buildings have owner === your playerId. The HUMAN PLAYER's entities have a different owner. Always check the owner field to distinguish friend from foe.
+
+INPUT FORMAT (you will receive this once per tick in a user message as JSON):
+{
+  "summary": "short rolling summary of recent ticks",
+  "input": GameTickInput
+}
+
+GameTickInput key fields:
+- protocolVersion: string (must match in output)
+- tick: number
+- playerId: string (your controlled player)
+- snapshot.resources.money: available budget
+- snapshot.units: array of units with id, type, owner, health, position, status (ammo/fuel)
+- snapshot.buildings: array of buildings with id, type, owner, health, tilePosition
+- snapshot.buildQueues: production queues (current plan in progress)
+- transitions.events: recent changes since last tick
+- constraints: maxActionsPerTick, allowQueuedCommands, maxQueuedCommands
+
+OUTPUT FORMAT (return ONLY JSON, no markdown) - GameTickOutput:
+{
+  "protocolVersion": "<same as input>",
+  "tick": <same as input>,
+  "actions": [
+    {
+      "actionId": "unique-string",
+      "type": "build_place",
+      "buildingType": "constructionYard|powerPlant|oreRefinery|vehicleFactory|...",
+      "tilePosition": { "x": 0, "y": 0, "space": "tile" },
+      "rallyPoint": null
+    },
+    {
+      "actionId": "unique-string",
+      "type": "build_queue",
+      "unitType": "tank_v1|tank-v2|...",
+      "count": 1,
+      "factoryId": null,
+      "rallyPoint": null
+    },
+    {
+      "actionId": "unique-string",
+      "type": "unit_command",
+      "unitIds": ["unit-id"],
+      "command": "move|attack|stop|hold|guard|patrol",
+      "targetPos": { "x": 0, "y": 0, "space": "world|tile" },
+      "targetId": null
+    },
+    {
+      "actionId": "unique-string",
+      "type": "set_rally",
+      "buildingId": "building-id",
+      "rallyPoint": { "x": 0, "y": 0, "space": "world|tile" }
+    },
+    { "actionId": "unique-string", "type": "cancel" },
+    {
+      "actionId": "unique-string",
+      "type": "ability",
+      "unitId": "unit-id",
+      "abilityId": "ability-key",
+      "targetPos": null,
+      "targetId": null
+    }
+  ],
+  "notes": "optional short taunt or plan summary for the player",
+  "intent": "short label of your current plan",
+  "confidence": 0.5
+}
+
+Always include intent, confidence (0.0-1.0), and notes fields even if the value is minimal.
+
+TACTICAL GUIDELINES
+- Build power plants first to ensure your base has enough energy.
+- Build ore refineries and harvesters for income.
+- Build a vehicle factory before queueing land units (all land units spawn from vehicle factory).
+- Build a helipad (requires radar) before queueing apaches.
+- Defend your base with turrets to slow rushes.
+- Amass a critical mass of combat units before attacking. Sending 1-2 tanks into an enemy base with turrets is wasteful.
+- If your attack force is low relative to enemy defenses, retreat and build more units first.
+- Use the "move" command to position units, then "attack" to engage specific targets.
+- Protect your harvesters — they are your economy.
+
+RULES
+- Return valid JSON only. No markdown, no extra text.
+- Respect constraints.maxActionsPerTick and available money.
+- Use unique actionId values.
+- Prefer "tile" positions for building placement.
+- If unsure, return an empty actions array.
+
+You will receive this full context only once. Future prompts include only the latest game state + transitions; continue the same session and follow these rules.`
+
+const STRATEGIC_FOLLOWUP_PROMPT = `You are the same enemy strategic AI continuing the current match.
+Return ONLY valid JSON matching GameTickOutput. No markdown or extra text.
+Follow the rules and schema from the initial brief.
+Always include intent, confidence (0-1), and notes fields.`
+
+const DEFAULT_COMMENTARY_PROMPT = `You are a mean RTS opponent commentating on the battle.
+Taunt the player about notable events: units destroyed, buildings lost, economy problems, or your upcoming attacks.
+Only comment when something interesting happened (battles, kills, expansions, milestones).
+If nothing notable occurred since your last comment, respond with exactly: {"skip":true}
+NEVER repeat the same taunt or observation twice. Vary your vocabulary, tone, and targets.
+Keep it under 30 words. Be creative, menacing, and entertaining.`
+
+
+const PROTOCOL_SCHEMA_TEXT = JSON.stringify(protocolSchema)
 
 function getAiPlayers(state) {
   const humanPlayer = state.humanPlayer || 'player1'
@@ -40,7 +246,10 @@ function ensureStrategicState(state) {
       lastTickFrame: 0,
       pending: false,
       lastSummary: '',
-      plansByPlayer: {}
+      plansByPlayer: {},
+      summariesByPlayer: {},
+      bootstrappedByPlayer: {},
+      responseIdsByPlayer: {}
     }
   }
   return state.llmStrategic
@@ -50,7 +259,9 @@ function ensureCommentaryState(state) {
   if (!state.llmCommentary) {
     state.llmCommentary = {
       lastTickAt: 0,
-      pending: false
+      pending: false,
+      responseId: null,
+      recentComments: []
     }
   }
   return state.llmCommentary
@@ -58,15 +269,24 @@ function ensureCommentaryState(state) {
 
 function summarizeInput(input, previousSummary) {
   const resources = input.snapshot?.resources || {}
-  const unitCount = Array.isArray(input.snapshot?.units) ? input.snapshot.units.length : 0
-  const buildingCount = Array.isArray(input.snapshot?.buildings) ? input.snapshot.buildings.length : 0
+  const snapshotUnits = Array.isArray(input.snapshot?.units) ? input.snapshot.units : []
+  const snapshotBuildings = Array.isArray(input.snapshot?.buildings) ? input.snapshot.buildings : []
+  const unitCount = snapshotUnits.length
+  const buildingCount = snapshotBuildings.length
   const transitions = Array.isArray(input.transitions?.events) ? input.transitions.events : []
   const recentEvents = transitions.slice(-6).map(evt => evt.type).join(', ')
+
+  // Count units/buildings per owner
+  const myUnits = snapshotUnits.filter(u => u.owner === input.playerId).length
+  const enemyUnits = unitCount - myUnits
+  const myBuildings = snapshotBuildings.filter(b => b.owner === input.playerId).length
+  const enemyBuildings = buildingCount - myBuildings
+
   const summaryParts = [
     `Tick ${input.tick}`,
     `Money ${Math.round(resources.money || 0)}`,
-    `Units ${unitCount}`,
-    `Buildings ${buildingCount}`
+    `MyUnits ${myUnits} EnemyUnits ${enemyUnits}`,
+    `MyBuildings ${myBuildings} EnemyBuildings ${enemyBuildings}`
   ]
   if (recentEvents) {
     summaryParts.push(`Recent: ${recentEvents}`)
@@ -85,6 +305,9 @@ function extractJsonBlock(text) {
 }
 
 function parseOutput(text) {
+  if (text && typeof text === 'object') {
+    return text
+  }
   const jsonText = extractJsonBlock(text)
   if (!jsonText) return null
   try {
@@ -97,49 +320,138 @@ function parseOutput(text) {
 
 function applyUsageCost(providerId, model, usage, costMap) {
   if (!usage) return
-  const promptTokens = usage.prompt_tokens ?? usage.input_tokens ?? 0
-  const completionTokens = usage.completion_tokens ?? usage.output_tokens ?? 0
-  const totalTokens = usage.total_tokens ?? (promptTokens + completionTokens)
+  const inputTokens = usage.input_tokens ?? usage.prompt_tokens ?? 0
+  const outputTokens = usage.output_tokens ?? usage.completion_tokens ?? 0
+  const totalTokens = usage.total_tokens ?? (inputTokens + outputTokens)
   const costInfo = getModelCostInfo(providerId, model, costMap)
   let costUsd = 0
   if (costInfo) {
     const divisor = costInfo.unit === 'per_1k' ? 1000 : 1000000
-    const inputCost = (promptTokens / divisor) * (costInfo.input || 0)
-    const outputCost = (completionTokens / divisor) * (costInfo.output || 0)
+    const inputCost = (inputTokens / divisor) * (costInfo.input || 0)
+    const outputCost = (outputTokens / divisor) * (costInfo.output || 0)
     costUsd = inputCost + outputCost
   }
   recordLlmUsage({
     provider: providerId,
     model,
-    promptTokens,
-    completionTokens,
+    promptTokens: inputTokens,
+    completionTokens: outputTokens,
     totalTokens,
     costUsd
   })
 }
 
-function buildStrategicMessages(input, summary) {
+function buildStrategicMessages({ input, summary, includeBootstrap }) {
+  const messages = []
+  if (includeBootstrap) {
+    messages.push({ role: 'system', content: STRATEGIC_BOOTSTRAP_PROMPT })
+    messages.push({ role: 'system', content: `PROTOCOL_JSON_SCHEMA:\n${PROTOCOL_SCHEMA_TEXT}` })
+  }
+  messages.push({
+    role: 'user',
+    content: JSON.stringify({
+      summary,
+      input
+    })
+  })
+  return messages
+}
+
+function hasInterestingEvents(transitions) {
+  if (!Array.isArray(transitions) || transitions.length === 0) return false
+  const interestingTypes = new Set([
+    'unit_destroyed', 'building_destroyed', 'unit_created', 'building_placed',
+    'attack_started', 'building_captured', 'unit_promoted', 'milestone',
+    'harvester_destroyed', 'construction_started'
+  ])
+  return transitions.some(evt => interestingTypes.has(evt.type))
+}
+
+function buildCommentaryMessages(input, summary, recentComments = []) {
+  const avoidRepeat = recentComments.length > 0
+    ? `\nRecent comments you already made (DO NOT repeat these): ${recentComments.slice(-5).join(' | ')}` : ''
   return [
     {
       role: 'user',
       content: JSON.stringify({
         summary,
-        input
+        transitions: input.transitions?.events?.slice(-8) || [],
+        instruction: `Comment on recent events.${avoidRepeat}\nIf nothing interesting happened, respond with exactly: {"skip":true}`
       })
     }
   ]
 }
 
-function buildCommentaryMessages(input, summary) {
-  return [
-    {
-      role: 'user',
-      content: JSON.stringify({
-        summary,
-        transitions: input.transitions?.events?.slice(-8) || []
-      })
+function computeAiVisibleTiles(state, playerId) {
+  const stateUnits = state.units || []
+  const allBuildings = [...(state.buildings || []), ...(state.factories || [])]
+  const mapWidth = state.mapTilesX || 100
+  const mapHeight = state.mapTilesY || 100
+  const visible = new Set()
+
+  const markCircle = (cx, cy, range) => {
+    const r = Math.ceil(range)
+    const rSq = (range + 0.5) * (range + 0.5)
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy <= rSq) {
+          const tx = Math.floor(cx) + dx
+          const ty = Math.floor(cy) + dy
+          if (tx >= 0 && tx < mapWidth && ty >= 0 && ty < mapHeight) {
+            visible.add(ty * mapWidth + tx)
+          }
+        }
+      }
     }
-  ]
+  }
+
+  for (const unit of stateUnits) {
+    if (unit.owner !== playerId) continue
+    const cx = (unit.x + TILE_SIZE / 2) / TILE_SIZE
+    const cy = (unit.y + TILE_SIZE / 2) / TILE_SIZE
+    let range = TANK_FIRE_RANGE
+    if (unit.type === 'harvester') range = 5
+    else if (unit.type === 'ambulance' || unit.type === 'tankerTruck') range = 2
+    else if (unit.type === 'rocketTank') range = TANK_FIRE_RANGE * 1.5
+    else if (unit.type === 'howitzer') range = 18
+    markCircle(cx, cy, range)
+  }
+
+  for (const b of allBuildings) {
+    if (b.owner !== playerId) continue
+    const cx = b.x + (b.width || 1) / 2
+    const cy = b.y + (b.height || 1) / 2
+    const bData = buildingData[b.type]
+    const range = bData?.fireRange || Math.max(4, Math.ceil(Math.max(b.width || 1, b.height || 1) / 2) + 4)
+    markCircle(cx, cy, range)
+  }
+
+  return { visible, mapWidth }
+}
+
+function isTileVisible(visData, tileX, tileY) {
+  return visData.visible.has(tileY * visData.mapWidth + tileX)
+}
+
+function filterInputByFogOfWar(input, state, playerId) {
+  if (!state.shadowOfWarEnabled) return input
+  const vis = computeAiVisibleTiles(state, playerId)
+  const filtered = { ...input, snapshot: { ...input.snapshot } }
+  // Keep own units, filter enemy units by visibility
+  filtered.snapshot.units = (input.snapshot.units || []).filter(u => {
+    if (u.owner === playerId) return true
+    const tx = u.tilePosition?.x ?? Math.floor(u.position.x / TILE_SIZE)
+    const ty = u.tilePosition?.y ?? Math.floor(u.position.y / TILE_SIZE)
+    return isTileVisible(vis, tx, ty)
+  })
+  // Keep own buildings, filter enemy buildings by visibility
+  filtered.snapshot.buildings = (input.snapshot.buildings || []).filter(b => {
+    if (b.owner === playerId) return true
+    const tx = b.tilePosition?.x ?? b.x
+    const ty = b.tilePosition?.y ?? b.y
+    return isTileVisible(vis, tx, ty)
+  })
+  return filtered
 }
 
 function applyLlmLocks(units, unitIds, now, lockMs) {
@@ -172,6 +484,7 @@ function disableLlmAI(type = 'both') {
 }
 
 async function runStrategicTickForPlayer(playerId, state, settings, now) {
+  const strategicState = ensureStrategicState(state)
   const factories = state.factories || []
   const enemyFactory = factories.find(factory => factory.id === playerId)
   const budget = enemyFactory?.budget ?? 0
@@ -183,14 +496,19 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
   }
 
   const lastTickFrame = state.llmStrategic.lastTickFrame || 0
-  const input = exportGameTickInput(viewState, lastTickFrame, {
+  const rawInput = exportGameTickInput(viewState, lastTickFrame, {
     playerId,
     verbosity: settings.strategic.verbosity,
     maxActionsPerTick: settings.strategic.maxActions
   })
 
-  const summary = summarizeInput(input, state.llmStrategic.lastSummary)
-  state.llmStrategic.lastSummary = summary
+  // Apply fog-of-war: only show entities visible to this AI player
+  const input = filterInputByFogOfWar(rawInput, state, playerId)
+
+  const previousSummary = strategicState.summariesByPlayer[playerId] || ''
+  const summary = summarizeInput(input, previousSummary)
+  strategicState.summariesByPlayer[playerId] = summary
+  strategicState.lastSummary = summary
 
   const providerId = settings.strategic.provider
   const model = settings.providers?.[providerId]?.model
@@ -203,13 +521,182 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
   }
 
   const costMap = await fetchCostMap()
-  const messages = buildStrategicMessages(input, summary)
+  const hasBootstrapped = Boolean(strategicState.bootstrappedByPlayer[playerId])
+  const previousResponseId = strategicState.responseIdsByPlayer[playerId] || null
+  const messages = buildStrategicMessages({
+    input,
+    summary,
+    includeBootstrap: !hasBootstrapped
+  })
+  // Schema for the OpenAI Responses API with strict: true.
+  // Rules from https://platform.openai.com/docs/guides/structured-outputs#supported-schemas:
+  //  - Use anyOf (NOT oneOf) for discriminated unions
+  //  - All properties must be in required
+  //  - additionalProperties: false on every object
+  //  - Nullable objects use anyOf: [{type:'object',...},{type:'null'}]
+  //  - Nullable scalars use type: ['string','null'] etc.
+
+  const NULLABLE_POSITION = {
+    anyOf: [
+      {
+        type: 'object',
+        properties: {
+          x: { type: 'number' },
+          y: { type: 'number' },
+          space: { type: 'string', enum: ['world', 'tile'] }
+        },
+        required: ['x', 'y', 'space'],
+        additionalProperties: false
+      },
+      { type: 'null' }
+    ]
+  }
+
+  const TILE_POSITION = {
+    type: 'object',
+    properties: {
+      x: { type: 'number' },
+      y: { type: 'number' },
+      space: { type: 'string', enum: ['tile'] }
+    },
+    required: ['x', 'y', 'space'],
+    additionalProperties: false
+  }
+
+  const POSITION = {
+    type: 'object',
+    properties: {
+      x: { type: 'number' },
+      y: { type: 'number' },
+      space: { type: 'string', enum: ['world', 'tile'] }
+    },
+    required: ['x', 'y', 'space'],
+    additionalProperties: false
+  }
+
+  const SIMPLE_GAME_TICK_SCHEMA = {
+    type: 'object',
+    properties: {
+      protocolVersion: { type: 'string' },
+      tick: { type: 'number' },
+      intent: { type: 'string' },
+      confidence: { type: 'number' },
+      notes: { type: 'string' },
+      actions: {
+        type: 'array',
+        items: {
+          anyOf: [
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['build_place'] },
+                buildingType: {
+                  type: 'string',
+                  enum: [
+                    'constructionYard', 'powerPlant', 'oreRefinery', 'vehicleFactory',
+                    'vehicleWorkshop', 'radarStation', 'hospital', 'helipad', 'gasStation',
+                    'ammunitionFactory', 'turretGunV1', 'turretGunV2', 'turretGunV3',
+                    'rocketTurret', 'teslaCoil', 'artilleryTurret', 'concreteWall'
+                  ]
+                },
+                tilePosition: TILE_POSITION,
+                rallyPoint: NULLABLE_POSITION
+              },
+              required: ['actionId', 'type', 'buildingType', 'tilePosition', 'rallyPoint'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['build_queue'] },
+                unitType: {
+                  type: 'string',
+                  enum: [
+                    'tank', 'tank_v1', 'tank-v2', 'tank-v3', 'rocketTank', 'harvester',
+                    'ambulance', 'tankerTruck', 'ammunitionTruck', 'recoveryTank',
+                    'howitzer', 'apache', 'mineLayer', 'mineSweeper'
+                  ]
+                },
+                count: { type: 'number' },
+                factoryId: { type: ['string', 'null'] },
+                rallyPoint: NULLABLE_POSITION
+              },
+              required: ['actionId', 'type', 'unitType', 'count', 'factoryId', 'rallyPoint'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['unit_command'] },
+                unitIds: { type: 'array', items: { type: 'string' } },
+                command: { type: 'string', enum: ['move', 'attack', 'stop', 'hold', 'guard', 'patrol'] },
+                targetPos: NULLABLE_POSITION,
+                targetId: { type: ['string', 'null'] }
+              },
+              required: ['actionId', 'type', 'unitIds', 'command', 'targetPos', 'targetId'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['set_rally'] },
+                buildingId: { type: 'string' },
+                rallyPoint: POSITION
+              },
+              required: ['actionId', 'type', 'buildingId', 'rallyPoint'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['cancel'] }
+              },
+              required: ['actionId', 'type'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['ability'] },
+                unitId: { type: 'string' },
+                abilityId: { type: 'string' },
+                targetPos: NULLABLE_POSITION,
+                targetId: { type: ['string', 'null'] }
+              },
+              required: ['actionId', 'type', 'unitId', 'abilityId', 'targetPos', 'targetId'],
+              additionalProperties: false
+            }
+          ]
+        }
+      }
+    },
+    required: ['protocolVersion', 'tick', 'intent', 'confidence', 'notes', 'actions'],
+    additionalProperties: false
+  }
+
+  const responseFormat = {
+    type: 'json_schema',
+    name: 'GameTickOutput',
+    schema: SIMPLE_GAME_TICK_SCHEMA,
+    strict: true
+  }
+  const instructionPrompt = STRATEGIC_FOLLOWUP_PROMPT
+  const systemForRequest = providerId === 'openai' ? null : instructionPrompt
 
   try {
     const response = await requestLlmCompletion(providerId, {
       model,
-      system: DEFAULT_STRATEGIC_PROMPT,
-      messages
+      system: systemForRequest,
+      messages,
+      responseFormat,
+      previousResponseId,
+      instructions: instructionPrompt
     })
 
     applyUsageCost(providerId, model, response.usage, costMap)
@@ -236,6 +723,12 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
     })
 
     updatePlanCache(state, playerId, parsed)
+    if (!hasBootstrapped) {
+      strategicState.bootstrappedByPlayer[playerId] = true
+    }
+    if (response.responseId) {
+      strategicState.responseIdsByPlayer[playerId] = response.responseId
+    }
 
     if (parsed.notes) {
       showNotification(parsed.notes, 4000)
@@ -278,6 +771,7 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
 }
 
 async function runCommentaryTick(state, settings, _now) {
+  const commentaryState = ensureCommentaryState(state)
   const providerId = settings.commentary.provider
   const model = settings.providers?.[providerId]?.model
   const providerSettings = getProviderSettings(providerId)
@@ -291,28 +785,62 @@ async function runCommentaryTick(state, settings, _now) {
   const input = exportGameTickInput(state, state.llmStrategic?.lastTickFrame || 0, {
     verbosity: 'minimal'
   })
+
+  // Skip commentary when nothing interesting happened
+  const transitions = input.transitions?.events || []
+  if (!hasInterestingEvents(transitions)) {
+    window.logger.info('[LLM] Commentary skipped: no interesting events')
+    return
+  }
+
   const summary = summarizeInput(input, state.llmStrategic?.lastSummary || '')
   const systemPrompt = settings.commentary.promptOverride?.trim() || DEFAULT_COMMENTARY_PROMPT
   const costMap = await fetchCostMap()
-  const messages = buildCommentaryMessages(input, summary)
+  const recentComments = commentaryState.recentComments || []
+  const messages = buildCommentaryMessages(input, summary, recentComments)
+  const previousResponseId = commentaryState.responseId || null
 
   try {
     const response = await requestLlmCompletion(providerId, {
       model,
       system: systemPrompt,
       messages,
-      maxTokens: 120,
-      temperature: 1.0
+      maxTokens: 10000,
+      temperature: 1.0,
+      previousResponseId
     })
 
     applyUsageCost(providerId, model, response.usage, costMap)
 
-    const comment = response.text?.trim()
-    if (!comment) return
-    state.llmCommentary.lastText = comment
-    showNotification(comment, 5000)
+    const rawComment = response.text?.trim()
+    if (!rawComment) return
+
+    // Check if LLM explicitly skipped
+    try {
+      const parsed = JSON.parse(rawComment)
+      if (parsed.skip) {
+        window.logger.info('[LLM] Commentary self-skipped via {skip:true}')
+        return
+      }
+    } catch {
+      // Not JSON, treat as a normal comment
+    }
+
+    state.llmCommentary.lastText = rawComment
+    if (response.responseId) {
+      commentaryState.responseId = response.responseId
+    }
+
+    // Track recent comments to prevent repetition (keep last 10)
+    if (!commentaryState.recentComments) commentaryState.recentComments = []
+    commentaryState.recentComments.push(rawComment)
+    if (commentaryState.recentComments.length > 10) {
+      commentaryState.recentComments = commentaryState.recentComments.slice(-10)
+    }
+
+    showNotification(rawComment, 5000)
     if (settings.commentary.ttsEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(comment)
+      const utterance = new SpeechSynthesisUtterance(rawComment)
       const voices = window.speechSynthesis.getVoices()
       if (settings.commentary.voiceName) {
         const selected = voices.find(v => v.name === settings.commentary.voiceName)
@@ -394,5 +922,28 @@ export function updateLlmStrategicAI(units, factories, _bullets, _mapGrid, state
       .finally(() => {
         commentaryState.pending = false
       })
+  }
+}
+
+// Trigger immediate strategic tick (used when enabling the feature via UI)
+export async function triggerStrategicNow(state = gameState) {
+  if (!isHost()) return
+  const settings = getLlmSettings()
+  if (!settings.strategic.enabled) return
+
+  const strategicState = ensureStrategicState(state)
+  if (strategicState.pending) return
+
+  strategicState.pending = true
+  const now = performance.now()
+  strategicState.lastTickAt = now
+  strategicState.lastTickFrame = state.frameCount || 0
+  const aiPlayers = getAiPlayers(state)
+  try {
+    await Promise.all(aiPlayers.map(playerId => runStrategicTickForPlayer(playerId, state, settings, now)))
+  } catch (err) {
+    window.logger.warn('[LLM] Immediate strategic tick failed:', err)
+  } finally {
+    strategicState.pending = false
   }
 }

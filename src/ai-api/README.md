@@ -48,6 +48,7 @@ The collector records combat and production transitions. Hooks are already added
 - All actions are explicit: IDs and coordinates are required.
 - Output validation rejects invalid actions with structured reasons.
 - No code execution: only enumerated action types are accepted.
+- OpenAI clients call `/v1/responses` with a `json_schema` text format derived from `protocol.schema.json`, chaining `previous_response_id` so the bootstrap brief + schema stay in context without resending history.
 
 ## Verbosity levels
 - `minimal`: essential resources and entities

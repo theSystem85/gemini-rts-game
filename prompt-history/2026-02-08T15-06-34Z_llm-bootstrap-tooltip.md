@@ -1,0 +1,4 @@
+2026-02-08T15-06-34Z
+LLM: codex
+
+The game runs now and the connection to the openAI API also works and I get a response but it seems as if the model does not really know what to do. Ensure to get the model a description of what it is supposed to do and how the input and output JSON format should look like and what options it has. Also give it a high level description of the game and what it is supposed to do. Put all this information in the very first prompt and then ensure it keeps the context so that the later promps only need to submit the current game state and all the relevant changes (transitions) that lead to the current state. Also make sure I can see the strategic planning backlog of the opponent AI when hovering over its construction yard in a professionally styled tooltip that contains a scrollable list with the names and images of all buildings and units that should be build and in which order.

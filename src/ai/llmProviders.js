@@ -163,7 +163,49 @@ export async function fetchModelList(providerId) {
   }
 }
 
-export async function requestLlmCompletion(providerId, { model, messages, system, maxTokens = 600, temperature = 1.0 }) {
+function ensureTextContent(content) {
+  if (Array.isArray(content)) {
+    return content.map(entry => (
+      entry && typeof entry === 'object' && entry.type
+        ? entry
+        : { type: 'input_text', text: String(entry) }
+    ))
+  }
+  if (typeof content === 'string') return [{ type: 'input_text', text: content }]
+  return [{ type: 'input_text', text: JSON.stringify(content) }]
+}
+
+function buildResponseInput(messages = []) {
+  return messages.map(message => ({
+    role: message.role,
+    content: ensureTextContent(message.content)
+  }))
+}
+
+function extractResponseText(output) {
+  if (!output || typeof output !== 'object') return ''
+  if (typeof output.output_text === 'string') return output.output_text
+  const items = Array.isArray(output.output) ? output.output : []
+  for (const item of items) {
+    if (item?.type === 'message' && Array.isArray(item.content)) {
+      const textPart = item.content.find(part => part?.type === 'output_text' && part.text)
+      if (textPart?.text) return textPart.text
+    }
+    if (item?.type === 'output_text' && item.text) return item.text
+  }
+  return ''
+}
+
+export async function requestLlmCompletion(providerId, {
+  model,
+  messages,
+  system,
+  maxTokens = 10000,
+  temperature = 1.0,
+  responseFormat,
+  previousResponseId,
+  instructions
+}) {
   const settings = getProviderSettings(providerId)
   if (!settings) {
     throw new Error(`Unknown provider: ${providerId}`)
@@ -171,18 +213,94 @@ export async function requestLlmCompletion(providerId, { model, messages, system
   const baseUrl = normalizeBaseUrl(settings.baseUrl)
 
   switch (providerId) {
-    case 'openai':
-    case 'xai': {
+    case 'openai': {
       if (!settings.apiKey) {
-        throw new Error(`${providerId} API key missing`)
+        throw new Error('openai API key missing')
       }
 
-      // Try with max_completion_tokens first (newer API), fallback to max_tokens
+      const inputItems = buildResponseInput([
+        ...(system ? [{ role: 'system', content: system }] : []),
+        ...(messages || [])
+      ])
+
+      const requestBody = {
+        model,
+        input: inputItems,
+        temperature,
+        max_output_tokens: maxTokens,
+        store: true
+      }
+
+      if (previousResponseId) {
+        requestBody.previous_response_id = previousResponseId
+      }
+
+      if (responseFormat) {
+        requestBody.text = { format: responseFormat }
+      }
+
+      if (instructions || system) {
+        requestBody.instructions = instructions || system
+      }
+
+      const response = await fetch(`${baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+
+        if (errorData?.error?.code === 'insufficient_quota' || errorData?.error?.type === 'insufficient_quota') {
+          throw new QuotaExceededError(
+            errorData.error.message || 'API quota exceeded',
+            providerId
+          )
+        }
+
+        if (response.status === 401 || errorData?.error?.type === 'invalid_request_error') {
+          throw new AuthenticationError(
+            errorData?.error?.message || 'Authentication failed or insufficient permissions',
+            providerId
+          )
+        }
+
+        if (response.status === 400 && errorData?.error?.param) {
+          const paramName = errorData.error.param
+          const errorCode = errorData.error.code
+          if (errorCode === 'unsupported_parameter' || errorCode === 'unsupported_value') {
+            throw new ApiParameterError(
+              errorData.error.message || 'API parameter error',
+              providerId,
+              paramName
+            )
+          }
+        }
+
+        throw new Error(`${providerId} completion failed: ${response.status}`)
+      }
+
+      const payload = await response.json()
+      return {
+        text: extractResponseText(payload),
+        usage: payload.usage || null,
+        responseId: payload.id || null
+      }
+    }
+    case 'xai': {
+      if (!settings.apiKey) {
+        throw new Error('xai API key missing')
+      }
+
       const requestBody = {
         model,
         messages: [
           ...(system ? [{ role: 'system', content: system }] : []),
-          ...messages
+          ...(messages || [])
         ],
         temperature,
         max_completion_tokens: maxTokens
@@ -200,7 +318,6 @@ export async function requestLlmCompletion(providerId, { model, messages, system
       if (!response.ok) {
         const errorData = await response.json().catch(() => null)
 
-        // Handle quota exceeded errors
         if (errorData?.error?.code === 'insufficient_quota' || errorData?.error?.type === 'insufficient_quota') {
           throw new QuotaExceededError(
             errorData.error.message || 'API quota exceeded',
@@ -208,7 +325,6 @@ export async function requestLlmCompletion(providerId, { model, messages, system
           )
         }
 
-        // Handle authentication/permission errors (401)
         if (response.status === 401 || errorData?.error?.type === 'invalid_request_error') {
           throw new AuthenticationError(
             errorData?.error?.message || 'Authentication failed or insufficient permissions',
@@ -216,11 +332,9 @@ export async function requestLlmCompletion(providerId, { model, messages, system
           )
         }
 
-        // Handle parameter errors (400) - unsupported parameters or values
         if (response.status === 400 && errorData?.error?.param) {
           const paramName = errorData.error.param
           const errorCode = errorData.error.code
-          // Check for both unsupported_parameter and unsupported_value
           if (errorCode === 'unsupported_parameter' || errorCode === 'unsupported_value') {
             throw new ApiParameterError(
               errorData.error.message || 'API parameter error',

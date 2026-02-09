@@ -3,7 +3,7 @@ import { TILE_SIZE, ENABLE_ENEMY_SELECTION, ENABLE_ENEMY_CONTROL } from '../conf
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
-import { hideLlmQueueTooltip, showLlmQueueTooltip } from '../ui/llmQueueTooltip.js'
+import { hideLlmQueueTooltip, updateLlmQueueTooltipForSelection } from '../ui/llmQueueTooltip.js'
 import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
@@ -241,7 +241,8 @@ export class SelectionManager {
       // No sound for building selection
     }
 
-    showLlmQueueTooltip(selectedBuilding, e)
+    // Update LLM tooltip if enemy construction yard selected
+    updateLlmQueueTooltipForSelection()
   }
 
   handleBoundingBoxSelection(units, factories, selectedUnits, selectionStart, selectionEnd) {

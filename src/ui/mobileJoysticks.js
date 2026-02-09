@@ -1,5 +1,17 @@
-import { selectedUnits } from '../inputHandler.js'
 import { gameState } from '../gameState.js'
+
+// Avoid importing `selectedUnits` directly to prevent circular import TDZ issues.
+// Use `window.debugGetSelectedUnits()` if available, otherwise fall back to an empty array.
+function getSelectedUnits() {
+  if (typeof window !== 'undefined' && typeof window.debugGetSelectedUnits === 'function') {
+    try {
+      return window.debugGetSelectedUnits() || []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
 import { getMobileJoystickMapping, isTurretTankUnitType } from '../config.js'
 import {
   setRemoteControlAction,
@@ -100,6 +112,7 @@ function isFriendlyUnit(unit) {
 }
 
 function determineCurrentProfile() {
+  const selectedUnits = getSelectedUnits()
   if (!selectedUnits || selectedUnits.length !== 1) {
     return null
   }
@@ -117,6 +130,7 @@ function determineCurrentProfile() {
 }
 
 function getSelectedTankUnit() {
+  const selectedUnits = getSelectedUnits()
   if (!selectedUnits || selectedUnits.length !== 1) {
     return null
   }

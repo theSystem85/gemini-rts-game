@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Wire strategic LLM flow to OpenAI `/v1/responses` with JSON-schema output, per-player conversation continuity via `previous_response_id`, and bootstrap prompt + protocol schema on first tick.
 - [x] Reduce key bindings and cheat modal height caps on small screens to avoid cropping.
 - [x] Cap all modal dialogs at 80% of the viewport height to prevent oversizing on small screens.
 - [ ] Update the mobile action bar so repair/sell buttons use green active icons, keep the play/pause icon white, and hide unit group controls outside the condensed sidebar.

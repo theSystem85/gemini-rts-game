@@ -16,6 +16,7 @@ import {
 } from './ui/deviceLifecycle.js'
 import { setMobileLayoutGameAccessor } from './ui/mobileLayout.js'
 import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
+import { initNotificationHistory } from './ui/notificationHistory.js'
 import { selectedUnits } from './inputHandler.js'
 import {
   preloadSounds,
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async() => {
   loadPersistedSettings()
   setupAudioUnlock()
   initRemoteInviteLanding()
+  initNotificationHistory()
 
   const gameInstance = new Game()
   window.gameInstance = gameInstance

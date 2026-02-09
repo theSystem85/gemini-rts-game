@@ -2,6 +2,7 @@ import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { handlePointerDown as handleMapEditPointerDown, handlePointerMove as handleMapEditPointerMove, handlePointerUp as handleMapEditPointerUp } from '../mapEditor.js'
 import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
+import { hideLlmQueueTooltip } from '../ui/llmQueueTooltip.js'
 import { keybindingManager, KEYBINDING_CONTEXTS } from './keybindings.js'
 
 export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -108,6 +109,10 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
     notifyMapEditorWheel(e.deltaY)
     if (handler.requestRenderFrame) handler.requestRenderFrame()
   }, { passive: true })
+
+  gameCanvas.addEventListener('mouseleave', () => {
+    hideLlmQueueTooltip()
+  })
 
   document.addEventListener('mouseup', (e) => {
     if (e.button === 2 && gameState.isRightDragging) {

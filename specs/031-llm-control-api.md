@@ -41,6 +41,7 @@ Event collection is recorded in the following systems:
 - `exportGameTickInput(state, sinceTick, options)` builds an input payload from game state plus transition events.
 - `applyGameTickOutput(state, output)` validates and applies actions, returning accepted/rejected action lists.
 - Invalid actions are rejected with structured reason codes (e.g. `INVALID_SCHEMA`, `UNKNOWN_ENTITY`).
+- OpenAI calls use the `/v1/responses` endpoint with a lightweight `GameTickOutput` schema (protocolVersion, tick, actions, intent, confidence, notes all required) to satisfy provider strict `json_schema` validation; full protocol validation still happens locally.
 
 ## Tests
 - Unit tests validate the example payloads and applier behaviors for building placement, production, and unit commands.

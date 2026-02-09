@@ -6,6 +6,14 @@
   - [x] ✅ Only show error messages when API key is configured (silent logging otherwise).
   - [x] ✅ Use `max_completion_tokens` parameter for OpenAI API compatibility with newer models.
   - [x] ✅ Handle unsupported parameter values (e.g., temperature constraints) across all providers.
+  - [x] Add a bootstrapped strategic system prompt with game overview + JSON schema details; follow-up ticks should only send compact state/transitions.
+  - [x] Include full unit/building stat catalogs (cost, HP, speed, armor, damage, etc.) in the LLM bootstrap prompt so the AI knows all game capabilities.
+  - [x] Filter LLM input by fog-of-war so the AI only sees enemy units/buildings visible to its own forces.
+  - [x] Include owner/party information on every unit and building in the LLM game state updates.
+  - [x] Allow LLM-locked units to retaliate against attackers and auto-target enemies in range while still following strategic orders.
+  - [x] Skip LLM commentary on boring ticks (no combat/production events) and prevent commentary repetition by tracking recent messages.
+  - [x] Add notification history panel with bell icon badge in top-right corner, scrollable reverse-chronological list, unread count, and clear/close actions.
+  - [ ] Show enemy strategic backlog on construction yard hover with a scrollable list of planned units/buildings and their images.
 - [x] Add a mobile control group panel with assign toggle and long-press assignment for groups 1-9.
 - [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.
