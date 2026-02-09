@@ -13,7 +13,17 @@
   - [x] Allow LLM-locked units to retaliate against attackers and auto-target enemies in range while still following strategic orders.
   - [x] Skip LLM commentary on boring ticks (no combat/production events) and prevent commentary repetition by tracking recent messages.
   - [x] Add notification history panel with bell icon badge in top-right corner, scrollable reverse-chronological list, unread count, and clear/close actions.
-  - [ ] Show enemy strategic backlog on construction yard hover with a scrollable list of planned units/buildings and their images.
+  - [x] Show enemy strategic backlog on any selected enemy building with LLM strategic intent, production plan, and unit/sell/repair commands.
+  - [x] Ensure LLM is aware of money supply mechanics (harvester + refinery income loop) in bootstrap prompt.
+  - [x] Add sell_building and repair_building actions to LLM schema and applier.
+  - [x] Add base defense avoidance tactical guidance to LLM bootstrap prompt.
+  - [x] Enforce tech tree availability in LLM applier (reject out-of-order builds with TECH_TREE_LOCKED).
+  - [x] Fix LLM-locked enemy units not firing at targets (set allowedToAttack, auto-target buildings).
+  - [x] Skip LLM API calls when no API key is configured for providers that need one.
+  - [x] Remove API key input for Ollama (local provider, no key needed).
+  - [x] Add per-party LLM toggle in multiplayer sidebar to switch between LLM AI and local AI per party.
+  - [x] Add building placement proximity rule to LLM bootstrap prompt (3-tile Chebyshev distance).
+  - [x] Add rejected/accepted action logging for LLM applier debugging.
 - [x] Add a mobile control group panel with assign toggle and long-press assignment for groups 1-9.
 - [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.

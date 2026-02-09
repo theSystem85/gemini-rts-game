@@ -54,6 +54,11 @@ vi.mock('../../src/units.js', () => ({
   }
 }))
 
+// Mock enemyBuilding.js to prevent import chain issues
+vi.mock('../../src/ai/enemyBuilding.js', () => ({
+  findBuildingPosition: vi.fn(() => null)
+}))
+
 import { TILE_SIZE } from '../../src/config.js'
 import { gameState } from '../../src/gameState.js'
 import { applyGameTickOutput } from '../../src/ai-api/applier.js'
@@ -144,11 +149,15 @@ describe('LLM Control API applier', () => {
       playerId: 'player1'
     })
 
-    // Both actions should be accepted now
+    // Both actions should be accepted and queued for sequential construction/production
     expect(result.rejected).toHaveLength(0)
     expect(result.accepted.map(entry => entry.type)).toEqual(['build_place', 'build_queue'])
-    expect(buildings.some(building => building.type === 'powerPlant')).toBe(true)
-    expect(units).toHaveLength(1)
+    // Buildings and units are now queued (not placed/spawned instantly)
+    expect(result.accepted[0].queued).toBe(true)
+    expect(result.accepted[1].queued).toBe(true)
+    // Verify queues were populated
+    expect(state.llmStrategic.buildQueuesByPlayer['player1']).toHaveLength(1)
+    expect(state.llmStrategic.unitQueuesByPlayer['player1']).toHaveLength(1)
   })
 
   it('applies move and attack commands', () => {

@@ -92,6 +92,29 @@ export function resetGameState() {
   // Reset scroll offset
   gameState.scrollOffset = { x: 0, y: 0 }
 
+  // Reset remote control state
+  gameState.remoteControl = {
+    forward: 0,
+    backward: 0,
+    turnLeft: 0,
+    turnRight: 0,
+    turretLeft: 0,
+    turretRight: 0,
+    fire: 0,
+    ascend: 0,
+    descend: 0,
+    strafeLeft: 0,
+    strafeRight: 0
+  }
+  gameState.remoteControlSources = {}
+  gameState.remoteControlAbsolute = {
+    wagonDirection: null,
+    wagonSpeed: 0,
+    turretDirection: null,
+    turretTurnFactor: 0
+  }
+  gameState.remoteControlAbsoluteSources = {}
+
   return gameState
 }
 

@@ -219,12 +219,17 @@ export function applyEnemyStrategies(unit, units, gameState, mapGrid, now) {
 
   // Apply group attack strategies for combat units
   if ((unit.type === 'tank' || unit.type === 'tank_v1' || unit.type === 'tank-v2' || unit.type === 'tank-v3' || unit.type === 'rocketTank' || unit.type === 'howitzer')) {
-    const shouldAttack = shouldConductGroupAttack(unit, units, gameState, unit.target)
-    unit.allowedToAttack = shouldAttack
+    // Only evaluate group-attack gating when the unit already has a target.
+    // When target is null, shouldConductGroupAttack returns false which would
+    // incorrectly clear allowedToAttack and prevent the unit from ever firing.
+    if (unit.target) {
+      const shouldAttack = shouldConductGroupAttack(unit, units, gameState, unit.target)
+      unit.allowedToAttack = shouldAttack
 
-    // Apply multi-directional attack coordination if allowed to attack
-    if (shouldAttack) {
-      handleMultiDirectionalAttack(unit, units, gameState, mapGrid, now)
+      // Apply multi-directional attack coordination if allowed to attack
+      if (shouldAttack) {
+        handleMultiDirectionalAttack(unit, units, gameState, mapGrid, now)
+      }
     }
   }
 }

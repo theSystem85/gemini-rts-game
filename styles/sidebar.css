@@ -417,6 +417,62 @@ body.mobile-landscape .money-bar-value {
   letter-spacing: 0.4px;
 }
 
+.llm-queue-tooltip__notes {
+  font-size: 12px;
+  color: #c8dce8;
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(12, 20, 32, 0.5);
+  border-radius: 8px;
+  border-left: 3px solid rgba(132, 214, 255, 0.35);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.llm-queue-tooltip__cmd-icon {
+  font-size: 18px;
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Queue status row variants */
+.llm-queue-tooltip__row--completed {
+  opacity: 0.7;
+  border-color: rgba(80, 200, 120, 0.35);
+}
+.llm-queue-tooltip__row--completed .llm-queue-tooltip__index {
+  color: #50c878;
+  font-size: 16px;
+}
+.llm-queue-tooltip__row--completed .llm-queue-tooltip__title {
+  text-decoration: line-through;
+  text-decoration-color: rgba(80, 200, 120, 0.5);
+}
+
+.llm-queue-tooltip__row--building {
+  border-color: rgba(255, 200, 60, 0.45);
+  background: rgba(40, 35, 10, 0.65);
+}
+.llm-queue-tooltip__row--building .llm-queue-tooltip__index {
+  color: #ffc83c;
+}
+
+.llm-queue-tooltip__row--failed {
+  opacity: 0.45;
+  border-color: rgba(220, 60, 60, 0.35);
+}
+.llm-queue-tooltip__row--failed .llm-queue-tooltip__index {
+  color: #dc3c3c;
+  font-size: 14px;
+}
+.llm-queue-tooltip__row--failed .llm-queue-tooltip__title {
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 60, 60, 0.5);
+}
+
 .production-tooltip {
   width: min(560px, 94vw);
 }

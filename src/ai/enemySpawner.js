@@ -160,6 +160,14 @@ export function spawnEnemyUnit(spawnBuilding, unitType, units, mapGrid, gameStat
     unit.alertMode = true
   }
 
+  // Combat units must be allowed to fire — the combat code gates AI firing
+  // behind `unit.allowedToAttack === true`. Without this they will aim but
+  // never shoot.
+  const nonCombatTypes = new Set(['harvester', 'ambulance', 'tankerTruck', 'recoveryTank', 'mineLayer', 'mineSweeper', 'ammunitionTruck'])
+  if (!nonCombatTypes.has(unitType)) {
+    unit.allowedToAttack = true
+  }
+
   if (unitType === 'harvester') {
     const aiGameState = { buildings: gameState?.buildings?.filter(b => b.owner === aiPlayerId) || [] }
     assignHarvesterToOptimalRefinery(unit, aiGameState)

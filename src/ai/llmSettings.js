@@ -3,10 +3,10 @@ const LLM_SETTINGS_KEY = 'rts_llm_settings'
 export const DEFAULT_LLM_SETTINGS = {
   strategic: {
     enabled: false,
-    tickSeconds: 30,
+    tickSeconds: 60,
     provider: 'openai',
     verbosity: 'minimal',
-    maxActions: 25
+    maxActions: 50
   },
   commentary: {
     enabled: false,

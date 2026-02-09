@@ -107,10 +107,47 @@ GAME OVERVIEW
 - Buildings unlock tech and produce units. Units can move, attack, and guard.
 - You can place buildings on valid tiles, queue units at the right factory, and issue unit commands.
 - The engine executes only explicit actions you output.
+- BUILDING PLACEMENT RULE (CRITICAL): New buildings MUST be placed within 3 tiles (Chebyshev distance) of an existing building you own. Buildings placed far from your base WILL BE REJECTED. Always expand outward from your construction yard, placing each new building adjacent to or near your existing structures.
 - Each unit and building has an "owner" field identifying which player controls it.
 - Your units will still auto-attack enemies within their fire range even between your ticks, but you should issue explicit commands for strategic movements and coordinated attacks.
 - Consider retreating damaged units to regroup before launching full-scale attacks. A well-coordinated strike with sufficient firepower is better than trickling units into enemy defenses.
 - You only see the battlefield where your own units and buildings provide vision. Data in the snapshot is limited to what is visible to you (fog of war).
+
+ECONOMY & MONEY SUPPLY (CRITICAL!)
+- Money is the ONLY resource. You start with a limited budget that WILL run out if you don't establish income.
+- Income comes from harvesters mining ore and delivering it to an ore refinery. Without at least 1 refinery AND 1 harvester, you have ZERO income.
+- ALWAYS prioritize building a power plant first, then an ore refinery, then a vehicle factory, then produce a harvester. This is the minimum viable economy.
+- Only after you have a working economy (harvester actively mining) should you invest in military.
+- Monitor your money closely. If money is below 2000 and you have no harvester or refinery, you are in an economic emergency — sell non-essential buildings to fund recovery.
+- A tank rush without economy will fail once your starting money runs out.
+
+TECH TREE (CRITICAL — FOLLOW THIS ORDER!)
+- You start with only: constructionYard, oreRefinery, powerPlant, vehicleFactory, vehicleWorkshop, radarStation, hospital, helipad, gasStation, turretGunV1, concreteWall
+- To unlock additional buildings and units, you MUST build prerequisite structures first:
+  Building prerequisites:
+  - ammunitionFactory: requires vehicleFactory
+  - turretGunV2, turretGunV3, rocketTurret, teslaCoil, artilleryTurret: requires radarStation
+  Unit prerequisites:
+  - tank (tank_v1): requires vehicleFactory
+  - harvester: requires vehicleFactory + oreRefinery
+  - tankerTruck: requires vehicleFactory + gasStation
+  - ammunitionTruck: requires vehicleFactory + ammunitionFactory
+  - ambulance: requires hospital
+  - recoveryTank, mineSweeper: requires vehicleFactory + vehicleWorkshop
+  - mineLayer: requires vehicleFactory + vehicleWorkshop + ammunitionFactory
+  - tank-v2: requires radarStation
+  - tank-v3: requires 2x vehicleFactory
+  - rocketTank: requires rocketTurret
+  - howitzer: requires radarStation + vehicleFactory
+  - apache: requires helipad (helipad requires radarStation)
+- Buildings and units you try to build without having the prerequisites WILL BE REJECTED.
+- The engine enforces construction times — buildings take time to finish construction, just like the human player.
+
+SELL & REPAIR BUILDINGS
+- You can sell buildings you own to recover 70% of their cost. Use action type "sell_building" with a buildingId.
+- You can repair damaged buildings. Use action type "repair_building" with a buildingId. Repair costs ~30% of damage value.
+- Sell unneeded or redundant buildings when you need emergency funds.
+- Repair critical buildings (refineries, factories) when they're damaged.
 
 UNIT CATALOG (all producible units with stats):
 ${UNIT_CATALOG_TEXT}
@@ -134,6 +171,12 @@ GameTickInput key fields:
 - snapshot.units: array of units with id, type, owner, health, position, status (ammo/fuel)
 - snapshot.buildings: array of buildings with id, type, owner, health, tilePosition
 - snapshot.buildQueues: production queues (current plan in progress)
+- snapshot.llmQueue: YOUR current production queue with status tracking:
+  - buildings: array of {buildingType, status} where status is "queued"|"building"|"completed"|"failed"
+  - units: array of {unitType, status} where status is "queued"|"building"|"completed"|"failed"
+  IMPORTANT: Check snapshot.llmQueue BEFORE issuing build_place or build_queue actions.
+  Do NOT re-issue commands for items already in the queue (queued/building/completed).
+  Only add NEW items that are not already tracked.
 - transitions.events: recent changes since last tick
 - constraints: maxActionsPerTick, allowQueuedCommands, maxQueuedCommands
 
@@ -171,6 +214,16 @@ OUTPUT FORMAT (return ONLY JSON, no markdown) - GameTickOutput:
       "buildingId": "building-id",
       "rallyPoint": { "x": 0, "y": 0, "space": "world|tile" }
     },
+    {
+      "actionId": "unique-string",
+      "type": "sell_building",
+      "buildingId": "building-id"
+    },
+    {
+      "actionId": "unique-string",
+      "type": "repair_building",
+      "buildingId": "building-id"
+    },
     { "actionId": "unique-string", "type": "cancel" },
     {
       "actionId": "unique-string",
@@ -189,15 +242,19 @@ OUTPUT FORMAT (return ONLY JSON, no markdown) - GameTickOutput:
 Always include intent, confidence (0.0-1.0), and notes fields even if the value is minimal.
 
 TACTICAL GUIDELINES
-- Build power plants first to ensure your base has enough energy.
-- Build ore refineries and harvesters for income.
+- Build power plants FIRST to ensure your base has enough energy.
+- Build an ore refinery and a harvester IMMEDIATELY for income. Without income you will lose.
 - Build a vehicle factory before queueing land units (all land units spawn from vehicle factory).
 - Build a helipad (requires radar) before queueing apaches.
+- BUILDING PLACEMENT: Look at your existing buildings in the snapshot (especially your constructionYard) and place new buildings within 1-2 tiles of them. Use coordinates close to your existing structures. If your constructionYard is at (x, y), place the next building at (x+3, y) or (x, y+3) etc. NEVER place buildings at random positions on the map.
 - Defend your base with turrets to slow rushes.
-- Amass a critical mass of combat units before attacking. Sending 1-2 tanks into an enemy base with turrets is wasteful.
-- If your attack force is low relative to enemy defenses, retreat and build more units first.
+- Amass a critical mass of combat units (at least 5-8 tanks) before attacking. Sending 1-2 tanks into an enemy base with turrets is wasteful — they will die instantly.
+- AVOID ENEMY BASE DEFENSES: Do NOT send units into range of enemy turrets, tesla coils, or artillery unless you have overwhelming force (2-3x the defensive firepower). Scout the enemy base perimeter first, then attack from the weakest side.
+- Keep your attack force OUT OF turret range until you have enough units to rush through. Use the "move" command to stage units just outside turret range, then "attack" to rush in together.
+- If your attack force takes heavy losses from enemy defenses, RETREAT (move them back) and rebuild before trying again.
 - Use the "move" command to position units, then "attack" to engage specific targets.
 - Protect your harvesters — they are your economy.
+- When issuing "attack" commands, always provide BOTH targetPos AND targetId for the specific enemy unit or building you want destroyed. Units with just a move target will walk but not fire!
 
 RULES
 - Return valid JSON only. No markdown, no extra text.
@@ -235,7 +292,10 @@ function getAiPlayers(state) {
   return allPlayers.filter(playerId => {
     if (playerId === humanPlayer) return false
     const partyState = state.partyStates.find(p => p.partyId === playerId)
-    return !partyState || partyState.aiActive !== false
+    if (!partyState) return true
+    if (partyState.aiActive === false) return false
+    if (partyState.llmControlled === false) return false
+    return true
   })
 }
 
@@ -520,6 +580,11 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
     return
   }
 
+  // Skip call if provider requires an API key and none is configured
+  if (providerId !== 'ollama' && !hasApiKey) {
+    return
+  }
+
   const costMap = await fetchCostMap()
   const hasBootstrapped = Boolean(strategicState.bootstrappedByPlayer[playerId])
   const previousResponseId = strategicState.responseIdsByPlayer[playerId] || null
@@ -671,6 +736,26 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
               },
               required: ['actionId', 'type', 'unitId', 'abilityId', 'targetPos', 'targetId'],
               additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['sell_building'] },
+                buildingId: { type: 'string' }
+              },
+              required: ['actionId', 'type', 'buildingId'],
+              additionalProperties: false
+            },
+            {
+              type: 'object',
+              properties: {
+                actionId: { type: 'string' },
+                type: { type: 'string', enum: ['repair_building'] },
+                buildingId: { type: 'string' }
+              },
+              required: ['actionId', 'type', 'buildingId'],
+              additionalProperties: false
             }
           ]
         }
@@ -716,6 +801,13 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
         }
       }
     })
+
+    if (result.rejected.length > 0) {
+      window.logger.warn('[LLM] Rejected actions:', JSON.stringify(result.rejected))
+    }
+    if (result.accepted.length > 0) {
+      window.logger.info('[LLM] Accepted actions:', result.accepted.map(a => `${a.type}:${a.actionId}`).join(', '))
+    }
 
     const acceptedCommands = result.accepted.filter(action => action.type === 'unit_command')
     acceptedCommands.forEach(action => {
@@ -779,6 +871,11 @@ async function runCommentaryTick(state, settings, _now) {
 
   if (!providerId || !model) {
     showNotification('LLM commentary needs a provider and model selected.')
+    return
+  }
+
+  // Skip call if provider requires an API key and none is configured
+  if (providerId !== 'ollama' && !hasApiKey) {
     return
   }
 
@@ -898,7 +995,8 @@ export function updateLlmStrategicAI(units, factories, _bullets, _mapGrid, state
 
   const tickIntervalMs = Math.max(5, settings.strategic.tickSeconds || 30) * 1000
 
-  if (settings.strategic.enabled && !strategicState.pending && now - strategicState.lastTickAt >= tickIntervalMs) {
+  if (settings.strategic.enabled && !strategicState.pending &&
+      (strategicState.lastTickAt === 0 || now - strategicState.lastTickAt >= tickIntervalMs)) {
     strategicState.pending = true
     strategicState.lastTickAt = now
     strategicState.lastTickFrame = state.frameCount || 0

@@ -17,6 +17,7 @@ import { logPerformance } from '../performanceUtils.js'
 import { RECOVERY_TANK_RATIO, UNIT_COSTS } from '../config.js'
 import { gameState } from '../gameState.js'
 import { getLlmSettings } from './llmSettings.js'
+import { processLlmBuildQueue, processLlmUnitQueue, markLlmBuildComplete, markLlmUnitComplete } from '../ai-api/applier.js'
 
 const AI_SELL_PRIORITY = [
   'turretGunV1',
@@ -308,6 +309,14 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
   )
   const llmStrategicActive = getLlmSettings().strategic.enabled
   const allowStrategicDecisions = !llmStrategicActive
+
+  // Process LLM building & unit queues when LLM strategic AI is active.
+  // This uses the same timer-based construction system as the local AI,
+  // ensuring buildings/units are produced one at a time (fair to the player).
+  if (llmStrategicActive && aiFactory) {
+    processLlmBuildQueue(gameState, aiPlayerId, aiFactory, factories, mapGrid, units, gameState.buildings, now)
+    processLlmUnitQueue(gameState, aiPlayerId, aiFactory, factories, units, gameState.buildings, now)
+  }
 
   // Ensure AI can recover from economic collapse by selling buildings if needed
   // This must run BEFORE the budget check so it can execute when budget is low/zero
@@ -667,6 +676,11 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     // Clear construction state
     aiFactory.currentlyBuilding = null
     aiFactory.buildingPosition = null
+
+    // Mark the LLM queue item as completed when LLM is driving builds
+    if (llmStrategicActive) {
+      markLlmBuildComplete(gameState, aiPlayerId)
+    }
   }
 
   // Complete unit production when timer finishes
@@ -711,6 +725,11 @@ function _updateAIPlayer(aiPlayerId, units, factories, bullets, mapGrid, gameSta
     aiFactory.unitBuildStartTime = null
     aiFactory.unitBuildDuration = null
     aiFactory.unitSpawnBuilding = null
+
+    // Mark the LLM queue item as completed when LLM is driving production
+    if (llmStrategicActive) {
+      markLlmUnitComplete(gameState, aiPlayerId)
+    }
   }
 
   // --- AI Unit Production ---

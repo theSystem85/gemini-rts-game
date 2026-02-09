@@ -198,6 +198,9 @@ export class SelectionManager {
       selectedUnits.push(selectedFactory)
       // No sound for building selection
     }
+
+    // Update LLM tooltip if enemy factory selected
+    updateLlmQueueTooltipForSelection()
   }
 
   handleBuildingSelection(selectedBuilding, e, units, selectedUnits) {

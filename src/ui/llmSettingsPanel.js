@@ -62,7 +62,21 @@ function attachVoiceOptions(select, settings) {
   setSelectValue(select, settings.commentary.voiceName)
 }
 
-async function refreshProviderModels(providerId, settings) {
+// Providers that require an API key to fetch models
+const PROVIDERS_REQUIRING_KEY = new Set(['openai', 'anthropic', 'xai'])
+
+async function refreshProviderModels(providerId, settings, { silent = false } = {}) {
+  // Skip providers that require an API key when none is set
+  if (PROVIDERS_REQUIRING_KEY.has(providerId)) {
+    const apiKey = settings.providers?.[providerId]?.apiKey || ''
+    if (!apiKey.trim()) {
+      // Clear model list silently
+      const select = document.getElementById(`llmModel-${providerId}`)
+      if (select) setSelectOptions(select, [], 'Enter API key first')
+      return
+    }
+  }
+
   try {
     const costs = await fetchCostMap()
     const models = await fetchModelList(providerId)
@@ -71,7 +85,10 @@ async function refreshProviderModels(providerId, settings) {
     setSelectValue(document.getElementById(`llmModel-${providerId}`), current)
   } catch (err) {
     window.logger.warn('[LLM] Failed to refresh models:', err)
-    showNotification(`Failed to refresh ${providerId} models.`)
+    // Only show notification to user when explicitly requested (not during auto-init)
+    if (!silent) {
+      showNotification(`Failed to refresh ${providerId} models.`)
+    }
   }
 }
 
@@ -114,7 +131,7 @@ function bindProviderInputs(providerId, settings) {
     })
   }
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => refreshProviderModels(providerId, getLlmSettings()))
+    refreshBtn.addEventListener('click', () => refreshProviderModels(providerId, getLlmSettings(), { silent: false }))
   }
 }
 
@@ -242,6 +259,6 @@ export function initLlmSettingsPanel() {
   })
 
   PROVIDERS.forEach(provider => {
-    refreshProviderModels(provider.id, settings)
+    refreshProviderModels(provider.id, settings, { silent: true })
   })
 }

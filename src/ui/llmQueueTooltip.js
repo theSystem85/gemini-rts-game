@@ -2,6 +2,7 @@ import { gameState } from '../gameState.js'
 import { TILE_SIZE } from '../config.js'
 import { getLlmSettings } from '../ai/llmSettings.js'
 import { buildingData } from '../buildings.js'
+import { getLlmQueueState } from '../ai-api/applier.js'
 
 let tooltipOpen = false
 let listenersAttached = false
@@ -107,7 +108,31 @@ function getSidebarImageForBuilding(buildingType) {
   return buildingSidebarImages[buildingType] || 'images/sidebar/construction_yard.png'
 }
 
-function getQueueItems(actions = []) {
+function getQueueItems(actions = [], queueState = null) {
+  // If we have real queue tracking state, use it (shows live status)
+  if (queueState) {
+    const items = []
+    for (const b of queueState.buildings) {
+      items.push({
+        kind: 'building',
+        label: getBuildingLabel(b.buildingType),
+        image: getSidebarImageForBuilding(b.buildingType),
+        count: 1,
+        status: b.status || 'queued'
+      })
+    }
+    for (const u of queueState.units) {
+      items.push({
+        kind: 'unit',
+        label: getUnitLabel(u.unitType),
+        image: getSidebarImageForUnit(u.unitType),
+        count: 1,
+        status: u.status || 'queued'
+      })
+    }
+    return items
+  }
+  // Fallback: parse from raw LLM plan actions
   return actions
     .filter(action => action.type === 'build_queue' || action.type === 'build_place')
     .map(action => {
@@ -116,16 +141,59 @@ function getQueueItems(actions = []) {
           kind: 'unit',
           label: getUnitLabel(action.unitType),
           image: getSidebarImageForUnit(action.unitType),
-          count: Math.max(1, Math.floor(action.count || 1))
+          count: Math.max(1, Math.floor(action.count || 1)),
+          status: 'queued'
         }
       }
       return {
         kind: 'building',
         label: getBuildingLabel(action.buildingType),
         image: getSidebarImageForBuilding(action.buildingType),
-        count: 1
+        count: 1,
+        status: 'queued'
       }
     })
+}
+
+function getCommandItems(actions = []) {
+  return actions
+    .filter(action => action.type === 'unit_command' || action.type === 'sell_building' || action.type === 'repair_building')
+    .map(action => {
+      if (action.type === 'unit_command') {
+        const count = (action.unitIds || []).length
+        return {
+          kind: 'command',
+          label: `${(action.command || 'move').toUpperCase()} (${count} unit${count !== 1 ? 's' : ''})`,
+          icon: action.command === 'attack' ? '⚔️' : action.command === 'guard' ? '🛡️' : '➡️'
+        }
+      }
+      if (action.type === 'sell_building') {
+        return { kind: 'sell', label: 'Sell building', icon: '💰' }
+      }
+      if (action.type === 'repair_building') {
+        return { kind: 'repair', label: 'Repair building', icon: '🔧' }
+      }
+      return null
+    })
+    .filter(Boolean)
+}
+
+function getStatusIcon(status) {
+  switch (status) {
+    case 'completed': return '✓'
+    case 'building': return '⏳'
+    case 'failed': return '✗'
+    default: return ''
+  }
+}
+
+function getStatusLabel(status) {
+  switch (status) {
+    case 'completed': return 'Done'
+    case 'building': return 'In progress'
+    case 'failed': return 'Failed'
+    default: return 'Queued'
+  }
 }
 
 function renderQueueContent(playerId) {
@@ -135,33 +203,85 @@ function renderQueueContent(playerId) {
 
   const plan = gameState.llmStrategic?.plansByPlayer?.[playerId]
   const actions = plan?.actions || []
-  const queueItems = getQueueItems(actions)
+  const notes = plan?.notes || ''
+  const queueState = getLlmQueueState(gameState, playerId)
+  const hasQueueItems = (queueState.buildings.length > 0 || queueState.units.length > 0)
+  const queueItems = getQueueItems(actions, hasQueueItems ? queueState : null)
+  const commandItems = getCommandItems(actions)
 
-  if (!queueItems.length) {
-    content.innerHTML = '<div class="money-tooltip__empty">No queued production from the LLM yet.</div>'
+  // Show latest/newest items on top so the player sees what's coming next
+  queueItems.reverse()
+
+  if (!queueItems.length && !commandItems.length && !notes) {
+    content.innerHTML = '<div class="money-tooltip__empty">No strategic plan from the LLM yet.</div>'
     return
   }
 
-  const rows = queueItems.map((item, index) => {
-    return `
-      <div class="money-tooltip__item llm-queue-tooltip__row" data-kind="${item.kind}">
-        <span class="llm-queue-tooltip__index">#${index + 1}</span>
-        <img class="llm-queue-tooltip__icon" src="${item.image}" alt="${item.label}" loading="lazy" />
-        <div class="llm-queue-tooltip__details">
-          <span class="llm-queue-tooltip__title">${item.label}</span>
-          <span class="llm-queue-tooltip__meta">${item.kind === 'unit' ? 'Unit' : 'Building'}</span>
-        </div>
-        <span class="money-tooltip__item-value">x${item.count}</span>
+  let html = ''
+
+  // Notes / intent section
+  if (notes) {
+    const escapedNotes = notes.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    html += `
+      <div class="money-tooltip__section">
+        <div class="money-tooltip__section-header">🧠 Strategic Intent</div>
+        <div class="llm-queue-tooltip__notes">${escapedNotes}</div>
       </div>
     `
-  }).join('')
+  }
 
-  content.innerHTML = `
-    <div class="money-tooltip__section">
-      <div class="money-tooltip__section-header">Production Plan</div>
-      <div class="money-tooltip__list llm-queue-tooltip__list">${rows}</div>
-    </div>
-  `
+  // Production plan section
+  if (queueItems.length) {
+    const rows = queueItems.map((item, index) => {
+      const statusIcon = getStatusIcon(item.status)
+      const statusLabel = getStatusLabel(item.status)
+      const statusClass = item.status === 'completed' ? ' llm-queue-tooltip__row--completed'
+        : item.status === 'building' ? ' llm-queue-tooltip__row--building'
+          : item.status === 'failed' ? ' llm-queue-tooltip__row--failed' : ''
+      return `
+        <div class="money-tooltip__item llm-queue-tooltip__row${statusClass}" data-kind="${item.kind}" data-status="${item.status}">
+          <span class="llm-queue-tooltip__index">${statusIcon || `#${index + 1}`}</span>
+          <img class="llm-queue-tooltip__icon" src="${item.image}" alt="${item.label}" loading="lazy" />
+          <div class="llm-queue-tooltip__details">
+            <span class="llm-queue-tooltip__title">${item.label}</span>
+            <span class="llm-queue-tooltip__meta">${item.kind === 'unit' ? 'Unit' : 'Building'} — ${statusLabel}</span>
+          </div>
+          <span class="money-tooltip__item-value">x${item.count}</span>
+        </div>
+      `
+    }).join('')
+
+    html += `
+      <div class="money-tooltip__section">
+        <div class="money-tooltip__section-header">🏭 Production Plan</div>
+        <div class="money-tooltip__list llm-queue-tooltip__list">${rows}</div>
+      </div>
+    `
+  }
+
+  // Commands section (unit_command, sell, repair)
+  if (commandItems.length) {
+    const cmdRows = commandItems.map((item, index) => {
+      return `
+        <div class="money-tooltip__item llm-queue-tooltip__row" data-kind="${item.kind}">
+          <span class="llm-queue-tooltip__index">#${index + 1}</span>
+          <span class="llm-queue-tooltip__cmd-icon">${item.icon}</span>
+          <div class="llm-queue-tooltip__details">
+            <span class="llm-queue-tooltip__title">${item.label}</span>
+          </div>
+        </div>
+      `
+    }).join('')
+
+    html += `
+      <div class="money-tooltip__section">
+        <div class="money-tooltip__section-header">⚡ Commands</div>
+        <div class="money-tooltip__list llm-queue-tooltip__list">${cmdRows}</div>
+      </div>
+    `
+  }
+
+  content.innerHTML = html
 }
 
 function positionTooltipBelowBuilding(building) {
@@ -206,6 +326,25 @@ function attachListeners() {
     if (!tooltipOpen) return
     const tooltip = document.getElementById('llmQueueTooltip')
     if (tooltip && tooltip.contains(event.target)) return
+
+    // Don't hide if an enemy building is selected (keep tooltip open for selection)
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const isEnemy = (owner) => owner !== humanPlayer && !(humanPlayer === 'player1' && owner === 'player')
+    const allBuildings = [
+      ...(gameState.buildings || []),
+      ...(gameState.factories || [])
+    ]
+    const selectedBuilding = allBuildings.find(building => {
+      if (!building) return false
+      if (!isEnemy(building.owner)) return false
+      return building.selected === true
+    })
+
+    // If a hostile building is selected, don't hide the tooltip
+    if (selectedBuilding) {
+      return
+    }
+
     hideLlmQueueTooltip()
   })
 
@@ -218,7 +357,7 @@ function attachListeners() {
 export function showLlmQueueTooltip(building) {
   const settings = getLlmSettings()
   if (!settings.strategic.enabled) return
-  if (!building || building.type !== 'constructionYard') return
+  if (!building) return
   const humanPlayer = gameState.humanPlayer || 'player1'
   if (building.owner === humanPlayer || (humanPlayer === 'player1' && building.owner === 'player')) return
 
@@ -252,7 +391,7 @@ export function updateLlmQueueTooltipForSelection() {
   ]
 
   const selectedBuilding = allBuildings.find(building => {
-    if (!building || building.type !== 'constructionYard') return false
+    if (!building) return false
     if (!isEnemy(building.owner)) return false
     return building.selected === true
   })

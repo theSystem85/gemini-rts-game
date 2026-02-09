@@ -10,6 +10,7 @@ import { showHostNotification } from '../network/hostNotifications.js'
 import { gameState } from '../gameState.js'
 import { observeMultiplayerSession } from '../network/multiplayerSessionEvents.js'
 import { createQRCodeCanvas } from './qrCode.js'
+import { getLlmSettings } from '../ai/llmSettings.js'
 
 const PARTY_LIST_ID = 'multiplayerPartyList'
 const PLAYER_ALIAS_STORAGE_KEY = 'rts-player-alias'
@@ -566,6 +567,13 @@ function createPartyRow(partyState) {
     updateStatusText(status, partyState)
     controls.appendChild(status)
 
+    // Show LLM toggle for AI parties (not the host)
+    const isAiParty = partyState.aiActive !== false && partyState.partyId !== gameState.humanPlayer
+    if (isAiParty) {
+      const llmToggle = createLlmToggleButton(partyState)
+      controls.appendChild(llmToggle)
+    }
+
     const inviteButton = document.createElement('button')
     inviteButton.type = 'button'
     inviteButton.className = 'multiplayer-invite-button'
@@ -577,6 +585,60 @@ function createPartyRow(partyState) {
 
   row.append(info, controls)
   return row
+}
+
+/**
+ * Determine if a party is effectively LLM-controlled
+ * @param {Object} partyState - The party state object
+ * @returns {boolean}
+ */
+function isPartyLlmControlled(partyState) {
+  const settings = getLlmSettings()
+  if (!settings.strategic.enabled) return false
+  return partyState.llmControlled !== false
+}
+
+/**
+ * Create an LLM/Local AI toggle button for an AI party
+ * @param {Object} partyState - The party state object
+ * @returns {HTMLElement}
+ */
+function createLlmToggleButton(partyState) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'multiplayer-llm-toggle'
+
+  const llmActive = isPartyLlmControlled(partyState)
+  updateLlmToggleAppearance(button, llmActive)
+
+  button.addEventListener('click', () => {
+    const currentlyLlm = isPartyLlmControlled(partyState)
+    // Toggle: if currently LLM, switch to local AI; if local AI, switch to LLM
+    const ps = gameState.partyStates?.find(p => p.partyId === partyState.partyId)
+    if (ps) {
+      ps.llmControlled = !currentlyLlm
+    }
+    updateLlmToggleAppearance(button, !currentlyLlm)
+  })
+
+  return button
+}
+
+/**
+ * Update the visual appearance of an LLM toggle button
+ * @param {HTMLElement} button
+ * @param {boolean} isLlm - Whether the party is LLM controlled
+ */
+function updateLlmToggleAppearance(button, isLlm) {
+  if (isLlm) {
+    button.textContent = '🤖 LLM'
+    button.classList.add('multiplayer-llm-toggle--active')
+    button.title = 'Controlled by LLM AI – click to switch to local AI'
+  } else {
+    button.textContent = '⚙️ Local'
+    button.classList.remove('multiplayer-llm-toggle--active')
+    button.title = 'Controlled by local AI – click to switch to LLM AI'
+  }
 }
 
 function getPartyDisplayName(partyId, color) {
@@ -595,7 +657,7 @@ function formatStatusText(statusKey, partyState) {
       if (partyState.inviteToken) {
         return 'Invite ready'
       }
-      return partyState.aiActive ? 'AI control' : 'Available'
+      return partyState.aiActive ? '' : 'Available'
     }
   }
 }

@@ -4,6 +4,7 @@ import { productionQueue } from '../productionQueue.js'
 import { units as mainUnits, factories as mainFactories, mapGrid as mainMapGrid } from '../main.js'
 import { collectTransitionsSince, pruneTransitionsUpTo } from './transitionCollector.js'
 import { getSupportedProtocolVersion } from './validate.js'
+import { getLlmQueueState } from './applier.js'
 
 function toWorldPosition(x, y) {
   return { x, y, space: 'world' }
@@ -114,6 +115,10 @@ export function exportGameTickInput(state = gameState, sinceTick = 0, options = 
 
   const buildQueues = productionQueue.getSerializableState()
 
+  // Include LLM production queue state so the LLM knows what's already
+  // queued, in-progress, or completed — preventing duplicate commands.
+  const llmQueue = getLlmQueueState(state, playerId)
+
   const transitions = collectTransitionsSince(sinceTick)
   if (options.pruneTransitions !== false) {
     pruneTransitionsUpTo(sinceTick)
@@ -146,6 +151,7 @@ export function exportGameTickInput(state = gameState, sinceTick = 0, options = 
       units: snapshotUnits,
       buildings: snapshotBuildings,
       buildQueues,
+      llmQueue,
       map: collectMapSnapshot(mapGrid, verbosity)
     },
     transitions,

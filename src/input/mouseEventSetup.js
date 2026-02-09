@@ -111,7 +111,19 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
   }, { passive: true })
 
   gameCanvas.addEventListener('mouseleave', () => {
-    hideLlmQueueTooltip()
+    // Only hide the LLM queue tooltip if no enemy building is currently selected.
+    // Without this guard the tooltip disappears as soon as the pointer enters the
+    // tooltip overlay (which is a sibling of the canvas, triggering mouseleave).
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const isEnemy = (owner) => owner !== humanPlayer && !(humanPlayer === 'player1' && owner === 'player')
+    const allBuildings = [
+      ...(gameState.buildings || []),
+      ...(gameState.factories || [])
+    ]
+    const enemyBuildingSelected = allBuildings.some(b => b && isEnemy(b.owner) && b.selected)
+    if (!enemyBuildingSelected) {
+      hideLlmQueueTooltip()
+    }
   })
 
   document.addEventListener('mouseup', (e) => {

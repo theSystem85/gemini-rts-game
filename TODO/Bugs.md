@@ -1,5 +1,11 @@
 ## Bugs
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
+- [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.
+- [x] LLM command queue bypasses game engine unlock mechanics; buildings that require prerequisites can be queued before prerequisites are built.
+- [x] LLM AI builds multiple buildings simultaneously (instant placement) which is unfair to the player who must build sequentially.
+- [x] LLM production queue items disappear when construction starts — no completion tracking, causing the LLM to re-send duplicate build commands and waste money (e.g., building refinery and power plant twice).
+- [x] LLM strategic AI first tick fires only after the tick interval elapses (~30s), wasting early game time instead of issuing commands immediately.
+- [x] LLM queue tooltip shows raw plan actions without status — no way to see which items are completed, in-progress, or failed.
 - [ ] Prevent iOS long-press text selection from appearing on production build buttons so tooltips stay visible.
 - [x] Fix building system unit tests failing due to missing `hasLineOfSightToTarget` mock export.
 - [ ] Defense turrets should not fire through buildings; block shots when line of sight is obstructed for player and AI turrets.
@@ -89,6 +95,11 @@
 - [x] ✅ Fixed player units becoming uncontrollable and moving in one direction until hitting obstacles after issuing move commands. The previous fix for path recalculation prevention was too aggressive - it skipped ALL stuck detection for player units with active paths, preventing recovery when units genuinely got stuck. Now stuck handling is only skipped for 2 seconds after a path is calculated, allowing stuck recovery to work after that grace period. Also added proper isDodging state cleanup when new move commands are issued.
 
 ## Bug Fixes (2026-02-01)
+- [x] ✅ Fixed LLM AI not building: build_place actions were silently rejected by the proximity check (isNearExistingBuilding requires 3-tile Chebyshev distance). Added placement rule to bootstrap prompt and logging for rejected/accepted actions.
+- [x] ✅ Fixed LLM strategic tooltip not showing when selecting enemy Construction Yard: handleFactorySelection() did not call updateLlmQueueTooltipForSelection(). Since CY is a factory, selecting it triggered the factory handler which lacked the tooltip update.
+- [x] ✅ Fixed LLM queue tooltip disappearing on mouse move: canvas `mouseleave` event was unconditionally hiding the tooltip when the pointer entered the tooltip overlay (a sibling element). Now only hides when no enemy building is selected.
+- [x] ✅ Fixed LLM queue tooltip showing oldest items first: reversed the production plan list so latest/newest strategic decisions appear at the top.
+- [x] ✅ Fixed enemy AI units aiming but never firing: `allowedToAttack` was never set on spawned combat units (`undefined` fails `=== true` check), and `applyEnemyStrategies` was resetting it to `false` every tick when `unit.target` was null. Now combat units spawn with `allowedToAttack = true` and the strategy only overrides the flag when a valid target exists.
 - [x] ✅ Fixed online multiplayer game state not syncing from host to client. The `hasActiveRemoteSession()` function in `stateSync.js` was calling `getActiveHostMonitor()` without a partyId argument, causing it to always return `false` for the host. Initial fix used non-existent `monitor.getConnectedPeerCount()` method; corrected to use `monitor.activeSession` check instead. This prevented all game state snapshots (including initial map sync) from being sent to clients.
 - [x] ✅ Fixed tanks (and other units) slowing down significantly when approaching each other. The bug was caused by two compounding velocity reduction mechanisms in `movementCollision.js`: proactive avoidance forces (FORCE_FIELD_RADIUS: 36px) and reactive velocity damping (MIN_UNIT_DISTANCE: 24px with up to 70% velocity reduction per frame). Removed the aggressive multiplicative damping in `checkUnitCollision()` since the separation forces are sufficient to push units apart.
 - [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
