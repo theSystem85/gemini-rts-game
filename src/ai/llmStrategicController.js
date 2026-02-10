@@ -935,7 +935,17 @@ async function runCommentaryTick(state, settings, _now) {
       commentaryState.recentComments = commentaryState.recentComments.slice(-10)
     }
 
-    showNotification(rawComment, 5000)
+    const aiPlayers = getAiPlayers(state)
+    const commentaryPartyId = aiPlayers[0] || null
+    const commentaryPartyState = Array.isArray(state.partyStates)
+      ? state.partyStates.find(p => p.partyId === commentaryPartyId)
+      : null
+
+    showNotification(rawComment, 5000, {
+      llmPartyIndicator: true,
+      partyId: commentaryPartyId,
+      partyColor: commentaryPartyState?.color
+    })
     if (settings.commentary.ttsEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(rawComment)
       const voices = window.speechSynthesis.getVoices()

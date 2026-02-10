@@ -159,3 +159,8 @@ Introduce configurable LLM support for enemy strategic planning and optional ene
 - Providers that require an API key (OpenAI, Anthropic, xAI) will not attempt model fetches or LLM calls when no key is configured.
 - Ollama runs locally and does not require an API key; the API key input is not shown in the settings UI.
 - Model list refresh during settings panel initialization is silent (no error notifications); explicit refresh button clicks show error notifications normally.
+
+## Commentary Notification Party Indicator
+- LLM commentary notifications render a circular 🤖 bubble on the left side of the toast.
+- The bubble color matches the controlling LLM party color (`partyState.color` with `PARTY_COLORS` fallback).
+- This makes it clear which party is speaking when LLM commentary appears.
