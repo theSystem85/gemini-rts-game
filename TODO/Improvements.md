@@ -360,3 +360,5 @@
 - [x] For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
 - [x] For harvesters to be build it is required to have a refinery and a vehicle factory.
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
+
+- [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use.

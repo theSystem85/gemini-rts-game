@@ -274,47 +274,6 @@ function calculatePositionalAudio(x, y) {
   return { pan, volumeFactor }
 }
 
-// Preload all sound files to ensure they're cached
-async function preloadAllSounds() {
-  const allSoundFiles = new Set()
-
-  // Collect all unique sound files from soundFiles object
-  Object.values(soundFiles).forEach(fileArray => {
-    fileArray.forEach(filename => {
-      if (filename) { // Skip empty entries
-        allSoundFiles.add('sound/' + filename)
-      }
-    })
-  })
-
-  // DON'T preload background music files - they will be loaded on demand
-  // backgroundMusicFiles.forEach(filename => {
-  //   allSoundFiles.add('sound/music/' + filename)
-  // })
-
-  window.logger(`Preloading ${allSoundFiles.size} unique sound files into audio buffer cache...`)
-  window.logger(`Background music (${backgroundMusicFiles.length} files) will be loaded on demand`)
-
-  const loadPromises = []
-
-  allSoundFiles.forEach(soundPath => {
-    // Use Web Audio API buffer cache for sound effects only
-    loadPromises.push(
-      getCachedAudioBuffer(soundPath).catch(e => {
-        window.logger.warn(`Failed to preload sound buffer: ${soundPath}`, e)
-      })
-    )
-  })
-
-  // Wait for all sound effects to preload
-  try {
-    await Promise.allSettled(loadPromises)
-    window.logger(`Sound effects preloaded into buffer cache! ${audioBufferCache.size} buffers cached.`)
-  } catch (error) {
-    console.error('Error during sound preloading:', error)
-  }
-}
-
 // Queue for narrated (stackable) sounds
 const narratedSoundQueue = []
 let isNarratedPlaying = false
@@ -611,9 +570,10 @@ export function getMasterVolume() {
   return masterVolume
 }
 
-// Preload all sound files during game initialization
+// Keep API compatibility while enforcing lazy-loading behavior.
+// All sounds are fetched only when first played.
 export async function preloadSounds() {
-  await preloadAllSounds()
+  window.logger('Skipping sound preloading; all audio assets load on demand')
 }
 
 // Get cache status for debugging

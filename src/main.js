@@ -19,7 +19,6 @@ import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import { initNotificationHistory } from './ui/notificationHistory.js'
 import { selectedUnits } from './inputHandler.js'
 import {
-  preloadSounds,
   resumeAllSounds,
   testNarratedSounds,
   playSound,
@@ -131,11 +130,6 @@ window.debugPlaySound = playSound
 window.getSoundCacheStatus = getSoundCacheStatus
 window.clearSoundCache = clearSoundCache
 
-preloadSounds().then(() => {
-  window.logger('Sound preloading completed')
-}).catch(e => {
-  console.error('Sound preloading failed:', e)
-})
 
 export {
   mapGrid,
