@@ -2,6 +2,7 @@ import { TILE_SIZE } from '../config.js'
 import { gameState } from '../gameState.js'
 import { handlePointerDown as handleMapEditPointerDown, handlePointerMove as handleMapEditPointerMove, handlePointerUp as handleMapEditPointerUp } from '../mapEditor.js'
 import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
+import { hideLlmQueueTooltip } from '../ui/llmQueueTooltip.js'
 import { keybindingManager, KEYBINDING_CONTEXTS } from './keybindings.js'
 
 export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
@@ -108,6 +109,22 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
     notifyMapEditorWheel(e.deltaY)
     if (handler.requestRenderFrame) handler.requestRenderFrame()
   }, { passive: true })
+
+  gameCanvas.addEventListener('mouseleave', () => {
+    // Only hide the LLM queue tooltip if no enemy building is currently selected.
+    // Without this guard the tooltip disappears as soon as the pointer enters the
+    // tooltip overlay (which is a sibling of the canvas, triggering mouseleave).
+    const humanPlayer = gameState.humanPlayer || 'player1'
+    const isEnemy = (owner) => owner !== humanPlayer && !(humanPlayer === 'player1' && owner === 'player')
+    const allBuildings = [
+      ...(gameState.buildings || []),
+      ...(gameState.factories || [])
+    ]
+    const enemyBuildingSelected = allBuildings.some(b => b && isEnemy(b.owner) && b.selected)
+    if (!enemyBuildingSelected) {
+      hideLlmQueueTooltip()
+    }
+  })
 
   document.addEventListener('mouseup', (e) => {
     if (e.button === 2 && gameState.isRightDragging) {

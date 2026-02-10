@@ -93,6 +93,28 @@
   cursor: pointer;
 }
 
+.perf-llm-summary {
+  margin-bottom: 8px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.perf-llm-summary__title {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #84d6ff;
+}
+
+.perf-llm-summary__row {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
 /* Map Settings Menu */
 #mapSettingsMenu {
   background-color: #333;
@@ -166,10 +188,10 @@ body.config-modal-open {
 }
 
 .config-modal__body {
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   flex: 1;
   overflow-y: auto;
 }
@@ -217,7 +239,7 @@ body.config-modal-open {
 .config-modal__content {
   display: none;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -399,6 +421,7 @@ body.config-modal-open {
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .config-modal__field--toggle {
@@ -423,7 +446,8 @@ body.config-modal-open {
 }
 
 .config-modal__field select,
-.config-modal__field input {
+.config-modal__field input,
+.config-modal__field textarea {
   background: #11161e;
   border: 1px solid #2d3640;
   border-radius: 4px;
@@ -435,7 +459,8 @@ body.config-modal-open {
 }
 
 .config-modal__field select:focus,
-.config-modal__field input:focus {
+.config-modal__field input:focus,
+.config-modal__field textarea:focus {
   border-color: #4da3ff;
   box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.2);
 }
@@ -449,6 +474,30 @@ body.config-modal-open {
   font-size: 13px;
   color: #ffcc66;
   min-height: 18px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 204, 102, 0.06);
+  border-radius: 6px;
+  border-left: 3px solid rgba(255, 204, 102, 0.3);
+  line-height: 1.5;
+}
+
+.config-modal__subsection {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.config-modal__subsection .config-modal__section-title {
+  font-size: 13px;
+  margin: 0 0 12px;
+  color: #9fb3c8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .config-modal__message {
@@ -469,7 +518,7 @@ body.config-modal-open {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .config-modal__button {
@@ -523,15 +572,17 @@ body.config-modal-open {
 }
 
 .config-modal__section {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .config-modal__section-title {
   font-size: 14px;
   font-weight: 600;
-  margin: 0 0 10px;
+  margin: 0 0 14px;
+  color: #cfd8e3;
+  letter-spacing: 0.3px;
 }
 
 .config-modal__field select option:disabled {

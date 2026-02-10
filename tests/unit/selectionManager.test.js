@@ -6,17 +6,24 @@ const configValues = vi.hoisted(() => ({
   ENABLE_ENEMY_CONTROL: false
 }))
 
-vi.mock('../../src/config.js', () => ({
-  get TILE_SIZE() {
-    return configValues.TILE_SIZE
-  },
-  get ENABLE_ENEMY_SELECTION() {
-    return configValues.ENABLE_ENEMY_SELECTION
-  },
-  get ENABLE_ENEMY_CONTROL() {
-    return configValues.ENABLE_ENEMY_CONTROL
+vi.mock('../../src/config.js', async(importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    get TILE_SIZE() {
+      return configValues.TILE_SIZE
+    },
+    get ENABLE_ENEMY_SELECTION() {
+      return configValues.ENABLE_ENEMY_SELECTION
+    },
+    get ENABLE_ENEMY_CONTROL() {
+      return configValues.ENABLE_ENEMY_CONTROL
+    },
+    HELIPAD_FUEL_CAPACITY: 15600,
+    HELIPAD_RELOAD_TIME: 8000,
+    HELIPAD_AMMO_RESERVE: 250
   }
-}))
+})
 
 vi.mock('../../src/gameState.js', () => ({
   gameState: {
@@ -25,7 +32,28 @@ vi.mock('../../src/gameState.js', () => ({
     buildings: [],
     factories: [],
     attackGroupTargets: [],
-    selectedWreckId: null
+    selectedWreckId: null,
+    remoteControl: {
+      forward: 0,
+      backward: 0,
+      turnLeft: 0,
+      turnRight: 0,
+      turretLeft: 0,
+      turretRight: 0,
+      fire: 0,
+      ascend: 0,
+      descend: 0,
+      strafeLeft: 0,
+      strafeRight: 0
+    },
+    remoteControlSources: {},
+    remoteControlAbsolute: {
+      wagonDirection: null,
+      wagonSpeed: 0,
+      turretDirection: null,
+      turretTurnFactor: 0
+    },
+    remoteControlAbsoluteSources: {}
   }
 }))
 
@@ -40,6 +68,23 @@ vi.mock('../../src/ui/notifications.js', () => ({
 vi.mock('../../src/utils/layoutMetrics.js', () => ({
   getPlayableViewportWidth: vi.fn(() => 100),
   getPlayableViewportHeight: vi.fn(() => 100)
+}))
+
+vi.mock('../../src/buildings.js', () => ({
+  buildingData: {
+    constructionYard: { cost: 3000, width: 3, height: 3 },
+    powerPlant: { cost: 500, width: 2, height: 2 }
+  },
+  createBuilding: vi.fn(),
+  canPlaceBuilding: vi.fn(),
+  placeBuilding: vi.fn(),
+  updatePowerSupply: vi.fn()
+}))
+
+vi.mock('../../src/main.js', () => ({
+  units: [],
+  factories: [],
+  mapGrid: []
 }))
 
 import { SelectionManager, getUnitSelectionCenter } from '../../src/input/selectionManager.js'

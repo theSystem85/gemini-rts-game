@@ -174,7 +174,7 @@ function placePlayerBuildings(playerId, factory) {
     building.constructionStartTime = performance.now() - 10000
     building.isBenchmarkStructure = true
 
-    placeBuilding(building, mapGrid, gameState.occupancyMap)
+    placeBuilding(building, mapGrid, gameState.occupancyMap, { recordTransition: false })
     gameState.buildings.push(building)
   })
 }

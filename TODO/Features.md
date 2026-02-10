@@ -1,4 +1,29 @@
 ## Features
+- [x] Add the LLM Control API module with versioned protocol types/schema/validators, export/apply adapters, transition collection hooks, examples, and tests.
+- [ ] Add LLM strategic AI settings + provider model pickers, commentary toggle/TTS, cost tracking, and in-game usage overlays.
+  - [x] ✅ Add quota exceeded error handling that stops LLM polling, shows user-friendly error messages, and falls back to local AI only.
+  - [x] ✅ Add authentication (401) and API parameter (400) error handling with appropriate user notifications.
+  - [x] ✅ Only show error messages when API key is configured (silent logging otherwise).
+  - [x] ✅ Use `max_completion_tokens` parameter for OpenAI API compatibility with newer models.
+  - [x] ✅ Handle unsupported parameter values (e.g., temperature constraints) across all providers.
+  - [x] Add a bootstrapped strategic system prompt with game overview + JSON schema details; follow-up ticks should only send compact state/transitions.
+  - [x] Include full unit/building stat catalogs (cost, HP, speed, armor, damage, etc.) in the LLM bootstrap prompt so the AI knows all game capabilities.
+  - [x] Filter LLM input by fog-of-war so the AI only sees enemy units/buildings visible to its own forces.
+  - [x] Include owner/party information on every unit and building in the LLM game state updates.
+  - [x] Allow LLM-locked units to retaliate against attackers and auto-target enemies in range while still following strategic orders.
+  - [x] Skip LLM commentary on boring ticks (no combat/production events) and prevent commentary repetition by tracking recent messages.
+  - [x] Add notification history panel with bell icon badge in top-right corner, scrollable reverse-chronological list, unread count, and clear/close actions.
+  - [x] Show enemy strategic backlog on any selected enemy building with LLM strategic intent, production plan, and unit/sell/repair commands.
+  - [x] Ensure LLM is aware of money supply mechanics (harvester + refinery income loop) in bootstrap prompt.
+  - [x] Add sell_building and repair_building actions to LLM schema and applier.
+  - [x] Add base defense avoidance tactical guidance to LLM bootstrap prompt.
+  - [x] Enforce tech tree availability in LLM applier (reject out-of-order builds with TECH_TREE_LOCKED).
+  - [x] Fix LLM-locked enemy units not firing at targets (set allowedToAttack, auto-target buildings).
+  - [x] Skip LLM API calls when no API key is configured for providers that need one.
+  - [x] Remove API key input for Ollama (local provider, no key needed).
+  - [x] Add per-party LLM toggle in multiplayer sidebar to switch between LLM AI and local AI per party.
+  - [x] Add building placement proximity rule to LLM bootstrap prompt (3-tile Chebyshev distance).
+  - [x] Add rejected/accepted action logging for LLM applier debugging.
 - [x] Add a mobile control group panel with assign toggle and long-press assignment for groups 1-9.
 - [ ] Add long-press production tooltips that show unit/building stats, damage totals, and clickable focus rows aligned to the money bar tooltip style.
 - [x] Ensure CI runs lint, unit tests, and integration tests on pull requests.

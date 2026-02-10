@@ -677,6 +677,7 @@ function handleSingleClick(handler, worldX, worldY, e, units, factories, selecte
   if (selectedFactory) {
     selectionManager.handleFactorySelection(selectedFactory, e, units, selectedUnits)
     handler.updateAGFCapability(selectedUnits)
+    e.stopPropagation()
     return
   }
 
@@ -965,6 +966,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
 
     selectionManager.handleBuildingSelection(clickedBuilding, e, units, selectedUnits)
     handler.updateAGFCapability(selectedUnits)
+    e.stopPropagation()
     return
   }
 

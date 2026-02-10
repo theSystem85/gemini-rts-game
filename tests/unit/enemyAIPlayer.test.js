@@ -52,13 +52,41 @@ vi.mock('../../src/game/dangerZoneMap.js', () => ({
   updateDangerZoneMaps: vi.fn()
 }))
 
-vi.mock('../../src/config.js', () => ({
-  RECOVERY_TANK_RATIO: 3,
-  UNIT_COSTS: { harvester: 1500 }
-}))
+vi.mock('../../src/config.js', async(importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    RECOVERY_TANK_RATIO: 3,
+    UNIT_COSTS: { harvester: 1500 },
+    MASTER_VOLUME: 0.25
+  }
+})
 
 vi.mock('../../src/gameState.js', () => ({
-  gameState: { humanPlayer: 'player1' }
+  gameState: {
+    humanPlayer: 'player1',
+    remoteControl: {
+      forward: 0,
+      backward: 0,
+      turnLeft: 0,
+      turnRight: 0,
+      turretLeft: 0,
+      turretRight: 0,
+      fire: 0,
+      ascend: 0,
+      descend: 0,
+      strafeLeft: 0,
+      strafeRight: 0
+    },
+    remoteControlSources: {},
+    remoteControlAbsolute: {
+      wagonDirection: null,
+      wagonSpeed: 0,
+      turretDirection: null,
+      turretTurnFactor: 0
+    },
+    remoteControlAbsoluteSources: {}
+  }
 }))
 
 vi.mock('../../src/utils/gameRandom.js', () => ({

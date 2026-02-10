@@ -215,7 +215,7 @@ function applyBuilding(tileX, tileY) {
     gameState.buildings = []
   }
   gameState.buildings.push(building)
-  placeBuilding(building, grid, gameState.occupancyMap)
+  placeBuilding(building, grid, gameState.occupancyMap, { recordTransition: false })
   updatePowerSupply(gameState.buildings, gameState)
   updateDangerZoneMaps(gameState)
   scheduleOccupancyRefresh()

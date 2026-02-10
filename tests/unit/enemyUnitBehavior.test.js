@@ -250,15 +250,20 @@ describe('enemyUnitBehavior updateAIUnit', () => {
     const unit = createBaseUnit({
       type: 'apache',
       tileX: 1,
-      tileY: 1
+      tileY: 1,
+      x: TILE_SIZE,
+      y: TILE_SIZE
     })
 
     updateAIUnit(unit, [unit, rocketTank], gameState, mapGrid, now, 'ai', [], [])
 
+    // Apache should retreat to safety, using flightPlan instead of pathfinding
     expect(unit.airDefenseRetreating).toBe(true)
     expect(unit.target).toBeNull()
-    expect(getCachedPath).toHaveBeenCalled()
-    expect(unit.moveTarget).toBeTruthy()
+    expect(unit.flightPlan).toBeDefined()
+    expect(unit.flightPlan.mode).toBe('retreat')
+    expect(unit.flightPlan.x).toBeDefined()
+    expect(unit.flightPlan.y).toBeDefined()
   })
 
   it('honors decision intervals before re-evaluating apache targets', () => {

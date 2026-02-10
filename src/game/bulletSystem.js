@@ -24,6 +24,7 @@ import { applyDamageToWreck } from './unitWreckManager.js'
 import { handleAICrewLossEvent } from '../ai/enemyStrategies.js'
 import { gameRandom } from '../utils/gameRandom.js'
 import { recordDamageValue } from '../utils/combatStats.js'
+import { recordDamage } from '../ai-api/transitionCollector.js'
 
 const APACHE_REMOTE_DAMAGE = 10
 const APACHE_TANK_DAMAGE_MULTIPLIER = 1.67
@@ -443,6 +444,18 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
 
               apacheTargetUnit.health -= adjustedDamage
               updateUnitSpeedModifier(apacheTargetUnit)
+              if (gameState.gameStarted && !gameState.mapEditMode) {
+                recordDamage({
+                  attackerId: bullet.shooter?.id,
+                  targetId: apacheTargetUnit.id,
+                  targetKind: 'unit',
+                  amount: adjustedDamage,
+                  weapon: bullet.originType || bullet.projectileType,
+                  position: { x: apacheTargetUnit.x, y: apacheTargetUnit.y, space: 'world' },
+                  tick: gameState.frameCount,
+                  timeSeconds: gameState.gameTime
+                })
+              }
 
               if (bullet.shooter && bullet.shooter.owner !== apacheTargetUnit.owner) {
                 apacheTargetUnit.lastDamageTime = now
@@ -662,6 +675,19 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
                 unit.health -= actualDamage
               }
               recordDamageValue(bullet.shooter, unit, previousHealth - unit.health)
+              const damageAmount = Math.max(0, previousHealth - unit.health)
+              if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+                recordDamage({
+                  attackerId: bullet.shooter?.id,
+                  targetId: unit.id,
+                  targetKind: 'unit',
+                  amount: damageAmount,
+                  weapon: bullet.originType || bullet.projectileType,
+                  position: { x: unit.x, y: unit.y, space: 'world' },
+                  tick: gameState.frameCount,
+                  timeSeconds: gameState.gameTime
+                })
+              }
 
               // window.logger(`💥 Unit hit: ${unit.type} took ${actualDamage} damage, health: ${unit.health}/${unit.maxHealth}`)
 
@@ -827,6 +853,23 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Ensure health doesn't go below 0
               building.health = Math.max(0, building.health)
               recordDamageValue(bullet.shooter, building, previousHealth - building.health)
+              const damageAmount = Math.max(0, previousHealth - building.health)
+              if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+                recordDamage({
+                  attackerId: bullet.shooter?.id,
+                  targetId: building.id,
+                  targetKind: 'building',
+                  amount: damageAmount,
+                  weapon: bullet.originType || bullet.projectileType,
+                  position: {
+                    x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
+                    y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
+                    space: 'world'
+                  },
+                  tick: gameState.frameCount,
+                  timeSeconds: gameState.gameTime
+                })
+              }
 
               // Broadcast building damage to host in multiplayer
               if (building.id) {
@@ -840,6 +883,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Set lastAttackedTime for ANY attack, including self-attacks
               if (bullet.shooter) {
                 building.lastAttackedTime = now
+                building.lastAttacker = bullet.shooter
 
                 // Handle attack notifications for player buildings
                 if (bullet.shooter.owner !== building.owner) {
@@ -914,6 +958,23 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Ensure health doesn't go below 0
               factory.health = Math.max(0, factory.health)
               recordDamageValue(bullet.shooter, factory, previousHealth - factory.health)
+              const damageAmount = Math.max(0, previousHealth - factory.health)
+              if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
+                recordDamage({
+                  attackerId: bullet.shooter?.id,
+                  targetId: factory.id,
+                  targetKind: 'factory',
+                  amount: damageAmount,
+                  weapon: bullet.originType || bullet.projectileType,
+                  position: {
+                    x: factory.x * TILE_SIZE + (factory.width * TILE_SIZE) / 2,
+                    y: factory.y * TILE_SIZE + (factory.height * TILE_SIZE) / 2,
+                    space: 'world'
+                  },
+                  tick: gameState.frameCount,
+                  timeSeconds: gameState.gameTime
+                })
+              }
 
               // Mark factory for repair pause (deferred processing)
               markBuildingForRepairPause(factory)
@@ -922,6 +983,7 @@ export const updateBullets = logPerformance(function updateBullets(bullets, unit
               // Set lastAttackedTime for ANY attack, including self-attacks
               if (bullet.shooter) {
                 factory.lastAttackedTime = now
+                factory.lastAttacker = bullet.shooter
 
                 // Handle attack notifications for player factories
                 if (bullet.shooter.owner !== factory.owner) {

@@ -109,6 +109,7 @@ body.is-touch {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: 0.5em;
 }
 
 .multiplayer-party-status {
@@ -146,6 +147,34 @@ body.is-touch {
 .multiplayer-kick-button {
   border-color: rgba(255, 100, 100, 0.5);
   color: #ff8888;
+}
+
+.multiplayer-llm-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #a8a8a8;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.multiplayer-llm-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.multiplayer-llm-toggle--active {
+  border-color: rgba(110, 180, 255, 0.6);
+  color: #7ec8ff;
+  background: rgba(110, 180, 255, 0.1);
+}
+
+.multiplayer-llm-toggle--active:hover {
+  border-color: rgba(110, 180, 255, 0.8);
+  background: rgba(110, 180, 255, 0.18);
 }
 
 .multiplayer-kick-button:hover:not([disabled]) {

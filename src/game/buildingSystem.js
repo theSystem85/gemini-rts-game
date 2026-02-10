@@ -11,6 +11,7 @@ import { updateDangerZoneMaps } from './dangerZoneMap.js'
 import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turretImageRenderer.js'
 import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { recordDestroyed } from '../ai-api/transitionCollector.js'
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -55,6 +56,22 @@ export const updateBuildings = logPerformance(function updateBuildings(gameState
 
       // Skip destroyed buildings and remove them
       if (building.health <= 0) {
+        if (!building.aiApiDestroyedRecorded && gameState.gameStarted && !gameState.mapEditMode) {
+          recordDestroyed({
+            killerId: building.lastAttacker?.id,
+            victimId: building.id,
+            victimKind: 'building',
+            cause: building.destroyedCause,
+            position: {
+              x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
+              y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
+              space: 'world'
+            },
+            tick: gameState.frameCount,
+            timeSeconds: gameState.gameTime
+          })
+          building.aiApiDestroyedRecorded = true
+        }
         // Track destroyed buildings for statistics
         if (building.owner === gameState.humanPlayer) {
           gameState.playerBuildingsDestroyed++

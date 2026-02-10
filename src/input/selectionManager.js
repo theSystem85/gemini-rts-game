@@ -3,6 +3,7 @@ import { TILE_SIZE, ENABLE_ENEMY_SELECTION, ENABLE_ENEMY_CONTROL } from '../conf
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 import { showNotification } from '../ui/notifications.js'
+import { hideLlmQueueTooltip, updateLlmQueueTooltipForSelection } from '../ui/llmQueueTooltip.js'
 import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
@@ -72,6 +73,7 @@ export class SelectionManager {
   }
 
   handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
+    hideLlmQueueTooltip()
     this.clearWreckSelection()
     const currentTime = performance.now()
     const isDoubleClick = this.lastClickedUnit === clickedUnit &&
@@ -162,6 +164,7 @@ export class SelectionManager {
   }
 
   handleFactorySelection(selectedFactory, e, units, selectedUnits) {
+    hideLlmQueueTooltip()
     this.clearWreckSelection()
     if (e.shiftKey) {
       // Shift+click on factory: Add/remove factory to/from current selection
@@ -195,9 +198,13 @@ export class SelectionManager {
       selectedUnits.push(selectedFactory)
       // No sound for building selection
     }
+
+    // Update LLM tooltip if enemy factory selected
+    updateLlmQueueTooltipForSelection()
   }
 
   handleBuildingSelection(selectedBuilding, e, units, selectedUnits) {
+    hideLlmQueueTooltip()
     this.clearWreckSelection()
     if (e.shiftKey) {
       // Shift+click on building: Add/remove building to/from current selection
@@ -236,6 +243,9 @@ export class SelectionManager {
       selectedUnits.push(selectedBuilding)
       // No sound for building selection
     }
+
+    // Update LLM tooltip if enemy construction yard selected
+    updateLlmQueueTooltipForSelection()
   }
 
   handleBoundingBoxSelection(units, factories, selectedUnits, selectionStart, selectionEnd) {

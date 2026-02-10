@@ -88,6 +88,19 @@ vi.mock('../../src/main.js', () => ({
   units: []
 }))
 
+vi.mock('../../src/inputHandler.js', () => ({
+  selectedUnits: [],
+  selectionActive: false,
+  selectionStartExport: { x: 0, y: 0 },
+  selectionEndExport: { x: 0, y: 0 },
+  setRenderScheduler: vi.fn(),
+  setupInputHandling: vi.fn(),
+  getUnitCommandsHandler: vi.fn(),
+  getCursorManager: vi.fn(),
+  getMouseHandler: vi.fn(),
+  getSelectionManager: vi.fn()
+}))
+
 import { MouseHandler } from '../../src/input/mouseHandler.js'
 import {
   isRallyPointTileBlocked,
