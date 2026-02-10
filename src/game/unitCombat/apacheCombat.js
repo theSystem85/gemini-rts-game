@@ -123,8 +123,58 @@ function initiateApacheHelipadReturn(unit, helipadInfo) {
   return true
 }
 
+function getTargetReference(target) {
+  if (!target) {
+    return null
+  }
+
+  const isBuilding = target.tileX === undefined && target.width !== undefined && target.height !== undefined
+  return {
+    id: target.id ?? null,
+    type: isBuilding ? 'building' : 'unit',
+    ref: target
+  }
+}
+
+function hasLiveTargetReference(targetRef) {
+  if (!targetRef) {
+    return false
+  }
+
+  if (targetRef.ref && targetRef.ref.health > 0) {
+    return true
+  }
+
+  const targetPool = targetRef.type === 'building' ? gameState.buildings : gameState.units
+  if (!Array.isArray(targetPool) || !targetRef.id) {
+    return false
+  }
+
+  const resolved = targetPool.find(entity => entity && entity.id === targetRef.id && entity.health > 0)
+  if (!resolved) {
+    return false
+  }
+
+  targetRef.ref = resolved
+  return true
+}
+
+function clearReturnToCombatState(unit) {
+  unit.autoReturnCombatTarget = null
+  unit.autoReturnRefilling = false
+}
+
 export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupancyMap) {
-  if (!unit.target || unit.target.health <= 0) {
+  const noLiveTarget = !unit.target || unit.target.health <= 0
+  if (noLiveTarget && !unit.autoReturnRefilling) {
+    if (unit.target && unit.target.health <= 0) {
+      clearReturnToCombatState(unit)
+      const helipadInfo = findNearestHelipadForApache(unit, units)
+      if (helipadInfo) {
+        initiateApacheHelipadReturn(unit, helipadInfo)
+      }
+    }
+    unit.target = null
     unit.volleyState = null
     unit.flightPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? null : unit.flightPlan
     return
@@ -161,9 +211,15 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
             }
           }
         } else {
+          unit.autoReturnCombatTarget = getTargetReference(unit.target)
+          unit.autoReturnRefilling = true
           unit.autoHelipadRetryAt = now + 3000
         }
       }
+    }
+
+    if (unit.helipadLandingRequested || unit.landedHelipadId || (unit.flightPlan && unit.flightPlan.mode === 'helipad')) {
+      return
     }
   } else {
     if (unit.autoHelipadReturnActive) {
@@ -175,6 +231,14 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
     if (unit.autoHelipadRetryAt) {
       unit.autoHelipadRetryAt = 0
     }
+
+    if (unit.autoReturnRefilling && !unit.helipadLandingRequested && !unit.landedHelipadId) {
+      if (hasLiveTargetReference(unit.autoReturnCombatTarget)) {
+        unit.target = unit.autoReturnCombatTarget.ref
+      }
+      clearReturnToCombatState(unit)
+    }
+
     // Set canFire to true when ammo is available
     unit.canFire = true
   }

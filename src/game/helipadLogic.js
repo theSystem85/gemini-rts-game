@@ -120,7 +120,6 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
         const heliCenterX = heli.x + TILE_SIZE / 2
         const heliCenterY = heli.y + TILE_SIZE / 2
         const distance = Math.hypot(heliCenterX - helipadCenterX, heliCenterY - helipadCenterY)
-        const landingRadius = TILE_SIZE * 1.2
 
         if (heli.flightState !== 'grounded' && heli.landedHelipadId === helipadId) {
           heli.landedHelipadId = null
@@ -132,9 +131,19 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
         const landingCommanded = heli.helipadLandingRequested && (!heli.helipadTargetId || heli.helipadTargetId === helipadId)
         const landingLinked = heli.landedHelipadId === helipadId || helipad.landedUnitId === heli.id
         const landingRequested = landingCommanded || landingLinked
+        const hasReservedPad = landingRequested && helipad.landedUnitId && helipad.landedUnitId !== heli.id
+        const landingRadius = hasReservedPad ? TILE_SIZE * 0.9 : TILE_SIZE * 1.35
 
         if (distance <= landingRadius) {
           if (landingRequested) {
+            heli.path = []
+            heli.moveTarget = null
+            if (heli.flightPlan && heli.flightPlan.mode === 'helipad') {
+              heli.flightPlan.x = helipadCenterX
+              heli.flightPlan.y = helipadCenterY
+            }
+            heli.remoteControlActive = false
+
             if (heli.flightState !== 'grounded') {
               heli.autoHoldAltitude = false
               heli.manualFlightState = 'land'
@@ -181,15 +190,25 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
 
               // Check if auto-return helicopter has finished refilling and can now takeoff
               if (heli.autoReturnRefilling && typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo >= heli.maxRocketAmmo) {
-                // Ammo is full - allow helicopter to takeoff now
+                const storedTarget = heli.autoReturnCombatTarget
+                const hasAttackTarget =
+                  storedTarget &&
+                  storedTarget.ref &&
+                  storedTarget.ref.health > 0
+
                 heli.autoReturnRefilling = false
                 heli.helipadLandingRequested = false
-                heli.autoHoldAltitude = false
+                heli.landedHelipadId = null
+                helipad.landedUnitId = null
+                heli.manualFlightState = hasAttackTarget ? 'takeoff' : 'land'
+                heli.autoHoldAltitude = Boolean(hasAttackTarget)
               }
 
               heli.helipadTargetId = helipadId
-              heli.landedHelipadId = helipadId
-              helipad.landedUnitId = heli.id
+              if (helipad.landedUnitId == null || helipad.landedUnitId === heli.id) {
+                heli.landedHelipadId = helipadId
+                helipad.landedUnitId = heli.id
+              }
               heli.autoHelipadReturnActive = false
               heli.autoHelipadReturnTargetId = null
               heli.autoHelipadRetryAt = 0

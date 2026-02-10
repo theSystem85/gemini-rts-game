@@ -743,6 +743,7 @@ Apache helicopters use a separate `rocketAmmo` field instead of `ammunition` for
 - ✅ Cheat system updated to handle both `ammunition` and `rocketAmmo` fields
 - ✅ False "out of ammo" notifications for Apache helicopters fixed
 - ✅ Apache helicopters with rockets can now fire continuously without false ammo warnings
+- ✅ Apache auto-return flow now preserves attack target through helipad reload, resumes attack when fully rearmed, and returns to helipad after target destruction.
 
 ### Future Enhancement Opportunities
 - Ammunition manufacturing cost (per resupply operation costs small amount of money)
