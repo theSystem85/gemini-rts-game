@@ -61,12 +61,27 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
 
     // Handle dodge completion
     if (unit.isDodging && unit.path && unit.path.length === 0 && unit.originalPath) {
-      unit.path = unit.originalPath
+      // Prune waypoints that are behind the unit's current position
+      // to prevent backtracking after a dodge manoeuvre
+      const restoredPath = unit.originalPath.filter(wp => {
+        const wpDist = Math.hypot(wp.x - unit.tileX, wp.y - unit.tileY)
+        // Keep waypoints that are ahead of or very close to the unit
+        if (unit.moveTarget) {
+          const wpToTarget = Math.hypot(wp.x - unit.moveTarget.x, wp.y - unit.moveTarget.y)
+          const unitToTarget = Math.hypot(unit.tileX - unit.moveTarget.x, unit.tileY - unit.moveTarget.y)
+          // Keep waypoints that are closer to the destination than the unit is
+          return wpToTarget <= unitToTarget + 2
+        }
+        return wpDist > 0
+      })
+      unit.path = restoredPath.length > 0 ? restoredPath : []
       unit.target = unit.originalTarget
       unit.originalPath = null
       unit.originalTarget = null
       unit.isDodging = false
       unit.dodgeEndTime = null
+      // Mark path as needing occupancy-aware recalculation
+      unit.pathComputedWithOccupancy = false
     }
 
     // Handle retreat behavior
@@ -158,6 +173,7 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
           )
           if (path.length > 1) {
             unit.path = path.slice(1)
+            unit.pathComputedWithOccupancy = true
           } else {
             unit.path = [{ x: targetTileX, y: targetTileY }]
           }

@@ -87,6 +87,7 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
     if (newPath.length > 1) {
       unit.path = newPath.slice(1)
       unit.lastPathCalcTime = now
+      unit.pathComputedWithOccupancy = useOccupancyMap
     }
   })
 
@@ -136,26 +137,32 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
         return
       }
 
-      // Only recalculate if unit has NO path at all
-      // Don't recalculate just because path is short - that's expected when close to target
-      if (!unit.path || unit.path.length === 0) {
+      // Get the target position from moveTarget
+      const targetPos = unit.moveTarget
+      if (!targetPos) return
+
+      // Calculate distance for priority sorting (closer units get priority)
+      const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
+
+      // Skip if essentially at target already
+      if (distance < MOVE_TARGET_REACHED_THRESHOLD) {
+        unit.moveTarget = null
+        return
+      }
+
+      // Determine if the unit entered the close-range zone with a stale
+      // long-distance path (computed without the occupancy map). If so,
+      // force a recalculation so the new path accounts for dynamic obstacles.
+      // Use strict equality (=== false) so units without the flag (legacy/test
+      // paths) are not affected.
+      const hasStaleNonOccupancyPath = unit.path && unit.path.length > 0 &&
+        unit.pathComputedWithOccupancy === false && distance <= PATHFINDING_THRESHOLD
+
+      if (!unit.path || unit.path.length === 0 || hasStaleNonOccupancyPath) {
         // For AI units, respect target change timer
         if (unit.owner !== gameState.humanPlayer && unit.lastTargetChangeTime &&
           now - unit.lastTargetChangeTime < 2000) {
           return // Skip recalculation if target was changed recently
-        }
-
-        // Get the target position from moveTarget
-        const targetPos = unit.moveTarget
-        if (!targetPos) return
-
-        // Calculate distance for priority sorting (closer units get priority)
-        const distance = Math.hypot(targetPos.x - unit.tileX, targetPos.y - unit.tileY)
-
-        // Skip if essentially at target already
-        if (distance < MOVE_TARGET_REACHED_THRESHOLD) {
-          unit.moveTarget = null
-          return
         }
 
         unitsNeedingPaths.push({ unit, targetPos, distance, isAttackMode: false, formationGroups })
@@ -203,6 +210,7 @@ function _updateGlobalPathfinding(units, mapGrid, occupancyMap, gameState) {
       if (newPath.length > 1) {
         unit.path = newPath.slice(1)
         unit.lastPathCalcTime = now
+        unit.pathComputedWithOccupancy = useOccupancyMap
       } else if (Math.hypot(unit.tileX - targetPos.x, unit.tileY - targetPos.y) < MOVE_TARGET_REACHED_THRESHOLD) {
         // Clear moveTarget if we've reached destination
         unit.moveTarget = null

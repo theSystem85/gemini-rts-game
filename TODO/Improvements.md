@@ -1,10 +1,15 @@
 ## Improvements
+- [ ]
+- [ ] There is an issues when unit is commanded to move to an unreachable place. Ensure the engine recognizes when a target is unreachable and aborts the command with a notification.
+- [ ] When LLM comments on the game show a bubble with the color of the party the LLM is controlling on the left hand side of the notification. Inside the bubble show the same robot icon that is already used in the multiplayer section of the sidebar to show that the LLM is active on a party.
+- [ ] add support for up to 3 optional LLM players (could also be steered by different models or all by the same to safe requests (make it configurable))
+- [x] fix path finding/dodging algorithm. Generate flow diagram on how it currently works to get betting analysis on how to fix it. → Deep analysis created in `AI_Docs/PATHFINDING_MOVEMENT_DEEP_ANALYSIS.md`. Fixed stale non-occupancy path continuation bug and dodge path restoration backtracking.
+- [ ] ensure when using drag and drop on the mobile build buttons that the unit or building info tooltip does not pop up. Only show it when the user hold the button but not when is pressed and then the finger is moved. It can pop up when the button is hold but as soon as the finger is moved by about half the size of the button the tooltip should go away again.
 - [x] Wire strategic LLM flow to OpenAI `/v1/responses` with JSON-schema output, per-player conversation continuity via `previous_response_id`, and bootstrap prompt + protocol schema on first tick.
 - [x] Reduce key bindings and cheat modal height caps on small screens to avoid cropping.
 - [x] Cap all modal dialogs at 80% of the viewport height to prevent oversizing on small screens.
-- [ ] Update the mobile action bar so repair/sell buttons use green active icons, keep the play/pause icon white, and hide unit group controls outside the condensed sidebar.
-- [ ] Add an invisible scrollable overflow for unit/building production tooltips when their content exceeds 90% of the viewport height.
-- [ ] Add a money bar tooltip that breaks down refinery revenue and harvester cycle stats with click-to-focus shortcuts for each entity.
+- [x] Update the mobile action bar so repair/sell buttons use green active icons, keep the play/pause icon white, and hide unit group controls outside the condensed sidebar.
+- [x] Add a money bar tooltip that breaks down refinery revenue and harvester cycle stats with click-to-focus shortcuts for each entity.
 - [x] Add desktop edge auto-scroll after a short hover delay with configurable speed and a settings toggle to disable it.
 - [x] Adjusted mobile portrait condensed sidebar money and power bars: removed rounded borders, added vertical text display (bottom-to-top) matching Buildings/Units tab direction, ensured PWA mode bars display with labels and matching colors.
 - [x] Extracted state synchronization logic from gameCommandSync.js into dedicated stateSync.js module for better code organization and modularity.
