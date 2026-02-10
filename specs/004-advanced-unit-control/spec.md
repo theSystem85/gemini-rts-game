@@ -175,6 +175,8 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-053**: When multiple Apache helicopters are ordered to land on a helipad, the system MUST assign each helicopter to a distinct available helipad (prioritizing those nearest the clicked helipad) so no two helis are assigned to the same pad during a group landing command.
 - **FR-054**: System MUST allow Apache helicopters to receive helipad landing commands while they remain selected (standard command input should not require deselection).
 - **FR-055**: On touch layouts, Apache helipad landing commands MUST not be blocked by idle remote-control input, and initiating remote control while grounded MUST trigger an automatic takeoff before movement.
+- **FR-056**: When a move command target is unreachable by pathfinding, the system MUST abort that unit's move command instead of leaving it pending.
+- **FR-057**: When one or more human-controlled selected units receive an unreachable move command, the system MUST show a user notification indicating the move was aborted.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
