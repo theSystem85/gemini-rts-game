@@ -1,4 +1,5 @@
 ## Improvements
+- [ ] Analyze `tests/lighthouse/default.report.json`, maintain a weighted top-10 Lighthouse performance TODO list, and track execution across `specs/lighthouse-performance/` task specs.
 - [ ]
 - [ ] There is an issues when unit is commanded to move to an unreachable place. Ensure the engine recognizes when a target is unreachable and aborts the command with a notification.
 - [ ] When LLM comments on the game show a bubble with the color of the party the LLM is controlling on the left hand side of the notification. Inside the bubble show the same robot icon that is already used in the multiplayer section of the sidebar to show that the LLM is active on a party.
