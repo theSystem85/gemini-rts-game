@@ -36,6 +36,7 @@ Improve first paint by minimizing CSS render-blocking time.
 - [x] Deferred non-critical `overlays.css`, `modals.css`, and `notificationHistory.css` using `preload` + `onload` stylesheet promotion.
 - [x] Added `noscript` stylesheet fallbacks for deferred CSS files.
 - [x] Added minimal inline guard styles for hidden-by-default overlay/modal/history containers to avoid flash-of-unstyled-content before deferred CSS applies.
+- [x] Restored settings and cheat modal visibility by adding a critical inline `.config-modal--open` display rule while deferred CSS loads.
 
 ## Quick visual regression checklist
 - [x] Initial load still shows the gameplay shell and sidebar with correct base/layout styling.

@@ -54,6 +54,14 @@
       display: none;
     }
 
+    .config-modal.config-modal--open {
+      display: flex;
+    }
+
+    body.production-buttons-loading .production-button {
+      display: none !important;
+    }
+
     /* ...existing styles... */
     .production-button.disabled {
       opacity: 0.5;
@@ -66,7 +74,7 @@
   </style>
 </head>
 
-<body>
+<body class="production-buttons-loading">
   <!-- Host Paused Banner - shown to clients when host pauses the game -->
   <div id="hostPausedBanner" class="host-paused-banner host-paused-banner--hidden" aria-hidden="true" role="alert">
     <div class="host-paused-banner__content">

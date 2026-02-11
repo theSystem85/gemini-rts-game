@@ -1,5 +1,6 @@
 ## Improvements
 - [x] Implemented lighthouse spec 04 main-thread long-task reduction by introducing startup task scheduling (post-paint + idle deferrals) and startup performance markers for init phases.
+- [x] Fix deferred-CSS regression where Settings/Cheat modals could stay hidden, and hide all production buttons by default until production setup JS reveals tech-tree-eligible options.
 - [x] Implement `specs/lighthouse-performance/06-critical-css-render-blocking.md` by deferring non-critical UI stylesheets and adding no-script/FOUC guards for first paint.
 - [ ] Analyze `tests/lighthouse/default.report.json`, maintain a weighted top-10 Lighthouse performance TODO list, and track execution across `specs/lighthouse-performance/` task specs.
 - [ ]

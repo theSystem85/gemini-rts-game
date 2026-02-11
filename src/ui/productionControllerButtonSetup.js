@@ -28,6 +28,7 @@ export function setupAllProductionButtons(controller) {
   controller.updateBuildingButtonStates()
   controller.updateMobileCategoryToggle()
 
+  document.body.classList.remove('production-buttons-loading')
   controller.isSetup = true
 }
 
@@ -38,9 +39,9 @@ export function setupUnitButtons(controller) {
     const unitType = button.getAttribute('data-unit-type')
     controller.unitButtons.set(unitType, button)
 
-    if (!gameState.availableUnitTypes.has(unitType)) {
-      button.style.display = 'none'
-    } else if (gameState.newUnitTypes.has(unitType)) {
+    button.style.display = 'none'
+
+    if (gameState.newUnitTypes.has(unitType)) {
       const label = button.querySelector('.new-label')
       if (label) label.style.display = 'block'
     }
@@ -322,9 +323,9 @@ export function setupBuildingButtons(controller) {
     const buildingType = button.getAttribute('data-building-type')
     controller.buildingButtons.set(buildingType, button)
 
-    if (!gameState.availableBuildingTypes.has(buildingType)) {
-      button.style.display = 'none'
-    } else if (gameState.newBuildingTypes.has(buildingType)) {
+    button.style.display = 'none'
+
+    if (gameState.newBuildingTypes.has(buildingType)) {
       const label = button.querySelector('.new-label')
       if (label) label.style.display = 'block'
     }
