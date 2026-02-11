@@ -151,19 +151,37 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
           if (landingRequested) {
             const landingX = helipadCenterX - TILE_SIZE / 2
             const landingY = helipadCenterY - TILE_SIZE / 2
-            heli.x = landingX
-            heli.y = landingY
-            heli.tileX = Math.floor(heli.x / TILE_SIZE)
-            heli.tileY = Math.floor(heli.y / TILE_SIZE)
-            heli.moveTarget = { x: heli.tileX, y: heli.tileY }
-            heli.path = []
-            heli.flightPlan = {
-              x: helipadCenterX,
-              y: helipadCenterY,
-              stopRadius: Math.max(6, TILE_SIZE * 0.2),
-              mode: 'helipad',
-              followTargetId: null,
-              destinationTile: { x: heli.tileX, y: heli.tileY }
+
+            // Only update position and flight state if not already grounded and stable
+            const isAlreadyGroundedHere = heli.flightState === 'grounded' &&
+                                          heli.landedHelipadId === helipadId &&
+                                          Math.abs(heli.x - landingX) < 1 &&
+                                          Math.abs(heli.y - landingY) < 1
+
+            if (!isAlreadyGroundedHere) {
+              heli.x = landingX
+              heli.y = landingY
+              heli.tileX = Math.floor(heli.x / TILE_SIZE)
+              heli.tileY = Math.floor(heli.y / TILE_SIZE)
+            }
+
+            // Clear movement commands when grounded
+            if (heli.flightState === 'grounded') {
+              heli.moveTarget = null
+              heli.path = []
+              heli.flightPlan = null
+            } else {
+              // Only set these when actively landing
+              heli.moveTarget = { x: heli.tileX, y: heli.tileY }
+              heli.path = []
+              heli.flightPlan = {
+                x: helipadCenterX,
+                y: helipadCenterY,
+                stopRadius: Math.max(6, TILE_SIZE * 0.2),
+                mode: 'helipad',
+                followTargetId: null,
+                destinationTile: { x: heli.tileX, y: heli.tileY }
+              }
             }
 
             if (heli.flightState !== 'grounded') {
