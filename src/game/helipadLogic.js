@@ -3,6 +3,20 @@ import { logPerformance } from '../performanceUtils.js'
 import { getBuildingIdentifier } from '../utils.js'
 import { getHelipadLandingCenter } from '../utils/helipadUtils.js'
 
+function clearHelipadClaimForUnit(unit, helipadId, helipads = []) {
+  if (!unit) return
+  if (unit.landedHelipadId) {
+    const linked = helipads.find(pad => getBuildingIdentifier(pad) === unit.landedHelipadId)
+    if (linked && linked.landedUnitId === unit.id) {
+      linked.landedUnitId = null
+    }
+  }
+  if (unit.landedHelipadId === helipadId) {
+    unit.landedHelipadId = null
+  }
+}
+
+
 /**
  * Check if a unit is adjacent to any tile of a building
  * @param {Object} unit - Unit with x/y (pixel coords)
@@ -120,7 +134,7 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
         const heliCenterX = heli.x + TILE_SIZE / 2
         const heliCenterY = heli.y + TILE_SIZE / 2
         const distance = Math.hypot(heliCenterX - helipadCenterX, heliCenterY - helipadCenterY)
-        const landingRadius = TILE_SIZE * 1.2
+        const landingRadius = TILE_SIZE * 1.45
 
         if (heli.flightState !== 'grounded' && heli.landedHelipadId === helipadId) {
           heli.landedHelipadId = null
@@ -135,73 +149,90 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
 
         if (distance <= landingRadius) {
           if (landingRequested) {
+            const landingX = helipadCenterX - TILE_SIZE / 2
+            const landingY = helipadCenterY - TILE_SIZE / 2
+            heli.x = landingX
+            heli.y = landingY
+            heli.tileX = Math.floor(heli.x / TILE_SIZE)
+            heli.tileY = Math.floor(heli.y / TILE_SIZE)
+            heli.moveTarget = { x: heli.tileX, y: heli.tileY }
+            heli.path = []
+            heli.flightPlan = {
+              x: helipadCenterX,
+              y: helipadCenterY,
+              stopRadius: Math.max(6, TILE_SIZE * 0.2),
+              mode: 'helipad',
+              followTargetId: null,
+              destinationTile: { x: heli.tileX, y: heli.tileY }
+            }
+
             if (heli.flightState !== 'grounded') {
               heli.autoHoldAltitude = false
               heli.manualFlightState = 'land'
             }
-            if (heli.flightState === 'grounded') {
-              heli.x = helipadCenterX - TILE_SIZE / 2
-              heli.y = helipadCenterY - TILE_SIZE / 2
-              heli.tileX = Math.floor(heli.x / TILE_SIZE)
-              heli.tileY = Math.floor(heli.y / TILE_SIZE)
 
-              if (typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo < heli.maxRocketAmmo) {
-                // Only refill ammo if helipad has ammo supply available
-                if (helipad.ammo > 0) {
-                  const ammoNeeded = heli.maxRocketAmmo - heli.rocketAmmo
-                  // Ammo refill time: 10 seconds for full clip
-                  const ammoRefillTime = 10000
-                  const ammoRefillRate = heli.maxRocketAmmo / ammoRefillTime
-                  const ammoToTransfer = Math.min(ammoRefillRate * delta, ammoNeeded, helipad.ammo)
-                  if (ammoToTransfer > 0) {
-                    heli.rocketAmmo += ammoToTransfer
-                    helipad.ammo -= ammoToTransfer
-                  }
-                  if (heli.rocketAmmo > 0) {
-                    heli.apacheAmmoEmpty = false
-                    heli.canFire = true
-                  }
+            heli.helipadTargetId = helipadId
+            heli.landedHelipadId = helipadId
+            helipad.landedUnitId = heli.id
+
+            if (typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo < heli.maxRocketAmmo) {
+              if (helipad.ammo > 0) {
+                const ammoNeeded = heli.maxRocketAmmo - heli.rocketAmmo
+                const ammoRefillTime = 10000
+                const ammoRefillRate = heli.maxRocketAmmo / ammoRefillTime
+                const ammoToTransfer = Math.min(ammoRefillRate * delta, ammoNeeded, helipad.ammo)
+                if (ammoToTransfer > 0) {
+                  heli.rocketAmmo += ammoToTransfer
+                  helipad.ammo -= ammoToTransfer
                 }
-                // If helipad has no ammo, helicopter keeps its current ammo level
+                if (heli.rocketAmmo > 0) {
+                  heli.apacheAmmoEmpty = false
+                }
               }
+            }
 
-              if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
-                const refuelRate = heli.maxGas / 4000
-                const transfer = Math.min(refuelRate * delta, heli.maxGas - heli.gas, helipad.fuel)
-                if (transfer > 0) {
-                  heli.gas = Math.min(heli.maxGas, heli.gas + transfer)
-                  helipad.fuel = Math.max(0, helipad.fuel - transfer)
-                  heli.refuelingAtHelipad = true
-                } else {
-                  heli.refuelingAtHelipad = false
-                }
+            if (typeof heli.maxGas === 'number' && heli.gas < heli.maxGas && helipad.fuel > 0) {
+              const refuelRate = heli.maxGas / 4000
+              const transfer = Math.min(refuelRate * delta, heli.maxGas - heli.gas, helipad.fuel)
+              if (transfer > 0) {
+                heli.gas = Math.min(heli.maxGas, heli.gas + transfer)
+                helipad.fuel = Math.max(0, helipad.fuel - transfer)
+                heli.refuelingAtHelipad = true
               } else {
                 heli.refuelingAtHelipad = false
               }
+            } else {
+              heli.refuelingAtHelipad = false
+            }
 
-              // Check if auto-return helicopter has finished refilling and can now takeoff
-              if (heli.autoReturnRefilling && typeof heli.maxRocketAmmo === 'number' && heli.rocketAmmo >= heli.maxRocketAmmo) {
-                // Ammo is full - allow helicopter to takeoff now
-                heli.autoReturnRefilling = false
-                heli.helipadLandingRequested = false
-                heli.autoHoldAltitude = false
-              }
+            const hasAmmoCapacity = typeof heli.maxRocketAmmo === 'number' && heli.maxRocketAmmo > 0
+            const ammoFull = !hasAmmoCapacity || heli.rocketAmmo >= heli.maxRocketAmmo
+            const hasStoredAttackTarget = Boolean(heli.autoHelipadReturnAttackTargetId)
+            const shouldAutoTakeoff = heli.autoHelipadReturnActive && ammoFull && hasStoredAttackTarget
 
-              heli.helipadTargetId = helipadId
-              heli.landedHelipadId = helipadId
-              helipad.landedUnitId = heli.id
+            if (shouldAutoTakeoff) {
+              heli.helipadLandingRequested = false
+              heli.autoHoldAltitude = true
+              heli.manualFlightState = 'takeoff'
+              heli.canFire = true
               heli.autoHelipadReturnActive = false
               heli.autoHelipadReturnTargetId = null
-              heli.autoHelipadRetryAt = 0
-              heli.noHelipadNotificationTime = 0
+              helipad.landedUnitId = null
+              heli.landedHelipadId = null
+            } else {
+              heli.canFire = ammoFull && heli.flightState === 'grounded'
+              heli.autoHelipadReturnActive = false
+              heli.autoHelipadReturnTargetId = null
             }
+            heli.autoHelipadRetryAt = 0
+            heli.noHelipadNotificationTime = 0
           }
         } else {
           if (heli.refuelingAtHelipad) {
             heli.refuelingAtHelipad = false
           }
           if (heli.landedHelipadId === helipadId) {
-            heli.landedHelipadId = null
+            clearHelipadClaimForUnit(heli, helipadId, helipads)
           }
           if (helipad.landedUnitId === heli.id) {
             helipad.landedUnitId = null

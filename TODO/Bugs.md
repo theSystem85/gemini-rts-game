@@ -4,6 +4,7 @@
 - [x] Ensure mobile portrait first paint defaults to condensed sidebar via CSS media-query fallback so the expanded sidebar is not visible before JS layout classes are applied.
 - [x] LLM enemy commentary misattributes ownership (e.g., says player destroyed "my" buildings when they were AI-owned); enforce owner-aware taunts tied to the controlled party id.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
+- [x] Ensure Apaches auto-return to helipad on empty ammo, fully land/reload, resume attacking the same target, and finally return to helipad after the target is destroyed.
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
 - [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.
 - [x] LLM command queue bypasses game engine unlock mechanics; buildings that require prerequisites can be queued before prerequisites are built.
