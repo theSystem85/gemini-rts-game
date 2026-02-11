@@ -31,3 +31,20 @@ Lower TBT and interactivity delay by reducing startup main-thread work.
 - `npm run build`
 - `npm run lint:fix`
 - Lighthouse/trace comparison for TBT + long-task counts.
+
+## Implementation notes (2026-02)
+- Added a startup scheduler utility that supports:
+  - phase-level performance markers (`performance.mark/measure`)
+  - post-paint deferrals (`requestAnimationFrame` + macrotask)
+  - idle deferrals (`requestIdleCallback` with timeout fallback)
+- Refactored startup sequencing to keep critical work synchronous (asset load, world setup, first loop start) while deferring non-critical initialization:
+  - Deferred to next paint: map editor controls, tutorial setup, multiplayer sidebar wiring, AI party sync, auto-resume check
+  - Deferred to idle: settings modal boot, benchmark button wiring, save-system registration, notification history panel prep
+  - Deferred from entrypoint: remote invite landing and notification history to reduce DOMContentLoaded long-task pressure
+- Added phase labels to support trace/Lighthouse comparisons for long-task attribution.
+
+### Deferred tasks rationale
+- **Tutorial + map editor controls**: not required for first interactive frame; safe after initial loop starts.
+- **Multiplayer sidebar + AI sync**: optional during first paint and can initialize immediately after render without affecting determinism.
+- **Save recovery + settings modal + benchmark wiring**: non-blocking enhancements with no impact on first-frame gameplay.
+- **Notification history / remote invite landing**: secondary UI systems that can load asynchronously after interaction readiness.

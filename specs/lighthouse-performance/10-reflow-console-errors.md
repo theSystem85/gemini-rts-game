@@ -28,3 +28,8 @@ Reduce runtime instability and hidden performance penalties from forced synchron
 ## Validation
 - `npm run lint:fix`
 - Lighthouse compare for console errors/deprecations/forced reflow.
+
+## Implementation notes (2026-02)
+- Service worker fetch caching now skips partial-content (`206`) and `Range` requests before calling `Cache.put`.
+- This prevents startup/runtime console errors such as `Failed to execute 'put' on 'Cache': Partial response (status code 206) is unsupported`.
+- Cache writes remain best-effort and are wrapped to avoid breaking live network responses when caching fails.
