@@ -6,15 +6,15 @@ import { discoverGrassTiles } from '../utils/grassTileDiscovery.js'
 
 // Map unit types to their image paths
 const unitImageMap = {
-  tank: 'images/tank.png',
-  tank_v1: 'images/tank.png',
-  'tank-v2': 'images/tank_v2.png',
-  tank_v2: 'images/tank_v2.png',
-  'tank-v3': 'images/tank_v3.png',
-  tank_v3: 'images/tank_v3.png',
+  tank: 'images/tank.webp',
+  tank_v1: 'images/tank.webp',
+  'tank-v2': 'images/tank_v2.webp',
+  tank_v2: 'images/tank_v2.webp',
+  'tank-v3': 'images/tank_v3.webp',
+  tank_v3: 'images/tank_v3.webp',
   rocketTank: 'images/map/units/rocket_tank.webp',
   harvester: 'images/harvester.webp',
-  artilleryTank: 'images/artillery_tank.jpg',
+  artilleryTank: 'images/artillery_tank.webp',
   howitzer: 'images/map/units/howitzer_map.webp'
 }
 
@@ -34,7 +34,7 @@ export class TextureManager {
   }
 
   // Helper function to load images once
-  getOrLoadImage(baseName, extensions = ['jpg', 'webp', 'png'], callback) {
+  getOrLoadImage(baseName, extensions = ['webp', 'jpg', 'png'], callback) {
     // Check if image is already in cache
     if (this.imageCache[baseName]) {
       callback(this.imageCache[baseName])
@@ -120,7 +120,7 @@ export class TextureManager {
       const img = new Image()
       img.onload = () => resolve(img)
       img.onerror = reject
-      img.src = 'images/map/water_spritesheet.png'
+      img.src = 'images/map/water_spritesheet.webp'
     })
     this.waterFrames = []
     for (let i = 0; i < 16; i++) {
@@ -185,7 +185,7 @@ export class TextureManager {
   // Helper method to load a single texture
   loadSingleTexture(imagePath, tileType, onComplete) {
     // Determine appropriate extensions based on tile type and path
-    let extensions = ['jpg', 'webp', 'png'] // Default order
+    let extensions = ['webp', 'jpg', 'png'] // Default order
 
     // For ore and seed crystal files, try webp first since they're primarily webp
     if (imagePath.includes('ore') || tileType === 'ore' || tileType === 'seedCrystal') {

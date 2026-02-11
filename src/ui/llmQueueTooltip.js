@@ -47,7 +47,7 @@ const buildingSidebarImages = {
   oreRefinery: 'images/sidebar/ore_refinery.webp',
   vehicleFactory: 'images/sidebar/vehicle_factory.webp',
   vehicleWorkshop: 'images/sidebar/vehicle_workshop.webp',
-  constructionYard: 'images/sidebar/construction_yard.png',
+  constructionYard: 'images/sidebar/construction_yard.webp',
   radarStation: 'images/sidebar/radar_station.webp',
   hospital: 'images/sidebar/hospital.webp',
   helipad: 'images/sidebar/helipad_sidebar.webp',
@@ -105,7 +105,7 @@ function getSidebarImageForUnit(unitType) {
 }
 
 function getSidebarImageForBuilding(buildingType) {
-  return buildingSidebarImages[buildingType] || 'images/sidebar/construction_yard.png'
+  return buildingSidebarImages[buildingType] || 'images/sidebar/construction_yard.webp'
 }
 
 function getQueueItems(actions = [], queueState = null) {

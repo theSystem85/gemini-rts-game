@@ -70,22 +70,22 @@ export function preloadTankImages(callback) {
     // Load tank wagon
     const wagonImg = new Image()
     wagonImg.onload = checkAllLoaded
-    wagonImg.onerror = () => handleLoadError(`${variant}_wagon.png`)
-    wagonImg.src = `images/map/units/${variant}_wagon.png`
+    wagonImg.onerror = () => handleLoadError(`${variant}_wagon.webp`)
+    wagonImg.src = `images/map/units/${variant}_wagon.webp`
     tankImageCache[variant].wagon = wagonImg
 
     // Load turret (without barrel)
     const turretImg = new Image()
     turretImg.onload = checkAllLoaded
-    turretImg.onerror = () => handleLoadError(`${variant}_turret.png`)
-    turretImg.src = `images/map/units/${variant}_turret.png`
+    turretImg.onerror = () => handleLoadError(`${variant}_turret.webp`)
+    turretImg.src = `images/map/units/${variant}_turret.webp`
     tankImageCache[variant].turret = turretImg
 
     // Load gun barrel
     const barrelImg = new Image()
     barrelImg.onload = checkAllLoaded
-    barrelImg.onerror = () => handleLoadError(`${variant}_barrel.png`)
-    barrelImg.src = `images/map/units/${variant}_barrel.png`
+    barrelImg.onerror = () => handleLoadError(`${variant}_barrel.webp`)
+    barrelImg.src = `images/map/units/${variant}_barrel.webp`
     tankImageCache[variant].barrel = barrelImg
   })
 }
