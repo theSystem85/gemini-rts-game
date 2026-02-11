@@ -30,11 +30,30 @@
   <link rel="preload" href="/cursors/default.svg" as="image" type="image/svg+xml">
   <link rel="stylesheet" href="./styles/base.css">
   <link rel="stylesheet" href="./styles/sidebar.css">
-  <link rel="stylesheet" href="./styles/overlays.css">
-  <link rel="stylesheet" href="./styles/modals.css">
-  <link rel="stylesheet" href="./styles/notificationHistory.css">
   <link rel="stylesheet" href="./cursors.css">
+  <link rel="preload" href="./styles/overlays.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="./styles/modals.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="./styles/notificationHistory.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="./styles/overlays.css">
+    <link rel="stylesheet" href="./styles/modals.css">
+    <link rel="stylesheet" href="./styles/notificationHistory.css">
+  </noscript>
   <style>
+    .tutorial-overlay,
+    .config-modal,
+    .notification-history,
+    .notification-history-panel {
+      display: none;
+    }
+
+    .host-paused-banner--hidden,
+    .remote-invite-overlay--hidden,
+    .mobile-sidebar-modal.hidden,
+    .modal-hidden {
+      display: none;
+    }
+
     /* ...existing styles... */
     .production-button.disabled {
       opacity: 0.5;
