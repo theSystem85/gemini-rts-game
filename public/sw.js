@@ -24,6 +24,28 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+function canCacheResponse(request, response) {
+  if (!response || !response.ok) {
+    return false
+  }
+
+  if (response.status === 206 || request.headers.has('range')) {
+    return false
+  }
+
+  return response.type === 'basic' || response.type === 'default'
+}
+
+function cacheResponse(cacheKey, request, response) {
+  if (!canCacheResponse(request, response)) {
+    return
+  }
+
+  caches.open(CACHE_NAME).then(cache => cache.put(cacheKey, response.clone())).catch(() => {
+    // Ignore cache write failures to avoid breaking fetch responses.
+  })
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
 
@@ -34,8 +56,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).then(response => {
-        const copy = response.clone()
-        caches.open(CACHE_NAME).then(cache => cache.put('/index.html', copy))
+        cacheResponse('/index.html', request, response)
         return response
       }).catch(() => caches.match('/index.html'))
     )
@@ -54,7 +75,7 @@ self.addEventListener('fetch', (event) => {
 
         try {
           const response = await fetch(request)
-          cache.put(request, response.clone())
+          cacheResponse(request, request, response)
           return response
         } catch (err) {
           return cached || Promise.reject(err)
