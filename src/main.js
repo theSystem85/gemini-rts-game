@@ -5,6 +5,7 @@ import './utils/debugLogger.js'
 import { registerMapEditorRendering } from './mapEditor.js'
 import { getTextureManager, notifyTileMutation } from './rendering.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
+import { scheduleAfterNextPaint, scheduleIdleTask } from './startupScheduler.js'
 import './ui/mobileJoysticks.js'
 import './ui/mobileControlGroups.js'
 import {
@@ -115,8 +116,14 @@ document.addEventListener('DOMContentLoaded', async() => {
   setupDoubleTapPrevention()
   loadPersistedSettings()
   setupAudioUnlock()
-  initRemoteInviteLanding()
-  initNotificationHistory()
+
+  scheduleAfterNextPaint('startup:remote-invite-landing', () => {
+    initRemoteInviteLanding()
+  })
+
+  scheduleIdleTask('startup:notification-history', () => {
+    initNotificationHistory()
+  })
 
   const gameInstance = new Game()
   window.gameInstance = gameInstance
