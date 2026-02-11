@@ -12,6 +12,7 @@
 - 2026-02-01: Split `src/game/unitCombat.js` into focused submodules under `src/game/unitCombat/` to keep each file under 1k LOC while preserving existing combat behavior.
 - 2026-01-31: Defensive turrets now require clear line-of-sight to targets before firing, matching player and AI behavior.
 - 2026-02-06: Apache helicopters now hold max-range standoff positions in combat, ignore ground-unit pathfinding, and their rockets deal 3x damage to tanker and ammunition trucks.
+- 2026-02-10: Apache helicopters now auto-return to helipads when rockets run dry, force landing alignment on the pad, reload to full before re-engaging the same target, and return to helipad after the target is destroyed.
 
 ## User Scenarios & Testing
 
