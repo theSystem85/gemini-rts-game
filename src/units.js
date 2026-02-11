@@ -763,6 +763,8 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     newUnit.remoteControlActive = false
     newUnit.groundedOccupancyApplied = false
     // Clear any path or moveTarget to prevent immediate takeoff
+    // This is a defensive measure - even though rally point logic is skipped,
+    // we explicitly clear these to ensure the helicopter stays grounded
     newUnit.path = []
     newUnit.moveTarget = null
     if (newUnit.movement) {

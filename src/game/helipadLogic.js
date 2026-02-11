@@ -166,6 +166,8 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
             }
 
             // Clear movement commands when grounded
+            // This prevents the helicopter from jittering as the movement system
+            // won't interpret these as commands to take off
             if (heli.flightState === 'grounded') {
               heli.moveTarget = null
               heli.path = []
