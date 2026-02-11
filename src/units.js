@@ -305,6 +305,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   const contextOptions = options || {}
   const unitOwner = contextOptions.unitOwner ?? start.owner ?? start.ownerId ?? start.playerId ?? start.unitOwner ?? null
   const ignoreFriendlyMines = Boolean(contextOptions.ignoreFriendlyMines)
+  const strictDestination = Boolean(contextOptions.strictDestination)
   const pathContext = { unitOwner, ignoreFriendlyMines }
 
   // Begin destination adjustment if blocked or occupied
@@ -322,6 +323,10 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     destSeedCrystal ||
     destOccupied
   ) {
+    if (strictDestination) {
+      return []
+    }
+
     const alt = findNearestFreeTile(adjustedEnd.x, adjustedEnd.y, mapGrid, occupancyMap, 5, pathContext)
     if (alt) {
       adjustedEnd = alt

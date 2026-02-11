@@ -428,6 +428,24 @@ describe('units.js', () => {
       expect(path).toEqual([])
     })
 
+
+    it('should return empty when strictDestination is true and destination is blocked', () => {
+      mapGrid[5][5].type = 'rock'
+
+      const path = findPath({ x: 2, y: 2 }, { x: 5, y: 5 }, mapGrid, null, undefined, { strictDestination: true })
+
+      expect(path).toEqual([])
+    })
+
+    it('should retarget to nearby tile when strictDestination is false and destination is blocked', () => {
+      mapGrid[5][5].type = 'rock'
+
+      const path = findPath({ x: 2, y: 2 }, { x: 5, y: 5 }, mapGrid)
+
+      expect(path.length).toBeGreaterThan(0)
+      expect(path[path.length - 1]).not.toEqual({ x: 5, y: 5 })
+    })
+
     it('should respect occupancy map when provided', () => {
       const occupancyMap = buildOccupancyMap([], mapGrid)
       // Block some tiles

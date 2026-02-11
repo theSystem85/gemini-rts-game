@@ -139,7 +139,8 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
           destTile,
           mapGrid,
           gameState.occupancyMap,
-          unit.owner
+          unit.owner,
+          { strictDestination: true }
         )
 
     if (path && path.length > 0) {

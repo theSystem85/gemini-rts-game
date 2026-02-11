@@ -177,6 +177,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-055**: On touch layouts, Apache helipad landing commands MUST not be blocked by idle remote-control input, and initiating remote control while grounded MUST trigger an automatic takeoff before movement.
 - **FR-056**: When a move command target is unreachable by pathfinding, the system MUST abort that unit's move command instead of leaving it pending.
 - **FR-057**: When one or more human-controlled selected units receive an unreachable move command, the system MUST show a user notification indicating the move was aborted.
+- **FR-058**: For direct player-issued move commands, pathfinding MUST treat the clicked destination as strict and MUST NOT auto-retarget to a nearby passable tile when the destination tile itself is blocked.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
