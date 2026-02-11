@@ -6,6 +6,31 @@ import { buildingData } from '../buildings.js'
 import { applyProductionBrush } from './mapEditorControls.js'
 import { attachProductionTooltipHandlers } from './productionTooltip.js'
 
+function loadButtonImage(button) {
+  const img = button.querySelector('img')
+  if (img && img.dataset && img.dataset.src && img.src !== img.dataset.src) {
+    img.src = img.dataset.src
+  }
+}
+
+function loadImagesForAvailableTypes(controller) {
+  // Load images for already available unit types
+  gameState.availableUnitTypes.forEach(unitType => {
+    const button = controller.unitButtons.get(unitType)
+    if (button) {
+      loadButtonImage(button)
+    }
+  })
+
+  // Load images for already available building types
+  gameState.availableBuildingTypes.forEach(buildingType => {
+    const button = controller.buildingButtons.get(buildingType)
+    if (button) {
+      loadButtonImage(button)
+    }
+  })
+}
+
 export function setupAllProductionButtons(controller) {
   // Only setup once to prevent duplicate event listeners
   if (controller.isSetup) {
@@ -28,6 +53,10 @@ export function setupAllProductionButtons(controller) {
   controller.updateBuildingButtonStates()
   controller.updateMobileCategoryToggle()
 
+  // Load images for already unlocked buildings/units
+  controller.syncTechTreeWithBuildings()
+  loadImagesForAvailableTypes(controller)
+
   document.body.classList.remove('production-buttons-loading')
   controller.isSetup = true
 }
@@ -39,7 +68,10 @@ export function setupUnitButtons(controller) {
     const unitType = button.getAttribute('data-unit-type')
     controller.unitButtons.set(unitType, button)
 
-    button.style.display = 'none'
+    // Check if this unit is already unlocked and make it visible
+    if (gameState.availableUnitTypes.has(unitType)) {
+      button.classList.add('unlocked')
+    }
 
     if (gameState.newUnitTypes.has(unitType)) {
       const label = button.querySelector('.new-label')
@@ -323,7 +355,10 @@ export function setupBuildingButtons(controller) {
     const buildingType = button.getAttribute('data-building-type')
     controller.buildingButtons.set(buildingType, button)
 
-    button.style.display = 'none'
+    // Check if this building is already unlocked and make it visible
+    if (gameState.availableBuildingTypes.has(buildingType)) {
+      button.classList.add('unlocked')
+    }
 
     if (gameState.newBuildingTypes.has(buildingType)) {
       const label = button.querySelector('.new-label')
