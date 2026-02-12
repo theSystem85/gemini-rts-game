@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint src/ tests/ *.js",
     "lint:fix": "eslint src/ tests/ *.js --fix",
+    "lint:fix:changed": "node scripts/lint-changed.js",
     "map:analyse": "node map_analyse.js",
     "make:sprites": "node makeSprites.js",
     "count:locs": "node countLocs.js",
