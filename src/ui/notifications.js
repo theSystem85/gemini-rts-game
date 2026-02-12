@@ -3,13 +3,40 @@
 
 import { pushNotification } from './notificationHistory.js'
 
-export function showNotification(message, duration = 3000) {
+export function showNotification(message, duration = 3000, options = {}) {
   // Remove any existing notifications immediately
   document.querySelectorAll('.notification').forEach((el) => el.remove())
 
   const notification = document.createElement('div')
   notification.className = 'notification'
-  notification.textContent = message
+
+  // Add LLM indicator if llmPlayerId is provided
+  if (options.llmPlayerId) {
+    notification.style.display = 'flex'
+    notification.style.alignItems = 'center'
+    notification.style.gap = '8px'
+
+    const indicator = document.createElement('span')
+    indicator.style.display = 'inline-flex'
+    indicator.style.alignItems = 'center'
+    indicator.style.justifyContent = 'center'
+    indicator.style.width = '24px'
+    indicator.style.height = '24px'
+    indicator.style.borderRadius = '50%'
+    indicator.style.backgroundColor = options.llmColor || '#FF0000'
+    indicator.style.fontSize = '14px'
+    indicator.style.lineHeight = '1'
+    indicator.style.flexShrink = '0'
+    indicator.textContent = '🤖'
+    notification.appendChild(indicator)
+
+    const textSpan = document.createElement('span')
+    textSpan.textContent = message
+    notification.appendChild(textSpan)
+  } else {
+    notification.textContent = message
+  }
+
   notification.style.position = 'absolute'
   notification.style.top = '10px'
   notification.style.left = '50%'
@@ -23,7 +50,7 @@ export function showNotification(message, duration = 3000) {
   document.body.appendChild(notification)
 
   // Push to persistent notification history
-  pushNotification(message)
+  pushNotification(message, { llmPlayerId: options.llmPlayerId, llmColor: options.llmColor })
 
   // Fade out and remove
   setTimeout(() => {

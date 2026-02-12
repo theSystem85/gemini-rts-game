@@ -86,12 +86,18 @@ function renderList() {
   list.innerHTML = notificationLog
     .slice()
     .reverse()
-    .map(entry => `
-      <div class="notif-history__item">
+    .map(entry => {
+      const llmIndicator = entry.llmPlayerId
+        ? `<span class="notif-history__llm-indicator" style="background-color: ${escapeHtml(entry.llmColor || '#FF0000')}">🤖</span>`
+        : ''
+      return `
+      <div class="notif-history__item${entry.llmPlayerId ? ' notif-history__item--llm' : ''}">
+        ${llmIndicator}
         <span class="notif-history__time">${formatTimestamp(entry.timestamp)}</span>
         <span class="notif-history__msg">${escapeHtml(entry.message)}</span>
       </div>
-    `)
+    `
+    })
     .join('')
 }
 
@@ -110,8 +116,13 @@ function updateBadge() {
   }
 }
 
-export function pushNotification(message) {
-  notificationLog.push({ message, timestamp: Date.now() })
+export function pushNotification(message, options = {}) {
+  notificationLog.push({
+    message,
+    timestamp: Date.now(),
+    llmPlayerId: options.llmPlayerId || null,
+    llmColor: options.llmColor || null
+  })
   if (notificationLog.length > MAX_HISTORY) {
     notificationLog.splice(0, notificationLog.length - MAX_HISTORY)
   }
