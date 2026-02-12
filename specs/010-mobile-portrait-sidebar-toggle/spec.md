@@ -96,3 +96,9 @@ Touch users holding the device in portrait orientation need the ability to recla
 
 - **Top Notch Protection for Notifications**: On mobile portrait layouts, transient top notifications must be offset by `var(--safe-area-top)` so banners always render below the notch/protective inset and remain fully readable.
 
+## Update 2026-02-12 (Modal + Sidebar Notch Safety)
+
+- **Modal Notch Clearance**: In mobile portrait mode, modal overlays/dialogs must preserve top safe-area clearance so modal content does not render underneath the notch.
+- **Expanded Sidebar Top Clearance**: Expanded portrait sidebar content must start below the top safe-area inset to keep controls readable and touch-safe around the notch region.
+- **Notification History Controls**: The notification history bell toggle and opened history panel must anchor below `var(--safe-area-top)` in portrait layouts.
+

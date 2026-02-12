@@ -4,6 +4,7 @@
 - [x] Implement `specs/lighthouse-performance/06-critical-css-render-blocking.md` by deferring non-critical UI stylesheets and adding no-script/FOUC guards for first paint.
 - [x] Add a changed-files-only lint fix command (`npm run lint:fix:changed`) and update agent instructions to use it instead of repo-wide lint fixing.
 - [x] Ensure mobile portrait top notifications render below the notch/protective safe-area inset so text never overlaps the device cutout.
+- [x] Keep mobile portrait modal overlays, expanded sidebar content, and notification history bell/list below the top safe-area notch inset.
 - [ ] Analyze `tests/lighthouse/default.report.json`, maintain a weighted top-10 Lighthouse performance TODO list, and track execution across `specs/lighthouse-performance/` task specs.
 - [ ]
 - [ ] There is an issues when unit is commanded to move to an unreachable place. Ensure the engine recognizes when a target is unreachable and aborts the command with a notification.

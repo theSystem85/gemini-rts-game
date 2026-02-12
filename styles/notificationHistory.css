@@ -289,3 +289,14 @@
     margin-left: calc(env(safe-area-inset-left) + 6px);
   }
 }
+
+@media (orientation: portrait) and (max-width: 900px) {
+  body.mobile-portrait .notif-badge {
+    top: calc(var(--safe-area-top) + 10px);
+  }
+
+  body.mobile-portrait .notif-history {
+    top: calc(var(--safe-area-top) + 56px);
+    max-height: calc(100vh - var(--safe-area-top) - 80px);
+  }
+}

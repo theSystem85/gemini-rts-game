@@ -1227,10 +1227,12 @@ body.mobile-portrait {
 }
 
 body.mobile-portrait #sidebar {
+  top: var(--safe-area-top);
   background: linear-gradient(180deg, rgba(46, 46, 46, 0.98) 0%, rgba(30, 30, 30, 0.98) 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 12px 0 28px rgba(0, 0, 0, 0.5);
   padding: 12px;
+  padding-top: calc(var(--safe-area-top) + 12px);
   padding-bottom: calc(12px + var(--safe-area-bottom));
 }
 
