@@ -264,6 +264,7 @@
 /* Full-bleed notifications on mobile portrait */
 @media (orientation: portrait) and (max-width: 900px) {
   body.mobile-portrait .notification {
+    top: calc(var(--safe-area-top) + 10px) !important;
     left: 0 !important;
     right: 0 !important;
     width: 100vw !important;

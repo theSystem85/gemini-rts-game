@@ -92,3 +92,7 @@ Touch users holding the device in portrait orientation need the ability to recla
 ## Update 2026-02-12
 
 - **Hidden Inactive Build Buttons**: In mobile condensed build menus, default production buttons that are still inactive/locked must remain hidden and only render once they become unlocked or otherwise active (queued/paused/ready).
+## Update 2026-02-12 (Notification Safe Area)
+
+- **Top Notch Protection for Notifications**: On mobile portrait layouts, transient top notifications must be offset by `var(--safe-area-top)` so banners always render below the notch/protective inset and remain fully readable.
+
