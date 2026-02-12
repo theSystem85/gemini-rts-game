@@ -66,6 +66,12 @@ export function forceLoadTabImages(_controller, tabContent) {
   }
 
   tabContent.querySelectorAll('img').forEach(img => {
+    // Skip lazy-loaded images that haven't been activated yet
+    // (their src is still the placeholder, data-src holds the real image)
+    if (img.dataset.src && img.src !== img.dataset.src) {
+      return
+    }
+
     if (!img.complete || img.naturalHeight === 0) {
       const originalSrc = img.src
       img.src = ''

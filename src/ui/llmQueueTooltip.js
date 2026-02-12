@@ -241,7 +241,7 @@ function renderQueueContent(playerId) {
       return `
         <div class="money-tooltip__item llm-queue-tooltip__row${statusClass}" data-kind="${item.kind}" data-status="${item.status}">
           <span class="llm-queue-tooltip__index">${statusIcon || `#${index + 1}`}</span>
-          <img class="llm-queue-tooltip__icon" src="${item.image}" alt="${item.label}" loading="lazy" />
+          <img class="llm-queue-tooltip__icon" src="images/sidebar/placeholder.webp" onload="if(this.dataset.src){this.src=this.dataset.src;delete this.dataset.src;}" data-src="${item.image}" alt="${item.label}" loading="lazy" />
           <div class="llm-queue-tooltip__details">
             <span class="llm-queue-tooltip__title">${item.label}</span>
             <span class="llm-queue-tooltip__meta">${item.kind === 'unit' ? 'Unit' : 'Building'} — ${statusLabel}</span>
