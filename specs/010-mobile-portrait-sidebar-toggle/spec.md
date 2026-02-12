@@ -92,3 +92,8 @@ Touch users holding the device in portrait orientation need the ability to recla
 ## Update 2026-02-12
 
 - **Hidden Inactive Build Buttons**: In mobile condensed build menus, default production buttons that are still inactive/locked must remain hidden and only render once they become unlocked or otherwise active (queued/paused/ready).
+
+## Update 2026-02-12 (Drag vs Tooltip Guard)
+
+- **Drag-to-Build Priority**: In mobile portrait build interactions, drag gestures from production buttons must cancel long-press tooltip activation once movement crosses the drag threshold.
+- **No Tooltip During Active Drag**: While a touch drag-to-build gesture is active for a production button, the production tooltip must remain suppressed to avoid stealing focus from placement flow.
