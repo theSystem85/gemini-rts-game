@@ -9,6 +9,125 @@ import { focusCameraOnPoint } from './tutorialSystem/helpers.js'
 let tooltipListenersAttached = false
 let tooltipOpen = false
 
+const THREAT_LEVELS = [
+  { key: 'calm', label: 'CALM', minScore: 0 },
+  { key: 'contact', label: 'CONTACT', minScore: 20 },
+  { key: 'skirmish', label: 'SKIRMISH', minScore: 45 },
+  { key: 'critical', label: 'CRITICAL', minScore: 70 }
+]
+
+const UNIT_THREAT_WEIGHTS = {
+  infantry: 2,
+  harvester: 2,
+  ambulance: 2,
+  tankerTruck: 2,
+  ammunitionTruck: 3,
+  tank: 9,
+  rocketTank: 12,
+  howitzer: 13,
+  mineLayer: 6,
+  minelayer: 6,
+  mineSweeper: 5,
+  apache: 15
+}
+
+function getBattleIntensityLevel(score) {
+  for (let index = THREAT_LEVELS.length - 1; index >= 0; index--) {
+    if (score >= THREAT_LEVELS[index].minScore) {
+      return THREAT_LEVELS[index]
+    }
+  }
+  return THREAT_LEVELS[0]
+}
+
+function getEntityCenter(entity) {
+  if (!entity || typeof entity.x !== 'number' || typeof entity.y !== 'number') {
+    return null
+  }
+
+  if (typeof entity.width === 'number' && typeof entity.height === 'number') {
+    return {
+      x: (entity.x + entity.width / 2) * TILE_SIZE,
+      y: (entity.y + entity.height / 2) * TILE_SIZE
+    }
+  }
+
+  return {
+    x: entity.x + TILE_SIZE / 2,
+    y: entity.y + TILE_SIZE / 2
+  }
+}
+
+function getDistanceBetweenPoints(pointA, pointB) {
+  if (!pointA || !pointB) return Infinity
+  const dx = pointA.x - pointB.x
+  const dy = pointA.y - pointB.y
+  return Math.hypot(dx, dy)
+}
+
+function getFriendlyAnchors(humanPlayer) {
+  const buildings = (gameState.buildings || []).filter(building => building.owner === humanPlayer && building.health > 0)
+  const factories = (gameState.factories || []).filter(factory => factory.owner === humanPlayer && factory.health > 0)
+  return [...buildings, ...factories]
+    .map(getEntityCenter)
+    .filter(Boolean)
+}
+
+function calculateBattleIntensity() {
+  const humanPlayer = gameState.humanPlayer
+  const friendlyAnchors = getFriendlyAnchors(humanPlayer)
+  const mapCenter = {
+    x: ((gameState.mapTilesX || 0) * TILE_SIZE) / 2,
+    y: ((gameState.mapTilesY || 0) * TILE_SIZE) / 2
+  }
+
+  const enemyUnits = (gameState.units || []).filter(unit => unit.owner !== humanPlayer && unit.health > 0)
+  const enemyBuildings = (gameState.buildings || []).filter(building => building.owner !== humanPlayer && building.health > 0)
+
+  let score = 0
+
+  enemyUnits.forEach(unit => {
+    const baseWeight = UNIT_THREAT_WEIGHTS[unit.type] || 6
+    const enemyPoint = getEntityCenter(unit)
+    const nearestDistance = friendlyAnchors.length
+      ? Math.min(...friendlyAnchors.map(anchor => getDistanceBetweenPoints(anchor, enemyPoint)))
+      : getDistanceBetweenPoints(enemyPoint, mapCenter)
+    const proximityRatio = Math.max(0, (700 - nearestDistance) / 700)
+    const proximityMultiplier = 1 + (proximityRatio * 2)
+    score += baseWeight * proximityMultiplier
+  })
+
+  enemyBuildings.forEach(building => {
+    if (!/(turret|tesla|howitzer|helipad|vehicleFactory)/i.test(building.type || '')) {
+      return
+    }
+    const enemyPoint = getEntityCenter(building)
+    const nearestDistance = friendlyAnchors.length
+      ? Math.min(...friendlyAnchors.map(anchor => getDistanceBetweenPoints(anchor, enemyPoint)))
+      : getDistanceBetweenPoints(enemyPoint, mapCenter)
+    const proximityRatio = Math.max(0, (900 - nearestDistance) / 900)
+    score += 4 + (7 * proximityRatio)
+  })
+
+  return {
+    score: Math.max(0, Math.min(100, Math.round(score))),
+    enemyUnitCount: enemyUnits.length,
+    enemyDefensiveBuildingCount: enemyBuildings.filter(building => /(turret|tesla|howitzer)/i.test(building.type || '')).length
+  }
+}
+
+function updateBattleIntensityIndicator() {
+  const indicator = document.getElementById('battleIntensityIndicator')
+  if (!indicator) return
+
+  const { score, enemyUnitCount, enemyDefensiveBuildingCount } = calculateBattleIntensity()
+  const level = getBattleIntensityLevel(score)
+
+  indicator.dataset.level = level.key
+  indicator.textContent = `Threat ${level.label} · ${score}`
+  indicator.title = `${enemyUnitCount} hostile units detected, ${enemyDefensiveBuildingCount} hostile defenses`
+}
+
 function ensureMoneyTooltip() {
   let tooltip = document.getElementById('moneyTooltip')
   if (tooltip) return tooltip
@@ -297,6 +416,13 @@ export function addMoneyIndicator() {
   moneyTrack.appendChild(moneyBar)
   moneyTrack.appendChild(moneyText)
 
+  const battleIntensityIndicator = document.createElement('div')
+  battleIntensityIndicator.id = 'battleIntensityIndicator'
+  battleIntensityIndicator.className = 'battle-intensity-indicator'
+  battleIntensityIndicator.dataset.level = 'calm'
+  battleIntensityIndicator.textContent = 'Threat CALM · 0'
+  moneyTrack.appendChild(battleIntensityIndicator)
+
   // Add elements to container
   moneyBarContainer.appendChild(moneyTrack)
 
@@ -335,4 +461,6 @@ export function updateMoneyBar() {
 
   // Update text to show current money
   moneyText.textContent = `$${currentMoney.toLocaleString()}`
+
+  updateBattleIntensityIndicator()
 }

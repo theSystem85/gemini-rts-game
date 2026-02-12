@@ -123,6 +123,41 @@ body.mobile-landscape .energy-bar-value {
   text-shadow: 0 0 3px #000; /* Black shadow like energy bar */
 }
 
+
+.battle-intensity-indicator {
+  position: absolute;
+  top: -17px;
+  right: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(20, 20, 20, 0.78);
+  color: #8dff8d;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.battle-intensity-indicator[data-level='contact'] {
+  color: #ffd659;
+  border-color: rgba(255, 214, 89, 0.55);
+}
+
+.battle-intensity-indicator[data-level='skirmish'] {
+  color: #ffb24d;
+  border-color: rgba(255, 178, 77, 0.62);
+}
+
+.battle-intensity-indicator[data-level='critical'] {
+  color: #ff6c6c;
+  border-color: rgba(255, 108, 108, 0.72);
+  background: rgba(45, 13, 13, 0.82);
+  box-shadow: 0 0 9px rgba(255, 71, 71, 0.4);
+}
+
 body.mobile-landscape #moneyBarContainer {
   display: none !important;
   visibility: hidden !important;
