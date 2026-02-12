@@ -36,22 +36,7 @@ class TutorialSystem {
   constructor() {
     this.settings = readFromStorage(TUTORIAL_SETTINGS_KEY, DEFAULT_SETTINGS)
     this.progress = readFromStorage(TUTORIAL_PROGRESS_KEY, DEFAULT_PROGRESS)
-    const isPortraitCondensed = document?.body?.classList?.contains('mobile-portrait')
-      && document.body.classList.contains('sidebar-condensed')
-    const defaultPosition = isPortraitCondensed
-      ? {
-        left: '12px',
-        top: 'calc(var(--safe-area-top) + 12px)',
-        bottom: 'auto',
-        right: 'auto'
-      }
-      : {
-        left: 'calc(var(--sidebar-width) + 20px)',
-        top: 'auto',
-        bottom: '20px',
-        right: 'auto'
-      }
-    this.position = readFromStorage(TUTORIAL_POSITION_KEY, defaultPosition)
+    this.position = readFromStorage(TUTORIAL_POSITION_KEY, this.getDefaultPosition())
     this.active = false
     this.phase = 'demo'
     this.stepIndex = this.progress.stepIndex || 0
@@ -79,10 +64,40 @@ class TutorialSystem {
     this.steps = buildTutorialSteps()
   }
 
+  getDefaultPosition() {
+    const isMobilePortrait = document?.body?.classList?.contains('mobile-portrait')
+    return isMobilePortrait
+      ? {
+        left: '0px',
+        top: '0px',
+        bottom: 'auto',
+        right: 'auto'
+      }
+      : {
+        left: 'calc(var(--sidebar-width) + 20px)',
+        top: 'auto',
+        bottom: '20px',
+        right: 'auto'
+      }
+  }
+
+  updatePosition() {
+    const newPosition = this.getDefaultPosition()
+    // Only update if the position actually changed
+    if (JSON.stringify(this.position) !== JSON.stringify(newPosition)) {
+      this.position = newPosition
+      writeToStorage(TUTORIAL_POSITION_KEY, this.position)
+      if (this.card) {
+        Object.assign(this.card.style, this.position)
+      }
+    }
+  }
+
   init() {
     createTutorialUI(this)
     this.bindSettingsControls()
     this.bindActionTracking()
+    this.bindLayoutChangeListeners()
 
     // Hide dock button if tutorial is disabled or completed
     if ((!this.settings.showTutorial || this.progress.completed) && this.dockButton) {
@@ -97,6 +112,23 @@ class TutorialSystem {
       // Ensure overlay is hidden when tutorial is completed or disabled
       this.hideUI()
     }
+  }
+
+  bindLayoutChangeListeners() {
+    // Listen for mobile layout changes
+    document.addEventListener('mobile-landscape-layout-changed', () => {
+      this.updatePosition()
+    })
+
+    // Also listen for orientation changes directly
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.updatePosition(), 100)
+    })
+
+    // And resize events
+    window.addEventListener('resize', () => {
+      this.updatePosition()
+    })
   }
 
 
