@@ -43,6 +43,16 @@ A new button is added to the portrait mode action row:
 - Positioned in horizontal action row above the condensed bottom bar
 - Appears alongside minimap toggle and menu buttons
 
+### Initial Render Fallback (Mobile Portrait)
+
+Before JS runs and applies `mobile-portrait` / `mobile-landscape` body classes, CSS defaults can briefly render the desktop-expanded sidebar.  
+To prevent this first-paint flash on mobile portrait devices:
+- Add a mobile portrait media-query fallback for coarse-pointer devices
+- Apply the fallback only while body has neither `mobile-portrait` nor `mobile-landscape`
+- Default that pre-init state to condensed behavior by translating the sidebar off-screen
+- Force canvases to full width (`left: 0; width: 100%`) during this pre-init window
+- Keep desktop default behavior unchanged (expanded sidebar)
+
 ## Technical Implementation
 
 ### Files Modified
@@ -65,6 +75,11 @@ A new button is added to the portrait mode action row:
    - Inherits styling from existing action button classesnce
    - Set display rules for portrait condensed mode only
    - Applied icon rotation for vertical orientation
+
+4. **styles/base.css**
+   - Added a mobile portrait media-query fallback for first paint
+   - Scoped fallback to `body:not(.mobile-landscape):not(.mobile-portrait)`
+   - Applied condensed-equivalent default sidebar/canvas layout until JS initializes body classes
 
 ### State Management
 
@@ -105,6 +120,8 @@ mobileLayoutState = {
 - [ ] ARIA labels are correct and announced by screen readers
 - [ ] No console errors when toggling sidebar state
 - [ ] Works across different mobile device sizes
+- [ ] On mobile portrait startup, expanded sidebar is not visible before JS layout initialization
+- [ ] Desktop startup still renders expanded sidebar by default
 
 ## Related Specifications
 

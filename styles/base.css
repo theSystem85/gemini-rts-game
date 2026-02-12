@@ -1388,6 +1388,24 @@ body.mobile-portrait.sidebar-condensed #gameCanvasGL {
   width: 100%;
 }
 
+@media (orientation: portrait) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
+  body:not(.mobile-landscape):not(.mobile-portrait) {
+    --sidebar-width: clamp(220px, 74vw, 320px);
+    --portrait-condensed-bar-height: 96px;
+    --portrait-condensed-toggle-width: calc(var(--mobile-action-size) * 0.44);
+  }
+
+  body:not(.mobile-landscape):not(.mobile-portrait) #sidebar {
+    transform: translateX(-100%);
+  }
+
+  body:not(.mobile-landscape):not(.mobile-portrait) #gameCanvas,
+  body:not(.mobile-landscape):not(.mobile-portrait) #gameCanvasGL {
+    left: 0;
+    width: 100%;
+  }
+}
+
 #mobileSidebarControls {
   position: fixed;
   top: calc(var(--safe-area-top));

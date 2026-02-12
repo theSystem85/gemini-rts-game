@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Ensure mobile portrait first paint defaults to condensed sidebar via CSS media-query fallback so the expanded sidebar is not visible before JS layout classes are applied.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
 - [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.
