@@ -1265,8 +1265,16 @@ body.mobile-portrait #actions .action-button.icon-button:hover {
 }
 
 #controlGroupsBtn .group-icon {
-  font-size: 12px;
-  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto; /* allow the multi-character label to fit */
+  min-width: 22px;
+  height: 20px;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  line-height: 1;
+  transform: translateY(-1px); /* visually center within the button */
 }
 
 body:not(.mobile-landscape):not(.mobile-portrait) #controlGroupsBtn {

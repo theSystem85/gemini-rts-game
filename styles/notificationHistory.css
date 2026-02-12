@@ -260,3 +260,31 @@
     min-width: unset;
   }
 }
+
+/* Full-bleed notifications on mobile portrait */
+@media (orientation: portrait) and (max-width: 900px) {
+  body.mobile-portrait .notification {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100% !important;
+    transform: none !important;
+    border-radius: 0 !important;
+    box-sizing: border-box;
+    padding-left: calc(12px + env(safe-area-inset-left));
+    padding-right: calc(12px + env(safe-area-inset-right));
+    margin: 0;
+  }
+
+  /* Ensure LLM indicator and text remain aligned in full-width layout */
+  body.mobile-portrait .notification {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  body.mobile-portrait .notification__llm-indicator {
+    margin-left: calc(env(safe-area-inset-left) + 6px);
+  }
+}

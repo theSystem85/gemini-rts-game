@@ -112,6 +112,7 @@
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
 - [ ] On mobile PWA portrait mode, stretch the sidebar to the very bottom so no unused black bar remains.
+- [x] Align mobile control-groups action button icon (`1·2·3`) with other bottom-bar icons (vertical + horizontal centering) — fixed CSS in `styles/sidebar.css` and `styles/base.css`.
 - [ ] Remove the blue progress bar from sidebar build buttons once a unit finishes production.
 - [ ] Airborne units must never collide with each other or take impact damage; they should only use predictive, position-based avoidance.
 - [ ] Slow Apache rocket volley cadence by 50% and shorten the reload cooldown between volleys by 30% so bursts fire slower but rearm faster.
