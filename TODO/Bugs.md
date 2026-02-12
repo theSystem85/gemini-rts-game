@@ -192,3 +192,4 @@
 - [x] Units when attacking should keep being close enough to target in order to be in range of attack but not too close so they get also hit by their own bullets impact.
 
 - [x] Ensure in mobile condensed production rows that default/inactive build buttons stay hidden until they become active or unlocked.
+- [x] Ensure in mobile portrait that long-press production tooltips do not open when the user is dragging a build button (drag-to-build gesture).
