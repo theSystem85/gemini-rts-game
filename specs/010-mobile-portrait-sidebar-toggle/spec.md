@@ -88,3 +88,7 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Action Bar Active States**: Repair and sell buttons surfaced in the portrait HUD must switch to green icon accents when active (no borders or extra chrome).
 - **White Play/Pause Icon**: The play/pause glyph in the portrait action strip should always render as a clean white icon, without additional color fills.
 - **Control Group Visibility**: Hide the unit group action button while the portrait action bar remains inside the expanded sidebar; only show it in the condensed HUD state.
+
+## Update 2026-02-12
+
+- **Hidden Inactive Build Buttons**: In mobile condensed build menus, default production buttons that are still inactive/locked must remain hidden and only render once they become unlocked or otherwise active (queued/paused/ready).
