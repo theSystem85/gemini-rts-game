@@ -6,7 +6,7 @@ import { recordLlmUsage } from './llmUsage.js'
 import { showNotification } from '../ui/notifications.js'
 import { isHost } from '../network/gameCommandSync.js'
 import { gameState } from '../gameState.js'
-import { TILE_SIZE, UNIT_COSTS, UNIT_PROPERTIES, BULLET_DAMAGES, UNIT_AMMO_CAPACITY, UNIT_GAS_PROPERTIES, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN } from '../config.js'
+import { TILE_SIZE, UNIT_COSTS, UNIT_PROPERTIES, BULLET_DAMAGES, UNIT_AMMO_CAPACITY, UNIT_GAS_PROPERTIES, TANK_FIRE_RANGE, HOWITZER_FIRE_RANGE, HOWITZER_MIN_RANGE, HOWITZER_FIREPOWER, HOWITZER_FIRE_COOLDOWN, PARTY_COLORS } from '../config.js'
 import { buildingData } from '../data/buildingData.js'
 import protocolSchema from '../ai-api/protocol.schema.json'
 
@@ -263,14 +263,22 @@ RULES
 - Prefer "tile" positions for building placement.
 - If unsure, return an empty actions array.
 
-You will receive this full context only once. Future prompts include only the latest game state + transitions; continue the same session and follow these rules.`
+You will receive this full context only once. Future prompts include only the latest game state + transitions; continue the same session and follow these rules.
+
+IMPORTANT: Respond to THIS message with your first set of strategic actions NOW. Analyze the game state below. Your economy build order should start immediately: build a power plant, then an ore refinery, then a vehicle factory, then queue a harvester. Do not wait for a second prompt to start issuing commands.`
 
 const STRATEGIC_FOLLOWUP_PROMPT = `You are the same enemy strategic AI continuing the current match.
 Return ONLY valid JSON matching GameTickOutput. No markdown or extra text.
 Follow the rules and schema from the initial brief.
 Always include intent, confidence (0-1), and notes fields.`
 
-const DEFAULT_COMMENTARY_PROMPT = `You are a mean RTS opponent commentating on the battle.
+const DEFAULT_COMMENTARY_PROMPT = `You are a mean RTS opponent commentating on the battle while actively controlling one AI party.
+Your controlled side is input.playerId in the provided game snapshot. Treat that side as "my" side in commentary.
+Before commenting on any event, identify ownership using each unit/building owner field:
+- If owner === input.playerId, it is YOUR side.
+- If owner !== input.playerId, it is an opposing side (usually the human player, but may include other parties).
+Never confuse sides: do not describe your own losses as the player's losses, and do not claim enemy losses as your own.
+When multiple non-self parties exist, refer to them as specific opposing parties based on owner id.
 Taunt the player about notable events: units destroyed, buildings lost, economy problems, or your upcoming attacks.
 Only comment when something interesting happened (battles, kills, expansions, milestones).
 If nothing notable occurred since your last comment, respond with exactly: {"skip":true}
@@ -771,7 +779,7 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
     schema: SIMPLE_GAME_TICK_SCHEMA,
     strict: true
   }
-  const instructionPrompt = STRATEGIC_FOLLOWUP_PROMPT
+  const instructionPrompt = hasBootstrapped ? STRATEGIC_FOLLOWUP_PROMPT : STRATEGIC_BOOTSTRAP_PROMPT
   const systemForRequest = providerId === 'openai' ? null : instructionPrompt
 
   try {
@@ -823,7 +831,8 @@ async function runStrategicTickForPlayer(playerId, state, settings, now) {
     }
 
     if (parsed.notes) {
-      showNotification(parsed.notes, 4000)
+      const llmColor = PARTY_COLORS[playerId] || '#FF0000'
+      showNotification(parsed.notes, 4000, { llmPlayerId: playerId, llmColor })
     }
   } catch (err) {
     // Only show error messages if API key is configured

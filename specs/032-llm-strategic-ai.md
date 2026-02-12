@@ -59,6 +59,7 @@ Introduce configurable LLM support for enemy strategic planning and optional ene
 - Commentary skips ticks where no interesting events occurred (no combat, production, or destruction events) to avoid spamming.
 - When the LLM chooses to skip commentary it responds with `{"skip": true}` which is silently accepted.
 - The last 10 commentary messages are tracked and included in the prompt to prevent repetition; the LLM is instructed to vary vocabulary and never repeat itself.
+- Commentary prompt enforces strict owner-aware narration: the AI must treat `input.playerId` as its own side and use each entity's `owner` field to attribute losses/kills correctly across all parties.
 - All commentary notifications are recorded in a persistent notification history log (up to 100 entries) accessible via a bell icon in the top-right corner.
 
 ## Fog-of-War Awareness

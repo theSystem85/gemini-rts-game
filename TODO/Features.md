@@ -19,6 +19,7 @@
   - [x] Add base defense avoidance tactical guidance to LLM bootstrap prompt.
   - [x] Enforce tech tree availability in LLM applier (reject out-of-order builds with TECH_TREE_LOCKED).
   - [x] Fix LLM-locked enemy units not firing at targets (set allowedToAttack, auto-target buildings).
+  - [x] Make LLM respond with strategic commands on the very first POST request instead of waiting for next GET tick (bootstrap prompt instructs immediate economy build order).
   - [x] Skip LLM API calls when no API key is configured for providers that need one.
   - [x] Remove API key input for Ollama (local provider, no key needed).
   - [x] Add per-party LLM toggle in multiplayer sidebar to switch between LLM AI and local AI per party.
