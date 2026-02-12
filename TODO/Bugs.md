@@ -190,3 +190,5 @@
 - [x] Console warning: "findPath: destination tile not passable (units.js:101)"
 - [x] When I click on some build button twice there is a 3 shown in the batch count.
 - [x] Units when attacking should keep being close enough to target in order to be in range of attack but not too close so they get also hit by their own bullets impact.
+
+- [x] Ensure in mobile condensed production rows that default/inactive build buttons stay hidden until they become active or unlocked.
