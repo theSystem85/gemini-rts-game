@@ -803,8 +803,9 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
 
   // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
   // This allows each factory to have its own individual assembly point.
-  // Harvesters handle their own initial path logic in productionQueue.js
-  if (rallyPointTarget && type !== 'harvester') {
+  // Harvesters handle their own initial path logic in productionQueue.js.
+  // Apaches spawned on helipads must remain landed until they receive a separate command.
+  if (rallyPointTarget && type !== 'harvester' && !isHelipadApache) {
     const path = findPath(
       { x: spawnPosition.x, y: spawnPosition.y },
       { x: rallyPointTarget.x, y: rallyPointTarget.y },

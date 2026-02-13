@@ -155,20 +155,31 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
             heli.y = landingY
             heli.tileX = Math.floor(heli.x / TILE_SIZE)
             heli.tileY = Math.floor(heli.y / TILE_SIZE)
-            heli.moveTarget = { x: heli.tileX, y: heli.tileY }
+            heli.moveTarget = null
             heli.path = []
-            heli.flightPlan = {
-              x: helipadCenterX,
-              y: helipadCenterY,
-              stopRadius: Math.max(6, TILE_SIZE * 0.2),
-              mode: 'helipad',
-              followTargetId: null,
-              destinationTile: { x: heli.tileX, y: heli.tileY }
+            if (heli.movement) {
+              heli.movement.velocity = { x: 0, y: 0 }
+              heli.movement.targetVelocity = { x: 0, y: 0 }
+              heli.movement.isMoving = false
+              heli.movement.currentSpeed = 0
             }
 
             if (heli.flightState !== 'grounded') {
+              heli.flightPlan = {
+                x: helipadCenterX,
+                y: helipadCenterY,
+                stopRadius: Math.max(6, TILE_SIZE * 0.2),
+                mode: 'helipad',
+                followTargetId: null,
+                destinationTile: { x: heli.tileX, y: heli.tileY }
+              }
               heli.autoHoldAltitude = false
               heli.manualFlightState = 'land'
+            } else {
+              heli.flightPlan = null
+              heli.autoHoldAltitude = false
+              heli.manualFlightState = 'auto'
+              heli.manualFlightHoverRequested = false
             }
 
             heli.helipadTargetId = helipadId

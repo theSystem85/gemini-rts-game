@@ -180,6 +180,32 @@ describe('helipadLogic', () => {
     expect(helipad.landedUnitId).toBe('a1')
   })
 
+
+  it('zeros movement while landing on helipad to prevent jitter', () => {
+    const helipad = createHelipad({ ammo: 50, fuel: 100 })
+    const landingCenter = getHelipadLandingCenter(helipad)
+    const apache = createApache({
+      x: landingCenter.x - 6,
+      y: landingCenter.y - 4,
+      flightState: 'airborne',
+      helipadLandingRequested: true,
+      selected: true,
+      movement: {
+        velocity: { x: 3, y: -2 },
+        targetVelocity: { x: 1, y: 1 },
+        isMoving: true,
+        currentSpeed: 2
+      }
+    })
+
+    updateHelipadLogic([apache], [helipad], {}, 100)
+
+    expect(apache.movement.velocity).toEqual({ x: 0, y: 0 })
+    expect(apache.movement.targetVelocity).toEqual({ x: 0, y: 0 })
+    expect(apache.movement.isMoving).toBe(false)
+    expect(apache.moveTarget).toBeNull()
+  })
+
   it('auto relaunches to continue attack after full ammo reload on auto-return', () => {
     const helipad = createHelipad({
       ammo: 50,

@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Stop Apache helipad jitter/hover when landing while selected, and keep newly produced Apaches grounded on helipads until commanded.
 - [x] Ensure Apaches auto-return to helipad on empty ammo, fully land/reload, resume attacking the same target, and finally return to helipad after the target is destroyed.
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
 - [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.

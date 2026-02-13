@@ -532,6 +532,35 @@ describe('units.js', () => {
       expect(unit).toBeTruthy()
     })
 
+
+    it('should keep newly built apache landed on helipad even when rally point exists', () => {
+      const helipad = {
+        id: 'helipad-1',
+        type: 'helipad',
+        x: 4,
+        y: 4,
+        width: 2,
+        height: 2,
+        owner: 'player1',
+        health: 100,
+        landedUnitId: null
+      }
+
+      const units = []
+      const rallyPoint = { x: 12, y: 12 }
+      const unit = spawnUnit(helipad, 'apache', units, mapGrid, rallyPoint)
+
+      expect(unit).toBeTruthy()
+      expect(unit.type).toBe('apache')
+      expect(unit.flightState).toBe('grounded')
+      expect(unit.moveTarget || null).toBeNull()
+      expect(unit.path).toEqual([])
+      expect(unit.autoHoldAltitude).toBe(false)
+      expect(unit.manualFlightState).toBe('auto')
+      expect(unit.landedHelipadId).toBe('helipad-1')
+      expect(helipad.landedUnitId).toBe(unit.id)
+    })
+
     it('should update occupancy map when spawning', () => {
       gameState.occupancyMap = buildOccupancyMap([], mapGrid)
       const units = []
