@@ -23,6 +23,9 @@ Provide a professional, in-game user documentation experience that can be opened
 3. Add a sidebar button to open the documentation in a modal.
 4. Add a tutorial-window toggle button that opens the same documentation modal.
 5. Ensure documentation is viewable through an iframe modal with keyboard and click-out close behavior.
+6. On mobile portrait, the docs modal must account for top safe-area insets and stretch to full screen width.
+7. Docs modal layering must appear above the tutorial overlay.
+8. Place the docs/settings/cheats button row above the Multiplayer section in the sidebar.
 
 ## Design Requirements
 - Mobile-responsive: single-column card layout on screens < 768px, scrollable tables

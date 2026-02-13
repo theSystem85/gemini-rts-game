@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Ensure mobile portrait first paint defaults to condensed sidebar via CSS media-query fallback so the expanded sidebar is not visible before JS layout classes are applied.
 - [x] LLM enemy commentary misattributes ownership (e.g., says player destroyed "my" buildings when they were AI-owned); enforce owner-aware taunts tied to the controlled party id.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
@@ -108,6 +109,7 @@
 - [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
 - [x] ✅ Paused attack pathfinding while a tank is remote controlled and delayed auto-movement for 1s after remote control stops.
 ## Bugs
+- [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
