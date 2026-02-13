@@ -21,7 +21,10 @@ export function createTutorialUI(tutorial) {
     tutorial.backButton = tutorial.overlay.querySelector('[data-tutorial-action="back"]')
     tutorial.minimizeButton = tutorial.overlay.querySelector('[data-tutorial-action="minimize"]')
     tutorial.voiceToggleButton = tutorial.overlay.querySelector('[data-tutorial-action="voice-toggle"]')
+    tutorial.docsButton = tutorial.overlay.querySelector('[data-tutorial-action="open-docs"]')
     if (tutorial.minimizeButton) {
+      tutorial.minimizeButton.innerHTML = '▬'
+      tutorial.minimizeButton.title = 'Minimize tutorial'
       tutorial.minimizeButton.addEventListener('click', () => tutorial.toggleMinimize())
     }
     if (tutorial.voiceToggleButton) {
@@ -29,6 +32,11 @@ export function createTutorialUI(tutorial) {
     }
     if (tutorial.backButton) {
       tutorial.backButton.addEventListener('click', () => tutorial.goToPreviousStep())
+    }
+    if (tutorial.docsButton) {
+      tutorial.docsButton.innerHTML = '📖'
+      tutorial.docsButton.title = 'Open documentation'
+      tutorial.docsButton.addEventListener('click', () => window.openUserDocs?.())
     }
     if (tutorial.dockButton) {
       tutorial.dockButton.addEventListener('click', () => tutorial.toggleMinimize())
@@ -60,7 +68,8 @@ export function createTutorialUI(tutorial) {
   const minimizeButton = document.createElement('button')
   minimizeButton.type = 'button'
   minimizeButton.className = 'tutorial-minimize'
-  minimizeButton.textContent = 'Minimize'
+  minimizeButton.innerHTML = '▬'
+  minimizeButton.title = 'Minimize tutorial'
   minimizeButton.setAttribute('data-tutorial-action', 'minimize')
   minimizeButton.setAttribute('aria-pressed', 'false')
 
@@ -71,9 +80,17 @@ export function createTutorialUI(tutorial) {
   voiceToggleButton.setAttribute('data-tutorial-action', 'voice-toggle')
   voiceToggleButton.setAttribute('aria-pressed', 'true')
 
+  const docsButton = document.createElement('button')
+  docsButton.type = 'button'
+  docsButton.className = 'tutorial-voice-toggle'
+  docsButton.innerHTML = '📖'
+  docsButton.title = 'Open documentation'
+  docsButton.setAttribute('data-tutorial-action', 'open-docs')
+
   header.appendChild(stepCount)
   header.appendChild(stepPhase)
   header.appendChild(voiceToggleButton)
+  header.appendChild(docsButton)
   header.appendChild(minimizeButton)
 
   const title = document.createElement('h3')
@@ -179,6 +196,7 @@ export function createTutorialUI(tutorial) {
   tutorial.backButton = backButton
   tutorial.minimizeButton = minimizeButton
   tutorial.voiceToggleButton = voiceToggleButton
+  tutorial.docsButton = docsButton
 
   nextButton.addEventListener('click', () => tutorial.handleNext())
   skipButton.addEventListener('click', () => tutorial.skipTutorial())
@@ -186,6 +204,7 @@ export function createTutorialUI(tutorial) {
   backButton.addEventListener('click', () => tutorial.goToPreviousStep())
   minimizeButton.addEventListener('click', () => tutorial.toggleMinimize())
   voiceToggleButton.addEventListener('click', () => tutorial.toggleVoice())
+  docsButton.addEventListener('click', () => window.openUserDocs?.())
   dockButton.addEventListener('click', () => tutorial.toggleMinimize())
 
   setupTutorialDragHandlers(tutorial)
