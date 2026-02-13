@@ -445,6 +445,19 @@ describe('units.js', () => {
       expect(path.length).toBeGreaterThan(0)
       expect(path[path.length - 1]).not.toEqual({ x: 5, y: 5 })
     })
+    it('should return empty when strictDestination is true and pathfinding limit is reached', () => {
+      const path = findPath(
+        { x: 0, y: 0 },
+        { x: 15, y: 15 },
+        mapGrid,
+        null,
+        1,
+        { strictDestination: true }
+      )
+
+      expect(path).toEqual([])
+    })
+
 
     it('should respect occupancy map when provided', () => {
       const occupancyMap = buildOccupancyMap([], mapGrid)

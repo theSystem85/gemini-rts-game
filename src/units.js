@@ -462,6 +462,18 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
       break
     }
   }
+  // In strict destination mode, only accept paths that actually reach the destination.
+  if (strictDestination) {
+    const reachedDestination =
+      finalPath.length > 0 &&
+      finalPath[finalPath.length - 1].x === adjustedEnd.x &&
+      finalPath[finalPath.length - 1].y === adjustedEnd.y
+
+    if (!reachedDestination) {
+      return []
+    }
+  }
+
   // If no path was found, finalPath will be empty
 
   // If direct line is available, compare costs
