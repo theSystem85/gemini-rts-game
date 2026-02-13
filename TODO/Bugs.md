@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Ensure multiplayer host alias is shown above construction yards for all players (including the host), updates immediately when edited in the sidebar, and persists across reloads.
 - [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Ensure mobile portrait first paint defaults to condensed sidebar via CSS media-query fallback so the expanded sidebar is not visible before JS layout classes are applied.
 - [x] LLM enemy commentary misattributes ownership (e.g., says player destroyed "my" buildings when they were AI-owned); enforce owner-aware taunts tied to the controlled party id.
