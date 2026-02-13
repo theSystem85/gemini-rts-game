@@ -509,6 +509,18 @@
       </div>
 
       <!-- Multiplayer Settings -->
+      <div style="display: flex; gap: 5px; margin: 10px 0;">
+        <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
+          <span class="button-icon settings-icon">⚙</span>
+        </button>
+        <button id="userDocsBtn" class="action-button icon-button" type="button" title="Open user documentation">
+          <span class="button-icon">📘</span>
+        </button>
+        <button id="cheatMenuBtn" class="action-button icon-button" type="button" title="Open cheat console">
+          <span class="button-icon">🃏</span>
+        </button>
+      </div>
+
       <div id="multiplayerSettings">
         <h3>Multiplayer</h3>
         <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
@@ -549,19 +561,6 @@
             <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1"
               style="width: 70px; margin-left: 10px;" id="speedMultiplier">
           </label>
-        </div>
-
-        <!-- Settings and cheat buttons -->
-        <div style="display: flex; gap: 5px; margin: 10px 0;">
-          <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
-            <span class="button-icon settings-icon">⚙</span>
-          </button>
-          <button id="userDocsBtn" class="action-button icon-button" type="button" title="Open user documentation">
-            <span class="button-icon">📘</span>
-          </button>
-          <button id="cheatMenuBtn" class="action-button icon-button" type="button" title="Open cheat console">
-            <span class="button-icon">🃏</span>
-          </button>
         </div>
 
         <!-- Map Settings Accordion -->
