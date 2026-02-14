@@ -446,7 +446,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
       }
     }
     nodesExplored++
-    if (nodesExplored > pathFindingLimit) {
+    if (!strictDestination && nodesExplored > pathFindingLimit) {
       const bestNode = openHeap.content.reduce((best, node) => {
         const fScore = node.g + node.h
         const bestFScore = best.g + best.h

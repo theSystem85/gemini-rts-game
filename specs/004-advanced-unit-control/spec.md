@@ -179,6 +179,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-057**: When one or more human-controlled selected units receive an unreachable move command, the system MUST show a user notification indicating the move was aborted.
 - **FR-058**: For direct player-issued move commands, pathfinding MUST treat the clicked destination as strict and MUST NOT auto-retarget to a nearby passable tile when the destination tile itself is blocked.
 - **FR-059**: In strict destination mode, partial/fallback paths that do not terminate on the clicked destination tile MUST be rejected (including when the destination is enclosed by occupied neighboring tiles).
+- **FR-060**: Strict-destination movement MUST still allow any reachable long-distance destination, and pathfinding for those commands MUST not be cut short by pathfinding-limit fallback that would produce false unreachable results or truncated route visualization.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.

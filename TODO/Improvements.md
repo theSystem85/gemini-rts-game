@@ -1,6 +1,6 @@
 ## Improvements
 - [ ]
-- [x] There is an issue when a unit is commanded to move to an unreachable place. Ensure the engine recognises unreachable targets, aborts the move command, and shows a notification to the user. (Completed 2026-02-10; refined: strict destination + reject partial paths when destination is enclosed by occupied neighbors)
+- [x] There is an issue when a unit is commanded to move to an unreachable place. Ensure the engine recognises unreachable targets, aborts the move command, and shows a notification to the user. (Completed 2026-02-10; refined: strict destination + reject partial enclosed paths + preserve long-distance reachable paths and full route rendering)
 - [ ] When LLM comments on the game show a bubble with the color of the party the LLM is controlling on the left hand side of the notification. Inside the bubble show the same robot icon that is already used in the multiplayer section of the sidebar to show that the LLM is active on a party.
 - [ ] add support for up to 3 optional LLM players (could also be steered by different models or all by the same to safe requests (make it configurable))
 - [x] fix path finding/dodging algorithm. Generate flow diagram on how it currently works to get betting analysis on how to fix it. → Deep analysis created in `AI_Docs/PATHFINDING_MOVEMENT_DEEP_ANALYSIS.md`. Fixed stale non-occupancy path continuation bug and dodge path restoration backtracking.

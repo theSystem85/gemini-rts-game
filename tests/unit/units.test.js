@@ -445,7 +445,7 @@ describe('units.js', () => {
       expect(path.length).toBeGreaterThan(0)
       expect(path[path.length - 1]).not.toEqual({ x: 5, y: 5 })
     })
-    it('should return empty when strictDestination is true and pathfinding limit is reached', () => {
+    it('should still find long strictDestination paths even when pathfinding limit is very low', () => {
       const path = findPath(
         { x: 0, y: 0 },
         { x: 15, y: 15 },
@@ -455,7 +455,8 @@ describe('units.js', () => {
         { strictDestination: true }
       )
 
-      expect(path).toEqual([])
+      expect(path.length).toBeGreaterThan(0)
+      expect(path[path.length - 1]).toEqual({ x: 15, y: 15 })
     })
 
 
