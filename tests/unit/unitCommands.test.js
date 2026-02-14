@@ -17,7 +17,8 @@ vi.mock('../../src/sound.js', () => ({
 vi.mock('../../src/gameState.js', () => ({
   gameState: {
     occupancyMap: [],
-    attackGroupTargets: []
+    attackGroupTargets: [],
+    humanPlayer: 'player'
   }
 }))
 
@@ -107,6 +108,7 @@ describe('UnitCommandsHandler utility queues', () => {
     units.length = 0
     gameState.attackGroupTargets = []
     gameState.occupancyMap = mapGrid
+    gameState.humanPlayer = 'player'
   })
 
   it('initializes and resets utility queue state when mode changes', () => {
@@ -430,6 +432,7 @@ describe('UnitCommandsHandler handleAttackCommand', () => {
     units.length = 0
     gameState.attackGroupTargets = []
     gameState.occupancyMap = mapGrid
+    gameState.humanPlayer = 'player'
   })
 
   it('should assign attack targets to selected units', () => {
@@ -478,6 +481,7 @@ describe('UnitCommandsHandler handleRefineryUnloadCommand', () => {
     units.length = 0
     gameState.attackGroupTargets = []
     gameState.occupancyMap = mapGrid
+    gameState.humanPlayer = 'player'
   })
 
   it('should assign refinery to harvesters', () => {
@@ -517,6 +521,7 @@ describe('UnitCommandsHandler handleHarvesterCommand', () => {
     units.length = 0
     gameState.attackGroupTargets = []
     gameState.occupancyMap = mapGrid
+    gameState.humanPlayer = 'player'
   })
 
   it('should set manualOreTarget when commanding harvesters to ore location', () => {
@@ -546,6 +551,7 @@ describe('UnitCommandsHandler attack group and movement', () => {
     units.length = 0
     gameState.attackGroupTargets = []
     gameState.occupancyMap = mapGrid
+    gameState.humanPlayer = 'player'
   })
 
   it('clears attack group state and attack queues from units', () => {
@@ -808,6 +814,28 @@ describe('UnitCommandsHandler attack group and movement', () => {
 
     expect(showNotification).toHaveBeenCalledWith('Cannot command units without commanders!', 2000)
   })
+  it('handleMovementCommand aborts unreachable movement and notifies human player', () => {
+    const unit = { id: 'u1', type: 'tank', owner: 'player', tileX: 0, tileY: 0 }
+
+    findPathForOwner.mockReturnValue(null)
+
+    handler.handleMovementCommand([unit], 96, 96, mapGrid)
+
+    expect(unit.path).toEqual([])
+    expect(unit.moveTarget).toBe(null)
+    expect(showNotification).toHaveBeenCalledWith('Cannot reach that location. Move command aborted.', 2200)
+  })
+
+  it('handleMovementCommand does not notify for unreachable non-human units', () => {
+    const aiUnit = { id: 'u2', type: 'tank', owner: 'enemy', tileX: 0, tileY: 0 }
+
+    findPathForOwner.mockReturnValue(null)
+
+    handler.handleMovementCommand([aiUnit], 96, 96, mapGrid)
+
+    expect(showNotification).not.toHaveBeenCalledWith('Cannot reach that location. Move command aborted.', 2200)
+  })
+
 
   it('planUtilityAssignments distributes targets among service units', () => {
     const ambulance1 = { id: 'amb1', type: 'ambulance', owner: 'player', tileX: 0, tileY: 0, x: 0, y: 0, health: 10, medics: 2 }

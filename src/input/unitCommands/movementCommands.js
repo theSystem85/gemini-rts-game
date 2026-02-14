@@ -40,6 +40,7 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
 
   let anyMoved = false
   let outOfGasCount = 0
+  let unreachableHumanCount = 0
   const mapHeight = mapGrid.length
   const mapWidth = mapGrid[0]?.length || 0
   unitsToCommand.forEach((unit, index) => {
@@ -138,7 +139,8 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
           destTile,
           mapGrid,
           gameState.occupancyMap,
-          unit.owner
+          unit.owner,
+          { strictDestination: true }
         )
 
     if (path && path.length > 0) {
@@ -162,6 +164,14 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
       anyMoved = true
     } else if (gasDepleted) {
       outOfGasCount++
+    } else {
+      if (unit.owner === gameState.humanPlayer) {
+        unreachableHumanCount++
+      }
+
+      resetUnitVelocityForNewPath(unit)
+      unit.path = []
+      unit.moveTarget = null
     }
 
   })
@@ -173,6 +183,15 @@ export function handleMovementCommand(handler, selectedUnits, targetX, targetY, 
     const avgX = selectedUnits.reduce((sum, u) => sum + u.x, 0) / selectedUnits.length
     const avgY = selectedUnits.reduce((sum, u) => sum + u.y, 0) / selectedUnits.length
     playPositionalSound('movement', avgX, avgY, 0.5)
+  }
+
+  if (unreachableHumanCount > 0) {
+    showNotification(
+      unreachableHumanCount === 1
+        ? 'Cannot reach that location. Move command aborted.'
+        : `${unreachableHumanCount} units cannot reach that location. Move commands aborted.`,
+      2200
+    )
   }
 
   if (unitsToCommand.length > 0) {

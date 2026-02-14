@@ -183,6 +183,12 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-061**: Cheat ammo commands applied to selected Apache helicopters MUST update Apache combat ammo (`rocketAmmo`) as the primary source of truth, even when compatibility fields (e.g. `maxAmmunition`) exist on the same unit object.
 - **FR-062**: Apache combat/autoreturn logic MUST ignore stale remote-control state after a short inactivity timeout so old `remoteControlActive` flags cannot block ammo-empty auto-return to helipad.
 - **FR-063**: Automated E2E coverage MUST verify the Apache ammo-empty lifecycle end-to-end (auto-return intent, refill, relaunch, and target-resume) including stale remote-control-state regression protection, using durable state checks that do not rely on a single-frame grounded transition.
+- **FR-064**: When a move command target is unreachable by pathfinding, the system MUST abort that unit's move command instead of leaving it pending.
+- **FR-065**: When one or more human-controlled selected units receive an unreachable move command, the system MUST show a user notification indicating the move was aborted.
+- **FR-066**: For direct player-issued move commands, pathfinding MUST treat the clicked destination as strict and MUST NOT auto-retarget to a nearby passable tile when the destination tile itself is blocked.
+- **FR-067**: In strict destination mode, partial/fallback paths that do not terminate on the clicked destination tile MUST be rejected (including when the destination is enclosed by occupied neighboring tiles).
+- **FR-068**: Strict-destination movement MUST still allow any reachable long-distance destination, and pathfinding for those commands MUST not be cut short by pathfinding-limit fallback that would produce false unreachable results or truncated route visualization.
+
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.

@@ -305,6 +305,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
   const contextOptions = options || {}
   const unitOwner = contextOptions.unitOwner ?? start.owner ?? start.ownerId ?? start.playerId ?? start.unitOwner ?? null
   const ignoreFriendlyMines = Boolean(contextOptions.ignoreFriendlyMines)
+  const strictDestination = Boolean(contextOptions.strictDestination)
   const pathContext = { unitOwner, ignoreFriendlyMines }
 
   // Begin destination adjustment if blocked or occupied
@@ -322,6 +323,10 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
     destSeedCrystal ||
     destOccupied
   ) {
+    if (strictDestination) {
+      return []
+    }
+
     const alt = findNearestFreeTile(adjustedEnd.x, adjustedEnd.y, mapGrid, occupancyMap, 5, pathContext)
     if (alt) {
       adjustedEnd = alt
@@ -441,7 +446,7 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
       }
     }
     nodesExplored++
-    if (nodesExplored > pathFindingLimit) {
+    if (!strictDestination && nodesExplored > pathFindingLimit) {
       const bestNode = openHeap.content.reduce((best, node) => {
         const fScore = node.g + node.h
         const bestFScore = best.g + best.h
@@ -457,6 +462,18 @@ export const findPath = logPerformance(function findPath(start, end, mapGrid, oc
       break
     }
   }
+  // In strict destination mode, only accept paths that actually reach the destination.
+  if (strictDestination) {
+    const reachedDestination =
+      finalPath.length > 0 &&
+      finalPath[finalPath.length - 1].x === adjustedEnd.x &&
+      finalPath[finalPath.length - 1].y === adjustedEnd.y
+
+    if (!reachedDestination) {
+      return []
+    }
+  }
+
   // If no path was found, finalPath will be empty
 
   // If direct line is available, compare costs
