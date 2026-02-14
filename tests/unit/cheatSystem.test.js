@@ -82,9 +82,18 @@ vi.mock('../../src/units.js', () => ({
 }))
 
 const updatePowerSupply = vi.fn()
+const createBuilding = vi.fn()
+const placeBuilding = vi.fn()
+const buildingData = {
+  helipad: { width: 3, height: 3 },
+  powerPlant: { width: 2, height: 2 }
+}
 
 vi.mock('../../src/buildings.js', () => ({
-  updatePowerSupply
+  updatePowerSupply,
+  createBuilding,
+  placeBuilding,
+  buildingData
 }))
 
 const updateUnitSpeedModifier = vi.fn()
@@ -156,6 +165,8 @@ beforeEach(async() => {
   gameState.selectionActive = false
   gameState.selectionStart = { x: 0, y: 0 }
   gameState.selectionEnd = { x: 0, y: 0 }
+  createBuilding.mockReset()
+  placeBuilding.mockReset()
   resetDom()
 
   ;({ CheatSystem } = await import('../../src/input/cheatSystem.js'))
@@ -219,6 +230,16 @@ describe('CheatSystem', () => {
     })
   })
 
+  it('parses build commands with building type and party', () => {
+    const system = new CheatSystem()
+    const parsed = system.parseBuildingSpawnCommand('build helipad red')
+
+    expect(parsed).toEqual({
+      buildingType: 'helipad',
+      owner: 'player2'
+    })
+  })
+
   it('finds valid spawn positions around occupied tiles', () => {
     const system = new CheatSystem()
     gameState.mapGrid = createGrid(3, 3)
@@ -252,6 +273,34 @@ describe('CheatSystem', () => {
     expect(units).toHaveLength(2)
     expect(updateUnitOccupancy).toHaveBeenCalledTimes(2)
     expect(showNotification).toHaveBeenCalledWith(expect.stringContaining('Spawned 2 tank_v1s'), 3000)
+  })
+
+  it('spawns buildings near cursor via build cheat command', () => {
+    const system = new CheatSystem()
+    gameState.mapGrid = createGrid(10, 10)
+    gameState.occupancyMap = Array.from({ length: 10 }, () => Array(10).fill(0))
+    gameState.buildings = []
+    gameState.cursorX = 20
+    gameState.cursorY = 20
+
+    createBuilding.mockImplementation((type, x, y) => ({
+      id: `${type}-${x}-${y}`,
+      type,
+      x,
+      y,
+      width: 3,
+      height: 3,
+      health: 100,
+      maxHealth: 100
+    }))
+
+    system.processCheatCode('build helipad red')
+
+    expect(createBuilding).toHaveBeenCalledWith('helipad', 2, 2)
+    expect(placeBuilding).toHaveBeenCalledTimes(1)
+    expect(gameState.buildings).toHaveLength(1)
+    expect(gameState.buildings[0].owner).toBe('player2')
+    expect(showNotification).toHaveBeenCalledWith(expect.stringContaining('Spawned helipad'), 3000)
   })
 
   it('deploys mine patterns and reports skipped tiles', () => {
@@ -297,12 +346,21 @@ describe('CheatSystem', () => {
 
   it('sets ammo values for apache units', () => {
     const system = new CheatSystem()
-    const apache = { type: 'apache', maxRocketAmmo: 10, rocketAmmo: 0, apacheAmmoEmpty: true, canFire: false }
+    const apache = {
+      type: 'apache',
+      maxAmmunition: 10,
+      ammunition: 0,
+      maxRocketAmmo: 10,
+      rocketAmmo: 0,
+      apacheAmmoEmpty: true,
+      canFire: false
+    }
     system.setSelectedUnitsRef([apache])
 
     system.setSelectedUnitsAmmo({ value: 0.5, isPercent: true, display: '50%' })
 
     expect(apache.rocketAmmo).toBe(5)
+    expect(apache.ammunition).toBe(5)
     expect(apache.apacheAmmoEmpty).toBe(false)
     expect(apache.canFire).toBe(true)
   })

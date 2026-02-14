@@ -762,6 +762,11 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
     newUnit.landedHelipadId = helipadId
     newUnit.remoteControlActive = false
     newUnit.groundedOccupancyApplied = false
+    // Clear any path or moveTarget to prevent immediate takeoff
+    // This is a defensive measure - even though rally point logic is skipped,
+    // we explicitly clear these to ensure the helicopter stays grounded
+    newUnit.path = []
+    newUnit.moveTarget = null
     if (newUnit.movement) {
       newUnit.movement.velocity = { x: 0, y: 0 }
       newUnit.movement.targetVelocity = { x: 0, y: 0 }
@@ -804,7 +809,8 @@ export function spawnUnit(factory, type, units, mapGrid, rallyPointTarget = null
   // If a rally point target was provided (from the specific spawning factory), set the unit's path to it.
   // This allows each factory to have its own individual assembly point.
   // Harvesters handle their own initial path logic in productionQueue.js
-  if (rallyPointTarget && type !== 'harvester') {
+  // Apache helicopters spawned on helipads should not immediately move to rally points - they should stay landed
+  if (rallyPointTarget && type !== 'harvester' && !isHelipadApache) {
     const path = findPath(
       { x: spawnPosition.x, y: spawnPosition.y },
       { x: rallyPointTarget.x, y: rallyPointTarget.y },

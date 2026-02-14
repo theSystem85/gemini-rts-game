@@ -834,7 +834,7 @@ export const UNIT_PROPERTIES = {
   apache: {
     health: 40,
     maxHealth: 40,
-    speed: 6.75, // 50% faster than previous base (4.5 -> 6.75)
+    speed: 5.0625, // 25% slower than previous value (6.75 -> 5.0625)
     rotationSpeed: 0.18,
     turretRotationSpeed: 0,
     accelerationMultiplier: 1.25

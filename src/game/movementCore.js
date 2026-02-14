@@ -223,14 +223,25 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         const airSpeed = (unit.airCruiseSpeed || unit.speed || MOVEMENT_CONFIG.MAX_SPEED) * (unit.speedModifier || 1)
         const dirX = dx / distance
         const dirY = dy / distance
-        movement.targetVelocity.x = dirX * airSpeed
-        movement.targetVelocity.y = dirY * airSpeed
-        movement.isMoving = true
         const desiredRotation = normalizeAngle(Math.atan2(dirY, dirX))
-        movement.targetRotation = desiredRotation
         const apacheRotationSpeed = unit.rotationSpeed || 0.18
         const currentRotation = unit.direction || movement.rotation || 0
         const smoothedRotation = smoothRotateTowardsAngle(currentRotation, desiredRotation, apacheRotationSpeed)
+        movement.targetRotation = desiredRotation
+
+        if (activeFlightPlan.mode === 'helipad') {
+          const angleToTarget = Math.abs(normalizeAngle(desiredRotation - smoothedRotation))
+          const forwardThrottle = Math.max(0, Math.cos(angleToTarget))
+          const minThrottle = angleToTarget < Math.PI * 0.35 ? 0.2 : 0
+          const throttle = Math.max(minThrottle, forwardThrottle)
+          movement.targetVelocity.x = Math.cos(smoothedRotation) * airSpeed * throttle
+          movement.targetVelocity.y = Math.sin(smoothedRotation) * airSpeed * throttle
+        } else {
+          movement.targetVelocity.x = dirX * airSpeed
+          movement.targetVelocity.y = dirY * airSpeed
+        }
+
+        movement.isMoving = true
         movement.rotation = smoothedRotation
         unit.direction = smoothedRotation
         unit.rotation = smoothedRotation

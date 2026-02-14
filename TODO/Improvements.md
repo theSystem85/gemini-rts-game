@@ -96,6 +96,10 @@
 - [x] ✅ Fix edit mode: remove buildings when drawing tiles over them, fix unitType initialization error.
 - [x] ✅ Add image preview for buildings/units under cursor in edit mode, disable range-to-base restrictions in edit mode.
 - [x] ✅ Fix image preview rendering: add onload handlers to trigger re-render when images load.
+- [x] Add building spawn cheat (`build [type] [party]`) and use it in Apache helipad auto-return E2E for minimal setup runtime.
+- [x] Ensure Apache helicopter stays focused during E2E test by enabling auto-focus with Shift+E keyboard shortcut after unit selection.
+- [x] Add map clicks before cheat commands in Apache E2E test to properly position cursor for helipad, helicopter, and tank spawning.
+- [x] Center camera on spawn location before Apache E2E test begins to ensure proper view positioning.
 - [x] ✅ Enforce edit mode unit placement rules: units replace existing buildings/units at placement location, prevent placement on water/rock tiles.
 - [x] ✅ Match cheat console modal styling with the settings menu UI.
 - [x] ✅ Hide cheat console scrollbars while keeping vertical scroll and preventing horizontal scroll.
@@ -368,4 +372,310 @@
 - [x] For harvesters to be build it is required to have a refinery and a vehicle factory.
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 
-- [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use.
+- [x] Add a portrait-only condensed sidebar state with a bottom build bar, right-side actions, and left-side minimap, plus swipe-to-hide behavior from the condensed build bar.
+- [x] Optimize the mobile portrait sidebar layout and tutorial overlay spacing/typography for a more professional small-screen presentation.
+- [ ] Default the tutorial modal to the top-left corner in mobile portrait condensed mode.
+- [x] Portrait condensed mode UX refinement: action buttons horizontal left-aligned with no background/borders (icon-only), hide menu/restart/music buttons, swipe up on build bar to expand sidebar.
+- [x] Portrait condensed mode minimap: add toggle button on left of action bar, show minimap only when button held (matching landscape behavior), use overlay approach instead of static dock.
+- [x] In portrait condensed mode, stack action icons bottom-up without button chrome, match the landscape minimap styling, and rotate the build category toggle text vertically.
+- [x] Add a portrait-only condensed sidebar state with a bottom build bar, right-side actions, and left-side minimap, plus swipe-to-hide behavior from the condensed build bar.
+- [x] Optimize the mobile portrait sidebar layout and tutorial overlay spacing/typography for a more professional small-screen presentation.
+- [ ] Default the tutorial modal to the top-left corner in mobile portrait condensed mode.
+- [x] Stabilize tanker truck refueling: build visible to-do lists (10s auto-scan interval), lock in priorities, and let user AGF selections override auto targets until finished.
+- [x] Apply 10-second cooldown to enemy AI tanker truck target assignment in both unitCommands and non-unitCommands paths to prevent frequent target switching.
+- [x] Ensure enemy AI has at least one tanker truck stationed at the refinery to refuel harvesters (designate closest tanker as refinery station tanker).
+- [x] Fix mobile landscape layout on iPhone 13 Pro Max so the right-side safe-area strip renders map content, build buttons align to the far edge, and the top-right power bar lines up with the sidebar.
+- [x] Fix startup Defeat screen + missing random map: prevent mapGrid/factories from being cleared by incorrect sync logic on initialization.
+- [x] Fix crash on auto-resume restore: prevent save load from wiping mapGrid (AI building placement should not run with empty map).
+- [x] Fix stale SOT overlays after victory/defeat when starting a new game: invalidate map renderer chunk cache + SOT mask in reset flow.
+- [x] Add a persistent "lastGame" autosave that runs every minute, saves immediately on pause, and automatically reloads after iOS/PWA resumes from a killed paused session.
+- [x] Add a host-only map edit mode with tile painting, random brushes, and instant building/unit placement tools.
+- [x] Restore the sidebar Settings button so it opens the settings modal (runtime + keybindings) reliably again.
+- [x] Add a tabbed sidebar settings modal with a Key Bindings editor (keyboard/mouse/touch), map-edit context groupings, and JSON export/import with version metadata.
+- [x] Route the map Settings gear directly into the modal (runtime tab + benchmark), move sidebar settings actions into the modal, keep the keybindings tab scrollable with flush section headers, and always show the app version in the sidebar footer.
+- [x] ✅ Ensure window.logger is not used in any server (Node.js) context - all scripts now use console.log/console.warn
+- [x] ✅ Make scrolling on the minimap on mobile super smooth.
+- [x] ✅ Allow the left sidebar to be toggled while playing on touch devices in portrait orientation so the canvas can fill the screen.
+- [x] ✅ Remove the black strip when the portrait sidebar collapses, resize the canvas immediately, support swipe-to-close gestures, and keep the collapsed toggle transparent so the map stays visible.
+- [x] ✅ Hide the portrait sidebar toggle while the panel is open and guarantee the collapsed state instantly fills the freed space with the map so no black bar ever remains.
+- [x] ✅ Move multiplayer settings below save games list on sidebar (party list and join section no longer part of map settings).
+- [x] ✅ Move edit mode button to the top of map settings.
+- [x] ✅ Add ore to the tile options available in edit mode.
+- [x] ✅ Ensure ore placement in edit mode follows same rules as ore spreading (land/street tiles only, no buildings/factories/occupancy).
+- [x] ✅ Change right-click erase in edit mode to require Shift + Right Click, allowing normal map scrolling with right-click alone.
+- [x] ✅ Fix right-click scrolling in edit mode by allowing right-click events to pass through to normal scrolling logic.
+- [x] ✅ Add Command/Ctrl+click eraser, right-click pipette tool, prevent same-tile redraw flickering, instant building/unit placement in edit mode.
+- [x] ✅ Enable all buildings and units in edit mode regardless of tech tree requirements.
+- [x] ✅ Fix edit mode: remove buildings when drawing tiles over them, fix unitType initialization error.
+- [x] ✅ Add image preview for buildings/units under cursor in edit mode, disable range-to-base restrictions in edit mode.
+- [x] ✅ Fix image preview rendering: add onload handlers to trigger re-render when images load.
+- [x] ✅ Enforce edit mode unit placement rules: units replace existing buildings/units at placement location, prevent placement on water/rock tiles.
+- [x] ✅ Match cheat console modal styling with the settings menu UI.
+- [x] ✅ Hide cheat console scrollbars while keeping vertical scroll and preventing horizontal scroll.
+- [x] Prevent airborne units from overlapping by adding air-to-air avoidance, bounce handling, and collision damage.
+- [x] ✅ ensure there is an input field in the network section of the game so that a user can input the entire invite link into that field to connect to a game invite. This is useful when using the app as a pwa!
+- [x] ✅ when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands. Also: cancel button added to connecting modal, beautified modal UI.
+- [x] ✅ **Spec 015** Deterministic lockstep multiplayer refactor:
+  - [x] ✅ Seedable PRNG module (`src/network/deterministicRandom.js`) - Mulberry32 algorithm with session seed
+  - [x] ✅ Lockstep manager (`src/network/lockstepManager.js`) - tick coordination, peer state tracking, 20 Hz tick rate
+  - [x] ✅ State hash system (`src/network/stateHash.js`) - FNV-1a inspired hashing with quantized positions
+  - [x] ✅ Input buffer system (`src/network/inputBuffer.js`) - 3-tick delay, duplicate detection, command queuing
+  - [x] ✅ Game random utilities (`src/utils/gameRandom.js`) - wrapper for game code to use deterministic random
+  - [x] ✅ Extended gameCommandSync.js with lockstep message types (LOCKSTEP_INPUT, LOCKSTEP_HASH, LOCKSTEP_RESYNC, etc.)
+  - [x] ✅ Added lockstep state properties to gameState.js
+  - [x] ✅ Integrated tick-based simulation into gameLoop.js with fixed timestep
+  - [x] ✅ Desync detection via periodic hash exchange and automatic resync from host
+  - [x] ✅ Replaced Math.random() calls in game-critical code with gameRandom imports
+  - [x] ✅ Integrated lockstep initialization into multiplayer game start flow (webrtcSession.js)
+- [x] ✅ Added lockstep UI status indicator in FPS overlay (tick counter, desync warning, host/client role)
+  - [ ] when a multiplayer game gets paused by the host ensure that there is a permanent message on the top of the screen showing that the host paused the game. The client can still scroll around on the map though but cannot do any commands.
+- [ ] Enable symmetrical supply interactions: supply vehicles should travel to the requesting units (not vice versa), dragging a box with any selected service unit queues every serviceable unit inside (ammo truck, ambulance, tanker, recovery), show move-into cursor, and queue requests LIFO when the provider is busy.
+  - [ ] Deterministic lockstep visuals: ensure multiplayer clients render explosion animations correctly, remote building construction plays its full animation instead of popping in, and building smoke only starts after the build animation completes.
+- [ ] Disable the Buildings tab when the construction yard is destroyed and auto-switch to the Units tab if a vehicle factory remains available.
+
+## Netlify Deployment for Multiplayer
+- [x] ✅ Convert Express signalling server to Netlify Functions using serverless-http
+- [x] ✅ Replace in-memory session storage with Netlify Blobs for persistence
+- [x] ✅ Update netlify.toml with functions config and API redirects
+- [x] ✅ Update frontend signalling.js to use relative /api/ URLs in production
+- [x] ✅ Fix Netlify Blobs error - convert to Netlify Functions v2 format with native context
+- [x] ✅ Fix Netlify function 404 errors - added redirect from /api/* to /.netlify/functions/api and removed conflicting config.path
+- [x] ✅ Fix host polling stopping after first 404 - added try-catch wrapper in _schedulePoll
+- [x] ✅ Fix CDN caching 404 responses - added cache-busting timestamps and no-store to fetch requests
+- [x] ✅ Replaced unreliable Netlify Blobs prefix listing with explicit index-based peer tracking
+- [x] ✅ Test multiplayer on Netlify production - WebRTC signalling works end-to-end
+- [x] **Performance:** Implement O(n×k) spatial quadtree for collision detection replacing O(n²) brute-force iteration
+  - [x] Created `src/game/spatialQuadtree.js` with separate trees for ground/air units
+  - [x] Created `src/game/flowField.js` for on-demand flow fields at chokepoints
+  - [x] Created `src/game/steeringBehaviors.js` with Boids-style separation, alignment, cohesion
+  - [x] Integrated quadtree into `unifiedMovement.js` collision detection functions
+  - [x] Integrated quadtree into `units.js` resolveUnitCollisions function
+  - [x] Quadtree rebuilt once per frame in game loop for consistent spatial queries
+  - [x] **Optimized quadtree:** eliminated array spreading, reuse result arrays, pre-compute unit centers
+  - [x] **Force-field collision:** units experience exponential repulsion preventing overlap proactively
+  - [x] **No velocity inversion:** collisions slow units down gradually instead of bouncing them
+  - [x] **Direct movement fix:** units now rotate to face target before moving instead of going opposite direction first
+    - Fixed 1-frame delay in `canAccelerate` flag by calling rotation update before position update
+    - Reduced rotation threshold from 45° to 15° for non-tank units
+    - Reset velocity when receiving new movement command to prevent coasting in wrong direction
+- [ ] Move main-map and minimap rendering to GPU-backed WebGL/WebGPU pipelines using atlas streaming and instanced quads for terrain and sprites to reduce CPU draw overhead.
+- [ ] Create a WebGPU transition plan (Chrome/Safari-aligned) covering adapter setup, pipeline parity, asset migration, fallback strategy, and a settings toggle for WebGPU/WebGL selection.
+- [x] Buffer GPU tile rendering with off-screen margin rows/columns so no black bars appear while panning to map edges.
+- [x] Restore animated water tiles within the GPU rendering path so shoreline movement matches the 2D renderer.
+- [x] **Performance:** Pre-cached gradient sprites for smoke and explosions - moves gradient creation from per-frame CPU to one-time startup + GPU texture sampling
+  - [x] Created sprite cache with pre-rendered gradients for sizes [4-32px] at initialization
+  - [x] Smoke particles now use `drawImage()` instead of `createRadialGradient()` per frame
+  - [x] Explosions use on-demand cached sprites with LRU eviction (max 50 entries)
+  - [x] Added view frustum culling for smoke (64px padding) and explosions (128px padding)
+  - [x] Reduced `MAX_SMOKE_PARTICLES` from 600 to 300 for better baseline performance
+  - [x] Replaced `.forEach()` with `for` loops and removed per-particle ctx.save()/restore()
+- [x] **Performance:** Batch and throttle pathfinding calculations
+  - [x] Extended `PATH_CACHE_TTL` to 4000ms (2x the calc interval) for better cache utilization
+  - [x] Added `MAX_PATHS_PER_CYCLE` limit (5 paths max per update) to prevent CPU spikes
+  - [x] Units sorted by distance to target - closer units get pathfinding priority
+  - [x] Spreads pathfinding work across multiple frames instead of calculating all at once
+- [x] **Performance:** Smart path recalculation to prevent unnecessary path updates
+  - [x] Added `MOVING_TARGET_CHECK_INTERVAL` (5000ms) for distance trend monitoring
+  - [x] Added `TARGET_MOVEMENT_THRESHOLD` (2 tiles) for target movement detection
+  - [x] Paths only recalculated when target has moved beyond threshold distance
+  - [x] For moving targets, paths only recalculated if distance to target is increasing (unit going wrong direction)
+  - [x] Tracks `lastKnownTargetPos` and `lastDistanceToTarget` per unit for smart decisions
+  - [x] **Architecture fix:** Clear separation of pathfinding responsibilities:
+    - [x] Attack mode units (with `unit.target`) handled ONLY by `updateUnitMovement()`
+    - [x] Regular movement (moveTarget without attack) handled by `updateGlobalPathfinding()`
+    - [x] Skip recently calculated paths (within 100ms) to prevent same-frame conflicts
+    - [x] Removed problematic `path.length < 3` trigger that caused constant recalculation
+    - [x] Removed duplicate path calculation from `handleTankMovement()` in combatHelpers.js
+    - [x] Fixed range mismatch: `updateUnitMovement()` now uses `getEffectiveFireRange()` instead of hardcoded range
+    - [x] Suppress stuck/dodge detours for human-issued move paths so a single player path stays intact
+    - [x] Standardize enemy AI pathfinding on `getCachedPath()` to match player pathfinding algorithm
+- [x] **Performance:** Throttle AI updates with frame skipping
+  - [x] Added `AI_UPDATE_FRAME_SKIP` config (default: 3) - AI runs every 3rd frame (~20 FPS AI at 60 FPS game)
+  - [x] Frame counter in enemy.js skips AI processing on non-AI frames
+  - [x] Reduces AI CPU overhead by ~66% while maintaining responsive gameplay
+- [x] **Performance:** View frustum culling for units and buildings
+  - [x] Added `VIEW_FRUSTUM_MARGIN` config (64px buffer = 2 tiles) to prevent pop-in artifacts
+  - [x] Units outside visible viewport + margin are skipped in `shouldRenderUnit()`
+  - [x] Buildings outside visible viewport + margin are skipped in `shouldRenderBuilding()`
+  - [x] Frustum check runs before fog-of-war visibility check (cheaper early exit)
+  - [x] Affects both base rendering and overlay rendering passes
+- [x] **Performance:** Precompute SOT (Smoothening Overlay Texture) masks when map is loaded/mutated instead of examining 4 neighbors per land tile each frame.
+  - [x] Created `sotMask` 2D array in MapRenderer storing precomputed orientation and type for each tile needing smoothening overlays
+  - [x] `computeSOTMask()` generates the full mask once on initial render (lazy initialization)
+  - [x] `updateSOTMaskForTile()` efficiently updates only affected tiles and neighbors when tile mutations occur
+  - [x] `drawBaseLayer()` now uses O(1) mask lookup instead of O(4) neighbor checks per land tile
+  - [x] Integrated SOT mask updates into `clearBuildingFromMapGrid()` for runtime tile type changes
+  - [x] Exposed `getMapRenderer()` and `notifyTileMutation()` in rendering.js for external mutation notifications
+  - [x] **Bug Fix:** SOT tiles now correctly update when loading save games or missions by invalidating the SOT mask cache
+  - [x] **Bug Fix:** SOT now renders below ore overlays in GPU rendering mode by adding second pass for ore/seed overlays in `renderSOTOverlays()`
+  - [x] **Feature:** SOT now applies to street tiles crossing water - water corner smoothening on streets
+- [x] **Performance:** Cache building smoke emission scale factors on construction completion
+  - [x] Added `cacheBuildingSmokeScales()` function in buildings.js to precompute scale factors
+  - [x] Scale factors cached when building is created or when image first loads (async callback)
+  - [x] `updateGame.js` now uses cached `cachedSmokeSpots` instead of per-frame image lookups and scale calculations
+  - [x] Removes per-frame `getBuildingImage()` calls for smoke emission, deferring to cached values
+- [x] **Bug Fix:** Unit smoke emission not working for loaded games
+  - [x] Fixed maxHealth validation - loaded units from older saves may have undefined maxHealth
+  - [x] Added fallback in saveGame.js to preserve defaultMaxHealth before Object.assign overwrites it
+  - [x] Added fallback in updateGame.js to use `unit.health || 100` if maxHealth is missing
+  - [x] Smoke now emits from back of unit (based on direction) instead of center
+- [x] Add short-range occupancy-based lookahead so moving units steer away from nearby blockers before colliding while keeping their planned paths unchanged.
+- [x] Throttle heavy-damage unit fume smoke to prevent particle overload and performance drops.
+- [ ] Ground units should drive 30% slower when moving over crystal tiles, with harvesters unaffected.
+- [ ] Add a JSON file that determines the whole tech tree. Refactor the code to obey this file.
+- [x] Ensure the money display updates only every 300ms to save performance on DOM rendering updates.
+- [x] Limit gas station explosion damage so construction yards retain 10% health.
+- [ ] Enemy AI should automatically build next what is the current production bottleneck regarding money supply. Highest prio is energy. When energy is too low it will build a power plant. When there is too little money it will build harvesters but only if there is less than 4 havesters per refinery otherwiese it will build a refinery but only if the money has reached 0 before. So whenevery the money supply reached 0 the highest prio is to build another refinery (given the power supply is sufficient). When money supply is sufficient focus on building a good base defence with at least 2 turrets and one tesla coil and one rocket launcher. If that is given focus on producing as many combat units as possible. When the money raises faster than tanks can be build then build more vehicle factories to speed up the production.
+- [x] Enemy AI building placement must enforce a 2-tile gap to other structures (except defence-with-defence and wall-to-wall placements that may touch), only relaxing to a 1-tile gap after all nearby 2-gap options are blocked.
+- [x] Enemy AI must repair damaged buildings using the same post-attack cooldown rules as the player and prioritize critical infrastructure (construction yard, power, refinery, factory/workshop, radar) whenever its cash reserves are low.
+- [x] Enemy AI must build Apaches (one per helipad), use them to strike unprotected harvesters and bases, and retreat from rocket-based air defenses before re-engaging.
+- [x] Ensure enemy AI sells non-essential buildings when broke and lacking refineries or harvesters so it can afford the missing structure and restart harvesting income.
+- [ ] remove "tank" in favour of "tankV1" from codebase (redundant?)
+- [x] **Refactor:** move all constants into config.
+- [x] **Refactor:** split unifiedMovement.js into modular files under 1k LOC each while preserving existing unit test behavior.
+- [x] **Refactor:** split mouseHandler.js into submodules (<1k LOC each) to reduce complexity while keeping unit tests green.
+- [x] **Refactor:** split unitCommands.js into submodules (<1k LOC each) while keeping existing unit tests passing.
+- [x] **Refactor:** split unitCombat.js into submodules (<1k LOC each) while keeping existing unit tests passing.
+- [x] Ensure mobile drag-to-build interactions auto-scroll the map within the last 20px near canvas edges on touch devices, speeding up as the cursor nears the boundary while keeping the center stationary.
+- [x] Offset the left-edge drag-to-build scroll trigger on mobile by the action bar width and safe-area inset so accidental scrolling near the controls is avoided.
+
+## Current Multiplayer Work
+- [x] ✅ T044 Host only starts polling signaling server after user clicks invite button
+  - done: Removed automatic polling start from initSidebarMultiplayer(); polling now only starts when user clicks "Invite" button in handleInviteClick()
+- [x] ✅ T042 Multiplayer defeat handling and spectator mode
+  - [x] ✅ Defeated human players see beautiful, mobile-optimized defeat modal with game statistics
+  - [x] ✅ Two buttons on defeat modal: "New Game" and "Spectator Mode"
+  - [x] ✅ Spectator mode allows viewing entire map (shadow of war disabled) but no interactions
+  - [x] ✅ Host defeat doesn't end game for other players - all players see same defeat modal
+  - [x] ✅ Fixed "money earned" statistics showing 0 on end game screen (totalMoneyEarned now tracked in harvesterLogic.js)
+  - [x] ✅ Spectator input blocking in mouseHandler.js and keyboardHandler.js (view-only commands like FPS, occupancy, grid still work)
+- [x] ✅ T043 Multiplayer defeat modal improvements
+  - [x] ✅ Defeat modal now shown for invited clients (defeatedPlayers synced via snapshot)
+  - [x] ✅ Fixed battleLost sound playing only once (guard flag _defeatSoundPlayed)
+  - [x] ✅ Defeat label text wrapped properly inside modal (split into title + subtitle)
+  - [x] ✅ Player alias shown above construction yards in multiplayer (from partyState.owner)
+  - [x] ✅ Host can toggle "Show Enemy Resources" to show/hide money and power on enemy construction yards
+- [x] T011 persist host invite UI state so party rows keep their button visibility state
+- [x] T012 begin User Story 2: remote alias/offer flow + WebRTC data channel and host-only controls
+  - done: remote landing alias form wired through `src/network/remoteConnection.js`, offers reach the STUN helper, and the polling loop handles answers/ICE
+- [x] T013 start User Story 2 host WebRTC handling
+  - done: host now polls `/signalling/pending`, answers offers, consumes remote control snapshots, and broadcasts pause/running updates via the data channel
+- [x] ✅ T014 enforce host-only start/pause/cheat controls when a remote client is connected
+  - done: session events disable pause/cheat buttons in `src/ui/sidebarMultiplayer.js` and the cheat hotkey is blocked in `src/inputHandler.js`
+- [x] ✅ T015 emit join notification when a remote WebRTC session flips to connected (host alert)
+- [x] ✅ T016 [US3] detect remote disconnects/host drops, flip `aiActive` back on, and keep invite usable within seconds of failure
+  - done: HostSession state change handler detects DISCONNECTED/FAILED, calls markPartyControlledByAi, emits AI_REACTIVATION_EVENT, and shows notification
+- [x] ✅ T017 [US3] regenerate `/invite-regenerate` when a non-host loads a save so the loader becomes new host and sidebar invites refresh
+  - done: multiplayerStore exports regenerateAllInviteTokens() and isHost(); saveGame.js calls regeneration on load
+- [x] ✅ T018 [US3] sync host metadata (start/pause/cheat authority, party state) during save/load handover so the new host gains exclusive controls
+  - done: aiPartySync.js module observes AI reactivation events and reinitializes AI controllers for disconnected parties
+- [x] ✅ T019 Game command synchronization - broadcast unit commands (move, attack) and build commands between multiplayer players via WebRTC DataChannel
+  - done: gameCommandSync.js module created with broadcastUnitMove/broadcastUnitAttack, integrated into unitCommands.js and webrtcSession.js/remoteConnection.js
+- [x] ✅ T020 Client initialization fixes - parse partyId from invite token, set humanPlayer, center camera on party's base
+  - done: invites.js exports parsePartyIdFromToken(); remoteInviteLanding.js sets humanPlayer and centers camera; gameCommandSync.js syncs factories in snapshots
+- [x] ✅ T021 Fix multiplayer sync issues - building IDs, unit visibility, render loop resume, building disappearance
+  - done: buildings.js now assigns unique IDs via getUniqueId(); gameCommandSync.js uses full array replacement for buildings/units with position-based fallback; gameLoop.js always schedules frame when paused
+- [x] ✅ T022 Fix client→host building sync and AI on client issues
+  - done: Added broadcastBuildingPlace() calls to eventHandlers.js, buildingRepairHandler.js, and productionQueue.js; Added isHost() check in enemy.js to disable AI on clients; Added processPendingRemoteCommands() in updateGame.js to process BUILDING_PLACE commands from clients on host
+- [x] ✅ T023 Enhanced multiplayer sync - tech tree, building damage, occupancy, animations
+  - done: Tech tree syncs on client join via setProductionControllerRef() and requestTechTreeSync(); Building damage broadcasts bi-directionally via broadcastBuildingDamage(); New buildings from network placed in occupancy map via placeBuilding(); Building construction animation triggered for network buildings; Milestone video volume reduced by 60%
+- [x] ✅ T024 Comprehensive multiplayer sync - all units, buildings, bullets, explosions
+  - done: Extended unit snapshot with muzzleFlashStartTime, recoilStartTime, path, vx/vy, attackTarget, guardPosition, isMoving, isAttacking, remainingMines, sweeping; Extended building snapshot with constructionStartTime, constructionFinished, turretDirection, muzzleFlashStartTime; Extended bullet snapshot with full trajectory properties; Added explosions to snapshot; Added CLIENT_STATE_UPDATE command type for bidirectional sync; Client now sends owned entity updates to host; Host merges client updates into authoritative state
+- [x] ✅ T025 Unit visibility, building sell, and money sync fixes
+  - done: Fixed unit array sync by using mainUnits from main.js (the actual rendering array) instead of gameState.units; Bullets now sync to mainBullets array; Added broadcastBuildingSell() for building sell action sync with sellStartTime in snapshot; Removed incorrect money sync from snapshot (each player manages own money)
+- [x] ✅ T026 Host-authoritative architecture fix
+  - done: Implemented proper host-authoritative architecture where host runs all game logic and clients only render + send user commands; Fixed updateGame.js to skip game logic on remote clients (early return after visual updates); Removed CLIENT_STATE_UPDATE sending from client in gameCommandSync.js; This fixes: HP oscillation (only host computes damage), turret rotation sync (only host updates), bullets visibility (mainBullets synced via snapshot), bidirectional unit production (all units synced via snapshot)
+- [x] ✅ T027 Client unit spawn and smooth movement fix
+  - done: Client no longer spawns units locally - sends UNIT_SPAWN command to host; Host processes UNIT_SPAWN and creates unit; Added easeOutQuad interpolation for smooth unit movement between 500ms snapshots; Movement interpolation runs each frame on client via updateUnitInterpolation()
+- [x] ✅ T028 Client commands, wrecks sync, and remove interpolation
+  - done: Added debug logging for client UNIT_MOVE commands; Removed interpolation entirely - using faster 100ms sync interval instead; Added unitWrecks to snapshot and applyGameStateSnapshot(); Direct position sync for consistent rendering with host
+- [x] ✅ T029 Fix client unit movement not working on host
+  - done: Fixed updateUnitPathfinding() in unitMovement.js to iterate over ALL units with moveTarget, not just selectedUnits; Previously host would receive UNIT_MOVE and set moveTarget but pathfinding only ran for local player's selected units; Now any unit with moveTarget gets path calculated
+- [x] ✅ T030 Client movement interpolation
+  - done: Added linear interpolation for smooth unit movement on client between 100ms host snapshots; unitInterpolationState Map tracks prev/target positions per unit; updateUnitInterpolation() called every frame interpolates x, y, direction, turretDirection; Handles angle wraparound for rotation
+- [x] ✅ T031 Fix multiplayer client issues: tank barrel, promotion stars, stop command
+  - done: Fixed tank barrel disappearing on client by converting animation timestamps (recoilStartTime, muzzleFlashStartTime) to elapsed times for cross-machine sync; Added level, bountyCounter, baseCost to unit snapshot for promotion stars; Added broadcastUnitStop() and integrated into handleStopAttacking(); Fixed UNIT_STOP handler on host to clear target property
+- [ ] T032 Multiplayer network stats + bullets
+  - TODO: finish host client byte tracking for WebRTC data channels, display send/receive rates & totals inside FPS overlay/perf widget, and ensure bullet interpolation updates alongside unit interpolation on clients
+- [x] ✅ T033 Fix client building sync when host loads save game
+  - done: Added mapTilesX/mapTilesY to game state snapshot so client knows map dimensions; Added ensureClientMapGridInitialized() to initialize client mapGrid/occupancyMap before building placement; Fixed building placement bounds checking with proper mapGrid readiness validation; Added mainFactories sync to keep factories array from main.js in sync with gameState.factories
+- [x] ✅ T034 Sync map seed and dimensions from host to client
+  - done: Added mapSeed to game state snapshot; Replaced ensureClientMapGridInitialized() with syncClientMap() that regenerates map using host's seed; Added regenerateMapForClient() export in main.js; Map settings UI hidden for clients on invite token detection and connection; Settings restored on disconnect
+- [x] ✅ T035 Sync player count from host to client for matching map generation
+  - done: Added playerCount to game state snapshot; Updated syncClientMap() and regenerateMapForClient() to accept and set playerCount before map generation; Fixed issue where roads were generated differently due to different player positions being used in street network generation
+- [x] ✅ T036 Fix wreck unitType not syncing to clients
+  - done: Fixed wreck serialization in createGameStateSnapshot() to use `unitType: wreck.unitType` instead of incorrect `type: wreck.type`; Also added spriteCacheKey to wreck snapshot for proper sprite lookup on client
+- [x] ✅ T037 Update sidebar party display when player takes over AI or disconnects
+  - done: Added PARTY_OWNERSHIP_CHANGED_EVENT in multiplayerStore.js; markPartyControlledByHuman() and markPartyControlledByAi() now emit ownership change events; sidebarMultiplayer.js subscribes to these events and refreshes the party list display when ownership changes
+- [x] ✅ T038 Add kick button for connected players
+  - done: Added kickPlayer() function in webrtcSession.js; sidebarMultiplayer.js shows "Kick" button instead of "Invite" when a human player is connected; kick disconnects the WebRTC session and returns party to AI control; red-styled button in CSS
+- [x] ✅ T039 Kick invalidates invite, regenerates token, client becomes standalone host
+  - done: kickPlayer() now sends kick message before disconnecting, invalidates old token, generates new invite; client handles kick message by converting to standalone host with all AI parties; invite URL cleared from browser
+- [x] ✅ T040 Sync ore spread and shadow of war settings from host to clients
+  - done: Added oreSpreadEnabled and shadowOfWarEnabled to game state snapshot; Clients receive and apply host settings on snapshot; Ore spread and shadow of war checkboxes disabled for clients with "(host setting)" indicator; Settings re-enabled on disconnect; Explosions now hidden under fog of war for shadow of war mode
+- [x] ✅ T041 Improve multiplayer party list UI and add alias persistence
+  - [x] ✅ Party rows now show only color dot (with tooltip) instead of "Green: AI"; Changed "Human (Host)" to "You (Host)" for clarity; Added "Your alias:" input field in map settings; Alias persisted to localStorage and synced between sidebar input and join modal input
+- [x] ✅ T046 Clear wrecks and SOT on client join and shuffle map
+  - done: Added gameState.unitWrecks cleanup and mapRenderer.invalidateAllChunks() in both resetGameWithNewMap() (shuffle map button) and regenerateMapForClient() (client joining multiplayer); Ensures stale wrecks from previous games don't persist and SOT (Smoothening Overlay Texture) mask is recomputed for the new map
+
+## Improvements
+- [x] When a group of units attack a target and there are friendly units in line of sight so they can't fire then this unit needs to walk around the target in a circle until line of sight is free to attack the target. Make sure the circle's circumfence the unit is using to walk along has the radius that is equivalent to the distance between the target and the unit.
+- [x] Make sure narrated sounds like (unitReady) can be chained and will not be played at the same time but one after another up until a stacking size of 3 everything after that will be skipped if it comes before the stackable sounds are finished playing. So for all playSound calls in the code that play a "narrated sound" make sure to add the new stacking boolean to true and update playSound so it is able to provide stacking behaviour as described.
+- [x] Refine the coloring of the power bar and its logic on impacting the production.
+- [x] Add all favicons and shortcut icons.
+- [x] **Refactor:** remove the soundMapping and use soundFiles directly instead.
+- [x] Use the same corner smoothing algorithm that is used for streets also for water tiles.
+- [x] The game is lost for any player when he has no more buildings left. Make sure the game is not over only when the base construction building got destroyed!
+- [x] Ensure tesla and rocket turret coil can only be build after radar.
+- [x] When entering the save game's name the user can save by pressing enter.
+- [x] Ensure the leveling stars on a unit when not selected look like the same as when they are not selected (smaller).
+- [x] Make sure the showNotification clears the previous one immediatly before showing a new one.
+- [x] On pressing R Key the repair mode should be toggled unless there is no input having focus.
+- [x] Clear previous notifications before showing a new one.
+- [x] Make sure the map generation makes the streets that connect the bases and ore fields are 1 tile thinner. Also Make sure that for multiple parties the streets merge and not overlap to prevent covering major parts of the map in streets.
+- [x] The rocket tank should not have a turret but instead 3 small static tubes on top of it to indicate a rocket launcher.
+- [x] only show health bars if units or buildings are damaged
+- [x] The selection indicator for units should only be visible at the conrers (like with buildings).
+- [x] Make sure buildings cannot be selected when dragging a selection box. (Works for AGF though).
+- [x] The health bar for player's own units and buildings as well as the one for the enemies should only be visible if those units/buildings are damaged or selected.
+- [x] Enemy unit types need to have the same color as the player unit types. That means for example that a tank_v1 of the player should be blue as well as a tank_v1 for the enemy.
+- [x] cut out the images for the buildings to be rendered on the map so that the background tiles around are merging with the building. Make sure to use transparency for those images.
+- [x] ✅ **Spec 005** Make sure every unit factory has its own individual assembly point that can be set by selecting the factory and then right clicking on the map. This will replace the current mechanism where the building factory is selected to define the assembly point. Whenever a factory gets selected their assembly points get visible otherwise they are hidden.
+- [x] ✅ **Spec 006** Make sure the tanks (and turrets) when they fire have:
+  - [x] ✅ (1) a recoil animation on their gun.
+  - [x] ✅ (2) a muzzle flash animation
+- [x] Ensure the players tanks do not move away from the target or towards the target when attacking. ONLY when the target moves out of range they should follow until they get in range again.
+- [x] Tanks movement speed should be 50% higher in general.
+- [x] ✅ **Spec 006** Rocket tank shall fire 3 projectiles instead of 1 but with lower damage each. The projectiles are currently way too fast and need to be at least 4x slower.
+- [x] The tesla coil should make little damage to the target.
+- [x] Tank projectiles make too much damage.
+- [x] **Refactor:** updateGame.js is too big and needs to be modularized.
+- [x] **Refactor:** enemy.js is too big and needs to be modularized.
+- [x] **Refactor:** Rendering.js is too big and needs to be modularized.
+- [x] **Refactor:** inputHandler.js is too big and needs to be modularized.
+
+## Improvements
+- [x] Extend bullet system unit tests to cover apache rockets, dodge logic, and crew damage (Task 15.6).
+- [x] Add meaningful unit tests to boost coverage in unifiedMovement.js (improved from 28.57% to 35.71% function coverage with 56 tests covering checkMineDetonation, isUnitCenterInsideMineCircle, normalizeAngle, isAirborneUnit, isGroundUnit, ownersAreEnemies, isValidDodgePosition functions)
+- [x] ✅ **Spec 006** Ensure that enemy units always attack player units when they are being attacked themselves, unless they are in "flee to base" mode
+- [x] Show some progress when the harvester is unloading the ore at the refinery by showing how the load indicator at the harvesters goes to zero.
+- [x] Add refinery building costing 2500$. Its size is 3x3 tiles. Its armor is same as for the base factory. Any harvester can be assigned to one specific refinery to unload only there by having a harvester selected an clicking then on the refinery. The refinery needs 30 energy.
+- [x] When player builds the radar station it enables the overview mini map. Before that map is just gray. It consumes 50 energy. When it get destroyed and no other radar station is in the players building list the mini map gets disabled again.
+- [x] Make sure the bullets from tanks and turrets fire at an exact location on the map and explode there rather than fly over the entire map.
+- [x] When game ist restarted with the restart button there should NOT be a page reload but the game state should be resetted AND the statistics should be kept (win/loss)
+- [x] Implement milestone system and show first milestone of building a refinery by showing a video with sound of a tank running over crystals.
+- [x] Make the enemy more intelligent so it does not just run into players defense over and over again but moves away when his units are too weak to break into players base turret defense. Then the enemy gaters units in safe distance to players base and starts another attack with more units trying to break players defense and so on. The enemy should also try to find a way around the players defense to attack weak spots of the base.
+- [x] Ensure harvesters spawn from the vehicle factory not the building factory.
+- [x] Ensure money for builds is gradually spend during build process
+- [x] Lower harvester unload time to 10s.
+- [x] Increase map scroll speed inertia by 3x.
+- [x] Add save and load game functionality with a menu containing a list with save games and their labels.
+- [x] Ensure that production queues for buildings and units can be filled even when no more money is available. Ensure the money is only charged when production is actually starting.
+- [x] Ensure enemy also has to build ore refineries and vehicle factories to produce harvesters and vehicles. Same build rules should apply for enemy AI like they are now for the player.
+- [x] Make sure the newly produced vehicles get spawned from the vehicle factory and not from the construction yard. When there are multiple vehicle factories make sure the units come out alternatingly from all of the factories one by one.
+- [x] Vehicles now spawn on the tile directly below the center of the vehicle factory. If that tile is occupied, the existing unit is moved to a nearby free tile using algorithm A1 before the new unit appears.
+- [x] For any vehicle to be build a vehicle factory is required. Make sure the build options in the sidebar are disabled until the factory is built. Disabled sidebar buttons are grayed out (just add 50% transparency). The more vehicle factories are build the faster the vehicle production gets. If production speed with one factory is 1x it is 2x with two factories and so on.
+- [x] For harvesters to be build it is required to have a refinery and a vehicle factory.
+- [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
+- [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use. 
+- [x] Added npm script 'test:e2e:file' to run specific E2E test files in headless mode

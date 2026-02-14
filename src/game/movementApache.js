@@ -67,8 +67,13 @@ export function updateApacheFlightState(unit, movement, occupancyMap, now) {
   } else if (landingBlocked) {
     unit.blockedFromLanding = true
   }
+
+  // Check if the helicopter is stably landed on a helipad
+  const isGroundedOnHelipad = unit.flightState === 'grounded' && Boolean(unit.landedHelipadId)
+
   const holdAltitude = Boolean(unit.autoHoldAltitude) || Boolean(unit.flightPlan) || Boolean(unit.remoteControlActive)
-  const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || Boolean(unit.moveTarget)
+  // Don't consider moveTarget as "in motion" if we're grounded on a helipad
+  const isInMotion = Boolean(movement?.isMoving) || (unit.path && unit.path.length > 0) || (Boolean(unit.moveTarget) && !isGroundedOnHelipad)
 
   let desiredAltitude = 0
   if (manualState === 'takeoff') {
