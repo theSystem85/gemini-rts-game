@@ -47,7 +47,7 @@ const buildingSidebarImages = {
   oreRefinery: 'images/sidebar/ore_refinery.webp',
   vehicleFactory: 'images/sidebar/vehicle_factory.webp',
   vehicleWorkshop: 'images/sidebar/vehicle_workshop.webp',
-  constructionYard: 'images/sidebar/construction_yard.png',
+  constructionYard: 'images/sidebar/construction_yard.webp',
   radarStation: 'images/sidebar/radar_station.webp',
   hospital: 'images/sidebar/hospital.webp',
   helipad: 'images/sidebar/helipad_sidebar.webp',
@@ -105,7 +105,7 @@ function getSidebarImageForUnit(unitType) {
 }
 
 function getSidebarImageForBuilding(buildingType) {
-  return buildingSidebarImages[buildingType] || 'images/sidebar/construction_yard.png'
+  return buildingSidebarImages[buildingType] || 'images/sidebar/construction_yard.webp'
 }
 
 function getQueueItems(actions = [], queueState = null) {
@@ -241,7 +241,7 @@ function renderQueueContent(playerId) {
       return `
         <div class="money-tooltip__item llm-queue-tooltip__row${statusClass}" data-kind="${item.kind}" data-status="${item.status}">
           <span class="llm-queue-tooltip__index">${statusIcon || `#${index + 1}`}</span>
-          <img class="llm-queue-tooltip__icon" src="${item.image}" alt="${item.label}" loading="lazy" />
+          <img class="llm-queue-tooltip__icon" src="images/sidebar/placeholder.webp" onload="if(this.dataset.src){this.src=this.dataset.src;delete this.dataset.src;}" data-src="${item.image}" alt="${item.label}" loading="lazy" />
           <div class="llm-queue-tooltip__details">
             <span class="llm-queue-tooltip__title">${item.label}</span>
             <span class="llm-queue-tooltip__meta">${item.kind === 'unit' ? 'Unit' : 'Building'} — ${statusLabel}</span>

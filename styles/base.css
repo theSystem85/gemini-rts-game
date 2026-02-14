@@ -1227,10 +1227,12 @@ body.mobile-portrait {
 }
 
 body.mobile-portrait #sidebar {
+  top: var(--safe-area-top);
   background: linear-gradient(180deg, rgba(46, 46, 46, 0.98) 0%, rgba(30, 30, 30, 0.98) 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 12px 0 28px rgba(0, 0, 0, 0.5);
   padding: 12px;
+  padding-top: calc(var(--safe-area-top) + 12px);
   padding-bottom: calc(12px + var(--safe-area-bottom));
 }
 
@@ -1265,8 +1267,16 @@ body.mobile-portrait #actions .action-button.icon-button:hover {
 }
 
 #controlGroupsBtn .group-icon {
-  font-size: 12px;
-  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto; /* allow the multi-character label to fit */
+  min-width: 22px;
+  height: 20px;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  line-height: 1;
+  transform: translateY(-1px); /* visually center within the button */
 }
 
 body:not(.mobile-landscape):not(.mobile-portrait) #controlGroupsBtn {
@@ -1386,6 +1396,24 @@ body.mobile-portrait.sidebar-condensed #gameCanvas,
 body.mobile-portrait.sidebar-condensed #gameCanvasGL {
   left: 0;
   width: 100%;
+}
+
+@media (orientation: portrait) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
+  body:not(.mobile-landscape):not(.mobile-portrait) {
+    --sidebar-width: clamp(220px, 74vw, 320px);
+    --portrait-condensed-bar-height: 96px;
+    --portrait-condensed-toggle-width: calc(var(--mobile-action-size) * 0.44);
+  }
+
+  body:not(.mobile-landscape):not(.mobile-portrait) #sidebar {
+    transform: translateX(-100%);
+  }
+
+  body:not(.mobile-landscape):not(.mobile-portrait) #gameCanvas,
+  body:not(.mobile-landscape):not(.mobile-portrait) #gameCanvasGL {
+    left: 0;
+    width: 100%;
+  }
 }
 
 #mobileSidebarControls {
@@ -2063,7 +2091,10 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.ac
   width: max-content;
 }
 
-body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button {
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button.unlocked,
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button.active,
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button.paused,
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button.ready-for-placement {
   display: flex !important;
   flex-direction: column;
   align-items: center;
@@ -2087,6 +2118,7 @@ body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.ac
   padding: 0;
 }
 
+body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button:not(.unlocked):not(.active):not(.paused):not(.ready-for-placement),
 body.mobile-portrait.sidebar-condensed #mobileBuildMenuContainer .tab-content.active .production-button[style*="display: none"] {
   display: none !important;
 }

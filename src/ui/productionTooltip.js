@@ -422,6 +422,11 @@ export function attachProductionTooltipHandlers(button, context, controller) {
   attachGlobalTooltipListeners()
 
   let holdTimer = null
+  let activePointerId = null
+  let pointerStartX = NaN
+  let pointerStartY = NaN
+
+  const DRAG_CANCEL_THRESHOLD_PX = 8
 
   const clearHoldTimer = () => {
     if (holdTimer) {
@@ -432,6 +437,9 @@ export function attachProductionTooltipHandlers(button, context, controller) {
 
   button.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return
+    activePointerId = event.pointerId
+    pointerStartX = event.clientX
+    pointerStartY = event.clientY
     clearHoldTimer()
     holdTimer = window.setTimeout(() => {
       controller.suppressNextClick = true
@@ -439,8 +447,35 @@ export function attachProductionTooltipHandlers(button, context, controller) {
     }, LONG_PRESS_MS)
   })
 
-  button.addEventListener('pointerup', clearHoldTimer)
+  button.addEventListener('pointermove', (event) => {
+    if (event.pointerId !== activePointerId) {
+      return
+    }
+
+    if (controller.mobileDragState?.active && controller.mobileDragState.mode === 'drag') {
+      clearHoldTimer()
+      return
+    }
+
+    const deltaX = event.clientX - pointerStartX
+    const deltaY = event.clientY - pointerStartY
+    if (Math.abs(deltaX) >= DRAG_CANCEL_THRESHOLD_PX || Math.abs(deltaY) >= DRAG_CANCEL_THRESHOLD_PX) {
+      clearHoldTimer()
+    }
+  })
+
+  button.addEventListener('pointerup', (event) => {
+    if (event.pointerId === activePointerId) {
+      activePointerId = null
+    }
+    clearHoldTimer()
+  })
   button.addEventListener('pointerleave', clearHoldTimer)
-  button.addEventListener('pointercancel', clearHoldTimer)
+  button.addEventListener('pointercancel', (event) => {
+    if (event.pointerId === activePointerId) {
+      activePointerId = null
+    }
+    clearHoldTimer()
+  })
   button.addEventListener('dragstart', clearHoldTimer)
 }

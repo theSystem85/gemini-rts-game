@@ -115,7 +115,7 @@ test.describe('Basic Game Flow', () => {
       await tutorialSkip.click()
     }
 
-    const tutorialMinimize = page.getByRole('button', { name: 'Minimize' })
+    const tutorialMinimize = page.locator('[data-tutorial-action="minimize"]')
     if (await tutorialMinimize.isVisible()) {
       await tutorialMinimize.click()
     }

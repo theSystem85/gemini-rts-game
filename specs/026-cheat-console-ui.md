@@ -13,3 +13,7 @@
 - Reuse `config-modal` classes from `styles/overlays.css` for the overlay and dialog elements.
 - Use `config-modal__field`, `config-modal__actions`, and `config-modal__button` styles for input and actions.
 - Add minimal cheat-specific styles only for spacing, hidden scrollbars, and help list presentation.
+
+## Command Updates
+- Added `build [type] [party]` cheat command support to spawn buildings near the cursor for fast test/setup workflows.
+- Building spawn applies immediate placement to the map grid, occupancy map, and building list, then refreshes power supply state.

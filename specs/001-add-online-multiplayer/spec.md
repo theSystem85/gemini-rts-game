@@ -71,6 +71,7 @@ If a human player disconnects or a save is loaded by a non-host, the party must 
 - **FR-006**: System MUST revert the party to AI control and keep the invite link valid for the same party/game instance within two seconds of a disconnect, allowing quick rejoining.
 - **FR-007**: System MUST allow every party to save the game, but when a non-host loads a save the loader becomes the new host, invites refresh to the new instance, and start/pause/cheat controls move to that host exclusively.
 - **FR-008**: System MUST provide an input field in the multiplayer/network section where users can paste a full invite link (URL with token or raw token) to connect to a game, enabling PWA users to join games without requiring URL parameter manipulation.
+- **FR-009**: System MUST show each human party's alias above its construction yard (including the host's own label), update that label immediately when the alias field changes in the multiplayer sidebar, and persist/reload the host alias across sessions.
 
 ### Key Entities *(include if feature involves data)*
 

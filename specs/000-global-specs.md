@@ -86,3 +86,9 @@ Ground and air movement logic is split across modular files to keep each under 1
 - Apache flight state: [src/game/movementApache.js](../src/game/movementApache.js)
 - Stuck recovery/dodge helpers: [src/game/movementStuck.js](../src/game/movementStuck.js)
 - Shared helpers/constants: [src/game/movementConstants.js](../src/game/movementConstants.js), [src/game/movementHelpers.js](../src/game/movementHelpers.js)
+
+## Audio Loading Policy
+
+- Sound effects and music must load lazily (on demand) when first needed, not during initial browser load.
+- Startup code must not prefetch or preload the full sound library.
+- Runtime audio caching is allowed after first use to avoid repeat network fetches.

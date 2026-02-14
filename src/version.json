@@ -1,4 +1,4 @@
 {
-  "commit": "e8ae563",
-  "message": "IMPROVE: Cap modal dialogs at 80vh"
+  "commit": "c838d36",
+  "message": "fix: restore modal visibility and default-hide production buttons"
 }

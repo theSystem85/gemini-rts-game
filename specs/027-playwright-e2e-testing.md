@@ -29,6 +29,7 @@ Setup and integration of Playwright for end-to-end (E2E) testing of the RTS game
 "test:e2e:ui": "playwright test --ui"
 "test:e2e:headed": "playwright test --headed"
 "test:e2e:debug": "playwright test --debug"
+"test:e2e:file": "playwright test --project=chromium"
 ```
 
 ### Test Location
@@ -73,6 +74,27 @@ Simulates a human player building a base and producing units:
 3. Integrate with GitHub Actions CI
 4. Add performance benchmarking tests
 5. Add mobile viewport tests
+
+## Test: apacheAutoReturnHelipad.test.js
+
+### Scenario
+Validates Apache auto-return with a cheat-accelerated setup to keep runtime minimal:
+
+1. Spawn a helipad via cheat near cursor.
+2. Spawn one Apache and command landing on that pad.
+3. Force takeoff and move Apache slightly away from the pad.
+4. Set Apache ammo to 1 via cheat.
+5. Spawn one enemy tank via cheat near Apache.
+6. Command Apache to attack that tank.
+7. Verify Apache lands back on helipad when ammo is depleted.
+8. Verify Apache refills on pad and auto-resumes attack against same target.
+
+### Assertions
+- Apache successfully lands on commanded helipad.
+- Apache damages target before returning to pad.
+- Auto-return state captures helipad + attack target.
+- Apache takes off automatically after reload and resumes attacking same target.
+- No critical console/page errors.
 
 ## Files Modified
 - `package.json` - Added E2E test scripts

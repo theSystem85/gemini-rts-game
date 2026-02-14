@@ -623,6 +623,20 @@ body.is-touch .money-tooltip__meta {
   line-height: 1;
 }
 
+/* Group icon needs extra width and vertical centering for the "1·2·3" label */
+.button-icon.group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto; /* allow label to render without clipping */
+  min-width: 22px;
+  height: 20px;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.6px;
+  transform: translateY(-1px);
+}
+
 /* Make wrench icon white */
 .white-icon {
   filter: brightness(0) invert(1); /* Makes the SVG white */
@@ -655,7 +669,7 @@ body.is-touch .money-tooltip__meta {
 }
 
 .production-button {
-  display: flex;
+  display: none; /* Hidden by default until unlocked via tech tree */
   flex-direction: column;
   align-items: center;
   background-color: #333;
@@ -672,6 +686,10 @@ body.is-touch .money-tooltip__meta {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.production-button.unlocked {
+  display: flex; /* Show when unlocked */
 }
 
 .production-button img {

@@ -1,13 +1,27 @@
 import { gameState } from '../gameState.js'
 import { playSound } from '../sound.js'
 
+/**
+ * Lazy load an image for a production button
+ * @param {HTMLElement} button - The production button
+ */
+function loadButtonImage(button) {
+  const img = button.querySelector('img')
+  if (img && img.dataset.src) {
+    // Always load the image from data-src (replaces placeholder)
+    img.src = img.dataset.src
+    // Keep data-src for potential re-use
+  }
+}
+
 export function unlockUnitType(controller, type, skipSound = false) {
   if (!gameState.availableUnitTypes.has(type)) {
     gameState.availableUnitTypes.add(type)
     gameState.newUnitTypes.add(type)
     const button = controller.unitButtons.get(type)
     if (button) {
-      button.style.display = ''
+      loadButtonImage(button)
+      button.classList.add('unlocked')
       const label = button.querySelector('.new-label')
       if (label) label.style.display = 'block'
     }
@@ -27,7 +41,8 @@ export function unlockBuildingType(controller, type, skipSound = false) {
     gameState.newBuildingTypes.add(type)
     const button = controller.buildingButtons.get(type)
     if (button) {
-      button.style.display = ''
+      loadButtonImage(button)
+      button.classList.add('unlocked')
       const label = button.querySelector('.new-label')
       if (label) label.style.display = 'block'
     }
@@ -55,7 +70,8 @@ export function unlockMultipleTypes(controller, unitTypes = [], buildingTypes = 
       gameState.newUnitTypes.add(type)
       const button = controller.unitButtons.get(type)
       if (button) {
-        button.style.display = ''
+        loadButtonImage(button)
+        button.classList.add('unlocked')
         const label = button.querySelector('.new-label')
         if (label) label.style.display = 'block'
       }
@@ -70,7 +86,8 @@ export function unlockMultipleTypes(controller, unitTypes = [], buildingTypes = 
       gameState.newBuildingTypes.add(type)
       const button = controller.buildingButtons.get(type)
       if (button) {
-        button.style.display = ''
+        loadButtonImage(button)
+        button.classList.add('unlocked')
         const label = button.querySelector('.new-label')
         if (label) label.style.display = 'block'
       }
@@ -112,7 +129,8 @@ export function forceUnlockUnitType(controller, type) {
   gameState.newUnitTypes.delete(type)
   const button = controller.unitButtons.get(type)
   if (button) {
-    button.style.display = ''
+    loadButtonImage(button)
+    button.classList.add('unlocked')
     const label = button.querySelector('.new-label')
     if (label) label.style.display = 'none'
   }
@@ -126,7 +144,8 @@ export function forceUnlockBuildingType(controller, type) {
   gameState.newBuildingTypes.delete(type)
   const button = controller.buildingButtons.get(type)
   if (button) {
-    button.style.display = ''
+    loadButtonImage(button)
+    button.classList.add('unlocked')
     const label = button.querySelector('.new-label')
     if (label) label.style.display = 'none'
   }

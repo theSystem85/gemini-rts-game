@@ -1,7 +1,7 @@
 {
   "name": "vite-starter",
   "private": true,
-  "version": "0.19.0",
+  "version": "0.19.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint src/ tests/ *.js",
     "lint:fix": "eslint src/ tests/ *.js --fix",
+    "lint:fix:changed": "node scripts/lint-changed.js",
     "map:analyse": "node map_analyse.js",
     "make:sprites": "node makeSprites.js",
     "count:locs": "node countLocs.js",
@@ -24,13 +25,19 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:file": "npx playwright test $1 --project=chromium",
+    "lighthouse": "lighthouse http://localhost:4173 --output=html --output=json --output-path=./tests/lighthouse/default",
+    "lighthouse:desktop": "lighthouse https://localhost:4173 --preset=desktop --output=html --output=json --output-path=./tests/lighthouse/desktop",
+    "lighthouse:mobile": "lighthouse https://localhost:4173 --preset=mobile --output=html --output=json --output-path=./tests/lighthouse/mobile",
+    "lighthouse:ci": "lighthouse https://localhost:4173 --chrome-flags='--headless --no-sandbox' --output=json --output-path=./tests/lighthouse/ci.json"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.32.0",
     "jsdom": "^27.4.0",
+    "lighthouse": "^13.0.2",
     "vite": "^6.0.3",
     "vitest": "^4.0.18"
   },

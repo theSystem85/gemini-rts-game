@@ -22,3 +22,19 @@
   to = "/index.html"
   status = 200
   force = false
+
+# Lighthouse plugin for performance testing
+# Runs automatically on all deploys including feature branches
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+
+  # Set minimum thresholds for each report area
+  [plugins.inputs.thresholds]
+    performance = 0.7
+    accessibility = 0.1
+    best-practices = 0.8
+    seo = 0.1
+
+  # Optional: deploy the lighthouse report to a path under your site
+  [[plugins.inputs.audits]]
+    output_path = "reports/lighthouse.html"

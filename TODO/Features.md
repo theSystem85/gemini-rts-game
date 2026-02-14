@@ -1,4 +1,6 @@
 ## Features
+- [x] Ensure the help modal applies the same style of the cheat modal including a cancel x button on the top right.
+- [x] Add a button to the right of the cheat modal toggle button in the sidebar to toggle the help modal (currently only toggled by "i" key). Ensure the button gets a suited icon to indicate "help" (no text).
 - [x] Add the LLM Control API module with versioned protocol types/schema/validators, export/apply adapters, transition collection hooks, examples, and tests.
 - [ ] Add LLM strategic AI settings + provider model pickers, commentary toggle/TTS, cost tracking, and in-game usage overlays.
   - [x] ✅ Add quota exceeded error handling that stops LLM polling, shows user-friendly error messages, and falls back to local AI only.
@@ -19,6 +21,7 @@
   - [x] Add base defense avoidance tactical guidance to LLM bootstrap prompt.
   - [x] Enforce tech tree availability in LLM applier (reject out-of-order builds with TECH_TREE_LOCKED).
   - [x] Fix LLM-locked enemy units not firing at targets (set allowedToAttack, auto-target buildings).
+  - [x] Make LLM respond with strategic commands on the very first POST request instead of waiting for next GET tick (bootstrap prompt instructs immediate economy build order).
   - [x] Skip LLM API calls when no API key is configured for providers that need one.
   - [x] Remove API key input for Ollama (local provider, no key needed).
   - [x] Add per-party LLM toggle in multiplayer sidebar to switch between LLM AI and local AI per party.
@@ -30,6 +33,8 @@
 - [x] ✅ **Playwright E2E Testing**: Setup Playwright for end-to-end browser testing with real user interactions.
   - [x] ✅ Install and configure Playwright with Chromium
   - [x] ✅ Create basic game flow test (seed 11): build power plant, refinery, vehicle factory, harvester, tank, command tank to ore
+  - [x] ✅ Add Apache helipad auto-return regression E2E (ammo empty → return → land/refill → resume attack target)
+  - [x] ✅ Stabilize Apache auto-return E2E by removing transient grounded-state assertion and dismissing startup overlays.
   - [x] ✅ Verify console error capture and no-error assertions
   - [x] ✅ Add npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:headed`, `test:e2e:debug`
   - [ ] Integrate E2E tests into CI/Netlify pipelines for merge gating
@@ -217,7 +222,7 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
   - [x] ✅ Make shure this feature does NOT interfere with the normal build workflow that should still be possible like before.
   - [x] ✅ When construction gets aborted (normal workflow by rightclick on sidebar's build button) make sure to remove the blueprint from the map again.
   - [x] ✅ Make sure to only place the finished building on the map when the occupancy map allows it (the blueprint should not block the tiles itself!) especially when the construction is finished and the final building gets placed automatically. Besides that the blueprint cannot be set when any map tile is occupied (same logic as normal placement logic => reuse that logic!).
-- [x] ✅ **Spec 005** When a new building is placed on the map create a construction animation by slowly letting an uncolored image of the building's image asset fade in from bottom to top for 3s (this means the height of the building is clipped and increases over the timespan of 3s from 0% to 100%) and then letting the full color of it fade in for another 2s.
+- [x] ✅ Implement lazy loading for production sidebar images to boost initial loading performance. Images only load when buildings/units are unlocked via tech tree progression, not upfront. Show placeholder images initially, replace with actual images only when unlocked. Works for fresh games (only Power Plant initially), saved games (only unlocked buildings load), and tech tree progression (images load on unlock events). Images load during syncTechTreeWithBuildings calls and for available types after setup.
 - [x] Completely hide build options in the sidebar for units and buildings until they are unlocked. When they get unlocked play sound "new_building_types_available" or "new_units_types_available" and show a yellow "new" label in the top right corner of the production tile until the first production of that kind was triggered.
 - [x] Add some smoke animation on the back of tanks when they are below 25% health.
 - [x] Introduce a new seed crystal that cannot be harvested and has 2x the spreading rate but only spreads normal blue crystals. Use the ore1_red.webp image asset for it. Make sure during map generation those seed crysals (1-3 of them) are always in the center of an ore filed.
@@ -246,3 +251,19 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
 - [x] ✅ **Spec 004** Implement an attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box (displayed in red) around the enemy units to be attacked. Then all those units will be attacked one after another. All units to be attacked will then have a small semi transparent slightly bouncing red triangle above the health bar to indicate that they are being attacked. Make any unit in ADF mode will leave that mode when commanded to do sth. else (including another AGF mode).
 - [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
+- [x] Add a professional in-game User Documentation HTML page with quick guide, deep guide, and full unit/building compendium, accessible from both sidebar and tutorial window.
+  - [x] Mobile-responsive design with single-column card layout on small screens
+  - [x] Borderless professional tables with hover highlights and subtle separators
+  - [x] Complete unit stats tables with all numerical values (cost, HP, speed, damage, fire rate, range, burst, ammo capacity, armor)
+  - [x] Complete building stats tables split by category (economy, support, defensive) with full stats
+  - [x] Tech tree visual dependency graph with sidebar asset images for all building→unit and building→building unlocks
+  - [x] HUD explanation section covering HP bar, fuel bar, ammo bar, XP progress, crew indicators, and promotion stars
+  - [x] Remote control section for desktop keyboard (arrow keys, shift+arrows, space) and mobile joystick profiles
+  - [x] Multiplayer guide with party colors, map positions, host rules, invite flow, and cross-platform play
+  - [x] Mine system UX guide covering mine layer deployment (ctrl+click, drag area), mine properties, and mine sweeper operation
+  - [x] Crew system section with D/C/G/L indicators, crew assignments by unit type, and restoration methods
+  - [x] XP & promotions with level thresholds, standard vs howitzer bonuses
+  - [x] Fuel & ammo logistics chain guide with collapsible fuel tank sizes per unit
+  - [x] Combat mechanics with hit zone multipliers (front/side/rear) and projectile details
+  - [x] Full keyboard reference table with contexts
+  - [x] Building placement rules and sidebar interaction tips (drag, hold, shift+scroll, chain build)

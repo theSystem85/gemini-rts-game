@@ -3,7 +3,8 @@ import {
   generateInviteForParty,
   getHostInviteStatus,
   setHostInviteStatus,
-  observePartyOwnershipChange
+  observePartyOwnershipChange,
+  updateHostPartyAlias
 } from '../network/multiplayerStore.js'
 import { watchHostInvite, kickPlayer } from '../network/webrtcSession.js'
 import { showHostNotification } from '../network/hostNotifications.js'
@@ -66,28 +67,37 @@ function setupAliasInput() {
   const aliasInput = document.getElementById('playerAliasInput')
   const remoteAliasInput = document.getElementById('remoteAliasInput')
 
-  if (aliasInput) {
-    // Load stored alias on init
-    const storedAlias = getStoredPlayerAlias()
-    if (storedAlias) {
-      aliasInput.value = storedAlias
-    }
-
-    // Save on change and sync to remote input
-    aliasInput.addEventListener('input', (e) => {
-      const value = e.target.value
-      setStoredPlayerAlias(value)
-      // Sync to remote join modal input if exists
-      if (remoteAliasInput) {
-        remoteAliasInput.value = value
-      }
-    })
-
-    // Also save on blur
-    aliasInput.addEventListener('blur', (e) => {
-      setStoredPlayerAlias(e.target.value)
-    })
+  if (!aliasInput) {
+    return
   }
+
+  // Load stored alias on init
+  const storedAlias = getStoredPlayerAlias()
+  if (storedAlias) {
+    aliasInput.value = storedAlias
+  }
+
+  // Ensure the host alias is reflected in multiplayer party state immediately on load
+  updateHostPartyAlias(aliasInput.value)
+
+  // Save on change and sync to remote input
+  aliasInput.addEventListener('input', (e) => {
+    const value = e.target.value
+    setStoredPlayerAlias(value)
+    updateHostPartyAlias(value)
+
+    // Sync to remote join modal input if exists
+    if (remoteAliasInput) {
+      remoteAliasInput.value = value
+    }
+  })
+
+  // Also save on blur
+  aliasInput.addEventListener('blur', (e) => {
+    const value = e.target.value
+    setStoredPlayerAlias(value)
+    updateHostPartyAlias(value)
+  })
 }
 
 /**

@@ -39,6 +39,7 @@ import { getPlayableViewportWidth, getPlayableViewportHeight } from '../utils/la
 import { initMapEditorControls } from '../ui/mapEditorControls.js'
 import { sanitizeSeed } from '../utils/seedUtils.js'
 import { initTutorialSystem } from '../ui/tutorialSystem.js'
+import { initUserDocs } from '../ui/userDocs.js'
 import { CanvasManager } from '../rendering/canvasManager.js'
 import { ProductionController } from '../ui/productionController.js'
 import { EventHandlers } from '../ui/eventHandlers.js'
@@ -48,6 +49,7 @@ import { addPowerIndicator } from '../ui/energyBar.js'
 import { addMoneyIndicator } from '../ui/moneyBar.js'
 import { closeMobileSidebarModal, isMobileSidebarModalVisible } from '../ui/mobileLayout.js'
 import { resetLlmUsage } from '../ai/llmUsage.js'
+import { runMeasuredTask, scheduleAfterNextPaint, scheduleIdleTask } from '../startupScheduler.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -184,11 +186,13 @@ class Game {
   }
 
   async initializeGame() {
-    await this.loadAssets()
-    this.setupGameWorld()
-    this.setupUI()
-    this.startGameLoop()
-    this.setupAutoSaveResume()
+    await runMeasuredTask('startup:initialize-game', async() => {
+      await this.loadAssets()
+      this.setupGameWorld()
+      this.setupUI()
+      this.startGameLoop()
+      this.setupDeferredStartupTasks()
+    })
   }
 
   async loadAssets() {
@@ -317,12 +321,6 @@ class Game {
     this.setupPlayerCountControl()
     this.setupMapShuffle()
     this.setupMapSettings()
-    initMapEditorControls()
-    initTutorialSystem()
-
-    initSidebarMultiplayer()
-    initAiPartySync()
-
     this.productionController.initProductionTabs()
     this.productionController.setupAllProductionButtons()
 
@@ -338,8 +336,6 @@ class Game {
 
     setupMinimapHandlers(this.canvasManager.getGameCanvas())
 
-    initSaveGameSystem()
-
     gameState.gamePaused = false
 
     const pauseBtn = document.getElementById('pauseBtn')
@@ -347,6 +343,24 @@ class Game {
     if (playPauseIcon) {
       playPauseIcon.textContent = '⏸'
     }
+  }
+
+
+  setupDeferredStartupTasks() {
+    scheduleAfterNextPaint('startup:after-paint-ui', () => {
+      initMapEditorControls()
+      initTutorialSystem()
+      initUserDocs()
+      initSidebarMultiplayer()
+      initAiPartySync()
+      this.setupAutoSaveResume()
+    })
+
+    scheduleIdleTask('startup:idle-settings-and-save', () => {
+      initSettingsModal()
+      attachBenchmarkButton()
+      initSaveGameSystem()
+    })
   }
 
   setupAutoSaveResume() {
@@ -469,8 +483,6 @@ class Game {
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
-    attachBenchmarkButton()
-    initSettingsModal()
 
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
       mapSettingsToggle.addEventListener('click', () => {

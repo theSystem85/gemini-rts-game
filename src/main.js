@@ -5,6 +5,7 @@ import './utils/debugLogger.js'
 import { registerMapEditorRendering } from './mapEditor.js'
 import { getTextureManager, notifyTileMutation } from './rendering.js'
 import { initializeMobileViewportLock } from './ui/mobileViewportLock.js'
+import { scheduleAfterNextPaint, scheduleIdleTask } from './startupScheduler.js'
 import './ui/mobileJoysticks.js'
 import './ui/mobileControlGroups.js'
 import {
@@ -19,7 +20,6 @@ import { initRemoteInviteLanding } from './ui/remoteInviteLanding.js'
 import { initNotificationHistory } from './ui/notificationHistory.js'
 import { selectedUnits } from './inputHandler.js'
 import {
-  preloadSounds,
   resumeAllSounds,
   testNarratedSounds,
   playSound,
@@ -116,8 +116,14 @@ document.addEventListener('DOMContentLoaded', async() => {
   setupDoubleTapPrevention()
   loadPersistedSettings()
   setupAudioUnlock()
-  initRemoteInviteLanding()
-  initNotificationHistory()
+
+  scheduleAfterNextPaint('startup:remote-invite-landing', () => {
+    initRemoteInviteLanding()
+  })
+
+  scheduleIdleTask('startup:notification-history', () => {
+    initNotificationHistory()
+  })
 
   const gameInstance = new Game()
   window.gameInstance = gameInstance
@@ -131,11 +137,6 @@ window.debugPlaySound = playSound
 window.getSoundCacheStatus = getSoundCacheStatus
 window.clearSoundCache = clearSoundCache
 
-preloadSounds().then(() => {
-  window.logger('Sound preloading completed')
-}).catch(e => {
-  console.error('Sound preloading failed:', e)
-})
 
 export {
   mapGrid,
