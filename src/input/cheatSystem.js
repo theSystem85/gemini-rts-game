@@ -874,19 +874,24 @@ export class CheatSystem {
 
     let appliedCount = 0
     this.selectedUnits.forEach(unit => {
-      if (typeof unit.maxAmmunition === 'number') {
+      if (unit.type === 'apache' && typeof unit.maxRocketAmmo === 'number') {
+        const target = isPercent ? unit.maxRocketAmmo * value : value
+        const clamped = Math.max(0, Math.min(target, unit.maxRocketAmmo))
+        unit.rocketAmmo = clamped
+        if (typeof unit.maxAmmunition === 'number') {
+          unit.ammunition = clamped
+        }
+        unit.apacheAmmoEmpty = clamped === 0
+        unit.canFire = clamped > 0
+        if (clamped > 0) {
+          unit.noAmmoNotificationShown = false
+        }
+        appliedCount++
+      } else if (typeof unit.maxAmmunition === 'number') {
         const target = isPercent ? unit.maxAmmunition * value : value
         const clamped = Math.max(0, Math.min(target, unit.maxAmmunition))
         unit.ammunition = clamped
         if (clamped > 0) unit.noAmmoNotificationShown = false // Reset notification flag
-        appliedCount++
-      } else if (unit.type === 'apache' && typeof unit.maxRocketAmmo === 'number') {
-        // Handle Apache helicopters that use rocketAmmo instead of ammunition
-        const target = isPercent ? unit.maxRocketAmmo * value : value
-        const clamped = Math.max(0, Math.min(target, unit.maxRocketAmmo))
-        unit.rocketAmmo = clamped
-        unit.apacheAmmoEmpty = clamped === 0
-        unit.canFire = clamped > 0
         appliedCount++
       }
     })

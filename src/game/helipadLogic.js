@@ -1,7 +1,7 @@
 import { HELIPAD_FUEL_CAPACITY, HELIPAD_RELOAD_TIME, TILE_SIZE, TANKER_SUPPLY_CAPACITY, HELIPAD_AMMO_RESERVE, AMMO_TRUCK_RANGE, AMMO_RESUPPLY_TIME, AMMO_TRUCK_CARGO } from '../config.js'
 import { logPerformance } from '../performanceUtils.js'
 import { getBuildingIdentifier } from '../utils.js'
-import { getHelipadLandingCenter } from '../utils/helipadUtils.js'
+import { getHelipadLandingCenter, isHelipadAvailableForUnit } from '../utils/helipadUtils.js'
 
 function clearHelipadClaimForUnit(unit, helipadId, helipads = []) {
   if (!unit) return
@@ -149,6 +149,10 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
 
         if (distance <= landingRadius) {
           if (landingRequested) {
+            if (!isHelipadAvailableForUnit(helipad, units, heli.id)) {
+              return
+            }
+
             const landingX = helipadCenterX - TILE_SIZE / 2
             const landingY = helipadCenterY - TILE_SIZE / 2
 
@@ -190,6 +194,7 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
               heli.autoHoldAltitude = false
               heli.manualFlightState = 'land'
             }
+            heli.manualFlightHoverRequested = false
 
             heli.helipadTargetId = helipadId
             heli.landedHelipadId = helipadId
@@ -240,9 +245,16 @@ export const updateHelipadLogic = logPerformance(function(units, buildings, _gam
               helipad.landedUnitId = null
               heli.landedHelipadId = null
             } else {
-              heli.canFire = ammoFull && heli.flightState === 'grounded'
-              heli.autoHelipadReturnActive = false
-              heli.autoHelipadReturnTargetId = null
+              if (heli.autoHelipadReturnActive) {
+                heli.canFire = false
+                if (!hasStoredAttackTarget) {
+                  heli.autoHelipadReturnActive = false
+                  heli.autoHelipadReturnTargetId = null
+                }
+              } else {
+                heli.canFire = ammoFull && heli.flightState === 'grounded'
+                heli.autoHelipadReturnTargetId = null
+              }
             }
             heli.autoHelipadRetryAt = 0
             heli.noHelipadNotificationTime = 0

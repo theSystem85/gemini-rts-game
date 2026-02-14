@@ -106,6 +106,19 @@ function findNearestHelipadForApache(unit, units) {
   return best
 }
 
+function getHelipadById(helipadId) {
+  if (!helipadId || !Array.isArray(gameState.buildings)) {
+    return null
+  }
+
+  return gameState.buildings.find(building => {
+    if (!building || building.type !== 'helipad' || building.health <= 0) {
+      return false
+    }
+    return getBuildingIdentifier(building) === helipadId
+  }) || null
+}
+
 function initiateApacheHelipadReturn(unit, helipadInfo) {
   if (!unit || !helipadInfo || !helipadInfo.center || !helipadInfo.tile) {
     return false
@@ -142,7 +155,7 @@ function initiateApacheHelipadReturn(unit, helipadInfo) {
   if (unit.flightState === 'grounded') {
     unit.manualFlightState = 'takeoff'
   }
-  unit.manualFlightHoverRequested = true
+  unit.manualFlightHoverRequested = false
   unit.remoteControlActive = false
   unit.hovering = false
   unit.autoHelipadReturnActive = true
@@ -175,7 +188,12 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
   }
 
   if (unit.remoteControlActive) {
-    return
+    const lastRemoteControlTime = unit.lastRemoteControlTime || 0
+    const remoteControlRecentlyActive = lastRemoteControlTime > 0 && now - lastRemoteControlTime < 350
+    if (remoteControlRecentlyActive) {
+      return
+    }
+    unit.remoteControlActive = false
   }
 
   const wasAmmoEmpty = unit.apacheAmmoEmpty === true
@@ -193,7 +211,22 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
       unit.autoReturnToHelipadOnTargetLoss = true
     }
 
-    const alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+    let alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+
+    if (alreadyLanding && unit.helipadTargetId && unit.landedHelipadId !== unit.helipadTargetId) {
+      const assignedHelipad = getHelipadById(unit.helipadTargetId)
+      const assignedStillAvailable = assignedHelipad && isHelipadAvailableForUnit(assignedHelipad, units, unit.id)
+
+      if (!assignedStillAvailable) {
+        unit.helipadLandingRequested = false
+        unit.helipadTargetId = null
+        if (unit.flightPlan?.mode === 'helipad') {
+          unit.flightPlan = null
+        }
+        alreadyLanding = false
+      }
+    }
+
     if (!alreadyLanding) {
       const retryAt = unit.autoHelipadRetryAt || 0
       const shouldAttempt = !wasAmmoEmpty || !unit.autoHelipadReturnActive || now >= retryAt

@@ -27,7 +27,8 @@ vi.mock('../../src/utils/helipadUtils.js', () => ({
   getHelipadLandingCenter: vi.fn(helipad => ({
     x: (helipad.x + (helipad.width ?? 1) / 2) * 32,
     y: (helipad.y + (helipad.height ?? 1) / 2) * 32
-  }))
+  })),
+  isHelipadAvailableForUnit: vi.fn(() => true)
 }))
 
 import { updateHelipadLogic } from '../../src/game/helipadLogic.js'

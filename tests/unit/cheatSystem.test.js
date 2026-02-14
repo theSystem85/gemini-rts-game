@@ -297,12 +297,21 @@ describe('CheatSystem', () => {
 
   it('sets ammo values for apache units', () => {
     const system = new CheatSystem()
-    const apache = { type: 'apache', maxRocketAmmo: 10, rocketAmmo: 0, apacheAmmoEmpty: true, canFire: false }
+    const apache = {
+      type: 'apache',
+      maxAmmunition: 10,
+      ammunition: 0,
+      maxRocketAmmo: 10,
+      rocketAmmo: 0,
+      apacheAmmoEmpty: true,
+      canFire: false
+    }
     system.setSelectedUnitsRef([apache])
 
     system.setSelectedUnitsAmmo({ value: 0.5, isPercent: true, display: '50%' })
 
     expect(apache.rocketAmmo).toBe(5)
+    expect(apache.ammunition).toBe(5)
     expect(apache.apacheAmmoEmpty).toBe(false)
     expect(apache.canFire).toBe(true)
   })

@@ -5,6 +5,11 @@
 - [x] LLM enemy commentary misattributes ownership (e.g., says player destroyed "my" buildings when they were AI-owned); enforce owner-aware taunts tied to the controlled party id.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
 - [x] Ensure Apaches auto-return to helipad on empty ammo, fully land/reload, resume attacking the same target, and finally return to helipad after the target is destroyed.
+- [x] Ensure selected Apaches still complete helipad landing immediately (no hover lock), auto-return reload cycles auto-relaunch to the interrupted target, and helipad return flight rotates then moves forward (no backward drifting).
+- [x] Reduce Apache speed by 25% and enforce that Apaches only land on currently unoccupied helipads.
+- [x] Ensure ammo-empty Apaches auto-reroute to another free helipad if their currently assigned return pad becomes unavailable during return.
+- [x] Fix Apache ammo cheat handling so ammo cheats update `rocketAmmo` reliably even when Apache has a populated `maxAmmunition` field.
+- [x] Fix stale `remoteControlActive` state blocking Apache auto-return/resupply combat logic after remote control inactivity.
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
 - [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.
 - [x] LLM command queue bypasses game engine unlock mechanics; buildings that require prerequisites can be queued before prerequisites are built.
