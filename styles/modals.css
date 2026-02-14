@@ -1532,6 +1532,28 @@ body.mobile-sidebar-modal-open #sidebarScroll {
   display: none;
 }
 
+body.mobile-portrait .config-modal,
+body.mobile-portrait .keybinding-conflict-overlay,
+body.mobile-portrait .kicked-modal,
+body.mobile-portrait .benchmark-modal,
+body.mobile-portrait .mobile-sidebar-modal[aria-hidden="false"],
+body.mobile-portrait .remote-invite-overlay {
+  padding-top: calc(var(--safe-area-top) + 16px);
+}
+
+body.mobile-portrait .config-modal__dialog,
+body.mobile-portrait .keybinding-conflict-dialog,
+body.mobile-portrait .kicked-modal__dialog,
+body.mobile-portrait .benchmark-modal__dialog,
+body.mobile-portrait .mobile-sidebar-modal__content,
+body.mobile-portrait .remote-invite-card {
+  max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 32px);
+}
+
+body.mobile-portrait .tutorial-card {
+  top: var(--safe-area-top);
+  max-height: calc(100vh - var(--safe-area-top) - 140px);
+}
 .user-docs-modal {
   position: fixed;
   inset: 0;
