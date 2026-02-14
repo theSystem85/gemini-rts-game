@@ -26,6 +26,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:file": "npx playwright test $1 --project=chromium",
     "lighthouse": "lighthouse http://localhost:4173 --output=html --output=json --output-path=./tests/lighthouse/default",
     "lighthouse:desktop": "lighthouse https://localhost:4173 --preset=desktop --output=html --output=json --output-path=./tests/lighthouse/desktop",
     "lighthouse:mobile": "lighthouse https://localhost:4173 --preset=mobile --output=html --output=json --output-path=./tests/lighthouse/mobile",

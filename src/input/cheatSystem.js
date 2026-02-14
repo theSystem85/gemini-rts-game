@@ -14,7 +14,7 @@ import {
   HELIPAD_AMMO_RESERVE
 } from '../config.js'
 import { createUnit, updateUnitOccupancy } from '../units.js'
-import { updatePowerSupply } from '../buildings.js'
+import { buildingData, createBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
 import { updateUnitSpeedModifier } from '../utils.js'
 import { deployMine } from '../game/mineSystem.js'
 import { getWreckById, removeWreckById } from '../game/unitWreckManager.js'
@@ -156,6 +156,7 @@ export class CheatSystem {
             <li><code>enemycontrol on</code> / <code>enemycontrol off</code> - Toggle enemy unit control</li>
             <li><code>driver</code> / <code>commander</code> / <code>loader</code> / <code>gunner</code> - Toggle crew for selected unit</li>
             <li title="Supported unit types: harvester, tank_v1, tank-v2, tank-v3, rocketTank, recoveryTank, ambulance, tankerTruck, ammunitionTruck, apache, howitzer, mineLayer, mineSweeper"><code>[type] [amount] [party]</code> - Spawn units around the cursor. Defaults to the player's party</li>
+            <li title="Supported building types include helipad, powerPlant, oreRefinery, vehicleFactory, vehicleWorkshop, radarStation, hospital, gasStation, turret variants, and walls"><code>build [type] [party]</code> - Spawn a building near the cursor. Defaults to the player's party</li>
             <li><code>mine [party]</code> - Deploy a mine at the cursor for the specified party (defaults to player)</li>
             <li><code>mines [WxH][gG] [party]</code> or <code>WxHgG</code> - Drop a minefield pattern (e.g., <code>mines 2x3g1</code>, <code>3x1</code> for a continuous row) with optional gaps</li>
           </ul>
@@ -262,6 +263,15 @@ export class CheatSystem {
         this.enableGodMode()
       } else if (normalizedCode === 'godmode off' || normalizedCode === 'god off' || normalizedCode === 'invincible off') {
         this.disableGodMode()
+      }
+      // Building spawn command
+      else if (normalizedCode.startsWith('build ')) {
+        const buildingSpawn = this.parseBuildingSpawnCommand(code)
+        if (!buildingSpawn) {
+          this.showError('Invalid build command. Use: build [type] [party]')
+          return
+        }
+        this.spawnBuildingAtCursor(buildingSpawn.buildingType, buildingSpawn.owner)
       }
       // Money commands
       else if (normalizedCode.startsWith('give ')) {
@@ -479,6 +489,33 @@ export class CheatSystem {
     return { unitType, count, owner }
   }
 
+  parseBuildingSpawnCommand(input) {
+    if (!input) return null
+    const tokens = input.trim().split(/\s+/)
+    if (tokens.length < 2 || tokens[0].toLowerCase() !== 'build') {
+      return null
+    }
+
+    if (!this.buildingTypeMap) {
+      this.buildingTypeMap = Object.keys(buildingData).reduce((acc, key) => {
+        acc[key.toLowerCase()] = key
+        return acc
+      }, {})
+    }
+
+    const buildingType = this.buildingTypeMap[tokens[1].toLowerCase()]
+    if (!buildingType) {
+      return null
+    }
+
+    let owner = gameState.humanPlayer
+    if (tokens.length >= 3) {
+      owner = this.resolvePartyAlias(tokens[2]) || owner
+    }
+
+    return { buildingType, owner }
+  }
+
   resolvePartyAlias(alias) {
     if (!alias) return null
     const map = {
@@ -610,6 +647,105 @@ export class CheatSystem {
     } else {
       this.showError('No valid spawn position found')
     }
+  }
+
+  isValidBuildingSpawnPosition(type, tileX, tileY) {
+    const mapGrid = gameState.mapGrid
+    const occupancyMap = gameState.occupancyMap
+    const data = buildingData[type]
+
+    if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !data) {
+      return false
+    }
+
+    const width = data.width
+    const height = data.height
+    const mapHeight = mapGrid.length
+    const mapWidth = mapGrid[0]?.length || 0
+
+    if (
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX + width > mapWidth ||
+      tileY + height > mapHeight
+    ) {
+      return false
+    }
+
+    for (let y = tileY; y < tileY + height; y++) {
+      for (let x = tileX; x < tileX + width; x++) {
+        const tile = mapGrid[y]?.[x]
+        if (!tile) return false
+        if (tile.type !== 'land' && tile.type !== 'street') return false
+        if (tile.seedCrystal || tile.building) return false
+
+        if (occupancyMap?.[y]?.[x] > 0) return false
+
+        const occupiedByUnit = units.some(unit =>
+          Math.floor(unit.x / TILE_SIZE) === x && Math.floor(unit.y / TILE_SIZE) === y
+        )
+        if (occupiedByUnit) return false
+      }
+    }
+
+    return true
+  }
+
+  findBuildingSpawnPositionNear(type, baseX, baseY) {
+    if (this.isValidBuildingSpawnPosition(type, baseX, baseY)) {
+      return { x: baseX, y: baseY }
+    }
+
+    for (let distance = 1; distance <= MAX_SPAWN_SEARCH_DISTANCE; distance++) {
+      for (let dx = -distance; dx <= distance; dx++) {
+        for (let dy = -distance; dy <= distance; dy++) {
+          if (Math.abs(dx) < distance && Math.abs(dy) < distance) continue
+          const candidateX = baseX + dx
+          const candidateY = baseY + dy
+          if (this.isValidBuildingSpawnPosition(type, candidateX, candidateY)) {
+            return { x: candidateX, y: candidateY }
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  spawnBuildingAtCursor(type, owner) {
+    const baseX = Math.floor(gameState.cursorX / TILE_SIZE)
+    const baseY = Math.floor(gameState.cursorY / TILE_SIZE)
+    const position = this.findBuildingSpawnPositionNear(type, baseX, baseY)
+
+    if (!position) {
+      this.showError(`No valid spawn position found for building type ${type}`)
+      return
+    }
+
+    const building = createBuilding(type, position.x, position.y)
+    if (!building) {
+      this.showError(`Unknown building type: ${type}`)
+      return
+    }
+
+    building.owner = owner || gameState.humanPlayer
+    building.health = building.maxHealth
+    building.constructionFinished = true
+    building.constructionStartTime = 0
+
+    placeBuilding(building, gameState.mapGrid, gameState.occupancyMap, { recordTransition: false })
+
+    if (!Array.isArray(gameState.buildings)) {
+      gameState.buildings = []
+    }
+    gameState.buildings.push(building)
+
+    updatePowerSupply(gameState.buildings, gameState)
+    showNotification(
+      `🏗️ Spawned ${type} for ${this.getPartyDisplayName(building.owner)}`,
+      3000
+    )
+    playSound('confirmed', 0.5)
   }
 
   placeMineAtCursor(owner) {

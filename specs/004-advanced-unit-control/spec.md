@@ -182,6 +182,7 @@ As a player, I want to select multiple enemy units at once for my combat units t
 - **FR-060**: If an Apache is auto-returning for resupply and its assigned helipad becomes unavailable before touchdown, the system MUST clear that stale assignment and reroute the Apache to another currently free helipad.
 - **FR-061**: Cheat ammo commands applied to selected Apache helicopters MUST update Apache combat ammo (`rocketAmmo`) as the primary source of truth, even when compatibility fields (e.g. `maxAmmunition`) exist on the same unit object.
 - **FR-062**: Apache combat/autoreturn logic MUST ignore stale remote-control state after a short inactivity timeout so old `remoteControlActive` flags cannot block ammo-empty auto-return to helipad.
+- **FR-063**: Automated E2E coverage MUST verify the Apache ammo-empty lifecycle end-to-end (auto-return intent, refill, relaunch, and target-resume) including stale remote-control-state regression protection, using durable state checks that do not rely on a single-frame grounded transition.
 
 **Logistics Symmetry:**
 - **FR-043**: System MUST allow selecting eligible units and clicking a friendly supply provider (ambulance, tanker truck, recovery tank, ammunition truck) to queue service from that provider while keeping the requesting units in place; the provider must travel to them.
