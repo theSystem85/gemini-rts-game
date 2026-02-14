@@ -27,7 +27,8 @@ vi.mock('../../src/utils/helipadUtils.js', () => ({
   getHelipadLandingCenter: vi.fn(helipad => ({
     x: (helipad.x + (helipad.width ?? 1) / 2) * 32,
     y: (helipad.y + (helipad.height ?? 1) / 2) * 32
-  }))
+  })),
+  isHelipadAvailableForUnit: vi.fn(() => true)
 }))
 
 import { updateHelipadLogic } from '../../src/game/helipadLogic.js'
@@ -146,7 +147,7 @@ describe('helipadLogic', () => {
     expect(helipad.landedUnitId).toBe('a1')
     expect(apache.rocketAmmo).toBeGreaterThan(0)
     expect(apache.apacheAmmoEmpty).toBe(false)
-    expect(apache.canFire).toBe(true)
+    expect(apache.canFire).toBe(false)
     expect(apache.gas).toBeGreaterThan(0)
     expect(apache.refuelingAtHelipad).toBe(true)
     expect(helipad.ammo).toBeLessThan(10)
@@ -157,6 +158,60 @@ describe('helipadLogic', () => {
     expect(apache.noHelipadNotificationTime).toBe(0)
   })
 
+
+  it('keeps Apache pinned to helipad center while landing even before touchdown', () => {
+    const helipad = createHelipad({ ammo: 50, fuel: 100 })
+    const landingCenter = getHelipadLandingCenter(helipad)
+    const apache = createApache({
+      x: landingCenter.x - 10,
+      y: landingCenter.y - 8,
+      flightState: 'airborne',
+      helipadLandingRequested: true,
+      selected: true,
+      altitude: 40
+    })
+
+    updateHelipadLogic([apache], [helipad], {}, 100)
+
+    expect(apache.x).toBe(landingCenter.x - 16)
+    expect(apache.y).toBe(landingCenter.y - 16)
+    expect(apache.manualFlightState).toBe('land')
+    expect(apache.flightPlan?.mode).toBe('helipad')
+    expect(apache.landedHelipadId).toBe('helipad-h1')
+    expect(helipad.landedUnitId).toBe('a1')
+  })
+
+  it('auto relaunches to continue attack after full ammo reload on auto-return', () => {
+    const helipad = createHelipad({
+      ammo: 50,
+      maxAmmo: 50,
+      fuel: 50,
+      maxFuel: 100,
+      fuelReloadTime: 100000
+    })
+    const landingCenter = getHelipadLandingCenter(helipad)
+    const apache = createApache({
+      x: landingCenter.x - 16,
+      y: landingCenter.y - 16,
+      flightState: 'grounded',
+      rocketAmmo: 9.98,
+      maxRocketAmmo: 10,
+      autoHelipadReturnActive: true,
+      autoHelipadReturnTargetId: 'helipad-h1',
+      autoHelipadReturnAttackTargetId: 'enemy-unit-1',
+      autoHelipadReturnAttackTargetType: 'unit'
+    })
+
+    updateHelipadLogic([apache], [helipad], {}, 100)
+
+    expect(apache.rocketAmmo).toBe(10)
+    expect(apache.helipadLandingRequested).toBe(false)
+    expect(apache.manualFlightState).toBe('takeoff')
+    expect(apache.autoHoldAltitude).toBe(true)
+    expect(apache.canFire).toBe(true)
+    expect(apache.landedHelipadId).toBeNull()
+    expect(helipad.landedUnitId).toBeNull()
+  })
   it('clears stale landed unit references when helicopters depart', () => {
     const helipad = createHelipad({ landedUnitId: 'a1' })
     const landingCenter = getHelipadLandingCenter(helipad)

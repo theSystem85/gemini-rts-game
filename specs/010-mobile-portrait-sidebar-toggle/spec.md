@@ -102,3 +102,8 @@ Touch users holding the device in portrait orientation need the ability to recla
 - **Expanded Sidebar Top Clearance**: Expanded portrait sidebar content must start below the top safe-area inset to keep controls readable and touch-safe around the notch region.
 - **Notification History Controls**: The notification history bell toggle and opened history panel must anchor below `var(--safe-area-top)` in portrait layouts.
 
+
+## Update 2026-02-12 (Drag vs Tooltip Guard)
+
+- **Drag-to-Build Priority**: In mobile portrait build interactions, drag gestures from production buttons must cancel long-press tooltip activation once movement crosses the drag threshold.
+- **No Tooltip During Active Drag**: While a touch drag-to-build gesture is active for a production button, the production tooltip must remain suppressed to avoid stealing focus from placement flow.

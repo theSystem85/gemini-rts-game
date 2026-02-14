@@ -472,7 +472,8 @@ class TutorialSystem {
       this.stepPhase.textContent = this.phase === 'demo' ? 'Demo' : 'Your turn'
     }
     if (this.minimizeButton) {
-      this.minimizeButton.textContent = this.minimized ? 'Expand' : 'Minimize'
+      this.minimizeButton.innerHTML = this.minimized ? '▴' : '▬'
+      this.minimizeButton.title = this.minimized ? 'Expand tutorial' : 'Minimize tutorial'
       this.minimizeButton.setAttribute('aria-pressed', this.minimized ? 'true' : 'false')
     }
     if (this.voiceToggleButton) {

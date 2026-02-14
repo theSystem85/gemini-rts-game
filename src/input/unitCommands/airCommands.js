@@ -37,14 +37,15 @@ export function assignApacheFlight(unit, destTile, destCenter, options = {}) {
     const helipadId = options.helipadId || null
     unit.helipadLandingRequested = true
     unit.helipadTargetId = helipadId
+    unit.manualFlightHoverRequested = false
   } else {
     unit.helipadLandingRequested = false
     unit.helipadTargetId = null
+    unit.manualFlightHoverRequested = true
   }
   if (unit.flightState === 'grounded') {
     unit.manualFlightState = 'takeoff'
   }
-  unit.manualFlightHoverRequested = true
   unit.remoteControlActive = false
   unit.hovering = false
   return true

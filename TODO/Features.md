@@ -1,4 +1,6 @@
 ## Features
+- [x] Ensure the help modal applies the same style of the cheat modal including a cancel x button on the top right.
+- [x] Add a button to the right of the cheat modal toggle button in the sidebar to toggle the help modal (currently only toggled by "i" key). Ensure the button gets a suited icon to indicate "help" (no text).
 - [x] Add the LLM Control API module with versioned protocol types/schema/validators, export/apply adapters, transition collection hooks, examples, and tests.
 - [ ] Add LLM strategic AI settings + provider model pickers, commentary toggle/TTS, cost tracking, and in-game usage overlays.
   - [x] ✅ Add quota exceeded error handling that stops LLM polling, shows user-friendly error messages, and falls back to local AI only.
@@ -31,6 +33,8 @@
 - [x] ✅ **Playwright E2E Testing**: Setup Playwright for end-to-end browser testing with real user interactions.
   - [x] ✅ Install and configure Playwright with Chromium
   - [x] ✅ Create basic game flow test (seed 11): build power plant, refinery, vehicle factory, harvester, tank, command tank to ore
+  - [x] ✅ Add Apache helipad auto-return regression E2E (ammo empty → return → land/refill → resume attack target)
+  - [x] ✅ Stabilize Apache auto-return E2E by removing transient grounded-state assertion and dismissing startup overlays.
   - [x] ✅ Verify console error capture and no-error assertions
   - [x] ✅ Add npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:headed`, `test:e2e:debug`
   - [ ] Integrate E2E tests into CI/Netlify pipelines for merge gating
@@ -247,3 +251,19 @@ The DZM overlay will look like a height map overlay with red 1px width lines tha
 - [x] Support cheat codes for better testing via browser console. Make sure there is a code for invincibility for all units (like "godmode on" or "godmode off") and a code to get x amount of money (like "give 10000$")
 - [x] ✅ **Spec 004** Implement an attack group feature (aka AGF): All selected players units can attack a group of enemy units by left click and hold to drag a box (displayed in red) around the enemy units to be attacked. Then all those units will be attacked one after another. All units to be attacked will then have a small semi transparent slightly bouncing red triangle above the health bar to indicate that they are being attacked. Make any unit in ADF mode will leave that mode when commanded to do sth. else (including another AGF mode).
 - [x] When a unit on the map is double clicked then automatically all units of this type visible on the screen will be selected together. When player holds shift key while double clicking on a unit then all units of that type will be added to the existing selection. When player just holds shift key and just makes a normal click on a unit then only this unit will be added to current selection.
+- [x] Add a professional in-game User Documentation HTML page with quick guide, deep guide, and full unit/building compendium, accessible from both sidebar and tutorial window.
+  - [x] Mobile-responsive design with single-column card layout on small screens
+  - [x] Borderless professional tables with hover highlights and subtle separators
+  - [x] Complete unit stats tables with all numerical values (cost, HP, speed, damage, fire rate, range, burst, ammo capacity, armor)
+  - [x] Complete building stats tables split by category (economy, support, defensive) with full stats
+  - [x] Tech tree visual dependency graph with sidebar asset images for all building→unit and building→building unlocks
+  - [x] HUD explanation section covering HP bar, fuel bar, ammo bar, XP progress, crew indicators, and promotion stars
+  - [x] Remote control section for desktop keyboard (arrow keys, shift+arrows, space) and mobile joystick profiles
+  - [x] Multiplayer guide with party colors, map positions, host rules, invite flow, and cross-platform play
+  - [x] Mine system UX guide covering mine layer deployment (ctrl+click, drag area), mine properties, and mine sweeper operation
+  - [x] Crew system section with D/C/G/L indicators, crew assignments by unit type, and restoration methods
+  - [x] XP & promotions with level thresholds, standard vs howitzer bonuses
+  - [x] Fuel & ammo logistics chain guide with collapsible fuel tank sizes per unit
+  - [x] Combat mechanics with hit zone multipliers (front/side/rear) and projectile details
+  - [x] Full keyboard reference table with contexts
+  - [x] Building placement rules and sidebar interaction tips (drag, hold, shift+scroll, chain build)

@@ -509,6 +509,21 @@
       </div>
 
       <!-- Multiplayer Settings -->
+      <div style="display: flex; gap: 5px; margin: 10px 0;">
+        <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
+          <span class="button-icon settings-icon">⚙</span>
+        </button>
+        <button id="userDocsBtn" class="action-button icon-button" type="button" title="Open user documentation">
+          <span class="button-icon">📘</span>
+        </button>
+        <button id="cheatMenuBtn" class="action-button icon-button" type="button" title="Open cheat console">
+          <span class="button-icon">🃏</span>
+        </button>
+        <button id="helpBtn" class="action-button icon-button" type="button" title="Show game controls help">
+          <span class="button-icon">ℹ️</span>
+        </button>
+      </div>
+
       <div id="multiplayerSettings">
         <h3>Multiplayer</h3>
         <div id="multiplayerPartyList" class="multiplayer-party-list" aria-live="polite"></div>
@@ -549,16 +564,6 @@
             <input type="number" class="sidebar-input" min="0.25" max="4" step="0.25" value="1"
               style="width: 70px; margin-left: 10px;" id="speedMultiplier">
           </label>
-        </div>
-
-        <!-- Settings and cheat buttons -->
-        <div style="display: flex; gap: 5px; margin: 10px 0;">
-          <button id="mapSettingsBtn" class="action-button icon-button" title="Map Settings">
-            <span class="button-icon settings-icon">⚙</span>
-          </button>
-          <button id="cheatMenuBtn" class="action-button icon-button" type="button" title="Open cheat console">
-            <span class="button-icon">🃏</span>
-          </button>
         </div>
 
         <!-- Map Settings Accordion -->
@@ -992,6 +997,16 @@
       <div id="mobileSidebarModalContent" class="mobile-sidebar-modal__content"></div>
     </div>
   </div>
+  <div id="userDocsModal" class="user-docs-modal hidden" aria-hidden="true">
+    <div class="user-docs-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="userDocsTitle">
+      <div class="user-docs-modal__header">
+        <h2 id="userDocsTitle">Code & Conquer — User Documentation</h2>
+        <button id="userDocsCloseBtn" class="user-docs-modal__close" type="button" aria-label="Close documentation">×</button>
+      </div>
+      <iframe id="userDocsFrame" class="user-docs-modal__frame" title="User documentation" loading="lazy"></iframe>
+    </div>
+  </div>
+
 </body>
 
 </html>

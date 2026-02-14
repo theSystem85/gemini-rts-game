@@ -39,6 +39,7 @@ import { getPlayableViewportWidth, getPlayableViewportHeight } from '../utils/la
 import { initMapEditorControls } from '../ui/mapEditorControls.js'
 import { sanitizeSeed } from '../utils/seedUtils.js'
 import { initTutorialSystem } from '../ui/tutorialSystem.js'
+import { initUserDocs } from '../ui/userDocs.js'
 import { CanvasManager } from '../rendering/canvasManager.js'
 import { ProductionController } from '../ui/productionController.js'
 import { EventHandlers } from '../ui/eventHandlers.js'
@@ -349,6 +350,7 @@ class Game {
     scheduleAfterNextPaint('startup:after-paint-ui', () => {
       initMapEditorControls()
       initTutorialSystem()
+      initUserDocs()
       initSidebarMultiplayer()
       initAiPartySync()
       this.setupAutoSaveResume()

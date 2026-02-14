@@ -345,7 +345,21 @@ function handleApacheRemoteControl(unit, params) {
     Math.abs(strafeAxis) > 0.05
   const hasFlightInput = ascendActive || descendActive
   const remoteActive = hasMovementInput || hasFlightInput
+  const landingInProgress = Boolean(
+    unit.helipadLandingRequested ||
+    unit.flightPlan?.mode === 'helipad' ||
+    unit.landedHelipadId
+  )
   unit.remoteControlActive = remoteActive
+
+  if (landingInProgress && !remoteActive && !descendActive) {
+    unit.remoteControlActive = false
+    if (!unit.remoteFireCommandActive) {
+      unit.remoteRocketTarget = null
+      unit.remoteReticleVisible = false
+    }
+    return
+  }
 
   if (unit.remoteControlActive && !unit.hasUsedRemoteControl) {
     unit.hasUsedRemoteControl = true

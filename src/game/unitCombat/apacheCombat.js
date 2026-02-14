@@ -26,6 +26,34 @@ function getApacheTargetCenter(target) {
   }
 }
 
+function resolveStoredApacheTarget(unit, units) {
+  if (!unit || !unit.autoHelipadReturnAttackTargetId) {
+    return null
+  }
+
+  const targetId = unit.autoHelipadReturnAttackTargetId
+  const targetType = unit.autoHelipadReturnAttackTargetType
+
+  if (targetType === 'building') {
+    return Array.isArray(gameState.buildings)
+      ? gameState.buildings.find(building => building && building.id === targetId && building.health > 0)
+      : null
+  }
+
+  return Array.isArray(units)
+    ? units.find(candidate => candidate && candidate.id === targetId && candidate.health > 0)
+    : null
+}
+
+function clearApacheReturnAttackState(unit) {
+  if (!unit) {
+    return
+  }
+  unit.autoHelipadReturnAttackTargetId = null
+  unit.autoHelipadReturnAttackTargetType = null
+  unit.autoReturnToHelipadOnTargetLoss = false
+}
+
 function findNearestHelipadForApache(unit, units) {
   if (!unit || !Array.isArray(gameState.buildings) || gameState.buildings.length === 0) {
     return null
@@ -78,6 +106,19 @@ function findNearestHelipadForApache(unit, units) {
   return best
 }
 
+function getHelipadById(helipadId) {
+  if (!helipadId || !Array.isArray(gameState.buildings)) {
+    return null
+  }
+
+  return gameState.buildings.find(building => {
+    if (!building || building.type !== 'helipad' || building.health <= 0) {
+      return false
+    }
+    return getBuildingIdentifier(building) === helipadId
+  }) || null
+}
+
 function initiateApacheHelipadReturn(unit, helipadInfo) {
   if (!unit || !helipadInfo || !helipadInfo.center || !helipadInfo.tile) {
     return false
@@ -114,7 +155,7 @@ function initiateApacheHelipadReturn(unit, helipadInfo) {
   if (unit.flightState === 'grounded') {
     unit.manualFlightState = 'takeoff'
   }
-  unit.manualFlightHoverRequested = true
+  unit.manualFlightHoverRequested = false
   unit.remoteControlActive = false
   unit.hovering = false
   unit.autoHelipadReturnActive = true
@@ -124,14 +165,35 @@ function initiateApacheHelipadReturn(unit, helipadInfo) {
 }
 
 export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupancyMap) {
+  if ((!unit.target || unit.target.health <= 0) && unit.autoHelipadReturnAttackTargetId) {
+    unit.target = resolveStoredApacheTarget(unit, units)
+  }
+
   if (!unit.target || unit.target.health <= 0) {
+    const shouldReturnToHelipad = unit.autoReturnToHelipadOnTargetLoss === true
+    if (shouldReturnToHelipad) {
+      const alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+      if (!alreadyLanding) {
+        const helipadInfo = findNearestHelipadForApache(unit, units)
+        if (helipadInfo) {
+          initiateApacheHelipadReturn(unit, helipadInfo)
+        }
+      }
+    }
+
+    clearApacheReturnAttackState(unit)
     unit.volleyState = null
     unit.flightPlan = unit.flightPlan && unit.flightPlan.mode === 'combat' ? null : unit.flightPlan
     return
   }
 
   if (unit.remoteControlActive) {
-    return
+    const lastRemoteControlTime = unit.lastRemoteControlTime || 0
+    const remoteControlRecentlyActive = lastRemoteControlTime > 0 && now - lastRemoteControlTime < 350
+    if (remoteControlRecentlyActive) {
+      return
+    }
+    unit.remoteControlActive = false
   }
 
   const wasAmmoEmpty = unit.apacheAmmoEmpty === true
@@ -143,7 +205,28 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
     unit.canFire = false
     unit.volleyState = null
 
-    const alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+    if (unit.target && unit.target.id) {
+      unit.autoHelipadReturnAttackTargetId = unit.target.id
+      unit.autoHelipadReturnAttackTargetType = unit.target.tileX !== undefined ? 'unit' : 'building'
+      unit.autoReturnToHelipadOnTargetLoss = true
+    }
+
+    let alreadyLanding = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+
+    if (alreadyLanding && unit.helipadTargetId && unit.landedHelipadId !== unit.helipadTargetId) {
+      const assignedHelipad = getHelipadById(unit.helipadTargetId)
+      const assignedStillAvailable = assignedHelipad && isHelipadAvailableForUnit(assignedHelipad, units, unit.id)
+
+      if (!assignedStillAvailable) {
+        unit.helipadLandingRequested = false
+        unit.helipadTargetId = null
+        if (unit.flightPlan?.mode === 'helipad') {
+          unit.flightPlan = null
+        }
+        alreadyLanding = false
+      }
+    }
+
     if (!alreadyLanding) {
       const retryAt = unit.autoHelipadRetryAt || 0
       const shouldAttempt = !wasAmmoEmpty || !unit.autoHelipadReturnActive || now >= retryAt
@@ -166,6 +249,10 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
       }
     }
   } else {
+    if (unit.autoHelipadReturnActive && typeof unit.maxRocketAmmo === 'number' && unit.rocketAmmo < unit.maxRocketAmmo) {
+      unit.canFire = false
+      return
+    }
     if (unit.autoHelipadReturnActive) {
       unit.autoHelipadReturnActive = false
     }
@@ -291,8 +378,9 @@ export function updateApacheCombat(unit, units, bullets, mapGrid, now, _occupanc
     unit.moveTarget = standOffTile
   }
 
-  unit.autoHoldAltitude = true
-  if (unit.flightState === 'grounded') {
+  const helipadLandingInProgress = Boolean(unit.helipadLandingRequested || (unit.flightPlan && unit.flightPlan.mode === 'helipad') || unit.landedHelipadId)
+  unit.autoHoldAltitude = !helipadLandingInProgress
+  if (!helipadLandingInProgress && unit.flightState === 'grounded') {
     unit.manualFlightState = 'takeoff'
   }
 

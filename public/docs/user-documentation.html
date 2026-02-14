@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code & Conquer — User Documentation</title>
+  <style>
+    :root {
+      --bg: #060c1a;
+      --panel: #101a33;
+      --panel2: #0d1428;
+      --line: rgba(43, 64, 111, 0.5);
+      --text: #ebf3ff;
+      --muted: #9fb4d9;
+      --accent: #5dc2ff;
+      --green: #6efc4b;
+      --red: #ff6b6b;
+      --yellow: #ffd644;
+      --orange: #ffa94d;
+      --blue: #4da3ff;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: Inter, 'Segoe UI', system-ui, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    /* ─── Hero ─── */
+    .hero {
+      background: linear-gradient(135deg, #122754 0%, #0d1a38 100%);
+      border-radius: 16px;
+      padding: 36px 28px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 60%;
+      height: 200%;
+      background: radial-gradient(ellipse, rgba(93, 194, 255, 0.06), transparent 70%);
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .hero p { color: var(--muted); margin-top: 8px; max-width: 680px; }
+    .pill {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(93, 194, 255, 0.12);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* ─── TOC ─── */
+    .toc {
+      margin-top: 24px;
+      padding: 20px 24px;
+      border-radius: 12px;
+      background: var(--panel2);
+    }
+    .toc h2 { font-size: 1.1rem; margin-bottom: 10px; }
+    .toc ol { padding-left: 20px; columns: 2; column-gap: 24px; }
+    .toc li { break-inside: avoid; padding: 3px 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ─── Sections ─── */
+    .section { margin-top: 32px; }
+    .section > h2 {
+      font-size: 1.35rem;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 16px;
+    }
+    .section > h3 {
+      font-size: 1.1rem;
+      margin: 20px 0 10px;
+      color: var(--accent);
+    }
+    .section p, .section li { color: var(--muted); }
+    .section ul, .section ol { padding-left: 20px; }
+    .section li + li { margin-top: 4px; }
+
+    /* ─── Cards grid ─── */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--panel2);
+      border-radius: 12px;
+      padding: 20px;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 0 0 1px var(--line), 0 8px 24px rgba(0, 0, 0, 0.3); }
+    .card h3 { font-size: 1rem; margin-bottom: 6px; }
+    .card p { font-size: 0.9rem; }
+    .shot {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 10px;
+      background: #0b1224;
+    }
+
+    /* ─── Tables (borderless) ─── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    thead th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 2px solid var(--line);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(43, 64, 111, 0.25);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(93, 194, 255, 0.04); }
+    .asset {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      border-radius: 6px;
+      vertical-align: middle;
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Cascadia Code', monospace; font-size: 12px; }
+    .dim { color: rgba(159, 180, 217, 0.55); }
+    .highlight { color: var(--accent); font-weight: 600; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+
+    /* ─── Stat pills / badges ─── */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge--fire { background: rgba(255, 107, 107, 0.15); color: var(--red); }
+    .badge--range { background: rgba(93, 194, 255, 0.15); color: var(--accent); }
+    .badge--armor { background: rgba(110, 252, 75, 0.15); color: var(--green); }
+    .badge--special { background: rgba(255, 214, 68, 0.15); color: var(--yellow); }
+
+    /* ─── Tech tree diagram ─── */
+    .tech-tree {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(13, 20, 40, 0.6);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    .tech-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tech-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .tech-node img { width: 22px; height: 22px; border-radius: 4px; }
+    .tech-node--building { background: rgba(93, 194, 255, 0.1); color: var(--accent); }
+    .tech-node--unit { background: rgba(110, 252, 75, 0.1); color: var(--green); }
+    .tech-arrow { color: var(--muted); font-size: 14px; }
+
+    /* ─── Key / kbd styling ─── */
+    kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    /* ─── Crew indicators ─── */
+    .crew-grid {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      width: 80px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    .crew-slot {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+    }
+
+    /* ─── Level stars ─── */
+    .star { color: var(--yellow); font-size: 16px; }
+    .star--empty { color: rgba(255, 214, 68, 0.25); }
+
+    /* ─── Hit zone diagram ─── */
+    .zone-diagram {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 20px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .zone-diagram .front { color: var(--green); }
+    .zone-diagram .side { color: var(--yellow); }
+    .zone-diagram .rear { color: var(--red); }
+
+    /* ─── Multiplayer colors ─── */
+    .party-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .wrap { padding: 16px 12px 48px; }
+      .hero { padding: 24px 18px; }
+      .hero h1 { font-size: 1.4rem; }
+      .toc ol { columns: 1; }
+      .grid { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+      thead th { padding: 6px 6px; font-size: 10px; }
+      tbody td { padding: 6px; }
+      .asset { width: 28px; height: 28px; }
+
+      /* Responsive tables → card layout on mobile */
+      .responsive-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tech-tree { padding: 12px 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .wrap { padding: 12px 8px 40px; }
+      .hero { padding: 18px 14px; border-radius: 12px; }
+      .section > h2 { font-size: 1.15rem; }
+      table { font-size: 11px; }
+      .asset { width: 24px; height: 24px; }
+      kbd { font-size: 11px; padding: 1px 4px; }
+    }
+
+    /* ─── Collapsible sections ─── */
+    details { margin-top: 8px; }
+    details > summary {
+      cursor: pointer;
+      padding: 10px 14px;
+      background: var(--panel2);
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    details > summary::before {
+      content: '▸';
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details > summary::-webkit-details-marker { display: none; }
+    details > .detail-body { padding: 12px 14px 4px; }
+
+    /* ─── Anchor offset ─── */
+    [id] { scroll-margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero">
+      <h1>Code &amp; Conquer — Official Player Guide</h1>
+      <p>Welcome Commander. This handbook covers everything from first-click onboarding to advanced system mastery, including a complete compendium of every unit and building with full combat stats.</p>
+      <span class="pill">Version: Live In-Game Docs</span>
+    </section>
+
+    <!-- ═══════════ TABLE OF CONTENTS ═══════════ -->
+    <nav class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#quick">Quick Guide</a></li>
+        <li><a href="#controls">Controls &amp; HUD</a></li>
+        <li><a href="#building-placement">Building Placement</a></li>
+        <li><a href="#tech-tree">Tech Tree</a></li>
+        <li><a href="#units">Unit Compendium</a></li>
+        <li><a href="#buildings">Building Compendium</a></li>
+        <li><a href="#combat">Combat Mechanics</a></li>
+        <li><a href="#crew">Crew System</a></li>
+        <li><a href="#xp">XP &amp; Promotions</a></li>
+        <li><a href="#logistics">Fuel, Ammo &amp; Logistics</a></li>
+        <li><a href="#mines">Mine System</a></li>
+        <li><a href="#remote">Remote Control</a></li>
+        <li><a href="#multiplayer">Multiplayer</a></li>
+        <li><a href="#keyboard">Keyboard Reference</a></li>
+      </ol>
+    </nav>
+
+    <!-- ═══════════ 1. QUICK GUIDE ═══════════ -->
+    <section id="quick" class="section">
+      <h2>1. Quick Guide</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Step 1 — Economy</h3>
+          <p>Build <strong>Power Plant → Ore Refinery → Vehicle Factory</strong>, then queue Harvesters. This establishes your money and power flow.</p>
+          <img class="shot" src="/images/docs/quick-guide-overview.png" alt="Quick guide overview" loading="lazy">
+        </article>
+        <article class="card">
+          <h3>Step 2 — Army</h3>
+          <p>Train tanks from the Vehicle Factory. Set rally points by selecting a factory and right-clicking the map. Keep gas and ammo supply online.</p>
+          <img class="shot" src="/images/docs/quick-guide-sidebar.png" alt="Sidebar production" loading="lazy">
+        </article>
+        <article class="card">
+          <h3>Step 3 — Victory</h3>
+          <p>Destroy <em>all</em> enemy buildings to win. Use turrets for defense and logistics units (tankers, ammo trucks, ambulances) to sustain pressure.</p>
+          <img class="shot" src="/images/docs/quick-guide-docs-modal.png" alt="Docs modal" loading="lazy">
+        </article>
+      </div>
+
+      <details style="margin-top: 16px;">
+        <summary>Building from the Sidebar</summary>
+        <div class="detail-body">
+          <ul>
+            <li><strong>Click</strong> a build button — building enters queue; click a second time to place on map.</li>
+            <li><strong>Drag</strong> a build button onto the map — enters blueprint mode; building auto-places when ready.</li>
+            <li><strong>Hold</strong> a build button — tooltip shows full stats (cost, HP, power, etc.).</li>
+            <li><strong>Shift + Scroll</strong> on a build button — batch-queue multiple units/buildings.</li>
+            <li><strong>Shift + Click upper half</strong> of a stack — add 5 to queue.</li>
+            <li><strong>Shift + Click lower half</strong> — remove 5 from queue.</li>
+            <li><strong>Shift + Drag</strong> — chain-build mode: draw connected lines of buildings (walls, turrets, etc.).</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═══════════ 2. CONTROLS & HUD ═══════════ -->
+    <section id="controls" class="section">
+      <h2>2. Controls &amp; HUD</h2>
+
+      <h3>Selection</h3>
+      <ul>
+        <li><strong>Click</strong> a unit to select it. <strong>Shift + Click</strong> to add/remove from selection.</li>
+        <li><strong>Drag</strong> a box around units for group selection.</li>
+        <li><strong>Double-click</strong> a unit to select all visible units of the same type. <strong>Shift + Double-click</strong> to add them.</li>
+        <li><strong>Right-click</strong> the map to move selected units. Right-click an enemy to attack.</li>
+      </ul>
+
+      <h3>Control Groups</h3>
+      <ul>
+        <li><kbd>Ctrl</kbd> + <kbd>1</kbd>–<kbd>9</kbd> — assign selected units to group.</li>
+        <li><kbd>1</kbd>–<kbd>9</kbd> — recall the group. Press twice quickly to center the camera on them.</li>
+      </ul>
+
+      <h3>HUD Indicators (per unit)</h3>
+      <p>Each unit displays up to four status bars when selected or damaged:</p>
+      <ul>
+        <li><strong style="color: #4caf50;">Health bar</strong> (top) — green, turns red at low HP. Yellow XP progress overlay inside.</li>
+        <li><strong style="color: #4da3ff;">Fuel bar</strong> (bottom center) — blue, ~50% HUD width. At 0% the unit cannot move.</li>
+        <li><strong style="color: #ffa94d;">Ammo bar</strong> (left side) — orange. At 0 rounds the unit cannot fire.</li>
+        <li><strong style="color: var(--yellow);">★ Stars</strong> (above HP) — up to 3 yellow stars showing promotion level.</li>
+        <li><strong>D / C / G / L</strong> crew indicators — colored squares at HUD corners (see <a href="#crew">Crew System</a>).</li>
+      </ul>
+
+      <h3>Path Planning (PPF)</h3>
+      <ul>
+        <li>Hold <kbd>Shift</kbd> then issue move/attack commands — they queue in order.</li>
+        <li>Waypoint markers appear on the map showing the planned path.</li>
+      </ul>
+
+      <h3>Attack Groups (AGF)</h3>
+      <ul>
+        <li>Hold left-click and drag a <span style="color: var(--red);">red box</span> around enemy units — selected units attack them sequentially.</li>
+        <li>Targeted enemies show a bouncing red triangle above their HP bar.</li>
+      </ul>
+
+      <h3>Guard Mode</h3>
+      <ul>
+        <li>Hold <kbd>⌘ Cmd</kbd> (Mac) / <kbd>Ctrl</kbd> (Win) and click a friendly unit — your units follow and protect it.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 3. BUILDING PLACEMENT ═══════════ -->
+    <section id="building-placement" class="section">
+      <h2>3. Building Placement</h2>
+      <ul>
+        <li>Buildings must be placed within <strong>3 tiles</strong> (Chebyshev distance) of an existing friendly building.</li>
+        <li>Tiles must be unoccupied — no rocks, water, units, or other buildings.</li>
+        <li><strong>Blueprint mode:</strong> drag from sidebar → blue overlay appears → building auto-places when construction finishes.</li>
+        <li><strong>Sell mode:</strong> press <kbd>S</kbd> (no units selected) to toggle sell mode, then click a building to sell it (3-second animation, partial refund).</li>
+        <li><strong>Repair mode:</strong> press <kbd>R</kbd> to toggle, then click damaged buildings — costs are deducted gradually during repair.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 4. TECH TREE ═══════════ -->
+    <section id="tech-tree" class="section">
+      <h2>4. Tech Tree</h2>
+      <p>Buildings and units unlock progressively. New items appear in the sidebar with a <span style="color: var(--yellow); font-weight: 600;">NEW</span> label and a sound cue.</p>
+
+      <h3>Building Unlocks</h3>
+      <div class="tech-tree">
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Vehicle Factory</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/ammunition_factory_sidebar.webp" alt="">Ammunition Factory</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/radar_station.webp" alt="">Radar Station</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/turret_gun_v2.webp" alt="">Turret V2</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/turret_gun_v3.webp" alt="">Turret V3</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/rocket_turret.webp" alt="">Rocket Turret</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/tesla_coil.webp" alt="">Tesla Coil</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/artillery_turret.webp" alt="">Artillery Turret</span>
+        </div>
+      </div>
+
+      <h3>Unit Unlocks</h3>
+      <div class="tech-tree">
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Vehicle Factory</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/tank.webp" alt="">Tank V1</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/ore_refinery.webp" alt="">Refinery</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/harvester.webp" alt="">Harvester</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/gas_station.webp" alt="">Gas Station</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/tanker_truck.webp" alt="">Tanker Truck</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/ammunition_factory_sidebar.webp" alt="">Ammo Factory</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/ammunition_truck_sidebar.webp" alt="">Ammo Truck</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_workshop.webp" alt="">Workshop</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/recovery_tank.webp" alt="">Recovery Tank</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/mine_sweeper_sidebar.webp" alt="">Mine Sweeper</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_workshop.webp" alt="">Workshop</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/ammunition_factory_sidebar.webp" alt="">Ammo Factory</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/mine_layer_sidebar.webp" alt="">Mine Layer</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory ×2</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/tank_v3.webp" alt="">Tank V3</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/radar_station.webp" alt="">Radar Station</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/tank_v2.webp" alt="">Tank V2</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/vehicle_factory.webp" alt="">Factory</span>
+          <span class="tech-arrow">+</span>
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/radar_station.webp" alt="">Radar</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/howitzer_sidebar.webp" alt="">Howitzer</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/hospital.webp" alt="">Hospital</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/ambulance.webp" alt="">Ambulance</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/helipad_sidebar.webp" alt="">Helipad</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/apache_sidebar.webp" alt="">Apache</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-node tech-node--building"><img src="/images/sidebar/rocket_turret.webp" alt="">Rocket Turret</span>
+          <span class="tech-arrow">→</span>
+          <span class="tech-node tech-node--unit"><img src="/images/sidebar/rocket_tank.webp" alt="">Rocket Tank</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 5. UNIT COMPENDIUM ═══════════ -->
+    <section id="units" class="section">
+      <h2>5. Unit Compendium</h2>
+
+      <h3>Combat Units</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Unit</th>
+              <th class="num">Cost</th>
+              <th class="num">HP</th>
+              <th class="num">Speed</th>
+              <th class="num">Damage</th>
+              <th class="num">Fire Rate</th>
+              <th class="num">Range</th>
+              <th class="num">Burst</th>
+              <th class="num">Ammo</th>
+              <th>Special</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/tank.webp" alt="Tank V1"></td>
+              <td><strong>Tank V1</strong></td>
+              <td class="num">$1,000</td>
+              <td class="num">100</td>
+              <td class="num">0.33</td>
+              <td class="num">25</td>
+              <td class="num">4.0s</td>
+              <td class="num">9 tiles</td>
+              <td class="num">1</td>
+              <td class="num">42</td>
+              <td class="dim">Baseline tank</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/tank_v2.webp" alt="Tank V2"></td>
+              <td><strong>Tank V2</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">150</td>
+              <td class="num">0.30</td>
+              <td class="num">25</td>
+              <td class="num">4.0s</td>
+              <td class="num">9 tiles</td>
+              <td class="num">1</td>
+              <td class="num">42</td>
+              <td><span class="badge badge--special">Alert mode</span> Auto-targets nearby enemies</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/tank_v3.webp" alt="Tank V3"></td>
+              <td><strong>Tank V3</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">200</td>
+              <td class="num">0.25</td>
+              <td class="num">30</td>
+              <td class="num">4.0s</td>
+              <td class="num">9 tiles</td>
+              <td class="num">2 (300ms)</td>
+              <td class="num">50</td>
+              <td><span class="badge badge--special">Aim-ahead</span> Predictive targeting, 1.5× turret speed</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/rocket_tank.webp" alt="Rocket Tank"></td>
+              <td><strong>Rocket Tank</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">100</td>
+              <td class="num">0.35</td>
+              <td class="num">20 ×4</td>
+              <td class="num">12.0s</td>
+              <td class="num">13.5 tiles</td>
+              <td class="num">4 (300ms)</td>
+              <td class="num">24</td>
+              <td><span class="badge badge--fire">80 burst dmg</span> Long-range rocket salvo</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/howitzer_sidebar.webp" alt="Howitzer"></td>
+              <td><strong>Howitzer</strong></td>
+              <td class="num">$2,500</td>
+              <td class="num">160</td>
+              <td class="num">0.22</td>
+              <td class="num">60</td>
+              <td class="num">6.0s</td>
+              <td class="num">30 tiles</td>
+              <td class="num">1</td>
+              <td class="num">30</td>
+              <td><span class="badge badge--range">Min range 6</span> <span class="badge badge--fire">3-tile splash</span> <span class="badge badge--armor">Armor 2</span> Fires over obstacles, 2× building damage</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/apache_sidebar.webp" alt="Apache"></td>
+              <td><strong>Apache</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">40</td>
+              <td class="num">6.75</td>
+              <td class="num">10</td>
+              <td class="num">8.4s</td>
+              <td class="num">6 tiles</td>
+              <td class="num">volley</td>
+              <td class="num">38</td>
+              <td><span class="badge badge--special">Airborne</span> Helipad refuel/reload, hits ground only</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Support &amp; Logistics Units</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Unit</th>
+              <th class="num">Cost</th>
+              <th class="num">HP</th>
+              <th class="num">Speed</th>
+              <th class="num">Armor</th>
+              <th>Role &amp; Abilities</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/harvester.webp" alt="Harvester"></td>
+              <td><strong>Harvester</strong></td>
+              <td class="num">$1,500</td>
+              <td class="num">150</td>
+              <td class="num">0.40</td>
+              <td class="num">3</td>
+              <td>Ore income engine. Auto-harvests and delivers to nearest assigned refinery.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/tanker_truck.webp" alt="Tanker Truck"></td>
+              <td><strong>Tanker Truck</strong></td>
+              <td class="num">$300</td>
+              <td class="num">20</td>
+              <td class="num">0.66</td>
+              <td class="num">—</td>
+              <td>Mobile refueling. 40,000L supply tank. Auto-refuels nearby units within 1 tile.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/ammunition_truck_sidebar.webp" alt="Ammo Truck"></td>
+              <td><strong>Ammo Truck</strong></td>
+              <td class="num">$800</td>
+              <td class="num">30</td>
+              <td class="num">0.66</td>
+              <td class="num">—</td>
+              <td>500-round cargo. Resupplies within 1.5 tiles. <span class="badge badge--fire">Explodes on death</span> with scattered munitions.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/recovery_tank.webp" alt="Recovery Tank"></td>
+              <td><strong>Recovery Tank</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">150</td>
+              <td class="num">0.525 / 0.33</td>
+              <td class="num">3</td>
+              <td>Repairs nearby units (25% of build cost for full repair). Tows wrecks. 50% faster unloaded.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/ambulance.webp" alt="Ambulance"></td>
+              <td><strong>Ambulance</strong></td>
+              <td class="num">$500</td>
+              <td class="num">25</td>
+              <td class="num">0.175</td>
+              <td class="num">—</td>
+              <td>Carries 10 medics. Restores crew within 1 tile in 2s per person. 4× speed on roads.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/mine_layer_sidebar.webp" alt="Mine Layer"></td>
+              <td><strong>Mine Layer</strong></td>
+              <td class="num">$1,000</td>
+              <td class="num">30</td>
+              <td class="num">0.528 / 0.264</td>
+              <td class="num">—</td>
+              <td>20-mine capacity. Deploy via <kbd>Ctrl</kbd>+click or drag-area checkerboard. Half speed while deploying.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/mine_sweeper_sidebar.webp" alt="Mine Sweeper"></td>
+              <td><strong>Mine Sweeper</strong></td>
+              <td class="num">$1,000</td>
+              <td class="num">200</td>
+              <td class="num">0.231 / 0.099</td>
+              <td class="num">6</td>
+              <td>Negates mine damage while sweeping. Heavily armored. Drag to sweep in serpentine pattern.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════════ 6. BUILDING COMPENDIUM ═══════════ -->
+    <section id="buildings" class="section">
+      <h2>6. Building Compendium</h2>
+
+      <h3>Economy &amp; Production</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Building</th>
+              <th class="num">Cost</th>
+              <th class="num">HP</th>
+              <th class="num">Power</th>
+              <th class="num">Size</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/construction_yard.webp" alt="Construction Yard"></td>
+              <td><strong>Construction Yard</strong></td>
+              <td class="num">$5,000</td>
+              <td class="num">350</td>
+              <td class="num positive">+50 MW</td>
+              <td class="num">3×3</td>
+              <td>Core base anchor. Produces all buildings. Losing all CYs = defeat.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/power_plant.webp" alt="Power Plant"></td>
+              <td><strong>Power Plant</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">200</td>
+              <td class="num positive">+200 MW</td>
+              <td class="num">3×3</td>
+              <td>Primary power source. Insufficient power disables production.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/ore_refinery.webp" alt="Ore Refinery"></td>
+              <td><strong>Ore Refinery</strong></td>
+              <td class="num">$2,500</td>
+              <td class="num">200</td>
+              <td class="num negative">−150 MW</td>
+              <td class="num">3×3</td>
+              <td>Converts ore to money. Harvesters unload ore here (10s per load).</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/vehicle_factory.webp" alt="Vehicle Factory"></td>
+              <td><strong>Vehicle Factory</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−50 MW</td>
+              <td class="num">3×3</td>
+              <td>Spawns all land units. More factories = faster production (2 = 2× speed).</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/radar_station.webp" alt="Radar Station"></td>
+              <td><strong>Radar Station</strong></td>
+              <td class="num">$1,500</td>
+              <td class="num">200</td>
+              <td class="num negative">−50 MW</td>
+              <td class="num">2×2</td>
+              <td>Enables minimap. Unlocks advanced turrets and Tank V2.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Support Buildings</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Building</th>
+              <th class="num">Cost</th>
+              <th class="num">HP</th>
+              <th class="num">Power</th>
+              <th class="num">Size</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/helipad_sidebar.webp" alt="Helipad"></td>
+              <td><strong>Helipad</strong></td>
+              <td class="num">$1,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−20 MW</td>
+              <td class="num">2×2</td>
+              <td>Apache spawn point. Holds 15,600L fuel + 250 rounds ammo reserve.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/gas_station.webp" alt="Gas Station"></td>
+              <td><strong>Gas Station</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">50</td>
+              <td class="num negative">−30 MW</td>
+              <td class="num">3×3</td>
+              <td>Refuels units on 3 tiles below building. 7s per refill, $50 per unit.</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/ammunition_factory_sidebar.webp" alt="Ammo Factory"></td>
+              <td><strong>Ammunition Factory</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">250</td>
+              <td class="num negative">−40 MW</td>
+              <td class="num">3×3</td>
+              <td>Resupplies units within 2 tiles in 7s. <span class="badge badge--fire">Explodes violently</span> on destruction. <span class="badge badge--armor">Armor 2</span></td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/vehicle_workshop.webp" alt="Workshop"></td>
+              <td><strong>Vehicle Workshop</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−20 MW</td>
+              <td class="num">3×3</td>
+              <td>Repairs nearby units at 2% HP/sec. <span class="badge badge--armor">Armor 3</span></td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/hospital.webp" alt="Hospital"></td>
+              <td><strong>Hospital</strong></td>
+              <td class="num">$4,000</td>
+              <td class="num">200</td>
+              <td class="num negative">−50 MW</td>
+              <td class="num">3×3</td>
+              <td>Restores crew on 3 tiles below. 10s per person, $100 each.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Defensive Structures</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Building</th>
+              <th class="num">Cost</th>
+              <th class="num">HP</th>
+              <th class="num">Power</th>
+              <th class="num">Range</th>
+              <th class="num">Damage</th>
+              <th class="num">Fire Rate</th>
+              <th class="num">Burst</th>
+              <th class="num">Armor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/turret_gun_v1.webp" alt="Turret V1"></td>
+              <td><strong>Turret V1</strong></td>
+              <td class="num">$1,200</td>
+              <td class="num">300</td>
+              <td class="num negative">−10 MW</td>
+              <td class="num">10</td>
+              <td class="num">10</td>
+              <td class="num">3.0s</td>
+              <td class="num">1</td>
+              <td class="num">1</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/turret_gun_v2.webp" alt="Turret V2"></td>
+              <td><strong>Turret V2</strong></td>
+              <td class="num">$2,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−20 MW</td>
+              <td class="num">10</td>
+              <td class="num">12</td>
+              <td class="num">3.0s</td>
+              <td class="num">2 (150ms)</td>
+              <td class="num">1</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/turret_gun_v3.webp" alt="Turret V3"></td>
+              <td><strong>Turret V3</strong></td>
+              <td class="num">$3,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−30 MW</td>
+              <td class="num">12</td>
+              <td class="num">15</td>
+              <td class="num">3.5s</td>
+              <td class="num">3 (150ms)</td>
+              <td class="num">1.5</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/rocket_turret.webp" alt="Rocket Turret"></td>
+              <td><strong>Rocket Turret</strong></td>
+              <td class="num">$4,000</td>
+              <td class="num">200</td>
+              <td class="num negative">−20 MW</td>
+              <td class="num">16</td>
+              <td class="num">18</td>
+              <td class="num">6.0s</td>
+              <td class="num">4 (500ms)</td>
+              <td class="num">2</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/tesla_coil.webp" alt="Tesla Coil"></td>
+              <td><strong>Tesla Coil</strong></td>
+              <td class="num">$5,000</td>
+              <td class="num">250</td>
+              <td class="num negative">−60 MW</td>
+              <td class="num">20</td>
+              <td class="num">5</td>
+              <td class="num">8.0s</td>
+              <td class="num">—</td>
+              <td class="num">2</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/artillery_turret.webp" alt="Artillery Turret"></td>
+              <td><strong>Artillery Turret</strong></td>
+              <td class="num">$4,000</td>
+              <td class="num">300</td>
+              <td class="num negative">−45 MW</td>
+              <td class="num">36</td>
+              <td class="num">100</td>
+              <td class="num">7.0s</td>
+              <td class="num">1</td>
+              <td class="num">2</td>
+            </tr>
+            <tr>
+              <td><img class="asset" src="/images/sidebar/concrete_wall.webp" alt="Wall"></td>
+              <td><strong>Concrete Wall</strong></td>
+              <td class="num">$100</td>
+              <td class="num">200</td>
+              <td class="num dim">0 MW</td>
+              <td class="num dim">—</td>
+              <td class="num dim">—</td>
+              <td class="num dim">—</td>
+              <td class="num dim">—</td>
+              <td class="num dim">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════════ 7. COMBAT MECHANICS ═══════════ -->
+    <section id="combat" class="section">
+      <h2>7. Combat Mechanics</h2>
+
+      <h3>Hit Zones</h3>
+      <p>Damage is multiplied based on where the projectile hits relative to the target's facing direction:</p>
+      <div class="zone-diagram">
+        <span class="front">▲ Front — 1.0× damage</span>
+        <span>━━━━━━━━━━</span>
+        <span class="side">◄ Side — 1.25× damage ►</span>
+        <span>━━━━━━━━━━</span>
+        <span class="rear">▼ Rear — 1.5× damage</span>
+      </div>
+
+      <h3>Projectile Details</h3>
+      <ul>
+        <li><strong>Tanks:</strong> bullet speed 8, single shot (V3 fires 2-shot burst with 300ms delay).</li>
+        <li><strong>Rockets:</strong> bullet speed 8, 4-rocket salvo with 300ms intervals.</li>
+        <li><strong>Howitzer:</strong> shell speed 0.85, ballistic arc, 3-tile splash radius, 2× vs buildings, fires over obstacles.</li>
+        <li><strong>Apache:</strong> rapid volley with 180ms between shots, ground targets only.</li>
+      </ul>
+
+      <h3>Damage &amp; Health</h3>
+      <ul>
+        <li>Units below <strong>25% HP</strong> move at 50% speed and emit smoke.</li>
+        <li>Wrecks remain on the map after destruction — can be towed by a Recovery Tank.</li>
+        <li>Artillery Turret has a <strong>minimum range of 5 tiles</strong> — cannot fire at close targets.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 8. CREW SYSTEM ═══════════ -->
+    <section id="crew" class="section">
+      <h2>8. Crew System</h2>
+      <p>Most vehicles carry a crew of up to 4 people. Each hit has a <strong>25% chance</strong> of killing a crew member. Crew status appears as colored indicators at the HUD corners:</p>
+
+      <div style="display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin: 12px 0;">
+        <div class="crew-grid">
+          <div class="crew-slot" style="background: #4da3ff;">D</div>
+          <div class="crew-slot" style="background: #ff6b6b;">G</div>
+          <div class="crew-slot" style="background: #ffa94d;">L</div>
+          <div class="crew-slot" style="background: #6efc4b;">C</div>
+        </div>
+        <div>
+          <ul style="list-style: none; padding: 0;">
+            <li><strong style="color: #4da3ff;">D — Driver</strong> (top-left) — Dead: unit cannot move, can still aim &amp; fire.</li>
+            <li><strong style="color: #ff6b6b;">G — Gunner</strong> (top-right) — Dead: turret locked, must rotate entire wagon to aim.</li>
+            <li><strong style="color: #ffa94d;">L — Loader</strong> (bottom-left) — Dead: unit <em>cannot fire at all</em>.</li>
+            <li><strong style="color: #6efc4b;">C — Commander</strong> (bottom-right) — Dead: no player control; unit only defends, follows paths, or returns to base.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Crew by Unit Type</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Unit Category</th><th>Crew Members</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Tanks (V1, V2, V3), Howitzer</td><td>D, G, L, C — full 4-person crew</td></tr>
+            <tr><td>Tanker, Ammo Truck, Ambulance, Recovery, Harvester, Rocket Tank</td><td>D, C, L — 3-person crew</td></tr>
+            <tr><td>Mine Layer, Mine Sweeper</td><td>D, C — 2-person crew</td></tr>
+            <tr><td>Apache</td><td>No crew system</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Crew Restoration</h3>
+      <ul>
+        <li><strong>Hospital:</strong> park on 3 tiles below — 10s per person, $100 each.</li>
+        <li><strong>Ambulance:</strong> select → click wounded unit → restores crew within 1 tile in 2s each.</li>
+        <li>Restore order: Driver → Commander → Loader → Gunner.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 9. XP & PROMOTIONS ═══════════ -->
+    <section id="xp" class="section">
+      <h2>9. XP &amp; Promotions</h2>
+      <p>Combat units earn XP by killing enemy units (XP = enemy cost × 3). Harvesters cannot level up.</p>
+
+      <h3>Level Thresholds</h3>
+      <p>Based on the unit's own cost:</p>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Level</th><th>XP Required</th><th>Example (Tank V1 = $1,000)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="star">★</span><span class="star star--empty">★★</span> Level 1</td><td>2× unit cost</td><td>2,000 XP</td></tr>
+            <tr><td><span class="star">★★</span><span class="star star--empty">★</span> Level 2</td><td>4× unit cost</td><td>4,000 XP</td></tr>
+            <tr><td><span class="star">★★★</span> Level 3</td><td>6× unit cost</td><td>6,000 XP</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Level Bonuses — Standard Units</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Level</th><th>Bonus</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="star">★</span> Level 1</td><td>+20% fire range</td></tr>
+            <tr><td><span class="star">★★</span> Level 2</td><td>+50% armor</td></tr>
+            <tr><td><span class="star">★★★</span> Level 3</td><td>Self-repair (1% HP / 3s when stationary) + 33% faster fire rate</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Level Bonuses — Howitzer (different order)</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Level</th><th>Bonus</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="star">★</span> Level 1</td><td>+33% fire rate</td></tr>
+            <tr><td><span class="star">★★</span> Level 2</td><td>+33% damage</td></tr>
+            <tr><td><span class="star">★★★</span> Level 3</td><td>+33% range</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Visual Indicators</h3>
+      <ul>
+        <li>Up to 3 yellow stars above the health bar.</li>
+        <li>A 2px yellow progress bar inside the health bar shows XP toward the next level.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 10. FUEL, AMMO & LOGISTICS ═══════════ -->
+    <section id="logistics" class="section">
+      <h2>10. Fuel, Ammo &amp; Logistics</h2>
+
+      <h3>Fuel System</h3>
+      <p>Every unit has a fuel tank. At 0% fuel, units cannot move. Refuel at a Gas Station or via Tanker Truck.</p>
+
+      <details>
+        <summary>Fuel Tank Sizes &amp; Consumption</summary>
+        <div class="detail-body">
+          <div class="responsive-table">
+            <table>
+              <thead>
+                <tr><th>Unit</th><th class="num">Tank (L)</th><th class="num">Consumption (L/100km)</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Tanks (V1, V2, V3)</td><td class="num">1,900</td><td class="num">450</td><td></td></tr>
+                <tr><td>Rocket Tank</td><td class="num">1,900</td><td class="num">450</td><td></td></tr>
+                <tr><td>Recovery Tank</td><td class="num">1,900</td><td class="num">450</td><td></td></tr>
+                <tr><td>Howitzer</td><td class="num">1,900</td><td class="num">450</td><td></td></tr>
+                <tr><td>Mine Sweeper</td><td class="num">1,900</td><td class="num">450</td><td></td></tr>
+                <tr><td>Harvester</td><td class="num">2,650</td><td class="num">30 (moving)</td><td>+100L per ore tile harvested</td></tr>
+                <tr><td>Ambulance</td><td class="num">75</td><td class="num">25</td><td></td></tr>
+                <tr><td>Tanker Truck</td><td class="num">700</td><td class="num">150</td><td>+40,000L supply tank</td></tr>
+                <tr><td>Mine Layer</td><td class="num">700</td><td class="num">150</td><td></td></tr>
+                <tr><td>Apache</td><td class="num">5,200</td><td class="num">120</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="margin-top: 8px;"><em>1 tile ≈ 1,000 meters. Gas Station refill: 7s, $50. Helipad fuel reserve: 15,600L.</em></p>
+        </div>
+      </details>
+
+      <h3>Ammunition System</h3>
+      <p>Combat units carry limited ammo. At 0 rounds, units display "No Ammunition" and cannot fire.</p>
+      <ul>
+        <li><strong>Resupply sources:</strong> Ammunition Factory (2-tile range, 7s), Ammo Truck (1.5-tile range), Helipad (250 rounds for Apaches).</li>
+        <li><strong>Ammo Truck cargo:</strong> 500 rounds total.</li>
+        <li><strong>Warning:</strong> Ammo Factories and Trucks <strong>explode violently</strong> on destruction — keep away from your base core!</li>
+      </ul>
+
+      <h3>Logistics Chain</h3>
+      <ol>
+        <li><strong>Build</strong> Gas Station + Tanker Truck for fuel supply.</li>
+        <li><strong>Build</strong> Ammunition Factory + Ammo Truck for ammo supply.</li>
+        <li><strong>Build</strong> Vehicle Workshop for passive repairs (2% HP/sec nearby).</li>
+        <li><strong>Build</strong> Hospital + Ambulance for crew restoration.</li>
+        <li><strong>Position</strong> logistics buildings near the front line but protected from enemy fire.</li>
+      </ol>
+    </section>
+
+    <!-- ═══════════ 11. MINE SYSTEM ═══════════ -->
+    <section id="mines" class="section">
+      <h2>11. Mine System</h2>
+
+      <h3>Mine Layer</h3>
+      <ul>
+        <li>Carries <strong>20 mines</strong> (shown on ammo bar). Refilled by Ammo Truck / Factory.</li>
+        <li><strong>Deploy single:</strong> <kbd>Ctrl</kbd> + click a tile.</li>
+        <li><strong>Deploy area:</strong> drag a rectangle — mines deploy in a checkerboard pattern.</li>
+        <li>Mines arm <strong>4 seconds</strong> after the truck leaves the tile.</li>
+        <li>Speed halves while deploying (0.264 vs 0.528).</li>
+        <li>If mines run out mid-deployment, the truck auto-refills and resumes.</li>
+      </ul>
+
+      <h3>Mine Properties</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Property</th><th class="num">Value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Mine HP</td><td class="num">10</td></tr>
+            <tr><td>Center damage</td><td class="num">90</td></tr>
+            <tr><td>Explosion radius</td><td class="num">2 tiles (falloff)</td></tr>
+            <tr><td>Deploy time</td><td class="num">4,000 ms</td></tr>
+            <tr><td>Arm delay</td><td class="num">4,000 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Mines trigger chain reactions when adjacent mines are in blast range. Friendly units cannot trigger their own mines.</p>
+
+      <h3>Mine Sweeper</h3>
+      <ul>
+        <li><strong>Click</strong> to move normally. <strong>Drag</strong> a rectangle to sweep in serpentine lanes.</li>
+        <li>Negates mine damage while actively sweeping.</li>
+        <li>Must physically traverse each tile — no remote clearing.</li>
+        <li>Multiple sweepers auto-split the sweep area into contiguous segments.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 12. REMOTE CONTROL ═══════════ -->
+    <section id="remote" class="section">
+      <h2>12. Remote Control</h2>
+      <p>When units are selected, arrow keys switch from camera scrolling to direct unit control.</p>
+
+      <h3>Desktop Controls</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>↑</kbd></td><td>Move forward</td></tr>
+            <tr><td><kbd>↓</kbd></td><td>Move backward</td></tr>
+            <tr><td><kbd>←</kbd></td><td>Turn wagon left</td></tr>
+            <tr><td><kbd>→</kbd></td><td>Turn wagon right</td></tr>
+            <tr><td><kbd>Shift</kbd> + <kbd>←</kbd></td><td>Rotate turret left</td></tr>
+            <tr><td><kbd>Shift</kbd> + <kbd>→</kbd></td><td>Rotate turret right</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>Fire at farthest point within range</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Apache Additional Controls</h3>
+      <p>Apaches support ascend, descend, strafe left/right in addition to the standard directional controls.</p>
+
+      <h3>Mobile</h3>
+      <p>On touch devices, dual virtual joysticks appear when units are selected — left joystick for movement, right joystick for turret/firing. Three control profiles: <strong>tank</strong>, <strong>vehicle</strong>, <strong>apache</strong>.</p>
+    </section>
+
+    <!-- ═══════════ 13. MULTIPLAYER ═══════════ -->
+    <section id="multiplayer" class="section">
+      <h2>13. Multiplayer</h2>
+      <p>Up to <strong>4 players</strong> via WebRTC peer-to-peer. No gaming server needed — the host browser is the source of truth.</p>
+
+      <h3>How to Play</h3>
+      <ol>
+        <li>Host clicks <strong>Invite</strong> next to a party name in the sidebar.</li>
+        <li>Share the generated link (or scan QR code on hover).</li>
+        <li>Remote player opens the link, enters their alias, and joins immediately.</li>
+        <li>Disconnected players are replaced by AI; the invite link remains valid.</li>
+      </ol>
+
+      <h3>Party Colors &amp; Positions</h3>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Party</th><th>Color</th><th>Start Position</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="party-dot" style="background: #00FF00;"></span> Player 1</td><td style="color: #00FF00;">Green</td><td>Bottom-left</td></tr>
+            <tr><td><span class="party-dot" style="background: #FF0000;"></span> Player 2</td><td style="color: #FF0000;">Red</td><td>Top-right</td></tr>
+            <tr><td><span class="party-dot" style="background: #0080FF;"></span> Player 3</td><td style="color: #0080FF;">Blue</td><td>Top-left</td></tr>
+            <tr><td><span class="party-dot" style="background: #FFFF00;"></span> Player 4</td><td style="color: #FFFF00;">Yellow</td><td>Bottom-right</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Host Rules</h3>
+      <ul>
+        <li>Only the host can start/pause the game or use cheats.</li>
+        <li>Host is game state authority — all logic runs on host.</li>
+        <li>Any player can save; non-host loading creates a new game instance (they become host).</li>
+        <li>Host can kick players, which returns the party to AI control.</li>
+      </ul>
+
+      <h3>Cross-Platform</h3>
+      <p>Desktop and mobile players can play together. Mobile players use touch controls with virtual joysticks and action bars.</p>
+    </section>
+
+    <!-- ═══════════ 14. KEYBOARD REFERENCE ═══════════ -->
+    <section id="keyboard" class="section">
+      <h2>14. Keyboard Reference</h2>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Action</th><th>Context</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Recall control group (double-press to center camera)</td><td>Gameplay</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>1</kbd>–<kbd>9</kbd></td><td>Assign selected units to control group</td><td>Units selected</td></tr>
+            <tr><td><kbd>S</kbd></td><td>Stop attacking (units selected) / Toggle sell mode (none selected)</td><td>Gameplay</td></tr>
+            <tr><td><kbd>R</kbd></td><td>Toggle repair mode</td><td>Gameplay</td></tr>
+            <tr><td><kbd>F</kbd></td><td>Toggle FPS overlay</td><td>Gameplay</td></tr>
+            <tr><td><kbd>Z</kbd></td><td>Cycle danger zone map overlay (per player)</td><td>Gameplay</td></tr>
+            <tr><td><kbd>O</kbd></td><td>Toggle occupancy map overlay</td><td>Gameplay</td></tr>
+            <tr><td><kbd>G</kbd></td><td>Toggle grid overlay</td><td>Gameplay</td></tr>
+            <tr><td><kbd>H</kbd></td><td>Toggle help/keyboard shortcuts display</td><td>Gameplay</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Cancel current action / close modal</td><td>Any</td></tr>
+            <tr><td><kbd>Shift</kbd>+click</td><td>Add unit to selection / path planning / chain build</td><td>Various</td></tr>
+            <tr><td><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click</td><td>Guard mode (on friendly) / Eraser (edit mode)</td><td>Units selected</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+click tile</td><td>Deploy mine</td><td>Mine Layer selected</td></tr>
+            <tr><td><kbd>Arrow keys</kbd></td><td>Remote control movement (units) / Camera scroll (no units)</td><td>Conditional</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>Fire (remote control)</td><td>Units selected</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top: 10px;">Key bindings can be customized in <strong>Settings → Key Bindings</strong>.</p>
+    </section>
+
+  </div>
+</body>
+</html>

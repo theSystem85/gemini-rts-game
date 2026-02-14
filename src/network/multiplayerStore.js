@@ -11,6 +11,7 @@ import { STUN_HOST } from './signalling.js'
 import { gameRandom } from '../utils/gameRandom.js'
 
 const inviteRecords = new Map()
+const HOST_ALIAS_STORAGE_KEY = 'rts-player-alias'
 
 // Event type for party ownership changes
 export const PARTY_OWNERSHIP_CHANGED_EVENT = 'partyOwnershipChanged'
@@ -59,7 +60,7 @@ function ensurePartyStates() {
       return {
         partyId,
         color: PARTY_COLORS[partyId] || PARTY_COLORS.player1,
-        owner: isHost ? 'You (Host)' : 'AI',
+        owner: isHost ? getHostAliasLabel() : 'AI',
         inviteToken: null,
         aiActive: !isHost,
         lastConnectedAt: null
@@ -67,6 +68,24 @@ function ensurePartyStates() {
     })
   }
   return gameState.partyStates
+}
+
+function getHostAliasLabel(alias) {
+  const normalizedAlias = typeof alias === 'string' ? alias.trim() : ''
+  if (normalizedAlias) {
+    return normalizedAlias
+  }
+
+  try {
+    const storedAlias = localStorage.getItem(HOST_ALIAS_STORAGE_KEY)
+    if (storedAlias && storedAlias.trim()) {
+      return storedAlias.trim()
+    }
+  } catch (err) {
+    window.logger.warn('Failed to read host alias from localStorage:', err)
+  }
+
+  return 'You (Host)'
 }
 
 function getInviteStatusStorage() {
@@ -281,6 +300,23 @@ export function markPartyControlledByHuman(partyId, alias) {
   // Emit event so UI components can update
   emitPartyOwnershipChange(partyId, party.owner, false)
 
+  return party
+}
+
+export function updateHostPartyAlias(alias) {
+  const party = getPartyState(gameState.humanPlayer)
+  if (!party) {
+    return null
+  }
+
+  const nextAlias = getHostAliasLabel(alias)
+  if (party.owner === nextAlias && party.aiActive === false) {
+    return party
+  }
+
+  party.owner = nextAlias
+  party.aiActive = false
+  emitPartyOwnershipChange(party.partyId, party.owner, false)
   return party
 }
 

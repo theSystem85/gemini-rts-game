@@ -1043,16 +1043,11 @@ export class BuildingRenderer {
     }
 
     // Get the alias (owner field contains "AI", "You (Host)", or player's alias)
-    let alias = partyState.owner || 'Unknown'
+    const alias = partyState.owner || 'Unknown'
 
     // Don't show "AI" - only show human player aliases
     if (alias === 'AI') {
       return
-    }
-
-    // Shorten "You (Host)" to just "You" for the local player
-    if (building.owner === gameState.humanPlayer) {
-      alias = 'You'
     }
 
     ctx.save()

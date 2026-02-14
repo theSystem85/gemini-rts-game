@@ -98,7 +98,7 @@ export class KeyboardHandler {
       }
 
       // Don't process other inputs if game is paused, cheat dialog is open, or runtime config dialog is open
-      if (gameState.paused || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen) return
+      if (gameState.paused || gameState.cheatDialogOpen || gameState.runtimeConfigDialogOpen || gameState.helpDialogOpen) return
 
       // Block game commands in spectator mode, when locally defeated, or when host has paused
       // (allow view-only commands like grid toggle, FPS toggle, camera movement)
@@ -399,6 +399,14 @@ export class KeyboardHandler {
         setRemoteControlAction('fire', 'keyboard', false)
       }
     })
+
+    // Bind help button
+    const helpBtn = document.getElementById('helpBtn')
+    if (helpBtn) {
+      helpBtn.addEventListener('click', () => {
+        this.helpSystem.showControlsHelp()
+      })
+    }
   }
 
   setMouseHandler(mouseHandler) {

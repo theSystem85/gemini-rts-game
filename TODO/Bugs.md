@@ -1,7 +1,15 @@
 ## Bugs
+- [x] Ensure multiplayer host alias is shown above construction yards for all players (including the host), updates immediately when edited in the sidebar, and persists across reloads.
+- [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Ensure mobile portrait first paint defaults to condensed sidebar via CSS media-query fallback so the expanded sidebar is not visible before JS layout classes are applied.
 - [x] LLM enemy commentary misattributes ownership (e.g., says player destroyed "my" buildings when they were AI-owned); enforce owner-aware taunts tied to the controlled party id.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
+- [x] Ensure Apaches auto-return to helipad on empty ammo, fully land/reload, resume attacking the same target, and finally return to helipad after the target is destroyed.
+- [x] Ensure selected Apaches still complete helipad landing immediately (no hover lock), auto-return reload cycles auto-relaunch to the interrupted target, and helipad return flight rotates then moves forward (no backward drifting).
+- [x] Reduce Apache speed by 25% and enforce that Apaches only land on currently unoccupied helipads.
+- [x] Ensure ammo-empty Apaches auto-reroute to another free helipad if their currently assigned return pad becomes unavailable during return.
+- [x] Fix Apache ammo cheat handling so ammo cheats update `rocketAmmo` reliably even when Apache has a populated `maxAmmunition` field.
+- [x] Fix stale `remoteControlActive` state blocking Apache auto-return/resupply combat logic after remote control inactivity.
 - [ ] Enemy base power display shows NaN when selecting an enemy construction yard; ensure it shows the correct power value.
 - [x] LLM enemy AI never places ore refinery even though money and tech tree allow it — blocked position with no fallback.
 - [x] LLM command queue bypasses game engine unlock mechanics; buildings that require prerequisites can be queued before prerequisites are built.
@@ -108,6 +116,7 @@
 - [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
 - [x] ✅ Paused attack pathfinding while a tank is remote controlled and delayed auto-movement for 1s after remote control stops.
 ## Bugs
+- [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.
 - [ ] Tanks must respect building line-of-sight: blocked shots should prevent firing for both player and AI and trigger repositioning until clear.
@@ -192,3 +201,4 @@
 - [x] Units when attacking should keep being close enough to target in order to be in range of attack but not too close so they get also hit by their own bullets impact.
 
 - [x] Ensure in mobile condensed production rows that default/inactive build buttons stay hidden until they become active or unlocked.
+- [x] Ensure in mobile portrait that long-press production tooltips do not open when the user is dragging a build button (drag-to-build gesture).

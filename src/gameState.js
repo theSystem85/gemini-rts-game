@@ -191,6 +191,9 @@ export const gameState = {
   // Cheat dialog state
   cheatDialogOpen: false,
 
+  // Help dialog state
+  helpDialogOpen: false,
+
   // Runtime config dialog state
   runtimeConfigDialogOpen: false,
 
