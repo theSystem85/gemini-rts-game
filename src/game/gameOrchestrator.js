@@ -18,7 +18,7 @@ import {
   setMapDimensions
 } from '../config.js'
 import { initSettingsModal, openSettingsModal } from '../ui/settingsModal.js'
-import { initSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
+import { initSidebarMultiplayer, refreshSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
 import { initAiPartySync } from '../network/aiPartySync.js'
 import { setProductionControllerRef } from '../network/gameCommandSync.js'
 import { initFactories } from '../factories.js'
@@ -396,6 +396,7 @@ class Game {
           } catch (err) {
             window.logger.warn('Failed to save player count to localStorage:', err)
           }
+          refreshSidebarMultiplayer()
         } else {
           e.target.value = gameState.playerCount || 2
         }
