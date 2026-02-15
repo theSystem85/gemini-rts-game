@@ -63,7 +63,8 @@ function ensurePartyStates() {
         owner: isHost ? getHostAliasLabel() : 'AI',
         inviteToken: null,
         aiActive: !isHost,
-        lastConnectedAt: null
+        lastConnectedAt: null,
+        unresponsiveSince: null
       }
     })
   }
@@ -258,6 +259,7 @@ export async function regenerateAllInviteTokens() {
       party.owner = 'AI'
       party.aiActive = true
       party.lastConnectedAt = null
+  party.unresponsiveSince = null
       party.inviteToken = null
 
       // Generate new invite token
@@ -295,6 +297,7 @@ export function markPartyControlledByHuman(partyId, alias) {
   party.owner = alias || 'Human'
   party.aiActive = false
   party.lastConnectedAt = Date.now()
+  party.unresponsiveSince = null
   showHostNotification(`Party ${partyId} taken over by ${party.owner}`)
 
   // Emit event so UI components can update
@@ -329,11 +332,24 @@ export function markPartyControlledByAi(partyId) {
   party.owner = 'AI'
   party.aiActive = true
   party.lastConnectedAt = null
+  party.unresponsiveSince = null
   showHostNotification(`Party ${partyId} returned to AI control`)
 
   // Emit event so UI components can update
   emitPartyOwnershipChange(partyId, 'AI', true)
 
+  return party
+}
+
+
+export function setPartyUnresponsiveState(partyId, unresponsiveSince = null) {
+  const party = getPartyState(partyId)
+  if (!party) {
+    return null
+  }
+
+  party.unresponsiveSince = unresponsiveSince || null
+  emitPartyOwnershipChange(partyId, party.owner, party.aiActive !== false)
   return party
 }
 

@@ -19,7 +19,8 @@ const multiplayerStore = vi.hoisted(() => ({
   markPartyControlledByAi: vi.fn(),
   invalidateInviteToken: vi.fn(),
   generateInviteForParty: vi.fn().mockResolvedValue(undefined),
-  getPartyState: vi.fn()
+  getPartyState: vi.fn(),
+  setPartyUnresponsiveState: vi.fn()
 }))
 
 vi.mock('../../src/network/multiplayerStore.js', () => multiplayerStore)
@@ -65,6 +66,7 @@ const commandSync = vi.hoisted(() => ({
 vi.mock('../../src/network/gameCommandSync.js', () => commandSync)
 
 import * as webrtcSession from '../../src/network/webrtcSession.js'
+import { gameState } from '../../src/gameState.js'
 
 const {
   AI_REACTIVATION_EVENT,
@@ -134,6 +136,7 @@ beforeEach(() => {
   })
   multiplayerStore.getPartyState.mockReturnValue({ inviteToken: 'invite-new' })
   commandSync.isLockstepEnabled.mockReturnValue(false)
+  gameState.gamePaused = false
   vi.useFakeTimers()
 })
 
@@ -346,11 +349,40 @@ describe('Host invite monitoring', () => {
     monitor._handleSessionState(session, 'disconnected')
 
     expect(remoteControlState.releaseRemoteControlSource).toHaveBeenCalledWith(session.sourceId)
-    expect(multiplayerStore.markPartyControlledByAi).toHaveBeenCalledWith('party-1')
-    expect(eventHandler).toHaveBeenCalledTimes(1)
-    expect(hostNotifications.showHostNotification).toHaveBeenCalledWith('Remote disconnected from party party-1 - AI has resumed control')
-    expect(commandSync.stopGameStateSync).toHaveBeenCalled()
-    expect(commandSync.disableLockstep).toHaveBeenCalled()
+    expect(multiplayerStore.markPartyControlledByAi).not.toHaveBeenCalled()
+    expect(multiplayerStore.setPartyUnresponsiveState).toHaveBeenCalledWith('party-1', expect.any(Number))
+    expect(eventHandler).not.toHaveBeenCalled()
+    expect(hostNotifications.showHostNotification).toHaveBeenCalledWith('Connection interrupted. Waiting for reconnection...')
+    expect(commandSync.stopGameStateSync).not.toHaveBeenCalled()
+    expect(commandSync.disableLockstep).not.toHaveBeenCalled()
+  })
+
+
+  it('pauses game when client becomes unresponsive and resumes on heartbeat pong', () => {
+    const monitor = watchHostInvite({ partyId: 'party-1', inviteToken: 'token-1' })
+    const session = {
+      alias: 'Remote',
+      sourceId: 'remote-party-1-peer-1',
+      peerId: 'peer-1',
+      connectionState: 'connected',
+      dispose: vi.fn(),
+      sendHostStatus: vi.fn(),
+      lastResponsiveAt: Date.now() - 7000,
+      unresponsiveSince: null,
+      aiFallbackHandle: null
+    }
+    monitor.sessions.set('peer-1', session)
+
+    monitor._checkForUnresponsiveSessions()
+
+    expect(multiplayerStore.setPartyUnresponsiveState).toHaveBeenCalledWith('party-1', expect.any(Number))
+
+    expect(gameState.gamePaused).toBe(true)
+
+    monitor._handleControlMessage(session, { type: 'heartbeat-pong' })
+
+    expect(multiplayerStore.setPartyUnresponsiveState).toHaveBeenLastCalledWith('party-1', null)
+    expect(gameState.gamePaused).toBe(false)
   })
 
   it('routes control messages to command sync and remote control handlers', () => {

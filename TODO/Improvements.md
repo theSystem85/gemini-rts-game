@@ -680,3 +680,4 @@
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 - [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use. 
 - [x] Added npm script 'test:e2e:file' to run specific E2E test files in headless mode
+- [x] Improve multiplayer network stability with heartbeat-based responsiveness checks, forced host/client pause while reconnecting, delayed AI takeover fallback, and reconnect timer visibility for hosts and clients (2-4 player compatible).

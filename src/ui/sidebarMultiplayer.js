@@ -30,6 +30,7 @@ const HOST_CONTROL_BUTTONS = [
 let partyListContainer = null
 let sessionObserverCleanup = null
 let partyOwnershipCleanup = null
+let reconnectTimerHandle = null
 
 /**
  * Get the stored player alias from localStorage
@@ -457,6 +458,15 @@ export function initSidebarMultiplayer() {
   setupQrScanner()
   // Note: Host polling is started only when user clicks "Invite" button (handleInviteClick)
   // This prevents unnecessary polling before a user actively shares an invite link
+
+  if (!reconnectTimerHandle) {
+    reconnectTimerHandle = setInterval(() => {
+      const hasUnresponsive = listPartyStates().some(party => party.unresponsiveSince)
+      if (hasUnresponsive) {
+        refreshSidebarMultiplayer()
+      }
+    }, 1000)
+  }
 }
 
 export function refreshSidebarMultiplayer() {
@@ -656,6 +666,13 @@ function getPartyDisplayName(partyId, color) {
 }
 
 function formatStatusText(statusKey, partyState) {
+  if (partyState.unresponsiveSince) {
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - partyState.unresponsiveSince) / 1000))
+    const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')
+    const seconds = (elapsedSeconds % 60).toString().padStart(2, '0')
+    return `Reconnecting ${minutes}:${seconds}`
+  }
+
   switch (statusKey) {
     case 'generating':
       return 'Generating invite...'
