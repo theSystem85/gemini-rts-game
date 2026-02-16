@@ -97,9 +97,16 @@ vi.mock('../../src/buildings.js', () => ({
 }))
 
 const updateUnitSpeedModifier = vi.fn()
+const initializeUnitLeveling = vi.fn((unit) => {
+  unit.level = unit.level ?? 0
+  unit.experience = unit.experience ?? 0
+})
+const checkLevelUp = vi.fn()
 
 vi.mock('../../src/utils.js', () => ({
-  updateUnitSpeedModifier
+  updateUnitSpeedModifier,
+  initializeUnitLeveling,
+  checkLevelUp
 }))
 
 const deployMine = vi.fn()
@@ -378,6 +385,31 @@ describe('CheatSystem', () => {
       expect.stringContaining('Ammo load set'),
       3000
     )
+  })
+
+  it('parses xp values for absolute and relative updates', () => {
+    const system = new CheatSystem()
+
+    expect(system.parseExperienceValue('120')).toEqual({ value: 120, isRelative: false, display: '120' })
+    expect(system.parseExperienceValue('+75')).toEqual({ value: 75, isRelative: true, display: '+75' })
+    expect(system.parseExperienceValue('-40')).toEqual({ value: -40, isRelative: true, display: '-40' })
+  })
+
+  it('sets selected unit xp with absolute and relative values', () => {
+    const system = new CheatSystem()
+    const combatUnit = { type: 'tank_v1', experience: 10, level: 0 }
+    const harvester = { type: 'harvester', experience: 10, level: 0 }
+    system.setSelectedUnitsRef([combatUnit, harvester])
+
+    system.setSelectedUnitsExperience({ value: 50, isRelative: false, display: '50' })
+    system.setSelectedUnitsExperience({ value: 20, isRelative: true, display: '+20' })
+
+    expect(combatUnit.experience).toBe(70)
+    expect(harvester.experience).toBe(10)
+    expect(initializeUnitLeveling).toHaveBeenCalledWith(combatUnit)
+    expect(checkLevelUp).toHaveBeenCalledTimes(2)
+    expect(showNotification).toHaveBeenCalledWith(expect.stringContaining('XP set to 50 for 1 unit'), 3000)
+    expect(showNotification).toHaveBeenCalledWith(expect.stringContaining('XP adjusted by +20 for 1 unit'), 3000)
   })
 
   it('prevents damage to player units when god mode is enabled', () => {
