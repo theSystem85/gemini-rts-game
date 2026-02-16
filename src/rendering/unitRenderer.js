@@ -218,26 +218,30 @@ export class UnitRenderer {
   drawHudEdgeBar(ctx, hudBounds, edge, ratio, color) {
     const clampedRatio = Math.max(0, Math.min(1, ratio))
     const barThickness = 3
+    const barSpan = TILE_SIZE * 0.75
+
     ctx.fillStyle = '#3A3A3A'
 
     if (edge === 'top' || edge === 'bottom') {
       const y = edge === 'top' ? hudBounds.top - 1 : hudBounds.bottom - 1
-      ctx.fillRect(hudBounds.left, y, hudBounds.width, barThickness)
+      const barX = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
+      ctx.fillRect(barX, y, barSpan, barThickness)
 
       if (clampedRatio > 0) {
         ctx.fillStyle = color
-        ctx.fillRect(hudBounds.left, y, hudBounds.width * clampedRatio, barThickness)
+        ctx.fillRect(barX, y, barSpan * clampedRatio, barThickness)
       }
       return
     }
 
     const x = edge === 'left' ? hudBounds.left - 1 : hudBounds.right - 1
-    ctx.fillRect(x, hudBounds.top, barThickness, hudBounds.height)
+    const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
+    ctx.fillRect(x, barY, barThickness, barSpan)
 
     if (clampedRatio > 0) {
-      const fillHeight = hudBounds.height * clampedRatio
+      const fillHeight = barSpan * clampedRatio
       ctx.fillStyle = color
-      ctx.fillRect(x, hudBounds.top + hudBounds.height - fillHeight, barThickness, fillHeight)
+      ctx.fillRect(x, barY + barSpan - fillHeight, barThickness, fillHeight)
     }
   }
 
@@ -492,8 +496,10 @@ export class UnitRenderer {
 
     // Draw reload indicator overlay for rocket tanks (light blue 1px line)
     if (reloadRatio !== null) {
+      const barSpan = TILE_SIZE * 0.75
+      const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
       const barX = hudBounds.left - 1
-      const reloadLineY = hudBounds.top + hudBounds.height - (hudBounds.height * reloadRatio)
+      const reloadLineY = barY + barSpan - (barSpan * reloadRatio)
       ctx.strokeStyle = '#87CEEB' // Light blue
       ctx.lineWidth = 1
       ctx.beginPath()
@@ -530,17 +536,20 @@ export class UnitRenderer {
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
     const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     const size = 5
-    const baseX = hudBounds.left
     const baseY = hudBounds.bottom + 8
     const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#006400' }
     const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
 
-    ctx.save()
-    let idx = 0
-    Object.entries(unit.crew).forEach(([role, alive]) => {
-      if (!alive) return
+    const aliveCrew = Object.entries(unit.crew).filter(([_role, alive]) => alive)
+    if (aliveCrew.length === 0) return
 
-      const x = baseX + idx * (size + 2)
+    const slotSpacing = size + 2
+    const totalCrewWidth = (aliveCrew.length * size) + ((aliveCrew.length - 1) * 2)
+    const baseX = centerX - (totalCrewWidth / 2)
+
+    ctx.save()
+    aliveCrew.forEach(([role], idx) => {
+      const x = baseX + idx * slotSpacing
       const y = baseY
 
       const rectHeight = size * 2 * 0.7
@@ -553,8 +562,6 @@ export class UnitRenderer {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
-
-      idx++
     })
     ctx.restore()
   }

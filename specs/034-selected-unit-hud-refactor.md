@@ -24,3 +24,7 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 - Confirm crew pips render below the bottom indicator strip.
 - Confirm XP stars overlap HP strip by about one-third.
 - Confirm the larger HUD perimeter leaves visible space around the unit sprite.
+## Follow-up adjustments
+7. Each edge bar span (horizontal/vertical) must be capped at **75% of one tile** so the selection outline remains visible around bar endpoints.
+8. Crew indicators must be **centered horizontally** beneath the bottom status bar.
+
