@@ -185,6 +185,49 @@ export class UnitRenderer {
   renderSelection(ctx, unit, centerX, centerY) {
     // Draw selection corner indicators if unit is selected (like buildings)
     if (unit.selected) {
+      if (this.getSelectionHudMode() === 'modern-no-border') {
+        return
+      }
+
+      if (this.getSelectionHudMode() === 'legacy') {
+        ctx.strokeStyle = '#FF0'
+        ctx.lineWidth = 1
+
+        const cornerSize = 8
+        const offset = 2
+        const halfTile = TILE_SIZE / 2
+
+        const left = centerX - halfTile - offset
+        const right = centerX + halfTile + offset
+        const top = centerY - halfTile - offset
+        const bottom = centerY + halfTile + offset
+
+        ctx.beginPath()
+        ctx.moveTo(left, top + cornerSize)
+        ctx.lineTo(left, top)
+        ctx.lineTo(left + cornerSize, top)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(right - cornerSize, top)
+        ctx.lineTo(right, top)
+        ctx.lineTo(right, top + cornerSize)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(left, bottom - cornerSize)
+        ctx.lineTo(left, bottom)
+        ctx.lineTo(left + cornerSize, bottom)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(right - cornerSize, bottom)
+        ctx.lineTo(right, bottom)
+        ctx.lineTo(right, bottom - cornerSize)
+        ctx.stroke()
+        return
+      }
+
       ctx.strokeStyle = '#FF0'
       ctx.lineWidth = 1
 
@@ -245,6 +288,18 @@ export class UnitRenderer {
     }
   }
 
+  getSelectionHudMode() {
+    return gameState.selectionHudMode || 'modern'
+  }
+
+  isLegacySelectionHud() {
+    return this.getSelectionHudMode() === 'legacy'
+  }
+
+  isModernCornerCrewHud() {
+    return this.getSelectionHudMode() === 'modern-no-border'
+  }
+
   renderUtilityServiceRange(ctx, unit, centerX, centerY) {
     if (!unit?.selected) return
 
@@ -301,7 +356,7 @@ export class UnitRenderer {
     // Draw health bar with party colors for owner distinction
     const unitHealthRatio = unit.health / unit.maxHealth
 
-    if (unit.selected) {
+    if (unit.selected && !this.isLegacySelectionHud()) {
       const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
       const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
       const hudBounds = this.getSelectedHudBounds(centerX, centerY)
@@ -318,6 +373,11 @@ export class UnitRenderer {
     const healthBarHeight = 4
     const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
     const healthBarY = unit.y - 10 - scrollOffset.y - altitudeLift
+
+    if (this.isLegacySelectionHud()) {
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+    }
 
     // Use red color for critically damaged units (below 25% health when speed penalty kicks in)
     // Otherwise use party colors for health bar fill
@@ -388,7 +448,7 @@ export class UnitRenderer {
     }
 
     if (shouldShowBar) {
-      if (unit.selected) {
+      if (unit.selected && !this.isLegacySelectionHud()) {
         const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
         const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
         const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
@@ -414,6 +474,10 @@ export class UnitRenderer {
       ctx.fillStyle = barColor
       ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
 
+      if (this.isLegacySelectionHud()) {
+        ctx.strokeStyle = '#000'
+        ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+      }
     }
   }
 
@@ -427,6 +491,32 @@ export class UnitRenderer {
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+    if (this.isLegacySelectionHud()) {
+      const halfTile = TILE_SIZE / 2
+      const cornerSize = 8
+      const offset = 2
+
+      const right = centerX + halfTile + offset
+      const top = centerY - halfTile - offset
+      const bottom = centerY + halfTile + offset
+
+      const barWidth = 3
+      const barHeight = bottom - top - cornerSize * 2
+      const barX = right - barWidth - 1
+      const barTop = top + cornerSize
+
+      ctx.fillStyle = '#333'
+      ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+      const fillHeight = barHeight * ratio
+      ctx.fillStyle = '#4A90E2'
+      ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(barX, barTop, barWidth, barHeight)
+      return
+    }
+
     const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     this.drawHudEdgeBar(ctx, hudBounds, 'right', ratio, '#4A90E2')
   }
@@ -488,9 +578,45 @@ export class UnitRenderer {
 
     // Apply altitude adjustment for Apache helicopters to align with selection
     const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
-
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+
+    if (this.isLegacySelectionHud()) {
+      const halfTile = TILE_SIZE / 2
+      const cornerSize = 8
+      const offset = 2
+
+      const left = centerX - halfTile - offset
+      const top = centerY - halfTile - offset
+      const bottom = centerY + halfTile + offset
+
+      const barWidth = 3
+      const barHeight = bottom - top - cornerSize * 2
+      const barX = left + 1
+      const barTop = top + cornerSize
+
+      ctx.fillStyle = '#333'
+      ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+      const fillHeight = barHeight * ratio
+      ctx.fillStyle = barColor
+      ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+      if (reloadRatio !== null) {
+        const reloadLineY = barTop + barHeight - (barHeight * reloadRatio)
+        ctx.strokeStyle = '#87CEEB'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(barX, reloadLineY)
+        ctx.lineTo(barX + barWidth, reloadLineY)
+        ctx.stroke()
+      }
+
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(barX, barTop, barWidth, barHeight)
+      return
+    }
+
     const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     this.drawHudEdgeBar(ctx, hudBounds, 'left', ratio, barColor)
 
@@ -536,13 +662,77 @@ export class UnitRenderer {
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
     const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     const size = 5
-    const baseY = hudBounds.bottom + 8
     const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#006400' }
     const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
 
     const aliveCrew = Object.entries(unit.crew).filter(([_role, alive]) => alive)
     if (aliveCrew.length === 0) return
 
+    if (this.isModernCornerCrewHud()) {
+      const cornerPositions = {
+        driver: { x: hudBounds.left + 3, y: hudBounds.top + 3 },
+        commander: { x: hudBounds.right - 8, y: hudBounds.top + 3 },
+        gunner: { x: hudBounds.left + 3, y: hudBounds.bottom - 8 },
+        loader: { x: hudBounds.right - 8, y: hudBounds.bottom - 8 }
+      }
+
+      const fallbackSlots = [
+        { x: hudBounds.left + 3, y: hudBounds.top + 3 },
+        { x: hudBounds.right - 8, y: hudBounds.top + 3 },
+        { x: hudBounds.left + 3, y: hudBounds.bottom - 8 },
+        { x: hudBounds.right - 8, y: hudBounds.bottom - 8 }
+      ]
+
+      ctx.save()
+      aliveCrew.forEach(([role], idx) => {
+        const point = cornerPositions[role] || fallbackSlots[idx % fallbackSlots.length]
+        const x = point.x
+        const y = point.y
+        const rectHeight = size * 2 * 0.7
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+        ctx.fillRect(x - 1, y - rectHeight - 1, size + 2, rectHeight + 2)
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+      })
+      ctx.restore()
+      return
+    }
+
+    if (this.isLegacySelectionHud()) {
+      const baseX = unit.x - scrollOffset.x
+      const baseY = unit.y + TILE_SIZE - scrollOffset.y
+
+      ctx.save()
+      let idx = 0
+      aliveCrew.forEach(([role]) => {
+        const x = baseX + idx * (size + 2)
+        const y = baseY
+        const rectHeight = size * 2 * 0.7
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+
+        idx++
+      })
+      ctx.restore()
+      return
+    }
+
+    const baseY = hudBounds.bottom + 8
     const slotSpacing = size + 2
     const totalCrewWidth = (aliveCrew.length * size) + ((aliveCrew.length - 1) * 2)
     const baseX = centerX - (totalCrewWidth / 2)
@@ -756,7 +946,9 @@ export class UnitRenderer {
     const starSpacing = 8
     const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
     const startX = centerX - totalWidth / 2
-    const starY = hudBounds.top - 3
+    const starY = this.isLegacySelectionHud()
+      ? unit.y - 20 - scrollOffset.y
+      : hudBounds.top - 3
     ctx.save()
     ctx.fillStyle = '#FFD700' // Gold color for stars
     ctx.strokeStyle = '#FFA500' // Orange outline

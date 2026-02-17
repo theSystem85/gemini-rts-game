@@ -28,3 +28,10 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 7. Each edge bar span (horizontal/vertical) must be capped at **75% of one tile** so the selection outline remains visible around bar endpoints.
 8. Crew indicators must be **centered horizontally** beneath the bottom status bar.
 
+## Settings integration
+9. Add a Settings modal dropdown allowing users to switch selected-unit HUD rendering mode with options:
+   - classic pre-refactor HUD
+   - current modern HUD
+   - modern HUD without yellow border and with crew symbols distributed at the 4 HUD corners
+10. Persist the selected HUD style in local storage and apply it on load.
+
