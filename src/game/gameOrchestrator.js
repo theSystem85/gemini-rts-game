@@ -233,7 +233,7 @@ function loadPersistedSettings() {
 
   try {
     const storedSelectionHudMode = localStorage.getItem(SELECTION_HUD_MODE_STORAGE_KEY)
-    if (storedSelectionHudMode === 'legacy' || storedSelectionHudMode === 'modern' || storedSelectionHudMode === 'modern-no-border') {
+    if (storedSelectionHudMode === 'legacy' || storedSelectionHudMode === 'modern' || storedSelectionHudMode === 'modern-no-border' || storedSelectionHudMode === 'modern-donut') {
       gameState.selectionHudMode = storedSelectionHudMode
     }
   } catch (e) {
@@ -683,7 +683,7 @@ class Game {
     if (selectionHudModeSelect) {
       selectionHudModeSelect.addEventListener('change', (e) => {
         const nextMode = e.target.value
-        if (nextMode !== 'legacy' && nextMode !== 'modern' && nextMode !== 'modern-no-border') {
+        if (nextMode !== 'legacy' && nextMode !== 'modern' && nextMode !== 'modern-no-border' && nextMode !== 'modern-donut') {
           return
         }
         gameState.selectionHudMode = nextMode

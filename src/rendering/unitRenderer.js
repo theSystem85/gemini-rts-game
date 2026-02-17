@@ -263,10 +263,52 @@ export class UnitRenderer {
     const barThickness = 3
     const barSpan = TILE_SIZE * 0.75
 
+    if (this.isDonutSelectionHud()) {
+      const centerX = (hudBounds.left + hudBounds.right) / 2
+      const centerY = (hudBounds.top + hudBounds.bottom) / 2
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const crewSize = 5
+      const crewGap = 3
+      const crewHalfSpanAngle = ((crewSize / 2) + crewGap) / donutRadius
+
+      const arcRanges = {
+        left: [Math.PI + crewHalfSpanAngle, (Math.PI * 1.5) - crewHalfSpanAngle],
+        top: [(Math.PI * 1.5) + crewHalfSpanAngle, (Math.PI * 2) - crewHalfSpanAngle],
+        right: [crewHalfSpanAngle, (Math.PI / 2) - crewHalfSpanAngle],
+        bottom: [(Math.PI / 2) + crewHalfSpanAngle, Math.PI - crewHalfSpanAngle]
+      }
+
+      const selectedArc = arcRanges[edge]
+      if (!selectedArc) return
+
+      const [startAngle, endAngle] = selectedArc
+      const sweep = endAngle - startAngle
+
+      ctx.save()
+      ctx.lineCap = 'round'
+      ctx.lineWidth = barThickness
+      ctx.strokeStyle = '#3A3A3A'
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, donutRadius, startAngle, endAngle)
+      ctx.stroke()
+
+      if (clampedRatio > 0) {
+        ctx.strokeStyle = color
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, donutRadius, startAngle, startAngle + (sweep * clampedRatio))
+        ctx.stroke()
+      }
+
+      ctx.restore()
+      return
+    }
+
     ctx.fillStyle = '#3A3A3A'
 
     if (edge === 'top' || edge === 'bottom') {
-      const y = edge === 'top' ? hudBounds.top - 1 : hudBounds.bottom - 1
+      const y = edge === 'top'
+        ? hudBounds.top - (barThickness / 2)
+        : hudBounds.bottom - (barThickness / 2)
       const barX = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
       ctx.fillRect(barX, y, barSpan, barThickness)
 
@@ -277,7 +319,9 @@ export class UnitRenderer {
       return
     }
 
-    const x = edge === 'left' ? hudBounds.left - 1 : hudBounds.right - 1
+    const x = edge === 'left'
+      ? hudBounds.left - (barThickness / 2)
+      : hudBounds.right - (barThickness / 2)
     const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
     ctx.fillRect(x, barY, barThickness, barSpan)
 
@@ -298,6 +342,10 @@ export class UnitRenderer {
 
   isModernCornerCrewHud() {
     return this.getSelectionHudMode() === 'modern-no-border'
+  }
+
+  isDonutSelectionHud() {
+    return this.getSelectionHudMode() === 'modern-donut'
   }
 
   renderUtilityServiceRange(ctx, unit, centerX, centerY) {
@@ -621,10 +669,10 @@ export class UnitRenderer {
     this.drawHudEdgeBar(ctx, hudBounds, 'left', ratio, barColor)
 
     // Draw reload indicator overlay for rocket tanks (light blue 1px line)
-    if (reloadRatio !== null) {
+    if (reloadRatio !== null && !this.isDonutSelectionHud()) {
       const barSpan = TILE_SIZE * 0.75
       const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
-      const barX = hudBounds.left - 1
+      const barX = hudBounds.left - (3 / 2)
       const reloadLineY = barY + barSpan - (barSpan * reloadRatio)
       ctx.strokeStyle = '#87CEEB' // Light blue
       ctx.lineWidth = 1
@@ -669,26 +717,67 @@ export class UnitRenderer {
     if (aliveCrew.length === 0) return
 
     if (this.isModernCornerCrewHud()) {
-      const cornerPositions = {
-        driver: { x: hudBounds.left + 3, y: hudBounds.top + 3 },
-        commander: { x: hudBounds.right - 8, y: hudBounds.top + 3 },
-        gunner: { x: hudBounds.left + 3, y: hudBounds.bottom - 8 },
-        loader: { x: hudBounds.right - 8, y: hudBounds.bottom - 8 }
+      const rectHeight = size * 2 * 0.7
+      const centerAnchors = {
+        driver: { cx: hudBounds.left, cy: hudBounds.top },
+        commander: { cx: hudBounds.right, cy: hudBounds.top },
+        gunner: { cx: hudBounds.left, cy: hudBounds.bottom },
+        loader: { cx: hudBounds.right, cy: hudBounds.bottom }
       }
 
-      const fallbackSlots = [
-        { x: hudBounds.left + 3, y: hudBounds.top + 3 },
-        { x: hudBounds.right - 8, y: hudBounds.top + 3 },
-        { x: hudBounds.left + 3, y: hudBounds.bottom - 8 },
-        { x: hudBounds.right - 8, y: hudBounds.bottom - 8 }
+      const fallbackAnchors = [
+        { cx: hudBounds.left, cy: hudBounds.top },
+        { cx: hudBounds.right, cy: hudBounds.top },
+        { cx: hudBounds.left, cy: hudBounds.bottom },
+        { cx: hudBounds.right, cy: hudBounds.bottom }
       ]
 
       ctx.save()
       aliveCrew.forEach(([role], idx) => {
-        const point = cornerPositions[role] || fallbackSlots[idx % fallbackSlots.length]
-        const x = point.x
-        const y = point.y
-        const rectHeight = size * 2 * 0.7
+        const anchor = centerAnchors[role] || fallbackAnchors[idx % fallbackAnchors.length]
+        const x = anchor.cx - (size / 2)
+        const y = anchor.cy + (rectHeight / 2)
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+        ctx.fillRect(x - 1, y - rectHeight - 1, size + 2, rectHeight + 2)
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+      })
+      ctx.restore()
+      return
+    }
+
+    if (this.isDonutSelectionHud()) {
+      const rectHeight = size * 2 * 0.7
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const anchorOffsets = {
+        commander: { x: 0, y: -donutRadius },
+        gunner: { x: donutRadius, y: 0 },
+        loader: { x: 0, y: donutRadius },
+        driver: { x: -donutRadius, y: 0 }
+      }
+
+      const fallbackOffsets = [
+        { x: 0, y: -donutRadius },
+        { x: donutRadius, y: 0 },
+        { x: 0, y: donutRadius },
+        { x: -donutRadius, y: 0 }
+      ]
+
+      ctx.save()
+      aliveCrew.forEach(([role], idx) => {
+        const offset = anchorOffsets[role] || fallbackOffsets[idx % fallbackOffsets.length]
+        const centerPx = centerX + offset.x
+        const centerPy = centerY + offset.y
+        const x = centerPx - (size / 2)
+        const y = centerPy + (rectHeight / 2)
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
         ctx.fillRect(x - 1, y - rectHeight - 1, size + 2, rectHeight + 2)

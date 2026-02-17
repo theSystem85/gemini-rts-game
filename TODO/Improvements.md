@@ -1,3 +1,4 @@
+- [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
 - [ ] Add settings dropdown for selected-unit HUD rendering modes (classic pre-refactor, modern with border, modern without border + corner crew markers).
 - [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
 - [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.

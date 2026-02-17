@@ -34,4 +34,6 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
    - current modern HUD
    - modern HUD without yellow border and with crew symbols distributed at the 4 HUD corners
 10. Persist the selected HUD style in local storage and apply it on load.
+11. Add a fourth HUD mode featuring four quarter-donut status arcs (3px thickness) around the selected unit, with crew symbols centered on top/right/bottom/left edges and at least 3px gap before adjacent arcs begin.
+12. Refine mode 3 so crew symbols are centered on each rectangle corner centerpoint and refine mode 2 bar alignment so bars are centered on the yellow outline.
 
