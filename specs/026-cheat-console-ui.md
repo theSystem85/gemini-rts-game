@@ -17,3 +17,5 @@
 ## Command Updates
 - Added `build [type] [party]` cheat command support to spawn buildings near the cursor for fast test/setup workflows.
 - Building spawn applies immediate placement to the map grid, occupancy map, and building list, then refreshes power supply state.
+
+- Added `xp [amount]`, `xp +[amount]`, and `xp -[amount]` cheat command support to set absolute XP or apply relative XP adjustments for selected combat units.

@@ -15,7 +15,7 @@ import {
 } from '../config.js'
 import { createUnit, updateUnitOccupancy } from '../units.js'
 import { buildingData, createBuilding, placeBuilding, updatePowerSupply } from '../buildings.js'
-import { updateUnitSpeedModifier } from '../utils.js'
+import { checkLevelUp, initializeUnitLeveling, updateUnitSpeedModifier } from '../utils.js'
 import { deployMine } from '../game/mineSystem.js'
 import { getWreckById, removeWreckById } from '../game/unitWreckManager.js'
 
@@ -149,6 +149,7 @@ export class CheatSystem {
             <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
             <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
             <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
+            <li><code>xp [amount]</code> / <code>xp +[amount]</code> / <code>xp -[amount]</code> - Set or adjust XP for selected combat units</li>
             <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
             <li><code>party [color|player]</code> - Change party of selected unit(s)</li>
             <li><code>kill</code> - Destroy all selected units or buildings</li>
@@ -356,6 +357,13 @@ export class CheatSystem {
             this.showError('Invalid amount. Use: ammo [number] or ammo [percent%]')
           }
         }
+      } else if (normalizedCode.startsWith('xp ')) {
+        const parsed = this.parseExperienceValue(code.substring(3))
+        if (parsed) {
+          this.setSelectedUnitsExperience(parsed)
+        } else {
+          this.showError('Invalid amount. Use: xp [number], xp +[number], or xp -[number]')
+        }
       } else if (normalizedCode === 'kill') {
         this.killSelectedTargets()
       } else if (normalizedCode.startsWith('recover')) {
@@ -454,6 +462,28 @@ export class CheatSystem {
     const amount = this.parseAmount(trimmed)
     if (amount === null) return null
     return { value: amount, isPercent: false, display: `${amount}` }
+  }
+
+  parseExperienceValue(input) {
+    if (!input) return null
+    const trimmed = input.trim()
+    if (!trimmed) return null
+
+    const prefix = trimmed[0]
+    if (prefix === '+' || prefix === '-') {
+      const amount = this.parseAmount(trimmed.slice(1))
+      if (amount === null) return null
+      const sign = prefix === '-' ? -1 : 1
+      return {
+        value: amount * sign,
+        isRelative: true,
+        display: `${prefix}${amount}`
+      }
+    }
+
+    const amount = this.parseAmount(trimmed)
+    if (amount === null) return null
+    return { value: amount, isRelative: false, display: `${amount}` }
   }
 
   parseSpawnCommand(input) {
@@ -1078,6 +1108,37 @@ export class CheatSystem {
       playSound('confirmed', 0.5)
     } else {
       this.showError('No ammunition trucks or helipads selected')
+    }
+  }
+
+  setSelectedUnitsExperience(parsed) {
+    const { value, isRelative, display } = parsed
+
+    if (!this.selectedUnits || this.selectedUnits.length === 0) {
+      this.showError('No unit selected')
+      return
+    }
+
+    let appliedCount = 0
+    this.selectedUnits.forEach(unit => {
+      if (!unit || unit.type === 'harvester') return
+
+      initializeUnitLeveling(unit)
+
+      const nextExperience = isRelative
+        ? Math.max(0, (unit.experience || 0) + value)
+        : Math.max(0, value)
+
+      unit.experience = nextExperience
+      checkLevelUp(unit)
+      appliedCount++
+    })
+
+    if (appliedCount > 0) {
+      showNotification(`⭐ XP ${isRelative ? 'adjusted by' : 'set to'} ${display} for ${appliedCount} unit${appliedCount > 1 ? 's' : ''}`, 3000)
+      playSound('confirmed', 0.5)
+    } else {
+      this.showError('No combat units selected')
     }
   }
 
