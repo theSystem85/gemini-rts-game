@@ -57,6 +57,7 @@ export const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
 export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 const DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY = 'rts-desktop-edge-autoscroll-enabled'
+const SELECTION_HUD_MODE_STORAGE_KEY = 'rts-selection-hud-mode'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -155,6 +156,15 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     window.logger.warn('Failed to load desktop edge auto-scroll setting from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudMode = localStorage.getItem(SELECTION_HUD_MODE_STORAGE_KEY)
+    if (storedSelectionHudMode === 'legacy' || storedSelectionHudMode === 'modern' || storedSelectionHudMode === 'modern-no-border' || storedSelectionHudMode === 'hud4') {
+      gameState.selectionHudMode = storedSelectionHudMode
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD mode from localStorage:', e)
   }
 }
 
@@ -480,6 +490,7 @@ class Game {
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const edgeAutoscrollCheckbox = document.getElementById('desktopEdgeAutoscrollToggle')
+    const selectionHudModeSelect = document.getElementById('selectionHudModeSelect')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
@@ -535,6 +546,10 @@ class Game {
       edgeAutoscrollCheckbox.checked = DESKTOP_EDGE_AUTOSCROLL_ENABLED
     }
 
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.value = gameState.selectionHudMode || 'modern'
+    }
+
     const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
     if (showEnemyResourcesCheckbox) {
       showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
@@ -574,6 +589,21 @@ class Game {
           localStorage.setItem(DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY, enabled.toString())
         } catch (err) {
           window.logger.warn('Failed to save desktop edge auto-scroll setting to localStorage:', err)
+        }
+      })
+    }
+
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.addEventListener('change', (e) => {
+        const nextMode = e.target.value
+        if (nextMode !== 'legacy' && nextMode !== 'modern' && nextMode !== 'modern-no-border' && nextMode !== 'hud4') {
+          return
+        }
+        gameState.selectionHudMode = nextMode
+        try {
+          localStorage.setItem(SELECTION_HUD_MODE_STORAGE_KEY, nextMode)
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD mode to localStorage:', err)
         }
       })
     }

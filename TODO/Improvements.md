@@ -1,3 +1,7 @@
+- [ ] HUD 4 follow-up: keep HUD 4 visuals but remove the yellow selection box border.
+- [ ] Add settings dropdown for selected-unit HUD rendering modes (classic pre-refactor, modern with border, modern without border + corner crew markers).
+- [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
+- [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.
 ## Improvements
 - [x] Replace the minimize and docs buttons in the tutorial modal with icons (no text) and add tooltip labels. Fixed icon being overwritten by renderStep method.
 - [x] Comprehensive user documentation rewrite: mobile-responsive borderless design, 14 sections covering all game systems (tech tree graph, HUD explanation, crew system, XP/promotions, fuel/ammo logistics, mine system, remote control, multiplayer, combat mechanics, keyboard reference), complete numerical stats for all 13 units and 18 buildings.

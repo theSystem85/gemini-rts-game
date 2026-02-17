@@ -197,6 +197,9 @@ export const gameState = {
   // Runtime config dialog state
   runtimeConfigDialogOpen: false,
 
+  // Selected unit HUD render mode (legacy, modern, modern-no-border)
+  selectionHudMode: 'modern',
+
   // Index for round-robin vehicle spawning
   nextVehicleFactoryIndex: 0,
 
