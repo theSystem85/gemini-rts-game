@@ -1,7 +1,7 @@
 # State Synchronization Module (stateSync.js)
 
 ## Context
-- Date: 2026-01-31 (Updated: 2026-02-01)
+- Date: 2026-01-31 (Updated: 2026-02-15)
 - Prompt Source: Refactoring request to extract state sync functionality
 - LLM: GitHub Copilot
 
@@ -33,6 +33,7 @@ The refactored `gameCommandSync.js` now serves only as a coordinator that:
   - Map configuration (seed, dimensions, player count)
   - Game settings (ore spread, shadow of war, etc.)
   - Defeated players tracking
+  - Per-party authoritative economy values (`partyMoney`) for remote-client HUD and affordability checks
 
 ### 2. Client State Application
 - **applyGameStateSnapshot()**: Applies received state snapshots on clients:
@@ -42,6 +43,7 @@ The refactored `gameCommandSync.js` now serves only as a coordinator that:
   - Handles animation state synchronization across machines
   - Manages interpolation state for smooth visuals
   - Syncs game settings and defeated players
+  - Syncs the local client party's money from host-authoritative `partyMoney`
 
 ### 3. Interpolation System
 - **updateUnitInterpolation()**: Provides smooth movement for clients between snapshots:
@@ -126,6 +128,12 @@ The refactored `gameCommandSync.js` now serves only as a coordinator that:
 - Host → Client: Full state snapshots
 - Client → Host: Only user commands (move, attack, etc.)
 - Simplifies synchronization and reduces bandwidth
+
+### Economy Authority (Multiplayer)
+- Host remains authoritative for all party economies.
+- Snapshots now carry `partyMoney` keyed by party ID.
+- Remote clients adopt their own party's value into `gameState.money` every snapshot.
+- This keeps remote human parties in sync for harvester unload income and host-issued party money cheats.
 
 ## Dependencies
 

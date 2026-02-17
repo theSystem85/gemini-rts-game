@@ -259,7 +259,7 @@ export async function regenerateAllInviteTokens() {
       party.owner = 'AI'
       party.aiActive = true
       party.lastConnectedAt = null
-  party.unresponsiveSince = null
+      party.unresponsiveSince = null
       party.inviteToken = null
 
       // Generate new invite token

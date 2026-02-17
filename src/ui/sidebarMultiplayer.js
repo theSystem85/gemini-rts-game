@@ -546,6 +546,7 @@ function updateHostControlAccessibility(session) {
 function createPartyRow(partyState) {
   const row = document.createElement('div')
   row.className = 'multiplayer-party-row'
+  row.dataset.testid = `multiplayer-party-row-${partyState.partyId}`
 
   const info = document.createElement('div')
   info.className = 'multiplayer-party-info'
@@ -559,6 +560,7 @@ function createPartyRow(partyState) {
   const label = document.createElement('span')
   label.className = 'multiplayer-party-label'
   label.textContent = partyState.owner
+  label.dataset.testid = `multiplayer-party-label-${partyState.partyId}`
   info.appendChild(label)
 
   const controls = document.createElement('div')
@@ -567,6 +569,7 @@ function createPartyRow(partyState) {
   const status = document.createElement('span')
   status.className = 'multiplayer-party-status'
   status.setAttribute('aria-live', 'polite')
+  status.dataset.testid = `multiplayer-party-status-${partyState.partyId}`
 
   // Check if a human player is connected (not AI and not the host)
   const isHumanConnected = !partyState.aiActive && partyState.partyId !== gameState.humanPlayer
@@ -580,6 +583,7 @@ function createPartyRow(partyState) {
     kickButton.type = 'button'
     kickButton.className = 'multiplayer-invite-button multiplayer-kick-button'
     kickButton.textContent = 'Kick'
+    kickButton.dataset.testid = `multiplayer-kick-${partyState.partyId}`
     kickButton.addEventListener('click', () => handleKickClick(partyState, kickButton))
     controls.appendChild(kickButton)
   } else {
@@ -598,6 +602,7 @@ function createPartyRow(partyState) {
     inviteButton.type = 'button'
     inviteButton.className = 'multiplayer-invite-button'
     inviteButton.textContent = 'Invite'
+    inviteButton.dataset.testid = `multiplayer-invite-${partyState.partyId}`
     inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
 
     controls.appendChild(inviteButton)

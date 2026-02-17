@@ -37,3 +37,28 @@
 ## Validation strategy
 - Unit tests for host pause + resume on heartbeat recovery.
 - Existing multiplayer store/player count tests continue validating 2-4 party initialization behavior.
+- Ensure host startup map settings can be injected through URL query params (`size`, `width`, `height`, `players`, `seed`) as temporary runtime overrides that dominate localStorage without persisting new localStorage values.
+- Add Playwright Netlify-dev E2E coverage for a 4-party session (host + 2 remote humans + 1 AI) on a 40x40 map (seed 4) where the host explicitly sets 4 players, pauses immediately, minimizes tutorial, shares invite URLs, and only resumes once RED and YELLOW human joins are connected while BLUE remains AI.
+- E2E test must pass `baseURL` to each `browser.newContext()` since Playwright does NOT inherit `config.use.baseURL` for manually created contexts; clients navigate directly to the invite URL (equivalent to paste-into-inviteLinkInput + click Join, which redirects to the same `/?invite=TOKEN` URL).
+- Run that flow with 3 opened browser windows (host, RED remote, YELLOW remote); BLUE stays AI under host simulation and does not require a separate client window.
+- Ensure host is paused immediately after startup in this flow so AI cannot execute autonomous early-game actions before invite/join synchronization.
+- Ensure RED/YELLOW joining uses invite-link copy/paste behavior through the in-game join input and verify invite-link landing does not show tutorial UI.
+- Ensure host-first sequencing: RED invite is generated/copied before RED browser starts; YELLOW browser starts only after YELLOW invite is generated/copied.
+- Ensure join path is paste-first (`#inviteLinkInput` + `#joinInviteLinkBtn`) with fallback to direct invite URL navigation if paste-triggered redirect fails in headed runs.
+- Optimize run speed by allowing RED/YELLOW clients to open directly via invite URL (`/?invite=...`) once copied/generated, avoiding an extra home-load + sidebar-paste cycle per client.
+- Keep invite QR modal explicitly closed after each invite generation so subsequent invite buttons remain clickable.
+- Explicitly close/dismiss host invite modal after YELLOW invite/join flow before proceeding to provisioning and combat checks.
+- In headed Chromium runs, position host/red/yellow windows using CDP `Browser.setWindowBounds` to reduce overlap during visual debugging.
+- Runner should detect the largest host display when possible (macOS display probe) and feed those dimensions into test window layout so all participant windows are placed on that largest available screen.
+- For stable headed placement across multiple monitors, run HOST/RED/YELLOW in separate browser processes (not only separate contexts of one browser), since CDP window-bounds operations can otherwise target a shared native window and cause relocation.
+- Ensure test explicitly expands `Map Settings` accordion and scrolls sidebar regions before interacting with hidden controls (`#playerCount`, invite buttons/inputs), to avoid visibility flakiness in headed runs.
+- Emit timestamped verbose logs for each invite/join step (host map setup, invite clicks, copied-link capture, paste join, fallback path decisions) so failures can be diagnosed from CI/local console output.
+- Current baseline parameters for this scenario: `seed=4`, `size=40`, `players=4`.
+- Ensure invite-link flows used by remote clients keep tutorial UI hidden on invite landing and alias submission (`RED`, `YELLOW`) is reflected before gameplay assertions.
+- Correct party-color mapping in the Netlify 4-party E2E: `player2=Red`, `player3=Blue`, `player4=Yellow`; invite RED and YELLOW, and keep BLUE AI-controlled.
+- Validate post-join gameplay flow by confirming GREEN/RED/YELLOW controlled parties complete base progression (power, refinery, vehicle factory), produce at least two harvesters and one `tank_v1`, and initiate combat where all human tanks focus BLUE AI with projectile visibility across host and clients.
+- Ensure GREEN/host party progression is asserted as strictly as RED/YELLOW (host must own construction yard, power plant, ore refinery, and vehicle factory before combat checks).
+- Ensure this Netlify multiplayer Playwright flow runs in headed mode for visual debugging and includes deterministic test timeout + `finally` teardown cleanup so runs cannot remain pending indefinitely.
+- Ensure multiplayer E2E command does not leave Playwright HTML report server running on `http://localhost:9323` (disable auto-open and perform explicit post-run port cleanup) to prevent agent-mode hangs.
+- To reduce headed multi-window FPS degradation, launch each role browser with anti-throttling Chromium flags for background/occluded windows.
+- For headed performance parity with manual local runs, prefer launching system Chrome channel on macOS when available, with fallback to bundled Chromium, and add frame-throttling disables (`--disable-frame-rate-limit`, `--disable-gpu-vsync`).

@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const useNetlifyDev = process.env.PLAYWRIGHT_NETLIFY_DEV === '1'
+const runHeaded = process.env.PLAYWRIGHT_HEADED === '1' || useNetlifyDev
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || (useNetlifyDev ? 'http://localhost:8888' : 'http://localhost:5173')
+const webServerCommand = process.env.PLAYWRIGHT_WEB_SERVER_COMMAND || (useNetlifyDev ? 'npx netlify dev --port 8888' : 'npm run dev')
+
 /**
  * Playwright Configuration for RTS Game E2E Tests
  * @see https://playwright.dev/docs/test-configuration
@@ -19,7 +24,8 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: 'http://localhost:5173',
+    baseURL,
+    headless: !runHeaded,
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
     /* Capture screenshot on failure */
@@ -38,10 +44,10 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: webServerCommand,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000
+    timeout: useNetlifyDev ? 180 * 1000 : 120 * 1000
   },
 
   /* Global timeout for each test */

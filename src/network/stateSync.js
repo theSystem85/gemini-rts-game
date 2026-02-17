@@ -186,6 +186,48 @@ function hasActiveRemoteSession() {
   return isRemote
 }
 
+function getPartyAuthoritativeMoney(partyId) {
+  if (!partyId) {
+    return 0
+  }
+
+  if (partyId === gameState.humanPlayer) {
+    return Number.isFinite(gameState.money) ? gameState.money : 0
+  }
+
+  const ownerFactory = (gameState.factories || []).find(factory => (factory.owner || factory.id) === partyId)
+  if (!ownerFactory || !Number.isFinite(ownerFactory.budget)) {
+    return 0
+  }
+
+  return ownerFactory.budget
+}
+
+function createPartyMoneySnapshot() {
+  const partyMoney = {}
+
+  const partyIds = Array.isArray(gameState.partyStates) && gameState.partyStates.length > 0
+    ? gameState.partyStates.map(party => party.partyId)
+    : []
+
+  if (gameState.humanPlayer && !partyIds.includes(gameState.humanPlayer)) {
+    partyIds.push(gameState.humanPlayer)
+  }
+
+  ;(gameState.factories || []).forEach(factory => {
+    const partyId = factory.owner || factory.id
+    if (partyId && !partyIds.includes(partyId)) {
+      partyIds.push(partyId)
+    }
+  })
+
+  partyIds.forEach(partyId => {
+    partyMoney[partyId] = getPartyAuthoritativeMoney(partyId)
+  })
+
+  return partyMoney
+}
+
 /**
  * Create a game state snapshot for synchronization
  * @returns {Object} Game state snapshot
@@ -352,6 +394,7 @@ export function createGameStateSnapshot() {
     explosions,
     unitWrecks,
     money: gameState.money,
+    partyMoney: createPartyMoneySnapshot(),
     gamePaused: gameState.gamePaused,
     gameStarted: gameState.gameStarted,
     partyStates: gameState.partyStates,
@@ -457,9 +500,14 @@ export function applyGameStateSnapshot(snapshot) {
   // Get current time for animation timestamp conversions (used by units and buildings)
   const now = performance.now()
 
-  // Note: Money is NOT synced from host to client because each player has their own money!
-  // The client manages their own gameState.money based on their actions.
-  // If in the future we want to display other players' money, we'd use per-party tracking.
+  // Remote clients are host-authoritative for economy and must adopt host party money.
+  const localPartyId = clientPartyId || gameState.humanPlayer
+  if (localPartyId && snapshot.partyMoney && typeof snapshot.partyMoney === 'object') {
+    const syncedMoney = snapshot.partyMoney[localPartyId]
+    if (Number.isFinite(syncedMoney)) {
+      gameState.money = syncedMoney
+    }
+  }
 
   // Sync game pause state
   if (typeof snapshot.gamePaused === 'boolean') {
