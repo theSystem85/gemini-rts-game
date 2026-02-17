@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Move the mobile landscape notification bell icon from top-right to the top-left safe-area position.
 - [x] Replace the minimize and docs buttons in the tutorial modal with icons (no text) and add tooltip labels. Fixed icon being overwritten by renderStep method.
 - [x] Comprehensive user documentation rewrite: mobile-responsive borderless design, 14 sections covering all game systems (tech tree graph, HUD explanation, crew system, XP/promotions, fuel/ammo logistics, mine system, remote control, multiplayer, combat mechanics, keyboard reference), complete numerical stats for all 13 units and 18 buildings.
 - [x] Implemented lighthouse spec 04 main-thread long-task reduction by introducing startup task scheduling (post-paint + idle deferrals) and startup performance markers for init phases.
