@@ -764,7 +764,12 @@ body.benchmark-modal-open {
   font-family: 'Arial', sans-serif;
 }
 
+.benchmark-modal.modal-hidden {
+  display: none;
+}
+
 .benchmark-modal--open {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
 }

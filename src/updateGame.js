@@ -67,7 +67,6 @@ import { spawnUnit } from './units.js'
 
 export const updateGame = logPerformance(function updateGame(delta, mapGrid, factories, units, bullets, gameState) {
   try {
-    if (gameState.gamePaused) return
     const now = performance.now()
     const occupancyMap = gameState.occupancyMap
 
@@ -220,6 +219,10 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
         }
         // Note: CLIENT_STATE_UPDATE is no longer processed - host is authoritative
       })
+    }
+
+    if (gameState.gamePaused) {
+      return
     }
 
     // Update game time (both host and client need this for animations)

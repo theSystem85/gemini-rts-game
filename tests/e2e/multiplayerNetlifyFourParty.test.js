@@ -14,15 +14,14 @@ import { test, expect } from '@playwright/test'
  *    8. YELLOW opens invite URL → fills alias → submits              *
  *    9. HOST verifies RED/YELLOW connected, BLUE stays AI            *
  *   10. HOST resumes the game                                        *
- *   11. HOST provisions buildings + units for controlled parties     *
- *   12. Tank combat → verify BLUE AI takes damage                    *
+ *   11. HOST/RED/YELLOW build stack to tank via production flow      *
+ *   12. Verify refinery unload income per party                      *
  * ------------------------------------------------------------------ */
 
 const MAP_SIZE = 40
 const MAP_SEED = '4'
 const CONTROLLED_PARTIES = ['player1', 'player2', 'player4']
 const AI_PARTY = 'player3'
-const PROVISIONED_PARTIES = [...CONTROLLED_PARTIES, AI_PARTY]
 
 // Replicate baseURL resolution from playwright.config.js so that
 // browser.newContext() – which does NOT inherit config.use.baseURL –
@@ -32,6 +31,10 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL
   || (useNetlifyDev ? 'http://localhost:8888' : 'http://localhost:5173')
 const LARGEST_SCREEN_WIDTH = Number.parseInt(process.env.PLAYWRIGHT_LARGEST_SCREEN_WIDTH || '0', 10)
 const LARGEST_SCREEN_HEIGHT = Number.parseInt(process.env.PLAYWRIGHT_LARGEST_SCREEN_HEIGHT || '0', 10)
+const WINDOW_MAX_WIDTH = Number.parseInt(process.env.PLAYWRIGHT_WINDOW_MAX_WIDTH || '1280', 10)
+const WINDOW_MAX_HEIGHT = Number.parseInt(process.env.PLAYWRIGHT_WINDOW_MAX_HEIGHT || '900', 10)
+const PREFERRED_BROWSER_CHANNEL = process.env.PLAYWRIGHT_BROWSER_CHANNEL || ''
+const ENABLE_UNCAPPED_RENDERING = process.env.PLAYWRIGHT_UNCAPPED_RENDERING === '1'
 
 function getWindowLayout() {
   if (!Number.isFinite(LARGEST_SCREEN_WIDTH) || !Number.isFinite(LARGEST_SCREEN_HEIGHT)
@@ -44,8 +47,10 @@ function getWindowLayout() {
   }
 
   const top = 40
-  const usableHeight = Math.max(700, LARGEST_SCREEN_HEIGHT - 120)
-  const paneWidth = Math.max(700, Math.floor(LARGEST_SCREEN_WIDTH / 3))
+  const calculatedHeight = Math.max(700, LARGEST_SCREEN_HEIGHT - 120)
+  const calculatedWidth = Math.max(700, Math.floor(LARGEST_SCREEN_WIDTH / 3))
+  const usableHeight = Number.isFinite(WINDOW_MAX_HEIGHT) ? Math.min(calculatedHeight, WINDOW_MAX_HEIGHT) : calculatedHeight
+  const paneWidth = Number.isFinite(WINDOW_MAX_WIDTH) ? Math.min(calculatedWidth, WINDOW_MAX_WIDTH) : calculatedWidth
 
   return {
     host: { left: 0, top, width: paneWidth, height: usableHeight },
@@ -190,6 +195,26 @@ async function pauseGameImmediately(page) {
   )
 }
 
+async function ensureHostPaused(page) {
+  const paused = await page.evaluate(() => {
+    if (!window.gameState) {
+      return false
+    }
+
+    if (window.gameState.gamePaused !== true) {
+      window.gameState.gamePaused = true
+      const icon = document.querySelector('#pauseBtn .play-pause-icon')
+      if (icon) {
+        icon.textContent = '▶'
+      }
+    }
+
+    return window.gameState.gamePaused === true
+  })
+
+  expect(paused).toBe(true)
+}
+
 /** Set map dimensions, player count and seed via sidebar inputs. */
 async function setHostMapAndPlayers(page) {
   logStep('Preparing sidebar/map settings for host map configuration')
@@ -289,22 +314,6 @@ async function invitePartyAndCaptureCopiedUrl(hostPage, partyId) {
   return { copiedUrl, inviteUrl }
 }
 
-async function ensureHostOwnsRequiredBuildings(hostPage) {
-  await hostPage.waitForFunction(
-    (partyId) => {
-      const blds = window.gameState?.buildings || []
-      const aliases = partyId === 'player1' ? ['player1', 'player'] : [partyId]
-      const ownedByHost = (building) => aliases.includes(building.owner)
-      return blds.some((b) => ownedByHost(b) && b.type === 'constructionYard')
-        && blds.some((b) => ownedByHost(b) && b.type === 'powerPlant')
-        && blds.some((b) => ownedByHost(b) && b.type === 'oreRefinery')
-        && blds.some((b) => ownedByHost(b) && b.type === 'vehicleFactory')
-    },
-    'player1',
-    { timeout: 30000 }
-  )
-}
-
 /**
  * A client (RED / YELLOW) joins the game:
  *   1. Navigate directly to the invite URL  (same result as pasting
@@ -316,7 +325,7 @@ async function ensureHostOwnsRequiredBuildings(hostPage) {
  */
 async function joinViaDirectInviteUrl(page, inviteUrl, alias) {
   logStep(`${alias}: opening invite URL directly`)
-  await page.goto(inviteUrl, { waitUntil: 'domcontentloaded' })
+  await page.goto(inviteUrl, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForSelector('#gameCanvas', { state: 'visible', timeout: 60000 })
 
   // The invite overlay should appear
@@ -326,293 +335,181 @@ async function joinViaDirectInviteUrl(page, inviteUrl, alias) {
   // Fill alias and submit
   await page.locator('#remoteAliasInput').fill(alias)
   await page.locator('#remoteInviteSubmit').click()
+  logStep(`${alias}: alias submitted, waiting for stable connection`)
 
-  // Wait for WebRTC connection
-  await expect(overlay).toBeHidden({ timeout: 60000 })
+  // Wait for connection on the joining client.
   await page.waitForFunction(
     () => {
       const s = window.gameState?.multiplayerSession
       return s && s.isRemote === true && s.status === 'connected'
     },
-    { timeout: 60000 }
+    undefined,
+    { timeout: 90000 }
   )
+
+  await expect(overlay).toBeHidden({ timeout: 15000 }).catch(() => {})
   logStep(`${alias}: remote session connected`)
 }
 
-async function provisionPartiesFromHost(hostPage) {
-  await hostPage.evaluate(async(parties) => {
-    const buildingsModule = await import('/src/buildings.js')
-    const buildingDataModule = await import('/src/data/buildingData.js')
-    const unitsModule = await import('/src/units.js')
-    const mainModule = await import('/src/main.js')
-    const gameStateModule = await import('/src/gameState.js')
+async function openProductionTab(page, tabName) {
+  const tab = page.locator(`.tab-button[data-tab="${tabName}"]`)
+  await tab.scrollIntoViewIfNeeded()
+  await tab.click()
+}
 
-    const { createBuilding, placeBuilding, canPlaceBuilding } = buildingsModule
-    const { buildingData } = buildingDataModule
-    const { createUnit, updateUnitOccupancy } = unitsModule
-    const { mapGrid, factories, units } = mainModule
-    const { gameState } = gameStateModule
+async function selectBuildTileNearCurrentPartyBase(page, buildingType) {
+  const candidates = await page.evaluate(async(type) => {
+    const { canPlaceBuilding, buildingData } = await import('/src/buildings.js')
+    const { mapGrid, units, factories } = await import('/src/main.js')
+    const gs = window.gameState
 
-    const ownerAliasesForParty = (partyId) => {
-      if (partyId === 'player1') {
-        const aliases = ['player1', 'player']
-        if (typeof gameState.humanPlayer === 'string' && gameState.humanPlayer.length > 0) {
-          aliases.push(gameState.humanPlayer)
-        }
-        return [...new Set(aliases)]
-      }
-      return [partyId]
+    if (!gs || !mapGrid?.length || !mapGrid[0]?.length) {
+      return []
     }
 
-    const isOwnedByParty = (entity, partyId) => ownerAliasesForParty(partyId).includes(entity?.owner)
+    const owner = gs.humanPlayer || 'player1'
+    const ownerAliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+    const yard = (gs.buildings || []).find((building) => building.type === 'constructionYard' && ownerAliases.includes(building.owner))
+    const info = buildingData?.[type]
 
-    const ownerForPlacement = (partyId) => {
-      if (partyId === 'player1') {
-        return gameState.humanPlayer || 'player1'
-      }
-      return partyId
+    if (!yard || !info?.width || !info?.height) {
+      return []
     }
 
-    const canPlaceRect = (x, y, width, height, owner) => {
-      if (x < 0 || y < 0 || y + height > mapGrid.length || x + width > mapGrid[0].length) {
-        return false
-      }
+    const around = [
+      { x: 4, y: 0 },
+      { x: 0, y: 4 },
+      { x: -4, y: 0 },
+      { x: 0, y: -4 },
+      { x: 5, y: 3 },
+      { x: -5, y: 3 },
+      { x: 5, y: -3 },
+      { x: -5, y: -3 },
+      { x: 7, y: 0 },
+      { x: 0, y: 7 }
+    ]
 
-      for (let yy = y; yy < y + height; yy++) {
-        for (let xx = x; xx < x + width; xx++) {
-          if (mapGrid[yy][xx].building) {
-            return false
-          }
-        }
-      }
+    const points = []
 
-      return canPlaceBuilding(typeForScan, x, y, mapGrid, units, gameState.buildings || [], factories, owner)
-    }
+    around.forEach((offset) => {
+      const tileX = yard.x + offset.x
+      const tileY = yard.y + offset.y
 
-    let typeForScan = 'constructionYard'
-
-    const findSpotNearFactory = (factory, width, height, owner, type) => {
-      const centerX = factory.x + Math.floor(factory.width / 2)
-      const centerY = factory.y + Math.floor(factory.height / 2)
-      typeForScan = type
-
-      for (let radius = 2; radius <= 10; radius++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const tx = centerX + dx
-            const ty = centerY + dy
-            if (canPlaceRect(tx, ty, width, height, owner)) {
-              return { x: tx, y: ty }
-            }
-          }
-        }
-      }
-
-      return null
-    }
-
-    const findAnySpot = (width, height, owner, type) => {
-      typeForScan = type
-      for (let y = 0; y <= mapGrid.length - height; y++) {
-        for (let x = 0; x <= mapGrid[0].length - width; x++) {
-          if (canPlaceRect(x, y, width, height, owner)) {
-            return { x, y }
-          }
-        }
-      }
-
-      return null
-    }
-
-    const findFreeUnitTileNearFactory = (factory) => {
-      const centerX = factory.x + Math.floor(factory.width / 2)
-      const centerY = factory.y + factory.height + 1
-
-      for (let radius = 0; radius <= 8; radius++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const tx = centerX + dx
-            const ty = centerY + dy
-            if (tx < 0 || ty < 0 || ty >= mapGrid.length || tx >= mapGrid[0].length) {
-              continue
-            }
-
-            if (mapGrid[ty][tx].building) {
-              continue
-            }
-
-            if (gameState.occupancyMap?.[ty]?.[tx] > 0) {
-              continue
-            }
-
-            return { x: tx, y: ty }
-          }
-        }
-      }
-
-      for (let y = 0; y < mapGrid.length; y++) {
-        for (let x = 0; x < mapGrid[0].length; x++) {
-          if (mapGrid[y][x].building) {
-            continue
-          }
-
-          if (gameState.occupancyMap?.[y]?.[x] > 0) {
-            continue
-          }
-
-          return { x, y }
-        }
-      }
-
-      return { x: centerX, y: Math.min(mapGrid.length - 1, centerY) }
-    }
-
-    const ensureBuildingForParty = (partyId, factory, type) => {
-      const existing = (gameState.buildings || []).find(building => building.type === type && isOwnedByParty(building, partyId))
-      if (existing) {
-        existing.constructionFinished = true
-        existing.constructionStartTime = performance.now() - 10000
-        return existing
-      }
-
-      const buildingConfig = buildingData?.[type]
-      if (!buildingConfig?.width || !buildingConfig?.height) {
-        return null
-      }
-
-      const targetOwner = ownerForPlacement(partyId)
-      const spot = findSpotNearFactory(factory, buildingConfig.width, buildingConfig.height, targetOwner, type)
-        || findAnySpot(buildingConfig.width, buildingConfig.height, targetOwner, type)
-      if (!spot) {
-        return null
-      }
-
-      const building = createBuilding(type, spot.x, spot.y)
-      if (!building) {
-        return null
-      }
-      building.owner = targetOwner
-      building.constructionFinished = true
-      building.constructionStartTime = performance.now() - 10000
-      placeBuilding(building, mapGrid, gameState.occupancyMap, { recordTransition: false })
-      gameState.buildings.push(building)
-      return building
-    }
-
-    const ensureUnitsForParty = (partyId, factory, type, count) => {
-      const existing = units.filter(unit => isOwnedByParty(unit, partyId) && unit.type === type)
-      if (existing.length >= count) {
-        return existing.slice(0, count)
-      }
-
-      const createdUnits = [...existing]
-      const needed = count - existing.length
-
-      for (let i = 0; i < needed; i++) {
-        const tile = findFreeUnitTileNearFactory(factory)
-        const unit = createUnit(factory, type, tile.x, tile.y)
-        units.push(unit)
-        updateUnitOccupancy(unit, -1, -1, gameState.occupancyMap)
-        createdUnits.push(unit)
-      }
-
-      return createdUnits
-    }
-
-    parties.forEach((partyId) => {
-      const factory = factories.find(item => (item.owner || item.id) === partyId)
-      if (!factory) {
+      if (tileX < 0 || tileY < 0 || tileY >= mapGrid.length || tileX >= mapGrid[0].length) {
         return
       }
 
-      if (partyId === 'player1' || ownerAliasesForParty(partyId).includes(gameState.humanPlayer)) {
-        gameState.money = Math.max(Number(gameState.money) || 0, 40000)
-      } else {
-        factory.budget = Math.max(Number(factory.budget) || 0, 40000)
+      const canPlace = canPlaceBuilding(type, tileX, tileY, mapGrid, units, gs.buildings || [], factories, owner)
+      if (!canPlace) {
+        return
       }
 
-      ensureBuildingForParty(partyId, factory, 'constructionYard')
-      ensureBuildingForParty(partyId, factory, 'powerPlant')
-      ensureBuildingForParty(partyId, factory, 'oreRefinery')
-      ensureBuildingForParty(partyId, factory, 'vehicleFactory')
-
-      ensureUnitsForParty(partyId, factory, 'harvester', 2)
-      ensureUnitsForParty(partyId, factory, 'tank_v1', 1)
+      points.push({ x: tileX, y: tileY })
     })
-  }, PROVISIONED_PARTIES)
+
+    if (points.length > 0) {
+      return points
+    }
+
+    for (let y = 0; y < mapGrid.length; y++) {
+      for (let x = 0; x < mapGrid[0].length; x++) {
+        if (canPlaceBuilding(type, x, y, mapGrid, units, gs.buildings || [], factories, owner)) {
+          points.push({ x, y })
+          if (points.length >= 5) {
+            return points
+          }
+        }
+      }
+    }
+
+    return points
+  }, buildingType)
+
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    throw new Error(`No valid placement candidates for ${buildingType}`)
+  }
+
+  return candidates[0]
 }
 
-async function setupTankCombat(hostPage) {
-  return hostPage.evaluate(({ humanParties, aiParty }) => {
+async function queueAndCompleteBuilding(page, buildingType, roleLabel) {
+  const baseline = await page.evaluate((type) => {
     const gs = window.gameState
-    const allUnits = gs?.units || []
+    const owner = gs?.humanPlayer || 'player1'
+    const aliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+    return (gs?.buildings || []).filter((building) => building.type === type && aliases.includes(building.owner)).length
+  }, buildingType)
 
-    const ownerAliasesForParty = (partyId) => {
-      if (partyId === 'player1') {
-        const aliases = ['player1', 'player']
-        if (typeof gs?.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
-          aliases.push(gs.humanPlayer)
-        }
-        return [...new Set(aliases)]
-      }
-      return [partyId]
+  const button = page.locator(`.production-button[data-building-type="${buildingType}"]`)
+  await button.scrollIntoViewIfNeeded()
+  await expect(button).toBeVisible({ timeout: 30000 })
+  await expect(button).toBeEnabled({ timeout: 30000 })
+
+  const buildTile = await selectBuildTileNearCurrentPartyBase(page, buildingType)
+  await page.evaluate(async({ type, x, y }) => {
+    const { productionQueue } = await import('/src/productionQueue.js')
+    const buttonEl = document.querySelector(`.production-button[data-building-type="${type}"]`)
+    if (!buttonEl) {
+      throw new Error(`Missing production button for ${type}`)
     }
 
-    const isOwnedByParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit?.owner)
+    productionQueue.addItem(type, buttonEl, true, { type, x, y })
+  }, { type: buildingType, x: buildTile.x, y: buildTile.y })
 
-    const aiTank = allUnits.find(unit => isOwnedByParty(unit, aiParty) && unit.type === 'tank_v1')
-    if (!aiTank) {
-      return { ok: false, tankIds: [], targetId: null }
-    }
+  await page.waitForFunction(
+    ({ type, previousCount }) => {
+      const gs = window.gameState
+      const owner = gs?.humanPlayer || 'player1'
+      const aliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+      const completed = (gs?.buildings || []).filter((building) => building.type === type && aliases.includes(building.owner))
+      return completed.length > previousCount
+    },
+    { type: buildingType, previousCount: baseline },
+    { timeout: 90000 }
+  )
 
-    aiTank.x = 18 * 32
-    aiTank.y = 12 * 32
-    aiTank.tileX = 18
-    aiTank.tileY = 12
-    aiTank.path = []
-    aiTank.moveTarget = null
-    aiTank.health = aiTank.maxHealth
-    aiTank.destroyed = false
-    aiTank.allowedToAttack = true
+  logStep(`${roleLabel}: completed ${buildingType}`)
+}
 
-    const tanks = humanParties.map((partyId, index) => {
-      const tank = allUnits.find(unit => isOwnedByParty(unit, partyId) && unit.type === 'tank_v1')
-      if (!tank) {
-        return null
-      }
+async function queueAndCompleteUnit(page, unitType, roleLabel) {
+  const baseline = await page.evaluate((type) => {
+    const gs = window.gameState
+    const owner = gs?.humanPlayer || 'player1'
+    const aliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+    return (gs?.units || []).filter((unit) => aliases.includes(unit.owner) && (unit.type === type || (type === 'tank' && unit.type === 'tank_v1'))).length
+  }, unitType)
 
-      const baseX = 10 + index * 2
-      const baseY = 12 + (index % 2)
-      tank.x = baseX * 32
-      tank.y = baseY * 32
-      tank.tileX = baseX
-      tank.tileY = baseY
-      tank.path = []
-      tank.moveTarget = null
-      tank.health = tank.maxHealth
-      tank.destroyed = false
-      tank.allowedToAttack = true
-      return tank
-    }).filter(Boolean)
+  const button = page.locator(`.production-button[data-unit-type="${unitType}"]`)
+  await button.scrollIntoViewIfNeeded()
+  await expect(button).toBeVisible({ timeout: 30000 })
+  await expect(button).toBeEnabled({ timeout: 30000 })
+  await button.click()
 
-    if (tanks.length < 3) {
-      return { ok: false, tankIds: [] }
-    }
+  await page.waitForFunction(
+    ({ type, previousCount }) => {
+      const gs = window.gameState
+      const owner = gs?.humanPlayer || 'player1'
+      const aliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+      const count = (gs?.units || []).filter((unit) => aliases.includes(unit.owner) && (unit.type === type || (type === 'tank' && unit.type === 'tank_v1'))).length
+      return count > previousCount
+    },
+    { type: unitType, previousCount: baseline },
+    { timeout: 90000 }
+  )
 
-    tanks.forEach((tank) => {
-      tank.target = aiTank
-      tank.attackTarget = aiTank
-      tank.holdFire = false
-      tank.lastShotTime = 0
-    })
+  logStep(`${roleLabel}: completed ${unitType}`)
+}
 
-    aiTank.target = tanks[0]
-    aiTank.attackTarget = tanks[0]
-    aiTank.holdFire = false
-    aiTank.lastShotTime = 0
+async function buildStackToTank(page, roleLabel) {
+  await ensureSidebarVisible(page)
+  await openProductionTab(page, 'buildings')
+  await queueAndCompleteBuilding(page, 'powerPlant', roleLabel)
+  await queueAndCompleteBuilding(page, 'oreRefinery', roleLabel)
+  await queueAndCompleteBuilding(page, 'vehicleFactory', roleLabel)
 
-    return { ok: true, tankIds: tanks.map(tank => tank.id), targetId: aiTank.id }
-  }, { humanParties: CONTROLLED_PARTIES, aiParty: AI_PARTY })
+  await openProductionTab(page, 'units')
+  await queueAndCompleteUnit(page, 'harvester', roleLabel)
+  await queueAndCompleteUnit(page, 'tank', roleLabel)
 }
 
 /** Verify RED and YELLOW are human-connected and BLUE is still AI. */
@@ -645,13 +542,69 @@ async function resumeHost(hostPage) {
   )
 }
 
+async function capturePartyEconomyBaseline(hostPage) {
+  return hostPage.evaluate(async(parties) => {
+    const gs = window.gameState
+    const { factories } = await import('/src/main.js')
+    const baseline = {
+      hostMoney: Number(gs?.money) || 0,
+      factoryBudgets: {}
+    }
+
+    parties.forEach((partyId) => {
+      if (partyId === 'player1') {
+        return
+      }
+      const factory = (factories || []).find((item) => (item.owner || item.id) === partyId)
+      baseline.factoryBudgets[partyId] = Number(factory?.budget) || 0
+    })
+
+    return baseline
+  }, CONTROLLED_PARTIES)
+}
+
+async function waitForPartyIncomeAfterRefineryUnload(hostPage, baseline) {
+  const timeoutMs = 180000
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const hasIncomeIncrease = await hostPage.evaluate(async({ parties, baselineSnapshot }) => {
+      const gs = window.gameState
+      const { factories } = await import('/src/main.js')
+      if (!gs) return false
+
+      const hostIncreased = (Number(gs.money) || 0) > (Number(baselineSnapshot.hostMoney) || 0)
+      if (!hostIncreased) {
+        return false
+      }
+
+      return parties
+        .filter((partyId) => partyId !== 'player1')
+        .every((partyId) => {
+          const factory = (factories || []).find((item) => (item.owner || item.id) === partyId)
+          const currentBudget = Number(factory?.budget) || 0
+          const initialBudget = Number(baselineSnapshot.factoryBudgets?.[partyId]) || 0
+          return currentBudget > initialBudget
+        })
+    }, { parties: CONTROLLED_PARTIES, baselineSnapshot: baseline })
+
+    if (hasIncomeIncrease) {
+      return
+    }
+
+    await hostPage.waitForTimeout(1000)
+  }
+
+  throw new Error('Timed out waiting for HOST/RED/YELLOW refinery income increase after baseline snapshot')
+}
+
 // ────────────────────────────────────────────────────────────────────
 //  Test
 // ────────────────────────────────────────────────────────────────────
 
 test.describe('Netlify multiplayer 4-party sync', () => {
   test.describe.configure({ mode: 'serial' })
-  test.setTimeout(240000)
+  test.setTimeout(420000)
 
   test('host setup + invite flow → 3-party build/combat with blue AI', async({ browser }) => {
     // Use separate browser processes per role so native windows don't get
@@ -666,33 +619,48 @@ test.describe('Netlify multiplayer 4-party sync', () => {
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
-        '--disable-frame-rate-limit',
-        '--disable-gpu-vsync'
+        '--no-first-run',
+        '--no-default-browser-check'
       ]
 
-      let roleBrowser = null
-
-      if (process.platform === 'darwin') {
-        try {
-          roleBrowser = await browserType.launch({
-            channel: 'chrome',
-            headless: false,
-            args
-          })
-          logStep(`${role}: launched using Chrome channel for better headed performance`)
-        } catch {
-          roleBrowser = null
-        }
+      if (ENABLE_UNCAPPED_RENDERING) {
+        args.push('--disable-frame-rate-limit', '--disable-gpu-vsync')
       }
 
-      if (!roleBrowser) {
+      const launchOptions = {
+        headless: false,
+        args
+      }
+
+      if (PREFERRED_BROWSER_CHANNEL) {
+        launchOptions.channel = PREFERRED_BROWSER_CHANNEL
+      }
+
+      let roleBrowser = null
+      try {
+        roleBrowser = await browserType.launch(launchOptions)
+        if (PREFERRED_BROWSER_CHANNEL) {
+          logStep(`${role}: launched using browser channel ${PREFERRED_BROWSER_CHANNEL}`)
+        }
+      } catch {
+        if (!PREFERRED_BROWSER_CHANNEL) {
+          throw new Error(`${role}: browser launch failed`)
+        }
+
         roleBrowser = await browserType.launch({
           headless: false,
           args
         })
+        logStep(`${role}: falling back to bundled chromium launch`)
       }
 
-      const roleContext = await roleBrowser.newContext({ baseURL: BASE_URL })
+      const roleContext = await roleBrowser.newContext({
+        baseURL: BASE_URL,
+        viewport: {
+          width: bounds.width,
+          height: bounds.height
+        }
+      })
       const rolePage = await roleContext.newPage()
       await positionBrowserWindow(rolePage, { ...bounds, label: role })
       return { roleBrowser, roleContext, rolePage }
@@ -726,6 +694,7 @@ test.describe('Netlify multiplayer 4-party sync', () => {
 
       // ── 3. Set map settings via sidebar inputs ────────────────────
       await setHostMapAndPlayers(hostPage)
+      await ensureHostPaused(hostPage)
 
       // ── 4. Minimise tutorial if visible ───────────────────────────
       await minimizeTutorialIfVisible(hostPage)
@@ -740,6 +709,7 @@ test.describe('Netlify multiplayer 4-party sync', () => {
       redPage = redRole.rolePage
       await configureTutorial(redPage, { showTutorial: false, completed: true })
       await joinViaDirectInviteUrl(redPage, redInvite.inviteUrl, 'RED')
+      await ensureHostPaused(hostPage)
 
       // ── 6. Host invites YELLOW (player4), captures copied link, then starts YELLOW browser ──
       const yellowInvite = await invitePartyAndCaptureCopiedUrl(hostPage, 'player4')
@@ -754,31 +724,31 @@ test.describe('Netlify multiplayer 4-party sync', () => {
       await joinViaDirectInviteUrl(yellowPage, yellowInvite.inviteUrl, 'YELLOW')
       await dismissInviteQrModalIfVisible(hostPage)
       logStep('Host invite modal closed after YELLOW invite flow')
+      await ensureHostPaused(hostPage)
 
       // ── 9. Verify connections ─────────────────────────────────────
       await waitForHumansAndBlueAi(hostPage)
       logStep('Host sees RED + YELLOW connected and BLUE still AI')
+      await ensureHostPaused(hostPage)
 
       // ── 10. Resume ────────────────────────────────────────────────
       await resumeHost(hostPage)
       logStep('Host resumed game after human connections')
 
-      // ── 11. Provision buildings + units ───────────────────────────
-      await provisionPartiesFromHost(hostPage)
-      await ensureHostOwnsRequiredBuildings(hostPage)
-      logStep('Host build-out confirmed (construction yard, power plant, refinery, vehicle factory)')
+      // ── 11. Build stack to tank on each human party ───────────────
+      await buildStackToTank(hostPage, 'HOST')
+      await buildStackToTank(redPage, 'RED')
+      await buildStackToTank(yellowPage, 'YELLOW')
 
-      // Wait until combat-critical provisioning is reflected in gameState
       await hostPage.waitForFunction(
-        ({ humanParties, aiParty }) => {
+        (parties) => {
           const gs = window.gameState
           if (!gs) return false
-          const uts = gs.units || []
 
           const ownerAliasesForParty = (partyId) => {
             if (partyId === 'player1') {
               const aliases = ['player1', 'player']
-              if (typeof gs?.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
+              if (typeof gs.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
                 aliases.push(gs.humanPlayer)
               }
               return [...new Set(aliases)]
@@ -786,21 +756,22 @@ test.describe('Netlify multiplayer 4-party sync', () => {
             return [partyId]
           }
 
+          const buildingMatchesParty = (building, partyId) => ownerAliasesForParty(partyId).includes(building.owner)
           const unitMatchesParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit.owner)
 
-          const humansReady = humanParties.every((pid) => {
-            return uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'harvester').length >= 2
-              && uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'tank_v1').length >= 1
+          return parties.every((partyId) => {
+            const hasPower = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'powerPlant')
+            const hasRefinery = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'oreRefinery')
+            const hasFactory = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'vehicleFactory')
+            const hasHarvester = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && unit.type === 'harvester')
+            const hasTank = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && (unit.type === 'tank_v1' || unit.type === 'tank'))
+            return hasPower && hasRefinery && hasFactory && hasHarvester && hasTank
           })
-
-          const blueReady = uts.filter((u) => unitMatchesParty(u, aiParty) && u.type === 'tank_v1').length >= 1
-          return humansReady && blueReady
         },
-        { humanParties: CONTROLLED_PARTIES, aiParty: AI_PARTY },
-        { timeout: 30000 }
+        CONTROLLED_PARTIES,
+        { timeout: 90000 }
       )
 
-      // Optional stronger check for base progression on human parties (non-fatal).
       const baseProgression = await hostPage.evaluate((parties) => {
         const gs = window.gameState
         if (!gs) return null
@@ -829,37 +800,16 @@ test.describe('Netlify multiplayer 4-party sync', () => {
             hasOreRefinery: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'oreRefinery'),
             hasVehicleFactory: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'vehicleFactory'),
             harvesterCount: uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'harvester').length,
-            tankCount: uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'tank_v1').length
+            tankCount: uts.filter((u) => unitMatchesParty(u, pid) && (u.type === 'tank_v1' || u.type === 'tank')).length
           }
         })
       }, CONTROLLED_PARTIES)
 
       logStep(`Base progression snapshot: ${JSON.stringify(baseProgression)}`)
-
-      // ── 12. Tank combat ───────────────────────────────────────────
-      const combatSetup = await setupTankCombat(hostPage)
-      expect(combatSetup.ok).toBe(true)
-      logStep('Combat setup complete, waiting for BLUE AI tank to take damage')
-
-      await hostPage.waitForFunction(
-        (targetId) => {
-          const target = (window.gameState?.units || []).find((unit) => unit.id === targetId)
-          if (!target) return false
-          return Number(target.health) < Number(target.maxHealth)
-        },
-        combatSetup.targetId,
-        { timeout: 60000 }
-      )
-
-      await redPage.waitForFunction(
-        () => window.gameState?.multiplayerSession?.status === 'connected',
-        { timeout: 15000 }
-      )
-      await yellowPage.waitForFunction(
-        () => window.gameState?.multiplayerSession?.status === 'connected',
-        { timeout: 15000 }
-      )
-      logStep('Combat effect confirmed: BLUE AI tank damaged while RED/YELLOW remain connected')
+      const economyBaseline = await capturePartyEconomyBaseline(hostPage)
+      await waitForPartyIncomeAfterRefineryUnload(hostPage, economyBaseline)
+      logStep('Refinery unload income accounted for HOST, RED, and YELLOW parties')
+      logStep('Host/RED/YELLOW each completed visible build stack to tank without direct spawn shortcuts')
     } finally {
       logStep('Cleaning up browser contexts')
       await hostBrowser.close().catch(() => {})

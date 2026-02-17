@@ -1,7 +1,12 @@
 ## Improvements
+- [x] Keep multiplayer remote-command/network processing active during paused frames (zero-delta paused tick) so invite join handshakes can complete before host resume.
+- [x] Stabilize multiplayer invite joins by requiring client-side remote session `connected` state and host-side human party confirmation (`aiActive === false`) before resume.
+- [x] Align multiplayer E2E browser window and rendered content sizes (no viewport-window mismatch), enforce host stays paused until all invited parties connect, and assert per-party refinery unload income accounting for HOST/RED/YELLOW.
+- [x] Update Netlify multiplayer E2E so HOST/RED/YELLOW each build their own visible progression (power plant → ore refinery → vehicle factory → harvester → tank) using normal production flow, without direct spawn/provision shortcuts.
+- [x] Ensure benchmark results modal stays hidden on startup and opens only lazily when a benchmark run completes.
 - [x] Ensure Netlify multiplayer E2E closes the host invite/QR modal after YELLOW invite flow before provisioning/combat assertions.
 - [x] Ensure host (GREEN/player1) builds the same required progression as RED/YELLOW in multiplayer E2E (construction yard, power plant, ore refinery, vehicle factory) and participates in BLUE-targeted combat.
-- [x] Improve headed Playwright multiplayer FPS: prefer system Chrome channel on macOS (matching manual incognito runs) and add Chromium frame-throttling flags (`--disable-frame-rate-limit`, `--disable-gpu-vsync`) in addition to background-throttling disables.
+- [x] Improve headed Playwright multiplayer FPS: keep Chromium frame pacing stable by default (remove uncapped rendering flags), cap per-role window size for lower GPU load, and make browser channel/uncapped rendering opt-in via env (`PLAYWRIGHT_BROWSER_CHANNEL`, `PLAYWRIGHT_UNCAPPED_RENDERING`).
 - [x] Fix multiplayer Netlify 4-party E2E party mapping to match UI colors (`player3=Blue`, `player4=Yellow`): invite RED (`player2`) + YELLOW (`player4`), keep BLUE (`player3`) as AI, and update combat setup so all human tanks (GREEN/RED/YELLOW) focus-fire BLUE AI.
 - [x] Improve headed Playwright multiplayer performance by launching role browsers with anti-throttling Chromium flags (`--disable-background-timer-throttling`, `--disable-backgrounding-occluded-windows`, `--disable-renderer-backgrounding`) to reduce FPS drops in non-focused windows.
 - [x] Fix headed-window relocation across displays by launching HOST/RED/YELLOW in separate Chromium browser processes (instead of contexts within one shared browser), preventing CDP window-bound collisions that moved the host window back to the smaller screen.

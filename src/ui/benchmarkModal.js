@@ -119,10 +119,13 @@ export function initializeBenchmarkModal({ onRunAgain, onClose } = {}) {
       runAgainHandler()
     }
   })
+
+  closeBenchmarkModal()
 }
 
 export function openBenchmarkModal() {
   const { modal } = getModalElements()
+  modal.classList.remove('modal-hidden')
   modal.classList.add('benchmark-modal--open')
   modal.setAttribute('aria-hidden', 'false')
   toggleBodyScroll(true)
@@ -131,6 +134,7 @@ export function openBenchmarkModal() {
 export function closeBenchmarkModal() {
   const { modal } = getModalElements()
   modal.classList.remove('benchmark-modal--open')
+  modal.classList.add('modal-hidden')
   modal.setAttribute('aria-hidden', 'true')
   toggleBodyScroll(false)
 }

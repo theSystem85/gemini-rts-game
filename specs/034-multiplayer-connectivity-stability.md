@@ -56,9 +56,15 @@
 - Current baseline parameters for this scenario: `seed=4`, `size=40`, `players=4`.
 - Ensure invite-link flows used by remote clients keep tutorial UI hidden on invite landing and alias submission (`RED`, `YELLOW`) is reflected before gameplay assertions.
 - Correct party-color mapping in the Netlify 4-party E2E: `player2=Red`, `player3=Blue`, `player4=Yellow`; invite RED and YELLOW, and keep BLUE AI-controlled.
+- Ensure the Netlify multiplayer E2E demonstrates visible stack progression for each human-controlled party (HOST/RED/YELLOW) through normal production flow (power plant, ore refinery, vehicle factory, harvester, tank) and does not use direct unit/building spawn shortcuts for this validation.
+- Ensure host pause discipline in Netlify multiplayer E2E: host pauses immediately after startup and remains paused through invite/join/setup until all remote parties are connected; resume occurs only after connection checks pass.
+- During direct-invite joins, require client-side remote session `connected` state and host-side party state confirmation (`aiActive === false`) before continuing.
+- While host simulation is paused, continue processing multiplayer/network command intake (without advancing simulation time) so invite-based connection handshakes can still complete.
+- Ensure headed role windows and rendered game content dimensions stay aligned in multiplayer E2E (no viewport larger than native window) so visual debugging reflects true on-screen output.
+- Validate economy accounting after refinery unload by asserting HOST money and RED/YELLOW factory budgets increase following harvester delivery cycles.
 - Validate post-join gameplay flow by confirming GREEN/RED/YELLOW controlled parties complete base progression (power, refinery, vehicle factory), produce at least two harvesters and one `tank_v1`, and initiate combat where all human tanks focus BLUE AI with projectile visibility across host and clients.
 - Ensure GREEN/host party progression is asserted as strictly as RED/YELLOW (host must own construction yard, power plant, ore refinery, and vehicle factory before combat checks).
 - Ensure this Netlify multiplayer Playwright flow runs in headed mode for visual debugging and includes deterministic test timeout + `finally` teardown cleanup so runs cannot remain pending indefinitely.
 - Ensure multiplayer E2E command does not leave Playwright HTML report server running on `http://localhost:9323` (disable auto-open and perform explicit post-run port cleanup) to prevent agent-mode hangs.
 - To reduce headed multi-window FPS degradation, launch each role browser with anti-throttling Chromium flags for background/occluded windows.
-- For headed performance parity with manual local runs, prefer launching system Chrome channel on macOS when available, with fallback to bundled Chromium, and add frame-throttling disables (`--disable-frame-rate-limit`, `--disable-gpu-vsync`).
+- For headed performance parity and stable CPU usage, keep default frame pacing (do not disable frame limit/vsync), cap role window sizes in multiplayer E2E, and make optional browser-channel/uncapped overrides env-controlled (`PLAYWRIGHT_BROWSER_CHANNEL`, `PLAYWRIGHT_UNCAPPED_RENDERING`).
