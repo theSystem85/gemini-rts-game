@@ -61,6 +61,8 @@
 - During direct-invite joins, require client-side remote session `connected` state and host-side party state confirmation (`aiActive === false`) before continuing.
 - While host simulation is paused, continue processing multiplayer/network command intake (without advancing simulation time) so invite-based connection handshakes can still complete.
 - Ensure headed role windows and rendered game content dimensions stay aligned in multiplayer E2E (no viewport larger than native window) so visual debugging reflects true on-screen output.
+- Launch headed multiplayer E2E role browsers with hardware acceleration defaults (prefer system Chrome channel, enable GPU/WebGL acceleration flags) so WebGL rendering uses GPU where available.
+- Ensure HOST/RED/YELLOW begin and execute build progression concurrently after host resume (parallel stack build), not one party at a time.
 - Validate economy accounting after refinery unload by asserting HOST money and RED/YELLOW factory budgets increase following harvester delivery cycles.
 - Validate post-join gameplay flow by confirming GREEN/RED/YELLOW controlled parties complete base progression (power, refinery, vehicle factory), produce at least two harvesters and one `tank_v1`, and initiate combat where all human tanks focus BLUE AI with projectile visibility across host and clients.
 - Ensure GREEN/host party progression is asserted as strictly as RED/YELLOW (host must own construction yard, power plant, ore refinery, and vehicle factory before combat checks).

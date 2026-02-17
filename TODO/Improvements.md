@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Enable hardware GPU acceleration defaults for headed multiplayer Playwright role browsers (prefer Chrome channel + GPU flags) and run HOST/RED/YELLOW build progression in parallel instead of sequentially.
 - [x] Keep multiplayer remote-command/network processing active during paused frames (zero-delta paused tick) so invite join handshakes can complete before host resume.
 - [x] Stabilize multiplayer invite joins by requiring client-side remote session `connected` state and host-side human party confirmation (`aiActive === false`) before resume.
 - [x] Align multiplayer E2E browser window and rendered content sizes (no viewport-window mismatch), enforce host stays paused until all invited parties connect, and assert per-party refinery unload income accounting for HOST/RED/YELLOW.

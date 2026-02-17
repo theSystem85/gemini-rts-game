@@ -87,7 +87,9 @@ function cleanupReportServerPort() {
 const env = {
   ...process.env,
   PLAYWRIGHT_NETLIFY_DEV: process.env.PLAYWRIGHT_NETLIFY_DEV || '1',
-  PLAYWRIGHT_HTML_OPEN: 'never'
+  PLAYWRIGHT_HTML_OPEN: 'never',
+  PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL || 'chrome',
+  PLAYWRIGHT_FORCE_GPU: process.env.PLAYWRIGHT_FORCE_GPU || '1'
 }
 
 const largestScreen = detectLargestScreen()

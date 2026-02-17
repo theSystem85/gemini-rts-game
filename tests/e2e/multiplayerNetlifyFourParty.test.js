@@ -35,6 +35,7 @@ const WINDOW_MAX_WIDTH = Number.parseInt(process.env.PLAYWRIGHT_WINDOW_MAX_WIDTH
 const WINDOW_MAX_HEIGHT = Number.parseInt(process.env.PLAYWRIGHT_WINDOW_MAX_HEIGHT || '900', 10)
 const PREFERRED_BROWSER_CHANNEL = process.env.PLAYWRIGHT_BROWSER_CHANNEL || ''
 const ENABLE_UNCAPPED_RENDERING = process.env.PLAYWRIGHT_UNCAPPED_RENDERING === '1'
+const ENABLE_GPU_ACCELERATION = process.env.PLAYWRIGHT_FORCE_GPU !== '0'
 
 function getWindowLayout() {
   if (!Number.isFinite(LARGEST_SCREEN_WIDTH) || !Number.isFinite(LARGEST_SCREEN_HEIGHT)
@@ -623,6 +624,18 @@ test.describe('Netlify multiplayer 4-party sync', () => {
         '--no-default-browser-check'
       ]
 
+      if (ENABLE_GPU_ACCELERATION) {
+        args.push(
+          '--enable-gpu-rasterization',
+          '--enable-zero-copy',
+          '--ignore-gpu-blocklist',
+          '--enable-accelerated-2d-canvas',
+          '--enable-accelerated-video-decode',
+          '--enable-webgl',
+          '--use-angle=metal'
+        )
+      }
+
       if (ENABLE_UNCAPPED_RENDERING) {
         args.push('--disable-frame-rate-limit', '--disable-gpu-vsync')
       }
@@ -630,6 +643,10 @@ test.describe('Netlify multiplayer 4-party sync', () => {
       const launchOptions = {
         headless: false,
         args
+      }
+
+      if (ENABLE_GPU_ACCELERATION) {
+        launchOptions.ignoreDefaultArgs = ['--disable-gpu']
       }
 
       if (PREFERRED_BROWSER_CHANNEL) {
@@ -736,9 +753,12 @@ test.describe('Netlify multiplayer 4-party sync', () => {
       logStep('Host resumed game after human connections')
 
       // ── 11. Build stack to tank on each human party ───────────────
-      await buildStackToTank(hostPage, 'HOST')
-      await buildStackToTank(redPage, 'RED')
-      await buildStackToTank(yellowPage, 'YELLOW')
+      logStep('Starting parallel build progression for HOST, RED, and YELLOW')
+      await Promise.all([
+        buildStackToTank(hostPage, 'HOST'),
+        buildStackToTank(redPage, 'RED'),
+        buildStackToTank(yellowPage, 'YELLOW')
+      ])
 
       await hostPage.waitForFunction(
         (parties) => {
