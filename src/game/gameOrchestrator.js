@@ -50,6 +50,8 @@ import { addMoneyIndicator } from '../ui/moneyBar.js'
 import { closeMobileSidebarModal, isMobileSidebarModalVisible } from '../ui/mobileLayout.js'
 import { resetLlmUsage } from '../ai/llmUsage.js'
 import { runMeasuredTask, scheduleAfterNextPaint, scheduleIdleTask } from '../startupScheduler.js'
+import { UnitRenderer } from '../rendering/unitRenderer.js'
+import { preloadRocketTankImage } from '../rendering/rocketTankImageRenderer.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -57,6 +59,8 @@ export const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
 export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 const DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY = 'rts-desktop-edge-autoscroll-enabled'
+const SELECTION_HUD_MODE_STORAGE_KEY = 'rts-selection-hud-mode'
+const SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY = 'rts-selection-hud-bar-thickness'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -64,6 +68,16 @@ function sanitizeMapDimension(value, fallback) {
     return Math.max(MIN_MAP_TILES, parsed)
   }
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
+}
+
+function sanitizeSelectionHudBarThickness(value, fallback = 4) {
+  const parsed = parseInt(value, 10)
+  if (Number.isFinite(parsed)) {
+    return Math.max(1, Math.min(8, parsed))
+  }
+
+  const safeFallback = Number.isFinite(fallback) ? Math.floor(fallback) : 4
+  return Math.max(1, Math.min(8, safeFallback))
 }
 
 function parseStartupMapOverrides() {
@@ -228,6 +242,24 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     window.logger.warn('Failed to load desktop edge auto-scroll setting from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudMode = localStorage.getItem(SELECTION_HUD_MODE_STORAGE_KEY)
+    if (storedSelectionHudMode === 'legacy' || storedSelectionHudMode === 'modern' || storedSelectionHudMode === 'modern-no-border' || storedSelectionHudMode === 'modern-donut') {
+      gameState.selectionHudMode = storedSelectionHudMode
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD mode from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudBarThickness = localStorage.getItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY)
+    if (storedSelectionHudBarThickness !== null) {
+      gameState.selectionHudBarThickness = sanitizeSelectionHudBarThickness(storedSelectionHudBarThickness, gameState.selectionHudBarThickness)
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD bar thickness from localStorage:', e)
   }
 }
 
@@ -567,9 +599,70 @@ class Game {
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const edgeAutoscrollCheckbox = document.getElementById('desktopEdgeAutoscrollToggle')
+    const selectionHudModeSelect = document.getElementById('selectionHudModeSelect')
+    const selectionHudBarThicknessInput = document.getElementById('selectionHudBarThicknessInput')
+    const selectionHudPreviewCanvas = document.getElementById('selectionHudPreviewCanvas')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
+    const previewRenderer = new UnitRenderer()
+
+    const renderSelectionHudPreview = () => {
+      if (!selectionHudPreviewCanvas) return
+
+      const ctx = selectionHudPreviewCanvas.getContext('2d')
+      if (!ctx) return
+
+      const mode = selectionHudModeSelect?.value || gameState.selectionHudMode || 'modern'
+      const barThickness = sanitizeSelectionHudBarThickness(
+        selectionHudBarThicknessInput?.value,
+        gameState.selectionHudBarThickness
+      )
+      gameState.selectionHudMode = mode
+      gameState.selectionHudBarThickness = barThickness
+
+      const canvasWidth = selectionHudPreviewCanvas.width
+      const canvasHeight = selectionHudPreviewCanvas.height
+      const centerX = Math.floor(canvasWidth / 2)
+      const centerY = Math.floor((canvasHeight / 2) + 8)
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+      ctx.fillStyle = '#0F131A'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      const previewUnit = {
+        id: 'settings-hud-preview-rocket',
+        owner: 'player',
+        type: 'rocketTank',
+        selected: true,
+        x: centerX - (TILE_SIZE / 2),
+        y: centerY - (TILE_SIZE / 2),
+        direction: -Math.PI / 3,
+        health: 70,
+        maxHealth: 100,
+        gas: 60,
+        maxGas: 100,
+        ammunition: 7,
+        maxAmmunition: 10,
+        level: 2,
+        experience: 1200,
+        baseCost: 2000,
+        crew: {
+          driver: true,
+          gunner: true,
+          loader: true,
+          commander: true
+        }
+      }
+
+      const previewScrollOffset = { x: 0, y: 0 }
+      previewRenderer.renderUnitBase(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
+      previewRenderer.renderUnitOverlay(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
+    }
+
+    preloadRocketTankImage(() => {
+      renderSelectionHudPreview()
+    })
 
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
       mapSettingsToggle.addEventListener('click', () => {
@@ -622,6 +715,16 @@ class Game {
       edgeAutoscrollCheckbox.checked = DESKTOP_EDGE_AUTOSCROLL_ENABLED
     }
 
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.value = gameState.selectionHudMode || 'modern'
+    }
+
+    if (selectionHudBarThicknessInput) {
+      selectionHudBarThicknessInput.value = sanitizeSelectionHudBarThickness(gameState.selectionHudBarThickness, 4)
+    }
+
+    renderSelectionHudPreview()
+
     const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
     if (showEnemyResourcesCheckbox) {
       showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
@@ -663,6 +766,42 @@ class Game {
           window.logger.warn('Failed to save desktop edge auto-scroll setting to localStorage:', err)
         }
       })
+    }
+
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.addEventListener('change', (e) => {
+        const nextMode = e.target.value
+        if (nextMode !== 'legacy' && nextMode !== 'modern' && nextMode !== 'modern-no-border' && nextMode !== 'modern-donut') {
+          return
+        }
+        gameState.selectionHudMode = nextMode
+        try {
+          localStorage.setItem(SELECTION_HUD_MODE_STORAGE_KEY, nextMode)
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD mode to localStorage:', err)
+        }
+        renderSelectionHudPreview()
+      })
+    }
+
+    if (selectionHudBarThicknessInput) {
+      const applyHudBarThickness = () => {
+        const nextThickness = sanitizeSelectionHudBarThickness(
+          selectionHudBarThicknessInput.value,
+          gameState.selectionHudBarThickness
+        )
+        selectionHudBarThicknessInput.value = nextThickness
+        gameState.selectionHudBarThickness = nextThickness
+        try {
+          localStorage.setItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY, nextThickness.toString())
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD bar thickness to localStorage:', err)
+        }
+        renderSelectionHudPreview()
+      }
+
+      selectionHudBarThicknessInput.addEventListener('input', applyHudBarThickness)
+      selectionHudBarThicknessInput.addEventListener('change', applyHudBarThickness)
     }
 
     if (cheatMenuBtn) {

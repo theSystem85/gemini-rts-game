@@ -765,6 +765,26 @@
               <input type="checkbox" id="desktopEdgeAutoscrollToggle">
               <span>Enable desktop edge auto-scroll</span>
             </label>
+            <div class="config-modal__hud-settings-row">
+              <div class="config-modal__hud-settings-controls">
+                <label class="config-modal__field">
+                  <span>Unit selection HUD style:</span>
+                  <select id="selectionHudModeSelect" class="config-modal__select">
+                    <option value="legacy">Classic (pre-refactor)</option>
+                    <option value="modern">Modern (outlined)</option>
+                    <option value="modern-no-border">Modern (corner crew, no border)</option>
+                    <option value="modern-donut">Modern (donut arcs + edge crew)</option>
+                  </select>
+                </label>
+                <label class="config-modal__field">
+                  <span>HUD bar thickness (px):</span>
+                  <input type="number" id="selectionHudBarThicknessInput" min="1" max="8" step="1" value="4">
+                </label>
+              </div>
+              <div class="config-modal__hud-preview-wrap" aria-label="Selected tank HUD preview">
+                <canvas id="selectionHudPreviewCanvas" width="180" height="120"></canvas>
+              </div>
+            </div>
           </div>
           <div class="config-modal__section">
             <h3 class="config-modal__section-title">LLM Strategic AI</h3>
