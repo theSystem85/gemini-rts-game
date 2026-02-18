@@ -40,5 +40,8 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 11. Add a fourth HUD mode featuring four quarter-donut status arcs (3px thickness) around the selected unit, with crew symbols centered on top/right/bottom/left edges and at least 3px gap before adjacent arcs begin.
 12. Refine mode 3 so crew symbols are centered on each rectangle corner centerpoint and refine mode 2 bar alignment so bars are centered on the yellow outline.
 13. Render a live selected-tank HUD preview directly in the Settings modal to the right of the HUD style selector.
-14. Add a HUD bar thickness number input in Settings with default **3px**, and persist/restore this value through local storage on startup.
+14. Add a HUD bar thickness number input in Settings with default **4px**, and persist/restore this value through local storage on startup.
+15. Update the default HUD bar thickness to **4px** while keeping user-configurable persistence.
+16. The settings HUD preview must use a real **rocket tank** unit image and match in-map HUD rendering behavior for HUD modes 1 and 2.
+17. In HUD mode 4, shift XP stars further upward and slightly right so they center better with the top crew indicator.
 

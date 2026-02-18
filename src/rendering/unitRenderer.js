@@ -344,7 +344,7 @@ export class UnitRenderer {
   getSelectionHudBarThickness() {
     const parsed = parseInt(gameState.selectionHudBarThickness, 10)
     if (!Number.isFinite(parsed)) {
-      return 3
+      return 4
     }
     return Math.max(1, Math.min(8, parsed))
   }
@@ -1048,11 +1048,11 @@ export class UnitRenderer {
     const starSize = 6
     const starSpacing = 8
     const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
-    const startX = centerX - totalWidth / 2
+    const startX = (centerX - totalWidth / 2) + (this.isDonutSelectionHud() ? 2 : 0)
     const starY = this.isLegacySelectionHud()
       ? unit.y - 20 - scrollOffset.y
       : this.isDonutSelectionHud()
-        ? hudBounds.top - 8
+        ? hudBounds.top - 12
         : hudBounds.top - 3
     ctx.save()
     ctx.fillStyle = '#FFD700' // Gold color for stars

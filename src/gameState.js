@@ -201,7 +201,7 @@ export const gameState = {
   selectionHudMode: 'modern',
 
   // Selected unit HUD bar thickness (in px)
-  selectionHudBarThickness: 3,
+  selectionHudBarThickness: 4,
 
   // Index for round-robin vehicle spawning
   nextVehicleFactoryIndex: 0,

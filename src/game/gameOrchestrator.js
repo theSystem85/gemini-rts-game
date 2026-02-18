@@ -50,6 +50,8 @@ import { addMoneyIndicator } from '../ui/moneyBar.js'
 import { closeMobileSidebarModal, isMobileSidebarModalVisible } from '../ui/mobileLayout.js'
 import { resetLlmUsage } from '../ai/llmUsage.js'
 import { runMeasuredTask, scheduleAfterNextPaint, scheduleIdleTask } from '../startupScheduler.js'
+import { UnitRenderer } from '../rendering/unitRenderer.js'
+import { preloadRocketTankImage } from '../rendering/rocketTankImageRenderer.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -68,13 +70,13 @@ function sanitizeMapDimension(value, fallback) {
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
 }
 
-function sanitizeSelectionHudBarThickness(value, fallback = 3) {
+function sanitizeSelectionHudBarThickness(value, fallback = 4) {
   const parsed = parseInt(value, 10)
   if (Number.isFinite(parsed)) {
     return Math.max(1, Math.min(8, parsed))
   }
 
-  const safeFallback = Number.isFinite(fallback) ? Math.floor(fallback) : 3
+  const safeFallback = Number.isFinite(fallback) ? Math.floor(fallback) : 4
   return Math.max(1, Math.min(8, safeFallback))
 }
 
@@ -603,6 +605,7 @@ class Game {
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
+    const previewRenderer = new UnitRenderer()
 
     const renderSelectionHudPreview = () => {
       if (!selectionHudPreviewCanvas) return
@@ -615,153 +618,51 @@ class Game {
         selectionHudBarThicknessInput?.value,
         gameState.selectionHudBarThickness
       )
-      const donutThickness = Math.max(1, barThickness - 2)
+      gameState.selectionHudMode = mode
+      gameState.selectionHudBarThickness = barThickness
 
       const canvasWidth = selectionHudPreviewCanvas.width
       const canvasHeight = selectionHudPreviewCanvas.height
       const centerX = Math.floor(canvasWidth / 2)
-      const centerY = Math.floor(canvasHeight / 2)
-      const halfHud = 22
-      const hudBounds = {
-        left: centerX - halfHud,
-        right: centerX + halfHud,
-        top: centerY - halfHud,
-        bottom: centerY + halfHud,
-        width: halfHud * 2,
-        height: halfHud * 2
-      }
+      const centerY = Math.floor((canvasHeight / 2) + 8)
 
       ctx.clearRect(0, 0, canvasWidth, canvasHeight)
       ctx.fillStyle = '#0F131A'
       ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-      if (mode !== 'modern-no-border' && mode !== 'modern-donut') {
-        ctx.strokeStyle = '#FF0'
-        ctx.lineWidth = 1
-        ctx.strokeRect(hudBounds.left, hudBounds.top, hudBounds.width, hudBounds.height)
+      const previewUnit = {
+        id: 'settings-hud-preview-rocket',
+        owner: 'player',
+        type: 'rocketTank',
+        selected: true,
+        x: centerX - (TILE_SIZE / 2),
+        y: centerY - (TILE_SIZE / 2),
+        direction: -Math.PI / 3,
+        health: 70,
+        maxHealth: 100,
+        gas: 60,
+        maxGas: 100,
+        ammunition: 7,
+        maxAmmunition: 10,
+        level: 2,
+        experience: 1200,
+        baseCost: 2000,
+        crew: {
+          driver: true,
+          gunner: true,
+          loader: true,
+          commander: true
+        }
       }
 
-      const drawRectBar = (edge, ratio, color) => {
-        const barSpan = TILE_SIZE * 0.75
-        ctx.fillStyle = '#3A3A3A'
-        if (edge === 'top' || edge === 'bottom') {
-          const y = edge === 'top'
-            ? hudBounds.top - (barThickness / 2)
-            : hudBounds.bottom - (barThickness / 2)
-          const barX = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
-          ctx.fillRect(barX, y, barSpan, barThickness)
-          ctx.fillStyle = color
-          ctx.fillRect(barX, y, barSpan * ratio, barThickness)
-          return
-        }
-
-        const x = edge === 'left'
-          ? hudBounds.left - (barThickness / 2)
-          : hudBounds.right - (barThickness / 2)
-        const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
-        ctx.fillRect(x, barY, barThickness, barSpan)
-        const fillHeight = barSpan * ratio
-        ctx.fillStyle = color
-        ctx.fillRect(x, barY + barSpan - fillHeight, barThickness, fillHeight)
-      }
-
-      const drawDonutBar = (edge, ratio, color) => {
-        const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
-        const crewSize = 5
-        const crewGap = 3
-        const crewHalfSpanAngle = ((crewSize / 2) + crewGap) / donutRadius
-        const arcRanges = {
-          left: [Math.PI + crewHalfSpanAngle, (Math.PI * 1.5) - crewHalfSpanAngle],
-          top: [(Math.PI * 1.5) + crewHalfSpanAngle, (Math.PI * 2) - crewHalfSpanAngle],
-          right: [crewHalfSpanAngle, (Math.PI / 2) - crewHalfSpanAngle],
-          bottom: [(Math.PI / 2) + crewHalfSpanAngle, Math.PI - crewHalfSpanAngle]
-        }
-        const selectedArc = arcRanges[edge]
-        if (!selectedArc) return
-
-        const [startAngle, endAngle] = selectedArc
-        const sweep = endAngle - startAngle
-
-        ctx.save()
-        ctx.lineCap = 'round'
-        ctx.lineWidth = donutThickness
-        ctx.strokeStyle = '#3A3A3A'
-        ctx.beginPath()
-        ctx.arc(centerX, centerY, donutRadius, startAngle, endAngle)
-        ctx.stroke()
-
-        if (ratio > 0) {
-          ctx.strokeStyle = color
-          ctx.beginPath()
-          ctx.arc(centerX, centerY, donutRadius, startAngle, startAngle + (sweep * ratio))
-          ctx.stroke()
-        }
-        ctx.restore()
-      }
-
-      const drawBar = mode === 'modern-donut' ? drawDonutBar : drawRectBar
-      drawBar('top', 0.65, '#67C23A')
-      drawBar('right', 0.55, '#4A90E2')
-      drawBar('left', 0.7, '#FFA500')
-      drawBar('bottom', 0.5, '#B084F5')
-
-      ctx.fillStyle = '#5B6D7D'
-      ctx.fillRect(centerX - 12, centerY - 9, 24, 18)
-      ctx.fillStyle = '#33414D'
-      ctx.fillRect(centerX - 7, centerY - 13, 14, 8)
-      ctx.fillStyle = '#97A6B3'
-      ctx.fillRect(centerX - 2, centerY - 20, 4, 8)
-
-      const crewMarkers = [
-        { x: centerX, y: centerY - 24, c: '#006400', t: 'C' },
-        { x: centerX + 24, y: centerY, c: '#F00', t: 'G' },
-        { x: centerX, y: centerY + 24, c: '#FFA500', t: 'L' },
-        { x: centerX - 24, y: centerY, c: '#00F', t: 'D' }
-      ]
-
-      ctx.save()
-      ctx.font = '4px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      crewMarkers.forEach(marker => {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
-        ctx.fillRect(marker.x - 4, marker.y - 5, 8, 8)
-        ctx.fillStyle = marker.c
-        ctx.fillRect(marker.x - 3, marker.y - 4, 6, 6)
-        ctx.fillStyle = '#FFF'
-        ctx.fillText(marker.t, marker.x, marker.y - 1)
-      })
-      ctx.restore()
-
-      const starY = mode === 'modern-donut' ? hudBounds.top - 8 : hudBounds.top - 3
-      const starSize = 6
-      const starSpacing = 8
-      const stars = 2
-      const totalWidth = (stars * starSpacing) - (starSpacing - starSize)
-      const startX = centerX - totalWidth / 2
-      ctx.fillStyle = '#FFD700'
-      ctx.strokeStyle = '#FFA500'
-      ctx.lineWidth = 1
-      for (let i = 0; i < stars; i++) {
-        const starX = startX + (i * starSpacing)
-        ctx.beginPath()
-        for (let j = 0; j < 5; j++) {
-          const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2
-          const outerRadius = starSize / 2
-          const innerRadius = starSize / 4
-          if (j === 0) {
-            ctx.moveTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
-          } else {
-            ctx.lineTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
-          }
-          const innerAngle = angle + (2 * Math.PI) / 10
-          ctx.lineTo(starX + innerRadius * Math.cos(innerAngle), starY + innerRadius * Math.sin(innerAngle))
-        }
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-      }
+      const previewScrollOffset = { x: 0, y: 0 }
+      previewRenderer.renderUnitBase(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
+      previewRenderer.renderUnitOverlay(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
     }
+
+    preloadRocketTankImage(() => {
+      renderSelectionHudPreview()
+    })
 
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
       mapSettingsToggle.addEventListener('click', () => {
@@ -819,7 +720,7 @@ class Game {
     }
 
     if (selectionHudBarThicknessInput) {
-      selectionHudBarThicknessInput.value = sanitizeSelectionHudBarThickness(gameState.selectionHudBarThickness, 3)
+      selectionHudBarThicknessInput.value = sanitizeSelectionHudBarThickness(gameState.selectionHudBarThickness, 4)
     }
 
     renderSelectionHudPreview()
