@@ -62,42 +62,7 @@ function clampRangeToViewport(rangePx, centerX, centerY, direction) {
 }
 
 function computeApacheRemoteAim(unit, direction) {
-  const centerX = unit.x + TILE_SIZE / 2
-  const centerY = unit.y + TILE_SIZE / 2
-  const baseRange = getApacheRemoteRange(unit)
-  const viewportLimitedRange = clampRangeToViewport(baseRange, centerX, centerY, direction)
-
-  const cosDir = Math.cos(direction)
-  const sinDir = Math.sin(direction)
-  let targetX = centerX + cosDir * viewportLimitedRange
-  let targetY = centerY + sinDir * viewportLimitedRange
-
-  const mapGrid = gameState.mapGrid || []
-  if (Array.isArray(mapGrid) && mapGrid.length > 0 && Array.isArray(mapGrid[0])) {
-    const mapWidth = mapGrid[0].length * TILE_SIZE
-    const mapHeight = mapGrid.length * TILE_SIZE
-    const minX = TILE_SIZE * 0.5
-    const minY = TILE_SIZE * 0.5
-    const maxX = Math.max(minX, mapWidth - TILE_SIZE * 0.5)
-    const maxY = Math.max(minY, mapHeight - TILE_SIZE * 0.5)
-    const clampedX = Math.max(minX, Math.min(targetX, maxX))
-    const clampedY = Math.max(minY, Math.min(targetY, maxY))
-    targetX = clampedX
-    targetY = clampedY
-  }
-
-  const actualRange = Math.min(
-    viewportLimitedRange,
-    Math.hypot(targetX - centerX, targetY - centerY)
-  )
-
-  return {
-    x: targetX,
-    y: targetY,
-    tileX: Math.max(0, Math.floor(targetX / TILE_SIZE)),
-    tileY: Math.max(0, Math.floor(targetY / TILE_SIZE)),
-    range: actualRange
-  }
+  return computeRemoteAim(unit, direction, getApacheRemoteRange(unit))
 }
 
 function getApacheRemoteRange(unit) {
@@ -120,9 +85,12 @@ function getRocketTankRemoteRange(unit) {
 
 // Compute remote aim target for rocket tank (similar to Apache)
 function computeRocketTankRemoteAim(unit, direction) {
+  return computeRemoteAim(unit, direction, getRocketTankRemoteRange(unit))
+}
+
+function computeRemoteAim(unit, direction, baseRange) {
   const centerX = unit.x + TILE_SIZE / 2
   const centerY = unit.y + TILE_SIZE / 2
-  const baseRange = getRocketTankRemoteRange(unit)
   const viewportLimitedRange = clampRangeToViewport(baseRange, centerX, centerY, direction)
 
   const cosDir = Math.cos(direction)

@@ -204,7 +204,7 @@ export class EventHandlers {
     // Add building repair handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
       if (gameState.mapEditMode) return
-      buildingRepairHandler(e, gameState, gameCanvas, gameState.mapGrid, this.units, this.factories, productionQueue, this.moneyEl)
+      buildingRepairHandler(e, gameState, gameCanvas)
     })
 
     // Add building sell handling to the canvas click event
@@ -300,10 +300,11 @@ export class EventHandlers {
 
       // Get building data
       const buildingType = gameState.currentBuildingType
+      const placementMapGrid = gameState.mapGrid || this.mapGrid
 
       try {
         // Check if placement is valid - pass buildings and factories arrays
-        if (canPlaceBuilding(buildingType, tileX, tileY, gameState.mapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
+        if (canPlaceBuilding(buildingType, tileX, tileY, placementMapGrid, this.units, gameState.buildings, this.factories, gameState.humanPlayer)) {
           // Create and place the building
           const newBuilding = createBuilding(buildingType, tileX, tileY)
 
@@ -318,7 +319,7 @@ export class EventHandlers {
           updateDangerZoneMaps(gameState)
 
           // Mark building tiles in the map grid
-          placeBuilding(newBuilding, this.mapGrid)
+          placeBuilding(newBuilding, placementMapGrid)
 
           // Update power supply
           updatePowerSupply(gameState.buildings, gameState)

@@ -515,53 +515,21 @@ export function handleRecoveryTankRepairCommand(handler, selectedUnits, targetUn
 }
 
 export function handleRecoveryWreckTowCommand(handler, selectedUnits, wreck, mapGrid, options = {}) {
-  if (!wreck) return
-  const { append = false, suppressNotifications = false } = options
-  const recoveryTanks = selectedUnits.filter(u => handler.canRecoveryTankRepair ? handler.canRecoveryTankRepair(u) : canRecoveryTankRepair(u))
-  if (recoveryTanks.length === 0) return
-
-  if (append) {
-    const queuedEntry = { id: wreck.id, isWreckTarget: true, queueAction: 'tow' }
-    let anyQueued = false
-    recoveryTanks.some(tank => {
-      const result = handler.setUtilityQueue(tank, [queuedEntry], UTILITY_QUEUE_MODES.REPAIR, mapGrid, {
-        append: true,
-        suppressNotifications: true
-      })
-      if (result.addedTargets.length > 0 || result.started) {
-        anyQueued = true
-        return true
-      }
-      return false
-    })
-
-    if (anyQueued && !suppressNotifications) {
-      playSound('movement', 0.5)
-    } else if (!anyQueued && !suppressNotifications) {
-      showNotification('All selected recovery tanks are busy.', 2000)
-    }
-    return
-  }
-
-  const availableTank = recoveryTanks.find(tank => !tank.recoveryTask || tank.recoveryTask.wreckId === wreck.id)
-  if (!availableTank) {
-    if (!suppressNotifications) {
-      showNotification('All selected recovery tanks are busy.', 2000)
-    }
-    return
-  }
-
-  handler.assignRecoveryTankToWreck(availableTank, wreck, mapGrid, { mode: 'tow', suppressNotifications })
+  handleRecoveryWreckCommand(handler, selectedUnits, wreck, mapGrid, options, 'tow')
 }
 
 export function handleRecoveryWreckRecycleCommand(handler, selectedUnits, wreck, mapGrid, options = {}) {
+  handleRecoveryWreckCommand(handler, selectedUnits, wreck, mapGrid, options, 'recycle')
+}
+
+function handleRecoveryWreckCommand(handler, selectedUnits, wreck, mapGrid, options = {}, mode) {
   if (!wreck) return
   const { append = false, suppressNotifications = false } = options
   const recoveryTanks = selectedUnits.filter(u => handler.canRecoveryTankRepair ? handler.canRecoveryTankRepair(u) : canRecoveryTankRepair(u))
   if (recoveryTanks.length === 0) return
 
   if (append) {
-    const queuedEntry = { id: wreck.id, isWreckTarget: true, queueAction: 'recycle' }
+    const queuedEntry = { id: wreck.id, isWreckTarget: true, queueAction: mode }
     let anyQueued = false
     recoveryTanks.some(tank => {
       const result = handler.setUtilityQueue(tank, [queuedEntry], UTILITY_QUEUE_MODES.REPAIR, mapGrid, {
@@ -591,7 +559,7 @@ export function handleRecoveryWreckRecycleCommand(handler, selectedUnits, wreck,
     return
   }
 
-  handler.assignRecoveryTankToWreck(availableTank, wreck, mapGrid, { mode: 'recycle', suppressNotifications })
+  handler.assignRecoveryTankToWreck(availableTank, wreck, mapGrid, { mode, suppressNotifications })
 }
 
 export function handleDamagedUnitToRecoveryTankCommand(handler, selectedUnits, recoveryTank, mapGrid) {

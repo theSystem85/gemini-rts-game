@@ -1,4 +1,5 @@
 ## Bugs
+- [x] ✅ Fix multiplayer full-assault auto building placement regression after dedup refactor: `EventHandlers.handleBuildingPlacement` now uses one authoritative grid reference (`gameState.mapGrid || this.mapGrid`) for both `canPlaceBuilding` and `placeBuilding`, preventing validation/mutation grid mismatch.
 - [x] ✅ Fix `npm run lint:fix:changed` filename truncation bug where root-level unstaged files could lose their first character (e.g. `playwright.config.js` became `laywright.config.js`) due to trimming git porcelain status lines before slicing.
 - [x] ✅ Fix multiplayer remote-party economy sync: remote human parties now receive host-authoritative money updates (harvester income + host `give [party] [amount]` cheats) via snapshot sync.
 - [x] ✅ When the number of players is changed in the map settings and the "shuffle map" button or the restart game button is pressed, ensure that the multiplayer section of the sidebar is adjusted to show the correct number of players.

@@ -1,14 +1,10 @@
 import { TILE_SIZE } from './config.js'
-import { canPlaceBuilding, createBuilding, placeBuilding, updatePowerSupply, calculateRepairCost } from './buildings.js'
+import { calculateRepairCost } from './buildings.js'
 import { playSound } from './sound.js'
 import { showNotification } from './ui/notifications.js'
-import { buildingData } from './buildings.js'
-import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
-import { savePlayerBuildPatterns } from './savePlayerBuildPatterns.js'
 import { updateMoneyBar } from './ui/moneyBar.js'
-import { broadcastBuildingPlace } from './network/gameCommandSync.js'
 
-export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, factories, productionQueue, _moneyEl) {
+export function buildingRepairHandler(e, gameState, gameCanvas) {
   // If repair mode is active, check for buildings and factories to repair
   if (gameState.repairMode) {
     const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
@@ -122,93 +118,5 @@ export function buildingRepairHandler(e, gameState, gameCanvas, mapGrid, units, 
 
     showNotification('No player building found to repair.')
     return
-  }
-
-  if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
-    const mouseX = e.clientX - gameCanvas.getBoundingClientRect().left + gameState.scrollOffset.x
-    const mouseY = e.clientY - gameCanvas.getBoundingClientRect().top + gameState.scrollOffset.y
-
-    // Convert to tile coordinates
-    const tileX = Math.floor(mouseX / TILE_SIZE)
-    const tileY = Math.floor(mouseY / TILE_SIZE)
-
-    // Get building data
-    const buildingType = gameState.currentBuildingType
-
-    try {
-      // Check if placement is valid - pass buildings and factories arrays
-      if (canPlaceBuilding(buildingType, tileX, tileY, mapGrid, units, gameState.buildings, factories, gameState.humanPlayer)) {
-        // Create and place the building
-        const newBuilding = createBuilding(buildingType, tileX, tileY)
-
-        // Add owner property to the building
-        newBuilding.owner = gameState.humanPlayer
-
-        // Add the building to gameState.buildings
-        if (!gameState.buildings) {
-          gameState.buildings = []
-        }
-        gameState.buildings.push(newBuilding)
-        updateDangerZoneMaps(gameState)
-
-        // Mark building tiles in the map grid
-        placeBuilding(newBuilding, mapGrid)
-
-        // Update power supply
-        updatePowerSupply(gameState.buildings, gameState)
-
-        // Broadcast building placement to other players in multiplayer
-        broadcastBuildingPlace(buildingType, tileX, tileY, gameState.humanPlayer)
-
-        // Exit placement mode
-        gameState.buildingPlacementMode = false
-        gameState.currentBuildingType = null
-
-        // Remove ready-for-placement class from the button
-        document.querySelectorAll('.ready-for-placement').forEach(button => {
-          button.classList.remove('ready-for-placement')
-        })
-
-        // Remove the placed building from the completed buildings array
-        const completedBuildingIndex = productionQueue.completedBuildings.findIndex(
-          building => building.type === buildingType
-        )
-        let placedBuildingButton = null
-        if (completedBuildingIndex !== -1) {
-          placedBuildingButton = productionQueue.completedBuildings[completedBuildingIndex].button
-          productionQueue.completedBuildings.splice(completedBuildingIndex, 1)
-        }
-
-        // Update the ready counter for the button that had a building placed
-        if (placedBuildingButton) {
-          productionQueue.updateReadyBuildingCounter(placedBuildingButton)
-        }
-
-        // Restore ready-for-placement class for buttons that still have completed buildings
-        productionQueue.completedBuildings.forEach(building => {
-          if (!building.button.classList.contains('ready-for-placement')) {
-            building.button.classList.add('ready-for-placement')
-          }
-          // Update ready building counter for remaining buildings
-          productionQueue.updateReadyBuildingCounter(building.button)
-        })
-
-        // Play placement sound
-        playSound('buildingPlaced')
-
-        // Show notification
-        showNotification(`${buildingData[buildingType].displayName} constructed`)
-
-        // Save player building patterns
-        savePlayerBuildPatterns(buildingType)
-      } else {
-        // Play error sound for invalid placement
-        playSound('constructionObstructed', 1.0, 0, true)
-      }
-    } catch (error) {
-      console.error('Error during building placement:', error)
-      showNotification('Error placing building: ' + error.message, 5000)
-      playSound('error')
-    }
   }
 }

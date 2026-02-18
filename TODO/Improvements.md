@@ -1,5 +1,5 @@
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
-- [ ] JSInspect redundancy elimination in `src/`: refactor repeated logic into reusable helpers until `npx jsinspect "src"` reports zero matches (baseline 52 groups, current 37 after implementation batches on input/UI/mine/retreat paths).
+- [ ] JSCPD redundancy elimination in `src/`: refactor repeated logic into reusable helpers based on `report/html/index.html` + `report/html/jscpd-report.json` (baseline 152 clone pairs / 1775 duplicated lines; current 146 clone pairs / 1627 duplicated lines after deduping building repair/placement overlap, recovery tow/recycle command flow, and shared remote aim logic).
 - [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.
 - [x] README follow-up: add section icons and document `netlify dev` as an optional local multiplayer test path when Netlify CLI is installed globally.
 - [x] Add desktop + mobile screenshots to README, converting docs images to WebP (quality 85) and removing the original PNGs.
