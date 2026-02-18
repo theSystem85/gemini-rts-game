@@ -1,4 +1,5 @@
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
+- [x] Add a proper standard MIT license to the project (`LICENSE`), add `license: MIT` in package metadata, and mention license in README.
 - [x] HUD mode 4 (donut) polish: remove yellow selection box, make donut bars 2px thinner, and raise XP stars to avoid overlap with the top HUD arc.
 - [x] Add a selected-tank HUD preview inside Settings next to the HUD style selector, and add a persistent HUD bar-thickness input (default 3px) restored from localStorage on load.
 - [x] Refine HUD settings preview to use a real rocket tank and mirror in-map HUD rendering for modes 1/2; set default HUD bar thickness to 4px; move HUD4 XP stars higher and slightly right.

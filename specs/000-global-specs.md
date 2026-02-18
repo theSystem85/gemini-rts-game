@@ -92,3 +92,9 @@ Ground and air movement logic is split across modular files to keep each under 1
 - Sound effects and music must load lazily (on demand) when first needed, not during initial browser load.
 - Startup code must not prefetch or preload the full sound library.
 - Runtime audio caching is allowed after first use to avoid repeat network fetches.
+
+## Licensing
+
+- The repository is licensed under the MIT License.
+- The canonical license text must be kept in the root `LICENSE` file.
+- Package metadata must declare `"license": "MIT"` in `package.json`.

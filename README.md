@@ -10,6 +10,10 @@ This game is a test for me to work with frontier coding LLMs (mostly openAI and 
 npm i
 npm run dev
 
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).
+
 ## Initial Prompt
 
 Here is the initial prompt that needs to be refined over and over again to get the best result for an initial generation of the code.
