@@ -93,6 +93,20 @@
   cursor: pointer;
 }
 
+
+.performance-dialog .perf-frame-limiter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  user-select: none;
+}
+
+.performance-dialog .perf-frame-limiter input {
+  margin: 0;
+}
+
 .perf-llm-summary {
   margin-bottom: 8px;
   padding: 6px;

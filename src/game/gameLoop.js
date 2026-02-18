@@ -36,6 +36,7 @@ export class GameLoop {
     this.allAssetsLoaded = false
     this.running = false
     this.animationId = null
+    this.frameTimeoutId = null
     this.fpsDisplay = new FPSDisplay()
     this.forceRender = false
 
@@ -82,9 +83,18 @@ export class GameLoop {
 
   stop() {
     this.running = false
+    this.cancelScheduledFrame()
+  }
+
+  cancelScheduledFrame() {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId)
       this.animationId = null
+    }
+
+    if (this.frameTimeoutId) {
+      clearTimeout(this.frameTimeoutId)
+      this.frameTimeoutId = null
     }
   }
 
@@ -108,10 +118,19 @@ export class GameLoop {
   }
 
   scheduleNextFrame() {
-    if (!this.running || this.animationId) {
+    if (!this.running || this.animationId || this.frameTimeoutId) {
       return
     }
-    this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+
+    if (gameState.frameLimiterEnabled !== false) {
+      this.animationId = requestAnimationFrame((timestamp) => this.animate(timestamp))
+      return
+    }
+
+    this.frameTimeoutId = setTimeout(() => {
+      this.frameTimeoutId = null
+      this.animate(performance.now())
+    }, 0)
   }
 
   hasActiveScrollActivity() {
@@ -198,6 +217,7 @@ export class GameLoop {
     }
 
     this.animationId = null
+    this.frameTimeoutId = null
 
     // Get current time and canvas contexts (used throughout the function)
     const now = timestamp || performance.now()
@@ -376,17 +396,7 @@ export class GameLoop {
       this.lastGameTimeUpdate = now
     }
 
-    // Use setTimeout to ensure we don't overload the browser
-    if (this.units.length > 20) {
-      // For large number of units, use setTimeout to give browser breathing room
-      setTimeout(() => {
-        if (this.running) {
-          this.scheduleNextFrame()
-        }
-      }, 5)
-    } else {
-      this.scheduleNextFrame()
-    }
+    this.scheduleNextFrame()
   }, false, 'animate')
 
   // Legacy game loop for compatibility (if needed)
@@ -473,7 +483,14 @@ export class GameLoop {
     }
 
     if (this.running) {
-      this.animationId = requestAnimationFrame((timestamp) => this.legacyGameLoop(timestamp))
+      if (gameState.frameLimiterEnabled !== false) {
+        this.animationId = requestAnimationFrame((nextTimestamp) => this.legacyGameLoop(nextTimestamp))
+      } else {
+        this.frameTimeoutId = setTimeout(() => {
+          this.frameTimeoutId = null
+          this.legacyGameLoop(performance.now())
+        }, 0)
+      }
     }
   }
 }

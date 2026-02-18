@@ -11,6 +11,10 @@ class PerformanceDialog {
           <button id="perfSortName">Name</button>
           <button id="perfSortDuration">Avg</button>
           <button id="perfReset">Reset</button>
+          <label class="perf-frame-limiter">
+            <input id="perfFrameLimiter" type="checkbox" checked>
+            Frame limiter
+          </label>
         </div>
         <div id="perfContent"></div>
       `
@@ -26,6 +30,13 @@ class PerformanceDialog {
       document.getElementById('perfReset').addEventListener('click', () => {
         this.resetStatistics()
       })
+      const frameLimiterInput = document.getElementById('perfFrameLimiter')
+      if (frameLimiterInput) {
+        frameLimiterInput.checked = gameState.frameLimiterEnabled !== false
+        frameLimiterInput.addEventListener('change', (event) => {
+          gameState.frameLimiterEnabled = event.target.checked
+        })
+      }
     }
   }
 
@@ -34,6 +45,10 @@ class PerformanceDialog {
     gameState.performanceVisible = !gameState.performanceVisible
     if (gameState.performanceVisible) {
       this.container.classList.add('visible')
+      const frameLimiterInput = document.getElementById('perfFrameLimiter')
+      if (frameLimiterInput) {
+        frameLimiterInput.checked = gameState.frameLimiterEnabled !== false
+      }
       this.start()
     } else {
       this.container.classList.remove('visible')

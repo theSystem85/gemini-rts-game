@@ -121,9 +121,11 @@ export class FPSDisplay {
 
     if (gameState.fpsVisible) {
       if (this.fpsValueEl) {
-        this.fpsValueEl.textContent = `FPS: ${this.fps}`
+        const modeLabel = gameState.frameLimiterEnabled !== false ? 'capped' : 'uncapped'
+        this.fpsValueEl.textContent = `FPS: ${this.fps} (${modeLabel})`
       } else {
-        this.fpsElement.textContent = `FPS: ${this.fps}`
+        const modeLabel = gameState.frameLimiterEnabled !== false ? 'capped' : 'uncapped'
+        this.fpsElement.textContent = `FPS: ${this.fps} (${modeLabel})`
       }
 
       if (this.frameTimeEl) {

@@ -134,6 +134,8 @@ beforeEach(() => {
   vi.spyOn(performance, 'now').mockReturnValue(1000)
   vi.stubGlobal('requestAnimationFrame', vi.fn(() => 101))
   vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  vi.stubGlobal('setTimeout', vi.fn(() => 202))
+  vi.stubGlobal('clearTimeout', vi.fn())
 })
 
 afterEach(() => {
@@ -200,6 +202,41 @@ describe('GameLoop', () => {
     loop.scheduleNextFrame()
 
     expect(requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
+
+  it('uses requestAnimationFrame when frame limiter is enabled', () => {
+    const loop = createLoop()
+    loop.running = true
+    gameState.frameLimiterEnabled = true
+
+    loop.scheduleNextFrame()
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
+    expect(setTimeout).not.toHaveBeenCalled()
+  })
+
+  it('uses setTimeout scheduling when frame limiter is disabled', () => {
+    const loop = createLoop()
+    loop.running = true
+    gameState.frameLimiterEnabled = false
+
+    loop.scheduleNextFrame()
+
+    expect(setTimeout).toHaveBeenCalledTimes(1)
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+    expect(loop.frameTimeoutId).toBe(202)
+  })
+
+  it('clears timeout-based scheduling on stop', () => {
+    const loop = createLoop()
+    loop.running = true
+    loop.frameTimeoutId = 303
+
+    loop.stop()
+
+    expect(clearTimeout).toHaveBeenCalledWith(303)
+    expect(loop.frameTimeoutId).toBe(null)
   })
 
   it('resumes from pause only when running', () => {
