@@ -44,4 +44,8 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 15. Update the default HUD bar thickness to **4px** while keeping user-configurable persistence.
 16. The settings HUD preview must use a real **rocket tank** unit image and match in-map HUD rendering behavior for HUD modes 1 and 2.
 17. In HUD mode 4, shift XP stars further upward and slightly right so they center better with the top crew indicator.
+## Hover micro-tooltips
+18. While hovering over a selected unit HUD, show a tiny tooltip near the cursor for the exact hovered segment.
+19. Tooltip labels must map precisely to HUD parts: `health`, `fuel`, `ammo`, `experience`, `rank stars`, and crew role markers (`commander`, `loader`, `gunner`, `driver`).
+20. Tooltip should only appear when the cursor is over a HUD segment and should remain compact/minimal to avoid obscuring gameplay.
 

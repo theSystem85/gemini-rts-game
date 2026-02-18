@@ -262,6 +262,246 @@ export class UnitRenderer {
     }
   }
 
+  isPointInRect(x, y, rect) {
+    if (!rect) return false
+    return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height
+  }
+
+  getHudBarRect(hudBounds, edge) {
+    const barThickness = this.getSelectionHudBarThickness()
+    const barSpan = TILE_SIZE * 0.75
+
+    if (edge === 'top' || edge === 'bottom') {
+      const y = edge === 'top'
+        ? hudBounds.top - (barThickness / 2)
+        : hudBounds.bottom - (barThickness / 2)
+      const x = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
+      return { x, y, width: barSpan, height: barThickness }
+    }
+
+    const x = edge === 'left'
+      ? hudBounds.left - (barThickness / 2)
+      : hudBounds.right - (barThickness / 2)
+    const y = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
+    return { x, y, width: barThickness, height: barSpan }
+  }
+
+  getCrewRects(unit, scrollOffset, hudBounds, centerX, centerY) {
+    if (!unit?.crew) return []
+
+    const size = 5
+    const rectHeight = size * 2 * 0.7
+    const aliveCrew = Object.entries(unit.crew).filter(([_role, alive]) => alive)
+    if (aliveCrew.length === 0) return []
+
+    if (this.isModernCornerCrewHud()) {
+      const anchors = {
+        driver: { cx: hudBounds.left, cy: hudBounds.top },
+        commander: { cx: hudBounds.right, cy: hudBounds.top },
+        gunner: { cx: hudBounds.left, cy: hudBounds.bottom },
+        loader: { cx: hudBounds.right, cy: hudBounds.bottom }
+      }
+      return aliveCrew.map(([role], idx) => {
+        const fallback = [
+          { cx: hudBounds.left, cy: hudBounds.top },
+          { cx: hudBounds.right, cy: hudBounds.top },
+          { cx: hudBounds.left, cy: hudBounds.bottom },
+          { cx: hudBounds.right, cy: hudBounds.bottom }
+        ][idx % 4]
+        const anchor = anchors[role] || fallback
+        return {
+          role,
+          x: anchor.cx - (size / 2),
+          y: anchor.cy - (rectHeight / 2),
+          width: size,
+          height: rectHeight
+        }
+      })
+    }
+
+    if (this.isDonutSelectionHud()) {
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const offsets = {
+        commander: { x: 0, y: -donutRadius },
+        gunner: { x: donutRadius, y: 0 },
+        loader: { x: 0, y: donutRadius },
+        driver: { x: -donutRadius, y: 0 }
+      }
+      return aliveCrew.map(([role], idx) => {
+        const fallback = [
+          { x: 0, y: -donutRadius },
+          { x: donutRadius, y: 0 },
+          { x: 0, y: donutRadius },
+          { x: -donutRadius, y: 0 }
+        ][idx % 4]
+        const offset = offsets[role] || fallback
+        const px = centerX + offset.x
+        const py = centerY + offset.y
+        return {
+          role,
+          x: px - (size / 2),
+          y: py - (rectHeight / 2),
+          width: size,
+          height: rectHeight
+        }
+      })
+    }
+
+    if (this.isLegacySelectionHud()) {
+      const baseX = unit.x - scrollOffset.x
+      const baseY = unit.y + TILE_SIZE - scrollOffset.y
+      return aliveCrew.map(([role], idx) => ({
+        role,
+        x: baseX + idx * (size + 2),
+        y: baseY - rectHeight,
+        width: size,
+        height: rectHeight
+      }))
+    }
+
+    const slotSpacing = size + 2
+    const totalCrewWidth = (aliveCrew.length * size) + ((aliveCrew.length - 1) * 2)
+    const baseX = centerX - (totalCrewWidth / 2)
+    const baseY = hudBounds.bottom + 8
+
+    return aliveCrew.map(([role], idx) => ({
+      role,
+      x: baseX + idx * slotSpacing,
+      y: baseY - rectHeight,
+      width: size,
+      height: rectHeight
+    }))
+  }
+
+  getHudHoverLabelForUnit(unit, scrollOffset, mouseScreenX, mouseScreenY) {
+    if (!unit?.selected || unit.health <= 0) return null
+
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+    const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+
+    const crewRects = this.getCrewRects(unit, scrollOffset, hudBounds, centerX, centerY)
+    for (const crewRect of crewRects) {
+      if (this.isPointInRect(mouseScreenX, mouseScreenY, crewRect)) {
+        return crewRect.role
+      }
+    }
+
+    const hasFuel = typeof unit.maxGas === 'number'
+    const canShowAmmo = unit.selected && (
+      typeof unit.maxAmmunition === 'number' ||
+      typeof unit.maxRocketAmmo === 'number' ||
+      unit.type === 'mineLayer'
+    )
+    const hasBottomProgress = unit.selected && (
+      unit.type === 'harvester' ||
+      unit.type === 'ambulance' ||
+      unit.type === 'tankerTruck' ||
+      unit.type === 'ammunitionTruck' ||
+      unit.type === 'mineLayer' ||
+      (unit.type !== 'harvester' && (unit.level || 0) < 3)
+    )
+
+    if (!this.isDonutSelectionHud()) {
+      if (this.isPointInRect(mouseScreenX, mouseScreenY, this.getHudBarRect(hudBounds, 'top'))) {
+        return 'health'
+      }
+      if (hasFuel && this.isPointInRect(mouseScreenX, mouseScreenY, this.getHudBarRect(hudBounds, 'right'))) {
+        return 'fuel'
+      }
+      if (canShowAmmo && this.isPointInRect(mouseScreenX, mouseScreenY, this.getHudBarRect(hudBounds, 'left'))) {
+        return 'ammo'
+      }
+      if (hasBottomProgress && this.isPointInRect(mouseScreenX, mouseScreenY, this.getHudBarRect(hudBounds, 'bottom'))) {
+        return 'experience'
+      }
+    } else {
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const dx = mouseScreenX - centerX
+      const dy = mouseScreenY - centerY
+      const distance = Math.hypot(dx, dy)
+      const ringHalf = Math.max(1, (this.getSelectionHudBarThickness() - 2) / 2)
+      if (Math.abs(distance - donutRadius) <= ringHalf + 1) {
+        const angle = (Math.atan2(dy, dx) + (Math.PI * 2)) % (Math.PI * 2)
+        if (angle >= Math.PI * 1.5 && angle < Math.PI * 2) return 'health'
+        if (hasFuel && angle >= 0 && angle < Math.PI / 2) return 'fuel'
+        if (canShowAmmo && angle >= Math.PI && angle < Math.PI * 1.5) return 'ammo'
+        if (hasBottomProgress && angle >= Math.PI / 2 && angle < Math.PI) return 'experience'
+      }
+    }
+
+    if (unit.type !== 'harvester' && unit.level > 0) {
+      const starSize = 6
+      const starSpacing = 8
+      const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
+      const startX = (centerX - totalWidth / 2) + (this.isDonutSelectionHud() ? 2 : 0)
+      const starY = this.isLegacySelectionHud()
+        ? unit.y - 20 - scrollOffset.y
+        : this.isDonutSelectionHud()
+          ? hudBounds.top - 12
+          : hudBounds.top - 3
+      const starsRect = {
+        x: startX - 1,
+        y: starY - (starSize / 2) - 1,
+        width: totalWidth + 2,
+        height: starSize + 2
+      }
+      if (this.isPointInRect(mouseScreenX, mouseScreenY, starsRect)) {
+        return 'rank stars'
+      }
+    }
+
+    return null
+  }
+
+  renderHudHoverTooltip(ctx, units, scrollOffset) {
+    if (!gameState?.desktopEdgeScroll?.overCanvas) return
+
+    const mouseScreenX = gameState.cursorX - scrollOffset.x
+    const mouseScreenY = gameState.cursorY - scrollOffset.y
+    const selected = units.filter(unit => unit?.selected)
+    if (selected.length === 0) return
+
+    let label = null
+    for (const unit of selected) {
+      label = this.getHudHoverLabelForUnit(unit, scrollOffset, mouseScreenX, mouseScreenY)
+      if (label) break
+    }
+    if (!label) return
+
+    const tooltipText = label
+    const fontSize = 9
+    ctx.save()
+    ctx.font = `${fontSize}px Arial`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+
+    const paddingX = 4
+    const paddingY = 2
+    const textWidth = ctx.measureText(tooltipText).width
+    const boxWidth = textWidth + paddingX * 2
+    const boxHeight = fontSize + paddingY * 2
+
+    let boxX = mouseScreenX + 8
+    let boxY = mouseScreenY - boxHeight - 8
+    if (boxX + boxWidth > ctx.canvas.width - 2) {
+      boxX = mouseScreenX - boxWidth - 8
+    }
+    if (boxY < 2) {
+      boxY = mouseScreenY + 8
+    }
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight)
+    ctx.fillStyle = '#FFF'
+    ctx.fillText(tooltipText, boxX + paddingX, boxY + boxHeight / 2)
+    ctx.restore()
+  }
+
   drawHudEdgeBar(ctx, hudBounds, edge, ratio, color) {
     const clampedRatio = Math.max(0, Math.min(1, ratio))
     const barThickness = this.getSelectionHudBarThickness()
@@ -1259,6 +1499,7 @@ export class UnitRenderer {
       this.renderUnitOverlay(ctx, unit, scrollOffset, viewportWidth, viewportHeight)
       this.renderApacheRemoteReticle(ctx, unit, scrollOffset)
     })
+    this.renderHudHoverTooltip(ctx, units, scrollOffset)
   }
 
   renderApacheRemoteReticle(ctx, unit, scrollOffset) {
