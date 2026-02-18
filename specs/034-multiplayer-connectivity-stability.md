@@ -63,6 +63,13 @@
 - Ensure headed role windows and rendered game content dimensions stay aligned in multiplayer E2E (no viewport larger than native window) so visual debugging reflects true on-screen output.
 - Launch headed multiplayer E2E role browsers with hardware acceleration defaults (prefer system Chrome channel, enable GPU/WebGL acceleration flags) so WebGL rendering uses GPU where available.
 - Ensure HOST/RED/YELLOW begin and execute build progression concurrently after host resume (parallel stack build), not one party at a time.
+- Add an extended multiplayer scenario that reuses the same setup/join/build flow and then scales each human party to a 2-tank stack through production UI, with immediate AGF-driven assaults into BLUE base targets whenever a tank is ready.
+- Extended scenario completion must verify BLUE structure elimination only (buildings/factories, excluding walls), without requiring BLUE unit elimination or victory-screen assertion.
+- AGF commands in this scenario must be issued host-authoritatively per human party (`player1`, `player2`, `player4`) so RED and YELLOW reliably attack, not only GREEN.
+- AGF target set for this scenario must include BLUE structures only (buildings/factories) and ignore BLUE units.
+- Extended scenario must issue AGF deterministically through programmatic engine-equivalent behavior (combat-unit selection state + AGF attack queue/targets), so in-game AGF target indicators visibly include all BLUE base structures, including construction yard, ore refinery, vehicle factory, and power plant.
+- Provide a dedicated npm launch script for the extended multiplayer scenario (grep-based selection in runner) without duplicating runner code.
+- Keep multiplayer economy host-authoritative: remote production/build commands must debit the corresponding party budget on host, and remote clients must not apply local-only money debits/refunds during production progress.
 - Validate economy accounting after refinery unload by asserting HOST money and RED/YELLOW factory budgets increase following harvester delivery cycles.
 - Validate post-join gameplay flow by confirming GREEN/RED/YELLOW controlled parties complete base progression (power, refinery, vehicle factory), produce at least two harvesters and one `tank_v1`, and initiate combat where all human tanks focus BLUE AI with projectile visibility across host and clients.
 - Ensure GREEN/host party progression is asserted as strictly as RED/YELLOW (host must own construction yard, power plant, ore refinery, and vehicle factory before combat checks).

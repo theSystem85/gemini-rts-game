@@ -36,6 +36,7 @@ const WINDOW_MAX_HEIGHT = Number.parseInt(process.env.PLAYWRIGHT_WINDOW_MAX_HEIG
 const PREFERRED_BROWSER_CHANNEL = process.env.PLAYWRIGHT_BROWSER_CHANNEL || ''
 const ENABLE_UNCAPPED_RENDERING = process.env.PLAYWRIGHT_UNCAPPED_RENDERING === '1'
 const ENABLE_GPU_ACCELERATION = process.env.PLAYWRIGHT_FORCE_GPU !== '0'
+const FULL_ASSAULT_TANK_COUNT = 2
 
 function getWindowLayout() {
   if (!Number.isFinite(LARGEST_SCREEN_WIDTH) || !Number.isFinite(LARGEST_SCREEN_HEIGHT)
@@ -472,7 +473,7 @@ async function queueAndCompleteBuilding(page, buildingType, roleLabel) {
   logStep(`${roleLabel}: completed ${buildingType}`)
 }
 
-async function queueAndCompleteUnit(page, unitType, roleLabel) {
+async function queueAndCompleteUnit(page, unitType, roleLabel, completionTimeout = 90000) {
   const baseline = await page.evaluate((type) => {
     const gs = window.gameState
     const owner = gs?.humanPlayer || 'player1'
@@ -495,7 +496,7 @@ async function queueAndCompleteUnit(page, unitType, roleLabel) {
       return count > previousCount
     },
     { type: unitType, previousCount: baseline },
-    { timeout: 90000 }
+    { timeout: completionTimeout }
   )
 
   logStep(`${roleLabel}: completed ${unitType}`)
@@ -511,6 +512,394 @@ async function buildStackToTank(page, roleLabel) {
   await openProductionTab(page, 'units')
   await queueAndCompleteUnit(page, 'harvester', roleLabel)
   await queueAndCompleteUnit(page, 'tank', roleLabel)
+}
+
+async function getOwnedTankCount(page) {
+  return page.evaluate(() => {
+    const gs = window.gameState
+    const owner = gs?.humanPlayer || 'player1'
+    const aliases = owner === 'player1' ? ['player1', 'player', owner] : [owner]
+    return (gs?.units || []).filter((unit) =>
+      aliases.includes(unit.owner) && (unit.type === 'tank_v1' || unit.type === 'tank') && unit.health > 0
+    ).length
+  })
+}
+
+async function buildTankStack(page, roleLabel, targetTankCount, onTankReady = null) {
+  await ensureSidebarVisible(page)
+  await openProductionTab(page, 'units')
+
+  while (true) {
+    const currentTankCount = await getOwnedTankCount(page)
+    if (currentTankCount >= targetTankCount) {
+      logStep(`${roleLabel}: reached tank stack target ${currentTankCount}/${targetTankCount}`)
+      return
+    }
+
+    await queueAndCompleteUnit(page, 'tank', roleLabel, 240000)
+    if (typeof onTankReady === 'function') {
+      await onTankReady()
+    }
+  }
+}
+
+async function issuePartyAgfAssaultViaEngine(page, roleLabel, targetPartyIds) {
+  const setup = await page.evaluate(async({ targetIds }) => {
+    const gs = window.gameState
+
+    if (!gs) {
+      return { ok: false, reason: 'missing-game-state' }
+    }
+
+    const { selectedUnits, getUnitCommandsHandler } = await import('/src/inputHandler.js')
+    const { mapGrid } = await import('/src/main.js')
+
+    const humanPlayer = gs.humanPlayer || 'player1'
+    const isHumanOwned = (owner) => owner === humanPlayer || (humanPlayer === 'player1' && owner === 'player')
+
+    const ownedTanks = (gs.units || []).filter((unit) =>
+      isHumanOwned(unit.owner)
+      && (unit.type === 'tank' || unit.type === 'tank_v1')
+      && unit.health > 0
+    )
+
+    if (ownedTanks.length === 0) {
+      return { ok: false, reason: 'no-owned-tanks' }
+    }
+
+    const enemyStructures = [
+      ...(gs.buildings || []),
+      ...(gs.factories || [])
+    ].filter((entity) =>
+      entity
+      && entity.health > 0
+      && entity.type !== 'concreteWall'
+      && targetIds.includes(entity.owner || entity.id)
+    )
+
+    if (enemyStructures.length === 0) {
+      return { ok: false, reason: 'no-enemy-structures' }
+    }
+
+    selectedUnits.forEach((unit) => {
+      if (unit) {
+        unit.selected = false
+      }
+    })
+
+    selectedUnits.splice(0, selectedUnits.length, ...ownedTanks)
+    gs.selectedUnits = selectedUnits
+
+    ownedTanks.forEach((unit) => {
+      unit.selected = true
+    })
+
+    const attackTargets = [...enemyStructures]
+    gs.attackGroupTargets = [...attackTargets]
+
+    const unitCommands = getUnitCommandsHandler()
+    const combatUnits = ownedTanks.filter((unit) => unit.type !== 'harvester' && isHumanOwned(unit.owner))
+
+    combatUnits.forEach((unit) => {
+      unit.attackQueue = [...attackTargets]
+      unit.target = unit.attackQueue[0] || null
+      unit.currentCommand = null
+      unit.moveTarget = null
+      unit.path = null
+      unit.commandQueue = [{ type: 'agf', targets: attackTargets }]
+    })
+
+    if (unitCommands && combatUnits.length > 0 && combatUnits[0].target) {
+      unitCommands.isAttackGroupOperation = true
+      unitCommands.handleAttackCommand(combatUnits, combatUnits[0].target, mapGrid, false)
+      unitCommands.isAttackGroupOperation = false
+    }
+
+    gs.attackGroupMode = false
+    gs.attackGroupStart = { x: 0, y: 0 }
+    gs.attackGroupEnd = { x: 0, y: 0 }
+    gs.disableAGFRendering = false
+
+    return {
+      ok: true,
+      selectedTankCount: ownedTanks.length,
+      targetStructureCount: enemyStructures.length
+    }
+  }, { targetIds: targetPartyIds })
+
+  if (!setup.ok) {
+    logStep(`${roleLabel}: skipped AGF engine issue (${setup.reason || 'unknown-reason'})`)
+    return
+  }
+
+  await page.waitForFunction(
+    (minimumTargetCount) => {
+      const gs = window.gameState
+      const targets = gs?.attackGroupTargets || []
+      return targets.length >= minimumTargetCount
+    },
+    setup.targetStructureCount,
+    { timeout: 15000 }
+  )
+
+  logStep(`${roleLabel}: issued AGF via engine state with ${setup.selectedTankCount} tanks against ${setup.targetStructureCount} BLUE structures`)
+}
+
+async function waitForPartyStructuresElimination(hostPage, partyId, timeout = 300000) {
+  await hostPage.waitForFunction(
+    (targetPartyId) => {
+      const gs = window.gameState
+      if (!gs) return false
+
+      const isAliveStructure = (entity) => {
+        if (!entity || entity.health <= 0) return false
+        if (entity.type === 'concreteWall') return false
+        const entityOwner = entity.owner || entity.id
+        return entityOwner === targetPartyId
+      }
+
+      const aliveBuildings = (gs.buildings || []).some(isAliveStructure)
+      const aliveFactories = (gs.factories || []).some(isAliveStructure)
+      return !aliveBuildings && !aliveFactories
+    },
+    partyId,
+    { timeout }
+  )
+}
+
+async function runMultiplayerScenario(browser, { fullAssault = false } = {}) {
+  const browserType = browser.browserType()
+  const windowLayout = getWindowLayout()
+
+  const launchRoleBrowser = async(role, bounds) => {
+    const args = [
+      `--window-position=${bounds.left},${bounds.top}`,
+      `--window-size=${bounds.width},${bounds.height}`,
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--no-first-run',
+      '--no-default-browser-check'
+    ]
+
+    if (ENABLE_GPU_ACCELERATION) {
+      args.push(
+        '--enable-gpu-rasterization',
+        '--enable-zero-copy',
+        '--ignore-gpu-blocklist',
+        '--enable-accelerated-2d-canvas',
+        '--enable-accelerated-video-decode',
+        '--enable-webgl',
+        '--use-angle=metal'
+      )
+    }
+
+    if (ENABLE_UNCAPPED_RENDERING) {
+      args.push('--disable-frame-rate-limit', '--disable-gpu-vsync')
+    }
+
+    const launchOptions = {
+      headless: false,
+      args
+    }
+
+    if (ENABLE_GPU_ACCELERATION) {
+      launchOptions.ignoreDefaultArgs = ['--disable-gpu']
+    }
+
+    if (PREFERRED_BROWSER_CHANNEL) {
+      launchOptions.channel = PREFERRED_BROWSER_CHANNEL
+    }
+
+    let roleBrowser = null
+    try {
+      roleBrowser = await browserType.launch(launchOptions)
+      if (PREFERRED_BROWSER_CHANNEL) {
+        logStep(`${role}: launched using browser channel ${PREFERRED_BROWSER_CHANNEL}`)
+      }
+    } catch {
+      if (!PREFERRED_BROWSER_CHANNEL) {
+        throw new Error(`${role}: browser launch failed`)
+      }
+
+      roleBrowser = await browserType.launch({
+        headless: false,
+        args
+      })
+      logStep(`${role}: falling back to bundled chromium launch`)
+    }
+
+    const roleContext = await roleBrowser.newContext({
+      baseURL: BASE_URL,
+      viewport: {
+        width: bounds.width,
+        height: bounds.height
+      }
+    })
+    const rolePage = await roleContext.newPage()
+    await positionBrowserWindow(rolePage, { ...bounds, label: role })
+    return { roleBrowser, roleContext, rolePage }
+  }
+
+  const hostRole = await launchRoleBrowser('HOST', windowLayout.host)
+  const hostBrowser = hostRole.roleBrowser
+  const hostContext = hostRole.roleContext
+  const hostPage = hostRole.rolePage
+  let redPage = null
+  let yellowPage = null
+  let redBrowser = null
+  let yellowBrowser = null
+
+  try {
+    logStep('Starting host-first multiplayer test flow')
+    await hostContext.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL }).catch(() => {})
+    logStep(`Window layout source: ${LARGEST_SCREEN_WIDTH > 0 ? `${LARGEST_SCREEN_WIDTH}x${LARGEST_SCREEN_HEIGHT}` : 'default fallback'}`)
+
+    await configureTutorial(hostPage, { showTutorial: true, completed: false })
+    await gotoAndWaitGameReady(hostPage, `/?size=${MAP_SIZE}&players=4&seed=${MAP_SEED}`)
+    await pauseGameImmediately(hostPage)
+    await setHostMapAndPlayers(hostPage)
+    await ensureHostPaused(hostPage)
+    await minimizeTutorialIfVisible(hostPage)
+
+    const redInvite = await invitePartyAndCaptureCopiedUrl(hostPage, 'player2')
+    expect(redInvite.inviteUrl).toBeTruthy()
+    logStep(`RED invite URL ready: ${redInvite.inviteUrl}`)
+
+    const redRole = await launchRoleBrowser('RED', windowLayout.red)
+    redBrowser = redRole.roleBrowser
+    redPage = redRole.rolePage
+    await configureTutorial(redPage, { showTutorial: false, completed: true })
+    await joinViaDirectInviteUrl(redPage, redInvite.inviteUrl, 'RED')
+    await ensureHostPaused(hostPage)
+
+    const yellowInvite = await invitePartyAndCaptureCopiedUrl(hostPage, 'player4')
+    expect(yellowInvite.inviteUrl).toBeTruthy()
+    logStep(`YELLOW invite URL ready: ${yellowInvite.inviteUrl}`)
+    await dismissInviteQrModalIfVisible(hostPage)
+
+    const yellowRole = await launchRoleBrowser('YELLOW', windowLayout.yellow)
+    yellowBrowser = yellowRole.roleBrowser
+    yellowPage = yellowRole.rolePage
+    await configureTutorial(yellowPage, { showTutorial: false, completed: true })
+    await joinViaDirectInviteUrl(yellowPage, yellowInvite.inviteUrl, 'YELLOW')
+    await dismissInviteQrModalIfVisible(hostPage)
+    logStep('Host invite modal closed after YELLOW invite flow')
+    await ensureHostPaused(hostPage)
+
+    await waitForHumansAndBlueAi(hostPage)
+    logStep('Host sees RED + YELLOW connected and BLUE still AI')
+    await ensureHostPaused(hostPage)
+
+    await resumeHost(hostPage)
+    logStep('Host resumed game after human connections')
+
+    logStep('Starting parallel build progression for HOST, RED, and YELLOW')
+    await Promise.all([
+      buildStackToTank(hostPage, 'HOST'),
+      buildStackToTank(redPage, 'RED'),
+      buildStackToTank(yellowPage, 'YELLOW')
+    ])
+
+    await hostPage.waitForFunction(
+      (parties) => {
+        const gs = window.gameState
+        if (!gs) return false
+
+        const ownerAliasesForParty = (partyId) => {
+          if (partyId === 'player1') {
+            const aliases = ['player1', 'player']
+            if (typeof gs.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
+              aliases.push(gs.humanPlayer)
+            }
+            return [...new Set(aliases)]
+          }
+          return [partyId]
+        }
+
+        const buildingMatchesParty = (building, partyId) => ownerAliasesForParty(partyId).includes(building.owner)
+        const unitMatchesParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit.owner)
+
+        return parties.every((partyId) => {
+          const hasPower = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'powerPlant')
+          const hasRefinery = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'oreRefinery')
+          const hasFactory = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'vehicleFactory')
+          const hasHarvester = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && unit.type === 'harvester')
+          const hasTank = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && (unit.type === 'tank_v1' || unit.type === 'tank'))
+          return hasPower && hasRefinery && hasFactory && hasHarvester && hasTank
+        })
+      },
+      CONTROLLED_PARTIES,
+      { timeout: 90000 }
+    )
+
+    const baseProgression = await hostPage.evaluate((parties) => {
+      const gs = window.gameState
+      if (!gs) return null
+
+      const ownerAliasesForParty = (partyId) => {
+        if (partyId === 'player1') {
+          const aliases = ['player1', 'player']
+          if (typeof gs?.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
+            aliases.push(gs.humanPlayer)
+          }
+          return [...new Set(aliases)]
+        }
+        return [partyId]
+      }
+
+      const unitMatchesParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit.owner)
+      const buildingMatchesParty = (building, partyId) => ownerAliasesForParty(partyId).includes(building.owner)
+
+      return parties.map((pid) => {
+        const blds = gs.buildings || []
+        const uts = gs.units || []
+        return {
+          partyId: pid,
+          hasConstructionYard: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'constructionYard'),
+          hasPowerPlant: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'powerPlant'),
+          hasOreRefinery: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'oreRefinery'),
+          hasVehicleFactory: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'vehicleFactory'),
+          harvesterCount: uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'harvester').length,
+          tankCount: uts.filter((u) => unitMatchesParty(u, pid) && (u.type === 'tank_v1' || u.type === 'tank')).length
+        }
+      })
+    }, CONTROLLED_PARTIES)
+
+    logStep(`Base progression snapshot: ${JSON.stringify(baseProgression)}`)
+    const economyBaseline = await capturePartyEconomyBaseline(hostPage)
+    await waitForPartyIncomeAfterRefineryUnload(hostPage, economyBaseline)
+    logStep('Refinery unload income accounted for HOST, RED, and YELLOW parties')
+    logStep('Host/RED/YELLOW each completed visible build stack to tank without direct spawn shortcuts')
+
+    if (fullAssault) {
+      logStep('FULL assault: issuing immediate AGF from current tanks to BLUE targets')
+      await Promise.all([
+        issuePartyAgfAssaultViaEngine(hostPage, 'HOST', [AI_PARTY]),
+        issuePartyAgfAssaultViaEngine(redPage, 'RED', [AI_PARTY]),
+        issuePartyAgfAssaultViaEngine(yellowPage, 'YELLOW', [AI_PARTY])
+      ])
+
+      logStep(`FULL assault: building to ${FULL_ASSAULT_TANK_COUNT} tanks per human party with immediate programmatic AGF targeting of BLUE structures`)
+      await Promise.all([
+        buildTankStack(hostPage, 'HOST', FULL_ASSAULT_TANK_COUNT, () => issuePartyAgfAssaultViaEngine(hostPage, 'HOST', [AI_PARTY])),
+        buildTankStack(redPage, 'RED', FULL_ASSAULT_TANK_COUNT, () => issuePartyAgfAssaultViaEngine(redPage, 'RED', [AI_PARTY])),
+        buildTankStack(yellowPage, 'YELLOW', FULL_ASSAULT_TANK_COUNT, () => issuePartyAgfAssaultViaEngine(yellowPage, 'YELLOW', [AI_PARTY]))
+      ])
+
+      await waitForPartyStructuresElimination(hostPage, AI_PARTY, 360000)
+      logStep('FULL assault: BLUE structures eliminated')
+    }
+  } finally {
+    logStep('Cleaning up browser contexts')
+    await hostBrowser.close().catch(() => {})
+    if (redBrowser) {
+      await redBrowser.close().catch(() => {})
+    }
+    if (yellowBrowser) {
+      await yellowBrowser.close().catch(() => {})
+    }
+  }
 }
 
 /** Verify RED and YELLOW are human-connected and BLUE is still AI. */
@@ -608,237 +997,11 @@ test.describe('Netlify multiplayer 4-party sync', () => {
   test.setTimeout(420000)
 
   test('host setup + invite flow → 3-party build/combat with blue AI', async({ browser }) => {
-    // Use separate browser processes per role so native windows don't get
-    // re-targeted/repositioned by shared CDP window IDs.
-    const browserType = browser.browserType()
-    const windowLayout = getWindowLayout()
+    await runMultiplayerScenario(browser, { fullAssault: false })
+  })
 
-    const launchRoleBrowser = async(role, bounds) => {
-      const args = [
-        `--window-position=${bounds.left},${bounds.top}`,
-        `--window-size=${bounds.width},${bounds.height}`,
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--no-first-run',
-        '--no-default-browser-check'
-      ]
-
-      if (ENABLE_GPU_ACCELERATION) {
-        args.push(
-          '--enable-gpu-rasterization',
-          '--enable-zero-copy',
-          '--ignore-gpu-blocklist',
-          '--enable-accelerated-2d-canvas',
-          '--enable-accelerated-video-decode',
-          '--enable-webgl',
-          '--use-angle=metal'
-        )
-      }
-
-      if (ENABLE_UNCAPPED_RENDERING) {
-        args.push('--disable-frame-rate-limit', '--disable-gpu-vsync')
-      }
-
-      const launchOptions = {
-        headless: false,
-        args
-      }
-
-      if (ENABLE_GPU_ACCELERATION) {
-        launchOptions.ignoreDefaultArgs = ['--disable-gpu']
-      }
-
-      if (PREFERRED_BROWSER_CHANNEL) {
-        launchOptions.channel = PREFERRED_BROWSER_CHANNEL
-      }
-
-      let roleBrowser = null
-      try {
-        roleBrowser = await browserType.launch(launchOptions)
-        if (PREFERRED_BROWSER_CHANNEL) {
-          logStep(`${role}: launched using browser channel ${PREFERRED_BROWSER_CHANNEL}`)
-        }
-      } catch {
-        if (!PREFERRED_BROWSER_CHANNEL) {
-          throw new Error(`${role}: browser launch failed`)
-        }
-
-        roleBrowser = await browserType.launch({
-          headless: false,
-          args
-        })
-        logStep(`${role}: falling back to bundled chromium launch`)
-      }
-
-      const roleContext = await roleBrowser.newContext({
-        baseURL: BASE_URL,
-        viewport: {
-          width: bounds.width,
-          height: bounds.height
-        }
-      })
-      const rolePage = await roleContext.newPage()
-      await positionBrowserWindow(rolePage, { ...bounds, label: role })
-      return { roleBrowser, roleContext, rolePage }
-    }
-
-    const hostRole = await launchRoleBrowser('HOST', windowLayout.host)
-    const hostBrowser = hostRole.roleBrowser
-    const hostContext = hostRole.roleContext
-    const hostPage = hostRole.rolePage
-    let redPage = null
-    let yellowPage = null
-    let redBrowser = null
-    let yellowBrowser = null
-
-    try {
-      logStep('Starting host-first multiplayer test flow')
-      await hostContext.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL }).catch(() => {})
-      logStep(`Window layout source: ${LARGEST_SCREEN_WIDTH > 0 ? `${LARGEST_SCREEN_WIDTH}x${LARGEST_SCREEN_HEIGHT}` : 'default fallback'}`)
-
-      // ── Pre-configure tutorial per context ────────────────────────
-      await configureTutorial(hostPage, { showTutorial: true, completed: false })
-
-      // ── 1. HOST loads game ────────────────────────────────────────
-      await gotoAndWaitGameReady(
-        hostPage,
-        `/?size=${MAP_SIZE}&players=4&seed=${MAP_SEED}`
-      )
-
-      // ── 2. Immediately pause so AI cannot act ─────────────────────
-      await pauseGameImmediately(hostPage)
-
-      // ── 3. Set map settings via sidebar inputs ────────────────────
-      await setHostMapAndPlayers(hostPage)
-      await ensureHostPaused(hostPage)
-
-      // ── 4. Minimise tutorial if visible ───────────────────────────
-      await minimizeTutorialIfVisible(hostPage)
-
-      // ── 5. Host invites RED, captures copied link, then starts RED browser ──
-      const redInvite = await invitePartyAndCaptureCopiedUrl(hostPage, 'player2')
-      expect(redInvite.inviteUrl).toBeTruthy()
-      logStep(`RED invite URL ready: ${redInvite.inviteUrl}`)
-
-      const redRole = await launchRoleBrowser('RED', windowLayout.red)
-      redBrowser = redRole.roleBrowser
-      redPage = redRole.rolePage
-      await configureTutorial(redPage, { showTutorial: false, completed: true })
-      await joinViaDirectInviteUrl(redPage, redInvite.inviteUrl, 'RED')
-      await ensureHostPaused(hostPage)
-
-      // ── 6. Host invites YELLOW (player4), captures copied link, then starts YELLOW browser ──
-      const yellowInvite = await invitePartyAndCaptureCopiedUrl(hostPage, 'player4')
-      expect(yellowInvite.inviteUrl).toBeTruthy()
-      logStep(`YELLOW invite URL ready: ${yellowInvite.inviteUrl}`)
-      await dismissInviteQrModalIfVisible(hostPage)
-
-      const yellowRole = await launchRoleBrowser('YELLOW', windowLayout.yellow)
-      yellowBrowser = yellowRole.roleBrowser
-      yellowPage = yellowRole.rolePage
-      await configureTutorial(yellowPage, { showTutorial: false, completed: true })
-      await joinViaDirectInviteUrl(yellowPage, yellowInvite.inviteUrl, 'YELLOW')
-      await dismissInviteQrModalIfVisible(hostPage)
-      logStep('Host invite modal closed after YELLOW invite flow')
-      await ensureHostPaused(hostPage)
-
-      // ── 9. Verify connections ─────────────────────────────────────
-      await waitForHumansAndBlueAi(hostPage)
-      logStep('Host sees RED + YELLOW connected and BLUE still AI')
-      await ensureHostPaused(hostPage)
-
-      // ── 10. Resume ────────────────────────────────────────────────
-      await resumeHost(hostPage)
-      logStep('Host resumed game after human connections')
-
-      // ── 11. Build stack to tank on each human party ───────────────
-      logStep('Starting parallel build progression for HOST, RED, and YELLOW')
-      await Promise.all([
-        buildStackToTank(hostPage, 'HOST'),
-        buildStackToTank(redPage, 'RED'),
-        buildStackToTank(yellowPage, 'YELLOW')
-      ])
-
-      await hostPage.waitForFunction(
-        (parties) => {
-          const gs = window.gameState
-          if (!gs) return false
-
-          const ownerAliasesForParty = (partyId) => {
-            if (partyId === 'player1') {
-              const aliases = ['player1', 'player']
-              if (typeof gs.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
-                aliases.push(gs.humanPlayer)
-              }
-              return [...new Set(aliases)]
-            }
-            return [partyId]
-          }
-
-          const buildingMatchesParty = (building, partyId) => ownerAliasesForParty(partyId).includes(building.owner)
-          const unitMatchesParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit.owner)
-
-          return parties.every((partyId) => {
-            const hasPower = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'powerPlant')
-            const hasRefinery = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'oreRefinery')
-            const hasFactory = (gs.buildings || []).some((building) => buildingMatchesParty(building, partyId) && building.type === 'vehicleFactory')
-            const hasHarvester = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && unit.type === 'harvester')
-            const hasTank = (gs.units || []).some((unit) => unitMatchesParty(unit, partyId) && (unit.type === 'tank_v1' || unit.type === 'tank'))
-            return hasPower && hasRefinery && hasFactory && hasHarvester && hasTank
-          })
-        },
-        CONTROLLED_PARTIES,
-        { timeout: 90000 }
-      )
-
-      const baseProgression = await hostPage.evaluate((parties) => {
-        const gs = window.gameState
-        if (!gs) return null
-
-        const ownerAliasesForParty = (partyId) => {
-          if (partyId === 'player1') {
-            const aliases = ['player1', 'player']
-            if (typeof gs?.humanPlayer === 'string' && gs.humanPlayer.length > 0) {
-              aliases.push(gs.humanPlayer)
-            }
-            return [...new Set(aliases)]
-          }
-          return [partyId]
-        }
-
-        const unitMatchesParty = (unit, partyId) => ownerAliasesForParty(partyId).includes(unit.owner)
-        const buildingMatchesParty = (building, partyId) => ownerAliasesForParty(partyId).includes(building.owner)
-
-        return parties.map((pid) => {
-          const blds = gs.buildings || []
-          const uts = gs.units || []
-          return {
-            partyId: pid,
-            hasConstructionYard: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'constructionYard'),
-            hasPowerPlant: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'powerPlant'),
-            hasOreRefinery: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'oreRefinery'),
-            hasVehicleFactory: blds.some((b) => buildingMatchesParty(b, pid) && b.type === 'vehicleFactory'),
-            harvesterCount: uts.filter((u) => unitMatchesParty(u, pid) && u.type === 'harvester').length,
-            tankCount: uts.filter((u) => unitMatchesParty(u, pid) && (u.type === 'tank_v1' || u.type === 'tank')).length
-          }
-        })
-      }, CONTROLLED_PARTIES)
-
-      logStep(`Base progression snapshot: ${JSON.stringify(baseProgression)}`)
-      const economyBaseline = await capturePartyEconomyBaseline(hostPage)
-      await waitForPartyIncomeAfterRefineryUnload(hostPage, economyBaseline)
-      logStep('Refinery unload income accounted for HOST, RED, and YELLOW parties')
-      logStep('Host/RED/YELLOW each completed visible build stack to tank without direct spawn shortcuts')
-    } finally {
-      logStep('Cleaning up browser contexts')
-      await hostBrowser.close().catch(() => {})
-      if (redBrowser) {
-        await redBrowser.close().catch(() => {})
-      }
-      if (yellowBrowser) {
-        await yellowBrowser.close().catch(() => {})
-      }
-    }
+  test('extended full assault → 2 tanks each + immediate AGF wipe blue structures', async({ browser }) => {
+    test.setTimeout(900000)
+    await runMultiplayerScenario(browser, { fullAssault: true })
   })
 })

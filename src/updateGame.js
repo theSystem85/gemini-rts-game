@@ -62,6 +62,8 @@ import { updateRemoteControlledUnits } from './game/remoteControl.js'
 import { updateShadowOfWar } from './game/shadowOfWar.js'
 import { processPendingRemoteCommands, isHost, COMMAND_TYPES, updateUnitInterpolation } from './network/gameCommandSync.js'
 import { createBuilding, placeBuilding, updatePowerSupply } from './buildings.js'
+import { buildingCosts } from './main.js'
+import { unitCosts } from './units.js'
 import { updateDangerZoneMaps } from './game/dangerZoneMap.js'
 import { spawnUnit } from './units.js'
 
@@ -76,10 +78,45 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
     // Process pending remote commands from clients (host only)
     if (isHost()) {
       const remoteCommands = processPendingRemoteCommands()
+
+      const chargePartyProductionCost = (partyId, cost) => {
+        const normalizedCost = Number(cost) || 0
+        if (normalizedCost <= 0) {
+          return true
+        }
+
+        if (partyId === gameState.humanPlayer) {
+          if ((Number(gameState.money) || 0) < normalizedCost) {
+            return false
+          }
+          gameState.money -= normalizedCost
+          return true
+        }
+
+        const ownerFactory = (factories || []).find((factory) => (factory.owner || factory.id) === partyId)
+        if (!ownerFactory || !Number.isFinite(ownerFactory.budget)) {
+          return false
+        }
+
+        if (ownerFactory.budget < normalizedCost) {
+          return false
+        }
+
+        ownerFactory.budget -= normalizedCost
+        return true
+      }
+
       remoteCommands.forEach(cmd => {
         if (cmd.commandType === COMMAND_TYPES.BUILDING_PLACE && cmd.payload) {
           const { buildingType, x, y } = cmd.payload
           const owner = cmd.sourcePartyId
+          const buildCost = Number(buildingCosts?.[buildingType]) || 0
+
+          if (!chargePartyProductionCost(owner, buildCost)) {
+            window.logger.warn('[Host] Rejecting BUILDING_PLACE due to insufficient funds:', owner, buildingType, buildCost)
+            return
+          }
+
           const newBuilding = createBuilding(buildingType, x, y)
           newBuilding.owner = owner
           if (!gameState.buildings) gameState.buildings = []
@@ -185,6 +222,12 @@ export const updateGame = logPerformance(function updateGame(delta, mapGrid, fac
           // Client requests host to spawn a unit
           const { unitType, factoryId, rallyPoint } = cmd.payload
           const partyId = cmd.sourcePartyId
+          const unitCost = Number(unitCosts?.[unitType]) || 0
+
+          if (!chargePartyProductionCost(partyId, unitCost)) {
+            window.logger.warn('[Host] Rejecting UNIT_SPAWN due to insufficient funds:', partyId, unitType, unitCost)
+            return
+          }
 
           // Find the factory for spawning
           let spawnFactory = null

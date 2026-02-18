@@ -25,6 +25,7 @@
     "test:e2e": "playwright test",
     "test:e2e:netlify": "PLAYWRIGHT_NETLIFY_DEV=1 playwright test",
     "test:e2e:multiplayer": "node scripts/runPlaywrightMultiplayer.js",
+    "test:e2e:multiplayer:full": "PLAYWRIGHT_MULTIPLAYER_GREP='extended full assault.*blue structures' node scripts/runPlaywrightMultiplayer.js",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",

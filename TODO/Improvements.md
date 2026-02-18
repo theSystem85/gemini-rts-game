@@ -1,4 +1,10 @@
 ## Improvements
+- [x] Change extended multiplayer full-assault win condition to complete when all BLUE structures are destroyed (buildings + factories, excluding walls), without waiting for total BLUE unit elimination or victory screen flow.
+- [x] Replace flaky UI-mouse AGF in extended multiplayer E2E with deterministic programmatic AGF-equivalent engine commands (selected combat units + attack queue + attackGroupTargets) so all BLUE structure targets remain visibly highlighted during selection.
+- [x] Ensure extended multiplayer assault uses real UI AGF drag per human party (HOST/RED/YELLOW) over the full BLUE base so all BLUE structures (construction yard, refinery, vehicle factory, power plant) are included as attack targets.
+- [x] Fix extended multiplayer assault so RED/YELLOW/HOST all receive host-authoritative AGF orders (not client-local commands) and target BLUE structures only (buildings/factories), with immediate re-issue whenever new tanks become ready.
+- [x] Fix multiplayer remote economy authority so host deducts per-party production costs for remote build/spawn commands and clients no longer locally debit/refund money during remote production progress.
+- [x] Simplify the extended multiplayer E2E variant to reuse baseline flow, build to 2 tanks per human party, and issue immediate AGF assaults to BLUE whenever a new tank is ready until BLUE is eliminated.
 - [x] Enable hardware GPU acceleration defaults for headed multiplayer Playwright role browsers (prefer Chrome channel + GPU flags) and run HOST/RED/YELLOW build progression in parallel instead of sequentially.
 - [x] Keep multiplayer remote-command/network processing active during paused frames (zero-delta paused tick) so invite join handshakes can complete before host resume.
 - [x] Stabilize multiplayer invite joins by requiring client-side remote session `connected` state and host-side human party confirmation (`aiActive === false`) before resume.

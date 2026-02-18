@@ -92,6 +92,18 @@ const env = {
   PLAYWRIGHT_FORCE_GPU: process.env.PLAYWRIGHT_FORCE_GPU || '1'
 }
 
+const multiplayerGrep = process.env.PLAYWRIGHT_MULTIPLAYER_GREP || ''
+const playwrightArgs = [
+  'playwright',
+  'test',
+  'tests/e2e/multiplayerNetlifyFourParty.test.js',
+  '--project=chromium'
+]
+
+if (multiplayerGrep) {
+  playwrightArgs.push('--grep', multiplayerGrep)
+}
+
 const largestScreen = detectLargestScreen()
 if (largestScreen) {
   process.stdout.write(
@@ -103,7 +115,7 @@ if (largestScreen) {
 
 const result = spawnSync(
   'npx',
-  ['playwright', 'test', 'tests/e2e/multiplayerNetlifyFourParty.test.js', '--project=chromium'],
+  playwrightArgs,
   {
     env,
     stdio: 'inherit'

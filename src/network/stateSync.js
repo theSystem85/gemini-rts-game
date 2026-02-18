@@ -195,7 +195,7 @@ function getPartyAuthoritativeMoney(partyId) {
     return Number.isFinite(gameState.money) ? gameState.money : 0
   }
 
-  const ownerFactory = (gameState.factories || []).find(factory => (factory.owner || factory.id) === partyId)
+  const ownerFactory = (mainFactories || []).find(factory => (factory.owner || factory.id) === partyId)
   if (!ownerFactory || !Number.isFinite(ownerFactory.budget)) {
     return 0
   }
@@ -214,7 +214,7 @@ function createPartyMoneySnapshot() {
     partyIds.push(gameState.humanPlayer)
   }
 
-  ;(gameState.factories || []).forEach(factory => {
+  ;(mainFactories || []).forEach(factory => {
     const partyId = factory.owner || factory.id
     if (partyId && !partyIds.includes(partyId)) {
       partyIds.push(partyId)
@@ -344,7 +344,7 @@ export function createGameStateSnapshot() {
   }))
 
   // Serialize factories (construction yards) with essential properties
-  const factories = (gameState.factories || []).map(factory => ({
+  const factories = (mainFactories || []).map(factory => ({
     id: factory.id,
     type: factory.type,
     owner: factory.owner,

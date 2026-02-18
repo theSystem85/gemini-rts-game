@@ -312,6 +312,8 @@ export const productionQueue = {
       return
     }
 
+    const isRemoteClientSession = !isHost() && gameState.multiplayerSession?.isRemote
+
     // Update unit production
     if (this.currentUnit && !this.pausedUnit) {
       const item = this.unitItems[0]
@@ -324,7 +326,9 @@ export const productionQueue = {
       const toPay = shouldHavePaid - this.unitPaid
 
       if (toPay > 0) {
-        if (gameState.money >= toPay) {
+        if (isRemoteClientSession) {
+          this.unitPaid += toPay
+        } else if (gameState.money >= toPay) {
           gameState.money -= toPay
           this.unitPaid += toPay
         } else {
@@ -364,7 +368,9 @@ export const productionQueue = {
       const toPay = shouldHavePaid - this.buildingPaid
 
       if (toPay > 0) {
-        if (gameState.money >= toPay) {
+        if (isRemoteClientSession) {
+          this.buildingPaid += toPay
+        } else if (gameState.money >= toPay) {
           gameState.money -= toPay
           this.buildingPaid += toPay
         } else {
@@ -648,6 +654,8 @@ export const productionQueue = {
   cancelUnitProduction: function() {
     if (!this.currentUnit) return
 
+    const isRemoteClientSession = !isHost() && gameState.multiplayerSession?.isRemote
+
     const button = this.currentUnit.button
     const _type = this.currentUnit.type
 
@@ -655,7 +663,9 @@ export const productionQueue = {
     playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
-    gameState.money += this.unitPaid || 0
+    if (!isRemoteClientSession) {
+      gameState.money += this.unitPaid || 0
+    }
 
     // Remove item from queue
     this.unitItems.shift()
@@ -688,6 +698,8 @@ export const productionQueue = {
   cancelBuildingProduction: function() {
     if (!this.currentBuilding) return
 
+    const isRemoteClientSession = !isHost() && gameState.multiplayerSession?.isRemote
+
     const button = this.currentBuilding.button
     const _type = this.currentBuilding.type
 
@@ -695,7 +707,9 @@ export const productionQueue = {
     playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the current production (refund only paid amount)
-    gameState.money += this.buildingPaid || 0
+    if (!isRemoteClientSession) {
+      gameState.money += this.buildingPaid || 0
+    }
 
     // Remove item from queue and blueprint
     this.buildingItems.shift()
@@ -743,7 +757,10 @@ export const productionQueue = {
     playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the building
-    gameState.money += buildingCosts[type] || 0
+    const isRemoteClientSession = !isHost() && gameState.multiplayerSession?.isRemote
+    if (!isRemoteClientSession) {
+      gameState.money += buildingCosts[type] || 0
+    }
 
     // Remove the completed building from the array
     this.completedBuildings.splice(completedBuildingIndex, 1)
@@ -867,7 +884,10 @@ export const productionQueue = {
     playSound('constructionCancelled', 1.0, 0, true)
 
     // Return money for the building
-    gameState.money += buildingCosts[buildingType] || 0
+    const isRemoteClientSession = !isHost() && gameState.multiplayerSession?.isRemote
+    if (!isRemoteClientSession) {
+      gameState.money += buildingCosts[buildingType] || 0
+    }
 
     // Remove the completed building from the array
     this.completedBuildings.splice(completedBuildingIndex, 1)
